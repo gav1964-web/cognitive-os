@@ -17,6 +17,15 @@ STAGE2_FASTAPI_PROMPT = (
     "валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт, "
     "имеет README, тесты и команду запуска."
 )
+STAGE2_TEXT_STATS_PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая читает текстовый файл, "
+    "считает строки, слова и символы, сохраняет JSON-отчёт, имеет README и тесты."
+)
+STAGE2_FASTAPI_KV_PROMPT = (
+    "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, "
+    "хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, "
+    "README, тесты и команду запуска."
+)
 
 
 def stage2_checks(report) -> None:
@@ -46,6 +55,36 @@ def stage2_checks(report) -> None:
             "curricula/programmer_prompt_stage2",
             "--prompt",
             STAGE2_FASTAPI_PROMPT,
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.verified_system_package_ok,
+    )
+    report.command(
+        "verified_system_package_text_stats",
+        [
+            sys.executable,
+            "tools/verified_system_package.py",
+            "--root",
+            ".",
+            "--curriculum-dir",
+            "curricula/programmer_prompt_stage2",
+            "--prompt",
+            STAGE2_TEXT_STATS_PROMPT,
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.verified_system_package_ok,
+    )
+    report.command(
+        "verified_system_package_fastapi_kv",
+        [
+            sys.executable,
+            "tools/verified_system_package.py",
+            "--root",
+            ".",
+            "--curriculum-dir",
+            "curricula/programmer_prompt_stage2",
+            "--prompt",
+            STAGE2_FASTAPI_KV_PROMPT,
             "--write",
         ],
         layers=["L4"], check=programmer_checks.verified_system_package_ok,

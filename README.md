@@ -168,7 +168,9 @@ adequate prompt
 Current deterministic package classes include:
 
 - JSONL log-filter CLI utility;
+- text statistics CLI utility;
 - FastAPI CSV aggregation service.
+- FastAPI in-memory key/value CRUD service.
 
 If tester review requests rework, Stage 2 uses a bounded contract debug loop:
 

@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 
-CASE = "fastapi_csv_aggregator"
-PACKAGE = "csv_aggregator_service"
+CSV_CASE = "fastapi_csv_aggregator"
+KV_CASE = "fastapi_kv_store"
 
 
 def has_case(case_name: str) -> bool:
-    return case_name == CASE
+    return case_name in {CSV_CASE, KV_CASE}
 
 
 def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]:
-    if case_name != CASE or verification.get("status") != "passed":
+    if verification.get("status") != "passed":
+        return []
+    if case_name == KV_CASE:
+        return [
+            "FastAPI app exposes health and item endpoints",
+            "items can be created read updated and deleted",
+            "missing items return a controlled 404 response",
+            "store logic is separated from API endpoint",
+            "all tests run from generated project root",
+        ]
+    if case_name != CSV_CASE:
         return []
     return [
         "FastAPI app exposes health and aggregate endpoints",
@@ -25,8 +35,10 @@ def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]
 
 def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
     path = artifact.replace("\\", "/")
+    if case_name == KV_CASE:
+        return _kv_content(path, prompt)
     if path == "pyproject.toml":
-        return _pyproject()
+        return _pyproject("csv_aggregator_service")
     if path == "README.md":
         return _readme(prompt)
     if path.endswith("__init__.py"):
@@ -44,15 +56,136 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
     return "# Generated Stage 2 package placeholder.\n"
 
 
-def _pyproject() -> str:
+def _pyproject(package: str) -> str:
     return (
         "[project]\n"
-        'name = "csv_aggregator_service"\n'
+        f'name = "{package}"\n'
         'version = "0.1.0"\n'
         'requires-python = ">=3.10"\n'
         'dependencies = ["fastapi"]\n\n'
         "[tool.pytest.ini_options]\n"
         'testpaths = ["tests"]\n'
+    )
+
+
+def _kv_content(path: str, prompt: str) -> str:
+    if path == "pyproject.toml":
+        return _pyproject("kv_store_service")
+    if path == "README.md":
+        return _kv_readme(prompt)
+    if path.endswith("__init__.py"):
+        return '__all__ = ["__version__"]\n__version__ = "0.1.0"\n'
+    if path.endswith("app.py"):
+        return _kv_app()
+    if path.endswith("store.py"):
+        return _kv_store()
+    if path.endswith("test_store.py"):
+        return _kv_test_store()
+    if path.endswith("test_api.py"):
+        return _kv_test_api()
+    return "# Generated Stage 2 FastAPI KV package placeholder.\n"
+
+
+def _kv_readme(prompt: str) -> str:
+    return (
+        "# fastapi_kv_store\n\n"
+        f"Prompt: {prompt}\n\n"
+        "Local FastAPI service with in-memory key/value CRUD operations and controlled errors.\n\n"
+        "Run tests: `python -m pytest tests -q`.\n"
+        "Run app: `uvicorn kv_store_service.app:app --app-dir src`.\n"
+    )
+
+
+def _kv_store() -> str:
+    return (
+        "from __future__ import annotations\n\n"
+        "class KeyValueStore:\n"
+        "    def __init__(self) -> None:\n"
+        "        self._items: dict[str, str] = {}\n\n"
+        "    def put(self, key: str, value: str) -> dict[str, str]:\n"
+        "        if not key.strip():\n"
+        "            raise ValueError('key must not be empty')\n"
+        "        self._items[key] = value\n"
+        "        return {'key': key, 'value': value}\n\n"
+        "    def get(self, key: str) -> dict[str, str] | None:\n"
+        "        value = self._items.get(key)\n"
+        "        return None if value is None else {'key': key, 'value': value}\n\n"
+        "    def delete(self, key: str) -> bool:\n"
+        "        return self._items.pop(key, None) is not None\n\n"
+        "    def all(self) -> list[dict[str, str]]:\n"
+        "        return [{'key': key, 'value': value} for key, value in sorted(self._items.items())]\n"
+    )
+
+
+def _kv_app() -> str:
+    return (
+        "from __future__ import annotations\n\n"
+        "from fastapi import FastAPI, HTTPException\n"
+        "from pydantic import BaseModel\n\n"
+        "from kv_store_service.store import KeyValueStore\n\n\n"
+        "app = FastAPI(title='Key Value Store Service')\n"
+        "store = KeyValueStore()\n\n\n"
+        "class ItemPayload(BaseModel):\n"
+        "    value: str\n\n\n"
+        "@app.get('/health')\n"
+        "def health() -> dict[str, str]:\n"
+        "    return {'status': 'ok'}\n\n\n"
+        "@app.get('/items')\n"
+        "def list_items() -> list[dict[str, str]]:\n"
+        "    return store.all()\n\n\n"
+        "@app.put('/items/{key}')\n"
+        "def put_item(key: str, payload: ItemPayload) -> dict[str, str]:\n"
+        "    try:\n"
+        "        return store.put(key, payload.value)\n"
+        "    except ValueError as exc:\n"
+        "        raise HTTPException(status_code=400, detail=str(exc)) from exc\n\n\n"
+        "@app.get('/items/{key}')\n"
+        "def get_item(key: str) -> dict[str, str]:\n"
+        "    item = store.get(key)\n"
+        "    if item is None:\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return item\n\n\n"
+        "@app.delete('/items/{key}')\n"
+        "def delete_item(key: str) -> dict[str, str]:\n"
+        "    if not store.delete(key):\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return {'status': 'deleted', 'key': key}\n"
+    )
+
+
+def _kv_test_store() -> str:
+    return (
+        "from kv_store_service.store import KeyValueStore\n\n\n"
+        "def test_store_put_get_delete():\n"
+        "    store = KeyValueStore()\n"
+        "    assert store.put('a', '1') == {'key': 'a', 'value': '1'}\n"
+        "    assert store.get('a') == {'key': 'a', 'value': '1'}\n"
+        "    assert store.delete('a') is True\n"
+        "    assert store.get('a') is None\n\n\n"
+        "def test_store_rejects_empty_key():\n"
+        "    try:\n"
+        "        KeyValueStore().put('', 'x')\n"
+        "    except ValueError as exc:\n"
+        "        assert 'key' in str(exc)\n"
+        "    else:\n"
+        "        raise AssertionError('empty key must fail')\n"
+    )
+
+
+def _kv_test_api() -> str:
+    return (
+        "from fastapi.testclient import TestClient\n\n"
+        "from kv_store_service.app import app\n\n\n"
+        "def test_health_endpoint():\n"
+        "    assert TestClient(app).get('/health').json() == {'status': 'ok'}\n\n\n"
+        "def test_item_crud_flow():\n"
+        "    client = TestClient(app)\n"
+        "    assert client.put('/items/sample', json={'value': 'one'}).json() == {'key': 'sample', 'value': 'one'}\n"
+        "    assert client.get('/items/sample').json() == {'key': 'sample', 'value': 'one'}\n"
+        "    assert client.get('/items').status_code == 200\n"
+        "    assert client.delete('/items/sample').json() == {'status': 'deleted', 'key': 'sample'}\n\n\n"
+        "def test_missing_item_returns_404():\n"
+        "    assert TestClient(app).get('/items/missing').status_code == 404\n"
     )
 
 

@@ -107,12 +107,12 @@ def _checks(
         "cli_uses_argparse": _is_api_project(source_text) or ("import argparse" in source_text and "parse_args" in source_text),
         "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input')" in source_text and "add_argument('output')" in source_text),
         "has_fastapi_app": not _is_api_project(source_text) or ("FastAPI(" in source_text and "@app." in source_text),
-        "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and "/aggregate" in test_text),
-        "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=400" in source_text),
+        "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text)),
+        "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=" in source_text),
         "has_tests": bool(test_files),
-        "has_core_test": any(item.endswith(("test_core.py", "test_aggregator.py")) for item in test_files),
+        "has_core_test": any(item.endswith(("test_core.py", "test_aggregator.py", "test_store.py")) for item in test_files),
         "has_cli_test": _is_api_project(source_text) or any(item.endswith("test_cli.py") for item in test_files),
-        "has_fixture": any("/fixtures/" in item.replace("\\", "/") for item in files),
+        "has_fixture": _is_api_project(source_text) or any("/fixtures/" in item.replace("\\", "/") for item in files),
         "has_negative_or_edge_test": _has_negative_or_edge_test(test_text, file_texts),
         "readme_mentions_prompt": _readme_mentions_prompt(file_texts, reference),
         "readme_behavior_aligned": _readme_behavior_aligned(file_texts, reference),
@@ -193,7 +193,7 @@ def _read_project_texts(project_dir: Path, files: list[str]) -> dict[str, str]:
 
 def _has_negative_or_edge_test(test_text: str, file_texts: dict[str, str]) -> bool:
     fixture_text = "\n".join(value for key, value in file_texts.items() if "/fixtures/" in key.replace("\\", "/"))
-    markers = ["malformed", "invalid", "unsupported", "missing", "empty", "skipped", "path traversal", "not-json"]
+    markers = ["malformed", "invalid", "unsupported", "missing", "empty", "skipped", "path traversal", "not-json", "stats('')"]
     return any(marker in test_text.lower() or marker in fixture_text.lower() for marker in markers)
 
 
@@ -210,7 +210,7 @@ def _has_dependency_policy(source_text: str, pyproject: str) -> bool:
 def _readme_has_run_command(source_text: str, readme: str) -> bool:
     lower = readme.lower()
     if _is_api_project(source_text):
-        return "uvicorn" in lower and "pytest" in lower
+        return "uvicorn" in lower and "pytest" in lower and "app:app" in lower
     return "pytest" in lower
 
 

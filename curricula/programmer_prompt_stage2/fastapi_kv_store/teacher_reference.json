@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, README, тесты и команду запуска.",
+  "expected_steps": [
+    "classify prompt as bounded FastAPI service",
+    "create isolated FastAPI package scaffold with README and tests",
+    "define key/value input and JSON response contract",
+    "separate store logic from API endpoint",
+    "return controlled 404 errors for missing items",
+    "add API and core tests",
+    "run project-scoped tests and produce release instructions"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/kv_store_service/__init__.py",
+    "src/kv_store_service/app.py",
+    "src/kv_store_service/store.py",
+    "tests/test_store.py",
+    "tests/test_api.py"
+  ],
+  "acceptance_criteria": [
+    "FastAPI app exposes health and item endpoints",
+    "items can be created read updated and deleted",
+    "missing items return a controlled 404 response",
+    "store logic is separated from API endpoint",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture",
+    "dependency_policy"
+  ]
+}

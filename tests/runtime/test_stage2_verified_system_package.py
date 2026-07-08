@@ -21,6 +21,15 @@ FASTAPI_PROMPT = (
     "валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт, "
     "имеет README, тесты и команду запуска."
 )
+TEXT_STATS_PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая читает текстовый файл, "
+    "считает строки, слова и символы, сохраняет JSON-отчёт, имеет README и тесты."
+)
+FASTAPI_KV_PROMPT = (
+    "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, "
+    "хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, "
+    "README, тесты и команду запуска."
+)
 
 
 def test_prompt_adequacy_gate_accepts_bounded_cli_prompt():
@@ -82,6 +91,41 @@ def test_verified_system_package_builds_fastapi_csv_service(tmp_path: Path):
     assert checks["has_controlled_api_error"] is True
     assert report["tests"]["missing_acceptance"] == []
     assert (Path(report["project_dir"]) / "src" / "csv_aggregator_service" / "app.py").is_file()
+
+
+def test_verified_system_package_builds_text_stats_cli(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=TEXT_STATS_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert report["tests"]["missing_acceptance"] == []
+    assert (Path(report["project_dir"]) / "src" / "text_stats" / "stats.py").is_file()
+
+
+def test_verified_system_package_builds_fastapi_kv_store(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=FASTAPI_KV_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    checks = report["tester_review"]["checks"]
+
+    assert report["status"] == "ok"
+    assert report["system_type"] == "fastapi_service"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert checks["has_fastapi_app"] is True
+    assert checks["has_api_tests"] is True
+    assert checks["has_controlled_api_error"] is True
+    assert report["tests"]["missing_acceptance"] == []
+    assert (Path(report["project_dir"]) / "src" / "kv_store_service" / "store.py").is_file()
 
 
 def test_stage2_debug_loop_repairs_controlled_fastapi_error(tmp_path: Path):

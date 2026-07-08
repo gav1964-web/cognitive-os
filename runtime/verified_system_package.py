@@ -101,8 +101,12 @@ def _blocked_report(prompt: str, gate: dict[str, Any], case_name: str | None) ->
 
 def _select_case(prompt: str) -> str | None:
     lower = prompt.lower()
+    if "fastapi" in lower and ("key" in lower or "ключ" in lower or "crud" in lower or "items" in lower):
+        return "fastapi_kv_store"
     if "fastapi" in lower and "csv" in lower and ("агрег" in lower or "aggreg" in lower):
         return "fastapi_csv_aggregator"
+    if ("text" in lower or "текст" in lower) and ("stats" in lower or "стат" in lower or "word" in lower or "слов" in lower):
+        return "text_stats_cli"
     if "jsonl" in lower and ("error" in lower or "лог" in lower or "log" in lower):
         return "json_log_filter_cli"
     return None
@@ -119,7 +123,8 @@ def _documentation_pack(programmer: dict[str, Any], tester: dict[str, Any], syst
         "python -m pytest tests -q",
     ]
     if system_type == "fastapi_service":
-        run_instructions.append("uvicorn csv_aggregator_service.app:app --app-dir src")
+        package = _fastapi_package(programmer)
+        run_instructions.append(f"uvicorn {package}.app:app --app-dir src")
     else:
         run_instructions.append("run package CLI through generated module main() or python -m package.cli when packaged")
     return {
@@ -130,6 +135,14 @@ def _documentation_pack(programmer: dict[str, Any], tester: dict[str, Any], syst
             "missing_acceptance": dict(tester.get("coverage", {})).get("missing_acceptance", []),
         },
     }
+
+
+def _fastapi_package(programmer: dict[str, Any]) -> str:
+    files = [str(row.get("path") or "") for row in programmer.get("files", [])]
+    for path in files:
+        if path.startswith("src/") and path.endswith("/app.py"):
+            return path.split("/")[1]
+    return "package"
 
 
 def _tester_limitations(tester: dict[str, Any]) -> list[str]:
