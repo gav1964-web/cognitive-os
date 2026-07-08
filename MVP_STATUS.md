@@ -5,9 +5,9 @@ Generated after the July 6, 2026 field pass.
 
 ## Current Verdict
 
-Status: `MVP-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials`.
+Status: `MVP-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; Stage 3 product-slice track started`.
 
-The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, and prepare a Foundry candidate without modifying the analyzed source project or changing the runtime registry automatically. Direct source patch application is still blocked in MVP.
+The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. Direct source patch application is still blocked in MVP.
 
 ## Verified Layers
 
@@ -20,6 +20,7 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
 | L3.5 spinal layer | Deterministic known-route planner and project signals are operational | goal reports |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
+| Stage 3 product slice | Initial `ProductSliceSpec` contract wraps a verified package with scenarios, architecture decision, task graph and release decision | `tools/product_slice.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
 | Knowledge Gap Loop | Installed-package probe, official-docs fetch and optional GitHub metadata evidence are implemented | knowledge tests |
 
@@ -104,6 +105,7 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 ## Known Limits
 
 * L4 external model calls are optional and not required for readiness; the latest project `5` pass used deterministic fallback.
+* Stage 3 is currently a contract wrapper over Stage 2 verified packages, not a general prompt-to-product generator.
 * `analysis_tasks` are proposed backlog items, not automatic edits.
 * Foundry candidates are not promoted without explicit approval.
 * GitHub evidence is metadata only and not authority.
@@ -113,4 +115,4 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 
 ## Next Best Step
 
-The next engineering step is to promote no code yet. First, review `capability_5_build_key` as a generated candidate, then decide whether to run explicit promotion or use project `5` to harden Foundry extraction for class/static methods and domain-object adapters.
+The next engineering step is to grow Stage 3 from a verified package wrapper into a small product-slice pipeline: richer requirement decomposition, explicit task dependencies, package-level documentation review, and bounded debug/rework loops across product scenarios.

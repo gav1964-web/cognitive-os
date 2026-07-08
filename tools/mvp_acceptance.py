@@ -13,6 +13,7 @@ import mvp_acceptance_checks as checks
 from mvp_acceptance_report import AcceptanceReport
 from mvp_acceptance_role_skills import role_skill_checks
 from mvp_acceptance_stage2 import stage2_checks
+from mvp_acceptance_stage3 import stage3_checks
 
 
 def main() -> int:
@@ -309,6 +310,7 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> Non
         check=checks.implementer_curriculum_ok,
     )
     stage2_checks(report)
+    stage3_checks(report)
     report.command(
         "project_extraction_proposal",
         [

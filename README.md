@@ -183,9 +183,30 @@ The loop is acceptance-tested as a separate L4 programmer capability: a probe in
 The same probe path also covers CLI input/output contract repair for generated file-processing utilities.
 It also covers missing negative or edge-case evidence, such as empty text input and malformed JSONL fixture handling.
 
+### Stage 3: Prompt To Verified Product Slice
+
+Stage 3 starts the post-MVP track:
+
+```text
+adequate prompt
+-> ProductSliceSpec
+-> ArchitectureDecisionRecord
+-> implementation task graph
+-> Stage 2 verified package
+-> product release decision
+```
+
+The current Stage 3 slice deliberately reuses Stage 2 as the execution engine. It does not generate arbitrary products and does not edit user source trees. Its job is to lift a verified package into a product-level contract that names user scenarios, inputs/outputs, architecture decision, implementation tasks, verification evidence, and release decision.
+
+Run it with:
+
+```powershell
+python tools/product_slice.py --root . --curriculum-dir curricula/programmer_prompt_stage2 --prompt "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, README, тесты и команду запуска." --write
+```
+
 ## Current MVP Status
 
-Current snapshot: **MVP-ready for controlled analysis/planning, sandbox programmer-executor, Foundry, and verified-package field trials.**
+Current snapshot: **MVP-ready for controlled analysis/planning, sandbox programmer-executor, Foundry, and verified-package field trials. Stage 3 product-slice work has started as the next controlled track.**
 
 Verified areas include:
 
