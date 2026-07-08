@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "role",
+    "status",
+    "goal",
+    "decision_summary",
+    "subsystem_boundaries",
+    "capability_model",
+    "risks",
+    "non_goals",
+    "open_questions",
+    "traceability",
+    "architecture_options",
+    "chosen_option",
+    "rejected_options",
+    "spec_writer_brief",
+    "next_artifact",
+    "forbidden_actions_observed"
+  ],
+  "properties": {
+    "artifact_type": {"const": "ArchitectureDecisionRecord"},
+    "role": {"const": "architect"},
+    "status": {"enum": ["ok", "blocked"]},
+    "goal": {"type": "string"},
+    "decision_summary": {"type": "string"},
+    "subsystem_boundaries": {"type": "array"},
+    "capability_model": {"type": "array"},
+    "risks": {"type": "array"},
+    "non_goals": {"type": "array"},
+    "open_questions": {"type": "array"},
+    "traceability": {"type": "array"},
+    "architecture_options": {"type": "array"},
+    "chosen_option": {"type": "object"},
+    "rejected_options": {"type": "array"},
+    "spec_writer_brief": {"type": "object"},
+    "next_artifact": {"type": "object"},
+    "forbidden_actions_observed": {"type": "array"}
+  },
+  "additionalProperties": true
+}

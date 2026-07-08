@@ -1,0 +1,13 @@
+{
+  "id": "scan_project_tree",
+  "version": "0.1.0",
+  "entrypoint": "plugins.scan_project_tree.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

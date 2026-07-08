@@ -1,0 +1,13 @@
+{
+  "id": "github_repository_search",
+  "version": "0.1.0",
+  "entrypoint": "plugins.github_repository_search.src.main:run",
+  "determinism_grade": "D",
+  "side_effects": {
+    "filesystem": "none",
+    "network": "allowlist",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

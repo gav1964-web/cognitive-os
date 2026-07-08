@@ -1,0 +1,11 @@
+{
+  "expected_entrypoints": ["app.py"],
+  "expected_capability_candidates": ["parse_payload", "call_provider", "write_audit", "/process"],
+  "expected_broad_functions": [],
+  "expected_hidden_orchestrators": [],
+  "expected_side_effects": ["filesystem"],
+  "expected_idempotency_risks": ["write_audit", "process_request"],
+  "expected_checkpoint_candidates": ["request_capture", "validation"],
+  "expected_minimal_extraction_plan": ["parse_payload", "call_provider", "write_audit"],
+  "expected_best_extraction_candidate": "app.py:parse_payload"
+}

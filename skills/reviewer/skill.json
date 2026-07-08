@@ -1,0 +1,31 @@
+{
+  "id": "reviewer",
+  "version": "0.1.0",
+  "role": "reviewer",
+  "layer": "L4",
+  "purpose": "Convert spec, implementation plan, test plan and optional test results into review findings.",
+  "input_artifacts": [
+    "TechnicalSpec",
+    "ImplementationPlan",
+    "TestPlan",
+    "TestResult"
+  ],
+  "output_artifacts": [
+    "ReviewFindings",
+    "RiskAssessment",
+    "ReworkTasks"
+  ],
+  "forbidden_actions": [
+    "write_code",
+    "edit_registry",
+    "execute_pipeline",
+    "promote_candidate"
+  ],
+  "quality_checks": [
+    "findings present",
+    "risk assessment present",
+    "contract violation check present",
+    "architecture drift check present",
+    "recommendation present"
+  ]
+}

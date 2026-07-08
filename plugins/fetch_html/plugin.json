@@ -1,0 +1,14 @@
+{
+  "id": "fetch_html",
+  "version": "0.1.0",
+  "entrypoint": "plugins.fetch_html.src.main:run",
+  "determinism_grade": "C",
+  "side_effects": {
+    "filesystem": "none",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:fetch_html_dev"
+}
+

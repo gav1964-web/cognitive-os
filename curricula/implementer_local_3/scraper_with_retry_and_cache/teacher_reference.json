@@ -1,0 +1,47 @@
+{
+  "schema_version": "implementer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/scraper_with_retry_and_cache",
+  "teacher_profile": "implementer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_plan": {
+    "candidate": "scraper.py:parse_links",
+    "patch_scope": [
+      "scraper.py:parse_links",
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ],
+    "evidence_scope": [
+      "scraper.py:parse_links",
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ],
+    "writable_scope": [
+      "scraper.py:parse_links"
+    ],
+    "expected_files": [
+      "scraper.py"
+    ],
+    "verification_commands": [
+      "python -m pytest -q",
+      "python -m compileall runtime tools plugins",
+      "python tools/mvp_acceptance.py --root . --skip-pytest"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "min_acceptance_mapping_count": 4
+  },
+  "teacher_review": {
+    "project_condition": "scraper project where parse_links is the only safe first implementation target",
+    "expected_plan_behavior": [
+      "bind implementation target to parse_links",
+      "keep fetch_html and save_cache as risky neighboring scope, not as implementation target",
+      "prepare verification without live network calls"
+    ],
+    "known_risks": [
+      "fetch_html needs timeout/quarantine policy",
+      "save_cache needs idempotency guard"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["path"],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5000
+    },
+    "max_depth": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 8
+    },
+    "include_hidden": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

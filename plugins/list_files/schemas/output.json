@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": ["files"],
+  "properties": {
+    "files": { "type": "array" }
+  },
+  "additionalProperties": false
+}

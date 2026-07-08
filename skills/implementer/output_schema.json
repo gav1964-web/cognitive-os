@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "role",
+    "status",
+    "patch_scope",
+    "expected_files",
+    "implementation_steps",
+    "verification_commands",
+    "rollback_plan",
+    "acceptance_mapping",
+    "forbidden_actions_observed"
+  ],
+  "properties": {
+    "artifact_type": {"const": "ImplementationPlan"},
+    "role": {"const": "implementer"},
+    "status": {"enum": ["ok", "blocked"]},
+    "patch_scope": {"type": "array"},
+    "expected_files": {"type": "array"},
+    "implementation_steps": {"type": "array"},
+    "verification_commands": {"type": "array"},
+    "rollback_plan": {"type": "object"},
+    "acceptance_mapping": {"type": "array"},
+    "forbidden_actions_observed": {"type": "array"}
+  },
+  "additionalProperties": true
+}

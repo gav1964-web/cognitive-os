@@ -1,0 +1,25 @@
+{
+  "schema_version": "architect_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/scraper_with_retry_and_cache",
+  "teacher_profile": "architect",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "facts": {
+    "entrypoints": [],
+    "capability_candidates": ["scraper.py:parse_links", "scraper.py:fetch_html", "scraper.py:save_cache"],
+    "pure_transforms": ["scraper.py:parse_links"],
+    "hidden_orchestrators": ["scraper.py:fetch_html", "scraper.py:scrape"],
+    "side_effects": ["filesystem", "network"],
+    "idempotency_risks": ["scraper.py:fetch_html", "scraper.py:save_cache"],
+    "minimal_extraction_plan": ["scraper.py:parse_links", "scraper.py:fetch_html", "scraper.py:save_cache"]
+  },
+  "judgments": {
+    "chosen_option_id": "minimal_safe_extraction",
+    "best_first_candidate": "scraper.py:parse_links",
+    "risk_sources": ["ProjectMapReport.risks"],
+    "subsystem_boundary_ids": ["runtime_entrypoints", "scraper.py:fetch_html", "scraper.py:scrape"],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ]
+  }
+}

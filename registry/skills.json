@@ -1,0 +1,116 @@
+{
+  "skills": [
+    {
+      "id": "architect",
+      "version": "0.2.0",
+      "layer": "L4",
+      "purpose": "Convert project facts and a goal into an ArchitectureDecisionRecord.",
+      "input_artifacts": [
+        "ProjectMapReport",
+        "GoalStatement",
+        "Constraints"
+      ],
+      "output_artifacts": [
+        "ArchitectureDecisionRecord",
+        "SubsystemBoundaryMap",
+        "CapabilityModel",
+        "RiskList"
+      ],
+      "forbidden_actions": [
+        "write_code",
+        "edit_registry",
+        "execute_pipeline",
+        "promote_candidate"
+      ],
+      "entrypoint": "runtime.role_skills:run_architect_skill"
+    },
+    {
+      "id": "spec_writer",
+      "version": "0.1.0",
+      "layer": "L4",
+      "purpose": "Convert an ArchitectureDecisionRecord into an implementable TechnicalSpec.",
+      "input_artifacts": [
+        "ArchitectureDecisionRecord"
+      ],
+      "output_artifacts": [
+        "TechnicalSpec",
+        "AcceptanceCriteria",
+        "TraceabilityTable"
+      ],
+      "forbidden_actions": [
+        "write_code",
+        "edit_registry",
+        "execute_pipeline",
+        "promote_candidate"
+      ],
+      "entrypoint": "runtime.role_skills:run_spec_writer_skill"
+    },
+    {
+      "id": "implementer",
+      "version": "0.1.0",
+      "layer": "L4",
+      "purpose": "Convert a TechnicalSpec into a bounded ImplementationPlan.",
+      "input_artifacts": [
+        "TechnicalSpec"
+      ],
+      "output_artifacts": [
+        "ImplementationPlan",
+        "PatchScope",
+        "RollbackPlan"
+      ],
+      "forbidden_actions": [
+        "write_code",
+        "edit_registry",
+        "execute_pipeline",
+        "promote_candidate"
+      ],
+      "entrypoint": "runtime.role_skills:run_implementer_skill"
+    },
+    {
+      "id": "tester",
+      "version": "0.1.0",
+      "layer": "L4",
+      "purpose": "Convert a TechnicalSpec and ImplementationPlan into an independent TestPlan.",
+      "input_artifacts": [
+        "TechnicalSpec",
+        "ImplementationPlan"
+      ],
+      "output_artifacts": [
+        "TestPlan",
+        "SmokeChecklist",
+        "RegressionRisks"
+      ],
+      "forbidden_actions": [
+        "write_code",
+        "edit_registry",
+        "execute_pipeline",
+        "promote_candidate"
+      ],
+      "entrypoint": "runtime.role_skills:run_tester_skill"
+    },
+    {
+      "id": "reviewer",
+      "version": "0.1.0",
+      "layer": "L4",
+      "purpose": "Convert spec, implementation plan, test plan and optional test results into ReviewFindings.",
+      "input_artifacts": [
+        "TechnicalSpec",
+        "ImplementationPlan",
+        "TestPlan",
+        "TestResult"
+      ],
+      "output_artifacts": [
+        "ReviewFindings",
+        "RiskAssessment",
+        "ReworkTasks"
+      ],
+      "forbidden_actions": [
+        "write_code",
+        "edit_registry",
+        "execute_pipeline",
+        "promote_candidate"
+      ],
+      "entrypoint": "runtime.role_skills:run_reviewer_skill"
+    }
+  ]
+}

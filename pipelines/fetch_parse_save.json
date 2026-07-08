@@ -1,0 +1,37 @@
+{
+  "id": "fetch_parse_save",
+  "version": "0.1.0",
+  "nodes": [
+    {
+      "id": "fetch",
+      "capability": "fetch_html",
+      "input": {
+        "url": "$input.url"
+      }
+    },
+    {
+      "id": "parse",
+      "capability": "parse_title",
+      "input": {
+        "html": "$nodes.fetch.output.html"
+      }
+    },
+    {
+      "id": "save",
+      "capability": "save_json",
+      "input": {
+        "data": "$nodes.parse.output",
+        "path": "$input.output_path"
+      }
+    }
+  ],
+  "edges": [
+    ["fetch", "parse"],
+    ["parse", "save"]
+  ],
+  "retry_policy": {
+    "max_attempts": 2,
+    "retry_on": ["transient"]
+  }
+}
+

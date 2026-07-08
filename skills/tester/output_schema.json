@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "role",
+    "status",
+    "test_strategy",
+    "acceptance_tests",
+    "negative_tests",
+    "smoke_checklist",
+    "regression_risks",
+    "reproducibility",
+    "forbidden_actions_observed"
+  ],
+  "properties": {
+    "artifact_type": {"const": "TestPlan"},
+    "role": {"const": "tester"},
+    "status": {"enum": ["ok", "blocked"]},
+    "test_strategy": {"type": "object"},
+    "acceptance_tests": {"type": "array"},
+    "negative_tests": {"type": "array"},
+    "smoke_checklist": {"type": "array"},
+    "regression_risks": {"type": "array"},
+    "reproducibility": {"type": "object"},
+    "forbidden_actions_observed": {"type": "array"}
+  },
+  "additionalProperties": true
+}

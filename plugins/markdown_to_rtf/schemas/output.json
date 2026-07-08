@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": ["rtf"],
+  "properties": {
+    "rtf": { "type": "string" }
+  },
+  "additionalProperties": false
+}

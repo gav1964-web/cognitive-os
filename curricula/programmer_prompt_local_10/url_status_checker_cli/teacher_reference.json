@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-утилиту, которая читает список URL и сохраняет CSV с HTTP-статусами, но тесты не должны ходить в сеть.",
+  "expected_steps": [
+    "clarify timeout retry and no-live-network test policy",
+    "create small CLI project scaffold with package module, README and tests",
+    "define CSV contract for url and status",
+    "implement URL checker with injectable fetcher",
+    "write CSV status report with deterministic header",
+    "add fixture-based tests without live network",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/url_status_checker/__init__.py",
+    "src/url_status_checker/cli.py",
+    "src/url_status_checker/checker.py",
+    "tests/fixtures/urls.txt",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "URL status checks use injectable fetcher",
+    "default tests require no live network",
+    "CLI writes CSV status report",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

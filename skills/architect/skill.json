@@ -1,0 +1,31 @@
+{
+  "id": "architect",
+  "version": "0.2.0",
+  "role": "architect",
+  "layer": "L4",
+  "purpose": "Convert goals and project facts into architecture decisions.",
+  "input_artifacts": [
+    "ProjectMapReport",
+    "GoalStatement",
+    "Constraints"
+  ],
+  "output_artifacts": [
+    "ArchitectureDecisionRecord"
+  ],
+  "forbidden_actions": [
+    "write_code",
+    "edit_registry",
+    "execute_pipeline",
+    "promote_candidate"
+  ],
+  "quality_checks": [
+    "clear subsystem boundaries",
+    "explicit non-goals",
+    "risk list present",
+    "contract implications present",
+    "traceability present",
+    "architecture options present",
+    "chosen option is explicit",
+    "spec writer brief is present"
+  ]
+}

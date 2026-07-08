@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-утилиту, которая считает строки, слова и символы в текстовом файле и сохраняет JSON-отчет.",
+  "expected_steps": [
+    "clarify text encoding and empty file behavior",
+    "create small CLI project scaffold with package module, README and tests",
+    "define JSON output contract for lines words and chars",
+    "implement pure text statistics transform",
+    "write JSON report with deterministic keys",
+    "add fixture-based tests for stats and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/text_stats/__init__.py",
+    "src/text_stats/cli.py",
+    "src/text_stats/stats.py",
+    "tests/fixtures/sample.txt",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "text fixture produces line word and character counts",
+    "CLI writes JSON statistics",
+    "empty input is handled explicitly",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

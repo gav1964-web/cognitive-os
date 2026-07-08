@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Runtime/generated artifacts
+/artifacts/
+/generated/
+/outputs/
+/reports/
+
+# External cloned benchmark corpora and live field-trial checkouts
+/benchmarks/github_*/
+/benchmarks/github_full_trial_*/
+
+# Machine-local curriculum references
+/curricula/*_external_local_3/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+*.pid
+
+# Packaging/build
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["packages"],
+  "properties": {
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["package", "available", "version"],
+        "properties": {
+          "package": { "type": "string" },
+          "available": { "type": "boolean" },
+          "version": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

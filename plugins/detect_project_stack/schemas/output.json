@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "required": [
+    "root",
+    "languages",
+    "frameworks",
+    "dependency_files",
+    "entrypoints",
+    "scripts",
+    "large_artifacts"
+  ],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "frameworks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dependency_files": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "entrypoints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scripts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "large_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

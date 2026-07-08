@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": ["root", "commands", "skipped"],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

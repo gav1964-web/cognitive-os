@@ -1,0 +1,46 @@
+{
+  "schema_version": "implementer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/simple_cli_tool",
+  "teacher_profile": "implementer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_plan": {
+    "candidate": "main.py:normalize_text",
+    "patch_scope": [
+      "main.py:normalize_text",
+      "main.py:load_text",
+      "main.py:write_json"
+    ],
+    "evidence_scope": [
+      "main.py:normalize_text",
+      "main.py:load_text",
+      "main.py:write_json"
+    ],
+    "writable_scope": [
+      "main.py:normalize_text"
+    ],
+    "expected_files": [
+      "main.py"
+    ],
+    "verification_commands": [
+      "python -m pytest -q",
+      "python -m compileall runtime tools plugins",
+      "python tools/mvp_acceptance.py --root . --skip-pytest"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "min_acceptance_mapping_count": 4
+  },
+  "teacher_review": {
+    "project_condition": "small CLI where implementation planning must stay bound to normalize_text",
+    "expected_plan_behavior": [
+      "bind implementation target to TechnicalSpec.extraction_contract",
+      "keep expected files limited to main.py",
+      "carry acceptance mapping forward without writing code"
+    ],
+    "known_risks": [
+      "write_json remains a filesystem boundary and should only appear in bounded scope"
+    ]
+  }
+}

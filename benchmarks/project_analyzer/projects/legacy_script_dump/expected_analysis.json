@@ -1,0 +1,11 @@
+{
+  "expected_entrypoints": [],
+  "expected_capability_candidates": ["legacy_process_all"],
+  "expected_broad_functions": ["legacy_process_all"],
+  "expected_hidden_orchestrators": [],
+  "expected_side_effects": ["filesystem", "subprocess"],
+  "expected_idempotency_risks": ["legacy_process_all"],
+  "expected_checkpoint_candidates": ["input_discovery", "write_or_publish"],
+  "expected_minimal_extraction_plan": ["legacy_process_all"],
+  "expected_best_extraction_candidate": "legacy.py:legacy_process_all"
+}

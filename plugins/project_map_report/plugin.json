@@ -1,0 +1,13 @@
+{
+  "id": "project_map_report",
+  "version": "0.1.0",
+  "entrypoint": "plugins.project_map_report.src.main:run",
+  "determinism_grade": "A",
+  "side_effects": {
+    "filesystem": "none",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "inspect_installed_packages",
+  "version": "0.1.0",
+  "entrypoint": "plugins.inspect_installed_packages.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "none",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "architect_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/simple_cli_tool",
+  "teacher_profile": "architect",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "facts": {
+    "entrypoints": ["main.py"],
+    "capability_candidates": ["main.py:normalize_text", "main.py:load_text", "main.py:write_json"],
+    "pure_transforms": ["main.py:normalize_text"],
+    "hidden_orchestrators": [],
+    "side_effects": ["filesystem"],
+    "idempotency_risks": ["main.py:write_json"],
+    "minimal_extraction_plan": ["main.py:normalize_text", "main.py:load_text", "main.py:write_json"]
+  },
+  "judgments": {
+    "chosen_option_id": "minimal_safe_extraction",
+    "best_first_candidate": "main.py:normalize_text",
+    "risk_sources": ["architect"],
+    "subsystem_boundary_ids": ["runtime_entrypoints"],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ]
+  }
+}

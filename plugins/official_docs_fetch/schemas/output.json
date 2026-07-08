@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["source", "url", "domain", "title", "text_excerpt", "content_hash", "fetched_chars"],
+  "properties": {
+    "source": { "type": "string" },
+    "url": { "type": "string" },
+    "domain": { "type": "string" },
+    "title": { "type": "string" },
+    "text_excerpt": { "type": "string" },
+    "content_hash": { "type": "string" },
+    "fetched_chars": { "type": "integer" }
+  },
+  "additionalProperties": false
+}

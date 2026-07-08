@@ -1,0 +1,28 @@
+{
+  "id": "spec_writer",
+  "version": "0.1.0",
+  "role": "spec_writer",
+  "layer": "L4",
+  "purpose": "Convert architecture decisions into implementable technical specs.",
+  "input_artifacts": [
+    "ArchitectureDecisionRecord"
+  ],
+  "output_artifacts": [
+    "TechnicalSpec",
+    "AcceptanceCriteria",
+    "TraceabilityTable"
+  ],
+  "forbidden_actions": [
+    "write_code",
+    "edit_registry",
+    "execute_pipeline",
+    "promote_candidate"
+  ],
+  "quality_checks": [
+    "scope is bounded",
+    "acceptance criteria are explicit",
+    "non-goals are preserved",
+    "traceability table is present",
+    "implementation handoff is bounded"
+  ]
+}

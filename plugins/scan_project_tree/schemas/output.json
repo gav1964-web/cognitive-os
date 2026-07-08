@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "required": [
+    "root",
+    "files",
+    "directories",
+    "counts",
+    "extensions",
+    "notable_files",
+    "skipped"
+  ],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "directories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "counts": {
+      "type": "object"
+    },
+    "extensions": {
+      "type": "object"
+    },
+    "notable_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skipped": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

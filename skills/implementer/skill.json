@@ -1,0 +1,28 @@
+{
+  "id": "implementer",
+  "version": "0.1.0",
+  "role": "implementer",
+  "layer": "L4",
+  "purpose": "Convert technical specs into bounded implementation plans.",
+  "input_artifacts": [
+    "TechnicalSpec"
+  ],
+  "output_artifacts": [
+    "ImplementationPlan",
+    "PatchScope",
+    "RollbackPlan"
+  ],
+  "forbidden_actions": [
+    "write_code",
+    "edit_registry",
+    "execute_pipeline",
+    "promote_candidate"
+  ],
+  "quality_checks": [
+    "patch scope is bounded",
+    "expected files are explicit",
+    "verification commands are present",
+    "rollback plan is present",
+    "acceptance mapping is present"
+  ]
+}

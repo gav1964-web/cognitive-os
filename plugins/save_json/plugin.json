@@ -1,0 +1,14 @@
+{
+  "id": "save_json",
+  "version": "0.1.0",
+  "entrypoint": "plugins.save_json.src.main:run",
+  "determinism_grade": "C",
+  "side_effects": {
+    "filesystem": "write_scoped",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:save_json_dev"
+}
+

@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "required": ["root"],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "auto_discover": {
+      "type": "boolean",
+      "default": false
+    },
+    "max_bytes_per_file": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 50000
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 20
+    }
+  },
+  "additionalProperties": false
+}

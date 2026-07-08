@@ -1,0 +1,42 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Сделай локальную FastAPI-службу, которая принимает CSV, валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт и имеет README, тесты и команду запуска.",
+  "expected_steps": [
+    "classify prompt as bounded FastAPI service",
+    "create isolated FastAPI package scaffold with README and tests",
+    "define CSV input contract with required category and value columns",
+    "implement pure aggregation logic separately from API endpoint",
+    "return controlled 400 errors for invalid CSV",
+    "write JSON report to configured output path",
+    "add API and core tests with fixture CSV",
+    "run project-scoped tests and produce release instructions"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/csv_aggregator_service/__init__.py",
+    "src/csv_aggregator_service/app.py",
+    "src/csv_aggregator_service/aggregator.py",
+    "tests/fixtures/sample.csv",
+    "tests/test_aggregator.py",
+    "tests/test_api.py"
+  ],
+  "acceptance_criteria": [
+    "FastAPI app exposes health and aggregate endpoints",
+    "CSV payload is validated for required columns",
+    "aggregates are grouped and written as JSON report",
+    "invalid CSV returns a controlled 400 response",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture",
+    "dependency_policy"
+  ]
+}

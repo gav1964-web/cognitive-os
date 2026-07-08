@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "role",
+    "status",
+    "findings",
+    "risk_assessment",
+    "contract_violations",
+    "architecture_drift",
+    "rework_tasks",
+    "recommendation",
+    "forbidden_actions_observed"
+  ],
+  "properties": {
+    "artifact_type": {"const": "ReviewFindings"},
+    "role": {"const": "reviewer"},
+    "status": {"enum": ["ok", "blocked"]},
+    "findings": {"type": "array"},
+    "risk_assessment": {"type": "array"},
+    "contract_violations": {"type": "array"},
+    "architecture_drift": {"type": "array"},
+    "rework_tasks": {"type": "array"},
+    "recommendation": {"type": "string"},
+    "forbidden_actions_observed": {"type": "array"}
+  },
+  "additionalProperties": true
+}

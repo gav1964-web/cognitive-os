@@ -1,0 +1,42 @@
+{
+  "schema_version": "spec_writer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/data_pipeline_csv_json",
+  "teacher_profile": "spec_writer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_spec": {
+    "candidate": "pipeline.py:normalize_rows",
+    "ranked_candidates": [
+      "pipeline.py:normalize_rows",
+      "pipeline.py:load_csv",
+      "pipeline.py:write_json"
+    ],
+    "source_evidence": [
+      "pipeline.py:normalize_rows",
+      "pipeline.py:load_csv",
+      "pipeline.py:write_json"
+    ],
+    "acceptance_sources": [
+      "pipeline.py:normalize_rows",
+      "pipeline.py:load_csv",
+      "pipeline.py:write_json"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "forbidden_candidates": [
+      "pipeline.py:write_json"
+    ]
+  },
+  "teacher_review": {
+    "project_condition": "CSV-to-JSON pipeline with pure normalization between file IO helpers",
+    "expected_spec_behavior": [
+      "select normalize_rows as first extraction contract",
+      "carry load_csv/write_json into evidence and acceptance",
+      "avoid filesystem writer as first candidate"
+    ],
+    "known_risks": [
+      "write_json needs idempotency policy before replay"
+    ]
+  }
+}

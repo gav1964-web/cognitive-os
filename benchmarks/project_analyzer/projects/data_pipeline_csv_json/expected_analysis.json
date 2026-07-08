@@ -1,0 +1,11 @@
+{
+  "expected_entrypoints": ["run_pipeline.sh"],
+  "expected_capability_candidates": ["load_csv", "normalize_rows", "write_json"],
+  "expected_broad_functions": [],
+  "expected_hidden_orchestrators": ["run_pipeline"],
+  "expected_side_effects": ["filesystem"],
+  "expected_idempotency_risks": ["write_json"],
+  "expected_checkpoint_candidates": ["input_discovery", "parsed_intermediate"],
+  "expected_minimal_extraction_plan": ["load_csv", "normalize_rows", "write_json"],
+  "expected_best_extraction_candidate": "pipeline.py:normalize_rows"
+}

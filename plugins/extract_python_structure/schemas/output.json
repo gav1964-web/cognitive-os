@@ -1,0 +1,61 @@
+{
+  "type": "object",
+  "required": ["root", "files", "imports", "routes", "skipped"],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "imports": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "central_nodes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "wide_functions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "pure_transform_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "contracts": {
+      "type": "object"
+    },
+    "external_dependencies": {
+      "type": "object"
+    },
+    "project_insights": {
+      "type": "object"
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

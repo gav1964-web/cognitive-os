@@ -1,0 +1,11 @@
+{
+  "expected_entrypoints": ["main.py"],
+  "expected_capability_candidates": ["price_item", "create_item", "ItemRequest", "ItemResponse"],
+  "expected_broad_functions": [],
+  "expected_hidden_orchestrators": [],
+  "expected_side_effects": [],
+  "expected_idempotency_risks": [],
+  "expected_checkpoint_candidates": ["request_capture", "validation"],
+  "expected_minimal_extraction_plan": ["price_item", "/items"],
+  "expected_best_extraction_candidate": "main.py:price_item"
+}

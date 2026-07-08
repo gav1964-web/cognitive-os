@@ -1,0 +1,2 @@
+"""normalize_text tests."""
+

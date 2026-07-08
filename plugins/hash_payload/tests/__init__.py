@@ -1,0 +1,2 @@
+"""hash_payload tests."""
+

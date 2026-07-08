@@ -1,0 +1,44 @@
+{
+  "schema_version": "spec_writer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/scraper_with_retry_and_cache",
+  "teacher_profile": "spec_writer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_spec": {
+    "candidate": "scraper.py:parse_links",
+    "ranked_candidates": [
+      "scraper.py:parse_links",
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ],
+    "source_evidence": [
+      "scraper.py:parse_links",
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ],
+    "acceptance_sources": [
+      "scraper.py:parse_links",
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "forbidden_candidates": [
+      "scraper.py:fetch_html",
+      "scraper.py:save_cache"
+    ]
+  },
+  "teacher_review": {
+    "project_condition": "scraper with network fetch, HTML parser and filesystem cache",
+    "expected_spec_behavior": [
+      "select parse_links as pure first extraction contract",
+      "represent fetch/cache as risky evidence and acceptance sources",
+      "do not pick network or cache side-effect helpers as first candidate"
+    ],
+    "known_risks": [
+      "fetch_html requires network timeout/quarantine policy",
+      "save_cache requires idempotency policy"
+    ]
+  }
+}

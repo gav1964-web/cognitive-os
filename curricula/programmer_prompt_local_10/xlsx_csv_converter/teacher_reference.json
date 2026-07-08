@@ -1,0 +1,42 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши конвертер .xls/.xlsx в .csv и обратно.",
+  "expected_steps": [
+    "clarify exact support for legacy .xls, multiple sheets, encoding and delimiter",
+    "create small CLI project scaffold with package module, README and tests",
+    "define conversion contracts for xlsx-to-csv, csv-to-xlsx and unsupported xls behavior",
+    "choose dependencies explicitly and isolate legacy xls support behind an adapter",
+    "implement deterministic CSV dialect handling",
+    "add fixture-based tests for workbook to CSV and CSV to workbook",
+    "add negative tests for missing files and unsupported formats",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/sheet_csv_converter/__init__.py",
+    "src/sheet_csv_converter/cli.py",
+    "src/sheet_csv_converter/contracts.py",
+    "src/sheet_csv_converter/converter.py",
+    "tests/fixtures/sample.csv",
+    "tests/test_converter.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "xlsx to csv conversion is covered by tests",
+    "csv to xlsx conversion is covered by tests",
+    "legacy xls limitation or adapter is explicit",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "dependency_policy",
+    "implementation_trace_capture"
+  ]
+}

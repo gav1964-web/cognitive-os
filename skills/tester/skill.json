@@ -1,0 +1,29 @@
+{
+  "id": "tester",
+  "version": "0.1.0",
+  "role": "tester",
+  "layer": "L4",
+  "purpose": "Convert specs and implementation plans into independent test plans.",
+  "input_artifacts": [
+    "TechnicalSpec",
+    "ImplementationPlan"
+  ],
+  "output_artifacts": [
+    "TestPlan",
+    "SmokeChecklist",
+    "RegressionRisks"
+  ],
+  "forbidden_actions": [
+    "write_code",
+    "edit_registry",
+    "execute_pipeline",
+    "promote_candidate"
+  ],
+  "quality_checks": [
+    "acceptance tests mapped",
+    "negative tests present",
+    "smoke checklist present",
+    "regression risks present",
+    "reproducibility notes present"
+  ]
+}

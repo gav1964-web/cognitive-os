@@ -1,0 +1,46 @@
+{
+  "schema_version": "implementer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/data_pipeline_csv_json",
+  "teacher_profile": "implementer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_plan": {
+    "candidate": "pipeline.py:normalize_rows",
+    "patch_scope": [
+      "pipeline.py:normalize_rows",
+      "pipeline.py:load_csv",
+      "pipeline.py:write_json"
+    ],
+    "evidence_scope": [
+      "pipeline.py:normalize_rows",
+      "pipeline.py:load_csv",
+      "pipeline.py:write_json"
+    ],
+    "writable_scope": [
+      "pipeline.py:normalize_rows"
+    ],
+    "expected_files": [
+      "pipeline.py"
+    ],
+    "verification_commands": [
+      "python -m pytest -q",
+      "python -m compileall runtime tools plugins",
+      "python tools/mvp_acceptance.py --root . --skip-pytest"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "min_acceptance_mapping_count": 4
+  },
+  "teacher_review": {
+    "project_condition": "CSV-to-JSON pipeline with normalize_rows selected as first implementation target",
+    "expected_plan_behavior": [
+      "bind implementation target to normalize_rows",
+      "keep load_csv and write_json in bounded patch scope as neighboring evidence",
+      "prepare rollback for pipeline.py only"
+    ],
+    "known_risks": [
+      "write_json requires idempotency policy before actual replay"
+    ]
+  }
+}

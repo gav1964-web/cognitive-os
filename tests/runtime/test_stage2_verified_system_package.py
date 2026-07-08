@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from runtime.prompt_adequacy import evaluate_prompt_adequacy
+from runtime.greenfield_scaffold import create_greenfield_scaffold, run_project_verification
+from runtime.greenfield_templates import acceptance_covered
+from runtime.programmer_project_review import review_programmer_project
+from runtime.stage2_debug_loop import run_stage2_debug_loop
+from runtime.verified_system_package import build_verified_system_package
+
+
+PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая читает JSONL-файл логов, "
+    "фильтрует записи уровня ERROR, пропускает malformed строки, сохраняет новый JSONL-файл, "
+    "имеет README и тесты."
+)
+FASTAPI_PROMPT = (
+    "Сделай локальную FastAPI-службу с зависимостью fastapi, которая принимает CSV, "
+    "валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт, "
+    "имеет README, тесты и команду запуска."
+)
+
+
+def test_prompt_adequacy_gate_accepts_bounded_cli_prompt():
+    gate = evaluate_prompt_adequacy(PROMPT).to_dict()
+
+    assert gate["artifact_type"] == "PromptAdequacyGate"
+    assert gate["status"] == "ready"
+    assert gate["system_type"] == "cli"
+    assert gate["checks"]["inputs_defined"] is True
+    assert gate["checks"]["outputs_defined"] is True
+    assert gate["checks"]["dependencies_policy_defined"] is True
+    assert gate["checks"]["success_criteria_verifiable"] is True
+    assert gate["clarification_questions"] == []
+
+
+def test_prompt_adequacy_gate_blocks_vague_prompt():
+    gate = evaluate_prompt_adequacy("сделай что-нибудь").to_dict()
+
+    assert gate["status"] in {"needs_clarification", "unsupported", "too_broad"}
+    assert gate["clarification_questions"]
+
+
+def test_verified_system_package_builds_release_artifact(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_local_10",
+        write=True,
+    )
+
+    assert report["artifact_type"] == "VerifiedSystemPackage"
+    assert report["status"] == "ok"
+    assert report["prompt_adequacy"]["status"] == "ready"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert report["tester_review"]["recommendation"] == "approve"
+    assert report["tests"]["missing_acceptance"] == []
+    assert report["documentation"]["readme"].endswith("/README.md")
+    assert report["invariants"]["direct_user_source_modification"] is False
+    assert Path(report["project_dir"]).is_dir()
+    assert Path(report["package_report_path"]).is_file()
+
+
+def test_verified_system_package_builds_fastapi_csv_service(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=FASTAPI_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    checks = report["tester_review"]["checks"]
+
+    assert report["status"] == "ok"
+    assert report["system_type"] == "fastapi_service"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert checks["has_fastapi_app"] is True
+    assert checks["has_api_tests"] is True
+    assert checks["has_controlled_api_error"] is True
+    assert report["tests"]["missing_acceptance"] == []
+    assert (Path(report["project_dir"]) / "src" / "csv_aggregator_service" / "app.py").is_file()
+
+
+def test_stage2_debug_loop_repairs_controlled_fastapi_error(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_stage2" / "fastapi_csv_aggregator" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="fastapi_csv_aggregator", reference=reference)
+    app_path = Path(scaffold["project_dir"]) / "src" / "csv_aggregator_service" / "app.py"
+    app_text = app_path.read_text(encoding="utf-8")
+    app_text = app_text.replace("from fastapi import FastAPI, HTTPException\n", "from fastapi import FastAPI\n")
+    app_text = app_text.replace(
+        "    try:\n"
+        "        report = aggregate_csv(payload.csv_text)\n"
+        "    except ValueError as exc:\n"
+        "        raise HTTPException(status_code=400, detail=str(exc)) from exc\n",
+        "    report = aggregate_csv(payload.csv_text)\n",
+    )
+    app_path.write_text(app_text, encoding="utf-8")
+    verification = run_project_verification(Path(scaffold["project_dir"]))
+    scaffold["verification"] = verification
+    scaffold["acceptance_covered"] = acceptance_covered("fastapi_csv_aggregator", verification)
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {
+        "status": "needs_rework",
+        "programmer_artifact": scaffold,
+        "tester_review": tester_review,
+    }
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    final_review = debug_loop["final_review_run"]["tester_review"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "has_controlled_api_error" in debug_loop["attempts"][0]["failure_analysis"]["failed_checks"]
+    assert "repair_fastapi_controlled_400" in debug_loop["attempts"][0]["result"]["applied_actions"]
+    assert final_review["recommendation"] == "approve"
+
+
+def test_stage2_debug_loop_repairs_readme_and_dependency_policy(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_stage2" / "fastapi_csv_aggregator" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="fastapi_csv_aggregator", reference=reference)
+    project_dir = Path(scaffold["project_dir"])
+    (project_dir / "README.md").write_text("# broken\n", encoding="utf-8")
+    pyproject = project_dir / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text(encoding="utf-8").replace('dependencies = ["fastapi"]', "dependencies = []"), encoding="utf-8")
+    scaffold["verification"] = run_project_verification(project_dir)
+    scaffold["acceptance_covered"] = acceptance_covered("fastapi_csv_aggregator", scaffold["verification"])
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {"status": "needs_rework", "programmer_artifact": scaffold, "tester_review": tester_review}
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    applied = debug_loop["attempts"][0]["result"]["applied_actions"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "rewrite_readme_prompt" in applied
+    assert "repair_dependency_policy" in applied
+    assert debug_loop["final_review_run"]["tester_review"]["checks"]["readme_has_run_command"] is True
+    assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_dependency_policy"] is True

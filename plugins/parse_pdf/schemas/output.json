@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": [
+    "text",
+    "page_count",
+    "backend"
+  ],
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+    "page_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "backend": {
+      "type": "string",
+      "enum": [
+        "pypdf",
+        "builtin"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

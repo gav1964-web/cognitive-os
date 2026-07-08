@@ -1,0 +1,45 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши скрапер новостей с сайта ixbt.com, который на выходе формирует csv файл из списка новостей.",
+  "expected_steps": [
+    "clarify target section, output columns, date range, robots/rate-limit constraints",
+    "create small CLI project scaffold with package module, README, requirements and tests",
+    "define CSV contract with title, url, date, summary and source fields",
+    "fetch ixbt page through requests/httpx with timeout, user-agent and retry/backoff policy",
+    "parse news list from fixture HTML before touching live network behavior",
+    "normalize relative links, dates and whitespace",
+    "write CSV with deterministic header and UTF-8 encoding",
+    "add fixture-based unit tests for parser and CSV writer",
+    "add optional live smoke test disabled by default",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/ixbt_news_scraper/__init__.py",
+    "src/ixbt_news_scraper/cli.py",
+    "src/ixbt_news_scraper/fetcher.py",
+    "src/ixbt_news_scraper/parser.py",
+    "src/ixbt_news_scraper/csv_writer.py",
+    "tests/fixtures/ixbt_news.html",
+    "tests/test_parser.py",
+    "tests/test_csv_writer.py"
+  ],
+  "acceptance_criteria": [
+    "parser works from fixture without network",
+    "CLI writes a CSV file with stable header",
+    "network call has timeout and identifiable user-agent",
+    "live access is optional and not required for default tests",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

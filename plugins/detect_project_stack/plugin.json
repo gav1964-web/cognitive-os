@@ -1,0 +1,13 @@
+{
+  "id": "detect_project_stack",
+  "version": "0.1.0",
+  "entrypoint": "plugins.detect_project_stack.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

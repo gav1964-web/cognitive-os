@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "role",
+    "status",
+    "scope",
+    "requirements",
+    "acceptance_criteria",
+    "non_goals",
+    "traceability_table",
+    "implementation_handoff",
+    "forbidden_actions_observed"
+  ],
+  "properties": {
+    "artifact_type": {"const": "TechnicalSpec"},
+    "role": {"const": "spec_writer"},
+    "status": {"enum": ["ok", "blocked"]},
+    "scope": {"type": "array"},
+    "requirements": {"type": "array"},
+    "acceptance_criteria": {"type": "array"},
+    "non_goals": {"type": "array"},
+    "traceability_table": {"type": "array"},
+    "implementation_handoff": {"type": "object"},
+    "forbidden_actions_observed": {"type": "array"}
+  },
+  "additionalProperties": true
+}

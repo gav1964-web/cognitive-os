@@ -1,0 +1,13 @@
+{
+  "id": "spreadsheet_to_csv",
+  "version": "0.1.0",
+  "entrypoint": "plugins.spreadsheet_to_csv.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "write_scoped",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

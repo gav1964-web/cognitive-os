@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": ["tree", "stack", "files", "python_structure", "runtime_commands"],
+  "properties": {
+    "tree": {
+      "type": "object"
+    },
+    "stack": {
+      "type": "object"
+    },
+    "files": {
+      "type": "object"
+    },
+    "python_structure": {
+      "type": "object"
+    },
+    "runtime_commands": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

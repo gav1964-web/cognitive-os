@@ -1,0 +1,38 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-конвертер файлов .md в .rtf.",
+  "expected_steps": [
+    "clarify supported Markdown subset and dependency policy",
+    "create small CLI project scaffold with package module, README and tests",
+    "define input/output contract for source md path and destination rtf path",
+    "implement markdown-to-RTF conversion with escaped text and basic heading/list emphasis support",
+    "handle missing input, invalid extension and overwrite policy explicitly",
+    "add fixture-based tests for conversion and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/md_to_rtf/__init__.py",
+    "src/md_to_rtf/cli.py",
+    "src/md_to_rtf/converter.py",
+    "tests/fixtures/sample.md",
+    "tests/test_converter.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "CLI accepts input and output paths",
+    "converter produces valid RTF envelope",
+    "tests do not require external services",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

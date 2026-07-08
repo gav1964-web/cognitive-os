@@ -1,0 +1,33 @@
+{
+  "id": "parse_pdf",
+  "purpose": "Extract readable text from a local PDF document for MVP field trials, using pypdf when available and a deterministic fallback otherwise.",
+  "input_contract": {
+    "path": "workspace-relative PDF path string"
+  },
+  "output_contract": {
+    "text": "extracted readable text",
+    "page_count": "integer page count or MVP page estimate",
+    "backend": "pypdf or builtin"
+  },
+  "error_policy": {
+    "missing_path": "raise KeyError",
+    "unsafe_path": "raise ValueError",
+    "not_pdf": "raise ValueError"
+  },
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "quality_gate": {
+    "sample_input": {
+      "path": "generated/candidates/parse_pdf/tests/fixtures/sample.pdf"
+    },
+    "expected_output": {
+      "text": "Hello PDF Field Trial",
+      "page_count": 1,
+      "backend": "builtin"
+    }
+  },
+  "reusable": true
+}

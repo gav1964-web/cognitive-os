@@ -1,0 +1,11 @@
+{
+  "expected_entrypoints": [],
+  "expected_capability_candidates": ["fetch_html", "parse_links", "save_cache", "scrape"],
+  "expected_broad_functions": [],
+  "expected_hidden_orchestrators": ["scrape"],
+  "expected_side_effects": ["filesystem", "network"],
+  "expected_idempotency_risks": ["save_cache", "scrape"],
+  "expected_checkpoint_candidates": ["external_api_response"],
+  "expected_minimal_extraction_plan": ["fetch_html", "parse_links", "save_cache"],
+  "expected_best_extraction_candidate": "scraper.py:parse_links"
+}

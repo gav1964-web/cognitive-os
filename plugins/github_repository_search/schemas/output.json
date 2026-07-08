@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": ["query", "source", "repositories", "total_count", "incomplete_results"],
+  "properties": {
+    "query": { "type": "string" },
+    "source": { "type": "string" },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["full_name", "html_url", "description", "language", "stars", "owner", "license"],
+        "properties": {
+          "full_name": { "type": ["string", "null"] },
+          "html_url": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "language": { "type": ["string", "null"] },
+          "stars": { "type": "integer" },
+          "owner": { "type": ["string", "null"] },
+          "license": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "total_count": { "type": "integer" },
+    "incomplete_results": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

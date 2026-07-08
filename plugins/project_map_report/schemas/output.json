@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": ["summary", "risks", "markdown"],
+  "properties": {
+    "summary": {
+      "type": "object"
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "markdown": {
+      "type": "string"
+    },
+    "answers": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

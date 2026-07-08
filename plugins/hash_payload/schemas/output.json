@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["hash"],
+  "properties": {
+    "hash": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+

@@ -1,0 +1,42 @@
+{
+  "schema_version": "spec_writer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/simple_cli_tool",
+  "teacher_profile": "spec_writer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_spec": {
+    "candidate": "main.py:normalize_text",
+    "ranked_candidates": [
+      "main.py:normalize_text",
+      "main.py:load_text",
+      "main.py:write_json"
+    ],
+    "source_evidence": [
+      "main.py:normalize_text",
+      "main.py:load_text",
+      "main.py:write_json"
+    ],
+    "acceptance_sources": [
+      "main.py:normalize_text",
+      "main.py:load_text",
+      "main.py:write_json"
+    ],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ],
+    "forbidden_candidates": [
+      "main.py:write_json"
+    ]
+  },
+  "teacher_review": {
+    "project_condition": "small CLI with one pure transform and filesystem read/write helpers",
+    "expected_spec_behavior": [
+      "select normalize_text as first extraction contract",
+      "keep load/write helpers as source evidence, not first candidate",
+      "preserve non-goals and Foundry gate constraints"
+    ],
+    "known_risks": [
+      "write_json has filesystem side effects and should not be first"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "architect_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/data_pipeline_csv_json",
+  "teacher_profile": "architect",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "facts": {
+    "entrypoints": ["run_pipeline.sh"],
+    "capability_candidates": ["pipeline.py:normalize_rows", "pipeline.py:load_csv", "pipeline.py:write_json"],
+    "pure_transforms": ["pipeline.py:normalize_rows"],
+    "hidden_orchestrators": ["pipeline.py:run_pipeline"],
+    "side_effects": ["filesystem"],
+    "idempotency_risks": ["pipeline.py:write_json"],
+    "minimal_extraction_plan": ["pipeline.py:normalize_rows", "pipeline.py:load_csv", "pipeline.py:write_json"]
+  },
+  "judgments": {
+    "chosen_option_id": "minimal_safe_extraction",
+    "best_first_candidate": "pipeline.py:normalize_rows",
+    "risk_sources": ["architect"],
+    "subsystem_boundary_ids": ["runtime_entrypoints", "pipeline.py:run_pipeline"],
+    "required_non_goals": [
+      "Do not rewrite the whole project in the first transformation step.",
+      "Do not mutate Capability Registry from ArchitectSkill."
+    ]
+  }
+}

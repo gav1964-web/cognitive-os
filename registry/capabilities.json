@@ -1,0 +1,438 @@
+{
+  "capabilities": [
+    {
+      "id": "csv_to_spreadsheet",
+      "version": "0.1.0",
+      "entrypoint": "plugins.csv_to_spreadsheet.src.main:run",
+      "input_schema_ref": "plugins/csv_to_spreadsheet/schemas/input.json",
+      "output_schema_ref": "plugins/csv_to_spreadsheet/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:6c052947d0aaf2c02f6ec5b557ac156d8d88b78bda1818942136ed3e8a181380",
+      "fallback_for": []
+    },
+    {
+      "id": "detect_project_stack",
+      "version": "0.1.0",
+      "entrypoint": "plugins.detect_project_stack.src.main:run",
+      "input_schema_ref": "plugins/detect_project_stack/schemas/input.json",
+      "output_schema_ref": "plugins/detect_project_stack/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:da12787c65b825863c0a1f837c8922a2142557f823e7ccec3b4ae61a530866df",
+      "fallback_for": []
+    },
+    {
+      "id": "extract_links",
+      "version": "0.1.0",
+      "entrypoint": "plugins.extract_links.src.main:run",
+      "input_schema_ref": "plugins/extract_links/schemas/input.json",
+      "output_schema_ref": "plugins/extract_links/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:d6291ce74ff18375c104a02bdd2cea8ed9e789a8c79f5db1aa7f21ce76f74091",
+      "fallback_for": []
+    },
+    {
+      "id": "extract_python_structure",
+      "version": "0.1.0",
+      "entrypoint": "plugins.extract_python_structure.src.main:run",
+      "input_schema_ref": "plugins/extract_python_structure/schemas/input.json",
+      "output_schema_ref": "plugins/extract_python_structure/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:9c11eaed03de6c12ea98c7f3984a6eab3ef3d4e296a4a9646696cc21a49bdd1a",
+      "fallback_for": []
+    },
+    {
+      "id": "extract_runtime_commands",
+      "version": "0.1.0",
+      "entrypoint": "plugins.extract_runtime_commands.src.main:run",
+      "input_schema_ref": "plugins/extract_runtime_commands/schemas/input.json",
+      "output_schema_ref": "plugins/extract_runtime_commands/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:580a9aebcad0a4da05d71725f23a4348007171c26d363e5805b1deeee082d483",
+      "fallback_for": []
+    },
+    {
+      "id": "fetch_html",
+      "version": "0.1.0",
+      "entrypoint": "plugins.fetch_html.src.main:run",
+      "input_schema_ref": "plugins/fetch_html/schemas/input.json",
+      "output_schema_ref": "plugins/fetch_html/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:88c1ebe947fb47015d8e089f504c902dc4b628e6e36d7b0bcb2f5b9f2734a733",
+      "fallback_for": []
+    },
+    {
+      "id": "github_repository_search",
+      "version": "0.1.0",
+      "entrypoint": "plugins.github_repository_search.src.main:run",
+      "input_schema_ref": "plugins/github_repository_search/schemas/input.json",
+      "output_schema_ref": "plugins/github_repository_search/schemas/output.json",
+      "determinism_grade": "D",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "allowlist",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:28ad596c072a5acadf0ee80e0b73d37fee91c144e6ba76727d43f2ce1b6f3e41",
+      "fallback_for": []
+    },
+    {
+      "id": "hash_payload",
+      "version": "0.1.0",
+      "entrypoint": "plugins.hash_payload.src.main:run",
+      "input_schema_ref": "plugins/hash_payload/schemas/input.json",
+      "output_schema_ref": "plugins/hash_payload/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:559b4baae991859a2988d99789a16dacb276f22d3b8a618cf68eab942b7f3c5c",
+      "fallback_for": []
+    },
+    {
+      "id": "inspect_installed_packages",
+      "version": "0.1.0",
+      "entrypoint": "plugins.inspect_installed_packages.src.main:run",
+      "input_schema_ref": "plugins/inspect_installed_packages/schemas/input.json",
+      "output_schema_ref": "plugins/inspect_installed_packages/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:9601bef1d67922bc1b56b5eda93ab254e75a2b93a495bf17bffd9fff44b09648",
+      "fallback_for": []
+    },
+    {
+      "id": "json_select",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_select.src.main:run",
+      "input_schema_ref": "plugins/json_select/schemas/input.json",
+      "output_schema_ref": "plugins/json_select/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:c348e5d0f7bb1357c053fa94b013e549c56fb3988850284d10ae31ef708e9eca",
+      "fallback_for": []
+    },
+    {
+      "id": "json_transform",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_transform.src.main:run",
+      "input_schema_ref": "plugins/json_transform/schemas/input.json",
+      "output_schema_ref": "plugins/json_transform/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:60eb8d3975e408d412ecad10b0ab96a057a4be8933ce103b3fe0b769ee3f9a05",
+      "fallback_for": []
+    },
+    {
+      "id": "list_files",
+      "version": "0.1.0",
+      "entrypoint": "plugins.list_files.src.main:run",
+      "input_schema_ref": "plugins/list_files/schemas/input.json",
+      "output_schema_ref": "plugins/list_files/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:0394d78552faa95645b422e08a57ce43c54800b69664e656bc9f7aff963eaadf",
+      "fallback_for": []
+    },
+    {
+      "id": "markdown_to_rtf",
+      "version": "0.1.0",
+      "entrypoint": "plugins.markdown_to_rtf.src.main:run",
+      "input_schema_ref": "plugins/markdown_to_rtf/schemas/input.json",
+      "output_schema_ref": "plugins/markdown_to_rtf/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:779728f5fa01e31f23d1f8dcdf6348148b362d8f38d1f5f28d13f8906ed4424b",
+      "fallback_for": []
+    },
+    {
+      "id": "markdown_to_text",
+      "version": "0.1.0",
+      "entrypoint": "plugins.markdown_to_text.src.main:run",
+      "input_schema_ref": "plugins/markdown_to_text/schemas/input.json",
+      "output_schema_ref": "plugins/markdown_to_text/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:7b0954714a58c81449cd8cbb3bc1efa31ccf4b723480fe5aba55e43e673239db",
+      "fallback_for": []
+    },
+    {
+      "id": "normalize_text",
+      "version": "0.1.0",
+      "entrypoint": "plugins.normalize_text.src.main:run",
+      "input_schema_ref": "plugins/normalize_text/schemas/input.json",
+      "output_schema_ref": "plugins/normalize_text/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:a2e479608e584a7cd9e888616bb708ef03e8a487787056b98ed5c7316edab01c",
+      "fallback_for": []
+    },
+    {
+      "id": "official_docs_fetch",
+      "version": "0.1.0",
+      "entrypoint": "plugins.official_docs_fetch.src.main:run",
+      "input_schema_ref": "plugins/official_docs_fetch/schemas/input.json",
+      "output_schema_ref": "plugins/official_docs_fetch/schemas/output.json",
+      "determinism_grade": "D",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "allowlist",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:ac40d890eb7da332ba19c977f06f883a7496d469bd47aa36dc4f6fab3a19c834",
+      "fallback_for": []
+    },
+    {
+      "id": "parse_pdf",
+      "version": "0.1.0",
+      "entrypoint": "plugins.parse_pdf.src.main:run",
+      "input_schema_ref": "plugins/parse_pdf/schemas/input.json",
+      "output_schema_ref": "plugins/parse_pdf/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:30d707cbe694b1ffc31ae5f8b46916a2b4a099e36b3b2ff5a9298028782671a8",
+      "fallback_for": []
+    },
+    {
+      "id": "parse_title",
+      "version": "0.1.0",
+      "entrypoint": "plugins.parse_title.src.main:run",
+      "input_schema_ref": "plugins/parse_title/schemas/input.json",
+      "output_schema_ref": "plugins/parse_title/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:584f44c3971339699fd83f722a5224972b6273e63710cbe722d7adaf18104613",
+      "fallback_for": []
+    },
+    {
+      "id": "parse_title_fallback",
+      "version": "0.1.0",
+      "entrypoint": "plugins.parse_title_fallback.src.main:run",
+      "input_schema_ref": "plugins/parse_title_fallback/schemas/input.json",
+      "output_schema_ref": "plugins/parse_title_fallback/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:84b15773f0545a9e7c0c6c89eb55f420696b74f7ae381908952ff526238c277e",
+      "fallback_for": [
+        "parse_title"
+      ]
+    },
+    {
+      "id": "project_map_report",
+      "version": "0.1.0",
+      "entrypoint": "plugins.project_map_report.src.main:run",
+      "input_schema_ref": "plugins/project_map_report/schemas/input.json",
+      "output_schema_ref": "plugins/project_map_report/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:132c7daffee3987771e261595fb3bc5c172877b921f5b7b68874e3e821962c43",
+      "fallback_for": []
+    },
+    {
+      "id": "read_many_files",
+      "version": "0.1.0",
+      "entrypoint": "plugins.read_many_files.src.main:run",
+      "input_schema_ref": "plugins/read_many_files/schemas/input.json",
+      "output_schema_ref": "plugins/read_many_files/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:f142e8c8fb71114d24117759423f2552cffbc638b5e4e9c36b8aba1853eea764",
+      "fallback_for": []
+    },
+    {
+      "id": "read_text_file",
+      "version": "0.1.0",
+      "entrypoint": "plugins.read_text_file.src.main:run",
+      "input_schema_ref": "plugins/read_text_file/schemas/input.json",
+      "output_schema_ref": "plugins/read_text_file/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:b36bb3dde5ab9626bc3b6b3b29ef2e2881098fd52bc510f3b43e5c1c5fc64520",
+      "fallback_for": []
+    },
+    {
+      "id": "save_json",
+      "version": "0.1.0",
+      "entrypoint": "plugins.save_json.src.main:run",
+      "input_schema_ref": "plugins/save_json/schemas/input.json",
+      "output_schema_ref": "plugins/save_json/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:dc5da837172be40f396bd8a29751f7ad55ce943e1a8d88d4c53274ac5802f009",
+      "fallback_for": []
+    },
+    {
+      "id": "scan_project_tree",
+      "version": "0.1.0",
+      "entrypoint": "plugins.scan_project_tree.src.main:run",
+      "input_schema_ref": "plugins/scan_project_tree/schemas/input.json",
+      "output_schema_ref": "plugins/scan_project_tree/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:f6c7073072940cfa8412f9f51dcc832f9a9fab131b6d27ca104dbb77e2dedb19",
+      "fallback_for": []
+    },
+    {
+      "id": "spreadsheet_to_csv",
+      "version": "0.1.0",
+      "entrypoint": "plugins.spreadsheet_to_csv.src.main:run",
+      "input_schema_ref": "plugins/spreadsheet_to_csv/schemas/input.json",
+      "output_schema_ref": "plugins/spreadsheet_to_csv/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:06269b8661589d36744d1edd460a7d98cf197508e0909e9df8f2f7f3addde5b8",
+      "fallback_for": []
+    },
+    {
+      "id": "translate_text",
+      "version": "0.1.0",
+      "entrypoint": "plugins.translate_text.src.main:run",
+      "input_schema_ref": "plugins/translate_text/schemas/input.json",
+      "output_schema_ref": "plugins/translate_text/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:0a8fcf5a40b30f071646b8cd94fcfa182433f993d100c70f280d61066f10385c",
+      "fallback_for": []
+    },
+    {
+      "id": "write_text_file",
+      "version": "0.1.0",
+      "entrypoint": "plugins.write_text_file.src.main:run",
+      "input_schema_ref": "plugins/write_text_file/schemas/input.json",
+      "output_schema_ref": "plugins/write_text_file/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:afa67807cf314e9189c246c678e96e14beb4edf99681a9b02b2570b9d9519a75",
+      "fallback_for": []
+    }
+  ]
+}

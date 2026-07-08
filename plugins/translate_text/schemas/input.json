@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "required": [
+    "text",
+    "target_language"
+  ],
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+    "target_language": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
