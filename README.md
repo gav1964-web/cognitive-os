@@ -180,6 +180,7 @@ FailureAnalysis -> ReworkPlan -> sandbox repair -> verification -> tester review
 
 This is not a free-form retry loop. Only allowlisted deterministic repairs are applied inside the isolated generated package.
 The loop is acceptance-tested as a separate L4 programmer capability: a probe intentionally damages a generated FastAPI package, the tester flags the contract failure, and the loop applies a bounded repair before re-running project-scoped verification.
+The same probe path also covers CLI input/output contract repair for generated file-processing utilities.
 
 ## Current MVP Status
 

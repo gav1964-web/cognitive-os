@@ -21,7 +21,11 @@ from runtime.stage2_debug_loop import run_stage2_debug_loop
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
-    parser.add_argument("--case", choices=["fastapi_csv_aggregator", "fastapi_kv_store"], default="fastapi_kv_store")
+    parser.add_argument(
+        "--case",
+        choices=["fastapi_csv_aggregator", "fastapi_kv_store", "text_stats_cli"],
+        default="fastapi_kv_store",
+    )
     parser.add_argument("--curriculum-dir", default="curricula/programmer_prompt_stage2")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
@@ -62,6 +66,8 @@ def _load_reference(curriculum_dir: Path, case_name: str) -> dict:
 def _damage_package(project_dir: Path, case_name: str) -> dict[str, str]:
     if case_name == "fastapi_csv_aggregator":
         return _damage_csv(project_dir)
+    if case_name == "text_stats_cli":
+        return _damage_text_stats_cli(project_dir)
     return _damage_kv(project_dir)
 
 
@@ -99,6 +105,17 @@ def _damage_kv(project_dir: Path) -> dict[str, str]:
     )
     path.write_text(text, encoding="utf-8")
     return {"kind": "removed_controlled_404", "path": "src/kv_store_service/app.py"}
+
+
+def _damage_text_stats_cli(project_dir: Path) -> dict[str, str]:
+    path = project_dir / "src" / "text_stats" / "cli.py"
+    path.write_text(
+        "from __future__ import annotations\n\n\n"
+        "def main(argv: list[str] | None = None) -> int:\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    return {"kind": "removed_cli_input_output_contract", "path": "src/text_stats/cli.py"}
 
 
 def _write_report(root: Path, report: dict) -> Path:

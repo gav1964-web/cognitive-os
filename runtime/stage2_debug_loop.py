@@ -93,8 +93,11 @@ def build_rework_plan(analysis: dict[str, Any], review_run: dict[str, Any]) -> d
     actions = []
     failed_checks = set(analysis.get("failed_checks", []))
     readme_failures = {"readme_mentions_prompt", "readme_behavior_aligned", "readme_has_run_command"}
+    cli_failures = {"has_cli_entrypoint", "cli_uses_argparse", "cli_accepts_input_output"}
     if failed_checks.intersection(readme_failures):
         actions.append({"type": "rewrite_readme_prompt", "target": "README.md"})
+    if failed_checks.intersection(cli_failures):
+        actions.append({"type": "repair_cli_entrypoint", "target": "src/<package>/cli.py"})
     if "has_dependency_policy" in failed_checks:
         actions.append({"type": "repair_dependency_policy", "target": "pyproject.toml"})
     if case == "fastapi_csv_aggregator" and "has_controlled_api_error" in failed_checks:
@@ -130,6 +133,9 @@ def apply_rework_plan(review_run: dict[str, Any], reference: dict[str, Any], pla
         if action_type == "rewrite_readme_prompt":
             _rewrite_readme(project_dir, reference)
             applied.append(action_type)
+        elif action_type == "repair_cli_entrypoint":
+            if _repair_cli_entrypoint(project_dir, str(scaffold.get("case") or "")):
+                applied.append(action_type)
         elif action_type == "repair_dependency_policy":
             if _repair_dependency_policy(project_dir):
                 applied.append(action_type)
@@ -160,6 +166,9 @@ def _is_repairable(failed_checks: list[str], failed_commands: list[dict[str, Any
         "readme_mentions_prompt",
         "readme_behavior_aligned",
         "readme_has_run_command",
+        "has_cli_entrypoint",
+        "cli_uses_argparse",
+        "cli_accepts_input_output",
         "has_dependency_policy",
         "has_controlled_api_error",
     }
@@ -198,6 +207,40 @@ def _rewrite_readme(project_dir: Path, reference: dict[str, Any]) -> None:
         f"# Generated package\n\nPrompt: {prompt}\n\nRun tests: `python -m pytest tests -q`.\n{run_app}",
         encoding="utf-8",
     )
+
+
+def _repair_cli_entrypoint(project_dir: Path, case_name: str) -> bool:
+    mapping = {
+        "json_log_filter_cli": ("json_log_filter", "filter"),
+        "text_stats_cli": ("text_stats", "stats"),
+        "duplicate_file_finder": ("duplicate_finder", "finder"),
+        "batch_renamer_cli": ("batch_renamer", "renamer"),
+        "json_config_merger": ("json_config_merger", "merger"),
+        "url_status_checker_cli": ("url_status_checker", "checker"),
+        "static_site_indexer": ("static_site_indexer", "indexer"),
+    }
+    if case_name not in mapping:
+        return False
+    package, module = mapping[case_name]
+    path = project_dir / "src" / package / "cli.py"
+    if not path.is_file():
+        return False
+    content = (
+        "from __future__ import annotations\n\n"
+        "import argparse\n\n"
+        f"from {package}.{module} import run_cli\n\n\n"
+        "def main(argv: list[str] | None = None) -> int:\n"
+        "    parser = argparse.ArgumentParser()\n"
+        "    parser.add_argument('input')\n"
+        "    parser.add_argument('output')\n"
+        "    args = parser.parse_args(argv)\n"
+        "    run_cli(args.input, args.output)\n"
+        "    return 0\n"
+    )
+    if path.read_text(encoding="utf-8") == content:
+        return False
+    path.write_text(content, encoding="utf-8")
+    return True
 
 
 def _repair_dependency_policy(project_dir: Path) -> bool:

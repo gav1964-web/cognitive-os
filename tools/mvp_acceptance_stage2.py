@@ -102,3 +102,16 @@ def stage2_checks(report) -> None:
         ],
         layers=["L4"], check=programmer_checks.stage2_debug_loop_probe_ok,
     )
+    report.command(
+        "stage2_debug_loop_cli_probe",
+        [
+            sys.executable,
+            "tools/stage2_debug_loop_probe.py",
+            "--root",
+            ".",
+            "--case",
+            "text_stats_cli",
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.stage2_debug_loop_probe_ok,
+    )

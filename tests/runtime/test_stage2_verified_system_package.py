@@ -221,3 +221,31 @@ def test_stage2_debug_loop_repairs_fastapi_kv_controlled_404(tmp_path: Path):
     assert "verification_failed" in debug_loop["attempts"][0]["failure_analysis"]["failure_classes"]
     assert "repair_fastapi_controlled_404" in applied
     assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_controlled_api_error"] is True
+
+
+def test_stage2_debug_loop_repairs_cli_input_output_contract(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_stage2" / "text_stats_cli" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="text_stats_cli", reference=reference)
+    cli_path = Path(scaffold["project_dir"]) / "src" / "text_stats" / "cli.py"
+    cli_path.write_text(
+        "from __future__ import annotations\n\n\n"
+        "def main(argv: list[str] | None = None) -> int:\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    scaffold["verification"] = run_project_verification(Path(scaffold["project_dir"]))
+    scaffold["acceptance_covered"] = acceptance_covered("text_stats_cli", scaffold["verification"])
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {"status": "needs_rework", "programmer_artifact": scaffold, "tester_review": tester_review}
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    applied = debug_loop["attempts"][0]["result"]["applied_actions"]
+    final_checks = debug_loop["final_review_run"]["tester_review"]["checks"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "cli_uses_argparse" in debug_loop["attempts"][0]["failure_analysis"]["failed_checks"]
+    assert "repair_cli_entrypoint" in applied
+    assert final_checks["cli_uses_argparse"] is True
+    assert final_checks["cli_accepts_input_output"] is True
