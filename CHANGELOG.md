@@ -4,6 +4,7 @@
 
 - Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
 - CLI input/output contract repair for generated file-processing packages.
+- Negative and edge-case test repair for empty text input and malformed JSONL fixtures.
 
 ## v0.1.0-mvp - 2026-07-08
 

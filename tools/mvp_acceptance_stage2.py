@@ -115,3 +115,20 @@ def stage2_checks(report) -> None:
         ],
         layers=["L4"], check=programmer_checks.stage2_debug_loop_probe_ok,
     )
+    report.command(
+        "stage2_debug_loop_edge_probe",
+        [
+            sys.executable,
+            "tools/stage2_debug_loop_probe.py",
+            "--root",
+            ".",
+            "--curriculum-dir",
+            "curricula/programmer_prompt_local_10",
+            "--case",
+            "json_log_filter_cli",
+            "--damage",
+            "edge_case",
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.stage2_debug_loop_probe_ok,
+    )

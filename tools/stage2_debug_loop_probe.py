@@ -23,9 +23,10 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument(
         "--case",
-        choices=["fastapi_csv_aggregator", "fastapi_kv_store", "text_stats_cli"],
+        choices=["fastapi_csv_aggregator", "fastapi_kv_store", "text_stats_cli", "json_log_filter_cli"],
         default="fastapi_kv_store",
     )
+    parser.add_argument("--damage", choices=["auto", "cli_contract", "edge_case"], default="auto")
     parser.add_argument("--curriculum-dir", default="curricula/programmer_prompt_stage2")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
@@ -33,7 +34,7 @@ def main() -> int:
     root = Path(args.root).resolve()
     reference = _load_reference(root / args.curriculum_dir, args.case)
     scaffold = create_greenfield_scaffold(root=root, case_name=args.case, reference=reference)
-    damage = _damage_package(Path(scaffold["project_dir"]), args.case)
+    damage = _damage_package(Path(scaffold["project_dir"]), args.case, args.damage)
     scaffold["verification"] = run_project_verification(Path(scaffold["project_dir"]))
     scaffold["acceptance_covered"] = acceptance_covered(args.case, scaffold["verification"])
     tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
@@ -63,11 +64,17 @@ def _load_reference(curriculum_dir: Path, case_name: str) -> dict:
     return json.loads((curriculum_dir / case_name / "teacher_reference.json").read_text(encoding="utf-8"))
 
 
-def _damage_package(project_dir: Path, case_name: str) -> dict[str, str]:
+def _damage_package(project_dir: Path, case_name: str, damage: str) -> dict[str, str]:
+    if damage == "edge_case":
+        return _damage_edge_case(project_dir, case_name)
+    if damage == "cli_contract":
+        return _damage_cli_contract(project_dir, case_name)
     if case_name == "fastapi_csv_aggregator":
         return _damage_csv(project_dir)
     if case_name == "text_stats_cli":
-        return _damage_text_stats_cli(project_dir)
+        return _damage_cli_contract(project_dir, case_name)
+    if case_name == "json_log_filter_cli":
+        return _damage_edge_case(project_dir, case_name)
     return _damage_kv(project_dir)
 
 
@@ -107,15 +114,47 @@ def _damage_kv(project_dir: Path) -> dict[str, str]:
     return {"kind": "removed_controlled_404", "path": "src/kv_store_service/app.py"}
 
 
-def _damage_text_stats_cli(project_dir: Path) -> dict[str, str]:
-    path = project_dir / "src" / "text_stats" / "cli.py"
+def _damage_cli_contract(project_dir: Path, case_name: str) -> dict[str, str]:
+    packages = {
+        "text_stats_cli": "text_stats",
+        "json_log_filter_cli": "json_log_filter",
+    }
+    package = packages.get(case_name)
+    if package is None:
+        raise ValueError(f"CLI contract damage is not supported for {case_name}")
+    path = project_dir / "src" / package / "cli.py"
     path.write_text(
         "from __future__ import annotations\n\n\n"
         "def main(argv: list[str] | None = None) -> int:\n"
         "    return 0\n",
         encoding="utf-8",
     )
-    return {"kind": "removed_cli_input_output_contract", "path": "src/text_stats/cli.py"}
+    return {"kind": "removed_cli_input_output_contract", "path": f"src/{package}/cli.py"}
+
+
+def _damage_edge_case(project_dir: Path, case_name: str) -> dict[str, str]:
+    if case_name == "text_stats_cli":
+        path = project_dir / "tests" / "test_core.py"
+        path.write_text(
+            "from text_stats.stats import stats\n\n"
+            "def test_stats_counts_text():\n"
+            "    assert stats('one two\\nthree')['words'] == 3\n",
+            encoding="utf-8",
+        )
+        return {"kind": "removed_empty_input_test", "path": "tests/test_core.py"}
+    if case_name == "json_log_filter_cli":
+        test_path = project_dir / "tests" / "test_core.py"
+        fixture_path = project_dir / "tests" / "fixtures" / "events.jsonl"
+        fixture_path.write_text('{"level":"INFO","message":"ok"}\n{"level":"ERROR","message":"bad"}\n', encoding="utf-8")
+        test_path.write_text(
+            "from json_log_filter.filter import filter_lines\n\n"
+            "def test_filter_lines():\n"
+            "    rows, _ = filter_lines('tests/fixtures/events.jsonl')\n"
+            "    assert rows[0]['message'] == 'bad'\n",
+            encoding="utf-8",
+        )
+        return {"kind": "removed_malformed_jsonl_test", "path": "tests/test_core.py"}
+    raise ValueError(f"edge-case damage is not supported for {case_name}")
 
 
 def _write_report(root: Path, report: dict) -> Path:

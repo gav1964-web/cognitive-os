@@ -249,3 +249,60 @@ def test_stage2_debug_loop_repairs_cli_input_output_contract(tmp_path: Path):
     assert "repair_cli_entrypoint" in applied
     assert final_checks["cli_uses_argparse"] is True
     assert final_checks["cli_accepts_input_output"] is True
+
+
+def test_stage2_debug_loop_repairs_text_stats_edge_test(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_stage2" / "text_stats_cli" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="text_stats_cli", reference=reference)
+    test_path = Path(scaffold["project_dir"]) / "tests" / "test_core.py"
+    test_path.write_text(
+        "from text_stats.stats import stats\n\n"
+        "def test_stats_counts_text():\n"
+        "    assert stats('one two\\nthree')['words'] == 3\n",
+        encoding="utf-8",
+    )
+    scaffold["verification"] = run_project_verification(Path(scaffold["project_dir"]))
+    scaffold["acceptance_covered"] = acceptance_covered("text_stats_cli", scaffold["verification"])
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {"status": "needs_rework", "programmer_artifact": scaffold, "tester_review": tester_review}
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    applied = debug_loop["attempts"][0]["result"]["applied_actions"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "has_negative_or_edge_test" in debug_loop["attempts"][0]["failure_analysis"]["failed_checks"]
+    assert "repair_negative_edge_tests" in applied
+    assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_negative_or_edge_test"] is True
+
+
+def test_stage2_debug_loop_repairs_json_log_malformed_edge_test(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_local_10" / "json_log_filter_cli" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="json_log_filter_cli", reference=reference)
+    project_dir = Path(scaffold["project_dir"])
+    (project_dir / "tests" / "fixtures" / "events.jsonl").write_text(
+        '{"level":"INFO","message":"ok"}\n{"level":"ERROR","message":"bad"}\n',
+        encoding="utf-8",
+    )
+    (project_dir / "tests" / "test_core.py").write_text(
+        "from json_log_filter.filter import filter_lines\n\n"
+        "def test_filter_lines():\n"
+        "    rows, _ = filter_lines('tests/fixtures/events.jsonl')\n"
+        "    assert rows[0]['message'] == 'bad'\n",
+        encoding="utf-8",
+    )
+    scaffold["verification"] = run_project_verification(project_dir)
+    scaffold["acceptance_covered"] = acceptance_covered("json_log_filter_cli", scaffold["verification"])
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {"status": "needs_rework", "programmer_artifact": scaffold, "tester_review": tester_review}
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    applied = debug_loop["attempts"][0]["result"]["applied_actions"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "has_negative_or_edge_test" in debug_loop["attempts"][0]["failure_analysis"]["failed_checks"]
+    assert "repair_negative_edge_tests" in applied
+    assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_negative_or_edge_test"] is True

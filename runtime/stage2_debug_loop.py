@@ -98,6 +98,8 @@ def build_rework_plan(analysis: dict[str, Any], review_run: dict[str, Any]) -> d
         actions.append({"type": "rewrite_readme_prompt", "target": "README.md"})
     if failed_checks.intersection(cli_failures):
         actions.append({"type": "repair_cli_entrypoint", "target": "src/<package>/cli.py"})
+    if "has_negative_or_edge_test" in failed_checks:
+        actions.append({"type": "repair_negative_edge_tests", "target": "tests"})
     if "has_dependency_policy" in failed_checks:
         actions.append({"type": "repair_dependency_policy", "target": "pyproject.toml"})
     if case == "fastapi_csv_aggregator" and "has_controlled_api_error" in failed_checks:
@@ -136,6 +138,9 @@ def apply_rework_plan(review_run: dict[str, Any], reference: dict[str, Any], pla
         elif action_type == "repair_cli_entrypoint":
             if _repair_cli_entrypoint(project_dir, str(scaffold.get("case") or "")):
                 applied.append(action_type)
+        elif action_type == "repair_negative_edge_tests":
+            if _repair_negative_edge_tests(project_dir, str(scaffold.get("case") or "")):
+                applied.append(action_type)
         elif action_type == "repair_dependency_policy":
             if _repair_dependency_policy(project_dir):
                 applied.append(action_type)
@@ -169,6 +174,7 @@ def _is_repairable(failed_checks: list[str], failed_commands: list[dict[str, Any
         "has_cli_entrypoint",
         "cli_uses_argparse",
         "cli_accepts_input_output",
+        "has_negative_or_edge_test",
         "has_dependency_policy",
         "has_controlled_api_error",
     }
@@ -241,6 +247,53 @@ def _repair_cli_entrypoint(project_dir: Path, case_name: str) -> bool:
         return False
     path.write_text(content, encoding="utf-8")
     return True
+
+
+def _repair_negative_edge_tests(project_dir: Path, case_name: str) -> bool:
+    if case_name == "text_stats_cli":
+        return _repair_text_stats_edge_tests(project_dir)
+    if case_name == "json_log_filter_cli":
+        return _repair_json_log_filter_edge_tests(project_dir)
+    return False
+
+
+def _repair_text_stats_edge_tests(project_dir: Path) -> bool:
+    path = project_dir / "tests" / "test_core.py"
+    if not path.is_file():
+        return False
+    content = (
+        "from text_stats.stats import stats\n\n"
+        "def test_stats_counts_text():\n"
+        "    assert stats('one two\\nthree')['words'] == 3\n"
+        "    assert stats('')['lines'] == 0\n"
+    )
+    if path.read_text(encoding="utf-8") == content:
+        return False
+    path.write_text(content, encoding="utf-8")
+    return True
+
+
+def _repair_json_log_filter_edge_tests(project_dir: Path) -> bool:
+    test_path = project_dir / "tests" / "test_core.py"
+    fixture_path = project_dir / "tests" / "fixtures" / "events.jsonl"
+    if not test_path.is_file() or not fixture_path.is_file():
+        return False
+    fixture = '{"level":"INFO","message":"ok"}\n{"level":"ERROR","message":"bad"}\nnot-json\n'
+    test_content = (
+        "from json_log_filter.filter import filter_lines\n\n"
+        "def test_filter_lines():\n"
+        "    rows, skipped = filter_lines('tests/fixtures/events.jsonl')\n"
+        "    assert rows[0]['message'] == 'bad'\n"
+        "    assert skipped == 1\n"
+    )
+    changed = False
+    if fixture_path.read_text(encoding="utf-8") != fixture:
+        fixture_path.write_text(fixture, encoding="utf-8")
+        changed = True
+    if test_path.read_text(encoding="utf-8") != test_content:
+        test_path.write_text(test_content, encoding="utf-8")
+        changed = True
+    return changed
 
 
 def _repair_dependency_policy(project_dir: Path) -> bool:
