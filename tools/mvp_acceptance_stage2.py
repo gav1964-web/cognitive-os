@@ -89,3 +89,16 @@ def stage2_checks(report) -> None:
         ],
         layers=["L4"], check=programmer_checks.verified_system_package_ok,
     )
+    report.command(
+        "stage2_debug_loop_probe",
+        [
+            sys.executable,
+            "tools/stage2_debug_loop_probe.py",
+            "--root",
+            ".",
+            "--case",
+            "fastapi_kv_store",
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.stage2_debug_loop_probe_ok,
+    )

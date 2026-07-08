@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
+
 ## v0.1.0-mvp - 2026-07-08
 
 Initial public research preview.

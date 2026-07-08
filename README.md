@@ -169,7 +169,7 @@ Current deterministic package classes include:
 
 - JSONL log-filter CLI utility;
 - text statistics CLI utility;
-- FastAPI CSV aggregation service.
+- FastAPI CSV aggregation service;
 - FastAPI in-memory key/value CRUD service.
 
 If tester review requests rework, Stage 2 uses a bounded contract debug loop:
@@ -179,6 +179,7 @@ FailureAnalysis -> ReworkPlan -> sandbox repair -> verification -> tester review
 ```
 
 This is not a free-form retry loop. Only allowlisted deterministic repairs are applied inside the isolated generated package.
+The loop is acceptance-tested as a separate L4 programmer capability: a probe intentionally damages a generated FastAPI package, the tester flags the contract failure, and the loop applies a bounded repair before re-running project-scoped verification.
 
 ## Current MVP Status
 
@@ -359,6 +360,15 @@ python tools/verified_system_package.py \
   --root . \
   --curriculum-dir curricula/programmer_prompt_stage2 \
   --prompt "Сделай локальную FastAPI-службу с зависимостью fastapi, которая принимает CSV, валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт, имеет README, тесты и команду запуска." \
+  --write
+```
+
+### 10. Exercise the Stage 2 debug loop
+
+```bash
+python tools/stage2_debug_loop_probe.py \
+  --root . \
+  --case fastapi_kv_store \
   --write
 ```
 

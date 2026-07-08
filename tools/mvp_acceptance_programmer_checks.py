@@ -66,3 +66,28 @@ def verified_system_package_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and invariants.get("human_approval_required_for_source_apply") is True
     )
     return ok, f"status={payload.get('status')}, gate={gate.get('status')}, decision={decision.get('decision')}"
+
+
+def stage2_debug_loop_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    loop = dict(payload.get("debug_loop", {})) if isinstance(payload, dict) else {}
+    attempts = list(loop.get("attempts", []))
+    first = dict(attempts[0]) if attempts else {}
+    result = dict(first.get("result", {}))
+    analysis = dict(first.get("failure_analysis", {}))
+    invariants = dict(payload.get("invariants", {}))
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "Stage2DebugLoopProbe"
+        and payload.get("status") == "ok"
+        and loop.get("artifact_type") == "Stage2DebugLoop"
+        and loop.get("final_status") == "ok"
+        and analysis.get("status") == "needs_rework"
+        and bool(result.get("applied_actions"))
+        and result.get("verification") == "passed"
+        and invariants.get("sandbox_only") is True
+        and invariants.get("source_tree_changes") is False
+        and invariants.get("registry_changes") is False
+        and invariants.get("bounded_rework") is True
+    )
+    return ok, f"case={payload.get('case')}, final={loop.get('final_status')}, actions={result.get('applied_actions')}"

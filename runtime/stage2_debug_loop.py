@@ -99,6 +99,14 @@ def build_rework_plan(analysis: dict[str, Any], review_run: dict[str, Any]) -> d
         actions.append({"type": "repair_dependency_policy", "target": "pyproject.toml"})
     if case == "fastapi_csv_aggregator" and "has_controlled_api_error" in failed_checks:
         actions.append({"type": "repair_fastapi_controlled_400", "target": "src/csv_aggregator_service/app.py"})
+    if case == "fastapi_kv_store" and "has_controlled_api_error" in failed_checks:
+        actions.append({"type": "repair_fastapi_controlled_404", "target": "src/kv_store_service/app.py"})
+    if case == "fastapi_csv_aggregator" and _mentions_http_exception_failure(analysis):
+        actions.append({"type": "repair_fastapi_controlled_400", "target": "src/csv_aggregator_service/app.py"})
+    if case == "fastapi_kv_store" and _mentions_http_exception_failure(analysis):
+        actions.append({"type": "repair_fastapi_controlled_404", "target": "src/kv_store_service/app.py"})
+    if case == "fastapi_kv_store" and _mentions_fastapi_response_validation(analysis):
+        actions.append({"type": "repair_fastapi_controlled_404", "target": "src/kv_store_service/app.py"})
     if analysis.get("failed_commands") or actions:
         actions.append({"type": "rerun_verification", "target": "project"})
     return {
@@ -127,6 +135,9 @@ def apply_rework_plan(review_run: dict[str, Any], reference: dict[str, Any], pla
                 applied.append(action_type)
         elif action_type == "repair_fastapi_controlled_400":
             if _repair_fastapi_controlled_400(project_dir):
+                applied.append(action_type)
+        elif action_type == "repair_fastapi_controlled_404":
+            if _repair_fastapi_controlled_404(project_dir):
                 applied.append(action_type)
         elif action_type == "rerun_verification":
             continue
@@ -161,6 +172,22 @@ def _is_repairable(failed_checks: list[str], failed_commands: list[dict[str, Any
 
 def _has_actionable_repair(actions: list[dict[str, Any]]) -> bool:
     return any(action.get("type") != "rerun_verification" for action in actions)
+
+
+def _mentions_http_exception_failure(analysis: dict[str, Any]) -> bool:
+    for command in analysis.get("failed_commands", []):
+        text = f"{command.get('stdout_tail', '')}\n{command.get('stderr_tail', '')}"
+        if "HTTPException" in text and ("NameError" in text or "not defined" in text):
+            return True
+    return False
+
+
+def _mentions_fastapi_response_validation(analysis: dict[str, Any]) -> bool:
+    for command in analysis.get("failed_commands", []):
+        text = f"{command.get('stdout_tail', '')}\n{command.get('stderr_tail', '')}"
+        if "ResponseValidationError" in text and "get_item" in text:
+            return True
+    return False
 
 
 def _rewrite_readme(project_dir: Path, reference: dict[str, Any]) -> None:
@@ -206,6 +233,39 @@ def _repair_fastapi_controlled_400(project_dir: Path) -> bool:
         "    path = save_report(report, payload.output_path)\n"
     )
     path.write_text(text.replace(old, new), encoding="utf-8")
+    return True
+
+
+def _repair_fastapi_controlled_404(project_dir: Path) -> bool:
+    path = project_dir / "src" / "kv_store_service" / "app.py"
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    if "from fastapi import FastAPI, HTTPException" not in text:
+        text = text.replace("from fastapi import FastAPI\n", "from fastapi import FastAPI, HTTPException\n")
+    changed = text
+    changed = changed.replace(
+        "    item = store.get(key)\n    return item\n",
+        "    item = store.get(key)\n    if item is None:\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return item\n",
+    )
+    changed = changed.replace(
+        "    deleted = store.delete(key)\n    return {'status': 'deleted', 'key': key}\n",
+        "    deleted = store.delete(key)\n    if not deleted:\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return {'status': 'deleted', 'key': key}\n",
+    )
+    changed = changed.replace(
+        "    store.delete(key)\n"
+        "    return {'status': 'deleted', 'key': key}\n",
+        "    if not store.delete(key):\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return {'status': 'deleted', 'key': key}\n",
+    )
+    if changed == text:
+        return False
+    path.write_text(changed, encoding="utf-8")
     return True
 
 

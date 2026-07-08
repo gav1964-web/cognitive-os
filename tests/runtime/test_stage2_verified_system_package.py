@@ -185,3 +185,39 @@ def test_stage2_debug_loop_repairs_readme_and_dependency_policy(tmp_path: Path):
     assert "repair_dependency_policy" in applied
     assert debug_loop["final_review_run"]["tester_review"]["checks"]["readme_has_run_command"] is True
     assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_dependency_policy"] is True
+
+
+def test_stage2_debug_loop_repairs_fastapi_kv_controlled_404(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    reference_path = root / "curricula" / "programmer_prompt_stage2" / "fastapi_kv_store" / "teacher_reference.json"
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    scaffold = create_greenfield_scaffold(root=tmp_path, case_name="fastapi_kv_store", reference=reference)
+    app_path = Path(scaffold["project_dir"]) / "src" / "kv_store_service" / "app.py"
+    app_text = app_path.read_text(encoding="utf-8")
+    app_text = app_text.replace("from fastapi import FastAPI, HTTPException\n", "from fastapi import FastAPI\n")
+    app_text = app_text.replace(
+        "    item = store.get(key)\n"
+        "    if item is None:\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return item\n",
+        "    item = store.get(key)\n    return item\n",
+    )
+    app_text = app_text.replace(
+        "    if not store.delete(key):\n"
+        "        raise HTTPException(status_code=404, detail='item not found')\n"
+        "    return {'status': 'deleted', 'key': key}\n",
+        "    store.delete(key)\n    return {'status': 'deleted', 'key': key}\n",
+    )
+    app_path.write_text(app_text, encoding="utf-8")
+    scaffold["verification"] = run_project_verification(Path(scaffold["project_dir"]))
+    scaffold["acceptance_covered"] = acceptance_covered("fastapi_kv_store", scaffold["verification"])
+    tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
+    review_run = {"status": "needs_rework", "programmer_artifact": scaffold, "tester_review": tester_review}
+
+    debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
+    applied = debug_loop["attempts"][0]["result"]["applied_actions"]
+
+    assert debug_loop["final_status"] == "ok"
+    assert "verification_failed" in debug_loop["attempts"][0]["failure_analysis"]["failure_classes"]
+    assert "repair_fastapi_controlled_404" in applied
+    assert debug_loop["final_review_run"]["tester_review"]["checks"]["has_controlled_api_error"] is True
