@@ -41,6 +41,8 @@ def parse_json_response(text: str) -> dict:
     sandbox_dir = Path(str(report["sandbox_dir"]))
     patched = (sandbox_dir / "package" / "import_indoc.py").read_text(encoding="utf-8")
     assert "GIGACHAT_AUTH_KEY" in patched
+    assert "GIGACHAT_CLIENT_SECRET" in patched
+    assert "GIGACHAT_VERIFY_SSL" in patched
     assert "GigaChat-2-Pro" in patched
     assert "http://127.0.0.1:8000" not in patched
     assert "населенный пункт без префикса" in patched

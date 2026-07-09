@@ -78,6 +78,12 @@ def _patch_import_indoc(text: str, target_model: str) -> str:
         'DEFAULT_GIGACHAT_OAUTH_URL = os.environ.get("GIGACHAT_OAUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth")\n'
         'DEFAULT_GIGACHAT_SCOPE = os.environ.get("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")\n',
     )
+    if "DEFAULT_GIGACHAT_VERIFY_SSL" not in text:
+        text = text.replace(
+            'DEFAULT_GIGACHAT_SCOPE = os.environ.get("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")\n',
+            'DEFAULT_GIGACHAT_SCOPE = os.environ.get("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")\n'
+            'DEFAULT_GIGACHAT_VERIFY_SSL = os.environ.get("GIGACHAT_VERIFY_SSL", "1").lower() not in {"0", "false", "no", "off"}\n',
+        )
     text = text.replace("Disable Qwen extraction and use rule-based parsing only.", "Disable GigaChat extraction and use rule-based parsing only.")
     text = text.replace("OpenAI-compatible chat completions URL.", "GigaChat chat completions URL.")
     text = text.replace("Qwen model name.", "GigaChat model name.")
@@ -110,13 +116,13 @@ def _llm_extractor_class() -> str:
         access_token: str | None = None,
         oauth_url: str = DEFAULT_GIGACHAT_OAUTH_URL,
         scope: str = DEFAULT_GIGACHAT_SCOPE,
-        verify_ssl: bool = True,
+        verify_ssl: bool = DEFAULT_GIGACHAT_VERIFY_SSL,
     ):
         self.url = url
         self.model = model
         self.timeout = timeout
         self.cache_path = cache_path
-        self.auth_key = auth_key or os.environ.get("GIGACHAT_AUTH_KEY", "")
+        self.auth_key = auth_key or os.environ.get("GIGACHAT_AUTH_KEY", "") or os.environ.get("GIGACHAT_CLIENT_SECRET", "")
         self.access_token = access_token or os.environ.get("GIGACHAT_ACCESS_TOKEN", "")
         self.oauth_url = oauth_url
         self.scope = scope
