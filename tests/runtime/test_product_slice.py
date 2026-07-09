@@ -33,8 +33,14 @@ def test_product_slice_wraps_verified_cli_package(tmp_path: Path):
     assert report["release_decision"]["decision"] == "slice_ready"
     assert report["verified_system_package"]["artifact_type"] == "VerifiedSystemPackage"
     assert report["architecture_decision"]["artifact_type"] == "ArchitectureDecisionRecord"
-    assert len(report["implementation_tasks"]) >= 5
+    assert report["requirements"]["artifact_type"] == "RequirementSet"
+    assert report["documentation_review"]["status"] == "ok"
+    assert report["scenario_verification"]["artifact_type"] == "ScenarioVerification"
+    assert len(report["implementation_tasks"]) >= 6
+    assert report["task_graph"]["artifact_type"] == "ProductTaskGraph"
+    assert report["task_graph"]["edges"]
     assert report["invariants"]["sandbox_only"] is True
+    assert report["invariants"]["scenario_rework_is_bounded"] is True
     assert Path(report["product_slice_path"]).is_file()
 
 
@@ -54,6 +60,11 @@ def test_product_slice_wraps_verified_fastapi_package(tmp_path: Path):
     assert report["verification"]["tester_recommendation"] == "approve"
     assert report["implementation_tasks"][2]["title"] == "add interface boundary"
     assert report["implementation_tasks"][2]["evidence"]
+    assert report["scenario_verification"]["status"] == "covered"
+    assert report["product_debug_loop"]["status"] == "not_needed"
+    assert report["task_graph"]["critical_path"][-1] == "T6"
+    assert report["inputs_outputs"]["inputs"] == ["HTTP JSON item payload", "path key"]
+    assert "controlled HTTP 404 response" in report["inputs_outputs"]["outputs"]
 
 
 def test_product_slice_blocks_vague_prompt(tmp_path: Path):
@@ -71,3 +82,5 @@ def test_product_slice_blocks_vague_prompt(tmp_path: Path):
     assert report["prompt_adequacy"]["status"] in {"needs_clarification", "unsupported", "too_broad"}
     assert report["release_decision"]["decision"] == "blocked"
     assert report["verified_system_package"]["status"] == "blocked"
+    assert report["requirements"]["status"] == "blocked"
+    assert report["product_debug_loop"]["status"] == "needs_bounded_rework"

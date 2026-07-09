@@ -42,11 +42,16 @@ def _slice_spec(prompt: str, package: dict[str, Any]) -> dict[str, Any]:
         "prompt": prompt,
         "prompt_adequacy": gate,
         "goal": _goal_summary(gate),
+        "requirements": _requirements(gate, package, system_type),
         "scope": _scope(system_type),
         "user_scenarios": _user_scenarios(system_type, prompt),
         "inputs_outputs": _inputs_outputs(gate, package),
         "architecture_decision": _architecture_decision(system_type, package),
         "implementation_tasks": _implementation_tasks(system_type, package),
+        "task_graph": _task_graph(system_type, package),
+        "documentation_review": _documentation_review(package),
+        "scenario_verification": _scenario_verification(system_type, package),
+        "product_debug_loop": _product_debug_loop(package),
         "verification": _verification(package),
         "release_decision": _product_release_decision(package_ok, release),
         "verified_system_package": package,
@@ -57,6 +62,7 @@ def _slice_spec(prompt: str, package: dict[str, Any]) -> dict[str, Any]:
             "human_approval_required_for_source_apply": True,
             "sandbox_only": True,
             "arbitrary_product_generation": False,
+            "scenario_rework_is_bounded": True,
         },
     }
 
@@ -80,6 +86,60 @@ def _scope(system_type: str) -> dict[str, Any]:
     }
 
 
+def _requirements(gate: dict[str, Any], package: dict[str, Any], system_type: str) -> dict[str, Any]:
+    goal_spec = dict(gate.get("goal_spec", {}))
+    tester = dict(package.get("tester_review", {}))
+    coverage = dict(tester.get("coverage", {}))
+    requirements = [
+        {
+            "id": "R1",
+            "kind": "goal",
+            "text": _requirement_text(goal_spec, system_type),
+            "source": "prompt",
+            "verification": "prompt adequacy gate is ready",
+            "status": "satisfied" if gate.get("status") == "ready" else "blocked",
+        },
+        {
+            "id": "R2",
+            "kind": "runtime",
+            "text": "build an isolated package with no direct user source modification",
+            "source": "stage3 invariant",
+            "verification": "VerifiedSystemPackage source_code flags stay false",
+            "status": "satisfied" if _no_source_changes(package) else "blocked",
+        },
+        {
+            "id": "R3",
+            "kind": "verification",
+            "text": "cover all expected acceptance criteria with project-scoped tests",
+            "source": "tester review",
+            "verification": "missing_acceptance is empty",
+            "status": "satisfied" if coverage.get("missing_acceptance") == [] else "blocked",
+        },
+        {
+            "id": "R4",
+            "kind": "documentation",
+            "text": "provide README and runnable commands",
+            "source": "documentation pack",
+            "verification": "documentation review passes",
+            "status": "satisfied" if _documentation_ready(package) else "blocked",
+        },
+    ]
+    return {
+        "artifact_type": "RequirementSet",
+        "status": "satisfied" if all(row["status"] == "satisfied" for row in requirements) else "blocked",
+        "items": requirements,
+    }
+
+
+def _requirement_text(goal_spec: dict[str, Any], system_type: str) -> str:
+    summary = goal_spec.get("summary") or goal_spec.get("goal")
+    if summary:
+        return str(summary)
+    if system_type == "fastapi_service":
+        return "produce a bounded local FastAPI service"
+    return "produce a bounded local CLI or file-processing utility"
+
+
 def _user_scenarios(system_type: str, prompt: str) -> list[dict[str, str]]:
     if system_type == "fastapi_service":
         return [
@@ -96,12 +156,40 @@ def _user_scenarios(system_type: str, prompt: str) -> list[dict[str, str]]:
 
 def _inputs_outputs(gate: dict[str, Any], package: dict[str, Any]) -> dict[str, Any]:
     goal_spec = dict(gate.get("goal_spec", {}))
+    system_type = str(package.get("system_type") or gate.get("system_type") or "unknown")
+    inferred = _inferred_io(str(package.get("prompt") or gate.get("prompt") or ""), system_type)
+    inputs = list(goal_spec.get("inputs") or inferred["inputs"])
+    outputs = list(goal_spec.get("outputs") or inferred["outputs"])
+    if outputs == ["file"] and inferred["outputs"]:
+        outputs = inferred["outputs"]
     return {
-        "inputs": goal_spec.get("inputs", []),
-        "outputs": goal_spec.get("outputs", []),
+        "inputs": inputs,
+        "outputs": outputs,
+        "inference_source": inferred["source"],
         "generated_files": dict(package.get("source_code", {})).get("files", []),
         "project_dir": package.get("project_dir"),
     }
+
+
+def _inferred_io(prompt: str, system_type: str) -> dict[str, Any]:
+    lower = prompt.lower()
+    if system_type == "fastapi_service" and ("key-value" in lower or "crud" in lower):
+        return {
+            "source": "stage3_prompt_inference",
+            "inputs": ["HTTP JSON item payload", "path key"],
+            "outputs": ["HTTP JSON item response", "controlled HTTP 404 response"],
+        }
+    if system_type == "fastapi_service" and "csv" in lower:
+        return {
+            "source": "stage3_prompt_inference",
+            "inputs": ["HTTP JSON payload with csv_text"],
+            "outputs": ["HTTP JSON aggregate report", "controlled HTTP 400 response"],
+        }
+    if "jsonl" in lower:
+        return {"source": "stage3_prompt_inference", "inputs": ["JSONL input file"], "outputs": ["filtered JSONL output file"]}
+    if "text" in lower or "текст" in lower:
+        return {"source": "stage3_prompt_inference", "inputs": ["text input file"], "outputs": ["JSON statistics report"]}
+    return {"source": "goal_spec", "inputs": [], "outputs": []}
 
 
 def _architecture_decision(system_type: str, package: dict[str, Any]) -> dict[str, Any]:
@@ -121,13 +209,25 @@ def _architecture_decision(system_type: str, package: dict[str, Any]) -> dict[st
 def _implementation_tasks(system_type: str, package: dict[str, Any]) -> list[dict[str, Any]]:
     files = list(dict(package.get("source_code", {})).get("files", []))
     tasks = [
-        {"id": "T1", "title": "create package structure", "status": "done", "evidence": files[:3]},
-        {"id": "T2", "title": "implement domain core", "status": "done", "evidence": _matching(files, ("core", "stats", "store", "filter"))},
-        {"id": "T3", "title": "add interface boundary", "status": "done", "evidence": _interface_files(system_type, files)},
-        {"id": "T4", "title": "add project-scoped tests", "status": "done", "evidence": _matching(files, ("test_", "tests/"))},
-        {"id": "T5", "title": "write run documentation", "status": "done", "evidence": [dict(package.get("documentation", {})).get("readme")]},
+        {"id": "T1", "title": "create package structure", "depends_on": [], "status": "done", "evidence": files[:3]},
+        {"id": "T2", "title": "implement domain core", "depends_on": ["T1"], "status": "done", "evidence": _matching(files, ("core", "stats", "store", "filter"))},
+        {"id": "T3", "title": "add interface boundary", "depends_on": ["T2"], "status": "done", "evidence": _interface_files(system_type, files)},
+        {"id": "T4", "title": "add project-scoped tests", "depends_on": ["T2", "T3"], "status": "done", "evidence": _matching(files, ("test_", "tests/"))},
+        {"id": "T5", "title": "write run documentation", "depends_on": ["T3", "T4"], "status": "done", "evidence": [dict(package.get("documentation", {})).get("readme")]},
+        {"id": "T6", "title": "review product slice release evidence", "depends_on": ["T4", "T5"], "status": "done" if package.get("status") == "ok" else "blocked", "evidence": [dict(package.get("release_decision", {})).get("decision")]},
     ]
     return tasks
+
+
+def _task_graph(system_type: str, package: dict[str, Any]) -> dict[str, Any]:
+    tasks = _implementation_tasks(system_type, package)
+    return {
+        "artifact_type": "ProductTaskGraph",
+        "status": "complete" if all(task["status"] == "done" for task in tasks) else "blocked",
+        "nodes": tasks,
+        "edges": [{"from": dep, "to": task["id"]} for task in tasks for dep in task["depends_on"]],
+        "critical_path": ["T1", "T2", "T3", "T4", "T5", "T6"],
+    }
 
 
 def _matching(files: list[str], markers: tuple[str, ...]) -> list[str]:
@@ -146,6 +246,92 @@ def _verification(package: dict[str, Any]) -> dict[str, Any]:
         "debug_loop": dict(package.get("debug_loop", {})).get("status"),
         "tester_recommendation": dict(package.get("tester_review", {})).get("recommendation"),
     }
+
+
+def _documentation_review(package: dict[str, Any]) -> dict[str, Any]:
+    docs = dict(package.get("documentation", {}))
+    run_commands = list(docs.get("run_instructions", []))
+    readme = docs.get("readme")
+    checks = {
+        "has_readme": bool(readme),
+        "has_test_command": any("pytest" in command for command in run_commands),
+        "has_run_command": len(run_commands) >= 3,
+        "verification_summary_present": bool(docs.get("verification_summary")),
+    }
+    status = "ok" if all(checks.values()) else "needs_rework"
+    return {
+        "artifact_type": "DocumentationReview",
+        "status": status,
+        "checks": checks,
+        "findings": [] if status == "ok" else [{"severity": "medium", "code": key} for key, ok in checks.items() if not ok],
+    }
+
+
+def _scenario_verification(system_type: str, package: dict[str, Any]) -> dict[str, Any]:
+    tests = dict(package.get("tests", {}))
+    covered = list(tests.get("covered_acceptance", []))
+    scenarios = _user_scenarios(system_type, str(package.get("prompt") or ""))
+    rows = []
+    for scenario in scenarios:
+        rows.append(
+            {
+                "scenario": scenario["name"],
+                "status": "covered" if _scenario_covered(scenario["name"], covered, system_type) else "needs_rework",
+                "evidence": covered,
+            }
+        )
+    return {
+        "artifact_type": "ScenarioVerification",
+        "status": "covered" if all(row["status"] == "covered" for row in rows) else "needs_rework",
+        "scenarios": rows,
+    }
+
+
+def _scenario_covered(name: str, covered: list[str], system_type: str) -> bool:
+    text = " ".join(covered).lower()
+    if system_type == "fastapi_service":
+        mapping = {
+            "health_check": ("health", "endpoints"),
+            "domain_request": ("create", "aggregates", "items"),
+            "controlled_error": ("controlled", "404", "validation"),
+        }
+    else:
+        mapping = {
+            "process_input_file": ("reads", "writes", "file", "cli"),
+            "invalid_or_edge_input": ("edge", "malformed", "empty"),
+            "local_run": ("project root", "cli", "tests"),
+        }
+    return any(marker in text for marker in mapping.get(name, (name,)))
+
+
+def _product_debug_loop(package: dict[str, Any]) -> dict[str, Any]:
+    docs = _documentation_review(package)
+    scenarios = _scenario_verification(str(package.get("system_type") or "unknown"), package)
+    blockers = []
+    if docs["status"] != "ok":
+        blockers.append("documentation_review")
+    if scenarios["status"] != "covered":
+        blockers.append("scenario_verification")
+    return {
+        "artifact_type": "ProductDebugLoopPlan",
+        "status": "not_needed" if not blockers else "needs_bounded_rework",
+        "bounded_rework_only": True,
+        "blockers": blockers,
+        "allowed_actions": [
+            "rewrite_readme_from_verified_package",
+            "add_missing_scenario_test_inside_generated_package",
+            "rerun_project_scoped_verification",
+        ],
+    }
+
+
+def _documentation_ready(package: dict[str, Any]) -> bool:
+    return _documentation_review(package)["status"] == "ok"
+
+
+def _no_source_changes(package: dict[str, Any]) -> bool:
+    source = dict(package.get("source_code", {}))
+    return source.get("source_tree_changes") is False and source.get("registry_changes") is False
 
 
 def _product_release_decision(package_ok: bool, release: dict[str, Any]) -> dict[str, str]:

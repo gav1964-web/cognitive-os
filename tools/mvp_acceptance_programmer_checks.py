@@ -99,6 +99,11 @@ def product_slice_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     package = dict(payload.get("verified_system_package", {}))
     release = dict(payload.get("release_decision", {}))
     invariants = dict(payload.get("invariants", {}))
+    requirements = dict(payload.get("requirements", {}))
+    task_graph = dict(payload.get("task_graph", {}))
+    docs = dict(payload.get("documentation_review", {}))
+    scenarios = dict(payload.get("scenario_verification", {}))
+    product_loop = dict(payload.get("product_debug_loop", {}))
     tasks = list(payload.get("implementation_tasks", []))
     ok = (
         ctx["returncode"] == 0
@@ -109,11 +114,17 @@ def product_slice_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and package.get("artifact_type") == "VerifiedSystemPackage"
         and package.get("status") == "ok"
         and release.get("decision") == "slice_ready"
-        and len(tasks) >= 5
+        and requirements.get("status") == "satisfied"
+        and task_graph.get("status") == "complete"
+        and docs.get("status") == "ok"
+        and scenarios.get("status") == "covered"
+        and product_loop.get("status") == "not_needed"
+        and len(tasks) >= 6
         and bool(payload.get("product_slice_path"))
         and invariants.get("stage2_package_is_execution_engine") is True
         and invariants.get("prompt_adequacy_gate_required") is True
         and invariants.get("direct_user_source_modification") is False
         and invariants.get("sandbox_only") is True
+        and invariants.get("scenario_rework_is_bounded") is True
     )
     return ok, f"status={payload.get('status')}, gate={gate.get('status')}, decision={release.get('decision')}, tasks={len(tasks)}"

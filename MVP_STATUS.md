@@ -20,7 +20,7 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
 | L3.5 spinal layer | Deterministic known-route planner and project signals are operational | goal reports |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
-| Stage 3 product slice | Initial `ProductSliceSpec` contract wraps a verified package with scenarios, architecture decision, task graph and release decision | `tools/product_slice.py` |
+| Stage 3 product slice | `ProductSliceSpec` wraps a verified package with requirements, scenarios, architecture decision, task graph, documentation/scenario review and release decision | `tools/product_slice.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
 | Knowledge Gap Loop | Installed-package probe, official-docs fetch and optional GitHub metadata evidence are implemented | knowledge tests |
 
@@ -105,7 +105,7 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 ## Known Limits
 
 * L4 external model calls are optional and not required for readiness; the latest project `5` pass used deterministic fallback.
-* Stage 3 is currently a contract wrapper over Stage 2 verified packages, not a general prompt-to-product generator.
+* Stage 3 is currently a product-slice contract and review layer over Stage 2 verified packages, not a general prompt-to-product generator.
 * `analysis_tasks` are proposed backlog items, not automatic edits.
 * Foundry candidates are not promoted without explicit approval.
 * GitHub evidence is metadata only and not authority.
@@ -115,4 +115,4 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 
 ## Next Best Step
 
-The next engineering step is to grow Stage 3 from a verified package wrapper into a small product-slice pipeline: richer requirement decomposition, explicit task dependencies, package-level documentation review, and bounded debug/rework loops across product scenarios.
+The next engineering step is to turn the Stage 3 product debug-loop plan into an executable bounded rework loop across product scenarios, then add more product prompts to the benchmark.

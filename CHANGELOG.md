@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Stage 3 `Prompt -> Verified Product Slice` contract with `ProductSliceSpec`, architecture decision, task graph, verification summary, CLI and acceptance gate.
+- Stage 3 product-slice review fields for requirements, task dependencies, documentation review, scenario verification, bounded product debug-loop plan and inferred input/output lifecycle.
 - Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
 - CLI input/output contract repair for generated file-processing packages.
 - Negative and edge-case test repair for empty text input and malformed JSONL fixtures.
