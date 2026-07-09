@@ -244,6 +244,17 @@ Verified areas include:
 
 These checks mean the deterministic planning and sandbox execution gates passed. They do **not** mean the system is generally intelligent, self-learning, or safe to let loose on arbitrary projects without review.
 
+### Direct Provider Migration Sandbox
+
+Provider migration is handled as a reviewed sandbox package, not as direct source editing. For the `map` field trial the focused analyzer can find local proxy assumptions, and the GigaChat sandbox patch generator can produce a separate tested package for direct `GigaChat-2-Pro` access:
+
+```powershell
+python tools\llm_migration_analysis.py --root . --project-dir F:\ubuntu\test\map --target-model GigaChat-2-Pro --write
+python tools\gigachat_sandbox_patch.py --root . --project-dir F:\ubuntu\test\map --target-model GigaChat-2-Pro
+```
+
+The patch package writes `package/import_indoc.py`, mocked provider-boundary tests, README and `patch_report.json` under `artifacts/gigachat_sandbox_patches/*`. It keeps `source_code_changes=false` and requires explicit human approval before any source-project apply.
+
 ## What This Project Is Good For
 
 Cognitive OS is currently useful as:
