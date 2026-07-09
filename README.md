@@ -201,6 +201,12 @@ adequate prompt
 The current Stage 3 slice deliberately reuses Stage 2 as the execution engine. It does not generate arbitrary products and does not edit user source trees. Its job is to lift a verified package into a product-level contract that names user scenarios, inputs/outputs, architecture decision, implementation tasks, verification evidence, and release decision.
 It also derives a small requirement set, task dependencies, documentation review, scenario verification and a bounded product debug-loop plan. If documentation or scenario evidence is incomplete, Stage 3 may request only allowlisted package-local rework such as README rewrite, missing scenario test addition, and project-scoped verification rerun.
 
+The executable product debug loop can be probed with:
+
+```powershell
+python tools/product_debug_loop_probe.py --root . --damage documentation --write
+```
+
 Run it with:
 
 ```powershell

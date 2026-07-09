@@ -31,3 +31,17 @@ def stage3_checks(report) -> None:
         layers=["L4"],
         check=programmer_checks.product_slice_ok,
     )
+    report.command(
+        "product_debug_loop_probe",
+        [
+            sys.executable,
+            "tools/product_debug_loop_probe.py",
+            "--root",
+            ".",
+            "--damage",
+            "documentation",
+            "--write",
+        ],
+        layers=["L4"],
+        check=programmer_checks.product_debug_loop_probe_ok,
+    )

@@ -128,3 +128,27 @@ def product_slice_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and invariants.get("scenario_rework_is_bounded") is True
     )
     return ok, f"status={payload.get('status')}, gate={gate.get('status')}, decision={release.get('decision')}, tasks={len(tasks)}"
+
+
+def product_debug_loop_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    loop = dict(payload.get("debug_loop", {})) if isinstance(payload, dict) else {}
+    attempts = list(loop.get("attempts", []))
+    first = dict(attempts[0]) if attempts else {}
+    result = dict(first.get("result", {}))
+    analysis = dict(first.get("failure_analysis", {}))
+    invariants = dict(payload.get("invariants", {}))
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "ProductDebugLoopProbe"
+        and payload.get("status") == "ok"
+        and loop.get("artifact_type") == "ProductDebugLoop"
+        and loop.get("final_status") == "ok"
+        and analysis.get("status") == "needs_rework"
+        and bool(result.get("applied_actions"))
+        and invariants.get("sandbox_only") is True
+        and invariants.get("source_tree_changes") is False
+        and invariants.get("registry_changes") is False
+        and invariants.get("bounded_rework") is True
+    )
+    return ok, f"damage={payload.get('damage')}, final={loop.get('final_status')}, actions={result.get('applied_actions')}"
