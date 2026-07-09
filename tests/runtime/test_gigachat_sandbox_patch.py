@@ -59,6 +59,18 @@ def test_gigachat_patch_is_idempotent_for_imports(tmp_path: Path) -> None:
     assert twice.count("import uuid\n") == 1
 
 
+def test_gigachat_patch_rewrites_runtime_progress_label() -> None:
+    source = SOURCE_WITH_LOCAL_PROXY().replace(
+        "return json.loads(text)\n",
+        'return json.loads(text)\nprint(f"  Qwen batch {1}")\n',
+    )
+
+    patched = _patch_import_indoc(source, "GigaChat-2-Pro")
+
+    assert "GigaChat batch" in patched
+    assert "Qwen batch" not in patched
+
+
 def SOURCE_WITH_LOCAL_PROXY() -> str:
     return '''
 import hashlib

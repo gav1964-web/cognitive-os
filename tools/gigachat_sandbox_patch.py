@@ -88,6 +88,7 @@ def _patch_import_indoc(text: str, target_model: str) -> str:
     text = text.replace("OpenAI-compatible chat completions URL.", "GigaChat chat completions URL.")
     text = text.replace("Qwen model name.", "GigaChat model name.")
     text = text.replace("Send only complex candidate lines to Qwen, or all candidate lines.", "Send only complex candidate lines to GigaChat, or all candidate lines.")
+    text = text.replace("Qwen batch", "GigaChat batch")
     start = text.index("class LlmExtractor:")
     end = text.index("\ndef parse_json_response", start)
     return text[:start] + _llm_extractor_class() + text[end:]
