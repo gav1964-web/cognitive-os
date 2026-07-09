@@ -277,6 +277,11 @@ python tools\map_gigachat_tester.py --root . --project-dir F:\ubuntu\test\map --
 ```
 
 The trial copies a baseline into an isolated fixture, applies the reviewed sandbox package only inside that fixture, compares the result with an external teacher reference, and records invariants such as `teacher_reference_is_ground_truth=false` and `source_project_modified=false`.
+The portable acceptance probe for the same contour is:
+
+```powershell
+python tools\project_change_trial_probe.py --root . --write
+```
 
 ## What This Project Is Good For
 

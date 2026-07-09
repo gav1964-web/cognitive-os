@@ -312,6 +312,12 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> Non
     stage2_checks(report)
     stage3_checks(report)
     report.command(
+        "project_change_trial_probe",
+        [sys.executable, "tools/project_change_trial_probe.py", "--root", ".", "--write"],
+        layers=["L4"],
+        check=checks.json_status_ok,
+    )
+    report.command(
         "project_extraction_proposal",
         [
             sys.executable,
