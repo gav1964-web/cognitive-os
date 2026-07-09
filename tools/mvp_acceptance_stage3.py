@@ -79,3 +79,17 @@ def stage3_checks(report) -> None:
         layers=["L4"],
         check=programmer_checks.product_slice_benchmark_ok,
     )
+    report.command(
+        "product_scenario_core_behavior_probe",
+        [
+            sys.executable,
+            "tools/product_scenario_probe.py",
+            "--root",
+            ".",
+            "--damage",
+            "core_behavior",
+            "--write",
+        ],
+        layers=["L4"],
+        check=programmer_checks.product_scenario_probe_ok,
+    )

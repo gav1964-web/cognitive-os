@@ -208,7 +208,10 @@ The executable product debug loop can be probed with:
 python tools/product_debug_loop_probe.py --root . --damage api_contract --write
 python tools/product_debug_loop_probe.py --root . --damage cli_ux --write
 python tools/product_debug_loop_probe.py --root . --damage readme_api --write
+python tools/product_scenario_probe.py --root . --damage core_behavior --write
 ```
+
+The `core_behavior` probe is intentionally a controlled block: if generated CLI domain logic produces wrong output while the CLI contract still looks valid, Stage 3 reports `core_behavior_drift` and stops for review instead of applying a blind deterministic repair.
 
 Run the current 8-case Stage 3 prompt benchmark with:
 

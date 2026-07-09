@@ -66,8 +66,10 @@ def analyze_product_slice_failure(package: dict[str, Any]) -> dict[str, Any]:
         blockers.append("scenario_verification")
     if _has_readme_mismatch(checks):
         blockers.append("readme_api_mismatch")
-    if _has_cli_ux_drift(package, checks, verification):
+    if _has_cli_ux_drift(package, checks):
         blockers.append("cli_ux_drift")
+    elif _has_core_behavior_drift(package, checks, verification):
+        blockers.append("core_behavior_drift")
     elif verification.get("status") == "failed" or checks.get("verification_passed") is False:
         blockers.append("api_contract_drift")
     return {
@@ -323,11 +325,19 @@ def _has_readme_mismatch(checks: dict[str, Any]) -> bool:
     return any(checks.get(name) is False for name in ("readme_behavior_aligned", "readme_has_run_command", "readme_mentions_prompt"))
 
 
-def _has_cli_ux_drift(package: dict[str, Any], checks: dict[str, Any], verification: dict[str, Any]) -> bool:
+def _has_cli_ux_drift(package: dict[str, Any], checks: dict[str, Any]) -> bool:
     if package.get("system_type") != "cli":
         return False
     cli_checks = ("has_cli_entrypoint", "cli_uses_argparse", "cli_accepts_input_output")
-    return any(checks.get(name) is False for name in cli_checks) or verification.get("status") == "failed"
+    return any(checks.get(name) is False for name in cli_checks)
+
+
+def _has_core_behavior_drift(package: dict[str, Any], checks: dict[str, Any], verification: dict[str, Any]) -> bool:
+    if package.get("system_type") != "cli":
+        return False
+    if verification.get("status") != "failed" and checks.get("verification_passed") is not False:
+        return False
+    return not _has_cli_ux_drift(package, checks)
 
 
 def _package_clean(package: dict[str, Any]) -> bool:

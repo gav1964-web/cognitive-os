@@ -8,6 +8,8 @@
 - Stage 3 product debug-loop repair for FastAPI API contract drift and a 3-case product-slice benchmark.
 - Stage 3 product debug-loop repairs for CLI UX drift and README/API mismatch, with acceptance probes.
 - Stage 3 product-slice benchmark expanded to 8 supported product prompts, with prompt intake and negative-edge evidence hardening.
+- Stage 3 product-scenario probe for non-repairable CLI core behavior drift, producing a controlled `needs_rework` boundary instead of blind repair.
+- Focused LLM migration analyzer for finding local proxy assumptions and producing direct-provider migration plans.
 - Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
 - CLI input/output contract repair for generated file-processing packages.
 - Negative and edge-case test repair for empty text input and malformed JSONL fixtures.

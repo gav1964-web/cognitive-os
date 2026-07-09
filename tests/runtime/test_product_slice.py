@@ -199,6 +199,30 @@ def test_product_debug_loop_repairs_cli_ux_drift(tmp_path: Path):
     assert "argparse" in cli_path.read_text(encoding="utf-8")
 
 
+def test_product_debug_loop_blocks_core_behavior_drift(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    package = build_verified_system_package(
+        root=tmp_path,
+        prompt=TEXT_STATS_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    project_dir = Path(str(package["project_dir"]))
+    stats_path = project_dir / "src" / "text_stats" / "stats.py"
+    stats_path.write_text(
+        stats_path.read_text(encoding="utf-8").replace("'words': len(text.split())", "'words': 0"),
+        encoding="utf-8",
+    )
+    package["verification_report"] = {"status": "failed"}
+    package["tester_review"]["checks"]["verification_passed"] = False
+
+    loop = run_product_debug_loop(package=package, reference=_reference(root, "text_stats_cli"), max_attempts=1)
+
+    assert loop["final_status"] == "needs_rework"
+    assert loop["attempts"][0]["failure_analysis"]["blockers"] == ["core_behavior_drift"]
+    assert loop["attempts"][0]["rework_plan"]["status"] == "blocked"
+
+
 def test_product_debug_loop_repairs_readme_api_mismatch(tmp_path: Path):
     root = Path(__file__).resolve().parents[2]
     package = build_verified_system_package(

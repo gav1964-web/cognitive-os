@@ -154,6 +154,28 @@ def product_debug_loop_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     return ok, f"damage={payload.get('damage')}, final={loop.get('final_status')}, actions={result.get('applied_actions')}"
 
 
+def product_scenario_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    loop = dict(payload.get("debug_loop", {})) if isinstance(payload, dict) else {}
+    attempts = list(loop.get("attempts", []))
+    first = dict(attempts[0]) if attempts else {}
+    analysis = dict(first.get("failure_analysis", {}))
+    plan = dict(first.get("rework_plan", {}))
+    invariants = dict(payload.get("invariants", {}))
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "ProductScenarioProbe"
+        and payload.get("status") == "ok"
+        and loop.get("final_status") == "needs_rework"
+        and analysis.get("blockers") == ["core_behavior_drift"]
+        and plan.get("status") == "blocked"
+        and invariants.get("sandbox_only") is True
+        and invariants.get("source_tree_changes") is False
+        and invariants.get("registry_changes") is False
+    )
+    return ok, f"damage={payload.get('damage')}, final={loop.get('final_status')}, blockers={analysis.get('blockers')}"
+
+
 def product_slice_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     payload = ctx["payload"]
     summary = dict(payload.get("summary", {})) if isinstance(payload, dict) else {}
