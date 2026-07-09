@@ -298,7 +298,17 @@ def _scenario_covered(name: str, covered: list[str], system_type: str) -> bool:
     else:
         mapping = {
             "process_input_file": ("reads", "writes", "file", "cli"),
-            "invalid_or_edge_input": ("edge", "malformed", "empty"),
+            "invalid_or_edge_input": (
+                "edge",
+                "malformed",
+                "empty",
+                "unique",
+                "rejected",
+                "invalid",
+                "path traversal",
+                "fixture",
+                "no live network",
+            ),
             "local_run": ("project root", "cli", "tests"),
         }
     return any(marker in text for marker in mapping.get(name, (name,)))

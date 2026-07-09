@@ -200,6 +200,7 @@ adequate prompt
 
 The current Stage 3 slice deliberately reuses Stage 2 as the execution engine. It does not generate arbitrary products and does not edit user source trees. Its job is to lift a verified package into a product-level contract that names user scenarios, inputs/outputs, architecture decision, implementation tasks, verification evidence, and release decision.
 It also derives a small requirement set, task dependencies, documentation review, scenario verification and a bounded product debug-loop plan. If documentation or scenario evidence is incomplete, Stage 3 may request only allowlisted package-local rework such as README rewrite, missing scenario test addition, and project-scoped verification rerun.
+The current benchmark covers 8 supported product prompts: FastAPI key/value CRUD, FastAPI CSV aggregation, text stats CLI, JSONL log filter, duplicate file finder, batch renamer, JSON config merger, and static site indexer.
 
 The executable product debug loop can be probed with:
 
@@ -209,7 +210,7 @@ python tools/product_debug_loop_probe.py --root . --damage cli_ux --write
 python tools/product_debug_loop_probe.py --root . --damage readme_api --write
 ```
 
-Run the current Stage 3 prompt benchmark with:
+Run the current 8-case Stage 3 prompt benchmark with:
 
 ```powershell
 python tools/product_slice_benchmark.py --root . --write

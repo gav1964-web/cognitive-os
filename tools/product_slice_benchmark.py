@@ -1,4 +1,4 @@
-"""Run a small Stage 3 product-slice benchmark."""
+"""Run the Stage 3 product-slice benchmark."""
 
 from __future__ import annotations
 
@@ -33,6 +33,47 @@ CASES = [
         "prompt": (
             "Напиши CLI-утилиту без внешних зависимостей, которая читает текстовый файл, "
             "считает строки, слова и символы, сохраняет JSON-отчёт, имеет README и тесты."
+        ),
+    },
+    {
+        "name": "json_log_filter_cli",
+        "curriculum": "curricula/programmer_prompt_local_10",
+        "prompt": (
+            "Напиши CLI-утилиту без внешних зависимостей, которая читает JSONL-файл логов, "
+            "фильтрует записи уровня ERROR, пропускает malformed строки, сохраняет новый JSONL-файл, "
+            "имеет README и тесты."
+        ),
+    },
+    {
+        "name": "duplicate_file_finder",
+        "curriculum": "curricula/programmer_prompt_local_10",
+        "prompt": (
+            "Напиши CLI-утилиту без внешних зависимостей, которая ищет дубликаты файлов в каталоге "
+            "по содержимому, сохраняет JSON со списком групп, имеет README и тесты."
+        ),
+    },
+    {
+        "name": "batch_renamer_cli",
+        "curriculum": "curricula/programmer_prompt_local_10",
+        "prompt": (
+            "Напиши CLI-утилиту без внешних зависимостей для пакетного переименования файлов "
+            "в каталоге с dry-run планом, защитой от path traversal, README и тестами."
+        ),
+    },
+    {
+        "name": "json_config_merger",
+        "curriculum": "curricula/programmer_prompt_local_10",
+        "prompt": (
+            "Напиши CLI-утилиту без внешних зависимостей, которая рекурсивно объединяет base.json "
+            "и override.json, сохраняет merged.json, валидирует top-level JSON object, имеет README и тесты."
+        ),
+    },
+    {
+        "name": "static_site_indexer",
+        "curriculum": "curricula/programmer_prompt_local_10",
+        "prompt": (
+            "Напиши CLI-индексатор статического сайта без внешних зависимостей: пройти по HTML-файлам "
+            "каталога, извлечь title и ссылки, сохранить JSON, иметь README и тесты."
         ),
     },
 ]

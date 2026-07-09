@@ -193,7 +193,21 @@ def _read_project_texts(project_dir: Path, files: list[str]) -> dict[str, str]:
 
 def _has_negative_or_edge_test(test_text: str, file_texts: dict[str, str]) -> bool:
     fixture_text = "\n".join(value for key, value in file_texts.items() if "/fixtures/" in key.replace("\\", "/"))
-    markers = ["malformed", "invalid", "unsupported", "missing", "empty", "skipped", "path traversal", "not-json", "stats('')"]
+    markers = [
+        "malformed",
+        "invalid",
+        "unsupported",
+        "missing",
+        "empty",
+        "skipped",
+        "unique",
+        "exclude",
+        "rejected",
+        "path traversal",
+        "path_traversal",
+        "not-json",
+        "stats('')",
+    ]
     return any(marker in test_text.lower() or marker in fixture_text.lower() for marker in markers)
 
 

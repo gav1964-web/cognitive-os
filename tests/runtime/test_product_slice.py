@@ -16,6 +16,10 @@ FASTAPI_KV_PROMPT = (
     "хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, "
     "README, тесты и команду запуска."
 )
+DUPLICATE_FINDER_PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая ищет дубликаты файлов в каталоге "
+    "по содержимому, сохраняет JSON со списком групп, имеет README и тесты."
+)
 
 
 def test_product_slice_wraps_verified_cli_package(tmp_path: Path):
@@ -67,6 +71,23 @@ def test_product_slice_wraps_verified_fastapi_package(tmp_path: Path):
     assert report["task_graph"]["critical_path"][-1] == "T6"
     assert report["inputs_outputs"]["inputs"] == ["HTTP JSON item payload", "path key"]
     assert "controlled HTTP 404 response" in report["inputs_outputs"]["outputs"]
+
+
+def test_product_slice_wraps_local10_duplicate_finder(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+
+    report = build_product_slice_spec(
+        root=tmp_path,
+        prompt=DUPLICATE_FINDER_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_local_10",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["release_decision"]["decision"] == "slice_ready"
+    assert report["verified_system_package"]["tester_review"]["checks"]["has_negative_or_edge_test"] is True
+    assert report["scenario_verification"]["status"] == "covered"
+    assert (Path(report["verified_system_package"]["project_dir"]) / "src" / "duplicate_finder" / "finder.py").is_file()
 
 
 def test_product_slice_blocks_vague_prompt(tmp_path: Path):

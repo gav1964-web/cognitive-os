@@ -109,6 +109,14 @@ def _select_case(prompt: str) -> str | None:
         return "text_stats_cli"
     if "jsonl" in lower and ("error" in lower or "лог" in lower or "log" in lower):
         return "json_log_filter_cli"
+    if "дублик" in lower or "duplicate" in lower:
+        return "duplicate_file_finder"
+    if "переимен" in lower or "rename" in lower:
+        return "batch_renamer_cli"
+    if ("base.json" in lower and "override.json" in lower) or ("json" in lower and ("merge" in lower or "объедин" in lower)):
+        return "json_config_merger"
+    if "static" in lower or "статическ" in lower or ("html" in lower and ("title" in lower or "ссыл" in lower or "links" in lower)):
+        return "static_site_indexer"
     return None
 
 

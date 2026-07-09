@@ -163,8 +163,8 @@ def product_slice_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         ctx["returncode"] == 0
         and payload.get("artifact_type") == "ProductSliceBenchmark"
         and payload.get("status") == "ok"
-        and summary.get("case_count") == 3
-        and summary.get("ok") == 3
+        and summary.get("case_count") == 8
+        and summary.get("ok") == 8
         and summary.get("failed") == 0
         and all(dict(case).get("release_decision") == "slice_ready" for case in cases)
         and all(dict(case).get("requirements") == "satisfied" for case in cases)

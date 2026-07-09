@@ -54,7 +54,29 @@ def _checks(prompt: str, spec: dict[str, Any], system_type: str | None) -> dict[
     return {
         "goal_understood": spec.get("intent") != "unknown" and (spec.get("status") == "ready" or greenfield_ok),
         "system_type_defined": system_type in SUPPORTED_SYSTEM_TYPES,
-        "inputs_defined": bool(spec.get("inputs")) or any(word in lower for word in ("input", "file", "csv", "jsonl", "url", "принимает", "читает", "ключ", "key")),
+        "inputs_defined": bool(spec.get("inputs"))
+        or any(
+            word in lower
+            for word in (
+                "input",
+                "file",
+                "directory",
+                "folder",
+                "csv",
+                "json",
+                "jsonl",
+                "html",
+                "url",
+                "принимает",
+                "читает",
+                "файл",
+                "файлов",
+                "каталог",
+                "директор",
+                "ключ",
+                "key",
+            )
+        ),
         "outputs_defined": bool(spec.get("outputs")) and spec.get("outputs") != ["final_report"],
         "constraints_defined": bool(spec.get("constraints")) or _has_dependency_policy(lower),
         "success_criteria_verifiable": bool(spec.get("success_criteria")) and any(word in lower for word in ("test", "тест", "readme", "csv", "json", "report", "отчет")),
