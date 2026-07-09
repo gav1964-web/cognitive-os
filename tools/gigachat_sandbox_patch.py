@@ -69,7 +69,7 @@ def build_patch(*, root: Path, project_dir: Path, target_model: str) -> dict[str
 
 
 def _patch_import_indoc(text: str, target_model: str) -> str:
-    text = text.replace("import json\n", "import json\nimport os\nimport time\nimport uuid\n")
+    text = _ensure_imports(text, ["os", "time", "uuid"])
     text = text.replace(
         'DEFAULT_LLM_URL = "http://127.0.0.1:8000/v1/chat/completions"\n'
         'DEFAULT_LLM_MODEL = "qwen/qwen-plus-2025-07-28"\n',
@@ -78,9 +78,23 @@ def _patch_import_indoc(text: str, target_model: str) -> str:
         'DEFAULT_GIGACHAT_OAUTH_URL = os.environ.get("GIGACHAT_OAUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth")\n'
         'DEFAULT_GIGACHAT_SCOPE = os.environ.get("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")\n',
     )
+    text = text.replace("Disable Qwen extraction and use rule-based parsing only.", "Disable GigaChat extraction and use rule-based parsing only.")
+    text = text.replace("OpenAI-compatible chat completions URL.", "GigaChat chat completions URL.")
+    text = text.replace("Qwen model name.", "GigaChat model name.")
+    text = text.replace("Send only complex candidate lines to Qwen, or all candidate lines.", "Send only complex candidate lines to GigaChat, or all candidate lines.")
     start = text.index("class LlmExtractor:")
     end = text.index("\ndef parse_json_response", start)
     return text[:start] + _llm_extractor_class() + text[end:]
+
+
+def _ensure_imports(text: str, modules: list[str]) -> str:
+    insert_after = "import json\n"
+    if insert_after not in text:
+        return text
+    additions = "".join(f"import {module}\n" for module in modules if f"import {module}\n" not in text)
+    if not additions:
+        return text
+    return text.replace(insert_after, insert_after + additions, 1)
 
 
 def _llm_extractor_class() -> str:
