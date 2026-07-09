@@ -155,6 +155,52 @@ def test_product_debug_loop_repairs_fastapi_api_contract_drift(tmp_path: Path):
     assert "@app.get('/items/{key}')" in app_path.read_text(encoding="utf-8")
 
 
+def test_product_debug_loop_repairs_cli_ux_drift(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    package = build_verified_system_package(
+        root=tmp_path,
+        prompt=TEXT_STATS_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    project_dir = Path(str(package["project_dir"]))
+    cli_path = project_dir / "src" / "text_stats" / "cli.py"
+    cli_path.write_text("def main(argv=None):\n    return 0\n", encoding="utf-8")
+    package["verification_report"] = {"status": "failed"}
+    package["tester_review"]["checks"]["cli_uses_argparse"] = False
+    package["tester_review"]["checks"]["cli_accepts_input_output"] = False
+
+    loop = run_product_debug_loop(package=package, reference=_reference(root, "text_stats_cli"), max_attempts=1)
+
+    assert loop["final_status"] == "ok"
+    assert loop["attempts"][0]["failure_analysis"]["blockers"] == ["cli_ux_drift"]
+    assert "repair_cli_ux_drift" in loop["attempts"][0]["result"]["applied_actions"]
+    assert "argparse" in cli_path.read_text(encoding="utf-8")
+
+
+def test_product_debug_loop_repairs_readme_api_mismatch(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    package = build_verified_system_package(
+        root=tmp_path,
+        prompt=FASTAPI_KV_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    project_dir = Path(str(package["project_dir"]))
+    readme_path = project_dir / "README.md"
+    readme_path.write_text("# Wrong service\n\nRun app: `uvicorn wrong.app:app --app-dir src`.\n", encoding="utf-8")
+    package["tester_review"]["checks"]["readme_behavior_aligned"] = False
+    package["tester_review"]["checks"]["readme_has_run_command"] = False
+    package["tester_review"]["checks"]["readme_mentions_prompt"] = False
+
+    loop = run_product_debug_loop(package=package, reference=_reference(root, "fastapi_kv_store"), max_attempts=1)
+
+    assert loop["final_status"] == "ok"
+    assert loop["attempts"][0]["failure_analysis"]["blockers"] == ["readme_api_mismatch"]
+    assert "repair_readme_api_mismatch" in loop["attempts"][0]["result"]["applied_actions"]
+    assert "uvicorn kv_store_service.app:app" in readme_path.read_text(encoding="utf-8")
+
+
 def _reference(root: Path, case_name: str) -> dict[str, object]:
     import json
 

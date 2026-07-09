@@ -6,6 +6,7 @@
 - Stage 3 product-slice review fields for requirements, task dependencies, documentation review, scenario verification, bounded product debug-loop plan and inferred input/output lifecycle.
 - Executable Stage 3 product debug loop with documentation/scenario failure analysis, bounded package-local rework, project-scoped verification rerun, tester refresh and acceptance probe.
 - Stage 3 product debug-loop repair for FastAPI API contract drift and a 3-case product-slice benchmark.
+- Stage 3 product debug-loop repairs for CLI UX drift and README/API mismatch, with acceptance probes.
 - Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
 - CLI input/output contract repair for generated file-processing packages.
 - Negative and edge-case test repair for empty text input and malformed JSONL fixtures.

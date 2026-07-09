@@ -115,4 +115,4 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 
 ## Next Best Step
 
-The next engineering step is to add more product prompts to the Stage 3 benchmark and broaden product debug-loop repairs beyond API contract drift into CLI UX and README/API mismatch.
+The next engineering step is to expand the Stage 3 benchmark to 8-10 product prompts and add richer product-scenario probes for generated packages.

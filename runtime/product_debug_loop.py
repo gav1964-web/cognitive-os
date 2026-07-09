@@ -64,7 +64,11 @@ def analyze_product_slice_failure(package: dict[str, Any]) -> dict[str, Any]:
         blockers.append("documentation_review")
     if scenarios["status"] != "covered":
         blockers.append("scenario_verification")
-    if verification.get("status") == "failed" or checks.get("verification_passed") is False:
+    if _has_readme_mismatch(checks):
+        blockers.append("readme_api_mismatch")
+    if _has_cli_ux_drift(package, checks, verification):
+        blockers.append("cli_ux_drift")
+    elif verification.get("status") == "failed" or checks.get("verification_passed") is False:
         blockers.append("api_contract_drift")
     return {
         "artifact_type": "ProductFailureAnalysis",
@@ -72,7 +76,9 @@ def analyze_product_slice_failure(package: dict[str, Any]) -> dict[str, Any]:
         "blockers": blockers,
         "documentation_review": docs,
         "scenario_verification": scenarios,
-        "repairable": set(blockers).issubset({"documentation_review", "scenario_verification", "api_contract_drift"}),
+        "repairable": set(blockers).issubset(
+            {"documentation_review", "scenario_verification", "api_contract_drift", "cli_ux_drift", "readme_api_mismatch"}
+        ),
     }
 
 
@@ -85,6 +91,10 @@ def build_product_rework_plan(analysis: dict[str, Any], package: dict[str, Any])
         actions.append({"type": "add_missing_scenario_test_inside_generated_package", "target": "tests"})
     if "api_contract_drift" in blockers:
         actions.append({"type": "repair_api_contract_drift", "target": "src/<package>/app.py"})
+    if "cli_ux_drift" in blockers:
+        actions.append({"type": "repair_cli_ux_drift", "target": "src/<package>/cli.py"})
+    if "readme_api_mismatch" in blockers:
+        actions.append({"type": "repair_readme_api_mismatch", "target": "README.md"})
     if actions:
         actions.append({"type": "rerun_project_scoped_verification", "target": "project"})
     return {
@@ -117,6 +127,12 @@ def apply_product_rework_plan(
                 applied.append(action_type)
         elif action_type == "repair_api_contract_drift":
             if _repair_api_contract_drift(project_dir, case_name):
+                applied.append(action_type)
+        elif action_type == "repair_cli_ux_drift":
+            if _repair_cli_ux_drift(project_dir, case_name):
+                applied.append(action_type)
+        elif action_type == "repair_readme_api_mismatch":
+            if _rewrite_readme(project_dir, package, reference):
                 applied.append(action_type)
         elif action_type == "rerun_project_scoped_verification":
             continue
@@ -244,6 +260,38 @@ def _repair_api_contract_drift(project_dir: Path, case_name: str) -> bool:
     return False
 
 
+def _repair_cli_ux_drift(project_dir: Path, case_name: str) -> bool:
+    mapping = {
+        "json_log_filter_cli": ("json_log_filter", "filter"),
+        "text_stats_cli": ("text_stats", "stats"),
+        "duplicate_file_finder": ("duplicate_finder", "finder"),
+        "batch_renamer_cli": ("batch_renamer", "renamer"),
+        "json_config_merger": ("json_config_merger", "merger"),
+        "url_status_checker_cli": ("url_status_checker", "checker"),
+        "static_site_indexer": ("static_site_indexer", "indexer"),
+    }
+    if case_name not in mapping:
+        return False
+    package, module = mapping[case_name]
+    path = project_dir / "src" / package / "cli.py"
+    content = (
+        "from __future__ import annotations\n\n"
+        "import argparse\n\n"
+        f"from {package}.{module} import run_cli\n\n\n"
+        "def main(argv: list[str] | None = None) -> int:\n"
+        "    parser = argparse.ArgumentParser()\n"
+        "    parser.add_argument('input')\n"
+        "    parser.add_argument('output')\n"
+        "    args = parser.parse_args(argv)\n"
+        "    run_cli(args.input, args.output)\n"
+        "    return 0\n"
+    )
+    if path.is_file() and path.read_text(encoding="utf-8") == content:
+        return False
+    path.write_text(content, encoding="utf-8")
+    return True
+
+
 def _replace_in_file(path: Path, replacements: dict[str, str]) -> bool:
     if not path.is_file():
         return False
@@ -269,6 +317,17 @@ def _append_if_missing(path: Path, marker: str, snippet: str) -> bool:
 
 def _case_name(package: dict[str, Any]) -> str:
     return str(dict(dict(package.get("tester_review", {})).get("review_target", {})).get("case") or "")
+
+
+def _has_readme_mismatch(checks: dict[str, Any]) -> bool:
+    return any(checks.get(name) is False for name in ("readme_behavior_aligned", "readme_has_run_command", "readme_mentions_prompt"))
+
+
+def _has_cli_ux_drift(package: dict[str, Any], checks: dict[str, Any], verification: dict[str, Any]) -> bool:
+    if package.get("system_type") != "cli":
+        return False
+    cli_checks = ("has_cli_entrypoint", "cli_uses_argparse", "cli_accepts_input_output")
+    return any(checks.get(name) is False for name in cli_checks) or verification.get("status") == "failed"
 
 
 def _package_clean(package: dict[str, Any]) -> bool:

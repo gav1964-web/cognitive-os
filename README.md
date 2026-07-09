@@ -205,6 +205,8 @@ The executable product debug loop can be probed with:
 
 ```powershell
 python tools/product_debug_loop_probe.py --root . --damage api_contract --write
+python tools/product_debug_loop_probe.py --root . --damage cli_ux --write
+python tools/product_debug_loop_probe.py --root . --damage readme_api --write
 ```
 
 Run the current Stage 3 prompt benchmark with:
