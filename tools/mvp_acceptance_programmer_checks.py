@@ -197,3 +197,18 @@ def product_slice_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and invariants.get("sandbox_only") is True
     )
     return ok, f"cases={summary.get('case_count')}, ok={summary.get('ok')}, failed={summary.get('failed')}"
+
+
+def sandbox_patch_review_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "SandboxPatchReviewProbe"
+        and payload.get("status") == "ok"
+        and payload.get("package_status") == "ok"
+        and payload.get("review_status") == "review_ready"
+        and payload.get("apply_status") == "not_requested"
+        and payload.get("source_unchanged") is True
+        and bool(payload.get("review_path"))
+    )
+    return ok, f"review={payload.get('review_status')}, apply={payload.get('apply_status')}, unchanged={payload.get('source_unchanged')}"

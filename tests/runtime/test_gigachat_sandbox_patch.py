@@ -43,3 +43,4 @@ def parse_json_response(text: str) -> dict:
     assert "GIGACHAT_AUTH_KEY" in patched
     assert "GigaChat-2-Pro" in patched
     assert "http://127.0.0.1:8000" not in patched
+    assert "населенный пункт без префикса" in patched

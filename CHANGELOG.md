@@ -11,6 +11,7 @@
 - Stage 3 product-scenario probe for non-repairable CLI core behavior drift, producing a controlled `needs_rework` boundary instead of blind repair.
 - Focused LLM migration analyzer for finding local proxy assumptions and producing direct-provider migration plans.
 - GigaChat sandbox patch generator for building reviewed, tested direct-provider migration packages without touching the source project.
+- Sandbox patch review/apply gate with diff, risk summary, verification checks, explicit approval flag and source backup.
 - Standalone Stage 2 debug-loop probe for damaged FastAPI packages and controlled rework verification.
 - CLI input/output contract repair for generated file-processing packages.
 - Negative and edge-case test repair for empty text input and malformed JSONL fixtures.

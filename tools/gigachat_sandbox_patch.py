@@ -203,7 +203,19 @@ def _llm_extractor_class() -> str:
         )
         user_prompt = {
             "report_date": report_date,
-            "schema": {"events": [{"line": "number", "time": "HH:MM or empty string", "place": "населенный пункт", "district": "район", "groups": ["attack_fpv"], "summary": "краткое описание", "confidence": 0.0}]},
+            "schema": {
+                "events": [
+                    {
+                        "line": "number",
+                        "time": "HH:MM or empty string",
+                        "place": "населенный пункт без префикса н.п./город/село/станция",
+                        "district": "район без окончания -ский/-ского, or empty string",
+                        "groups": ["attack_fpv"],
+                        "summary": "краткое описание события из строки",
+                        "confidence": 0.0,
+                    }
+                ]
+            },
             "rows": rows,
         }
         payload = {

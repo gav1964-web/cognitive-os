@@ -255,6 +255,20 @@ python tools\gigachat_sandbox_patch.py --root . --project-dir F:\ubuntu\test\map
 
 The patch package writes `package/import_indoc.py`, mocked provider-boundary tests, README and `patch_report.json` under `artifacts/gigachat_sandbox_patches/*`. It keeps `source_code_changes=false` and requires explicit human approval before any source-project apply.
 
+Review the package before applying:
+
+```powershell
+python tools\sandbox_patch_review.py --patch-dir artifacts\gigachat_sandbox_patches\<patch-id> --expected-source-project F:\ubuntu\test\map --write-review
+```
+
+Actual source apply is a separate explicit step:
+
+```powershell
+python tools\sandbox_patch_review.py --patch-dir artifacts\gigachat_sandbox_patches\<patch-id> --expected-source-project F:\ubuntu\test\map --apply-approved
+```
+
+The apply gate validates package status, verification status, source-project identity and registry/source invariants. It writes a timestamped backup next to each replaced source file before copying sandbox content into the source project.
+
 ## What This Project Is Good For
 
 Cognitive OS is currently useful as:

@@ -93,3 +93,9 @@ def stage3_checks(report) -> None:
         layers=["L4"],
         check=programmer_checks.product_scenario_probe_ok,
     )
+    report.command(
+        "sandbox_patch_review_probe",
+        [sys.executable, "tools/sandbox_patch_review_probe.py", "--root", ".", "--write"],
+        layers=["L4"],
+        check=programmer_checks.sandbox_patch_review_probe_ok,
+    )
