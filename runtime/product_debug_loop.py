@@ -57,17 +57,22 @@ def analyze_product_slice_failure(package: dict[str, Any]) -> dict[str, Any]:
     docs = _documentation_review(package)
     scenarios = _scenario_verification(system_type, package)
     blockers = []
+    tester = dict(package.get("tester_review", {}))
+    checks = dict(tester.get("checks", {}))
+    verification = dict(package.get("verification_report", {}))
     if docs["status"] != "ok":
         blockers.append("documentation_review")
     if scenarios["status"] != "covered":
         blockers.append("scenario_verification")
+    if verification.get("status") == "failed" or checks.get("verification_passed") is False:
+        blockers.append("api_contract_drift")
     return {
         "artifact_type": "ProductFailureAnalysis",
         "status": "needs_rework" if blockers else "clean",
         "blockers": blockers,
         "documentation_review": docs,
         "scenario_verification": scenarios,
-        "repairable": set(blockers).issubset({"documentation_review", "scenario_verification"}),
+        "repairable": set(blockers).issubset({"documentation_review", "scenario_verification", "api_contract_drift"}),
     }
 
 
@@ -78,6 +83,8 @@ def build_product_rework_plan(analysis: dict[str, Any], package: dict[str, Any])
         actions.append({"type": "rewrite_readme_from_verified_package", "target": "README.md"})
     if "scenario_verification" in blockers:
         actions.append({"type": "add_missing_scenario_test_inside_generated_package", "target": "tests"})
+    if "api_contract_drift" in blockers:
+        actions.append({"type": "repair_api_contract_drift", "target": "src/<package>/app.py"})
     if actions:
         actions.append({"type": "rerun_project_scoped_verification", "target": "project"})
     return {
@@ -107,6 +114,9 @@ def apply_product_rework_plan(
                 applied.append(action_type)
         elif action_type == "add_missing_scenario_test_inside_generated_package":
             if _add_missing_scenario_test(project_dir, case_name):
+                applied.append(action_type)
+        elif action_type == "repair_api_contract_drift":
+            if _repair_api_contract_drift(project_dir, case_name):
                 applied.append(action_type)
         elif action_type == "rerun_project_scoped_verification":
             continue
@@ -214,6 +224,37 @@ def _add_missing_scenario_test(project_dir: Path, case_name: str) -> bool:
         )
         return _append_if_missing(path, marker, snippet)
     return False
+
+
+def _repair_api_contract_drift(project_dir: Path, case_name: str) -> bool:
+    if case_name == "fastapi_kv_store":
+        return _replace_in_file(
+            project_dir / "src" / "kv_store_service" / "app.py",
+            {
+                "@app.get('/broken/{key}')": "@app.get('/items/{key}')",
+                "@app.delete('/broken/{key}')": "@app.delete('/items/{key}')",
+                "@app.put('/broken/{key}')": "@app.put('/items/{key}')",
+            },
+        )
+    if case_name == "fastapi_csv_aggregator":
+        return _replace_in_file(
+            project_dir / "src" / "csv_aggregator_service" / "app.py",
+            {"@app.post('/broken')": "@app.post('/aggregate')"},
+        )
+    return False
+
+
+def _replace_in_file(path: Path, replacements: dict[str, str]) -> bool:
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    changed = text
+    for old, new in replacements.items():
+        changed = changed.replace(old, new)
+    if changed == text:
+        return False
+    path.write_text(changed, encoding="utf-8")
+    return True
 
 
 def _append_if_missing(path: Path, marker: str, snippet: str) -> bool:

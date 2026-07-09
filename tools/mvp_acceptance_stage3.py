@@ -39,9 +39,15 @@ def stage3_checks(report) -> None:
             "--root",
             ".",
             "--damage",
-            "documentation",
+            "api_contract",
             "--write",
         ],
         layers=["L4"],
         check=programmer_checks.product_debug_loop_probe_ok,
+    )
+    report.command(
+        "product_slice_benchmark",
+        [sys.executable, "tools/product_slice_benchmark.py", "--root", ".", "--write"],
+        layers=["L4"],
+        check=programmer_checks.product_slice_benchmark_ok,
     )

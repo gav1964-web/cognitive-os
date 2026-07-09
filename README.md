@@ -204,7 +204,13 @@ It also derives a small requirement set, task dependencies, documentation review
 The executable product debug loop can be probed with:
 
 ```powershell
-python tools/product_debug_loop_probe.py --root . --damage documentation --write
+python tools/product_debug_loop_probe.py --root . --damage api_contract --write
+```
+
+Run the current Stage 3 prompt benchmark with:
+
+```powershell
+python tools/product_slice_benchmark.py --root . --write
 ```
 
 Run it with:

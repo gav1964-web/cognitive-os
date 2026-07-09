@@ -152,3 +152,26 @@ def product_debug_loop_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and invariants.get("bounded_rework") is True
     )
     return ok, f"damage={payload.get('damage')}, final={loop.get('final_status')}, actions={result.get('applied_actions')}"
+
+
+def product_slice_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    summary = dict(payload.get("summary", {})) if isinstance(payload, dict) else {}
+    cases = list(payload.get("cases", []))
+    invariants = dict(payload.get("invariants", {}))
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "ProductSliceBenchmark"
+        and payload.get("status") == "ok"
+        and summary.get("case_count") == 3
+        and summary.get("ok") == 3
+        and summary.get("failed") == 0
+        and all(dict(case).get("release_decision") == "slice_ready" for case in cases)
+        and all(dict(case).get("requirements") == "satisfied" for case in cases)
+        and all(dict(case).get("task_graph") == "complete" for case in cases)
+        and all(dict(case).get("documentation_review") == "ok" for case in cases)
+        and all(dict(case).get("scenario_verification") == "covered" for case in cases)
+        and invariants.get("direct_user_source_modification") is False
+        and invariants.get("sandbox_only") is True
+    )
+    return ok, f"cases={summary.get('case_count')}, ok={summary.get('ok')}, failed={summary.get('failed')}"

@@ -27,7 +27,7 @@ def main() -> int:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
-    parser.add_argument("--damage", choices=["documentation", "scenario"], default="documentation")
+    parser.add_argument("--damage", choices=["documentation", "scenario", "api_contract"], default="documentation")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
 
@@ -58,10 +58,20 @@ def _reference(curriculum_dir: Path) -> dict[str, object]:
 def _damage(package: dict[str, object], damage: str) -> None:
     if damage == "documentation":
         package["documentation"] = {"readme": None, "run_instructions": [], "verification_summary": None}
-    else:
+    elif damage == "scenario":
         tests = dict(package.get("tests", {}))
         tests["covered_acceptance"] = []
         package["tests"] = tests
+    else:
+        app_path = Path(str(package.get("project_dir") or "")) / "src" / "kv_store_service" / "app.py"
+        text = app_path.read_text(encoding="utf-8")
+        app_path.write_text(text.replace("@app.get('/items/{key}')", "@app.get('/broken/{key}')"), encoding="utf-8")
+        package["verification_report"] = {"status": "failed"}
+        tester = dict(package.get("tester_review", {}))
+        checks = dict(tester.get("checks", {}))
+        checks["verification_passed"] = False
+        tester["checks"] = checks
+        package["tester_review"] = tester
 
 
 def _write_report(root: Path, report: dict[str, object], damage: str) -> Path:

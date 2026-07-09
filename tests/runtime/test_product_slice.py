@@ -130,6 +130,31 @@ def test_product_debug_loop_repairs_missing_scenario_evidence(tmp_path: Path):
     assert "missing items return a controlled 404 response" in loop["final_package"]["tests"]["covered_acceptance"]
 
 
+def test_product_debug_loop_repairs_fastapi_api_contract_drift(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    package = build_verified_system_package(
+        root=tmp_path,
+        prompt=FASTAPI_KV_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+    project_dir = Path(str(package["project_dir"]))
+    app_path = project_dir / "src" / "kv_store_service" / "app.py"
+    app_path.write_text(
+        app_path.read_text(encoding="utf-8").replace("@app.get('/items/{key}')", "@app.get('/broken/{key}')"),
+        encoding="utf-8",
+    )
+    package["verification_report"] = {"status": "failed"}
+    package["tester_review"]["checks"]["verification_passed"] = False
+
+    loop = run_product_debug_loop(package=package, reference=_reference(root, "fastapi_kv_store"), max_attempts=1)
+
+    assert loop["final_status"] == "ok"
+    assert loop["attempts"][0]["failure_analysis"]["blockers"] == ["api_contract_drift"]
+    assert "repair_api_contract_drift" in loop["attempts"][0]["result"]["applied_actions"]
+    assert "@app.get('/items/{key}')" in app_path.read_text(encoding="utf-8")
+
+
 def _reference(root: Path, case_name: str) -> dict[str, object]:
     import json
 
