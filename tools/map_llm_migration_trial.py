@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 import argparse
-import difflib
 import json
-import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from runtime.project_change_trial import (
+    FeatureNeedle,
+    TrialFile,
+    build_trial_report,
+    compare_text_files,
+    copy_optional_files,
+    create_fixture,
+    create_trial_dir,
+    write_report,
+)
 
 try:
     from gigachat_sandbox_patch import build_patch
@@ -43,8 +53,7 @@ def main() -> int:
 
 
 def run_trial(*, root: Path, source_project: Path, target_model: str, write: bool = False) -> dict[str, Any]:
-    out_dir = _trial_dir(root)
-    fixture = out_dir / "map_baseline_fixture"
+    out_dir = create_trial_dir(root, "map_llm_migration_trials", "trial")
     teacher_file = source_project / "import_indoc.py"
     baseline_file = _latest_backup(source_project)
     if not teacher_file.is_file():
@@ -52,10 +61,8 @@ def run_trial(*, root: Path, source_project: Path, target_model: str, write: boo
     if baseline_file is None:
         raise FileNotFoundError("import_indoc.py.bak.* baseline not found")
 
-    fixture.mkdir(parents=True)
-    shutil.copy2(baseline_file, fixture / "import_indoc.py")
-    if (source_project / "requirements.txt").is_file():
-        shutil.copy2(source_project / "requirements.txt", fixture / "requirements.txt")
+    fixture = create_fixture(out_dir, "map_baseline_fixture", [TrialFile("import_indoc.py", baseline_file)])
+    copied_optional = copy_optional_files(source_project, fixture, ["requirements.txt"])
 
     analysis = analyze_llm_migration(project_dir=fixture, target_model=target_model)
     package = build_patch(root=root, project_dir=fixture, target_model=target_model)
@@ -67,51 +74,45 @@ def run_trial(*, root: Path, source_project: Path, target_model: str, write: boo
     )
 
     compile_result = _compile_file(fixture / "import_indoc.py")
-    teacher_text = teacher_file.read_text(encoding="utf-8")
-    result_text = (fixture / "import_indoc.py").read_text(encoding="utf-8")
-    comparison = _compare_result(_normalize(teacher_text), _normalize(result_text), target_model)
+    comparison = compare_text_files(
+        teacher_path=teacher_file,
+        result_path=fixture / "import_indoc.py",
+        feature_needles=_feature_needles(target_model),
+    )
 
     status = "ok" if _is_ok(analysis, package, review, compile_result, comparison) else "failed"
-    report = {
-        "artifact_type": "MapLlmMigrationTrial",
-        "status": status,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "source_project": source_project.as_posix(),
-        "baseline_source": baseline_file.as_posix(),
-        "teacher_reference": {
-            "kind": "external_teacher_corrector_patch",
-            "quality": "teacher_reference_not_ground_truth",
-            "file": teacher_file.as_posix(),
+    report = build_trial_report(
+        artifact_type="MapLlmMigrationTrial",
+        status=status,
+        source_project=source_project,
+        trial_fixture=fixture,
+        teacher_file=teacher_file,
+        baseline_sources=[baseline_file],
+        sections={
+            "baseline_source": baseline_file.as_posix(),
+            "optional_files_copied": copied_optional,
+            "analysis": {
+                "status": analysis.get("status"),
+                "llm_files": analysis.get("llm_files", []),
+                "recommendations": analysis.get("recommendations", []),
+            },
+            "patch_package": {
+                "status": package.get("status"),
+                "sandbox_dir": package.get("sandbox_dir"),
+                "verification": dict(package.get("verification", {})).get("status"),
+            },
+            "review_apply": {
+                "status": review.get("status"),
+                "apply_status": dict(review.get("apply", {})).get("status"),
+                "validation": review.get("validation"),
+                "risk_summary": review.get("risk_summary"),
+            },
+            "verification": compile_result,
+            "comparison": comparison,
         },
-        "trial_fixture": fixture.as_posix(),
-        "analysis": {
-            "status": analysis.get("status"),
-            "llm_files": analysis.get("llm_files", []),
-            "recommendations": analysis.get("recommendations", []),
-        },
-        "patch_package": {
-            "status": package.get("status"),
-            "sandbox_dir": package.get("sandbox_dir"),
-            "verification": dict(package.get("verification", {})).get("status"),
-        },
-        "review_apply": {
-            "status": review.get("status"),
-            "apply_status": dict(review.get("apply", {})).get("status"),
-            "validation": review.get("validation"),
-            "risk_summary": review.get("risk_summary"),
-        },
-        "verification": compile_result,
-        "comparison": comparison,
-        "invariants": {
-            "source_project_modified": False,
-            "fixture_only_apply": True,
-            "teacher_reference_is_ground_truth": False,
-            "automatic_code_changes_from_own_output": False,
-        },
-    }
+    )
     if write:
-        report_path = out_dir / "map_llm_migration_trial.json"
-        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        report_path = write_report(report, out_dir, "map_llm_migration_trial.json")
         report["report_path"] = report_path.as_posix()
     return report
 
@@ -131,29 +132,21 @@ def _compile_file(path: Path) -> dict[str, Any]:
     }
 
 
-def _compare_result(teacher: str, result: str, target_model: str) -> dict[str, Any]:
-    features = {
-        "target_model": target_model in result,
-        "local_proxy_removed": "http://127.0.0.1:8000/v1/chat/completions" not in result,
-        "client_secret_alias": "GIGACHAT_CLIENT_SECRET" in result,
-        "auth_key_alias": "GIGACHAT_AUTH_KEY" in result,
-        "verify_ssl_env": "GIGACHAT_VERIFY_SSL" in result,
-        "bearer_header": "Bearer" in result and "Authorization" in result,
-        "oauth_rquid": "RqUID" in result,
-        "provider_cache_key": '"provider": "gigachat"' in result,
-        "fallback_error_message": "GIGACHAT_AUTH_KEY or GIGACHAT_ACCESS_TOKEN" in result,
-        "schema_detail_preserved": "населенный пункт без префикса" in result,
-        "qwen_help_removed": "Qwen" not in result,
-    }
-    diff = list(difflib.unified_diff(teacher.splitlines(), result.splitlines(), fromfile="teacher", tofile="trial", lineterm=""))
-    return {
-        "exact_match": teacher == result,
-        "feature_score": sum(1 for ok in features.values() if ok),
-        "feature_total": len(features),
-        "features": features,
-        "diff_lines": len(diff),
-        "diff_head": diff[:80],
-    }
+def _feature_needles(target_model: str) -> list[FeatureNeedle]:
+    return [
+        FeatureNeedle("target_model", present=(target_model,)),
+        FeatureNeedle("local_proxy_removed", absent=("http://127.0.0.1:8000/v1/chat/completions",)),
+        FeatureNeedle("client_secret_alias", present=("GIGACHAT_CLIENT_SECRET",)),
+        FeatureNeedle("auth_key_alias", present=("GIGACHAT_AUTH_KEY",)),
+        FeatureNeedle("verify_ssl_env", present=("GIGACHAT_VERIFY_SSL",)),
+        FeatureNeedle("bearer_header", present=("Bearer", "Authorization")),
+        FeatureNeedle("oauth_rquid", present=("RqUID",)),
+        FeatureNeedle("provider_cache_key", present=('"provider": "gigachat"',)),
+        FeatureNeedle("fallback_error_message", present=("GIGACHAT_AUTH_KEY or GIGACHAT_ACCESS_TOKEN",)),
+        FeatureNeedle("schema_detail_preserved", present=("населенный пункт без префикса",)),
+        FeatureNeedle("qwen_help_removed", absent=("Qwen",)),
+    ]
+
 
 
 def _is_ok(
@@ -172,15 +165,6 @@ def _is_ok(
         and compile_result.get("status") == "passed"
         and comparison.get("feature_score") == comparison.get("feature_total")
     )
-
-
-def _normalize(text: str) -> str:
-    return text.replace("\r\n", "\n").replace("\r", "\n").strip() + "\n"
-
-
-def _trial_dir(root: Path) -> Path:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    return root / "artifacts" / "map_llm_migration_trials" / f"trial_{stamp}"
 
 
 if __name__ == "__main__":

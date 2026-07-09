@@ -269,6 +269,15 @@ python tools\sandbox_patch_review.py --patch-dir artifacts\gigachat_sandbox_patc
 
 The apply gate validates package status, verification status, source-project identity and registry/source invariants. It writes a timestamped backup next to each replaced source file before copying sandbox content into the source project.
 
+The replayable teacher/corrector contour is implemented as a generic project-change trial helper plus the `map` GigaChat scenario:
+
+```powershell
+python tools\map_llm_migration_trial.py --root . --source-project F:\ubuntu\test\map --target-model GigaChat-2-Pro --write
+python tools\map_gigachat_tester.py --root . --project-dir F:\ubuntu\test\map --live --write
+```
+
+The trial copies a baseline into an isolated fixture, applies the reviewed sandbox package only inside that fixture, compares the result with an external teacher reference, and records invariants such as `teacher_reference_is_ground_truth=false` and `source_project_modified=false`.
+
 ## What This Project Is Good For
 
 Cognitive OS is currently useful as:
