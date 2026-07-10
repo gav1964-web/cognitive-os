@@ -145,3 +145,9 @@ Create a small evaluation harness for 5-8 existing tasks first:
 - one negative or clarification task.
 
 Only after the report format is stable should the corpus expand to 20-30 tasks.
+
+The repository-level corpus starts in `evaluation/`. New tasks should copy `evaluation/task_template/` and pass:
+
+```bash
+python tools/evaluation_check.py --root .
+```

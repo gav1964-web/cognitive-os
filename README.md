@@ -403,6 +403,8 @@ benchmarks/github_full_trial_*/
 
 Those folders are local field-trial outputs or cloned external corpora, not source files for this repository.
 
+Evaluation tasks live under `evaluation/`. They are source-controlled because they define the comparison corpus used to test Cognitive OS against direct-agent baselines.
+
 ## Quickstart
 
 The commands below assume Python 3.10+.

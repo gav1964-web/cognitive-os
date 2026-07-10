@@ -4,6 +4,7 @@
 
 - Positioning and evaluation-plan documents clarifying that Cognitive OS is a contract-driven intent-to-engineering pipeline and verification harness, not a competing chat/workspace agent UI.
 - Documentation now states that role artifacts are APIs between layers, not prose-only reports.
+- Evaluation corpus scaffold with task template, metrics contract and validation CLI.
 - Stage 3 `Prompt -> Verified Product Slice` contract with `ProductSliceSpec`, architecture decision, task graph, verification summary, CLI and acceptance gate.
 - Stage 3 product-slice review fields for requirements, task dependencies, documentation review, scenario verification, bounded product debug-loop plan and inferred input/output lifecycle.
 - Executable Stage 3 product debug loop with documentation/scenario failure analysis, bounded package-local rework, project-scoped verification rerun, tester refresh and acceptance probe.
