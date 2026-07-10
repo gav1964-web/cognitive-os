@@ -6,6 +6,8 @@ Cognitive OS is an R&D project exploring a practical alternative to the common "
 
 Instead of letting an LLM freely plan, execute, rewrite code, mutate state, and explain itself in one unbounded loop, Cognitive OS separates meaning, planning, contracts, and execution into explicit layers.
 
+It is best understood as a **contract-driven compiler and verification harness for LLM-assisted software work**, not as a replacement for ChatGPT Work, Codex, Copilot, Cursor or an IDE.
+
 The core idea is:
 
 ```text
@@ -44,6 +46,21 @@ The guiding principle is:
 The lower the layer, the less freedom.
 The higher the layer, the more semantic judgment, but fewer direct execution rights.
 ```
+
+## Positioning
+
+Modern workspace agents and coding assistants are already good at reading projects, editing files and running tools. Cognitive OS should not compete with them on UI surface area or raw convenience.
+
+The project is useful only where it adds control:
+
+- explicit prompt adequacy and clarification gates;
+- portable contracts instead of hidden chat state;
+- role artifacts that separate facts, judgments, plans, tests and reviews;
+- fixture-first or sandbox-first implementation;
+- source immutability checks and release decisions;
+- reproducible evaluation against direct-agent baselines.
+
+See `POSITIONING.md` for the full positioning statement and `EVALUATION_PLAN.md` for the comparison plan.
 
 ## Architecture
 
@@ -320,6 +337,7 @@ produce a bounded, reviewable engineering chain instead of a free-form agent run
 Cognitive OS is **not** currently:
 
 - a finished production framework;
+- a competitor to ChatGPT Work, Codex, Copilot, Cursor or IDE workflows;
 - a general autonomous software engineer;
 - a safe arbitrary-code auto-patcher;
 - a replacement for human review;
@@ -548,9 +566,11 @@ Start with:
 2. `COGNITIVE_OS_TECHNICAL_BASELINE.md` - engineering requirements and MVP architecture.
 3. `MVP_RUNTIME_SPEC.md` - runtime and role implementation details.
 4. `MVP_STATUS.md` - current readiness snapshot and known limits.
-5. `PROJECT_ANALYZER_FIELD_TRIAL_SPEC.md` - first vertical field trial.
-6. `RUNTIME_OPERATIONS.md` - runtime operation commands.
-7. Role specs:
+5. `POSITIONING.md` - why this exists alongside workspace/coding agents.
+6. `EVALUATION_PLAN.md` - how to prove value against direct agent usage.
+7. `PROJECT_ANALYZER_FIELD_TRIAL_SPEC.md` - first vertical field trial.
+8. `RUNTIME_OPERATIONS.md` - runtime operation commands.
+9. Role specs:
    - `ARCHITECT_SKILL_SPEC.md`
    - `SPEC_WRITER_SKILL_SPEC.md`
    - `IMPLEMENTER_SKILL_SPEC.md`
