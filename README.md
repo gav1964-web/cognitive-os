@@ -283,6 +283,14 @@ The portable acceptance probe for the same contour is:
 python tools\project_change_trial_probe.py --root . --write
 ```
 
+Declarative project-change scenarios can also be run directly:
+
+```powershell
+python tools\project_change_trial_run.py --root . --scenario benchmarks\project_change_trials\direct_provider_probe\scenario.json --write
+```
+
+The current scenario interface is intentionally narrow: it supports fixture creation from baseline files, optional context copying, fixture-only teacher/reference apply simulation, text comparison and feature evidence checks.
+
 ## What This Project Is Good For
 
 Cognitive OS is currently useful as:

@@ -1,0 +1,6 @@
+PROVIDER = "local-proxy"
+MODEL = "qwen"
+
+
+def call_provider(payload):
+    return {"provider": PROVIDER, "model": MODEL, "payload": payload}

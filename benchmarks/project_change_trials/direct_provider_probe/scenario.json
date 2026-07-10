@@ -1,0 +1,51 @@
+{
+  "id": "direct_provider_probe",
+  "artifact_type": "ProjectChangeScenarioTrial",
+  "artifact_group": "project_change_trials",
+  "label": "direct_provider_probe",
+  "fixture_name": "fixture",
+  "source_project": "source_project",
+  "teacher_reference": {
+    "file": "source_project/client.py"
+  },
+  "files": [
+    {
+      "target_relative": "client.py",
+      "baseline": "source_project/client.py.bak.0",
+      "teacher": "source_project/client.py"
+    }
+  ],
+  "optional_files": [
+    "requirements.txt"
+  ],
+  "apply": {
+    "type": "copy_teacher_to_fixture"
+  },
+  "comparisons": [
+    {
+      "target_relative": "client.py",
+      "teacher": "source_project/client.py",
+      "features": [
+        {
+          "name": "target_model",
+          "present": [
+            "GigaChat-2-Pro"
+          ]
+        },
+        {
+          "name": "secret_env",
+          "present": [
+            "GIGACHAT_CLIENT_SECRET"
+          ]
+        },
+        {
+          "name": "local_proxy_removed",
+          "absent": [
+            "local-proxy",
+            "qwen"
+          ]
+        }
+      ]
+    }
+  ]
+}

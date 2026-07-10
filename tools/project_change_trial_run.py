@@ -1,4 +1,4 @@
-"""Portable acceptance probe for the project-change scenario interface."""
+"""Run a declarative project-change trial scenario."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -18,21 +17,17 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
+    parser.add_argument("--scenario", required=True)
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
 
-    report = run_probe(root=Path(args.root).resolve(), write=args.write)
+    report = run_project_change_scenario(
+        root=Path(args.root).resolve(),
+        scenario_path=Path(args.scenario).resolve(),
+        write=args.write,
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "ok" else 1
-
-
-def run_probe(*, root: Path, write: bool = False) -> dict[str, Any]:
-    repo_root = Path(__file__).resolve().parents[1]
-    return run_project_change_scenario(
-        root=root,
-        scenario_path=repo_root / "benchmarks" / "project_change_trials" / "direct_provider_probe" / "scenario.json",
-        write=write,
-    )
 
 
 if __name__ == "__main__":
