@@ -21,11 +21,21 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
 
-    report = run_project_change_scenario(
-        root=Path(args.root).resolve(),
-        scenario_path=Path(args.scenario).resolve(),
-        write=args.write,
-    )
+    try:
+        report = run_project_change_scenario(
+            root=Path(args.root).resolve(),
+            scenario_path=Path(args.scenario).resolve(),
+            write=args.write,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        report = {
+            "artifact_type": "ProjectChangeScenarioTrial",
+            "status": "failed",
+            "error": {
+                "type": type(exc).__name__,
+                "message": str(exc),
+            },
+        }
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "ok" else 1
 

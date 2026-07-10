@@ -290,6 +290,7 @@ python tools\project_change_trial_run.py --root . --scenario benchmarks\project_
 ```
 
 The current scenario interface is intentionally narrow: it supports fixture creation from baseline files, optional context copying, fixture-only teacher/reference apply simulation, text comparison and feature evidence checks.
+The runner validates required fields, supported apply type, existing baseline/teacher files, safe relative targets and feature-check shapes before creating the fixture.
 
 ## What This Project Is Good For
 
