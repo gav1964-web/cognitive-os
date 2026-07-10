@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from runtime.project_change_scenario import run_project_change_scenario, validate_project_change_scenario
+from runtime.project_change_scenario import (
+    load_project_change_builder_registry,
+    run_project_change_scenario,
+    validate_project_change_scenario,
+)
 
 
 SCENARIO = Path("benchmarks/project_change_trials/direct_provider_probe/scenario.json")
@@ -49,12 +53,20 @@ def test_project_change_scenario_runs_sandbox_patch_package(tmp_path: Path) -> N
     assert report["status"] == "ok"
     assert report["scenario"]["apply_type"] == "sandbox_patch_package"
     assert report["apply_result"]["package"]["status"] == "ok"
+    assert report["apply_result"]["package"]["builder"] == "gigachat_sandbox_patch"
     assert report["apply_result"]["package"]["verification"] == "passed"
     assert report["apply_result"]["review"]["status"] == "applied"
     assert report["comparison"]["exact_match"] is False
     assert report["comparison"]["exact_match_required"] is False
     assert report["comparison"]["feature_score"] == report["comparison"]["feature_total"]
     assert report["invariants"]["fixture_only_apply"] is True
+
+
+def test_project_change_builder_registry_loads_active_builders() -> None:
+    registry = load_project_change_builder_registry(Path("."))
+
+    assert "gigachat_sandbox_patch" in registry["builders"]
+    assert registry["builders"]["gigachat_sandbox_patch"]["allowed_apply_type"] == "sandbox_patch_package"
 
 
 def test_project_change_scenario_validation_rejects_unsafe_target() -> None:
@@ -113,6 +125,26 @@ def test_project_change_scenario_rejects_unsupported_patch_builder() -> None:
     }
 
     validation = validate_project_change_scenario(scenario=scenario, base_dir=Path("."))
+
+    assert validation["status"] == "failed"
+    assert any("unsupported sandbox patch builder" in error for error in validation["errors"])
+
+
+def test_project_change_scenario_requires_allowlisted_patch_builder() -> None:
+    scenario = {
+        "id": "missing_builder",
+        "source_project": "benchmarks/project_change_trials/gigachat_patch_package_probe/source_project",
+        "teacher_reference": {"file": "benchmarks/project_change_trials/gigachat_patch_package_probe/source_project/import_indoc.py"},
+        "files": [
+            {
+                "target_relative": "import_indoc.py",
+                "baseline": "benchmarks/project_change_trials/gigachat_patch_package_probe/source_project/import_indoc.py.bak.0",
+            }
+        ],
+        "apply": {"type": "sandbox_patch_package", "builder": "gigachat_sandbox_patch"},
+    }
+
+    validation = validate_project_change_scenario(scenario=scenario, base_dir=Path("."), builder_registry={"builders": {}})
 
     assert validation["status"] == "failed"
     assert any("unsupported sandbox patch builder" in error for error in validation["errors"])

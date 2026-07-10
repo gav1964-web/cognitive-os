@@ -1,0 +1,22 @@
+{
+  "builders": [
+    {
+      "id": "gigachat_sandbox_patch",
+      "version": "0.1.0",
+      "entrypoint": "tools.gigachat_sandbox_patch:build_patch",
+      "reviewer": "tools.sandbox_patch_review:review_patch_package",
+      "allowed_apply_type": "sandbox_patch_package",
+      "lifecycle_status": "active",
+      "side_effects": {
+        "source_project": "none",
+        "fixture": "write_scoped",
+        "registry": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "default_args": {
+        "target_model": "GigaChat-2-Pro"
+      }
+    }
+  ]
+}

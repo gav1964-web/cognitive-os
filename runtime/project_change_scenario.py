@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import hashlib
+import importlib
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,8 @@ def run_project_change_scenario(*, root: Path, scenario_path: Path, write: bool 
     scenario_path = scenario_path.resolve()
     scenario = json.loads(scenario_path.read_text(encoding="utf-8"))
     base_dir = scenario_path.parent
-    validation = validate_project_change_scenario(scenario=scenario, base_dir=base_dir)
+    builder_registry = load_project_change_builder_registry(root)
+    validation = validate_project_change_scenario(scenario=scenario, base_dir=base_dir, builder_registry=builder_registry)
     if validation["status"] != "ok":
         raise ValueError("; ".join(validation["errors"]))
     source_project = _resolve(base_dir, scenario["source_project"])
@@ -47,7 +49,7 @@ def run_project_change_scenario(*, root: Path, scenario_path: Path, write: bool 
     fixture = create_fixture(out_dir, str(scenario.get("fixture_name", "fixture")), files)
     copied_optional = copy_optional_files(source_project, fixture, [str(path) for path in scenario.get("optional_files", [])])
     source_before = _snapshot_project(source_project)
-    apply_result = _apply_scenario(base_dir=base_dir, fixture=fixture, scenario=scenario, root=root, write=write)
+    apply_result = _apply_scenario(base_dir=base_dir, fixture=fixture, scenario=scenario, root=root, write=write, builder_registry=builder_registry)
     source_after = _snapshot_project(source_project)
     apply_result["source_project_unchanged"] = source_before == source_after
 
@@ -101,7 +103,24 @@ def run_project_change_scenario(*, root: Path, scenario_path: Path, write: bool 
     return report
 
 
-def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+def load_project_change_builder_registry(root: Path) -> dict[str, Any]:
+    path = root / "registry" / "project_change_builders.json"
+    if not path.is_file():
+        path = Path.cwd() / "registry" / "project_change_builders.json"
+    if not path.is_file():
+        return {"builders": []}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    builders = data.get("builders", []) if isinstance(data, dict) else []
+    return {
+        "builders": {
+            item.get("id"): item
+            for item in builders
+            if isinstance(item, dict) and isinstance(item.get("id"), str) and item.get("lifecycle_status") == "active"
+        }
+    }
+
+
+def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path, builder_registry: dict[str, Any] | None = None) -> dict[str, Any]:
     errors: list[str] = []
     if not isinstance(scenario, dict):
         return {"status": "failed", "errors": ["scenario must be an object"]}
@@ -142,8 +161,11 @@ def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path
         if apply_type not in {"copy_teacher_to_fixture", "sandbox_patch_package"}:
             errors.append(f"unsupported scenario apply type: {apply_type}")
         if apply_type == "sandbox_patch_package":
-            if apply_spec.get("builder") != "gigachat_sandbox_patch":
+            builder = _builder_config(builder_registry or {"builders": {}}, str(apply_spec.get("builder", "")))
+            if not builder:
                 errors.append(f"unsupported sandbox patch builder: {apply_spec.get('builder')}")
+            elif builder.get("allowed_apply_type") != "sandbox_patch_package":
+                errors.append(f"builder does not allow sandbox_patch_package: {apply_spec.get('builder')}")
             for key in ("write_review", "apply_approved"):
                 if key in apply_spec and not isinstance(apply_spec[key], bool):
                     errors.append(f"apply.{key} must be a boolean")
@@ -164,7 +186,15 @@ def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path
     return {"status": "ok" if not errors else "failed", "errors": errors}
 
 
-def _apply_scenario(*, base_dir: Path, fixture: Path, scenario: dict[str, Any], root: Path, write: bool) -> dict[str, Any]:
+def _apply_scenario(
+    *,
+    base_dir: Path,
+    fixture: Path,
+    scenario: dict[str, Any],
+    root: Path,
+    write: bool,
+    builder_registry: dict[str, Any],
+) -> dict[str, Any]:
     apply_spec = dict(scenario.get("apply", {}))
     apply_type = apply_spec.get("type", "copy_teacher_to_fixture")
     if apply_type == "copy_teacher_to_fixture":
@@ -175,18 +205,23 @@ def _apply_scenario(*, base_dir: Path, fixture: Path, scenario: dict[str, Any], 
             shutil.copy2(teacher, target)
         return {"target": "fixture", "status": "applied", "source_project_unchanged": True}
     if apply_type == "sandbox_patch_package":
-        return _apply_sandbox_patch_package(fixture=fixture, root=root, apply_spec=apply_spec, write=write)
+        return _apply_sandbox_patch_package(fixture=fixture, root=root, apply_spec=apply_spec, write=write, builder_registry=builder_registry)
     raise ValueError(f"unsupported scenario apply type: {apply_type}")
 
 
-def _apply_sandbox_patch_package(*, fixture: Path, root: Path, apply_spec: dict[str, Any], write: bool) -> dict[str, Any]:
-    builder = apply_spec.get("builder")
-    if builder != "gigachat_sandbox_patch":
-        raise ValueError(f"unsupported sandbox patch builder: {builder}")
-    from tools.gigachat_sandbox_patch import build_patch
-    from tools.sandbox_patch_review import review_patch_package
-
-    package = build_patch(root=root, project_dir=fixture, target_model=str(apply_spec.get("target_model", "GigaChat-2-Pro")))
+def _apply_sandbox_patch_package(*, fixture: Path, root: Path, apply_spec: dict[str, Any], write: bool, builder_registry: dict[str, Any]) -> dict[str, Any]:
+    builder_id = str(apply_spec.get("builder", ""))
+    builder = _builder_config(builder_registry, builder_id)
+    if not builder:
+        raise ValueError(f"unsupported sandbox patch builder: {builder_id}")
+    build_patch = _load_callable(str(builder["entrypoint"]))
+    review_patch_package = _load_callable(str(builder["reviewer"]))
+    default_args = dict(builder.get("default_args", {}))
+    package = build_patch(
+        root=root,
+        project_dir=fixture,
+        target_model=str(apply_spec.get("target_model", default_args.get("target_model", "GigaChat-2-Pro"))),
+    )
     review = review_patch_package(
         patch_dir=Path(str(package["sandbox_dir"])),
         expected_source_project=fixture,
@@ -198,6 +233,7 @@ def _apply_sandbox_patch_package(*, fixture: Path, root: Path, apply_spec: dict[
         "status": review.get("apply", {}).get("status", review.get("status")),
         "source_project_unchanged": True,
         "package": {
+            "builder": builder_id,
             "status": package.get("status"),
             "sandbox_dir": package.get("sandbox_dir"),
             "verification": dict(package.get("verification", {})).get("status"),
@@ -209,6 +245,23 @@ def _apply_sandbox_patch_package(*, fixture: Path, root: Path, apply_spec: dict[
             "risk_summary": review.get("risk_summary"),
         },
     }
+
+
+def _builder_config(builder_registry: dict[str, Any], builder_id: str) -> dict[str, Any] | None:
+    builders = builder_registry.get("builders", {})
+    builder = builders.get(builder_id) if isinstance(builders, dict) else None
+    return builder if isinstance(builder, dict) else None
+
+
+def _load_callable(entrypoint: str):
+    module_name, _, attr = entrypoint.partition(":")
+    if not module_name or not attr:
+        raise ValueError(f"invalid builder entrypoint: {entrypoint}")
+    module = importlib.import_module(module_name)
+    value = getattr(module, attr)
+    if not callable(value):
+        raise ValueError(f"builder entrypoint is not callable: {entrypoint}")
+    return value
 
 
 def _feature_needles(items: list[dict[str, Any]]) -> list[FeatureNeedle]:
