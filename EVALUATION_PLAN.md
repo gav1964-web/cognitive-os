@@ -39,6 +39,8 @@ user prompt
 
 The mediated route must record artifacts and cannot silently mutate the source project unless the scenario explicitly permits it.
 
+For evaluation purposes, these artifacts are treated as APIs between steps, not as optional explanatory reports. A run is incomplete if a later step relies on information that was not present in the preceding artifact contract.
+
 ## Initial Corpus
 
 Use 20-30 bounded tasks before making broad claims.
@@ -143,4 +145,3 @@ Create a small evaluation harness for 5-8 existing tasks first:
 - one negative or clarification task.
 
 Only after the report format is stable should the corpus expand to 20-30 tasks.
-

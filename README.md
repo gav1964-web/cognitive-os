@@ -6,7 +6,7 @@ Cognitive OS is an R&D project exploring a practical alternative to the common "
 
 Instead of letting an LLM freely plan, execute, rewrite code, mutate state, and explain itself in one unbounded loop, Cognitive OS separates meaning, planning, contracts, and execution into explicit layers.
 
-It is best understood as a **contract-driven compiler and verification harness for LLM-assisted software work**, not as a replacement for ChatGPT Work, Codex, Copilot, Cursor or an IDE.
+It is best understood as a **contract-driven intent-to-engineering pipeline and verification harness for LLM-assisted software work**, not as a replacement for ChatGPT Work, Codex, Copilot, Cursor or an IDE.
 
 The core idea is:
 
@@ -55,7 +55,8 @@ The project is useful only where it adds control:
 
 - explicit prompt adequacy and clarification gates;
 - portable contracts instead of hidden chat state;
-- role artifacts that separate facts, judgments, plans, tests and reviews;
+- role artifacts that act as APIs between layers rather than prose-only reports;
+- explicit separation of facts, judgments, plans, tests and reviews;
 - fixture-first or sandbox-first implementation;
 - source immutability checks and release decisions;
 - reproducible evaluation against direct-agent baselines.
@@ -126,7 +127,22 @@ The liquid layer may decide what should happen next. It cannot bypass the crysta
 
 ### Typed Artifacts
 
-Important transitions are represented as explicit artifacts:
+Important transitions are represented as explicit artifacts. These artifacts are not just reports; they are the system's internal APIs between layers and roles.
+
+For example:
+
+```text
+GoalSpec
+-> ArchitectureDecisionRecord
+-> TechnicalSpec
+-> ImplementationPlan
+-> TestPlan
+-> ReviewFindings
+```
+
+Each artifact defines what the next layer may rely on, what it must not invent, and what evidence or constraints must survive the handoff.
+
+The current artifact set includes:
 
 - `GoalSpec`
 - `IntentPacket`
@@ -583,7 +599,7 @@ Start with:
 Research preview / MVP field trial
 ```
 
-The goal is not to claim general autonomy. The goal is to make the path from human intent to engineering artifacts explicit, typed, inspectable, and safer than a free-form coding-agent loop.
+The goal is not to claim general autonomy. The goal is to make the path from human intent to typed engineering interfaces explicit, inspectable, and safer than a free-form coding-agent loop.
 
 ## License
 

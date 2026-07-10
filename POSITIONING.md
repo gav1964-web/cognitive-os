@@ -4,15 +4,15 @@
 
 Cognitive OS is not trying to become a better chat UI, a workspace assistant, or a generic autonomous coding agent.
 
-The project is positioned as a **contract-driven compiler and verification harness for LLM-assisted software work**.
+The project is positioned as a **contract-driven intent-to-engineering pipeline and verification harness for LLM-assisted software work**.
 
-Its job is to turn a human goal into explicit, versioned, inspectable engineering artifacts:
+Its job is to turn a human goal into explicit, versioned, inspectable engineering interfaces:
 
 ```text
 prompt
 -> adequacy gate
 -> GoalSpec / contracts
--> role artifacts
+-> role artifact APIs
 -> bounded implementation or analysis package
 -> tests / review / verification report
 -> human release decision
@@ -63,14 +63,33 @@ The repository currently focuses on mechanisms that ordinary chat-style agent lo
 - `teacher_reference != ground_truth` as a protected curriculum invariant;
 - acceptance probes that validate behavior as artifacts rather than conversation quality.
 
-These are not proof of broad autonomy. They are proof points for a narrower claim: bounded LLM-assisted work can be compiled into artifacts with stronger control boundaries.
+These are not proof of broad autonomy. They are proof points for a narrower claim: bounded LLM-assisted work can be lowered into explicit artifact APIs with stronger control boundaries.
+
+## Artifacts Are APIs
+
+The most important design point is that Cognitive OS artifacts are not passive documents.
+
+They are interfaces between layers:
+
+```text
+GoalSpec
+-> ArchitectureDecisionRecord
+-> TechnicalSpec
+-> ImplementationPlan
+-> TestPlan
+-> ReviewFindings
+```
+
+Each artifact is a contract for the next step. It defines allowed assumptions, preserved constraints, evidence links, scope boundaries, forbidden actions and verification expectations.
+
+This is why prose conversation between roles is not enough. A role may produce a human-readable explanation, but the next role consumes the typed artifact API.
 
 ## Product Shape
 
 The near-term product shape is:
 
 ```text
-Cognitive OS = compiler + verifier + release harness
+Cognitive OS = intent pipeline + verifier + release harness
 ```
 
 It can sit in front of different executors:
@@ -99,4 +118,3 @@ Better means fewer missed requirements, clearer artifacts, safer source boundari
 If that cannot be shown for a task class, that task class should remain out of scope.
 
 See `EVALUATION_PLAN.md` for the measurement plan.
-
