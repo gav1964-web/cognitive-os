@@ -27,6 +27,15 @@ evaluation/
 
 Use `task_template/` as the starting shape for new tasks.
 
+Initial seed tasks:
+
+- `task01_project5_improvement_plan` - project analysis and improvement planning.
+- `task02_map_project_analysis` - project analysis with provider-boundary risks.
+- `task03_markdown_to_rtf_cli` - CLI utility generation.
+- `task04_xlsx_csv_converter` - CLI utility with dependency/format ambiguity.
+- `task05_fastapi_csv_aggregator` - small local service generation.
+- `task06_ambiguous_project_request` - negative prompt adequacy case.
+
 ## Required Files
 
 - `prompt.md` - original user task, constraints, allowed tools and success criteria.
@@ -90,3 +99,8 @@ python tools/evaluation_check.py --root .
 
 The checker validates required files and required `metrics.json` fields for every `evaluation/task*` directory except `task_template`.
 
+To print a compact corpus table:
+
+```bash
+python tools/evaluation_summary.py --root .
+```
