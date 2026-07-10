@@ -56,11 +56,11 @@ def render_architecture_analysis_document(
         "",
         "## Project Purpose And Boundaries",
         "",
-        *_answer_lines(answers.get("1_project_purpose_and_boundaries")),
+        *_answer_lines(_first_answer(answers, "1_project_purpose_and_boundaries", "1_scope")),
         "",
         "## Entrypoints And Execution Flow",
         "",
-        *_answer_lines(answers.get("2_entrypoints_and_execution_flow")),
+        *_answer_lines(_first_answer(answers, "2_entrypoints_and_execution_flow", "2_execution")),
         "",
         "## Capability Candidates",
         "",
@@ -111,6 +111,14 @@ def render_architecture_analysis_document(
         "",
     ]
     return "\n".join(lines)
+
+
+def _first_answer(answers: dict[str, Any], *keys: str) -> object:
+    for key in keys:
+        value = answers.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return None
 
 
 def _answer_lines(value: object) -> list[str]:

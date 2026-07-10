@@ -25,8 +25,8 @@
       "executor": "tools/role_pipeline_run.py",
       "model": "deterministic",
       "status": "completed",
-      "requirement_coverage": 0.68,
-      "missed_requirements": 2,
+      "requirement_coverage": 0.8,
+      "missed_requirements": 1,
       "invented_requirements": 0,
       "tests_passed": 0,
       "tests_total": 0,
@@ -34,9 +34,9 @@
       "repair_cycles": 0,
       "runtime_seconds": null,
       "estimated_cost": null,
-      "artifact_completeness": 0.86,
+      "artifact_completeness": 0.92,
       "source_safety_violations": 0,
-      "review_blockers": 1,
+      "review_blockers": 0,
       "human_correction_minutes": 0
     }
   },
@@ -45,18 +45,20 @@
     "cognitive_os_advantages": [
       "Better artifact traceability across ADR, TechnicalSpec, ImplementationPlan, TestPlan and ReviewFindings",
       "Explicit source/registry safety record",
-      "Consistent bounded extraction target selection"
+      "Consistent bounded extraction target selection",
+      "After renderer repair, human-readable report includes purpose, entrypoints and execution path from ProjectMapReport facts"
     ],
     "direct_agent_advantages": [
       "Better human-readable project purpose and boundary summary",
       "Identified FastAPI entrypoints and main execution path",
-      "Produced broader improvement plan for orchestration, process boundaries, idempotency and dependency policy"
+      "Produced broader improvement plan for orchestration, process boundaries, idempotency and dependency policy",
+      "More concise human synthesis of architectural recommendations"
     ],
     "no_difference": [
       "Both routes kept the source project unchanged",
       "Both identified cache key generation as a useful bounded capability candidate"
     ],
-    "confidence": 0.62
+    "confidence": 0.55
   },
   "invariants": {
     "same_original_prompt": true,

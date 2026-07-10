@@ -28,25 +28,35 @@ The strongest result was structured traceability around the first bounded extrac
 - review target: `app/core/cache.py:build_key`;
 - review contract violations: `0`.
 
-The weakest result was human-facing analysis breadth. The generated `architecture_analysis` document left project purpose and entrypoints as `n/a`, even though the source project has clear FastAPI entrypoints and documented LLM Gateway behavior. For this evaluation task, that is a meaningful miss.
+After repairing `runtime/architecture_analysis_document.py`, the human-readable report now includes:
+
+- project purpose from `1_scope.main_task`;
+- supported scenarios;
+- inputs and outputs;
+- code-area breakdown;
+- `app/api/server.py` as the detected entrypoint;
+- primary execution path;
+- central flow nodes and implicit orchestration candidates.
+
+Remaining weakness: the report is still more extraction-oriented than improvement-plan-oriented. It surfaces rich facts and a safe first capability target, but the direct route still produced a broader human synthesis of architectural improvement themes.
 
 ## Artifact APIs
 
 - `GoalSpec`: implicit role pipeline goal input.
 - `ProjectMapReport`: produced internally by `runtime.project_benchmark.analyze_project`.
-- `ArchitectureDecisionRecord`: `artifacts/roles/architect/ArchitectureDecisionRecord_20260710T084057235794Z.json`.
-- `TechnicalSpec`: `artifacts/roles/spec_writer/TechnicalSpec_20260710T084057236794Z.json`.
-- `ImplementationPlan`: `artifacts/roles/implementer/ImplementationPlan_20260710T084057237794Z.json`.
-- `TestPlan`: `artifacts/roles/tester/TestPlan_20260710T084057237794Z.json`.
-- `ReviewFindings`: `artifacts/roles/reviewer/ReviewFindings_20260710T084057238799Z.json`.
+- `ArchitectureDecisionRecord`: `artifacts/roles/architect/ArchitectureDecisionRecord_20260710T104914394047Z.json`.
+- `TechnicalSpec`: `artifacts/roles/spec_writer/TechnicalSpec_20260710T104914395037Z.json`.
+- `ImplementationPlan`: `artifacts/roles/implementer/ImplementationPlan_20260710T104914396038Z.json`.
+- `TestPlan`: `artifacts/roles/tester/TestPlan_20260710T104914397037Z.json`.
+- `ReviewFindings`: `artifacts/roles/reviewer/ReviewFindings_20260710T104914397037Z.json`.
 
 ## Artifacts
 
-- Role pipeline report: `artifacts/roles/pipelines/role_pipeline_20260710T084057240794Z.json`.
-- Human-readable architecture report: `artifacts/roles/pipelines/architecture_analysis_20260710T084057240794Z.md`.
+- Role pipeline report: `artifacts/roles/pipelines/role_pipeline_20260710T104914399037Z.json`.
+- Human-readable architecture report: `artifacts/roles/pipelines/architecture_analysis_20260710T104914398038Z.md`.
 - Tests: not executed beyond role pipeline artifact checks.
 - Logs: role pipeline command output recorded in this evaluation.
 
 ## Notes
 
-This route preserved source immutability and recorded role artifacts as step APIs. It was stronger than the direct route on safety/traceability, but weaker on broad human-readable project understanding for this task.
+This route preserved source immutability and recorded role artifacts as step APIs. After the renderer repair, it is competitive on factual project structure, stronger on safety/traceability, and still weaker on broad improvement synthesis.
