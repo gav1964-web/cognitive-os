@@ -134,6 +134,22 @@ known_limits
 
 The final comparison should group results by task class rather than averaging unrelated tasks into one misleading number.
 
+## Architecture Hypothesis Track
+
+Some evaluations test Cognitive OS against a direct agent baseline. Others test Cognitive OS against its own simpler variants.
+
+The architecture hypothesis track covers:
+
+- role separation vs merged-role routes;
+- registry separation vs generated/derived views;
+- artifact and packet redundancy;
+- strict layering vs explicitly declared bypass routes;
+- Stage 2 verified package vs Stage 3 product slice;
+- separated memory mechanisms vs unified evidence store;
+- deterministic-only repair vs sandbox semantic repair.
+
+These tests must not automatically rewrite the architecture. They produce keep/simplify/remove recommendations, which require a separate human or engineering decision.
+
 ## Near-Term Next Step
 
 Create a small evaluation harness for 5-8 existing tasks first:
@@ -151,3 +167,5 @@ The repository-level corpus starts in `evaluation/`. New tasks should copy `eval
 ```bash
 python tools/evaluation_check.py --root .
 ```
+
+Architectural claims and their decision criteria are tracked in `ARCHITECTURE_HYPOTHESES.md`.

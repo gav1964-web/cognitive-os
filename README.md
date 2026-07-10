@@ -586,9 +586,10 @@ Start with:
 4. `MVP_STATUS.md` - current readiness snapshot and known limits.
 5. `POSITIONING.md` - why this exists alongside workspace/coding agents.
 6. `EVALUATION_PLAN.md` - how to prove value against direct agent usage.
-7. `PROJECT_ANALYZER_FIELD_TRIAL_SPEC.md` - first vertical field trial.
-8. `RUNTIME_OPERATIONS.md` - runtime operation commands.
-9. Role specs:
+7. `ARCHITECTURE_HYPOTHESES.md` - which architectural claims must be proven, simplified or removed.
+8. `PROJECT_ANALYZER_FIELD_TRIAL_SPEC.md` - first vertical field trial.
+9. `RUNTIME_OPERATIONS.md` - runtime operation commands.
+10. Role specs:
    - `ARCHITECT_SKILL_SPEC.md`
    - `SPEC_WRITER_SKILL_SPEC.md`
    - `IMPLEMENTER_SKILL_SPEC.md`

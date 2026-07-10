@@ -118,3 +118,5 @@ Better means fewer missed requirements, clearer artifacts, safer source boundari
 If that cannot be shown for a task class, that task class should remain out of scope.
 
 See `EVALUATION_PLAN.md` for the measurement plan.
+
+The same rule applies internally: roles, registries, layer boundaries, memory mechanisms and product stages are hypotheses until measured. See `ARCHITECTURE_HYPOTHESES.md`.

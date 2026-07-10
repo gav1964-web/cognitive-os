@@ -35,6 +35,10 @@ Initial seed tasks:
 - `task04_xlsx_csv_converter` - CLI utility with dependency/format ambiguity.
 - `task05_fastapi_csv_aggregator` - small local service generation.
 - `task06_ambiguous_project_request` - negative prompt adequacy case.
+- `task07_role_pipeline_ablation` - full role chain vs reduced-role baseline.
+- `task08_registry_artifact_audit` - registry separation and artifact redundancy audit.
+- `task09_stage3_value_ablation` - Stage 2 package vs Stage 3 product slice.
+- `task10_strict_layering_bypass` - strict layered route vs controlled bypass.
 
 ## Required Files
 
