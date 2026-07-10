@@ -318,6 +318,20 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> Non
         check=checks.json_status_ok,
     )
     report.command(
+        "project_change_patch_package_probe",
+        [
+            sys.executable,
+            "tools/project_change_trial_run.py",
+            "--root",
+            ".",
+            "--scenario",
+            "benchmarks/project_change_trials/gigachat_patch_package_probe/scenario.json",
+            "--write",
+        ],
+        layers=["L4"],
+        check=checks.json_status_ok,
+    )
+    report.command(
         "project_extraction_proposal",
         [
             sys.executable,

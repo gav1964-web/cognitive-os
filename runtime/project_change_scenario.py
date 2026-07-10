@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -45,26 +46,35 @@ def run_project_change_scenario(*, root: Path, scenario_path: Path, write: bool 
     )
     fixture = create_fixture(out_dir, str(scenario.get("fixture_name", "fixture")), files)
     copied_optional = copy_optional_files(source_project, fixture, [str(path) for path in scenario.get("optional_files", [])])
-    _apply_scenario(base_dir=base_dir, fixture=fixture, scenario=scenario)
+    source_before = _snapshot_project(source_project)
+    apply_result = _apply_scenario(base_dir=base_dir, fixture=fixture, scenario=scenario, root=root, write=write)
+    source_after = _snapshot_project(source_project)
+    apply_result["source_project_unchanged"] = source_before == source_after
 
     comparisons = [
-        compare_text_files(
+        _comparison_with_policy(
             teacher_path=_resolve(base_dir, item.get("teacher", scenario["teacher_reference"]["file"])),
             result_path=fixture / str(item["target_relative"]),
             feature_needles=_feature_needles(item.get("features", [])),
+            exact_match_required=bool(item.get("exact_match_required", True)),
         )
         for item in scenario.get("comparisons", [])
     ]
     if not comparisons:
         comparisons = [
-            compare_text_files(
+            _comparison_with_policy(
                 teacher_path=teacher_file,
                 result_path=fixture / files[0].target_relative,
                 feature_needles=_feature_needles(scenario.get("feature_needles", [])),
+                exact_match_required=True,
             )
         ]
 
-    status = "ok" if _scenario_ok(comparisons) else "failed"
+    status = (
+        "ok"
+        if apply_result.get("status") == "applied" and apply_result.get("source_project_unchanged") is True and _scenario_ok(comparisons)
+        else "failed"
+    )
     report = build_trial_report(
         artifact_type=str(scenario.get("artifact_type", "ProjectChangeScenarioTrial")),
         status=status,
@@ -81,11 +91,8 @@ def run_project_change_scenario(*, root: Path, scenario_path: Path, write: bool 
             "optional_files_copied": copied_optional,
             "comparisons": comparisons,
             "comparison": comparisons[0],
-            "simulated_apply": {
-                "target": "fixture",
-                "status": "applied",
-                "source_project_unchanged": True,
-            },
+            "apply_result": apply_result,
+            "simulated_apply": apply_result,
         },
     )
     if write:
@@ -130,8 +137,16 @@ def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path
     apply_spec = scenario.get("apply", {"type": "copy_teacher_to_fixture"})
     if not isinstance(apply_spec, dict):
         errors.append("apply must be an object")
-    elif apply_spec.get("type", "copy_teacher_to_fixture") != "copy_teacher_to_fixture":
-        errors.append(f"unsupported scenario apply type: {apply_spec.get('type')}")
+    else:
+        apply_type = apply_spec.get("type", "copy_teacher_to_fixture")
+        if apply_type not in {"copy_teacher_to_fixture", "sandbox_patch_package"}:
+            errors.append(f"unsupported scenario apply type: {apply_type}")
+        if apply_type == "sandbox_patch_package":
+            if apply_spec.get("builder") != "gigachat_sandbox_patch":
+                errors.append(f"unsupported sandbox patch builder: {apply_spec.get('builder')}")
+            for key in ("write_review", "apply_approved"):
+                if key in apply_spec and not isinstance(apply_spec[key], bool):
+                    errors.append(f"apply.{key} must be a boolean")
 
     optional_files = scenario.get("optional_files", [])
     if not isinstance(optional_files, list) or not all(isinstance(path, str) for path in optional_files):
@@ -149,16 +164,51 @@ def validate_project_change_scenario(*, scenario: dict[str, Any], base_dir: Path
     return {"status": "ok" if not errors else "failed", "errors": errors}
 
 
-def _apply_scenario(*, base_dir: Path, fixture: Path, scenario: dict[str, Any]) -> None:
+def _apply_scenario(*, base_dir: Path, fixture: Path, scenario: dict[str, Any], root: Path, write: bool) -> dict[str, Any]:
     apply_spec = dict(scenario.get("apply", {}))
     apply_type = apply_spec.get("type", "copy_teacher_to_fixture")
-    if apply_type != "copy_teacher_to_fixture":
-        raise ValueError(f"unsupported scenario apply type: {apply_type}")
-    for item in scenario.get("files", []):
-        teacher = _resolve(base_dir, item.get("teacher", scenario["teacher_reference"]["file"]))
-        target = fixture / str(item["target_relative"])
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(teacher, target)
+    if apply_type == "copy_teacher_to_fixture":
+        for item in scenario.get("files", []):
+            teacher = _resolve(base_dir, item.get("teacher", scenario["teacher_reference"]["file"]))
+            target = fixture / str(item["target_relative"])
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(teacher, target)
+        return {"target": "fixture", "status": "applied", "source_project_unchanged": True}
+    if apply_type == "sandbox_patch_package":
+        return _apply_sandbox_patch_package(fixture=fixture, root=root, apply_spec=apply_spec, write=write)
+    raise ValueError(f"unsupported scenario apply type: {apply_type}")
+
+
+def _apply_sandbox_patch_package(*, fixture: Path, root: Path, apply_spec: dict[str, Any], write: bool) -> dict[str, Any]:
+    builder = apply_spec.get("builder")
+    if builder != "gigachat_sandbox_patch":
+        raise ValueError(f"unsupported sandbox patch builder: {builder}")
+    from tools.gigachat_sandbox_patch import build_patch
+    from tools.sandbox_patch_review import review_patch_package
+
+    package = build_patch(root=root, project_dir=fixture, target_model=str(apply_spec.get("target_model", "GigaChat-2-Pro")))
+    review = review_patch_package(
+        patch_dir=Path(str(package["sandbox_dir"])),
+        expected_source_project=fixture,
+        write_review=bool(apply_spec.get("write_review", write)),
+        apply_approved=bool(apply_spec.get("apply_approved", True)),
+    )
+    return {
+        "target": "fixture",
+        "status": review.get("apply", {}).get("status", review.get("status")),
+        "source_project_unchanged": True,
+        "package": {
+            "status": package.get("status"),
+            "sandbox_dir": package.get("sandbox_dir"),
+            "verification": dict(package.get("verification", {})).get("status"),
+        },
+        "review": {
+            "status": review.get("status"),
+            "apply_status": dict(review.get("apply", {})).get("status"),
+            "validation": review.get("validation"),
+            "risk_summary": review.get("risk_summary"),
+        },
+    }
 
 
 def _feature_needles(items: list[dict[str, Any]]) -> list[FeatureNeedle]:
@@ -174,14 +224,36 @@ def _feature_needles(items: list[dict[str, Any]]) -> list[FeatureNeedle]:
 
 def _scenario_ok(comparisons: list[dict[str, Any]]) -> bool:
     return all(
-        item.get("exact_match") is True and item.get("feature_score") == item.get("feature_total")
+        (item.get("exact_match") is True or item.get("exact_match_required") is False)
+        and item.get("feature_score") == item.get("feature_total")
         for item in comparisons
     )
+
+
+def _comparison_with_policy(
+    *,
+    teacher_path: Path,
+    result_path: Path,
+    feature_needles: list[FeatureNeedle],
+    exact_match_required: bool,
+) -> dict[str, Any]:
+    comparison = compare_text_files(teacher_path=teacher_path, result_path=result_path, feature_needles=feature_needles)
+    comparison["exact_match_required"] = exact_match_required
+    return comparison
 
 
 def _resolve(base_dir: Path, value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else base_dir / path
+
+
+def _snapshot_project(project_dir: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for path in sorted(item for item in project_dir.rglob("*") if item.is_file()):
+        if any(part in {"__pycache__", ".pytest_cache"} for part in path.parts):
+            continue
+        snapshot[path.relative_to(project_dir).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
 
 
 def _require_string(mapping: dict[str, Any], key: str, errors: list[str], *, prefix: str = "") -> None:
@@ -204,6 +276,8 @@ def _validate_comparisons(comparisons: list[Any], errors: list[str]) -> None:
             continue
         _require_string(item, "target_relative", errors, prefix=f"comparisons[{index}].")
         _validate_relative_target(item.get("target_relative"), errors, f"comparisons[{index}].target_relative")
+        if "exact_match_required" in item and not isinstance(item["exact_match_required"], bool):
+            errors.append(f"comparisons[{index}].exact_match_required must be a boolean")
         features = item.get("features", [])
         if not isinstance(features, list):
             errors.append(f"comparisons[{index}].features must be a list")

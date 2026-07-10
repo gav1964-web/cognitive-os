@@ -1,0 +1,64 @@
+{
+  "id": "gigachat_patch_package_probe",
+  "artifact_type": "ProjectChangeScenarioTrial",
+  "artifact_group": "project_change_trials",
+  "label": "gigachat_patch_package_probe",
+  "fixture_name": "fixture",
+  "source_project": "source_project",
+  "teacher_reference": {
+    "file": "source_project/import_indoc.py"
+  },
+  "files": [
+    {
+      "target_relative": "import_indoc.py",
+      "baseline": "source_project/import_indoc.py.bak.0",
+      "teacher": "source_project/import_indoc.py"
+    }
+  ],
+  "apply": {
+    "type": "sandbox_patch_package",
+    "builder": "gigachat_sandbox_patch",
+    "target_model": "GigaChat-2-Pro",
+    "write_review": true,
+    "apply_approved": true
+  },
+  "comparisons": [
+    {
+      "target_relative": "import_indoc.py",
+      "teacher": "source_project/import_indoc.py",
+      "exact_match_required": false,
+      "features": [
+        {
+          "name": "target_model",
+          "present": [
+            "GigaChat-2-Pro"
+          ]
+        },
+        {
+          "name": "client_secret_alias",
+          "present": [
+            "GIGACHAT_CLIENT_SECRET"
+          ]
+        },
+        {
+          "name": "verify_ssl_env",
+          "present": [
+            "GIGACHAT_VERIFY_SSL"
+          ]
+        },
+        {
+          "name": "local_proxy_removed",
+          "absent": [
+            "http://127.0.0.1:8000/v1/chat/completions"
+          ]
+        },
+        {
+          "name": "qwen_removed",
+          "absent": [
+            "Qwen"
+          ]
+        }
+      ]
+    }
+  ]
+}

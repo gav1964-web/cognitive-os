@@ -291,6 +291,11 @@ python tools\project_change_trial_run.py --root . --scenario benchmarks\project_
 
 The current scenario interface is intentionally narrow: it supports fixture creation from baseline files, optional context copying, fixture-only teacher/reference apply simulation, text comparison and feature evidence checks.
 The runner validates required fields, supported apply type, existing baseline/teacher files, safe relative targets and feature-check shapes before creating the fixture.
+Supported apply types are `copy_teacher_to_fixture` and `sandbox_patch_package`. The latter currently uses the allowlisted `gigachat_sandbox_patch` builder, then routes the generated package through `sandbox_patch_review` with apply restricted to the fixture:
+
+```powershell
+python tools\project_change_trial_run.py --root . --scenario benchmarks\project_change_trials\gigachat_patch_package_probe\scenario.json --write
+```
 
 ## What This Project Is Good For
 
