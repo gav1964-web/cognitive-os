@@ -73,9 +73,29 @@ def test_project_map_report_builds_markdown_and_risks():
                             }
                         ],
                     },
+                    {
+                        "path": "map_install_package/app.py",
+                        "functions": [
+                            {
+                                "path": "map_install_package/app.py",
+                                "name": "index",
+                                "line": 10,
+                                "loc": 120,
+                                "calls": ["open", "json.dumps", "render_template"],
+                                "side_effects": ["filesystem"],
+                                "error_profile": {},
+                            }
+                        ],
+                    },
                 ],
-                "central_nodes": [{"path": "app.py", "name": "index", "line": 10, "loc": 90, "call_count": 12, "side_effects": ["filesystem"]}],
-                "wide_functions": [{"path": "app.py", "name": "index", "line": 10, "loc": 90, "call_count": 12, "side_effects": ["filesystem"]}],
+                "central_nodes": [
+                    {"path": "map_install_package/app.py", "name": "index", "line": 10, "loc": 120, "call_count": 20, "side_effects": ["filesystem"]},
+                    {"path": "app.py", "name": "index", "line": 10, "loc": 90, "call_count": 12, "side_effects": ["filesystem"]},
+                ],
+                "wide_functions": [
+                    {"path": "map_install_package/app.py", "name": "index", "line": 10, "loc": 120, "call_count": 20, "side_effects": ["filesystem"]},
+                    {"path": "app.py", "name": "index", "line": 10, "loc": 90, "call_count": 12, "side_effects": ["filesystem"]},
+                ],
                 "pure_transform_candidates": [
                     {"path": "tests/test_app.py", "name": "test_normalize", "line": 1, "loc": 3},
                     {"path": "tools/build_package.py", "name": "copy_dist", "line": 1, "loc": 3},
@@ -86,7 +106,12 @@ def test_project_map_report_builds_markdown_and_risks():
                     "error_handling": {"raises": ["ValueError"], "handlers": ["Exception"], "functions_with_try": ["app.py:index"]},
                 },
             },
-            "runtime_commands": {"commands": [{"path": "RUN.bat", "purpose": "run_application", "commands": ["python app.py"]}]},
+            "runtime_commands": {
+                "commands": [
+                    {"path": "map_install_package/RUN.bat", "purpose": "run_application", "commands": ["python app.py"]},
+                    {"path": "RUN.bat", "purpose": "run_application", "commands": ["python app.py"]},
+                ]
+            },
         }
     )
 
@@ -95,12 +120,17 @@ def test_project_map_report_builds_markdown_and_risks():
     assert result["answers"]["1_scope"]["test_surface"]["test_functions"] == 2
     assert "ValueError" in result["answers"]["5_errors_state_repro"]["error_details"]["raises"]
     readiness = result["answers"]["6_runtime_extraction_readiness"]
+    execution = result["answers"]["2_execution"]
     assert result["answers"]["3_capabilities"]["pure_transforms"][0]["path"] == "app.py"
     assert result["answers"]["3_capabilities"]["atomic_reusable_capabilities"][0] == "app.py:normalize"
+    assert execution["runtime_commands"][0]["path"] == "RUN.bat"
+    assert execution["central_flow_nodes"][0]["path"] == "app.py"
+    assert "map_install_package/RUN.bat" not in result["markdown"]
     assert "_project_analyzer_extract.py:check_python_syntax" not in [
         row["capability"] for row in readiness["minimal_extraction_plan"]["capabilities_to_extract"]
     ]
     assert readiness["source_strata"]["legacy_noise"][0]["path"] == "_project_analyzer_extract.py"
+    assert readiness["source_strata"]["packaged_copy"][0]["path"] == "map_install_package/app.py"
     assert readiness["mixed_responsibility_functions"][0]["name"] == "index"
     assert readiness["idempotency_risks"][0]["target"] == "app.py:index"
     assert readiness["minimal_extraction_plan"]["capabilities_to_extract"][0]["capability"] == "app.py:normalize"

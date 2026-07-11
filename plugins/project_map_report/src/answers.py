@@ -32,7 +32,7 @@ def build_answers(
     runtime_commands: dict[str, Any],
 ) -> dict[str, Any]:
     routes = python_structure.get("routes", [])
-    commands = runtime_commands.get("commands", [])
+    commands = _active_commands(runtime_commands.get("commands", []))
     imports = set(python_structure.get("imports", []))
     insights = dict(python_structure.get("project_insights", {}))
     docs = docs_text(files)
@@ -50,15 +50,15 @@ def build_answers(
             "entrypoints": summary.get("entrypoints", []),
             "runtime_commands": [_command_summary(command) for command in commands[:10]],
             "primary_execution_path": _execution_path(summary, routes, commands),
-            "central_flow_nodes": python_structure.get("central_nodes", [])[:8],
-            "implicit_orchestration": python_structure.get("wide_functions", [])[:8],
-            "internal_import_hubs": insights.get("import_graph", [])[:8],
+            "central_flow_nodes": _active_nodes(python_structure.get("central_nodes", []))[:8],
+            "implicit_orchestration": _active_nodes(python_structure.get("wide_functions", []))[:8],
+            "internal_import_hubs": _active_nodes(insights.get("import_graph", []))[:8],
             "pipeline_candidate": _pipeline_candidate(summary, routes, commands),
         },
         "3_capabilities": {
             "atomic_reusable_capabilities": _capability_candidates(python_structure, routes, commands),
             "pure_transforms": _core_pure_transforms(python_structure),
-            "too_broad_functions": python_structure.get("wide_functions", [])[:8],
+            "too_broad_functions": _active_nodes(python_structure.get("wide_functions", []))[:8],
             "environment_dependencies": python_structure.get("external_dependencies", {}),
             "fallback_logic": _fallback_logic(python_structure, docs),
         },
@@ -94,6 +94,26 @@ def build_answers(
             "source_strata": source_strata(python_structure),
         },
     }
+
+
+def _active_commands(commands: Any) -> list[dict[str, Any]]:
+    if not isinstance(commands, list):
+        return []
+    return [
+        command
+        for command in commands
+        if isinstance(command, dict) and is_core_path(str(command.get("path", "")))
+    ]
+
+
+def _active_nodes(rows: Any) -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        return []
+    return [
+        row
+        for row in rows
+        if isinstance(row, dict) and is_core_path(str(row.get("path", "")))
+    ]
 
 
 def inline_value(value: Any) -> str:

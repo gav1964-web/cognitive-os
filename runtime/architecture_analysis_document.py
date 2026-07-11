@@ -87,6 +87,10 @@ def render_architecture_analysis_document(
             ],
         ),
         "",
+        "## Improvement Recommendations",
+        "",
+        *_improvement_recommendations(answers),
+        "",
         "## Open Questions",
         "",
         *_bullet(row.get("question") for row in architecture_decision.get("open_questions", [])),
@@ -130,6 +134,72 @@ def _answer_lines(value: object) -> list[str]:
     if isinstance(value, list):
         return _bullet(value)
     return [f"- {_value(value)}"]
+
+
+def _improvement_recommendations(answers: dict[str, Any]) -> list[str]:
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    recommendations: list[str] = []
+
+    hidden = _target_refs(readiness.get("hidden_orchestrators", []))
+    if hidden:
+        recommendations.append(
+            "Split hidden orchestrators or large control surfaces: " + ", ".join(hidden[:4]) + "."
+        )
+
+    process_boundaries = _target_refs(readiness.get("process_boundary_candidates", []))
+    if process_boundaries:
+        recommendations.append(
+            "Isolate process/network/filesystem-heavy boundaries before retry or replay: "
+            + ", ".join(process_boundaries[:4])
+            + "."
+        )
+
+    idempotency = _target_refs(readiness.get("idempotency_risks", []), key="target")
+    if idempotency:
+        recommendations.append(
+            "Define idempotency and resume policy for side-effecting operations: "
+            + ", ".join(idempotency[:4])
+            + "."
+        )
+
+    quarantine = _target_refs(readiness.get("quarantine_candidates", []), key="target")
+    if quarantine:
+        recommendations.append(
+            "Add quarantine policy for unstable dependencies or external boundaries: "
+            + ", ".join(quarantine[:4])
+            + "."
+        )
+
+    strategy = readiness.get("contract_test_strategy")
+    if isinstance(strategy, list) and strategy:
+        recommendations.append("Add contract tests around: " + ", ".join(_value(item) for item in strategy[:4]) + ".")
+
+    extraction_plan = dict(readiness.get("minimal_extraction_plan", {}))
+    capabilities = _target_refs(extraction_plan.get("capabilities_to_extract", []), key="capability")
+    if capabilities:
+        recommendations.append("Start with bounded extraction candidates: " + ", ".join(capabilities[:4]) + ".")
+
+    return [f"- {item}" for item in recommendations] or ["- No structured recommendations available."]
+
+
+def _target_refs(rows: object, *, key: str | None = None) -> list[str]:
+    if not isinstance(rows, list):
+        return []
+    refs: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if key and row.get(key):
+            refs.append(str(row.get(key)))
+            continue
+        path = row.get("path")
+        name = row.get("name")
+        target = row.get("target")
+        if path and name:
+            refs.append(f"{path}:{name}")
+        elif target:
+            refs.append(str(target))
+    return refs
 
 
 def _table(headers: list[str], rows: list[list[object]]) -> list[str]:

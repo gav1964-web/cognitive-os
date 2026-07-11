@@ -42,15 +42,23 @@ def purpose_heading(docs: str) -> str:
 def purpose_sentence(docs: str) -> str:
     lines = docs.splitlines()
     paragraph: list[str] = []
+    seen_top_heading = False
     for line in lines:
         stripped = line.strip()
         if not stripped:
             if paragraph:
                 break
             continue
+        if stripped.startswith("##") and seen_top_heading and not paragraph:
+            break
+        if stripped.startswith("#"):
+            seen_top_heading = True
+            continue
         if stripped.startswith(("#", "[!", "![", "<", "|", ".. ", ":")) or set(stripped) <= {"=", "-", "~"}:
             continue
         if stripped.startswith(("-", "*", "1.", "2.", "3.", "**note**", "**NOTE**")):
+            continue
+        if _non_purpose_sentence(stripped.lower()):
             continue
         paragraph.append(stripped)
     text = " ".join(paragraph).strip()
@@ -89,4 +97,13 @@ def _non_purpose_heading(normalized: str) -> bool:
         or normalized.startswith((".. ", "<", "</"))
         or "changelog" in normalized
         or "change notes" in normalized
+    )
+
+
+def _non_purpose_sentence(normalized: str) -> bool:
+    return (
+        "intentionally excludes" in normalized
+        or normalized.startswith("what is not included")
+        or normalized.startswith("the package excludes")
+        or normalized.startswith("not included")
     )

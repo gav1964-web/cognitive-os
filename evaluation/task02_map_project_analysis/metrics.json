@@ -25,8 +25,8 @@
       "executor": "tools/role_pipeline_run.py",
       "model": "deterministic",
       "status": "completed",
-      "requirement_coverage": 0.76,
-      "missed_requirements": 2,
+      "requirement_coverage": 0.86,
+      "missed_requirements": 1,
       "invented_requirements": 0,
       "tests_passed": 0,
       "tests_total": 0,
@@ -34,9 +34,9 @@
       "repair_cycles": 0,
       "runtime_seconds": null,
       "estimated_cost": null,
-      "artifact_completeness": 0.9,
+      "artifact_completeness": 0.94,
       "source_safety_violations": 0,
-      "review_blockers": 1,
+      "review_blockers": 0,
       "human_correction_minutes": 0
     }
   },
@@ -45,19 +45,20 @@
     "cognitive_os_advantages": [
       "Better typed artifact chain and safety trace",
       "Consistent bounded extraction target app.py:parse_bbox",
-      "Detected large artifacts, risky imports and unpinned dependencies"
+      "Detected large artifacts, risky imports and unpinned dependencies",
+      "After rerun, excluded packaged-copy paths from active execution evidence",
+      "After rerun, produced structured improvement recommendations"
     ],
     "direct_agent_advantages": [
-      "Better separated active core from packaged copy/noise",
       "Better described the full Flask/Leaflet + data rebuild architecture",
       "Identified direct GigaChat provider boundary and import_indoc pipeline risks",
-      "Produced broader architectural improvement plan beyond first extraction target"
+      "Produced a clearer target module split and more concise architectural synthesis"
     ],
     "no_difference": [
       "Both routes kept the source project unchanged",
       "Both identified app.py:parse_bbox as a safe first bounded capability candidate"
     ],
-    "confidence": 0.7
+    "confidence": 0.52
   },
   "invariants": {
     "same_original_prompt": true,

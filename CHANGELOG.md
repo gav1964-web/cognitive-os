@@ -10,6 +10,7 @@
 - First completed evaluation run for `task01_project5_improvement_plan`, recording a direct-agent win on human-readable analysis breadth and Cognitive OS strengths in artifact traceability/source safety.
 - Architecture analysis document now supports current ProjectMapReport answer keys (`1_scope`, `2_execution`), eliminating `n/a` purpose/entrypoint sections in the first evaluation rerun.
 - Completed `task02_map_project_analysis`, recording a direct-agent win and a Cognitive OS backlog item for stronger packaged-copy/source-strata filtering.
+- Project map reports now exclude packaged-copy paths from active execution evidence, avoid usage/not-included README text as project purpose, and add human-readable improvement recommendations.
 - Stage 3 `Prompt -> Verified Product Slice` contract with `ProductSliceSpec`, architecture decision, task graph, verification summary, CLI and acceptance gate.
 - Stage 3 product-slice review fields for requirements, task dependencies, documentation review, scenario verification, bounded product debug-loop plan and inferred input/output lifecycle.
 - Executable Stage 3 product debug loop with documentation/scenario failure analysis, bounded package-local rework, project-scoped verification rerun, tester refresh and acceptance probe.

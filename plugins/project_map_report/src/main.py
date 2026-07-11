@@ -95,7 +95,7 @@ def _markdown(
         "",
         "## Runtime Commands",
     ]
-    for command in runtime_commands.get("commands", [])[:10]:
+    for command in _active_runtime_commands(runtime_commands)[:10]:
         first = _representative_command(command.get("commands") or [])
         lines.append(f"- `{command.get('path')}`: {command.get('purpose')} -> `{first}`")
     lines.extend(["", "## Routes"])
@@ -129,3 +129,11 @@ def _representative_command(commands: list[str]) -> str:
         if not lower.startswith(("if ", "echo ", "set ")):
             return command
     return commands[0] if commands else ""
+
+
+def _active_runtime_commands(runtime_commands: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        command
+        for command in runtime_commands.get("commands", [])
+        if isinstance(command, dict) and is_core_path(str(command.get("path", "")))
+    ]
