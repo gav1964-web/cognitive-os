@@ -1,59 +1,70 @@
 {
   "task_id": "task02_map_project_analysis",
   "task_class": "project_analysis",
-  "prompt_hash": "sha256:pending",
+  "prompt_hash": "sha256:6eb1c670d447594ac29ca1b06bd02b21fff1641abf81e3809a83fbc7c197efd5",
   "routes": {
     "direct_agent": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
+      "executor": "Codex direct inspection",
+      "model": "GPT-5 Codex session",
+      "status": "completed",
+      "requirement_coverage": 0.9,
       "missed_requirements": 0,
       "invented_requirements": 0,
       "tests_passed": 0,
       "tests_total": 0,
-      "verification_status": "not_run",
+      "verification_status": "review_only",
       "repair_cycles": 0,
       "runtime_seconds": null,
       "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "artifact_completeness": 0.62,
       "source_safety_violations": 0,
       "review_blockers": 0,
-      "human_correction_minutes": null
+      "human_correction_minutes": 0
     },
     "cognitive_os": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
-      "missed_requirements": 0,
+      "executor": "tools/role_pipeline_run.py",
+      "model": "deterministic",
+      "status": "completed",
+      "requirement_coverage": 0.76,
+      "missed_requirements": 2,
       "invented_requirements": 0,
       "tests_passed": 0,
       "tests_total": 0,
-      "verification_status": "not_run",
+      "verification_status": "artifact_checks_ok",
       "repair_cycles": 0,
       "runtime_seconds": null,
       "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "artifact_completeness": 0.9,
       "source_safety_violations": 0,
-      "review_blockers": 0,
-      "human_correction_minutes": null
+      "review_blockers": 1,
+      "human_correction_minutes": 0
     }
   },
   "comparison": {
-    "winner": "undecided",
-    "cognitive_os_advantages": [],
-    "direct_agent_advantages": [],
-    "no_difference": [],
-    "confidence": 0.0
+    "winner": "direct_agent",
+    "cognitive_os_advantages": [
+      "Better typed artifact chain and safety trace",
+      "Consistent bounded extraction target app.py:parse_bbox",
+      "Detected large artifacts, risky imports and unpinned dependencies"
+    ],
+    "direct_agent_advantages": [
+      "Better separated active core from packaged copy/noise",
+      "Better described the full Flask/Leaflet + data rebuild architecture",
+      "Identified direct GigaChat provider boundary and import_indoc pipeline risks",
+      "Produced broader architectural improvement plan beyond first extraction target"
+    ],
+    "no_difference": [
+      "Both routes kept the source project unchanged",
+      "Both identified app.py:parse_bbox as a safe first bounded capability candidate"
+    ],
+    "confidence": 0.7
   },
   "invariants": {
     "same_original_prompt": true,
     "same_constraints": true,
-    "manual_corrections_recorded": false,
+    "manual_corrections_recorded": true,
     "teacher_reference_is_ground_truth": false,
     "source_mutation_detected": false
   },
-  "verdict": "not_evaluated"
+  "verdict": "direct_agent_wins"
 }
-
