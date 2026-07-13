@@ -271,6 +271,12 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> Non
         check=checks.json_status_ok,
     )
     report.command(
+        "spinal_benchmark",
+        [sys.executable, "tools/spinal_benchmark.py", "--root", ".", "--write"],
+        layers=["L3.5", "L2"],
+        check=checks.spinal_benchmark_ok,
+    )
+    report.command(
         "project_analyzer_benchmark",
         [sys.executable, "tools/project_analyzer_benchmark.py", "--root", ".", "--write"],
         layers=["L1", "L3.5", "L4"],

@@ -52,7 +52,13 @@ def worker_pool_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     if not isinstance(payload, dict):
         return False, "worker pool did not return JSON payload"
     results = payload.get("results", []) if isinstance(payload, dict) else []
-    completed = [item for item in results if item.get("status") == "completed" and item.get("result_status") == "ok"]
+    completed = [
+        item
+        for item in results
+        if item.get("status") == "completed"
+        and item.get("result_status") == "ok"
+        and int(item.get("packet_count", 0)) > 0
+    ]
     ok = ctx["returncode"] == 0 and int(payload.get("processed", 0)) >= 1 and bool(completed)
     return ok, f"processed={payload.get('processed')}, completed_ok={len(completed)}"
 
@@ -62,9 +68,15 @@ def queue_has_completed(job_id: str | None) -> Check:
         payload = ctx["payload"]
         jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
         matching = [job for job in jobs if job.get("job_id") == job_id]
-        ok = ctx["returncode"] == 0 and bool(matching) and matching[0].get("status") in {"completed", "succeeded"}
+        packet_trace = list(dict(matching[0].get("result") or {}).get("layer_packets", [])) if matching else []
+        ok = (
+            ctx["returncode"] == 0
+            and bool(matching)
+            and matching[0].get("status") in {"completed", "succeeded"}
+            and bool(packet_trace)
+        )
         status = matching[0].get("status") if matching else None
-        return ok, f"job_id={job_id}, status={status}"
+        return ok, f"job_id={job_id}, status={status}, packets={len(packet_trace)}"
 
     return check
 
@@ -121,6 +133,23 @@ def goal_run_planner_in(expected_planners: set[str]) -> Check:
         )
 
     return check
+
+
+def spinal_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    summary = dict(payload.get("summary", {})) if isinstance(payload, dict) else {}
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("status") == "ok"
+        and int(summary.get("case_count", 0)) >= 8
+        and float(summary.get("route_accuracy", 0.0)) == 1.0
+        and float(summary.get("packet_contract_rate", 0.0)) == 1.0
+        and float(summary.get("recovery_accuracy", 0.0)) == 1.0
+    )
+    return ok, (
+        f"cases={summary.get('case_count')}, routes={summary.get('route_accuracy')}, "
+        f"packets={summary.get('packet_contract_rate')}, recovery={summary.get('recovery_accuracy')}"
+    )
 
 
 def project_analyzer_benchmark_ok(ctx: dict[str, Any]) -> tuple[bool, str]:

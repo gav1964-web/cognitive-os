@@ -115,6 +115,17 @@ See `POSITIONING.md` for the full positioning statement and `EVALUATION_PLAN.md`
 +-----------------------------------------------------+
 ```
 
+The user-goal path is enforced by `runtime/goal_runtime.py`: `goal_run.py`
+cannot call a graph or LLM planner directly. It sends an `IntentPacket` through
+the spinal planner, validates the returned `MotorPlanPacket`, then allows L2 to
+execute. L2 emits correlated execution events and typed interrupts back to L3.5;
+motor adaptation is bounded by an explicit budget.
+
+The same packet/recovery contract is used by synchronous goal execution,
+`execute_pipeline_async()`, and durable worker jobs. Queue results persist their
+`layer_packets` and `level35_adaptations`, so recovery decisions survive process
+boundaries and can be audited after a worker finishes.
+
 ## Key Concepts
 
 ### Crystal / Liquid Split
@@ -374,6 +385,8 @@ The safety model is based on explicit boundaries:
 - promotion requires explicit approval;
 - L4 roles cannot execute pipelines or mutate registries;
 - L3.5 planner output must validate through Pipeline DSL before execution;
+- the goal path cannot bypass the L3.5 facade or fabricate its own motor packet;
+- L2 recovery decisions return through typed interrupts and bounded L3.5 adaptation;
 - unsafe dependencies, unresolved local/domain calls, and risky side effects are blocked or quarantined;
 - generated code is treated as a candidate artifact, not trusted production code.
 
@@ -531,6 +544,12 @@ In the current MVP:
 - L3.5 planner proposals must validate before execution;
 - L4 may use deterministic fallback when no external cortex model is configured;
 - LLM outputs are advisory or bounded role artifacts, not direct execution authority.
+
+The deterministic L3.5 gate can be measured independently:
+
+```powershell
+python tools\spinal_benchmark.py --root . --write
+```
 
 The preferred design is provider-portable and local-first: projects should talk to a configured gateway rather than hardcoding external model API keys.
 

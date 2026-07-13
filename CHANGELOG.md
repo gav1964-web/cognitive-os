@@ -13,6 +13,12 @@
 - Project map reports now exclude packaged-copy paths from active execution evidence, avoid usage/not-included README text as project purpose, and add human-readable improvement recommendations.
 - Architecture analysis documents now include a target architecture sketch; `task02_map_project_analysis` was rerun to `no_clear_difference` after the project-analysis fixes.
 - Layer 3.5 now has a contract facade in `runtime/spinal_planner.py` for IntentPacket -> validated Pipeline DSL -> MotorPlanPacket/SignalPacket, plus interrupt adaptation and quality checks.
+- User goals now pass through mandatory `runtime/goal_runtime.py` coordination; L2 emits correlated execution/interrupt packets and recovery returns through a bounded L3.5 adaptation loop.
+- Async execution and durable workers now use the same spinal recovery controller; queue results persist packet and adaptation traces, and async fallback no longer leaks the original exception into node outputs.
+- Sync and async executors now re-enter L3.5 when a retry or fallback also fails, producing a second interrupt and a blocked signal when the adaptation budget is exhausted.
+- L3.5 deterministic benchmark covers known chains, graph planning, safe blocking, retry, fallback and escalation, with contract and latency metrics.
+- Contract Registry now catalogs role artifacts as producer/consumer APIs in addition to capabilities and packet routes.
+- `goal_run.py` emits ASCII-safe valid JSON on Windows even when analyzed source contains characters unsupported by the console encoding.
 - Stage 3 `Prompt -> Verified Product Slice` contract with `ProductSliceSpec`, architecture decision, task graph, verification summary, CLI and acceptance gate.
 - Stage 3 product-slice review fields for requirements, task dependencies, documentation review, scenario verification, bounded product debug-loop plan and inferred input/output lifecycle.
 - Executable Stage 3 product debug loop with documentation/scenario failure analysis, bounded package-local rework, project-scoped verification rerun, tester refresh and acceptance probe.

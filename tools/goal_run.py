@@ -47,39 +47,33 @@ def main() -> int:
     root = Path(args.root).resolve()
 
     from tools.goal_packet_helpers import (
-        checkpoint_after,
         expected_artifacts,
         intent_for_decision,
         is_project_analysis,
-        planned_capabilities_active,
-        process_boundary_for_plan,
         success_criteria,
     )
-    from runtime.deterministic_goal_planner import plan_from_required_capabilities
     from runtime.dialogue_memory import DialogueMemory
-    from runtime.executor import execute_pipeline
     from runtime.goal_intake import build_goal_spec
     from runtime.goal_orchestrator import decide_goal_route, decide_goal_route_with_llm
     from runtime.goal_report import build_goal_report
+    from runtime.goal_runtime import execute_motor_route, plan_motor_route
     from runtime.goal_session import GoalSessionStore
     from runtime.knowledge import apply_knowledge_route_override, knowledge_preflight
     from runtime.level4_deliberation import build_deliberation
-    from runtime.layer_packets import intent_packet, motor_plan_packet, signal_packet
-    from runtime.llm_graph_planner import plan_pipeline_with_llm
-    from runtime.local_inference import LocalInferenceConfig, LocalInferenceError
+    from runtime.layer_packets import intent_packet, signal_packet
+    from runtime.local_inference import LocalInferenceConfig
     from runtime.memory_index import MemoryIndex
     from runtime.project_deliberation import deliberate_project_report
     from runtime.project_signals import generate_project_signals
     from runtime.project_tasks import generate_project_tasks
     from runtime.registry import CapabilityRegistry
-    from runtime.template_instantiator import TemplateInstantiationError, plan_from_memory_template
 
     registry = CapabilityRegistry(root)
     registry.load()
     store = GoalSessionStore(root)
     root_input = json.loads(args.input_json)
     if not isinstance(root_input, dict):
-        print(json.dumps({"status": "failed", "error": "--input-json must decode to object"}, ensure_ascii=False, indent=2))
+        print(json.dumps({"status": "failed", "error": "--input-json must decode to object"}, ensure_ascii=True, indent=2))
         return 2
     if args.goal_id:
         session = store.load(args.goal_id)
@@ -88,7 +82,7 @@ def main() -> int:
             store.add_clarification(session, args.clarification)
     else:
         if not args.goal:
-            print(json.dumps({"status": "failed", "error": "--goal is required when --goal-id is not provided"}, ensure_ascii=False, indent=2))
+            print(json.dumps({"status": "failed", "error": "--goal is required when --goal-id is not provided"}, ensure_ascii=True, indent=2))
             return 2
         session = store.create(args.goal, root_input=root_input)
     goal = str(session.get("effective_goal") or session["goal"])
@@ -173,6 +167,19 @@ def main() -> int:
             "selected_alternative": dict(deliberation.get("selected_alternative") or {}).get("id"),
         },
     )
+    intent = intent_packet(
+        correlation_id=str(session["goal_id"]),
+        intent=intent_for_decision(decision.action),
+        objective=goal,
+        constraints={
+            "risk_posture": "conservative",
+            "read_only": is_project_analysis(decision.required_capabilities),
+            "execute_requested": bool(args.execute),
+            "required_capabilities": list(decision.required_capabilities),
+        },
+        expected_artifacts=expected_artifacts(decision.required_capabilities),
+        success_criteria=success_criteria(decision.required_capabilities),
+    )
     report: dict[str, object] = {
         "status": "decided",
         "goal_id": session["goal_id"],
@@ -184,20 +191,7 @@ def main() -> int:
         "knowledge_artifacts": knowledge.get("knowledge_artifacts", []),
         "level4_decision": decision.to_dict(),
         "level4_deliberation": deliberation,
-        "layer_packets": [
-            intent_packet(
-                correlation_id=str(session["goal_id"]),
-                intent=intent_for_decision(decision.action),
-                objective=goal,
-                constraints={
-                    "risk_posture": "conservative",
-                    "read_only": is_project_analysis(decision.required_capabilities),
-                    "execute_requested": bool(args.execute),
-                },
-                expected_artifacts=expected_artifacts(decision.required_capabilities),
-                success_criteria=success_criteria(decision.required_capabilities),
-            )
-        ],
+        "layer_packets": [intent],
     }
 
     if decision.action != "PLAN_WITH_L35":
@@ -209,84 +203,45 @@ def main() -> int:
         report_path = store.write_report(session, final_report)
         MemoryIndex(root).upsert_report(final_report, report_path)
         report["report_path"] = report_path.as_posix()
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+        print(json.dumps(report, ensure_ascii=True, indent=2))
         return 0
 
-    try:
-        planned = plan_from_memory_template(goal, memory_preflight, registry, required_capabilities=decision.required_capabilities)
-        if planned is not None:
-            store.append_event(
-                session,
-                "memory_template_planned",
-                {
-                    "template_id": planned.get("template_id"),
-                    "pipeline_id": dict(planned["pipeline"]).get("id"),
-                },
-            )
-        else:
-            planned = plan_from_required_capabilities(goal, decision.required_capabilities, registry)
-            if planned is not None:
-                store.append_event(session, "deterministic_goal_planned", {"pipeline_id": planned["pipeline"]["id"]})
-            else:
-                planned = plan_pipeline_with_llm(
-                    goal,
-                    registry,
-                    config=config,
-                    memory_hint=_memory_hint(memory_preflight),
-                )
-    except TemplateInstantiationError as exc:
-        store.append_event(session, "memory_template_failed", {"error": str(exc)})
-        try:
-            planned = plan_from_required_capabilities(goal, decision.required_capabilities, registry)
-            if planned is not None:
-                store.append_event(session, "deterministic_goal_planned", {"pipeline_id": planned["pipeline"]["id"]})
-            else:
-                planned = plan_pipeline_with_llm(
-                    goal,
-                    registry,
-                    config=config,
-                    memory_hint=_memory_hint(memory_preflight),
-                )
-        except LocalInferenceError as llm_exc:
-            failed_report = {"status": "failed", **report, "error": str(llm_exc), "template_error": str(exc)}
-            final_report = build_goal_report(session, failed_report)
-            report_path = store.write_report(session, final_report)
-            MemoryIndex(root).upsert_report(final_report, report_path)
-            failed_report["report_path"] = report_path.as_posix()
-            store.append_event(session, "level35_failed", {"error": str(llm_exc)})
-            print(json.dumps(failed_report, ensure_ascii=False, indent=2))
-            return 2
-    except LocalInferenceError as exc:
-        failed_report = {"status": "failed", **report, "error": str(exc)}
-        final_report = build_goal_report(session, failed_report)
-        report_path = store.write_report(session, final_report)
-        MemoryIndex(root).upsert_report(final_report, report_path)
-        failed_report["report_path"] = report_path.as_posix()
-        store.append_event(session, "level35_failed", {"error": str(exc)})
-        print(json.dumps(failed_report, ensure_ascii=False, indent=2))
-        return 2
+    planned = plan_motor_route(
+        intent,
+        registry,
+        required_capabilities=decision.required_capabilities,
+        memory_preflight=memory_preflight,
+        allow_local_llm=True,
+        config=config,
+    )
 
     report["level35_plan"] = planned
-    report.setdefault("layer_packets", []).append(
-        motor_plan_packet(
-            correlation_id=str(session["goal_id"]),
-            planner=str(planned.get("planner") or "unknown"),
-            capability_chain=[str(node.get("capability")) for node in dict(planned.get("pipeline", {})).get("nodes", [])],
-            execution_policy={
-                "retry_policy": dict(dict(planned.get("pipeline", {})).get("retry_policy", {})),
-                "checkpoint_after": checkpoint_after(planned),
-                "process_boundary": process_boundary_for_plan(planned),
-            },
-            validation={
-                "pipeline_dsl_validated": True,
-                "registry_capabilities_active": planned_capabilities_active(planned),
-            },
-        )
-    )
+    if isinstance(planned.get("motor_plan_packet"), dict):
+        report.setdefault("layer_packets", []).append(planned["motor_plan_packet"])
+    if isinstance(planned.get("signal_packet"), dict):
+        report.setdefault("layer_packets", []).append(planned["signal_packet"])
+    if planned.get("status") != "planned":
+        report["status"] = "blocked"
+        final_report = build_goal_report(session, report)
+        report_path = store.write_report(session, final_report)
+        MemoryIndex(root).upsert_report(final_report, report_path)
+        report["report_path"] = report_path.as_posix()
+        store.append_event(session, "level35_blocked", {"errors": planned.get("errors", [])})
+        store.save(session)
+        print(json.dumps(report, ensure_ascii=True, indent=2))
+        return 2
     store.append_event(session, "level35_planned", {"pipeline_id": planned["pipeline"]["id"]})
     if args.execute:
-        pipeline = _pipeline_from_dict(dict(planned["pipeline"]))
-        report["execution"] = execute_pipeline(root, pipeline, root_input)
+        motor_run = execute_motor_route(
+            root,
+            planned,
+            root_input,
+            registry,
+            correlation_id=str(session["goal_id"]),
+        )
+        report["execution"] = motor_run["execution"]
+        report["level35_adaptations"] = motor_run["adaptations"]
+        report.setdefault("layer_packets", []).extend(motor_run["layer_packets"])
         store.append_event(session, "executed", {"status": dict(report["execution"]).get("status")})
         if args.interpret_project_llm:
             try:
@@ -333,30 +288,8 @@ def main() -> int:
     MemoryIndex(root).upsert_report(final_report, report_path)
     report["report_path"] = report_path.as_posix()
     store.save(session)
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(json.dumps(report, ensure_ascii=True, indent=2))
     return 0
-
-
-def _pipeline_from_dict(payload: dict[str, object]) -> Pipeline:
-    from runtime.models import Pipeline, PipelineNode
-
-    return Pipeline(
-        id=str(payload["id"]),
-        version=str(payload["version"]),
-        nodes=[
-            PipelineNode(id=str(node["id"]), capability=str(node["capability"]), input=dict(node["input"]))
-            for node in payload["nodes"]  # type: ignore[index]
-        ],
-        edges=[list(edge) for edge in payload["edges"]],  # type: ignore[index]
-        retry_policy=dict(payload["retry_policy"]),  # type: ignore[index]
-    )
-
-
-def _memory_hint(memory_preflight: dict[str, object]) -> dict[str, object]:
-    return {
-        "previous_plan": memory_preflight.get("recommendation"),
-        "plan_template": memory_preflight.get("template_recommendation"),
-    }
 
 
 def _cortex_config(args: argparse.Namespace, config_cls: type) -> object:

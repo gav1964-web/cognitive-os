@@ -25,6 +25,7 @@ def test_contract_registry_builds_capability_and_packet_catalog(registry):
 
     assert any(item["id"] == "normalize_text" for item in catalog["capabilities"])
     assert {"source_layer": "L4", "target_layer": "L3.5", "packet_type": "INTENT"} in catalog["packet_routes"]
+    assert any(item["artifact_type"] == "TechnicalSpec" for item in catalog["artifacts"])
 
 
 def test_contract_registry_rejects_non_executable_capability(registry):
@@ -59,3 +60,21 @@ def test_contract_registry_validates_layer_packet_routes(registry):
     )
 
     ContractRegistry.from_capability_registry(registry).validate_layer_packet(packet)
+
+
+def test_contract_registry_validates_artifact_api(registry):
+    artifact = {
+        "artifact_type": "ReviewFindings",
+        "findings": [],
+        "risk_assessment": [],
+        "recommendation": "approve",
+    }
+
+    ContractRegistry.from_capability_registry(registry).validate_artifact(artifact)
+
+
+def test_contract_registry_rejects_incomplete_artifact_api(registry):
+    with pytest.raises(ContractRegistryError, match="missing fields"):
+        ContractRegistry.from_capability_registry(registry).validate_artifact(
+            {"artifact_type": "TechnicalSpec", "requirements": []}
+        )

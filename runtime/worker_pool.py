@@ -11,6 +11,7 @@ from typing import Any
 from .durable_queue import DurableQueue, job_pipeline
 from .execution_journal import append_journal_event
 from .executor import execute_pipeline
+from .goal_runtime import SpinalRecoveryController
 
 
 class WorkerPool:
@@ -128,12 +129,19 @@ def _run_job(
         if force_process_boundary:
             pipeline.retry_policy["process_boundary"] = True
             pipeline.retry_policy.setdefault("node_timeout_seconds", 10)
+        packets: list[dict[str, Any]] = []
+        recovery = SpinalRecoveryController(max_adaptations=2, packet_sink=packets.append)
         result = execute_pipeline(
             root,
             pipeline,
             dict(job["root_input"]),
             reset_registry=bool(job.get("reset_registry", False)),
+            correlation_id=job_id,
+            packet_sink=packets.append,
+            recovery_handler=recovery,
         )
+        result["layer_packets"] = packets
+        result["level35_adaptations"] = recovery.adaptations
         stop_heartbeat.set()
         heartbeat_thread.join(timeout=1)
         queue.complete(job_id, result=result)
@@ -147,7 +155,13 @@ def _run_job(
                 "result_status": result.get("status"),
             },
         )
-        return {"job_id": job_id, "status": "completed", "result_status": result.get("status")}
+        return {
+            "job_id": job_id,
+            "status": "completed",
+            "result_status": result.get("status"),
+            "packet_count": len(packets),
+            "adaptation_count": len(recovery.adaptations),
+        }
     except Exception as exc:
         stop_heartbeat.set()
         heartbeat_thread.join(timeout=1)

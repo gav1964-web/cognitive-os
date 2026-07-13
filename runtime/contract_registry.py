@@ -15,6 +15,55 @@ class ContractRegistryError(ValueError):
     """Raised when a runtime contract is missing or cannot be used."""
 
 
+ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
+    "GoalSpec": {
+        "producer": "goal_intake",
+        "consumers": ["L4"],
+        "required_fields": ["artifact_type", "intent", "inputs", "outputs", "constraints", "success_criteria"],
+    },
+    "ProjectMapReport": {
+        "producer": "project_analyzer",
+        "consumers": ["architect"],
+        "required_fields": ["artifact_type", "project", "summary"],
+    },
+    "ArchitectureDecisionRecord": {
+        "producer": "architect",
+        "consumers": ["spec_writer"],
+        "required_fields": ["artifact_type", "architecture_options", "chosen_option", "risks", "spec_writer_brief"],
+    },
+    "TechnicalSpec": {
+        "producer": "spec_writer",
+        "consumers": ["implementer", "tester", "reviewer"],
+        "required_fields": ["artifact_type", "requirements", "acceptance_criteria", "traceability_table"],
+    },
+    "ImplementationPlan": {
+        "producer": "implementer",
+        "consumers": ["programmer_executor", "tester", "reviewer"],
+        "required_fields": ["artifact_type", "patch_scope", "expected_files", "verification_commands", "rollback_plan"],
+    },
+    "TestPlan": {
+        "producer": "tester",
+        "consumers": ["programmer_executor", "reviewer"],
+        "required_fields": ["artifact_type", "acceptance_tests", "negative_tests", "regression_risks"],
+    },
+    "PatchPackage": {
+        "producer": "programmer_executor",
+        "consumers": ["tester", "reviewer"],
+        "required_fields": ["artifact_type", "expected_files", "patches", "policy"],
+    },
+    "TestResult": {
+        "producer": "programmer_executor",
+        "consumers": ["reviewer"],
+        "required_fields": ["artifact_type", "status", "commands"],
+    },
+    "ReviewFindings": {
+        "producer": "reviewer",
+        "consumers": ["human", "release_gate"],
+        "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation"],
+    },
+}
+
+
 @dataclass(frozen=True)
 class CapabilityContract:
     capability_id: str
@@ -37,6 +86,7 @@ class ContractRegistry:
     def __init__(self, capabilities: dict[str, CapabilityContract]) -> None:
         self.capabilities = capabilities
         self.packet_routes = set(LAYER_ROUTES)
+        self.artifacts = {key: dict(value) for key, value in ARTIFACT_CONTRACTS.items()}
 
     @classmethod
     def from_capability_registry(cls, registry: CapabilityRegistry) -> "ContractRegistry":
@@ -75,6 +125,20 @@ class ContractRegistry:
         if route not in self.packet_routes:
             raise ContractRegistryError(f"missing packet route contract: {route}")
 
+    def require_artifact(self, artifact_type: str) -> dict[str, Any]:
+        if artifact_type not in self.artifacts:
+            raise ContractRegistryError(f"missing artifact contract: {artifact_type}")
+        return dict(self.artifacts[artifact_type])
+
+    def validate_artifact(self, artifact: dict[str, Any]) -> None:
+        artifact_type = str(artifact.get("artifact_type") or "")
+        contract = self.require_artifact(artifact_type)
+        missing = [field for field in contract["required_fields"] if field not in artifact]
+        if missing:
+            raise ContractRegistryError(
+                f"{artifact_type} artifact missing fields: {', '.join(missing)}"
+            )
+
     def catalog(self) -> dict[str, Any]:
         return {
             "capabilities": [
@@ -92,6 +156,10 @@ class ContractRegistry:
             "packet_routes": [
                 {"source_layer": source, "target_layer": target, "packet_type": packet_type}
                 for source, target, packet_type in sorted(self.packet_routes)
+            ],
+            "artifacts": [
+                {"artifact_type": artifact_type, **contract}
+                for artifact_type, contract in sorted(self.artifacts.items())
             ],
         }
 

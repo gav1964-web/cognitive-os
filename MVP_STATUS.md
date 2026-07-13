@@ -1,7 +1,7 @@
 # MVP_STATUS.md
 **Baseline snapshot: Cognitive OS MVP**
 
-Generated after the July 6, 2026 field pass.
+Updated after the July 13, 2026 Layer 3.5 vertical-runtime pass.
 
 ## Current Verdict
 
@@ -14,11 +14,11 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | Layer | Current state | Evidence |
 | --- | --- | --- |
 | L1 capabilities | Plugin catalog, schemas and contract tests pass | `tools/check_plugins.py --root .` |
-| L2 runtime | Pipeline execution, checkpointing, process boundary, queue/worker pool pass acceptance | `tools/mvp_acceptance.py --skip-pytest` |
-| L2.5 registry | Capability Registry and Contract Registry validate active capabilities | `tools/registry_doctor.py --root .` |
-| L3 interrupt/policy | Quarantine, controlled stop and fallback paths are exercised | MVP acceptance |
+| L2 runtime | Sync/async pipeline execution, checkpointing, process boundary and queue/worker pool emit correlated execution-event/interrupt packets; durable jobs persist recovery traces | `tests/runtime/test_goal_runtime.py`, `tests/runtime/test_async_executor.py`, `tests/runtime/test_worker_pool.py` |
+| L2.5 registry | Capability Registry and read-only Contract Registry validate active capabilities, packet routes and role artifact APIs | `tools/registry_doctor.py --root .`, `tests/runtime/test_contract_registry.py` |
+| L3 interrupt/policy | Quarantine, fallback, repeated fallback failure, adaptation-budget stop and blocked escalation are exercised in sync/async paths | MVP acceptance and vertical runtime tests |
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
-| L3.5 spinal layer | Contract facade builds MotorPlanPacket/SignalPacket from IntentPacket, validates Pipeline DSL, supports deterministic and optional local-LLM proposal routes, and adapts L2 interrupts without executing plugins | `runtime/spinal_planner.py`, `tests/runtime/test_spinal_planner.py` |
+| L3.5 spinal layer | Mandatory goal-runtime facade selects memory/deterministic/graph/optional-LLM routes, emits MotorPlanPacket/SignalPacket, receives correlated L2 events/interrupts and applies bounded recovery without executing plugins | `runtime/spinal_planner.py`, `runtime/goal_runtime.py`, `tools/spinal_benchmark.py` |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
 | Stage 3 product slice | `ProductSliceSpec` wraps a verified package with requirements, scenarios, architecture decision, task graph, documentation/scenario review, executable product debug loop, 8-case benchmark and release decision | `tools/product_slice.py`, `tools/product_debug_loop_probe.py`, `tools/product_slice_benchmark.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
@@ -112,7 +112,8 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 * Official docs fetch is allowlisted excerpt/hash evidence, not free browsing.
 * Semantic long-term dialogue memory remains intentionally limited.
 * The analyzed external project is treated as read-only.
+* Direct standalone executor calls retain their deterministic default policy when no recovery handler is supplied; `goal_run.py`, async integration and worker pool use the typed spinal recovery controller.
 
 ## Next Best Step
 
-The next engineering step is to add richer product-scenario probes for the 8-case Stage 3 corpus, then decide whether network/spreadsheet adapter cases are mature enough to join the main benchmark.
+The next engineering step is to compare deterministic and live local-LLM L3.5 proposals on the same benchmark corpus, including route quality, latency and controlled invalid-output fallback.

@@ -90,8 +90,13 @@ def test_spinal_planner_turns_interrupt_into_motor_signal() -> None:
     interrupt = interrupt_packet(
         correlation_id="goal_spinal_3",
         interrupt={
+            "type": "CRITICAL_INTERRUPT",
+            "pipeline_id": "fetch_pipeline",
+            "failed_node_id": "fetch",
             "error_class": "transient",
             "capability_id": "fetch_html",
+            "error_fingerprint": {"exception_type": "TimeoutError", "traceback_hash": "test"},
+            "state_ref": "checkpoint_test",
             "capability_status": "active",
             "suggested_actions": [],
         },

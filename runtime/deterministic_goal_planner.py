@@ -243,6 +243,25 @@ def _proposal_for(goal: str, required_capabilities: list[str]) -> dict[str, Any]
             ],
             "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
         }
+    if capabilities == ("fetch_html", "parse_title", "save_json"):
+        return {
+            "id": "deterministic_fetch_parse_save",
+            "version": "0.1.0",
+            "steps": [
+                {"id": "fetch", "capability": "fetch_html", "input": {"url": "$input.url"}},
+                {
+                    "id": "parse",
+                    "capability": "parse_title",
+                    "input": {"html": "$nodes.fetch.output.html"},
+                },
+                {
+                    "id": "save",
+                    "capability": "save_json",
+                    "input": {"path": "$input.output_path", "data": "$nodes.parse.output"},
+                },
+            ],
+            "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
+        }
     if capabilities == ("translate_text",):
         return {
             "id": "deterministic_translate_text",

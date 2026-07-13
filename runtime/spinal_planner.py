@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from .deterministic_goal_planner import plan_from_required_capabilities
 from .graph_planner import GraphPlanningError, plan_pipeline
 from .layer_packets import motor_plan_packet, signal_packet, validate_packet
 from .llm_graph_planner import plan_pipeline_with_llm
@@ -18,6 +19,7 @@ from .models import Pipeline, PolicyDecision
 from .pipeline import PipelineValidationError, validate_pipeline
 from .planner_stub import plan_recovery
 from .registry import CapabilityRegistry
+from .template_instantiator import TemplateInstantiationError, plan_from_memory_template
 
 
 class SpinalPlanningError(RuntimeError):
@@ -31,6 +33,8 @@ def plan_from_intent_packet(
     allow_local_llm: bool = False,
     config: LocalInferenceConfig | None = None,
     memory_hint: dict[str, Any] | None = None,
+    memory_preflight: dict[str, Any] | None = None,
+    required_capabilities: list[str] | None = None,
 ) -> dict[str, Any]:
     """Translate L4 IntentPacket into a validated L2 MotorPlanPacket.
 
@@ -47,6 +51,29 @@ def plan_from_intent_packet(
     correlation_id = str(intent["correlation_id"])
     goal = _goal_key(payload)
     errors: list[str] = []
+    required = [str(item) for item in (required_capabilities or [])]
+
+    if memory_preflight:
+        try:
+            planned = plan_from_memory_template(
+                str(payload.get("objective") or goal),
+                memory_preflight,
+                registry,
+                required_capabilities=required,
+            )
+            if planned is not None:
+                return _planned_dict_result(correlation_id, goal, planned, registry)
+        except TemplateInstantiationError as exc:
+            errors.append(f"memory_template: {exc}")
+
+    if required:
+        planned = plan_from_required_capabilities(
+            str(payload.get("objective") or goal),
+            required,
+            registry,
+        )
+        if planned is not None:
+            return _planned_dict_result(correlation_id, goal, planned, registry)
 
     try:
         pipeline = plan_pipeline(goal, registry)
@@ -181,6 +208,37 @@ def _planned_result(
         "signal_packet": signal_packet(correlation_id=correlation_id, signals=signals),
         "proposal": proposal or {},
     }
+
+
+def _planned_dict_result(
+    correlation_id: str,
+    goal: str,
+    planned: dict[str, Any],
+    registry: CapabilityRegistry,
+) -> dict[str, Any]:
+    pipeline = _pipeline_from_dict(dict(planned["pipeline"]))
+    validate_pipeline(pipeline, registry)
+    planner = str(planned.get("planner") or "unknown")
+    result = _planned_result(
+        correlation_id=correlation_id,
+        planner=planner,
+        goal=goal,
+        pipeline=pipeline,
+        selection=list(planned.get("selection", [])),
+        signals=[
+            {
+                "type": "MOTOR_PLAN_READY",
+                "goal": goal,
+                "planner": planner,
+                "confidence": "high",
+            }
+        ],
+        proposal=dict(planned.get("proposal", {})),
+    )
+    for key in ("template_id", "template_support_count"):
+        if key in planned:
+            result[key] = planned[key]
+    return result
 
 
 def _goal_key(payload: dict[str, Any]) -> str:
