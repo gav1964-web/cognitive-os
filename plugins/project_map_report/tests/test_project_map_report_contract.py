@@ -118,6 +118,8 @@ def test_project_map_report_builds_markdown_and_risks():
     assert "Project Map Report" in result["markdown"]
     assert {risk["code"] for risk in result["risks"]} >= {"large_artifacts", "risky_imports"}
     assert result["answers"]["1_scope"]["test_surface"]["test_functions"] == 2
+    assert "app.py" in result["answers"]["1_scope"]["code_areas"]["core_logic"]
+    assert "map_install_package/app.py" not in result["answers"]["1_scope"]["code_areas"]["core_logic"]
     assert "ValueError" in result["answers"]["5_errors_state_repro"]["error_details"]["raises"]
     readiness = result["answers"]["6_runtime_extraction_readiness"]
     execution = result["answers"]["2_execution"]

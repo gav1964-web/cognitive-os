@@ -199,9 +199,14 @@ def _outputs(routes: list[dict[str, Any]], commands: list[dict[str, Any]], impor
 
 def _code_areas(python_structure: dict[str, Any]) -> dict[str, list[str]]:
     paths = [str(item.get("path", "")) for item in python_structure.get("files", [])]
+    active = [path for path in paths if is_core_path(path)]
     return {
-        "core_logic": [path for path in paths if path.startswith(("app/", "src/")) and "test" not in path][:10],
-        "interfaces_adapters": [path for path in paths if any(part in path for part in ("api", "server", "client", "adapter"))][:10],
+        "core_logic": active[:10],
+        "interfaces_adapters": [
+            path
+            for path in active
+            if any(part in path.lower() for part in ("api", "server", "client", "adapter", "app.py"))
+        ][:10],
         "tests": [path for path in paths if path.startswith("tests/") or "/test" in path][:10],
         "experiments_tools": [path for path in paths if path.startswith(("tools/", "scratch/", "examples/"))][:10],
     }

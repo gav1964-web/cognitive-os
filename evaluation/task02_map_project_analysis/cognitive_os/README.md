@@ -41,19 +41,19 @@ Important weakness:
 
 - `GoalSpec`: implicit role pipeline goal input.
 - `ProjectMapReport`: produced internally by `runtime.project_benchmark.analyze_project`.
-- `ArchitectureDecisionRecord`: `artifacts/roles/architect/ArchitectureDecisionRecord_20260711T120253058381Z.json`.
-- `TechnicalSpec`: `artifacts/roles/spec_writer/TechnicalSpec_20260711T120253059380Z.json`.
-- `ImplementationPlan`: `artifacts/roles/implementer/ImplementationPlan_20260711T120253060381Z.json`.
-- `TestPlan`: `artifacts/roles/tester/TestPlan_20260711T120253061381Z.json`.
-- `ReviewFindings`: `artifacts/roles/reviewer/ReviewFindings_20260711T120253061886Z.json`.
+- `ArchitectureDecisionRecord`: `artifacts/roles/architect/ArchitectureDecisionRecord_20260713T014436408695Z.json`.
+- `TechnicalSpec`: `artifacts/roles/spec_writer/TechnicalSpec_20260713T014436410698Z.json`.
+- `ImplementationPlan`: `artifacts/roles/implementer/ImplementationPlan_20260713T014436411697Z.json`.
+- `TestPlan`: `artifacts/roles/tester/TestPlan_20260713T014436411697Z.json`.
+- `ReviewFindings`: `artifacts/roles/reviewer/ReviewFindings_20260713T014436412698Z.json`.
 
 ## Artifacts
 
-- Role pipeline report: `artifacts/roles/pipelines/role_pipeline_20260711T120253063900Z.json`.
-- Human-readable architecture report: `artifacts/roles/pipelines/architecture_analysis_20260711T120253062892Z.md`.
+- Role pipeline report: `artifacts/roles/pipelines/role_pipeline_20260713T014436413697Z.json`.
+- Human-readable architecture report: `artifacts/roles/pipelines/architecture_analysis_20260713T014436413697Z.md`.
 - Tests: not executed beyond role pipeline artifact checks.
 - Logs: role pipeline command output recorded in this evaluation.
 
 ## Notes
 
-This route preserved source immutability and separated typed artifacts well. The packaged-copy pollution observed in the first run was fixed before this rerun.
+This route preserved source immutability and separated typed artifacts well. The packaged-copy pollution observed in the first run was fixed before this rerun, and the report now includes code-area breakdown plus target architecture sketch.

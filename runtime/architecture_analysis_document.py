@@ -91,6 +91,10 @@ def render_architecture_analysis_document(
         "",
         *_improvement_recommendations(answers),
         "",
+        "## Target Architecture Sketch",
+        "",
+        *_target_architecture_sketch(answers),
+        "",
         "## Open Questions",
         "",
         *_bullet(row.get("question") for row in architecture_decision.get("open_questions", [])),
@@ -182,6 +186,50 @@ def _improvement_recommendations(answers: dict[str, Any]) -> list[str]:
     return [f"- {item}" for item in recommendations] or ["- No structured recommendations available."]
 
 
+def _target_architecture_sketch(answers: dict[str, Any]) -> list[str]:
+    scope = dict(answers.get("1_scope", {}))
+    execution = dict(answers.get("2_execution", {}))
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    rows: list[str] = []
+
+    entrypoints = _strings(execution.get("entrypoints"))
+    if entrypoints:
+        rows.append("Keep entrypoints thin: " + ", ".join(entrypoints[:4]) + ".")
+
+    scenarios = " ".join(_strings(scope.get("supported_scenarios"))).lower()
+    if "http" in scenarios or execution.get("primary_execution_path"):
+        rows.append("Move route handlers into an API/web boundary layer that validates requests and delegates work.")
+
+    hidden = _target_refs(readiness.get("hidden_orchestrators", []))
+    if hidden:
+        rows.append("Move orchestration out of large handlers into application services: " + ", ".join(hidden[:4]) + ".")
+
+    lifecycle = readiness.get("data_lifecycle", [])
+    if isinstance(lifecycle, list) and lifecycle:
+        stages = [str(row.get("stage")) for row in lifecycle if isinstance(row, dict) and row.get("stage")]
+        if stages:
+            rows.append("Make the data lifecycle explicit as separate stages: " + " -> ".join(stages[:5]) + ".")
+
+    process_boundaries = _target_refs(readiness.get("process_boundary_candidates", []))
+    if process_boundaries:
+        rows.append("Wrap subprocess/network/filesystem boundaries behind adapters with timeouts and failure packets.")
+
+    state = readiness.get("long_lived_state", [])
+    if isinstance(state, list) and state:
+        kinds = [str(row.get("kind")) for row in state if isinstance(row, dict) and row.get("kind")]
+        if kinds:
+            rows.append("Define state ownership and checkpoints for: " + ", ".join(dict.fromkeys(kinds[:5])) + ".")
+
+    capabilities = _target_refs(
+        dict(readiness.get("minimal_extraction_plan", {})).get("capabilities_to_extract", []),
+        key="capability",
+    )
+    if capabilities:
+        rows.append("Extract reusable pure/core capabilities first: " + ", ".join(capabilities[:4]) + ".")
+
+    return [f"- {row}" for row in rows] or ["- No target architecture sketch available."]
+
+
 def _target_refs(rows: object, *, key: str | None = None) -> list[str]:
     if not isinstance(rows, list):
         return []
@@ -200,6 +248,14 @@ def _target_refs(rows: object, *, key: str | None = None) -> list[str]:
         elif target:
             refs.append(str(target))
     return refs
+
+
+def _strings(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [_value(item) for item in value if _value(item) != "n/a"]
+    if value in (None, "", []):
+        return []
+    return [_value(value)]
 
 
 def _table(headers: list[str], rows: list[list[object]]) -> list[str]:

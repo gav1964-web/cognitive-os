@@ -25,6 +25,17 @@ def test_architecture_document_supports_current_project_answer_keys() -> None:
                         "idempotency_risks": [
                             {"target": "app/api/server.py:handle_chat", "side_effects": ["network"]}
                         ],
+                        "process_boundary_candidates": [
+                            {"path": "app/api/server.py", "name": "call_provider"}
+                        ],
+                        "data_lifecycle": [
+                            {"stage": "input"},
+                            {"stage": "validation"},
+                            {"stage": "output"},
+                        ],
+                        "long_lived_state": [
+                            {"kind": "cache"}
+                        ],
                         "minimal_extraction_plan": {
                             "capabilities_to_extract": [
                                 {"capability": "app/core/cache.py:build_key"}
@@ -46,5 +57,8 @@ def test_architecture_document_supports_current_project_answer_keys() -> None:
     assert "entrypoints: app/api/server.py" in text
     assert "primary_execution_path: HTTP request, route handler, JSON response" in text
     assert "## Improvement Recommendations" in text
+    assert "## Target Architecture Sketch" in text
     assert "app/api/server.py:handle_chat" in text
     assert "app/core/cache.py:build_key" in text
+    assert "Keep entrypoints thin: app/api/server.py." in text
+    assert "input -> validation -> output" in text
