@@ -18,7 +18,7 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | L2.5 registry | Capability Registry and Contract Registry validate active capabilities | `tools/registry_doctor.py --root .` |
 | L3 interrupt/policy | Quarantine, controlled stop and fallback paths are exercised | MVP acceptance |
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
-| L3.5 spinal layer | Deterministic known-route planner and project signals are operational | goal reports |
+| L3.5 spinal layer | Contract facade builds MotorPlanPacket/SignalPacket from IntentPacket, validates Pipeline DSL, supports deterministic and optional local-LLM proposal routes, and adapts L2 interrupts without executing plugins | `runtime/spinal_planner.py`, `tests/runtime/test_spinal_planner.py` |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
 | Stage 3 product slice | `ProductSliceSpec` wraps a verified package with requirements, scenarios, architecture decision, task graph, documentation/scenario review, executable product debug loop, 8-case benchmark and release decision | `tools/product_slice.py`, `tools/product_debug_loop_probe.py`, `tools/product_slice_benchmark.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |

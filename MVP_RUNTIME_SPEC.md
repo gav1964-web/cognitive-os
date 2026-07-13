@@ -601,7 +601,7 @@ python tools/registry_doctor.py --root .
 
 Он сверяет `registry/capabilities.json` с фактическими каталогами plugins, вычисленными hashes и lifecycle status. Это maintenance tool, а не фоновый worker: он запускается явно в smoke/test/release flow.
 
-Уровень 3.5 представлен deterministic planner stub `runtime/planner_stub.py` и rule-based graph planner `runtime/graph_planner.py`. `planner_stub.py` переводит interrupt packet в одно из действий `RETRY`, `SWITCH_PLUGIN`, `GENERATE_SPEC`, `STOP` по rule table. `graph_planner.py` строит простые pipeline по целевым rule ids и схемам известных capabilities. `GENERATE_SPEC` пока понижается policy layer до `STOP`, если автоматическая генерация не включена.
+Уровень 3.5 представлен контрактным фасадом `runtime/spinal_planner.py`, deterministic recovery stub `runtime/planner_stub.py` и rule-based graph planner `runtime/graph_planner.py`. `spinal_planner.py` принимает `IntentPacket` от L4, строит валидированный `Pipeline DSL`, возвращает `MotorPlanPacket` для L2 и короткий `SignalPacket` для L4; он не исполняет plugins и не меняет registry. `planner_stub.py` переводит interrupt packet в одно из действий `RETRY`, `SWITCH_PLUGIN`, `GENERATE_SPEC`, `STOP` по rule table. `graph_planner.py` строит простые pipeline по целевым rule ids и схемам известных capabilities. `GENERATE_SPEC` пока понижается policy layer до `STOP`, если автоматическая генерация не включена.
 
 Graph Planner 2.0 добавляет structured goal spec:
 
@@ -616,6 +616,33 @@ Graph Planner 2.0 добавляет structured goal spec:
 ```
 
 Planner возвращает Pipeline DSL и selection explanation по registry scoring. Итоговый Pipeline все равно проходит runtime validation перед enqueue/execute.
+
+Spinal Planner contract:
+
+```text
+IntentPacket(L4 -> L3.5)
+-> runtime.spinal_planner.plan_from_intent_packet()
+-> validated Pipeline DSL
+-> MotorPlanPacket(L3.5 -> L2)
+-> SignalPacket(L3.5 -> L4)
+```
+
+Порядок выбора route: deterministic known graph, затем optional local LLM proposal, затем blocked `SignalPacket` с `needs_l4_decision=true`. LLM-backed route возвращает только JSON proposal; `runtime/spinal_planner.py` повторно собирает Pipeline object и запускает `validate_pipeline()`. Interrupt path работает отдельно:
+
+```text
+InterruptPacket(L2 -> L3.5)
+-> runtime.spinal_planner.adapt_from_interrupt_packet()
+-> SignalPacket(RETRY | SWITCH_PLUGIN | GENERATE_SPEC | STOP)
+```
+
+Качество L3.5 проверяет `runtime/spinal_quality.py`: typed packets, validated pipeline, known capabilities, no direct plugin execution и bounded escalation.
+
+CLI probe:
+
+```text
+python tools/spinal_plan.py --root . --intent NORMALIZE_AND_HASH --objective "Normalize input text then hash it" --route-goal normalize_then_hash
+python tools/spinal_plan.py --root . --intent CUSTOM_CHAIN --objective "Select JSON value and hash it" --allow-local-llm
+```
 
 Foundry spec tools:
 

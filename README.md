@@ -82,8 +82,9 @@ See `POSITIONING.md` for the full positioning statement and `EVALUATION_PLAN.md`
                        v
 +-----------------------------------------------------+
 | L3.5: Spinal Planner                                 |
-| Pattern translation, known-route planning, signals   |
-| Validated planner proposals only                     |
+| IntentPacket -> MotorPlanPacket/SignalPacket         |
+| deterministic route, optional local LLM proposal     |
+| validated Pipeline DSL, no direct plugin execution   |
 +-----------------------------------------------------+
                        |
                        v

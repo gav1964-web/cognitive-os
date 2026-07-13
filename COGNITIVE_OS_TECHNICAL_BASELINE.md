@@ -132,6 +132,10 @@ Runtime поддерживает подключаемый backend локальн
 
 Local LLM planner path обязан принимать от модели только JSON proposal, преобразовывать его через deterministic planner adapter и запускать `validate_pipeline()` перед любым enqueue/execute. Ошибка локального backend или невалидный JSON является controlled failure, а не поводом исполнять свободный текст.
 
+Основной программный фасад Уровня 3.5 — `runtime/spinal_planner.py`. Он принимает `IntentPacket` от L4, строит валидированный `Pipeline DSL`, выпускает `MotorPlanPacket` для L2 и короткий `SignalPacket` для L4. Deterministic route является первым выбором; локальная LLM включается только как proposal source и не может обойти `plan_from_spec()`/`validate_pipeline()`. При невозможности построить план L3.5 возвращает blocked `SignalPacket` с `needs_l4_decision=true`, а не исполняет частичный или текстовый план.
+
+Для interrupt path `runtime/spinal_planner.py` принимает `InterruptPacket` от L2 и выполняет только моторную адаптацию внутри уже утвержденного намерения: `RETRY`, совместимый `SWITCH_PLUGIN`, controlled `STOP` или сигнал о необходимости `GENERATE_SPEC`. Метрика качества L3.5 задается `runtime/spinal_quality.py`: typed packets, validated pipeline, known capabilities, отсутствие прямого исполнения plugins и bounded escalation.
+
 Project-analysis L3.5 path обязан получать только compact fact digest из уже построенного `project_map_report`, а не читать проект напрямую. Его выход сохраняется в goal report как `level35_project_signals` и является коротким advisory signal packet, а не человеческим объяснением. L3.5 обязан иметь deterministic enrichment fallback для subsystem/hotspot/boundary signals, чтобы сбой локальной модели не обнулял полезные импульсы. Он не может менять Pipeline DSL, registry lifecycle, execution state, memory templates или ответы deterministic report.
 
 ### 4.1 Межслойные packet-контракты
