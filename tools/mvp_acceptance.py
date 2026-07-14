@@ -20,6 +20,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--skip-pytest", action="store_true")
+    parser.add_argument("--live-l4", action="store_true", help="Include the non-deterministic external L4 quality probe")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -42,7 +43,7 @@ def main() -> int:
     _durable_queue_checks(report)
     _foundry_checks(report, root, spec_id)
     dialogue_id = _dialogue_checks(report)
-    _memory_and_level4_checks(report, dialogue_id)
+    _memory_and_level4_checks(report, dialogue_id, live_l4=args.live_l4)
 
     final = report.finish()
     print(json.dumps(final, ensure_ascii=False, indent=2))
@@ -225,7 +226,7 @@ def _dialogue_checks(report: AcceptanceReport) -> str:
     return dialogue_id
 
 
-def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> None:
+def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, live_l4: bool = False) -> None:
     goal = "Normalize input text from $input.text and then hash the normalized text."
     report.command(
         "memory_templates",
@@ -282,26 +283,27 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str) -> Non
         layers=["L1", "L3.5", "L4"],
         check=checks.project_analyzer_benchmark_ok,
     )
-    report.command(
-        "github_l4_quality_probe",
-        [
-            sys.executable,
-            "tools/github_l4_interpretation_probe.py",
-            "--root",
-            ".",
-            "--projects-dir",
-            "benchmarks/github_full_trial_10",
-            "--l4-base-url",
-            os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1"),
-            "--l4-model",
-            os.environ.get("COGNITIVE_OS_L4_MODEL", "gpt-4.1"),
-            "--context",
-            os.environ.get("COGNITIVE_OS_L4_CONTEXT", "compact"),
-            "--write",
-        ],
-        layers=["L4"],
-        check=checks.l4_quality_probe_ok,
-    )
+    if live_l4:
+        report.command(
+            "github_l4_quality_probe",
+            [
+                sys.executable,
+                "tools/github_l4_interpretation_probe.py",
+                "--root",
+                ".",
+                "--projects-dir",
+                "benchmarks/github_full_trial_10",
+                "--l4-base-url",
+                os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1"),
+                "--l4-model",
+                os.environ.get("COGNITIVE_OS_L4_MODEL", "gpt-4.1"),
+                "--context",
+                os.environ.get("COGNITIVE_OS_L4_CONTEXT", "compact"),
+                "--write",
+            ],
+            layers=["L4"],
+            check=checks.l4_quality_probe_ok,
+        )
     role_skill_checks(report)
     report.command(
         "spec_writer_curriculum_local_3",

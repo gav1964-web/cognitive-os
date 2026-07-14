@@ -471,6 +471,12 @@ For a faster acceptance pass after pytest has already run:
 python tools/mvp_acceptance.py --root . --skip-pytest
 ```
 
+The default acceptance gate is deterministic and does not require an external L4 provider. Run the model-backed quality probe explicitly when the configured provider is available:
+
+```bash
+python tools/mvp_acceptance.py --root . --skip-pytest --live-l4
+```
+
 ### 6. Run the Project Analyzer benchmark
 
 ```bash

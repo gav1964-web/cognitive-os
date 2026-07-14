@@ -68,15 +68,15 @@ def queue_has_completed(job_id: str | None) -> Check:
         payload = ctx["payload"]
         jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
         matching = [job for job in jobs if job.get("job_id") == job_id]
-        packet_trace = list(dict(matching[0].get("result") or {}).get("layer_packets", [])) if matching else []
+        packet_count = int(matching[0].get("packet_count", 0)) if matching else 0
         ok = (
             ctx["returncode"] == 0
             and bool(matching)
             and matching[0].get("status") in {"completed", "succeeded"}
-            and bool(packet_trace)
+            and packet_count > 0
         )
         status = matching[0].get("status") if matching else None
-        return ok, f"job_id={job_id}, status={status}, packets={len(packet_trace)}"
+        return ok, f"job_id={job_id}, status={status}, packets={packet_count}"
 
     return check
 
