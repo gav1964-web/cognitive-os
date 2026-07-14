@@ -233,7 +233,7 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, liv
             f"memory_seed_run_{seed_number}",
             _goal_run_command(goal, dialogue_id, text=f"acceptance memory seed {seed_number}"),
             layers=["L4", "L3.5", "L2", "memory"],
-            check=checks.goal_run_ok,
+            check=checks.goal_run_planner_in({"deterministic_required_capabilities", "memory_template"}),
         )
     report.command(
         "memory_templates",
