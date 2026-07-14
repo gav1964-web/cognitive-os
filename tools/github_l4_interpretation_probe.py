@@ -12,6 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from tools.l4_defaults import DEFAULT_L4_BASE_URL, DEFAULT_L4_MODEL
 from runtime.local_inference import LocalInferenceConfig
 from runtime.project_benchmark import analyze_project
 from runtime.project_deliberation import deliberate_project_report
@@ -34,8 +35,8 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--projects-dir", required=True)
     parser.add_argument("--label", default="github_l4_interpretation_probe")
-    parser.add_argument("--l4-base-url", default="http://127.0.0.1:8000/v1")
-    parser.add_argument("--l4-model", default="gpt-4.1")
+    parser.add_argument("--l4-base-url", default=DEFAULT_L4_BASE_URL)
+    parser.add_argument("--l4-model", default=DEFAULT_L4_MODEL)
     parser.add_argument("--l4-timeout", type=float, default=180.0)
     parser.add_argument("--context", choices=["expanded", "compact"], default="expanded")
     parser.add_argument("--no-response-format", action="store_true")

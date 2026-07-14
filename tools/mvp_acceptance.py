@@ -10,6 +10,10 @@ import sys
 from pathlib import Path
 
 import mvp_acceptance_checks as checks
+try:
+    from tools.l4_defaults import DEFAULT_L4_BASE_URL, DEFAULT_L4_MODEL
+except ModuleNotFoundError:  # Direct `python tools/mvp_acceptance.py` execution.
+    from l4_defaults import DEFAULT_L4_BASE_URL, DEFAULT_L4_MODEL
 from mvp_acceptance_report import AcceptanceReport
 from mvp_acceptance_role_skills import role_skill_checks
 from mvp_acceptance_stage2 import stage2_checks
@@ -301,9 +305,9 @@ def _memory_and_level4_checks(
                 "--projects-dir",
                 "benchmarks/github_full_trial_10",
                 "--l4-base-url",
-                os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1"),
+                os.environ.get("COGNITIVE_OS_L4_BASE_URL", DEFAULT_L4_BASE_URL),
                 "--l4-model",
-                os.environ.get("COGNITIVE_OS_L4_MODEL", "gpt-4.1"),
+                os.environ.get("COGNITIVE_OS_L4_MODEL", DEFAULT_L4_MODEL),
                 "--context",
                 os.environ.get("COGNITIVE_OS_L4_CONTEXT", "compact"),
                 "--write",

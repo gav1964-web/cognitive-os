@@ -554,7 +554,8 @@ In the current MVP:
 
 - many readiness and field-trial paths are deterministic;
 - L3.5 planner proposals must validate before execution;
-- L4 may use deterministic fallback when no external cortex model is configured;
+- the external L4 profile defaults to `GigaChat-Pro` through `http://127.0.0.1:8000/v1` and can be overridden with `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`;
+- L4 calls remain explicit and use a controlled deterministic fallback when the configured cortex provider is unavailable;
 - LLM outputs are advisory or bounded role artifacts, not direct execution authority.
 
 The deterministic L3.5 gate can be measured independently:
@@ -600,7 +601,7 @@ Current known limits:
 
 - the general Programmer Executor blocks source apply; only explicitly approved, validated specialized sandbox packages can be applied through the reviewed backup-producing patch gate;
 - Foundry candidates are not promoted without explicit approval;
-- L4 external model calls are optional and may fall back to deterministic behavior;
+- L4 external model calls are optional; the default `GigaChat-Pro` profile may fall back to deterministic behavior when its gateway is unavailable;
 - analysis tasks are proposed backlog items, not automatic edits;
 - native-heavy or non-Python-first projects may produce controlled `blocked` outcomes;
 - local/domain helper bundling and instance-bound extraction are not fully supported yet;

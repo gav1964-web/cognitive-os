@@ -134,3 +134,12 @@ python tools/mvp_acceptance.py --root . --skip-pytest --local-project-trials
 ```
 
 `--live-l4` требует доступный model provider. `--local-project-trials` требует локальные `F:/ubuntu/test/map`, `5`, `004` и загруженный `benchmarks/github_full_trial_10`; эти данные не входят в чистый checkout.
+
+Default-профиль внешнего L4 использует `GigaChat-Pro` через `http://127.0.0.1:8000/v1`. Его можно переопределить без изменения кода:
+
+```powershell
+$env:COGNITIVE_OS_L4_MODEL = "GigaChat-Pro"
+$env:COGNITIVE_OS_L4_BASE_URL = "http://127.0.0.1:8000/v1"
+```
+
+Детерминированный acceptance не вызывает L4. Токены расходуются только при явном `--live-l4`, `--use-l4-llm` или `--interpret-project-llm`.
