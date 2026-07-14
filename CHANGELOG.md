@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added Tester executable acceptance v0.2: TestPlan obligations now generate a pytest scaffold, Programmer Executor records ExecutableAcceptanceResult, and Reviewer conformance blocks failed executable acceptance.
 - Added deterministic L3.5 selection diagnostics, Tester executable acceptance obligations, Reviewer conformance checks, L4 raw-model quality status, and documented controlled LLM fallback after deterministic failure.
 - Documented the LLM Replacement Policy: LLMs are bounded hypothesis sources inside a verifiable engineering machine, while contracts, deterministic hardening, conformance checks and tests decide promotion to artifacts or execution.
 - Switched the explicit external L4 gateway default from a provider routing alias to `GigaChat-Pro`; all L4 CLIs now share the same environment-overridable profile.

@@ -44,7 +44,7 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
     "TestPlan": {
         "producer": "tester",
         "consumers": ["programmer_executor", "reviewer"],
-        "required_fields": ["artifact_type", "acceptance_tests", "negative_tests", "regression_risks"],
+        "required_fields": ["artifact_type", "acceptance_tests", "executable_acceptance", "negative_tests", "regression_risks"],
     },
     "PatchPackage": {
         "producer": "programmer_executor",
@@ -55,6 +55,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "producer": "programmer_executor",
         "consumers": ["reviewer"],
         "required_fields": ["artifact_type", "status", "commands"],
+    },
+    "ExecutableAcceptanceResult": {
+        "producer": "programmer_executor",
+        "consumers": ["reviewer"],
+        "required_fields": ["artifact_type", "status", "generated_tests", "summary", "command"],
     },
     "ReviewFindings": {
         "producer": "reviewer",

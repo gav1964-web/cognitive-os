@@ -293,7 +293,7 @@ def test_reviewer_skill_returns_review_findings():
         technical_spec=spec,
         implementation_plan=implementation,
         test_plan=test_plan,
-        test_result={"status": "ok"},
+        test_result={"status": "ok", "executable_acceptance_result": {"status": "passed"}},
     )
 
     assert review["artifact_type"] == "ReviewFindings"
@@ -330,6 +330,26 @@ def test_reviewer_rejects_writable_scope_expansion():
     assert review["recommendation"] == "request_rework"
     assert review["conformance_status"] == "failed"
     assert any(row["code"] == "test_writable_scope_mismatch" for row in review["contract_violations"])
+
+
+def test_reviewer_rejects_failed_executable_acceptance_result():
+    project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
+    report = analyze_project(project_dir)["project_map_report"]
+    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
+    spec = run_spec_writer_skill(architecture_decision=adr)
+    implementation = run_implementer_skill(technical_spec=spec)
+    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+
+    review = run_reviewer_skill(
+        technical_spec=spec,
+        implementation_plan=implementation,
+        test_plan=test_plan,
+        test_result={"status": "failed", "executable_acceptance_result": {"status": "failed"}},
+    )
+
+    assert review["recommendation"] == "request_rework"
+    assert review["conformance_status"] == "failed"
+    assert any(row["code"] == "executable_acceptance_passed_or_absent" and not row["passed"] for row in review["conformance_checks"])
 
 
 def test_architect_skill_runs_on_benchmark_corpus():

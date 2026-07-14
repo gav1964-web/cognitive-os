@@ -574,6 +574,8 @@ When a repeated LLM-backed pattern becomes machine-checkable, it should be promo
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 
+Tester executable acceptance v0.2 turns `TestPlan.executable_acceptance` into a generated pytest scaffold and writes an `ExecutableAcceptanceResult`. In v0.2 this scaffold executes obligation and boundary meta-checks; project-specific function invocation remains a later harness step. Reviewer consumes the result through `TestResult.executable_acceptance_result` and blocks failed executable acceptance.
+
 The deterministic L3.5 gate can be measured independently:
 
 ```powershell

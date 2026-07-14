@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .executable_acceptance import run_executable_acceptance
+
 
 def run_programmer_executor(
     *,
@@ -38,6 +40,8 @@ def run_programmer_executor(
         root=root,
         project_dir=project_dir,
         implementation_plan=implementation_plan,
+        test_plan=test_plan,
+        execution_dir=execution_dir,
         run_verification=run_verification,
         max_commands=max_commands,
     )
@@ -141,6 +145,8 @@ def _run_test_result(
     root: Path,
     project_dir: Path,
     implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
+    execution_dir: Path,
     run_verification: bool,
     max_commands: int,
 ) -> dict[str, Any]:
@@ -156,6 +162,14 @@ def _run_test_result(
             command_results.append(_run_command(command, root))
     failed = [item for item in command_results if item.get("status") == "failed"]
     executed = [item for item in command_results if item.get("status") in {"passed", "failed"}]
+    executable_acceptance = run_executable_acceptance(
+        root=root,
+        project_dir=project_dir,
+        test_plan=test_plan,
+        work_dir=execution_dir,
+    )
+    if executable_acceptance.get("status") == "failed":
+        failed.append({"status": "failed", "command": "executable_acceptance"})
     return {
         "artifact_type": "TestResult",
         "role": "programmer_executor",
@@ -169,7 +183,9 @@ def _run_test_result(
             "passed": sum(1 for item in executed if item.get("status") == "passed"),
             "failed": len(failed),
             "skipped": sum(1 for item in command_results if item.get("status") == "skipped"),
+            "executable_acceptance": executable_acceptance.get("status"),
         },
+        "executable_acceptance_result": executable_acceptance,
         "source_code_changes": False,
         "registry_changes": False,
     }

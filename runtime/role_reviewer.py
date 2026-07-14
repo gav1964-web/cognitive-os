@@ -13,9 +13,11 @@ def run_reviewer_skill(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     test_result: dict[str, Any] | None = None,
+    executable_acceptance_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    acceptance_result = executable_acceptance_result or dict((test_result or {}).get("executable_acceptance_result", {}))
     findings = _findings(technical_spec, implementation_plan, test_plan, test_result or {})
-    conformance = _conformance_checks(technical_spec, implementation_plan, test_plan, test_result or {})
+    conformance = _conformance_checks(technical_spec, implementation_plan, test_plan, test_result or {}, acceptance_result)
     if any(not item["passed"] for item in conformance):
         findings.append(_finding("conformance_check_failed", "high", "Deterministic conformance checks failed."))
     risks = _risk_assessment(implementation_plan, test_plan, findings)
@@ -137,6 +139,7 @@ def _conformance_checks(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     test_result: dict[str, Any],
+    executable_acceptance_result: dict[str, Any],
 ) -> list[dict[str, Any]]:
     forbidden_observed = (
         list(technical_spec.get("forbidden_actions_observed", []))
@@ -188,6 +191,12 @@ def _conformance_checks(
             not test_result or test_result.get("status") in {"ok", "passed", "success"},
             "If TestResult is present, it must be green.",
             {"status": test_result.get("status")},
+        ),
+        _check(
+            "executable_acceptance_passed_or_absent",
+            not executable_acceptance_result or executable_acceptance_result.get("status") == "passed",
+            "If ExecutableAcceptanceResult is present, it must pass.",
+            {"status": executable_acceptance_result.get("status")},
         ),
     ]
 
