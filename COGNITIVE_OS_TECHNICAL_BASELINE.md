@@ -72,6 +72,10 @@ Controlled LLM fallback допускается только при отказе 
 
 Tester executable acceptance v0.3 реализует первый project-specific harness поверх `TestPlan.executable_acceptance`: `runtime/executable_acceptance.py` генерирует pytest scaffold, запускает его в sandbox/work directory и сохраняет `ExecutableAcceptanceResult`. Scaffold всегда проверяет структуру obligations, наличие positive contract case, controlled malformed-input case и side-effect boundary case. Для простых целей вида `file.py:function`, расположенных внутри project root, scaffold импортирует функцию через isolated import, вызывает ее с sample kwargs из positive contract case, проверяет output shape и требует controlled failure на malformed input. Классы, методы, async functions, framework handlers и targets вне project root остаются meta-checked до следующего harness stage. Reviewer читает `ExecutableAcceptanceResult` из `TestResult.executable_acceptance_result` и переводит failed result в conformance failure.
 
+Верхний слой разделяется на L4.0 Cognitive Control Plane и L4.5 Semantic Reasoner. L4.0 является кодовым контроллером повторяемых решений: role transition state machine, artifact promotion gate, semantic escalation policy, prompt/goal gates, quality gates и crystallization backlog. L4.5 остается LLM/human-assisted semantic layer для неоднозначных целей, trade-off решений, неизвестных маршрутов, новых capability designs и доменной оценки. Инвариант: L4.0 может выбирать из известных маршрутов и блокировать нарушение контрактов; L4.5 может предлагать новые гипотезы, но не обходит gates.
+
+Crystallizing Cortex: если решение повторяется, оно мигрирует из L4.5 в L4.0 policy/template/gate/test. Если решение проверяемо, оно мигрирует в deterministic gate. Если решение остается спорным или смысловым, оно остается L4.5 advisory. Текущая реализация L4.0 начинается с `runtime/cognitive_control_plane.py`, который строит `CognitiveControlPlaneDecision` с `artifact_promotion_gate`, `role_transition`, `semantic_escalation` и `crystallization_backlog`.
+
 Порядок развития role curriculum фиксируется как обязательный safety rail:
 
 1. Стабилизировать `Architect Curriculum Local-3`.

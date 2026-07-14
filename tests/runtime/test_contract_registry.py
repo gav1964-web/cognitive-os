@@ -63,14 +63,24 @@ def test_contract_registry_validates_layer_packet_routes(registry):
 
 
 def test_contract_registry_validates_artifact_api(registry):
-    artifact = {
-        "artifact_type": "ReviewFindings",
-        "findings": [],
-        "risk_assessment": [],
-        "recommendation": "approve",
-    }
-
-    ContractRegistry.from_capability_registry(registry).validate_artifact(artifact)
+    contracts = ContractRegistry.from_capability_registry(registry)
+    contracts.validate_artifact(
+        {
+            "artifact_type": "ReviewFindings",
+            "findings": [],
+            "risk_assessment": [],
+            "recommendation": "approve",
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "CognitiveControlPlaneDecision",
+            "layer": "L4.0",
+            "artifact_promotion_gate": {"status": "passed"},
+            "role_transition": {"next_action": "run_project_transform"},
+            "semantic_escalation": {"l4_5_required": False},
+        }
+    )
 
 
 def test_contract_registry_rejects_incomplete_artifact_api(registry):

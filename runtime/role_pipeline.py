@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .architecture_analysis_document import write_architecture_analysis_document
+from .cognitive_control_plane import run_cognitive_control_plane
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
 from .role_skills import (
@@ -65,9 +66,15 @@ def run_role_pipeline(
         "test_plan": test_plan,
         "review_findings": review,
     }
+    control_plane = run_cognitive_control_plane(
+        goal=goal,
+        artifacts=artifacts,
+        review=review,
+        llm_invoked=bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+    )
     paths = _write_artifacts(root, artifacts) if write else {}
     human_documents = _write_human_documents(root, report, adr, spec) if write else {}
-    next_action = _next_action(review)
+    next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
     transform = _maybe_run_transform(
         root=root,
         project_dir=project_dir,
@@ -84,6 +91,7 @@ def run_role_pipeline(
         "recommendation": review.get("recommendation"),
         "next_action": next_action,
         "architect_advisory": adr.get("architect_advisory", {}),
+        "cognitive_control_plane": control_plane,
         "role_quality": _role_quality(spec, implementation, test_plan, review),
         "artifacts": _artifact_summary(artifacts, paths),
         "human_documents": human_documents,
@@ -94,6 +102,7 @@ def run_role_pipeline(
             "registry_changes": False,
             "foundry_invoked": transform.get("status") in {"promotion_ready", "promoted"},
             "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+            "l4_5_required": bool(dict(control_plane.get("semantic_escalation", {})).get("l4_5_required")),
         },
     }
     if write:

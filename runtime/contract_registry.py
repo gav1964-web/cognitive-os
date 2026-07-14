@@ -66,6 +66,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "release_gate"],
         "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation"],
     },
+    "CognitiveControlPlaneDecision": {
+        "producer": "cognitive_control_plane",
+        "consumers": ["role_pipeline", "human", "release_gate"],
+        "required_fields": ["artifact_type", "layer", "artifact_promotion_gate", "role_transition", "semantic_escalation"],
+    },
 }
 
 

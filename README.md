@@ -572,6 +572,13 @@ Tests decide.
 
 When a repeated LLM-backed pattern becomes machine-checkable, it should be promoted into deterministic code, a planner rule, a capability, a repair operator, or a conformance check. The LLM remains as an out-of-distribution fallback or semantic proposer, not as the default executor.
 
+The upper layer is split into:
+
+- `L4.0 Cognitive Control Plane`: deterministic policy, role transitions, artifact promotion gates, semantic-escalation decisions and crystallization backlog;
+- `L4.5 Semantic Reasoner`: LLM or human-assisted reasoning for ambiguous goals, semantic trade-offs, unknown routes and new capability designs.
+
+This is the "crystallizing cortex" rule: repeated decisions migrate from L4.5 into L4.0 policies, templates, gates or tests. Known routes stay in code; unknown or conflicting routes escalate.
+
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 
 Tester executable acceptance v0.3 turns `TestPlan.executable_acceptance` into a generated pytest scaffold and writes an `ExecutableAcceptanceResult`. The scaffold always executes obligation and boundary meta-checks; for simple `file.py:function` targets inside the project it also imports the function, calls it with sample kwargs from the positive contract case, checks the output shape, and verifies that malformed input is rejected. Classes, methods, async functions and framework handlers remain meta-checked until a later harness stage. Reviewer consumes the result through `TestResult.executable_acceptance_result` and blocks failed executable acceptance.
