@@ -21,6 +21,7 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--skip-pytest", action="store_true")
     parser.add_argument("--live-l4", action="store_true", help="Include the non-deterministic external L4 quality probe")
+    parser.add_argument("--local-project-trials", action="store_true", help="Include Local-3 projects outside the repository")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -43,7 +44,12 @@ def main() -> int:
     _durable_queue_checks(report)
     _foundry_checks(report, root, spec_id)
     dialogue_id = _dialogue_checks(report)
-    _memory_and_level4_checks(report, dialogue_id, live_l4=args.live_l4)
+    _memory_and_level4_checks(
+        report,
+        dialogue_id,
+        live_l4=args.live_l4,
+        local_project_trials=args.local_project_trials,
+    )
 
     final = report.finish()
     print(json.dumps(final, ensure_ascii=False, indent=2))
@@ -226,7 +232,13 @@ def _dialogue_checks(report: AcceptanceReport) -> str:
     return dialogue_id
 
 
-def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, live_l4: bool = False) -> None:
+def _memory_and_level4_checks(
+    report: AcceptanceReport,
+    dialogue_id: str,
+    *,
+    live_l4: bool = False,
+    local_project_trials: bool = False,
+) -> None:
     goal = "Normalize input text from $input.text and then hash the normalized text."
     for seed_number in (1, 2):
         report.command(
@@ -299,7 +311,7 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, liv
             layers=["L4"],
             check=checks.l4_quality_probe_ok,
         )
-    role_skill_checks(report)
+    role_skill_checks(report, local_project_trials=local_project_trials)
     report.command(
         "spec_writer_curriculum_local_3",
         [sys.executable, "tools/spec_writer_curriculum.py", "--root", ".", "--write"],

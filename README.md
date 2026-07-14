@@ -477,6 +477,12 @@ The default acceptance gate is deterministic and does not require an external L4
 python tools/mvp_acceptance.py --root . --skip-pytest --live-l4
 ```
 
+The machine-local `map`, `5`, and `004` field trials are also opt-in:
+
+```bash
+python tools/mvp_acceptance.py --root . --skip-pytest --local-project-trials
+```
+
 ### 6. Run the Project Analyzer benchmark
 
 ```bash

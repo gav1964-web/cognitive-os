@@ -8,7 +8,7 @@ import mvp_acceptance_checks as checks
 from mvp_acceptance_report import AcceptanceReport
 
 
-def role_skill_checks(report: AcceptanceReport) -> None:
+def role_skill_checks(report: AcceptanceReport, *, local_project_trials: bool = False) -> None:
     architect = report.command(
         "architect_role_skill",
         [
@@ -118,24 +118,25 @@ def role_skill_checks(report: AcceptanceReport) -> None:
         layers=["L4"],
         check=checks.json_status_ok,
     )
-    report.command(
-        "role_artifact_quality_external_3",
-        [
-            sys.executable,
-            "tools/role_artifact_quality.py",
-            "--root",
-            ".",
-            "--project-dir",
-            "F:/ubuntu/test/map",
-            "--project-dir",
-            "F:/ubuntu/test/5",
-            "--project-dir",
-            "F:/ubuntu/test/004",
-            "--write",
-        ],
-        layers=["L4"],
-        check=checks.json_status_ok,
-    )
+    if local_project_trials:
+        report.command(
+            "role_artifact_quality_external_3",
+            [
+                sys.executable,
+                "tools/role_artifact_quality.py",
+                "--root",
+                ".",
+                "--project-dir",
+                "F:/ubuntu/test/map",
+                "--project-dir",
+                "F:/ubuntu/test/5",
+                "--project-dir",
+                "F:/ubuntu/test/004",
+                "--write",
+            ],
+            layers=["L4"],
+            check=checks.json_status_ok,
+        )
     report.command(
         "role_artifact_quality_github_10",
         [
