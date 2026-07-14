@@ -137,20 +137,20 @@ def role_skill_checks(report: AcceptanceReport, *, local_project_trials: bool = 
             layers=["L4"],
             check=checks.json_status_ok,
         )
-    report.command(
-        "role_artifact_quality_github_10",
-        [
-            sys.executable,
-            "tools/role_artifact_quality.py",
-            "--root",
-            ".",
-            "--benchmarks-dir",
-            "benchmarks/github_full_trial_10",
-            "--write",
-        ],
-        layers=["L4"],
-        check=checks.json_status_ok,
-    )
+        report.command(
+            "role_artifact_quality_github_10",
+            [
+                sys.executable,
+                "tools/role_artifact_quality.py",
+                "--root",
+                ".",
+                "--benchmarks-dir",
+                "benchmarks/github_full_trial_10",
+                "--write",
+            ],
+            layers=["L4"],
+            check=checks.json_status_ok,
+        )
     report.command(
         "role_pipeline_orchestrator",
         [
