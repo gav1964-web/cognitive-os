@@ -228,6 +228,13 @@ def _dialogue_checks(report: AcceptanceReport) -> str:
 
 def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, live_l4: bool = False) -> None:
     goal = "Normalize input text from $input.text and then hash the normalized text."
+    for seed_number in (1, 2):
+        report.command(
+            f"memory_seed_run_{seed_number}",
+            _goal_run_command(goal, dialogue_id, text=f"acceptance memory seed {seed_number}"),
+            layers=["L4", "L3.5", "L2", "memory"],
+            check=checks.goal_run_ok,
+        )
     report.command(
         "memory_templates",
         [sys.executable, "tools/memory_templates.py", "--root", ".", "--rebuild", "--min-support", "2"],
@@ -242,19 +249,7 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, liv
     )
     report.command(
         "level4_goal_run",
-        [
-            sys.executable,
-            "tools/goal_run.py",
-            "--root",
-            ".",
-            "--goal",
-            goal,
-            "--execute",
-            "--dialogue-id",
-            dialogue_id,
-            "--input-json",
-            json.dumps({"text": "acceptance layer check"}),
-        ],
+        _goal_run_command(goal, dialogue_id, text="acceptance layer check"),
         layers=["L4", "L3.5", "L2", "memory"],
         check=checks.goal_run_ok,
     )
@@ -368,6 +363,22 @@ def _memory_and_level4_checks(report: AcceptanceReport, dialogue_id: str, *, liv
         layers=["L4", "L3.2"],
         check=checks.project_transform_ok,
     )
+
+
+def _goal_run_command(goal: str, dialogue_id: str, *, text: str) -> list[str]:
+    return [
+        sys.executable,
+        "tools/goal_run.py",
+        "--root",
+        ".",
+        "--goal",
+        goal,
+        "--execute",
+        "--dialogue-id",
+        dialogue_id,
+        "--input-json",
+        json.dumps({"text": text}),
+    ]
 
 
 def _level4_goal_checks(report: AcceptanceReport) -> None:
