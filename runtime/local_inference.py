@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib import error, request
 
 
@@ -21,6 +22,7 @@ class LocalInferenceConfig:
     response_format: bool = True
     api_key: str | None = None
     provider_label: str = "local"
+    telemetry_sink: Callable[[dict[str, Any]], None] | None = None
 
     @classmethod
     def from_env(cls) -> "LocalInferenceConfig":
@@ -36,6 +38,7 @@ class LocalInferenceConfig:
 
 def call_json_chat(messages: list[dict[str, str]], *, config: LocalInferenceConfig | None = None) -> dict[str, Any]:
     cfg = config or LocalInferenceConfig.from_env()
+    started = time.perf_counter()
     payload = {
         "model": cfg.model,
         "temperature": 0,
@@ -60,6 +63,7 @@ def call_json_chat(messages: list[dict[str, str]], *, config: LocalInferenceConf
         raise LocalInferenceError(f"local inference request failed: HTTP {exc.code}: {body}") from exc
     except Exception as exc:
         raise LocalInferenceError(f"local inference request failed: {exc}") from exc
+    _emit_telemetry(cfg, response_payload, time.perf_counter() - started)
     try:
         content = response_payload["choices"][0]["message"]["content"]
         result = _loads_json_object(str(content))
@@ -68,6 +72,33 @@ def call_json_chat(messages: list[dict[str, str]], *, config: LocalInferenceConf
     if not isinstance(result, dict):
         raise LocalInferenceError("local inference response must decode to object")
     return result
+
+
+def _emit_telemetry(config: LocalInferenceConfig, response_payload: dict[str, Any], elapsed_seconds: float) -> None:
+    if config.telemetry_sink is None:
+        return
+    usage = response_payload.get("usage")
+    usage = usage if isinstance(usage, dict) else {}
+    record = {
+        "model": str(response_payload.get("model") or config.model),
+        "provider_label": config.provider_label,
+        "latency_seconds": round(elapsed_seconds, 3),
+        "prompt_tokens": _optional_int(usage.get("prompt_tokens")),
+        "completion_tokens": _optional_int(usage.get("completion_tokens")),
+        "total_tokens": _optional_int(usage.get("total_tokens")),
+        "usage_reported": bool(usage),
+    }
+    try:
+        config.telemetry_sink(record)
+    except Exception:
+        return
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _loads_json_object(content: str) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Documented the LLM Replacement Policy: LLMs are bounded hypothesis sources inside a verifiable engineering machine, while contracts, deterministic hardening, conformance checks and tests decide promotion to artifacts or execution.
 - Switched the explicit external L4 gateway default from a provider routing alias to `GigaChat-Pro`; all L4 CLIs now share the same environment-overridable profile.
 - Portable MVP acceptance is now self-contained: external L4 and machine-local project corpora are explicit opt-in field trials, memory evidence is seeded deterministically, and queue summaries expose packet counts without leaking full results.
 - Documentation now distinguishes the sandbox-only general Programmer Executor from the explicit reviewed specialized patch-apply gate.

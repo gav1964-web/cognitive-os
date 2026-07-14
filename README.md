@@ -550,13 +550,27 @@ The runtime uses durable artifacts for queues, execution journals, checkpoints, 
 
 Cognitive OS is designed to work with local or gateway-based LLM access, but LLM calls are not required for every path.
 
+The architectural rule is: **LLM is a bounded hypothesis source inside a verifiable engineering machine**. It may propose an interpretation, risk, option, missing fact, or repair candidate, but it does not receive execution authority merely because the text is plausible. Runtime code, schemas, evidence links, deterministic hardening, conformance checks, and tests decide whether the hypothesis can become a role artifact or an executable step.
+
 In the current MVP:
 
 - many readiness and field-trial paths are deterministic;
 - L3.5 planner proposals must validate before execution;
 - the external L4 profile defaults to `GigaChat-Pro` through `http://127.0.0.1:8000/v1` and can be overridden with `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`;
 - L4 calls remain explicit and use a controlled deterministic fallback when the configured cortex provider is unavailable;
-- LLM outputs are advisory or bounded role artifacts, not direct execution authority.
+- LLM outputs are advisory hypotheses or bounded role artifacts, not direct execution authority;
+- L4 project interpretation records must distinguish raw model output from hardened output, including quality warnings, hardening actions, and whether the raw model output was clean.
+
+The preferred replacement path is:
+
+```text
+LLM discovers.
+Code repeats.
+Contracts constrain.
+Tests decide.
+```
+
+When a repeated LLM-backed pattern becomes machine-checkable, it should be promoted into deterministic code, a planner rule, a capability, a repair operator, or a conformance check. The LLM remains as an out-of-distribution fallback or semantic proposer, not as the default executor.
 
 The deterministic L3.5 gate can be measured independently:
 

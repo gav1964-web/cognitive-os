@@ -122,7 +122,7 @@ def test_project_deliberation_validates_human_contract():
 
     assert result["source"] == "external_l4"
     assert result["layer"] == "L4"
-    assert result["executive_summary"] == "API service."
+    assert result["executive_summary"] == "Expose an API"
     assert result["fact_summary"]["frameworks"] == ["FastAPI"]
     assert "external_imports" in mocked.call_args.args[0][1]["content"]
 
@@ -166,10 +166,13 @@ def test_project_deliberation_normalizes_contract_types():
     with patch("runtime.project_deliberation.call_json_chat", return_value=payload):
         result = deliberate_project_report(_report(), level35_signals={"signals": []}, config=config)
 
-    assert result["executive_summary"] == "API service."
-    assert result["capability_decomposition"] == ["health check"]
-    assert result["refactor_plan"] == ["split handlers"]
-    assert result["cognitive_loop"] == "call /health capture failure"
+    assert result["executive_summary"] == "Expose an API"
+    assert result["capability_decomposition"] == ["Entrypoint workflow: app/api/server.py"]
+    assert result["refactor_plan"] == [
+        "Review hotspot app/api/server.py:handle_chat",
+        "Harden weak contract app/api/server.py:health_check",
+    ]
+    assert result["cognitive_loop"] == "call /health"
     assert result["open_questions"]
     assert result["confidence"] == "medium"
 

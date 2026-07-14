@@ -64,6 +64,10 @@ Architect Curriculum Local-3 является отдельным малым gate
 
 Важно: curriculum-контур не является самообучающейся системой. Он не генерирует себе ground truth, не принимает свои текущие ответы как эталон и не меняет код автоматически по собственному выводу. Улучшение выполняется как внешний teacher/corrector loop: человек или внешний корректировщик задает или правит reference, запускает прогон, анализирует расхождения, затем инженерно дорабатываются extractor/scorer/ranking/role logic и снова прогоняются тесты. Любые LLM artifacts в этом контуре являются advisory evidence, а не authority.
 
+LLM в Cognitive OS трактуется как ограниченный источник гипотез внутри проверяемой инженерной машины. Модель может предложить интерпретацию, риск, архитектурную опцию, knowledge gap, repair candidate или semantic tie-break, но такой результат не становится истиной и не получает права на исполнение без evidence, typed artifact contract, deterministic hardening, conformance checks и тестов. Рабочий принцип развития: `LLM discovers; Code repeats; Contracts constrain; Tests decide`. Если повторяемый LLM-маршрут можно описать схемами, графом, правилами выбора и машинной проверкой качества, он должен постепенно вытесняться deterministic planner/rule/capability/repair operator, а LLM остается fallback для неизвестных или семантически неоднозначных случаев.
+
+Приоритет вытеснения LLM закрепляется так: сначала L3.5 planning/recovery, затем Tester executable acceptance и Reviewer conformance checks, затем Implementer planning, фактическая часть Project Analyzer, knowledge acquisition planning и memory/template reuse. Architect остается L4-семантической ролью дольше остальных: код готовит evidence, ограничения и варианты, но смысловые компромиссы и новые архитектурные гипотезы допускают LLM или human review. Любой model-backed результат обязан сохранять раздельно raw model output, hardened output, `model_output_clean`, quality warnings, hardening actions и необходимость human review.
+
 Порядок развития role curriculum фиксируется как обязательный safety rail:
 
 1. Стабилизировать `Architect Curriculum Local-3`.

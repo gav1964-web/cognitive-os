@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .project_deliberation_hardening import harden_deliberation
 from .project_facts import facts_from_project_report, llm_fact_digest
 
 
@@ -72,7 +73,7 @@ def deliberate_project_report(
             result["fact_summary"] = digest
             result["signal_count"] = len(signals.get("signals", []))
             result["context_retry_reason"] = str(exc)
-            return _harden_deliberation(result, digest)
+            return harden_deliberation(result, digest)
         return _fallback_deliberation(digest, signals, error=str(exc), config=config, context_mode=context_mode)
     missing = sorted(REQUIRED_KEYS - set(result))
     if missing:
@@ -86,7 +87,7 @@ def deliberate_project_report(
     result["context_mode"] = context_mode
     result["fact_summary"] = digest
     result["signal_count"] = len(signals.get("signals", []))
-    return _harden_deliberation(result, digest)
+    return harden_deliberation(result, digest)
 
 
 def _messages(facts: dict[str, Any], signals: dict[str, Any], *, context_mode: str) -> list[dict[str, str]]:
@@ -106,6 +107,8 @@ def _messages(facts: dict[str, Any], signals: dict[str, Any], *, context_mode: s
                 "Each capability must mention a concrete project feature, core file/function, protocol, schema, or data type from facts. "
                 "Do not use tests, benchmarks, integration examples, docs, or CI files as capabilities. "
                 "Do not write generic items like optimize pipeline, human-readable output, or integration with other libraries. "
+                "Never use placeholder identifiers such as Class W, Schema Z, Function X, or Module Y. "
+                "Every refactor item must name a concrete file/function and the responsibility or contract to change. "
                 "If facts are weak, say what evidence is missing and set confidence to medium or low. "
                 "capability_decomposition, refactor_plan, open_questions are arrays of at most 3 short strings."
             ),
@@ -117,7 +120,7 @@ def _messages(facts: dict[str, Any], signals: dict[str, Any], *, context_mode: s
                 f"{json.dumps(facts, ensure_ascii=False, separators=(',', ':'))}\n"
                 "Level 3.5 impulses:\n"
                 f"{json.dumps(signals, ensure_ascii=False, separators=(',', ':'))}\n"
-                "Write concise Level 4 interpretation."
+                "Prompt contract: l4-project-interpretation-v2. Write concise Level 4 interpretation."
             ),
         },
     ]
@@ -144,165 +147,6 @@ def _normalize_deliberation(result: dict[str, Any]) -> dict[str, Any]:
     confidence = str(normalized.get("confidence") or "medium").lower()
     normalized["confidence"] = confidence if confidence in {"high", "medium", "low"} else "medium"
     return normalized
-
-
-def _harden_deliberation(result: dict[str, Any], facts: dict[str, Any]) -> dict[str, Any]:
-    hardened = dict(result)
-    warnings = []
-    if _is_weak_summary(hardened.get("executive_summary")):
-        hardened["executive_summary"] = _grounded_summary(facts)
-        warnings.append("summary_replaced_from_facts")
-    capabilities = _grounded_list(hardened.get("capability_decomposition"), facts, kind="capability")
-    if capabilities != hardened.get("capability_decomposition"):
-        warnings.append("capabilities_grounded")
-    hardened["capability_decomposition"] = capabilities
-    refactor_plan = _grounded_list(hardened.get("refactor_plan"), facts, kind="refactor")
-    if refactor_plan != hardened.get("refactor_plan"):
-        warnings.append("refactor_plan_grounded")
-    hardened["refactor_plan"] = refactor_plan
-    if not hardened.get("open_questions"):
-        hardened["open_questions"] = _grounded_open_questions(facts)
-        warnings.append("open_questions_added")
-    if not str(hardened.get("cognitive_loop") or "").strip():
-        hardened["cognitive_loop"] = _grounded_loop(facts)
-        warnings.append("cognitive_loop_added")
-    if _facts_are_sparse(facts) and hardened.get("confidence") == "high":
-        hardened["confidence"] = "medium"
-        warnings.append("confidence_reduced_for_sparse_facts")
-    if warnings:
-        hardened["quality_warnings"] = warnings
-    return hardened
-
-
-def _is_weak_summary(value: Any) -> bool:
-    text = str(value or "").strip().lower()
-    if not text or text in {".", "...", "n/a", "unknown"}:
-        return True
-    generic = (
-        "target software project",
-        "unspecified functionality",
-        "automation/tooling solution",
-        "deterministic facts",
-        "level 4",
-        "cognitive os",
-        "insert concise description",
-    )
-    return any(marker in text for marker in generic)
-
-
-def _grounded_summary(facts: dict[str, Any]) -> str:
-    task = str(facts.get("task") or "").strip()
-    if task:
-        return _clean_task(task)
-    frameworks = ", ".join(str(item) for item in facts.get("frameworks", [])[:2])
-    root = str(facts.get("root") or "project").replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
-    if frameworks:
-        return f"{root} is analyzed as a {frameworks} project."
-    return f"{root} has insufficient product-level evidence; review README, entrypoints, and core modules."
-
-
-def _clean_task(task: str) -> str:
-    text = task
-    prefix = "Inferred from docs: "
-    if text.startswith(prefix):
-        text = text[len(prefix) :]
-    for suffix in (" (Python project).", " (Python automation/tooling project).", " (FastAPI API service).", " (Flask web application)."):
-        text = text.replace(suffix, ".")
-    return text.strip()
-
-
-def _grounded_list(value: Any, facts: dict[str, Any], *, kind: str) -> list[str]:
-    rows = [str(item) for item in value if _is_grounded_item(str(item), facts, kind=kind)] if isinstance(value, list) else []
-    if rows:
-        return rows[:3]
-    fallback = _capability_fallback(facts) if kind == "capability" else _refactor_fallback(facts)
-    return (rows + [item for item in fallback if item not in rows])[:3]
-
-
-def _is_grounded_item(text: str, facts: dict[str, Any], *, kind: str) -> bool:
-    lowered = text.lower()
-    bad = ("optimize", "human-readable", "integration with other libraries", "pipeline", "clarity", "future")
-    if any(marker in lowered for marker in bad):
-        return False
-    if kind == "capability" and _mentions_context_path(lowered):
-        return False
-    evidence = _evidence_terms(facts)
-    return any(term and term in lowered for term in evidence)
-
-
-def _mentions_context_path(lowered: str) -> bool:
-    context = ("bench/", "benchmark", "test/", "tests/", "testing/", "test_", "testing.py", "integration/", "docs/", "ci/")
-    return any(marker in lowered for marker in context)
-
-
-def _evidence_terms(facts: dict[str, Any]) -> set[str]:
-    terms = set()
-    for key in ("task", "inputs", "outputs", "entrypoints", "capabilities", "schemas", "weak_contracts", "errors", "risks", "loop"):
-        terms.update(_terms_from_value(facts.get(key)))
-    for key in ("central", "broad", "hotspots"):
-        terms.update(_terms_from_value(facts.get(key)))
-    return {term for term in terms if len(term) >= 4}
-
-
-def _terms_from_value(value: Any) -> set[str]:
-    if isinstance(value, dict):
-        return set().union(*(_terms_from_value(item) for item in value.values())) if value else set()
-    if isinstance(value, list):
-        return set().union(*(_terms_from_value(item) for item in value)) if value else set()
-    text = str(value or "").replace("_", " ").replace("/", " ").replace(":", " ").replace(".", " ")
-    return {part.lower() for part in text.split() if part.isalnum()}
-
-
-def _capability_fallback(facts: dict[str, Any]) -> list[str]:
-    rows = [str(item) for item in facts.get("capabilities", [])[:3]]
-    if rows:
-        return rows
-    task = _clean_task(str(facts.get("task") or ""))
-    entries = [str(item) for item in facts.get("entrypoints", [])[:2]]
-    if "json" in task.lower():
-        return ["JSON serialization/deserialization behavior evidenced by project docs"]
-    if "http" in task.lower():
-        return ["HTTP protocol/request handling evidenced by project docs"]
-    if "ini" in task.lower():
-        return ["INI configuration parsing evidenced by project docs"]
-    if entries:
-        return [f"Entrypoint workflow: {entry}" for entry in entries]
-    return ["No safe reusable Python capability identified from current facts"]
-
-
-def _refactor_fallback(facts: dict[str, Any]) -> list[str]:
-    rows = []
-    rows.extend(f"Review hotspot {item.get('target')}" for item in facts.get("hotspots", [])[:2] if isinstance(item, dict) and item.get("target"))
-    rows.extend(f"Harden weak contract {item}" for item in facts.get("weak_contracts", [])[:2])
-    if rows:
-        return rows[:3]
-    if not facts.get("entrypoints"):
-        return ["Add or identify a product-level entrypoint before extraction"]
-    return ["Map core boundaries before extracting runtime capabilities"]
-
-
-def _grounded_open_questions(facts: dict[str, Any]) -> list[str]:
-    questions = []
-    if not facts.get("entrypoints"):
-        questions.append("Which product-level entrypoint should be treated as runtime boundary?")
-    if not facts.get("capabilities"):
-        questions.append("Which core function is safe to extract as the first capability?")
-    if facts.get("risks"):
-        questions.append("Which listed risks must block automated extraction?")
-    return questions[:3] or ["Which scenario should be validated first by a human reviewer?"]
-
-
-def _grounded_loop(facts: dict[str, Any]) -> str:
-    loop = [str(item) for item in facts.get("loop", []) if item]
-    if loop:
-        return "; ".join(loop[:4])
-    if facts.get("entrypoints"):
-        return "run entrypoint; capture input/output; inject controlled failure; report result"
-    return "identify product boundary; capture representative input; test controlled failure; report extraction decision"
-
-
-def _facts_are_sparse(facts: dict[str, Any]) -> bool:
-    return not facts.get("entrypoints") or not facts.get("capabilities")
 
 
 def _as_short_string(value: Any) -> str:
