@@ -15,6 +15,9 @@ def run_reviewer_skill(
     test_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     findings = _findings(technical_spec, implementation_plan, test_plan, test_result or {})
+    conformance = _conformance_checks(technical_spec, implementation_plan, test_plan, test_result or {})
+    if any(not item["passed"] for item in conformance):
+        findings.append(_finding("conformance_check_failed", "high", "Deterministic conformance checks failed."))
     risks = _risk_assessment(implementation_plan, test_plan, findings)
     review_target = _review_target(implementation_plan, test_plan)
     return {
@@ -29,6 +32,8 @@ def run_reviewer_skill(
         ],
         "review_target": review_target,
         "coverage_assessment": _coverage_assessment(implementation_plan, test_plan, review_target),
+        "conformance_checks": conformance,
+        "conformance_status": "passed" if all(item["passed"] for item in conformance) else "failed",
         "findings": findings,
         "risk_assessment": risks,
         "contract_violations": _contract_violations(technical_spec, implementation_plan, test_plan),
@@ -127,6 +132,66 @@ def _contract_violations(
     return violations
 
 
+def _conformance_checks(
+    technical_spec: dict[str, Any],
+    implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
+    test_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    forbidden_observed = (
+        list(technical_spec.get("forbidden_actions_observed", []))
+        + list(implementation_plan.get("forbidden_actions_observed", []))
+        + list(test_plan.get("forbidden_actions_observed", []))
+    )
+    spec_acceptance = {str(item.get("id")) for item in technical_spec.get("acceptance_criteria", []) if item.get("id")}
+    tested_acceptance = {str(item.get("acceptance_id")) for item in test_plan.get("acceptance_tests", []) if item.get("acceptance_id")}
+    executable = dict(test_plan.get("executable_acceptance", {}))
+    obligations = list(executable.get("obligations", []))
+    return [
+        _check(
+            "artifact_chain_present",
+            technical_spec.get("artifact_type") == "TechnicalSpec"
+            and implementation_plan.get("artifact_type") == "ImplementationPlan"
+            and test_plan.get("artifact_type") == "TestPlan",
+            "TechnicalSpec, ImplementationPlan and TestPlan must be present.",
+        ),
+        _check(
+            "traceability_present",
+            bool(technical_spec.get("traceability_table")) and bool(implementation_plan.get("acceptance_mapping")),
+            "Spec traceability and implementation acceptance mapping must exist.",
+        ),
+        _check(
+            "acceptance_covered",
+            bool(spec_acceptance) and spec_acceptance <= tested_acceptance,
+            "Every TechnicalSpec acceptance criterion must have a TestPlan acceptance test.",
+            {"missing": sorted(spec_acceptance - tested_acceptance)},
+        ),
+        _check(
+            "executable_acceptance_ready",
+            executable.get("status") == "ready" and bool(obligations),
+            "Tester must publish executable acceptance obligations.",
+            {"obligation_count": len(obligations)},
+        ),
+        _check(
+            "scope_constrained",
+            not _scope_violations(implementation_plan, test_plan),
+            "Writable scope and read-only evidence scope must remain constrained.",
+        ),
+        _check(
+            "forbidden_actions_clean",
+            not forbidden_observed,
+            "No role artifact may report forbidden actions.",
+            {"observed": forbidden_observed},
+        ),
+        _check(
+            "test_result_green_or_absent",
+            not test_result or test_result.get("status") in {"ok", "passed", "success"},
+            "If TestResult is present, it must be green.",
+            {"status": test_result.get("status")},
+        ),
+    ]
+
+
 def _architecture_drift(technical_spec: dict[str, Any], implementation_plan: dict[str, Any]) -> list[dict[str, Any]]:
     patch_scope = set(implementation_plan.get("patch_scope", []))
     handoff_scope = set(dict(technical_spec.get("implementation_handoff", {})).get("patch_scope", []))
@@ -168,6 +233,13 @@ def _recommendation(findings: list[dict[str, Any]], risks: list[dict[str, Any]])
 
 def _finding(code: str, severity: str, description: str) -> dict[str, str]:
     return {"code": code, "severity": severity, "description": description}
+
+
+def _check(code: str, passed: bool, description: str, detail: dict[str, Any] | None = None) -> dict[str, Any]:
+    row = {"code": code, "passed": bool(passed), "description": description}
+    if detail:
+        row["detail"] = detail
+    return row
 
 
 def _review_target(implementation_plan: dict[str, Any], test_plan: dict[str, Any]) -> dict[str, Any]:

@@ -216,6 +216,8 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
     count = len(cases)
     ok = sum(1 for case in cases if case["status"] == "ok")
     inference = [dict(case.get("inference") or {}) for case in cases]
+    clean = sum(1 for case in cases if case.get("model_output_clean"))
+    hardened = sum(1 for case in cases if case.get("hardening_actions"))
     return {
         "ok": ok,
         "needs_review": count - ok,
@@ -224,9 +226,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "avg_quality_score": round(sum(float(case["quality"]["quality_score"]) for case in cases) / count, 3) if count else 0.0,
         "quality_passed": sum(1 for case in cases if case["quality"]["passed"]),
         "quality_warnings": sum(len(case["quality"]["warnings"]) for case in cases),
-        "model_output_clean": sum(1 for case in cases if case.get("model_output_clean")),
-        "hardened_cases": sum(1 for case in cases if case.get("hardening_actions")),
+        "model_output_clean": clean,
+        "hardened_cases": hardened,
         "hardening_actions": sum(len(case.get("hardening_actions", [])) for case in cases),
+        "model_quality_status": "clean" if count and clean == count else ("hardened" if hardened else "needs_review"),
         "source_code_changes": sum(1 for case in cases if case["source_code_changes"] is True),
         "source_snapshot_unavailable": sum(1 for case in cases if not case.get("source_snapshot_available")),
         "high_confidence": sum(1 for case in cases if case["confidence"] == "high"),

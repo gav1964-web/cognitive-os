@@ -271,6 +271,8 @@ def test_tester_skill_returns_test_plan():
     assert any(row["target"] == implementation["implementation_target"]["candidate"] for row in test_plan["contract_test_matrix"])
     assert any(row["target"] == implementation["implementation_target"]["candidate"] for row in test_plan["negative_tests"])
     assert test_plan["acceptance_tests"]
+    assert test_plan["executable_acceptance"]["status"] == "ready"
+    assert test_plan["executable_acceptance"]["obligations"]
     assert test_plan["negative_tests"]
     assert test_plan["smoke_checklist"]
     assert test_plan["regression_risks"]
@@ -301,6 +303,8 @@ def test_reviewer_skill_returns_review_findings():
     assert review["review_target"]["candidate"] == implementation["implementation_target"]["candidate"]
     assert review["coverage_assessment"]["target_covered"] is True
     assert review["coverage_assessment"]["contract_matrix_rows"] > 0
+    assert review["conformance_status"] == "passed"
+    assert all(row["passed"] for row in review["conformance_checks"])
     assert review["risk_assessment"]
     assert review["contract_violations"] == []
     assert review["recommendation"] in {"approve", "approve_with_risks", "request_rework"}
@@ -324,6 +328,7 @@ def test_reviewer_rejects_writable_scope_expansion():
     )
 
     assert review["recommendation"] == "request_rework"
+    assert review["conformance_status"] == "failed"
     assert any(row["code"] == "test_writable_scope_mismatch" for row in review["contract_violations"])
 
 

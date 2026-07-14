@@ -29,6 +29,7 @@ def run_tester_skill(*, technical_spec: dict[str, Any], implementation_plan: dic
         "contract_test_matrix": _contract_test_matrix(contract_binding, target),
         "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target),
         "acceptance_tests": _acceptance_tests(acceptance, target),
+        "executable_acceptance": _executable_acceptance(acceptance, contract_binding, target),
         "negative_tests": _negative_tests(target, contract_binding),
         "smoke_checklist": _smoke_checklist(verification),
         "regression_risks": _regression_risks(evidence_scope, writable_scope, technical_spec, target),
@@ -127,6 +128,59 @@ def _acceptance_tests(acceptance: list[dict[str, Any]], target: str) -> list[dic
     return tests
 
 
+def _executable_acceptance(
+    acceptance: list[dict[str, Any]],
+    contract_binding: dict[str, Any],
+    target: str,
+) -> dict[str, Any]:
+    input_contract = dict(contract_binding.get("input_contract", {}))
+    output_contract = dict(contract_binding.get("output_contract", {}))
+    obligations = []
+    for index, item in enumerate(acceptance[:10], start=1):
+        acceptance_id = str(item.get("id") or f"AC-{index:03d}")
+        obligations.append(
+            {
+                "id": f"OBL-{index:03d}",
+                "acceptance_id": acceptance_id,
+                "target": target,
+                "kind": "positive_contract_case",
+                "given": _sample_payload(input_contract),
+                "expect": _expected_shape(output_contract),
+                "oracle": "output_schema_and_acceptance_criterion",
+                "source_criterion": item.get("criterion"),
+            }
+        )
+    if input_contract:
+        obligations.append(
+            {
+                "id": f"OBL-{len(obligations) + 1:03d}",
+                "acceptance_id": "contract_negative_missing_input",
+                "target": target,
+                "kind": "malformed_input_case",
+                "given": {},
+                "expect": {"error": "controlled_validation_error"},
+                "oracle": "missing_required_input_rejected",
+            }
+        )
+    obligations.append(
+        {
+            "id": f"OBL-{len(obligations) + 1:03d}",
+            "acceptance_id": "side_effect_boundary",
+            "target": target,
+            "kind": "side_effect_scope_case",
+            "given": {"declared_scope": "writable_scope_only"},
+            "expect": {"no_writes_outside_declared_scope": True},
+            "oracle": "changed_file_list_is_subset_of_writable_scope",
+        }
+    )
+    return {
+        "status": "ready" if obligations else "empty",
+        "format": "executable_acceptance_obligations_v0.1",
+        "can_generate_scaffold": bool(obligations),
+        "obligations": obligations,
+    }
+
+
 def _negative_tests(target: str, contract_binding: dict[str, Any]) -> list[dict[str, Any]]:
     input_fields = list(dict(contract_binding.get("input_contract", {})))
     first_field = input_fields[0] if input_fields else "required input"
@@ -142,6 +196,27 @@ def _negative_tests(target: str, contract_binding: dict[str, Any]) -> list[dict[
             "case": "unexpected side effect outside declared scope is not allowed",
         },
     ]
+
+
+def _sample_payload(contract: dict[str, Any]) -> dict[str, Any]:
+    return {str(name): _sample_value(str(type_name)) for name, type_name in contract.items()}
+
+
+def _sample_value(type_name: str) -> Any:
+    lowered = type_name.lower()
+    if "int" in lowered or "number" in lowered:
+        return 1
+    if "bool" in lowered:
+        return True
+    if "list" in lowered or "array" in lowered:
+        return []
+    if "dict" in lowered or "object" in lowered:
+        return {}
+    return "sample"
+
+
+def _expected_shape(contract: dict[str, Any]) -> dict[str, Any]:
+    return {str(name): str(type_name) for name, type_name in contract.items()} or {"result": "declared_output"}
 
 
 def _smoke_checklist(commands: list[str]) -> list[dict[str, Any]]:
