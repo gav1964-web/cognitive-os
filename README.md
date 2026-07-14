@@ -372,7 +372,7 @@ Cognitive OS is **not** currently:
 - a self-learning system that treats its own outputs as ground truth;
 - a multi-agent chatroom where agents debate until something happens.
 
-Direct source patch application remains blocked in the MVP. The programmer executor creates isolated patch/test artifacts.
+The general Programmer Executor remains sandbox-only and creates isolated patch/test artifacts. A separate reviewed gate can apply only an explicitly approved, validated specialized sandbox package with source-identity checks and a timestamped backup; Cognitive OS is still not a safe arbitrary-code auto-patcher.
 
 ## Safety Model
 
@@ -598,7 +598,7 @@ The project grows by adding verified capabilities, better analyzers, stricter ro
 
 Current known limits:
 
-- direct source edits are blocked in MVP;
+- the general Programmer Executor blocks source apply; only explicitly approved, validated specialized sandbox packages can be applied through the reviewed backup-producing patch gate;
 - Foundry candidates are not promoted without explicit approval;
 - L4 external model calls are optional and may fall back to deterministic behavior;
 - analysis tasks are proposed backlog items, not automatic edits;

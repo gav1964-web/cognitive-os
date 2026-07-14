@@ -1,13 +1,13 @@
 # MVP_STATUS.md
 **Baseline snapshot: Cognitive OS MVP**
 
-Updated after the July 13, 2026 Layer 3.5 vertical-runtime pass.
+Updated after the July 14, 2026 clean-checkout CI and documentation-alignment pass.
 
 ## Current Verdict
 
 Status: `MVP-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; Stage 3 product-slice track started`.
 
-The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. Direct source patch application is still blocked in MVP.
+The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. The general Programmer Executor still blocks source apply. A separate specialized reviewed patch gate can apply an explicitly approved, validated sandbox package after source-identity checks and timestamped backup creation; it is not an autonomous general-purpose source editor.
 
 ## Verified Layers
 
@@ -24,9 +24,11 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
 | Knowledge Gap Loop | Installed-package probe, official-docs fetch and optional GitHub metadata evidence are implemented | knowledge tests |
 
+The portable CI gate runs repository-contained deterministic checks only. Live L4 evaluation is opt-in through `--live-l4`; Local-3 and downloaded GitHub corpora are opt-in through `--local-project-trials`.
+
 ## Role Readiness
 
-Latest readiness report: `artifacts/field_trials/role_mvp_readiness_20260707T053507623879Z.md`.
+Latest verified command: `python tools/role_mvp_readiness.py --root .` on July 14, 2026. Generated reports under `artifacts/` are machine-local evidence and are not committed as repository fixtures.
 
 | Role | Status | Score |
 | --- | --- | ---: |
@@ -34,11 +36,11 @@ Latest readiness report: `artifacts/field_trials/role_mvp_readiness_20260707T053
 | Architect | `MVP-ready` | `1.0` |
 | SpecWriter | `MVP-ready` | `1.0` |
 | Implementer Planner | `MVP-ready` | `1.0` |
-| Programmer Executor | `MVP-ready in sandbox/no-source-edit mode` | `1.0` |
+| Programmer Executor | `MVP-ready; sandbox/no-source-edit by default` | `1.0` |
 | Tester | `MVP-ready` | `1.0` |
 | Reviewer | `MVP-ready` | `1.0` |
 
-These scores mean the deterministic planning and sandbox execution gates are green. They do not mean the system is generally intelligent, self-learning, or safe to edit arbitrary projects without review. The programmer executor currently creates isolated patch/test artifacts; direct source edits remain disabled.
+These scores mean the deterministic planning and sandbox execution gates are green. They do not mean the system is generally intelligent, self-learning, or safe to edit arbitrary projects without review. The general Programmer Executor creates isolated patch/test artifacts and rejects `--apply-source`; only the separate reviewed patch gate may apply a validated specialized package after explicit approval and backup.
 
 ## Field Trial: Project 5
 
@@ -84,7 +86,7 @@ Project Transform previously chose a framework middleware candidate before the c
 
 ## Foundry Extraction Hardening v0.1
 
-Additional live extraction cases were run after the project `5` pass:
+Additional machine-local live extraction cases were run after the project `5` pass. Their projects and generated reports are field-trial evidence, not portable repository fixtures:
 
 | Project | Selected target | Result | Report |
 | --- | --- | --- | --- |
@@ -113,6 +115,7 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 * Semantic long-term dialogue memory remains intentionally limited.
 * The analyzed external project is treated as read-only.
 * Direct standalone executor calls retain their deterministic default policy when no recovery handler is supplied; `goal_run.py`, async integration and worker pool use the typed spinal recovery controller.
+* Live L4 and machine-local project corpora are evaluation tracks, not mandatory clean-checkout CI dependencies.
 
 ## Next Best Step
 

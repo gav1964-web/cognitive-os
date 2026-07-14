@@ -30,6 +30,8 @@ python tools/queue_status.py --root .
 python tools/queue_status.py --root . --status failed
 ```
 
+Каждая краткая запись job содержит `packet_count` - количество сохраненных межслойных packets в результате. Полный packet trace, adaptations и output конкретного job доступны через `job_inspect.py`.
+
 Архивировать terminal jobs:
 
 ```text
@@ -115,3 +117,20 @@ python tools/runtime_smoke.py --root .
 ```text
 python tools/runtime_smoke.py --root . --skip-pytest
 ```
+
+### 7. Acceptance
+
+Portable deterministic gate, используемый CI после pytest:
+
+```text
+python tools/mvp_acceptance.py --root . --skip-pytest
+```
+
+Живой L4 quality probe и локальные corpus не входят в portable gate и подключаются явно:
+
+```text
+python tools/mvp_acceptance.py --root . --skip-pytest --live-l4
+python tools/mvp_acceptance.py --root . --skip-pytest --local-project-trials
+```
+
+`--live-l4` требует доступный model provider. `--local-project-trials` требует локальные `F:/ubuntu/test/map`, `5`, `004` и загруженный `benchmarks/github_full_trial_10`; эти данные не входят в чистый checkout.
