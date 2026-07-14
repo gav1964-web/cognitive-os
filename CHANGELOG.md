@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Extended Tester executable acceptance to v0.3 with project-specific invocation for simple `file.py:function` targets, output-shape checks and malformed-input rejection.
 - Added Tester executable acceptance v0.2: TestPlan obligations now generate a pytest scaffold, Programmer Executor records ExecutableAcceptanceResult, and Reviewer conformance blocks failed executable acceptance.
 - Added deterministic L3.5 selection diagnostics, Tester executable acceptance obligations, Reviewer conformance checks, L4 raw-model quality status, and documented controlled LLM fallback after deterministic failure.
 - Documented the LLM Replacement Policy: LLMs are bounded hypothesis sources inside a verifiable engineering machine, while contracts, deterministic hardening, conformance checks and tests decide promotion to artifacts or execution.
