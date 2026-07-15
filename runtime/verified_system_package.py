@@ -11,6 +11,7 @@ from .cognitive_control_plane import run_prompt_product_control_plane
 from .l4_semantic_validation import validate_l45_semantic_proposal
 from .programmer_project_review import run_programmer_project_review
 from .prompt_adequacy import evaluate_prompt_adequacy
+from .semantic_evidence_pack import build_semantic_evidence_pack
 from .semantic_reasoner import (
     build_semantic_hypothesis_request,
     build_stage2_template_backlog_item,
@@ -34,9 +35,23 @@ def build_verified_system_package(
         supported_template=case_name,
     )
     if control_plane["role_transition"]["next_action"] != "build_verified_system_package":
+        semantic_evidence_pack = build_semantic_evidence_pack(
+            control_plane_decision=control_plane,
+            prompt=prompt,
+            prompt_adequacy=gate,
+            supported_templates=[case_name] if case_name else [],
+            known_templates=[
+                "json_log_filter_cli",
+                "text_stats_cli",
+                "csv_sort_cli",
+                "fastapi_csv_aggregator",
+                "fastapi_kv_store",
+            ],
+            context={"selected_case": case_name},
+        )
         semantic_request = build_semantic_hypothesis_request(
             control_plane_decision=control_plane,
-            context={"prompt": prompt, "supported_template": case_name},
+            context={"prompt": prompt, "supported_template": case_name, "evidence_pack": semantic_evidence_pack},
         )
         semantic_proposal = run_semantic_reasoner(request=semantic_request) if semantic_request is not None else None
         semantic_validation = (
@@ -56,6 +71,7 @@ def build_verified_system_package(
             case_name,
             control_plane,
             semantic_request,
+            semantic_evidence_pack,
             semantic_proposal,
             semantic_validation,
             stage2_template_backlog_item,
@@ -125,6 +141,7 @@ def _blocked_report(
     case_name: str | None,
     control_plane: dict[str, Any],
     semantic_hypothesis_request: dict[str, Any] | None,
+    semantic_evidence_pack: dict[str, Any] | None,
     semantic_hypothesis_proposal: dict[str, Any] | None,
     l4_semantic_validation: dict[str, Any] | None,
     stage2_template_backlog_item: dict[str, Any] | None,
@@ -148,6 +165,8 @@ def _blocked_report(
     }
     if semantic_hypothesis_request is not None:
         report["semantic_hypothesis_request"] = semantic_hypothesis_request
+    if semantic_evidence_pack is not None:
+        report["semantic_evidence_pack"] = semantic_evidence_pack
     if semantic_hypothesis_proposal is not None:
         report["semantic_hypothesis_proposal"] = semantic_hypothesis_proposal
     if l4_semantic_validation is not None:

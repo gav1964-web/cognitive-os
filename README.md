@@ -587,16 +587,24 @@ L4.5 is represented as a bounded contract, not as an implicit model call. When L
 
 ```text
 CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
+-> SemanticEvidencePack
 -> SemanticHypothesisRequest
 -> SemanticHypothesisProposal
 -> L4SemanticValidationResult
 -> optional Stage2TemplateBacklogItem / clarification / stop / rework
+-> optional SemanticProposalReplay
 -> deterministic L4.0 gates
 ```
 
 The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
 
-In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal then passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult`. Stage 2 may create `Stage2TemplateBacklogItem` only when L4.0 accepts the proposal and routes it to `record_template_backlog`; otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. For example, the CSV sort CLI moved through this path from backlog candidate to deterministic Stage 2 template through `Stage2TemplateAdmissionResult`; future unsupported bounded prompts still stop at validated proposal/backlog until a human or engineer admits a template.
+In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with a human-readable explanation. Stage 2 may create `Stage2TemplateBacklogItem` only when L4.0 accepts the proposal and routes it to `record_template_backlog`; otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
+
+Run the deterministic L4.5 loop benchmark:
+
+```powershell
+python tools\l45_semantic_benchmark.py --root . --write
+```
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

@@ -294,6 +294,12 @@ def _memory_and_level4_checks(
         layers=["L1", "L3.5", "L4"],
         check=checks.project_analyzer_benchmark_ok,
     )
+    report.command(
+        "l45_semantic_benchmark",
+        [sys.executable, "tools/l45_semantic_benchmark.py", "--root", ".", "--write"],
+        layers=["L4"],
+        check=checks.json_status_ok,
+    )
     if live_l4:
         report.command(
             "github_l4_quality_probe",

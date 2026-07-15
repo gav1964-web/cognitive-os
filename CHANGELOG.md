@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added the L4/L4.5 semantic-loop toolkit: `SemanticEvidencePack`, `SemanticProposalReplay`, `L4DecisionTable`, L4.5 model quality modes, deterministic semantic benchmark and acceptance gate.
 - Added `L4SemanticValidationResult` as the explicit L4.0 gate for L4.5 proposals; Stage 2 template backlog items are now created only after accepted L4 validation.
 - Promoted `csv_sort_cli` from L4.5 template backlog candidate to admitted deterministic Stage 2 template with project-scoped tests.
 - Added Stage 2 template admission gate and optional model-backed L4.5 semantic proposal mode with deterministic fallback.

@@ -187,6 +187,8 @@ def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_pat
     assert report["semantic_hypothesis_request"]["artifact_type"] == "SemanticHypothesisRequest"
     assert report["semantic_hypothesis_request"]["layer"] == "L4.5"
     assert report["semantic_hypothesis_request"]["return_path"]["target_layer"] == "L4.0"
+    assert report["semantic_evidence_pack"]["artifact_type"] == "SemanticEvidencePack"
+    assert report["semantic_evidence_pack"]["authority"]["may_build_package"] is False
     assert report["semantic_hypothesis_proposal"]["artifact_type"] == "SemanticHypothesisProposal"
     assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "new_template_candidate"
     assert report["l4_semantic_validation"]["artifact_type"] == "L4SemanticValidationResult"

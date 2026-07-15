@@ -76,6 +76,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["semantic_reasoner", "human"],
         "required_fields": ["artifact_type", "layer", "source_decision", "trigger_reasons", "question", "output_contract", "forbidden_actions", "return_path"],
     },
+    "SemanticEvidencePack": {
+        "producer": "cognitive_control_plane",
+        "consumers": ["semantic_reasoner", "human"],
+        "required_fields": ["artifact_type", "layer", "status", "prompt_facts", "control_facts", "forbidden_actions", "authority"],
+    },
     "SemanticHypothesisProposal": {
         "producer": "semantic_reasoner",
         "consumers": ["cognitive_control_plane", "human"],
@@ -95,6 +100,21 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "producer": "stage2_template_admission",
         "consumers": ["human", "engineer", "verified_system_package"],
         "required_fields": ["artifact_type", "status", "case", "blockers", "invariants"],
+    },
+    "SemanticProposalReplay": {
+        "producer": "semantic_replay",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "request", "proposal", "validation", "model_quality_mode", "outcome", "audit"],
+    },
+    "L45SemanticBenchmarkReport": {
+        "producer": "l45_semantic_benchmark",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "model_quality_mode", "summary", "cases"],
+    },
+    "L4DecisionTable": {
+        "producer": "l4_decision_table",
+        "consumers": ["cognitive_control_plane", "human"],
+        "required_fields": ["artifact_type", "status", "rule_count", "rules", "principle"],
     },
 }
 

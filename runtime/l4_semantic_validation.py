@@ -54,6 +54,7 @@ def validate_l45_semantic_proposal(
             "backlog_allowed": accepted_action == "record_template_backlog",
             "clarification_allowed": accepted_action == "ask_clarification",
         },
+        "explanation": _explanation(status, accepted_action, failed_codes, proposal),
         "forbidden_actions_observed": _forbidden_actions(request, proposal),
         "human_readable_summary": _summary(status, accepted_action, failed_codes),
     }
@@ -138,6 +139,31 @@ def _summary(status: str, accepted_action: str, failed_codes: list[str]) -> str:
     if status == "accepted":
         return f"L4.0 accepted bounded L4.5 hypothesis and routed it to {accepted_action}."
     return "L4.0 blocked L4.5 hypothesis: " + ", ".join(failed_codes)
+
+
+def _explanation(
+    status: str,
+    accepted_action: str,
+    failed_codes: list[str],
+    proposal: dict[str, Any],
+) -> dict[str, Any]:
+    if status == "accepted":
+        return {
+            "verdict": "accepted",
+            "why": [
+                "proposal matches the requested contract",
+                "proposal returns to L4.0 instead of executing directly",
+                "evidence, risks and confidence are explicit",
+            ],
+            "next_step": accepted_action,
+            "human_note": f"L4.0 accepted {proposal.get('hypothesis_type')} and routed it to {accepted_action}.",
+        }
+    return {
+        "verdict": "blocked",
+        "why": failed_codes,
+        "next_step": "inspect_or_rework_l45_proposal",
+        "human_note": "L4.0 blocked the L4.5 proposal because it failed one or more gate checks.",
+    }
 
 
 def _forbidden_actions(request: dict[str, Any], proposal: dict[str, Any]) -> list[str]:
