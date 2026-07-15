@@ -24,6 +24,11 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--generated-corpus-size", type=int, default=None)
     parser.add_argument("--seed", type=int, default=45)
+    parser.add_argument(
+        "--corpus-profile",
+        choices=["balanced", "risk_heavy", "unknown_template_heavy", "known_template_regression"],
+        default="balanced",
+    )
     parser.add_argument("--use-model", action="store_true")
     parser.add_argument(
         "--model-quality-mode",
@@ -51,6 +56,7 @@ def main() -> int:
         config=config,
         generated_corpus_size=args.generated_corpus_size,
         seed=args.seed,
+        corpus_profile=args.corpus_profile,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report.get("status") == "ok" else 1

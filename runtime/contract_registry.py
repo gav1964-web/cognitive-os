@@ -111,6 +111,16 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "evaluation"],
         "required_fields": ["artifact_type", "status", "model_quality_mode", "summary", "cases"],
     },
+    "L45SemanticCorpusAnalyticsReport": {
+        "producer": "l45_semantic_analytics",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "source_report", "summary", "boundary_counts", "action_counts"],
+    },
+    "L45RiskPolicyGapReport": {
+        "producer": "l45_semantic_analytics",
+        "consumers": ["human", "evaluation", "cognitive_control_plane"],
+        "required_fields": ["artifact_type", "status", "source_report", "summary", "gaps", "policy_recommendations"],
+    },
     "L45SemanticComparisonReport": {
         "producer": "l45_semantic_comparison",
         "consumers": ["human", "evaluation"],

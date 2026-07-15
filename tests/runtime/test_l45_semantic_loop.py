@@ -6,6 +6,7 @@ from runtime.cognitive_control_plane import run_prompt_product_control_plane
 from runtime.contract_registry import ContractRegistry
 from runtime.l4_decision_table import decision_table_catalog, match_prompt_product_rule
 from runtime.l45_model_modes import resolve_model_quality_mode
+from runtime.l45_semantic_analytics import analyze_l45_semantic_benchmark, build_l45_risk_policy_gap_report
 from runtime.l45_semantic_corpus import generate_l45_semantic_cases
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
 from runtime.l45_semantic_comparison import compare_l45_semantic_reports
@@ -100,6 +101,27 @@ def test_l45_generated_corpus_is_seeded_and_runs_200_cases(tmp_path: Path):
     assert report["summary"]["case_count"] == 200
 
 
+def test_l45_generated_corpus_profiles_are_seeded_and_distinct(tmp_path: Path):
+    risk = generate_l45_semantic_cases(size=50, seed=45, profile="risk_heavy")
+    known = generate_l45_semantic_cases(size=50, seed=45, profile="known_template_regression")
+    report = run_l45_semantic_benchmark(
+        root=tmp_path,
+        write=False,
+        generated_corpus_size=50,
+        seed=45,
+        corpus_profile="risk_heavy",
+    )
+
+    assert risk == generate_l45_semantic_cases(size=50, seed=45, profile="risk_heavy")
+    assert risk != known
+    assert report["status"] == "ok"
+    assert report["corpus"]["profile"] == "risk_heavy"
+    assert any(
+        row["actual"]["l4_action"] == "record_template_backlog_requires_human_review"
+        for row in report["cases"]
+    )
+
+
 def test_prompt_boundary_classifier_marks_unsupported_surfaces():
     result = classify_prompt_boundary(
         "Создай мобильное приложение с push-уведомлениями и публикацией в store.",
@@ -110,6 +132,40 @@ def test_prompt_boundary_classifier_marks_unsupported_surfaces():
     assert result["artifact_type"] == "PromptBoundaryClassification"
     assert result["boundary"] == "unsupported_product_surface"
     assert "mobile_app" in result["unsupported_markers"]
+
+
+def test_l4_gate_adds_policy_review_for_risky_l45_template_candidates(tmp_path: Path):
+    report = run_l45_semantic_benchmark(root=tmp_path, write=False)
+    by_id = {row["case_id"]: row for row in report["cases"]}
+
+    source_edit = by_id["source_edit_boundary"]
+    desktop_gui = by_id["desktop_gui_boundary"]
+
+    assert source_edit["actual"]["l4_action"] == "record_template_backlog_requires_human_review"
+    assert source_edit["actual"]["backlog_created"] is False
+    assert source_edit["actual"]["policy_review"]["applied_rule"] == "risk_boundary_requires_human_review"
+    assert desktop_gui["actual"]["l4_action"] == "ask_clarification"
+    assert desktop_gui["actual"]["policy_review"]["applied_rule"] == "unsupported_surface_requires_clarification"
+
+
+def test_l45_analytics_and_policy_gap_reports_are_contract_artifacts(tmp_path: Path):
+    report = run_l45_semantic_benchmark(
+        root=tmp_path,
+        write=False,
+        generated_corpus_size=80,
+        seed=45,
+        corpus_profile="risk_heavy",
+    )
+    analytics = analyze_l45_semantic_benchmark(report)
+    gaps = build_l45_risk_policy_gap_report(report)
+
+    assert analytics["artifact_type"] == "L45SemanticCorpusAnalyticsReport"
+    assert analytics["summary"]["case_count"] == 80
+    assert analytics["policy_signals"]["risk_boundary_to_normal_backlog"] == 0
+    assert analytics["category_counts"]["unknown_template"] > 0
+    assert gaps["artifact_type"] == "L45RiskPolicyGapReport"
+    assert gaps["status"] == "ok"
+    assert gaps["summary"]["gap_count"] == 0
 
 
 def test_l45_semantic_comparison_reports_no_clear_difference_for_same_reports(tmp_path: Path):
@@ -160,6 +216,26 @@ def test_contract_registry_knows_l45_loop_artifacts():
             "model_quality_mode": "deterministic",
             "summary": {},
             "cases": [],
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L45SemanticCorpusAnalyticsReport",
+            "status": "ok",
+            "source_report": {},
+            "summary": {},
+            "boundary_counts": {},
+            "action_counts": {},
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L45RiskPolicyGapReport",
+            "status": "ok",
+            "source_report": {},
+            "summary": {},
+            "gaps": [],
+            "policy_recommendations": [],
         }
     )
     contracts.validate_artifact(

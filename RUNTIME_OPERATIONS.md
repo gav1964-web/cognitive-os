@@ -143,3 +143,27 @@ $env:COGNITIVE_OS_L4_BASE_URL = "http://127.0.0.1:8000/v1"
 ```
 
 Детерминированный acceptance не вызывает L4. Токены расходуются только при явном `--live-l4`, `--use-l4-llm` или `--interpret-project-llm`.
+
+### 8. L4.5 semantic-loop field trials
+
+Curated deterministic smoke:
+
+```text
+python tools/l45_semantic_benchmark.py --root . --write
+```
+
+Seeded generated corpus with explicit profile:
+
+```text
+python tools/l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --corpus-profile balanced --write
+python tools/l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --corpus-profile risk_heavy --write
+```
+
+Aggregate route/boundary analytics and risk-policy gaps from a saved report:
+
+```text
+python tools/l45_semantic_analytics.py --report artifacts/l45_semantic_benchmark/l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
+python tools/l45_policy_gap.py --report artifacts/l45_semantic_benchmark/l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
+```
+
+Healthy risk policy result: `L45RiskPolicyGapReport.status=ok` and `summary.gap_count=0`.

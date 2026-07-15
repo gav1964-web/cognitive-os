@@ -19,10 +19,13 @@ def validate_l45_semantic_proposal(
     checks = _quality_checks(request, proposal, contract_validation)
     score = sum(1 for item in checks if item["passed"]) / len(checks)
     failed_codes = [item["code"] for item in checks if not item["passed"]]
-    accepted_action = _accepted_action(str(proposal.get("hypothesis_type") or ""))
+    base_action = _accepted_action(str(proposal.get("hypothesis_type") or ""))
+    policy_review = _policy_review(request, base_action)
+    accepted_action = str(policy_review["accepted_action"])
     status = "accepted" if not failed_codes and accepted_action != "blocked" else "blocked"
     if status == "blocked":
         accepted_action = "blocked"
+        policy_review["accepted_action"] = "blocked"
     return {
         "artifact_type": "L4SemanticValidationResult",
         "layer": "L4.0",
@@ -47,11 +50,15 @@ def validate_l45_semantic_proposal(
             "checks": checks,
             "failed_codes": failed_codes,
         },
+        "policy_review": policy_review,
         "accepted_action": accepted_action,
         "decision": {
             "next_action": accepted_action,
             "reason_code": _reason_code(status, failed_codes, str(proposal.get("hypothesis_type") or "")),
             "backlog_allowed": accepted_action == "record_template_backlog",
+            "risk_backlog_allowed": accepted_action == "record_template_backlog_requires_human_review",
+            "human_review_required": accepted_action
+            in {"record_template_backlog", "record_template_backlog_requires_human_review"},
             "clarification_allowed": accepted_action == "ask_clarification",
         },
         "explanation": _explanation(status, accepted_action, failed_codes, proposal),
@@ -127,6 +134,69 @@ def _accepted_action(hypothesis_type: str) -> str:
         "rework_target": "request_role_rework",
         "knowledge_gap": "record_knowledge_gap",
     }.get(hypothesis_type, "blocked")
+
+
+def _policy_review(request: dict[str, Any], base_action: str) -> dict[str, Any]:
+    boundary = _prompt_boundary(request)
+    risk_markers = _risk_markers(request)
+    unsupported_markers = _unsupported_markers(request)
+    accepted_action = base_action
+    applied_rule = "none"
+    rationale = "base L4.5 hypothesis route is allowed"
+
+    if base_action == "record_template_backlog" and boundary == "unsupported_product_surface":
+        accepted_action = "ask_clarification"
+        applied_rule = "unsupported_surface_requires_clarification"
+        rationale = "unsupported product surfaces must not become template backlog without a clarified supported scope"
+    elif base_action == "record_template_backlog" and (boundary == "bounded_with_risks" or risk_markers):
+        accepted_action = "record_template_backlog_requires_human_review"
+        applied_rule = "risk_boundary_requires_human_review"
+        rationale = "risk-marked prompts may be studied, but cannot enter normal template backlog automatically"
+
+    return {
+        "base_action": base_action,
+        "accepted_action": accepted_action,
+        "prompt_boundary": boundary,
+        "risk_markers": risk_markers,
+        "unsupported_markers": unsupported_markers,
+        "applied_rule": applied_rule,
+        "rationale": rationale,
+    }
+
+
+def _prompt_boundary(request: dict[str, Any]) -> str | None:
+    boundary = _boundary_classification(request)
+    value = boundary.get("boundary")
+    return str(value) if value is not None else None
+
+
+def _risk_markers(request: dict[str, Any]) -> list[str]:
+    boundary = _boundary_classification(request)
+    markers = boundary.get("risk_markers", [])
+    return [str(item) for item in markers] if isinstance(markers, list) else []
+
+
+def _unsupported_markers(request: dict[str, Any]) -> list[str]:
+    boundary = _boundary_classification(request)
+    markers = boundary.get("unsupported_markers", [])
+    return [str(item) for item in markers] if isinstance(markers, list) else []
+
+
+def _boundary_classification(request: dict[str, Any]) -> dict[str, Any]:
+    context = request.get("evidence_context", {})
+    if not isinstance(context, dict):
+        return {}
+    pack = context.get("evidence_pack", {})
+    if not isinstance(pack, dict):
+        return {}
+    prompt_facts = pack.get("prompt_facts", {})
+    if not isinstance(prompt_facts, dict):
+        return {}
+    adequacy = prompt_facts.get("prompt_adequacy", {})
+    if not isinstance(adequacy, dict):
+        return {}
+    boundary = adequacy.get("boundary_classification", {})
+    return dict(boundary) if isinstance(boundary, dict) else {}
 
 
 def _reason_code(status: str, failed_codes: list[str], hypothesis_type: str) -> str:

@@ -38,24 +38,60 @@ CLARIFICATION_TASKS = [
     ("blockchain", "Напиши blockchain smart contract, который принимает JSON input, возвращает transaction receipt JSON, имеет README и тесты, без внешних зависимостей."),
 ]
 
+RISK_BOUNDARY_TASKS = [
+    (
+        "source_edit",
+        "Измени исходники проекта: напиши CLI-утилиту без внешних зависимостей, которая читает JSON-файл, сохраняет JSON-отчёт, имеет README и тесты.",
+        "record_template_backlog_requires_human_review",
+    ),
+    (
+        "network_scraper",
+        "Напиши CLI-скрапер с зависимостью requests, который читает URL, скачивает HTML, сохраняет JSON-отчёт, имеет README и тесты.",
+        "record_template_backlog_requires_human_review",
+    ),
+    (
+        "desktop_gui",
+        "Напиши desktop GUI приложение без внешних зависимостей, которое читает CSV файл, показывает таблицу, сохраняет JSON отчет, имеет README и тесты.",
+        "ask_clarification",
+    ),
+]
 
-def generate_l45_semantic_cases(*, size: int, seed: int = 45) -> list[dict[str, Any]]:
+CORPUS_PROFILES = {
+    "balanced": ("known", "unknown_cli", "unknown_fastapi", "clarification"),
+    "risk_heavy": ("risk", "risk", "risk", "unknown_cli", "clarification"),
+    "unknown_template_heavy": ("unknown_cli", "unknown_cli", "unknown_fastapi", "known"),
+    "known_template_regression": ("known",),
+}
+
+def generate_l45_semantic_cases(*, size: int, seed: int = 45, profile: str = "balanced") -> list[dict[str, Any]]:
     """Generate deterministic prompt-boundary cases for broader field trials."""
 
+    if profile not in CORPUS_PROFILES:
+        raise ValueError(f"unknown L4.5 semantic corpus profile: {profile}")
     rng = random.Random(seed)
-    templates = [
-        *_known_cases(),
-        *_unknown_cli_cases(),
-        *_unknown_fastapi_cases(),
-        *_clarification_cases(),
-    ]
+    templates = _profile_templates(profile)
     cases: list[dict[str, Any]] = []
     for index in range(size):
         template = dict(rng.choice(templates))
         case = dict(template)
         case["case_id"] = f"generated_{index + 1:03d}_{template['case_id']}"
+        case["corpus_profile"] = profile
         cases.append(case)
     return cases
+
+
+def _profile_templates(profile: str) -> list[dict[str, Any]]:
+    groups = {
+        "known": _known_cases(),
+        "unknown_cli": _unknown_cli_cases(),
+        "unknown_fastapi": _unknown_fastapi_cases(),
+        "clarification": _clarification_cases(),
+        "risk": _risk_boundary_cases(),
+    }
+    templates: list[dict[str, Any]] = []
+    for group_name in CORPUS_PROFILES[profile]:
+        templates.extend(groups[group_name])
+    return templates
 
 
 def _known_cases() -> list[dict[str, Any]]:
@@ -114,4 +150,18 @@ def _clarification_cases() -> list[dict[str, Any]]:
             "expected_l4_action": "ask_clarification",
         }
         for task_id, prompt in CLARIFICATION_TASKS
+    ]
+
+
+def _risk_boundary_cases() -> list[dict[str, Any]]:
+    return [
+        {
+            "case_id": f"risk_{task_id}",
+            "prompt": prompt,
+            "supported_template": None,
+            "expected_escalation": True,
+            "expected_hypothesis_type": "new_template_candidate",
+            "expected_l4_action": expected_action,
+        }
+        for task_id, prompt, expected_action in RISK_BOUNDARY_TASKS
     ]

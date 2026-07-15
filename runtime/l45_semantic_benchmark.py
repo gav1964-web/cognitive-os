@@ -129,7 +129,7 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "supported_template": None,
         "expected_escalation": True,
         "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_l4_action": "ask_clarification",
     },
     {
         "case_id": "source_edit_boundary",
@@ -137,7 +137,7 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "supported_template": None,
         "expected_escalation": True,
         "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_l4_action": "record_template_backlog_requires_human_review",
     },
     {
         "case_id": "secret_boundary",
@@ -152,7 +152,7 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "supported_template": None,
         "expected_escalation": True,
         "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_l4_action": "record_template_backlog_requires_human_review",
     },
     {
         "case_id": "small_local_service_unknown",
@@ -198,12 +198,13 @@ def run_l45_semantic_benchmark(
     config: Any = None,
     generated_corpus_size: int | None = None,
     seed: int = 45,
+    corpus_profile: str = "balanced",
 ) -> dict[str, Any]:
     policy = resolve_model_quality_mode(model_quality_mode, use_model_flag=use_model)
     selected_cases = cases
     corpus_kind = "curated"
     if selected_cases is None and generated_corpus_size is not None:
-        selected_cases = generate_l45_semantic_cases(size=generated_corpus_size, seed=seed)
+        selected_cases = generate_l45_semantic_cases(size=generated_corpus_size, seed=seed, profile=corpus_profile)
         corpus_kind = "generated"
     rows = [
         _run_case(root=root, case=case, write=write, policy=policy, config=config)
@@ -219,6 +220,7 @@ def run_l45_semantic_benchmark(
             "kind": corpus_kind,
             "seed": seed if corpus_kind == "generated" else None,
             "requested_size": generated_corpus_size if corpus_kind == "generated" else None,
+            "profile": corpus_profile if corpus_kind == "generated" else None,
         },
         "summary": {
             "case_count": len(rows),
@@ -236,7 +238,12 @@ def run_l45_semantic_benchmark(
     if write:
         out_dir = root / "artifacts" / "l45_semantic_benchmark"
         out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / f"l45_semantic_benchmark_{policy['mode']}.json"
+        suffix = (
+            f"{policy['mode']}_generated_{corpus_profile}"
+            if corpus_kind == "generated"
+            else str(policy["mode"])
+        )
+        path = out_dir / f"l45_semantic_benchmark_{suffix}.json"
         path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         report["report_path"] = path.as_posix()
     return report
@@ -314,6 +321,7 @@ def _run_case(
             "validation_status": (validation or {}).get("status"),
             "validation_quality_score": dict((validation or {}).get("quality", {})).get("score"),
             "accepted_action": (validation or {}).get("accepted_action"),
+            "policy_review": (validation or {}).get("policy_review"),
             "l4_action": actual_action,
             "backlog_created": backlog is not None,
             "replay_path": replay_path,
