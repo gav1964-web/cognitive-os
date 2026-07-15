@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added explicit L4.5 `SemanticHypothesisRequest` contracts for bounded semantic escalation from L4.0 back into deterministic gates.
 - Routed Stage 2 prompt-to-product through L4.0 `CognitiveControlPlaneDecision`, so `PromptAdequacyGate` is now an API input to deterministic build/clarify/stop transitions.
 - Added L4.0 Cognitive Control Plane v0.1 with deterministic artifact promotion, role transition, semantic-escalation policy and crystallization backlog.
 - Extended Tester executable acceptance to v0.3 with project-specific invocation for simple `file.py:function` targets, output-shape checks and malformed-input rejection.

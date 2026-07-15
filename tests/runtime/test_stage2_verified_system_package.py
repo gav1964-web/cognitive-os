@@ -132,6 +132,26 @@ def test_verified_system_package_builds_fastapi_kv_store(tmp_path: Path):
     assert (Path(report["project_dir"]) / "src" / "kv_store_service" / "store.py").is_file()
 
 
+def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=(
+            "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, "
+            "сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
+        ),
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=False,
+    )
+
+    assert report["status"] == "blocked"
+    assert report["prompt_adequacy"]["status"] == "ready"
+    assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is True
+    assert report["semantic_hypothesis_request"]["artifact_type"] == "SemanticHypothesisRequest"
+    assert report["semantic_hypothesis_request"]["layer"] == "L4.5"
+    assert report["semantic_hypothesis_request"]["return_path"]["target_layer"] == "L4.0"
+
+
 def test_stage2_debug_loop_repairs_controlled_fastapi_error(tmp_path: Path):
     root = Path(__file__).resolve().parents[2]
     reference_path = root / "curricula" / "programmer_prompt_stage2" / "fastapi_csv_aggregator" / "teacher_reference.json"

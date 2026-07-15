@@ -76,6 +76,8 @@ Tester executable acceptance v0.3 реализует первый project-specif
 
 Crystallizing Cortex: если решение повторяется, оно мигрирует из L4.5 в L4.0 policy/template/gate/test. Если решение проверяемо, оно мигрирует в deterministic gate. Если решение остается спорным или смысловым, оно остается L4.5 advisory. Текущая реализация L4.0 начинается с `runtime/cognitive_control_plane.py`, который строит `CognitiveControlPlaneDecision` с `artifact_promotion_gate`, `role_transition`, `semantic_escalation` и `crystallization_backlog`. Для Stage 2 prompt-to-product тот же control plane работает в режиме `prompt_to_product`: `PromptAdequacyGate + supported_template -> prompt_product_gate -> role_transition`. Сборка `VerifiedSystemPackage` разрешена только при `role_transition.next_action=build_verified_system_package`; `needs_clarification` возвращает уточнение, `unsupported` останавливает маршрут, а bounded prompt без supported template становится кандидатом на L4.5 hypothesis proposal без обхода contracts.
 
+L4.5 обязан быть видимым контрактным переходом. Если `semantic_escalation.l4_5_required=true`, runtime формирует `SemanticHypothesisRequest`: source decision, trigger reasons, evidence context, allowed hypothesis types, forbidden actions, output contract и return path. L4.5 может вернуть только bounded `SemanticHypothesisProposal`; он не имеет права исполнять pipeline, строить package, менять source tree или registry, promote capability или обходить L4.0/L3.5/L2 gates. Возврат всегда идет обратно в L4.0 validation и повторный deterministic gate.
+
 Порядок развития role curriculum фиксируется как обязательный safety rail:
 
 1. Стабилизировать `Architect Curriculum Local-3`.

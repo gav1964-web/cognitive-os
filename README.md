@@ -582,6 +582,17 @@ The upper layer is split into:
 
 This is the "crystallizing cortex" rule: repeated decisions migrate from L4.5 into L4.0 policies, templates, gates or tests. Known routes stay in code; unknown or conflicting routes escalate. The same rule now applies to prompt-to-product flow: `PromptAdequacyGate` enters L4.0, and only a passed `prompt_product_gate` can trigger Stage 2 package construction.
 
+L4.5 is represented as a bounded contract, not as an implicit model call. When L4.0 cannot route an otherwise bounded request, it may emit a `SemanticHypothesisRequest`:
+
+```text
+CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
+-> SemanticHypothesisRequest
+-> SemanticHypothesisProposal
+-> back to L4.0 validation and gates
+```
+
+The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
+
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 
 Tester executable acceptance v0.3 turns `TestPlan.executable_acceptance` into a generated pytest scaffold and writes an `ExecutableAcceptanceResult`. The scaffold always executes obligation and boundary meta-checks; for simple `file.py:function` targets inside the project it also imports the function, calls it with sample kwargs from the positive contract case, checks the output shape, and verifies that malformed input is rejected. Classes, methods, async functions and framework handlers remain meta-checked until a later harness stage. Reviewer consumes the result through `TestResult.executable_acceptance_result` and blocks failed executable acceptance.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
+from runtime.semantic_reasoner import build_semantic_hypothesis_request
 
 
 def _artifacts() -> dict[str, dict]:
@@ -92,3 +93,28 @@ def test_prompt_product_control_plane_blocks_unclear_prompt_without_build():
     assert result["prompt_product_gate"]["status"] == "blocked"
     assert result["role_transition"]["next_action"] == "ask_clarification"
     assert result["semantic_escalation"]["l4_5_required"] is False
+
+
+def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "ready",
+        "system_type": "cli",
+        "reason_code": "PROMPT_ADEQUATE",
+    }
+
+    decision = run_prompt_product_control_plane(
+        prompt="build bounded CLI with an unsupported domain template",
+        prompt_adequacy=gate,
+        supported_template=None,
+    )
+    request = build_semantic_hypothesis_request(control_plane_decision=decision)
+
+    assert decision["artifact_promotion_gate"]["status"] == "not_applicable"
+    assert decision["semantic_escalation"]["l4_5_required"] is True
+    assert "no_supported_package_template" in decision["semantic_escalation"]["reasons"]
+    assert request is not None
+    assert request["artifact_type"] == "SemanticHypothesisRequest"
+    assert request["layer"] == "L4.5"
+    assert "build_package" in request["forbidden_actions"]
+    assert request["return_path"]["target_layer"] == "L4.0"

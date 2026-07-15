@@ -61,6 +61,7 @@ def run_prompt_product_control_plane(
         "created_at": datetime.now(timezone.utc).isoformat(),
         "goal": prompt,
         "prompt_adequacy": prompt_adequacy,
+        "artifact_promotion_gate": {"status": "not_applicable", "reason": "prompt_to_product_uses_prompt_product_gate"},
         "prompt_product_gate": gate,
         "role_transition": transition,
         "semantic_escalation": escalation,

@@ -68,8 +68,13 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
     },
     "CognitiveControlPlaneDecision": {
         "producer": "cognitive_control_plane",
-        "consumers": ["role_pipeline", "human", "release_gate"],
+        "consumers": ["role_pipeline", "semantic_reasoner", "human", "release_gate"],
         "required_fields": ["artifact_type", "layer", "artifact_promotion_gate", "role_transition", "semantic_escalation"],
+    },
+    "SemanticHypothesisRequest": {
+        "producer": "cognitive_control_plane",
+        "consumers": ["semantic_reasoner", "human"],
+        "required_fields": ["artifact_type", "layer", "source_decision", "trigger_reasons", "question", "output_contract", "forbidden_actions", "return_path"],
     },
 }
 

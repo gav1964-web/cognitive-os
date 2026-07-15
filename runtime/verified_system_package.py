@@ -10,6 +10,7 @@ from typing import Any
 from .cognitive_control_plane import run_prompt_product_control_plane
 from .programmer_project_review import run_programmer_project_review
 from .prompt_adequacy import evaluate_prompt_adequacy
+from .semantic_reasoner import build_semantic_hypothesis_request
 from .stage2_debug_loop import run_stage2_debug_loop
 
 
@@ -28,7 +29,16 @@ def build_verified_system_package(
         supported_template=case_name,
     )
     if control_plane["role_transition"]["next_action"] != "build_verified_system_package":
-        report = _blocked_report(prompt, gate, case_name, control_plane)
+        report = _blocked_report(
+            prompt,
+            gate,
+            case_name,
+            control_plane,
+            build_semantic_hypothesis_request(
+                control_plane_decision=control_plane,
+                context={"prompt": prompt, "supported_template": case_name},
+            ),
+        )
     else:
         review_run = run_programmer_project_review(
             root=root,
@@ -93,8 +103,9 @@ def _blocked_report(
     gate: dict[str, Any],
     case_name: str | None,
     control_plane: dict[str, Any],
+    semantic_hypothesis_request: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    return {
+    report = {
         "artifact_type": "VerifiedSystemPackage",
         "stage": "Stage 2",
         "status": "blocked",
@@ -111,6 +122,9 @@ def _blocked_report(
             "teacher_reference_is_ground_truth": False,
         },
     }
+    if semantic_hypothesis_request is not None:
+        report["semantic_hypothesis_request"] = semantic_hypothesis_request
+    return report
 
 
 def _select_case(prompt: str) -> str | None:
