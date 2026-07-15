@@ -81,6 +81,28 @@ def test_contract_registry_validates_artifact_api(registry):
             "semantic_escalation": {"l4_5_required": False},
         }
     )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "SemanticHypothesisProposal",
+            "layer": "L4.5",
+            "hypothesis_type": "new_template_candidate",
+            "proposal": {},
+            "confidence": 0.7,
+            "evidence_refs": [],
+            "risks": [],
+            "return_to_gate": True,
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "Stage2TemplateBacklogItem",
+            "status": "candidate",
+            "template_id": "csv_sort_cli",
+            "purpose": "sort csv",
+            "requires_human_review": True,
+            "next_step": "review",
+        }
+    )
 
 
 def test_contract_registry_rejects_incomplete_artifact_api(registry):

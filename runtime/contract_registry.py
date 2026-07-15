@@ -76,6 +76,16 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["semantic_reasoner", "human"],
         "required_fields": ["artifact_type", "layer", "source_decision", "trigger_reasons", "question", "output_contract", "forbidden_actions", "return_path"],
     },
+    "SemanticHypothesisProposal": {
+        "producer": "semantic_reasoner",
+        "consumers": ["cognitive_control_plane", "human"],
+        "required_fields": ["artifact_type", "layer", "hypothesis_type", "proposal", "confidence", "evidence_refs", "risks", "return_to_gate"],
+    },
+    "Stage2TemplateBacklogItem": {
+        "producer": "semantic_reasoner",
+        "consumers": ["human", "engineer", "stage2_template_curriculum"],
+        "required_fields": ["artifact_type", "status", "template_id", "purpose", "requires_human_review", "next_step"],
+    },
 }
 
 

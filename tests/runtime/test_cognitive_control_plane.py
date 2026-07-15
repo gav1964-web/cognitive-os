@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
-from runtime.semantic_reasoner import build_semantic_hypothesis_request
+from runtime.semantic_reasoner import (
+    build_semantic_hypothesis_request,
+    build_stage2_template_backlog_item,
+    run_semantic_reasoner,
+    validate_semantic_hypothesis_proposal,
+)
 
 
 def _artifacts() -> dict[str, dict]:
@@ -118,3 +123,46 @@ def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():
     assert request["layer"] == "L4.5"
     assert "build_package" in request["forbidden_actions"]
     assert request["return_path"]["target_layer"] == "L4.0"
+
+    proposal = run_semantic_reasoner(request=request)
+    backlog = build_stage2_template_backlog_item(proposal)
+
+    assert proposal["artifact_type"] == "SemanticHypothesisProposal"
+    assert proposal["status"] == "ok"
+    assert proposal["hypothesis_type"] == "new_template_candidate"
+    assert proposal["return_to_gate"] is True
+    assert backlog is not None
+    assert backlog["artifact_type"] == "Stage2TemplateBacklogItem"
+    assert backlog["requires_human_review"] is True
+
+
+def test_semantic_reasoner_blocks_invalid_or_forbidden_proposal():
+    request = {
+        "artifact_type": "SemanticHypothesisRequest",
+        "layer": "L4.5",
+        "allowed_hypothesis_types": ["new_template_candidate"],
+        "output_contract": {
+            "required_fields": [
+                "hypothesis_type",
+                "proposal",
+                "confidence",
+                "evidence_refs",
+                "risks",
+                "return_to_gate",
+            ],
+        },
+        "forbidden_actions": ["build_package"],
+    }
+    proposal = {
+        "hypothesis_type": "new_template_candidate",
+        "proposal": {"actions": ["build_package"]},
+        "confidence": 0.7,
+        "evidence_refs": [],
+        "risks": [],
+        "return_to_gate": True,
+    }
+
+    validation = validate_semantic_hypothesis_proposal(request=request, proposal=proposal)
+
+    assert validation["status"] == "blocked"
+    assert any(item.startswith("forbidden_actions_requested") for item in validation["violations"])

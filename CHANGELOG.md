@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added deterministic L4.5 semantic runner, `SemanticHypothesisProposal` validation, and Stage 2 template backlog items for bounded unsupported prompts.
 - Added explicit L4.5 `SemanticHypothesisRequest` contracts for bounded semantic escalation from L4.0 back into deterministic gates.
 - Routed Stage 2 prompt-to-product through L4.0 `CognitiveControlPlaneDecision`, so `PromptAdequacyGate` is now an API input to deterministic build/clarify/stop transitions.
 - Added L4.0 Cognitive Control Plane v0.1 with deterministic artifact promotion, role transition, semantic-escalation policy and crystallization backlog.

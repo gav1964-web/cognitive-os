@@ -588,10 +588,13 @@ L4.5 is represented as a bounded contract, not as an implicit model call. When L
 CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
 -> SemanticHypothesisRequest
 -> SemanticHypothesisProposal
+-> optional Stage2TemplateBacklogItem
 -> back to L4.0 validation and gates
 ```
 
 The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
+
+In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract. For example, a bounded but unsupported Stage 2 prompt such as a CSV sort CLI produces a `new_template_candidate` proposal and a `Stage2TemplateBacklogItem`. That backlog item requires human/engineering review before any deterministic template is added; it is not an automatic generator.
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

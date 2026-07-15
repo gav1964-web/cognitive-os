@@ -150,6 +150,11 @@ def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_pat
     assert report["semantic_hypothesis_request"]["artifact_type"] == "SemanticHypothesisRequest"
     assert report["semantic_hypothesis_request"]["layer"] == "L4.5"
     assert report["semantic_hypothesis_request"]["return_path"]["target_layer"] == "L4.0"
+    assert report["semantic_hypothesis_proposal"]["artifact_type"] == "SemanticHypothesisProposal"
+    assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "new_template_candidate"
+    assert report["stage2_template_backlog_item"]["artifact_type"] == "Stage2TemplateBacklogItem"
+    assert report["stage2_template_backlog_item"]["template_id"] == "csv_sort_cli"
+    assert report["stage2_template_backlog_item"]["requires_human_review"] is True
 
 
 def test_stage2_debug_loop_repairs_controlled_fastapi_error(tmp_path: Path):
