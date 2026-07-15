@@ -43,6 +43,32 @@ def run_cognitive_control_plane(
     }
 
 
+def run_prompt_product_control_plane(
+    *,
+    prompt: str,
+    prompt_adequacy: dict[str, Any],
+    supported_template: str | None,
+    llm_invoked: bool = False,
+) -> dict[str, Any]:
+    gate = _prompt_product_gate(prompt_adequacy, supported_template)
+    transition = _prompt_product_transition(prompt_adequacy, gate)
+    escalation = _prompt_product_escalation(prompt_adequacy, gate, llm_invoked)
+    return {
+        "artifact_type": "CognitiveControlPlaneDecision",
+        "layer": "L4.0",
+        "mode": "prompt_to_product",
+        "status": "ok",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "goal": prompt,
+        "prompt_adequacy": prompt_adequacy,
+        "prompt_product_gate": gate,
+        "role_transition": transition,
+        "semantic_escalation": escalation,
+        "crystallization_backlog": _prompt_product_crystallization_backlog(transition, gate, escalation),
+        "principle": "Prompt-to-product advances only through explicit gates; L4.5 is a bounded hypothesis source, not a free executor",
+    }
+
+
 def _artifact_promotion_gate(artifacts: dict[str, dict[str, Any]], review: dict[str, Any]) -> dict[str, Any]:
     required = {
         "architecture_decision": "ArchitectureDecisionRecord",
@@ -160,6 +186,94 @@ def _crystallization_backlog(
             }
         )
     return backlog
+
+
+def _prompt_product_gate(prompt_adequacy: dict[str, Any], supported_template: str | None) -> dict[str, Any]:
+    status = prompt_adequacy.get("status")
+    checks = [
+        {
+            "code": "prompt_adequacy_ready",
+            "passed": status == "ready",
+            "actual": status,
+        },
+        {
+            "code": "supported_package_template_available",
+            "passed": bool(supported_template),
+            "actual": supported_template,
+        },
+    ]
+    passed = all(item["passed"] for item in checks)
+    return {
+        "status": "passed" if passed else "blocked",
+        "checks": checks,
+        "supported_template": supported_template,
+        "can_build_package": passed,
+    }
+
+
+def _prompt_product_transition(prompt_adequacy: dict[str, Any], gate: dict[str, Any]) -> dict[str, Any]:
+    prompt_status = prompt_adequacy.get("status")
+    if gate.get("can_build_package"):
+        next_action = "build_verified_system_package"
+        reason = "prompt_ready_and_template_supported"
+    elif prompt_status in {"needs_clarification", "too_broad"}:
+        next_action = "ask_clarification"
+        reason = f"prompt_{prompt_status}"
+    elif prompt_status == "unsupported":
+        next_action = "stop_unsupported"
+        reason = "prompt_unsupported_by_policy"
+    else:
+        next_action = "stop_unsupported"
+        reason = "no_supported_package_template"
+    return {
+        "status": "decided",
+        "next_action": next_action,
+        "reason_code": reason,
+        "controller": "deterministic_prompt_product_transition_v0.1",
+    }
+
+
+def _prompt_product_escalation(
+    prompt_adequacy: dict[str, Any],
+    gate: dict[str, Any],
+    llm_invoked: bool,
+) -> dict[str, Any]:
+    reasons: list[str] = []
+    if prompt_adequacy.get("status") == "ready" and not gate.get("can_build_package"):
+        reasons.append("no_supported_package_template")
+    if prompt_adequacy.get("status") == "unsupported" and prompt_adequacy.get("system_type") is None:
+        reasons.append("unsupported_system_type_requires_semantic_classification")
+    return {
+        "l4_5_required": bool(reasons),
+        "reasons": reasons,
+        "llm_already_invoked": llm_invoked,
+        "policy": "invoke L4.5 only when deterministic prompt gates cannot classify or route an otherwise bounded request",
+    }
+
+
+def _prompt_product_crystallization_backlog(
+    transition: dict[str, Any],
+    gate: dict[str, Any],
+    escalation: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if escalation.get("l4_5_required"):
+        return []
+    if gate.get("status") != "passed":
+        return []
+    return [
+        {
+            "candidate": "prompt_product_transition_rule",
+            "pattern": transition.get("reason_code"),
+            "target": "runtime/cognitive_control_plane.py",
+            "action": "keep prompt-to-product routing deterministic and covered by tests",
+        },
+        {
+            "candidate": "supported_package_template",
+            "pattern": gate.get("supported_template"),
+            "target": "curricula/programmer_prompt_stage2",
+            "action": "promote stable generated-package case coverage into the curriculum catalog",
+        },
+    ]
 
 
 def _blocked_no_safe_candidate(artifacts: dict[str, dict[str, Any]]) -> bool:

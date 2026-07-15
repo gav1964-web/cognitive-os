@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Routed Stage 2 prompt-to-product through L4.0 `CognitiveControlPlaneDecision`, so `PromptAdequacyGate` is now an API input to deterministic build/clarify/stop transitions.
 - Added L4.0 Cognitive Control Plane v0.1 with deterministic artifact promotion, role transition, semantic-escalation policy and crystallization backlog.
 - Extended Tester executable acceptance to v0.3 with project-specific invocation for simple `file.py:function` targets, output-shape checks and malformed-input rejection.
 - Added Tester executable acceptance v0.2: TestPlan obligations now generate a pytest scaffold, Programmer Executor records ExecutableAcceptanceResult, and Reviewer conformance blocks failed executable acceptance.

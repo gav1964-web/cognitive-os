@@ -204,11 +204,14 @@ Stage 2 explores bounded prompt-to-package generation:
 ```text
 adequate prompt
 -> PromptAdequacyGate
+-> L4.0 CognitiveControlPlaneDecision
 -> isolated generated package
 -> tests
 -> tester review
 -> release decision
 ```
+
+The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts.
 
 Current deterministic package classes include:
 
@@ -577,7 +580,7 @@ The upper layer is split into:
 - `L4.0 Cognitive Control Plane`: deterministic policy, role transitions, artifact promotion gates, semantic-escalation decisions and crystallization backlog;
 - `L4.5 Semantic Reasoner`: LLM or human-assisted reasoning for ambiguous goals, semantic trade-offs, unknown routes and new capability designs.
 
-This is the "crystallizing cortex" rule: repeated decisions migrate from L4.5 into L4.0 policies, templates, gates or tests. Known routes stay in code; unknown or conflicting routes escalate.
+This is the "crystallizing cortex" rule: repeated decisions migrate from L4.5 into L4.0 policies, templates, gates or tests. Known routes stay in code; unknown or conflicting routes escalate. The same rule now applies to prompt-to-product flow: `PromptAdequacyGate` enters L4.0, and only a passed `prompt_product_gate` can trigger Stage 2 package construction.
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

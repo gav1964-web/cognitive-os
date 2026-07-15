@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from runtime.cognitive_control_plane import run_cognitive_control_plane
+from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
 
 
 def _artifacts() -> dict[str, dict]:
@@ -52,3 +52,43 @@ def test_control_plane_escalates_on_architect_fallback():
 
     assert result["semantic_escalation"]["l4_5_required"] is True
     assert "architect_advisory_backend_failed" in result["semantic_escalation"]["reasons"]
+
+
+def test_prompt_product_control_plane_routes_ready_prompt_to_build():
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "ready",
+        "system_type": "cli",
+        "reason_code": "ready",
+    }
+
+    result = run_prompt_product_control_plane(
+        prompt="build bounded CLI",
+        prompt_adequacy=gate,
+        supported_template="json_log_filter_cli",
+    )
+
+    assert result["mode"] == "prompt_to_product"
+    assert result["prompt_product_gate"]["status"] == "passed"
+    assert result["role_transition"]["next_action"] == "build_verified_system_package"
+    assert result["semantic_escalation"]["l4_5_required"] is False
+    assert result["crystallization_backlog"]
+
+
+def test_prompt_product_control_plane_blocks_unclear_prompt_without_build():
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "needs_clarification",
+        "system_type": None,
+        "reason_code": "missing_inputs_outputs",
+    }
+
+    result = run_prompt_product_control_plane(
+        prompt="сделай что-нибудь",
+        prompt_adequacy=gate,
+        supported_template=None,
+    )
+
+    assert result["prompt_product_gate"]["status"] == "blocked"
+    assert result["role_transition"]["next_action"] == "ask_clarification"
+    assert result["semantic_escalation"]["l4_5_required"] is False

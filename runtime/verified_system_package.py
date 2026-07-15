@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .cognitive_control_plane import run_prompt_product_control_plane
 from .programmer_project_review import run_programmer_project_review
 from .prompt_adequacy import evaluate_prompt_adequacy
 from .stage2_debug_loop import run_stage2_debug_loop
@@ -21,8 +22,13 @@ def build_verified_system_package(
 ) -> dict[str, Any]:
     gate = evaluate_prompt_adequacy(prompt).to_dict()
     case_name = _select_case(prompt)
-    if gate["status"] != "ready" or case_name is None:
-        report = _blocked_report(prompt, gate, case_name)
+    control_plane = run_prompt_product_control_plane(
+        prompt=prompt,
+        prompt_adequacy=gate,
+        supported_template=case_name,
+    )
+    if control_plane["role_transition"]["next_action"] != "build_verified_system_package":
+        report = _blocked_report(prompt, gate, case_name, control_plane)
     else:
         review_run = run_programmer_project_review(
             root=root,
@@ -35,7 +41,7 @@ def build_verified_system_package(
         if review_run.get("status") != "ok":
             debug_loop = run_stage2_debug_loop(review_run=review_run, reference=reference, max_attempts=1)
             review_run = dict(debug_loop["final_review_run"])
-        report = _release_report(prompt, gate, review_run, debug_loop)
+        report = _release_report(prompt, gate, control_plane, review_run, debug_loop)
     if write:
         report["package_report_path"] = _write_report(root, report).as_posix()
     return report
@@ -44,6 +50,7 @@ def build_verified_system_package(
 def _release_report(
     prompt: str,
     gate: dict[str, Any],
+    control_plane: dict[str, Any],
     review_run: dict[str, Any],
     debug_loop: dict[str, Any] | None,
 ) -> dict[str, Any]:
@@ -58,6 +65,7 @@ def _release_report(
         "created_at": _now(),
         "prompt": prompt,
         "prompt_adequacy": gate,
+        "cognitive_control_plane": control_plane,
         "system_type": gate.get("system_type"),
         "project_dir": programmer.get("project_dir"),
         "source_code": {
@@ -80,7 +88,12 @@ def _release_report(
     }
 
 
-def _blocked_report(prompt: str, gate: dict[str, Any], case_name: str | None) -> dict[str, Any]:
+def _blocked_report(
+    prompt: str,
+    gate: dict[str, Any],
+    case_name: str | None,
+    control_plane: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "artifact_type": "VerifiedSystemPackage",
         "stage": "Stage 2",
@@ -88,9 +101,10 @@ def _blocked_report(prompt: str, gate: dict[str, Any], case_name: str | None) ->
         "created_at": _now(),
         "prompt": prompt,
         "prompt_adequacy": gate,
+        "cognitive_control_plane": control_plane,
         "selected_case": case_name,
         "blocker": "prompt is not adequate or no supported package template exists",
-        "release_decision": {"decision": "blocked", "reason": gate.get("reason_code")},
+        "release_decision": {"decision": "blocked", "reason": control_plane["role_transition"]["reason_code"]},
         "invariants": {
             "direct_user_source_modification": False,
             "human_approval_required_for_source_apply": True,

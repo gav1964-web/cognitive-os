@@ -64,6 +64,9 @@ def test_verified_system_package_builds_release_artifact(tmp_path: Path):
     assert report["artifact_type"] == "VerifiedSystemPackage"
     assert report["status"] == "ok"
     assert report["prompt_adequacy"]["status"] == "ready"
+    assert report["cognitive_control_plane"]["mode"] == "prompt_to_product"
+    assert report["cognitive_control_plane"]["role_transition"]["next_action"] == "build_verified_system_package"
+    assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is False
     assert report["release_decision"]["decision"] == "release_ready"
     assert report["tester_review"]["recommendation"] == "approve"
     assert report["tests"]["missing_acceptance"] == []
@@ -85,6 +88,7 @@ def test_verified_system_package_builds_fastapi_csv_service(tmp_path: Path):
 
     assert report["status"] == "ok"
     assert report["system_type"] == "fastapi_service"
+    assert report["cognitive_control_plane"]["prompt_product_gate"]["status"] == "passed"
     assert report["release_decision"]["decision"] == "release_ready"
     assert checks["has_fastapi_app"] is True
     assert checks["has_api_tests"] is True
