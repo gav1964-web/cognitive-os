@@ -126,6 +126,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "evaluation"],
         "required_fields": ["artifact_type", "status", "summary", "cases", "interpretation"],
     },
+    "L45SemanticEvaluationSuiteReport": {
+        "producer": "l45_semantic_eval_suite",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "config", "summary", "profiles"],
+    },
     "L4DecisionTable": {
         "producer": "l4_decision_table",
         "consumers": ["cognitive_control_plane", "human"],

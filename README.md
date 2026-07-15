@@ -622,9 +622,11 @@ python tools\l45_semantic_benchmark.py --root . --generated-corpus-size 200 --se
 python tools\l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --corpus-profile risk_heavy --write
 python tools\l45_semantic_analytics.py --report artifacts\l45_semantic_benchmark\l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
 python tools\l45_policy_gap.py --report artifacts\l45_semantic_benchmark\l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
+python tools\l45_semantic_eval_suite.py --root . --generated-corpus-size 50 --profiles balanced risk_heavy unknown_template_heavy known_template_regression --write
+python tools\l45_semantic_eval_suite.py --root . --generated-corpus-size 20 --profiles risk_heavy unknown_template_heavy --include-model --model-quality-mode model_propose_only --write
 ```
 
-The curated corpus remains the default smoke/acceptance set. The generated corpus is intended for local/nightly measurement and can be resized while keeping reproducibility through `--seed`. Supported generated profiles are `balanced`, `risk_heavy`, `unknown_template_heavy`, and `known_template_regression`; analytics and policy-gap reports are typed artifacts used to prove that risky or unsupported prompts do not enter normal template backlog.
+The curated corpus remains the default smoke/acceptance set. The generated corpus is intended for local/nightly measurement and can be resized while keeping reproducibility through `--seed`. Supported generated profiles are `balanced`, `risk_heavy`, `unknown_template_heavy`, and `known_template_regression`; analytics and policy-gap reports are typed artifacts used to prove that risky or unsupported prompts do not enter normal template backlog. The evaluation suite wraps those runs into `L45SemanticEvaluationSuiteReport`; model-backed runs remain opt-in and compare model proposals against the deterministic route without granting action authority.
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

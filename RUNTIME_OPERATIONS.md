@@ -167,3 +167,17 @@ python tools/l45_policy_gap.py --report artifacts/l45_semantic_benchmark/l45_sem
 ```
 
 Healthy risk policy result: `L45RiskPolicyGapReport.status=ok` and `summary.gap_count=0`.
+
+Run the multi-profile evaluation suite:
+
+```text
+python tools/l45_semantic_eval_suite.py --root . --generated-corpus-size 50 --profiles balanced risk_heavy unknown_template_heavy known_template_regression --write
+```
+
+Opt-in model-backed comparison over a smaller corpus:
+
+```text
+python tools/l45_semantic_eval_suite.py --root . --generated-corpus-size 20 --profiles risk_heavy unknown_template_heavy --include-model --model-quality-mode model_propose_only --write
+```
+
+The suite report is `L45SemanticEvaluationSuiteReport`. Model-backed runs compare proposals with deterministic routing; they do not make model output authoritative.

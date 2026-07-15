@@ -320,6 +320,7 @@ def _run_case(
             "hypothesis_type": (proposal or {}).get("hypothesis_type"),
             "validation_status": (validation or {}).get("status"),
             "validation_quality_score": dict((validation or {}).get("quality", {})).get("score"),
+            "validation_failed_codes": dict((validation or {}).get("quality", {})).get("failed_codes"),
             "accepted_action": (validation or {}).get("accepted_action"),
             "policy_review": (validation or {}).get("policy_review"),
             "l4_action": actual_action,

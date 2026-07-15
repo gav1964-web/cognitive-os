@@ -10,6 +10,7 @@ from runtime.l45_semantic_analytics import analyze_l45_semantic_benchmark, build
 from runtime.l45_semantic_corpus import generate_l45_semantic_cases
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
 from runtime.l45_semantic_comparison import compare_l45_semantic_reports
+from runtime.l45_semantic_eval_suite import run_l45_semantic_evaluation_suite
 from runtime.l4_semantic_validation import validate_l45_semantic_proposal
 from runtime.prompt_boundary_classifier import classify_prompt_boundary
 from runtime.prompt_adequacy import evaluate_prompt_adequacy
@@ -180,6 +181,24 @@ def test_l45_semantic_comparison_reports_no_clear_difference_for_same_reports(tm
     assert comparison["summary"]["deterministic_better"] == 0
 
 
+def test_l45_semantic_evaluation_suite_runs_profiles_without_model(tmp_path: Path):
+    report = run_l45_semantic_evaluation_suite(
+        root=tmp_path,
+        generated_corpus_size=20,
+        seed=45,
+        profiles=["risk_heavy", "unknown_template_heavy"],
+        include_model=False,
+        write=True,
+    )
+
+    assert report["artifact_type"] == "L45SemanticEvaluationSuiteReport"
+    assert report["status"] == "ok"
+    assert report["summary"]["profile_count"] == 2
+    assert report["summary"]["risk_policy_gap_count"] == 0
+    assert Path(report["report_path"]).is_file()
+    assert all(row["deterministic"]["status"] == "ok" for row in report["profiles"])
+
+
 def test_contract_registry_knows_l45_loop_artifacts():
     root = Path(__file__).resolve().parents[2]
     registry = CapabilityRegistry(root)
@@ -245,6 +264,15 @@ def test_contract_registry_knows_l45_loop_artifacts():
             "summary": {},
             "cases": [],
             "interpretation": {},
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L45SemanticEvaluationSuiteReport",
+            "status": "ok",
+            "config": {},
+            "summary": {},
+            "profiles": [],
         }
     )
     contracts.validate_artifact(
