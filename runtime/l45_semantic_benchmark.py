@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .cognitive_control_plane import run_prompt_product_control_plane
+from .l45_semantic_corpus import generate_l45_semantic_cases
 from .l4_semantic_validation import validate_l45_semantic_proposal
 from .l45_model_modes import resolve_model_quality_mode
 from .prompt_adequacy import evaluate_prompt_adequacy
@@ -195,11 +196,18 @@ def run_l45_semantic_benchmark(
     use_model: bool = False,
     model_quality_mode: str | None = None,
     config: Any = None,
+    generated_corpus_size: int | None = None,
+    seed: int = 45,
 ) -> dict[str, Any]:
     policy = resolve_model_quality_mode(model_quality_mode, use_model_flag=use_model)
+    selected_cases = cases
+    corpus_kind = "curated"
+    if selected_cases is None and generated_corpus_size is not None:
+        selected_cases = generate_l45_semantic_cases(size=generated_corpus_size, seed=seed)
+        corpus_kind = "generated"
     rows = [
         _run_case(root=root, case=case, write=write, policy=policy, config=config)
-        for case in (cases or BENCHMARK_CASES)
+        for case in (selected_cases or BENCHMARK_CASES)
     ]
     passed = sum(1 for row in rows if row["status"] == "ok")
     report = {
@@ -207,6 +215,11 @@ def run_l45_semantic_benchmark(
         "status": "ok" if passed == len(rows) else "failed",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "model_quality_mode": policy["mode"],
+        "corpus": {
+            "kind": corpus_kind,
+            "seed": seed if corpus_kind == "generated" else None,
+            "requested_size": generated_corpus_size if corpus_kind == "generated" else None,
+        },
         "summary": {
             "case_count": len(rows),
             "passed": passed,

@@ -615,6 +615,14 @@ python tools\l45_semantic_compare.py --deterministic-report artifacts\l45_semant
 
 The current local trial corpus has 22 prompt-boundary and unknown-template cases. In the latest run, deterministic routing passed `22/22`; the live `GigaChat-Pro` propose-only run invoked the model on 13 escalated cases, matched deterministic action on 19/22 cases, passed L4 validation on 10/13 model proposals, and did not beat the deterministic route. The conclusion is intentionally conservative: use L4.5 as a bounded proposal source with replay and validation, then crystallize useful repeated patterns into L4.0 code.
 
+For broader local field trials, generate a seeded matrix corpus instead of hand-maintaining hundreds of static cases:
+
+```powershell
+python tools\l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --write
+```
+
+The curated 22-case corpus remains the default smoke/acceptance set. The generated corpus is intended for local/nightly measurement and can be resized while keeping reproducibility through `--seed`.
+
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 
 Tester executable acceptance v0.3 turns `TestPlan.executable_acceptance` into a generated pytest scaffold and writes an `ExecutableAcceptanceResult`. The scaffold always executes obligation and boundary meta-checks; for simple `file.py:function` targets inside the project it also imports the function, calls it with sample kwargs from the positive contract case, checks the output shape, and verifies that malformed input is rejected. Classes, methods, async functions and framework handlers remain meta-checked until a later harness stage. Reviewer consumes the result through `TestResult.executable_acceptance_result` and blocks failed executable acceptance.

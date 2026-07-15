@@ -6,6 +6,7 @@ from runtime.cognitive_control_plane import run_prompt_product_control_plane
 from runtime.contract_registry import ContractRegistry
 from runtime.l4_decision_table import decision_table_catalog, match_prompt_product_rule
 from runtime.l45_model_modes import resolve_model_quality_mode
+from runtime.l45_semantic_corpus import generate_l45_semantic_cases
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
 from runtime.l45_semantic_comparison import compare_l45_semantic_reports
 from runtime.l4_semantic_validation import validate_l45_semantic_proposal
@@ -84,6 +85,19 @@ def test_l45_semantic_benchmark_passes_deterministic_cases(tmp_path: Path):
     assert report["summary"]["case_count"] >= 20
     assert Path(report["report_path"]).is_file()
     assert any(row["actual"]["replay_path"] for row in report["cases"])
+
+
+def test_l45_generated_corpus_is_seeded_and_runs_200_cases(tmp_path: Path):
+    corpus = generate_l45_semantic_cases(size=200, seed=45)
+    again = generate_l45_semantic_cases(size=200, seed=45)
+    report = run_l45_semantic_benchmark(root=tmp_path, write=False, generated_corpus_size=200, seed=45)
+
+    assert len(corpus) == 200
+    assert corpus == again
+    assert len({row["case_id"] for row in corpus}) == 200
+    assert report["status"] == "ok"
+    assert report["corpus"]["kind"] == "generated"
+    assert report["summary"]["case_count"] == 200
 
 
 def test_prompt_boundary_classifier_marks_unsupported_surfaces():

@@ -22,6 +22,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--generated-corpus-size", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=45)
     parser.add_argument("--use-model", action="store_true")
     parser.add_argument(
         "--model-quality-mode",
@@ -47,6 +49,8 @@ def main() -> int:
         use_model=args.use_model,
         model_quality_mode=args.model_quality_mode,
         config=config,
+        generated_corpus_size=args.generated_corpus_size,
+        seed=args.seed,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report.get("status") == "ok" else 1
