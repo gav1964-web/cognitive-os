@@ -181,3 +181,11 @@ python tools/l45_semantic_eval_suite.py --root . --generated-corpus-size 20 --pr
 ```
 
 The suite report is `L45SemanticEvaluationSuiteReport`. Model-backed runs compare proposals with deterministic routing; they do not make model output authoritative.
+
+Analyze model-backed failures after a suite run:
+
+```text
+python tools/l45_model_failure_analysis.py --suite-report artifacts/l45_semantic_benchmark/l45_semantic_evaluation_suite_model.json --write
+```
+
+The report is `L45ModelFailureAnalysisReport` and groups model failures by L4 validation failed codes.

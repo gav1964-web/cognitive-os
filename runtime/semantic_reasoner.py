@@ -247,6 +247,7 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
             "forbidden_actions_stripped": False,
             "schema_normalized": True,
             "proposal_payload_synthesized": False,
+            "risks_synthesized": False,
         },
     }
     if proposal["hypothesis_type"] == "clarification_question" and not proposal["proposal"]:
@@ -263,6 +264,9 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
         fallback = _new_template_candidate(str(dict(request.get("evidence_context", {})).get("prompt") or ""))
         proposal["proposal"] = dict(fallback.get("proposal", {}))
         proposal["hardening"]["proposal_payload_synthesized"] = True
+    if not proposal["risks"] and proposal["hypothesis_type"] in set(request.get("allowed_hypothesis_types", [])):
+        proposal["risks"] = _default_risks(str(proposal["hypothesis_type"]))
+        proposal["hardening"]["risks_synthesized"] = True
     forbidden = set(str(item) for item in request.get("forbidden_actions", []))
     actions = list(proposal["proposal"].get("actions", []))
     safe_actions = [str(item) for item in actions if str(item) not in forbidden]
@@ -270,6 +274,18 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
         proposal["proposal"]["actions"] = safe_actions
         proposal["hardening"]["forbidden_actions_stripped"] = True
     return proposal
+
+
+def _default_risks(hypothesis_type: str) -> list[str]:
+    return {
+        "new_template_candidate": [
+            "model omitted explicit risks",
+            "human review required before template admission",
+        ],
+        "template_mapping_candidate": ["model omitted explicit risks", "mapping must be rerun through deterministic gate"],
+        "clarification_question": ["model omitted explicit risks", "clarification may still be incomplete"],
+        "unsupported_reason": ["model omitted explicit risks", "unsupported classification may need human review"],
+    }.get(hypothesis_type, ["model omitted explicit risks", "L4.0 validation required"])
 
 
 def _new_template_candidate(prompt: str) -> dict[str, Any]:

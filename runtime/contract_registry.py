@@ -131,6 +131,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "evaluation"],
         "required_fields": ["artifact_type", "status", "config", "summary", "profiles"],
     },
+    "L45ModelFailureAnalysisReport": {
+        "producer": "l45_model_failure_analysis",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "summary", "failures", "recommendations"],
+    },
     "L4DecisionTable": {
         "producer": "l4_decision_table",
         "consumers": ["cognitive_control_plane", "human"],

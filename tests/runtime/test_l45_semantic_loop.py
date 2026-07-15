@@ -11,6 +11,7 @@ from runtime.l45_semantic_corpus import generate_l45_semantic_cases
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
 from runtime.l45_semantic_comparison import compare_l45_semantic_reports
 from runtime.l45_semantic_eval_suite import run_l45_semantic_evaluation_suite
+from runtime.l45_model_failure_analysis import analyze_l45_model_failures
 from runtime.l4_semantic_validation import validate_l45_semantic_proposal
 from runtime.prompt_boundary_classifier import classify_prompt_boundary
 from runtime.prompt_adequacy import evaluate_prompt_adequacy
@@ -199,6 +200,69 @@ def test_l45_semantic_evaluation_suite_runs_profiles_without_model(tmp_path: Pat
     assert all(row["deterministic"]["status"] == "ok" for row in report["profiles"])
 
 
+def test_l45_model_failure_analysis_counts_blocked_model_cases():
+    comparison = {
+        "cases": [
+            {
+                "case_id": "case_1",
+                "verdict": "deterministic_better",
+                "deterministic": {"status": "ok", "l4_action": "record_template_backlog"},
+                "model": {
+                    "status": "failed",
+                    "l4_action": "blocked",
+                    "validation_failed_codes": ["risks_present"],
+                    "raw_model_output_used": True,
+                },
+            }
+        ]
+    }
+
+    report = analyze_l45_model_failures(comparison_reports=[comparison])
+
+    assert report["artifact_type"] == "L45ModelFailureAnalysisReport"
+    assert report["summary"]["model_failure_count"] == 1
+    assert report["summary"]["failed_code_counts"]["risks_present"] == 1
+
+
+def test_l45_hardening_synthesizes_missing_model_risks():
+    request = {
+        "artifact_type": "SemanticHypothesisRequest",
+        "layer": "L4.5",
+        "source_decision": {"mode": "prompt_to_product"},
+        "trigger_reasons": ["no_supported_package_template"],
+        "allowed_hypothesis_types": ["new_template_candidate"],
+        "output_contract": {
+            "required_fields": [
+                "hypothesis_type",
+                "proposal",
+                "confidence",
+                "evidence_refs",
+                "risks",
+                "return_to_gate",
+            ],
+        },
+        "forbidden_actions": ["build_package"],
+        "return_path": {"target_layer": "L4.0"},
+    }
+    proposal = run_semantic_reasoner(
+        request=request,
+        proposal_provider=lambda _request: {
+            "hypothesis_type": "new_template_candidate",
+            "proposal": {"template_id": "candidate", "actions": ["record_backlog_item"]},
+            "confidence": 0.7,
+            "evidence_refs": ["test"],
+            "risks": [],
+            "return_to_gate": True,
+        },
+    )
+
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+
+    assert proposal["hardening"]["risks_synthesized"] is True
+    assert proposal["risks"]
+    assert validation["status"] == "accepted"
+
+
 def test_contract_registry_knows_l45_loop_artifacts():
     root = Path(__file__).resolve().parents[2]
     registry = CapabilityRegistry(root)
@@ -273,6 +337,15 @@ def test_contract_registry_knows_l45_loop_artifacts():
             "config": {},
             "summary": {},
             "profiles": [],
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L45ModelFailureAnalysisReport",
+            "status": "ok",
+            "summary": {},
+            "failures": [],
+            "recommendations": [],
         }
     )
     contracts.validate_artifact(
