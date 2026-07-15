@@ -30,6 +30,7 @@ def build_semantic_replay_record(
             "raw_model_output_used": bool(hardening.get("raw_model_output_used")),
             "forbidden_actions_stripped": bool(hardening.get("forbidden_actions_stripped")),
             "schema_normalized": bool(hardening.get("schema_normalized")),
+            "proposal_payload_synthesized": bool(hardening.get("proposal_payload_synthesized")),
             "model_error": hardening.get("model_error"),
             "fallback": hardening.get("fallback"),
         },

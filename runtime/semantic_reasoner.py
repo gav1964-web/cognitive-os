@@ -246,6 +246,7 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
             "raw_model_output_used": False,
             "forbidden_actions_stripped": False,
             "schema_normalized": True,
+            "proposal_payload_synthesized": False,
         },
     }
     if proposal["hypothesis_type"] == "clarification_question" and not proposal["proposal"]:
@@ -258,6 +259,10 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
             "reason": "L4.5 could not map the request into a supported bounded route.",
             "actions": ["stop_unsupported"],
         }
+    elif proposal["hypothesis_type"] == "new_template_candidate" and not proposal["proposal"]:
+        fallback = _new_template_candidate(str(dict(request.get("evidence_context", {})).get("prompt") or ""))
+        proposal["proposal"] = dict(fallback.get("proposal", {}))
+        proposal["hardening"]["proposal_payload_synthesized"] = True
     forbidden = set(str(item) for item in request.get("forbidden_actions", []))
     actions = list(proposal["proposal"].get("actions", []))
     safe_actions = [str(item) for item in actions if str(item) not in forbidden]

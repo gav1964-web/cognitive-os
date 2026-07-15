@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from .goal_intake import build_goal_spec
+from .prompt_boundary_classifier import classify_prompt_boundary
 
 
 SUPPORTED_SYSTEM_TYPES = {"cli", "file_processing_utility", "small_local_service", "fastapi_service"}
@@ -23,6 +24,7 @@ class PromptAdequacyGate:
     missing: list[str]
     clarification_questions: list[str]
     supported_scope: list[str]
+    boundary_classification: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -33,6 +35,7 @@ def evaluate_prompt_adequacy(prompt: str, *, root_input: dict[str, Any] | None =
     system_type = _system_type(prompt)
     checks = _checks(prompt, spec, system_type)
     missing = [name for name, passed in checks.items() if not passed]
+    boundary = classify_prompt_boundary(prompt, system_type=system_type, missing=missing).to_dict()
     status, reason = _status(spec, system_type, missing)
     return PromptAdequacyGate(
         artifact_type="PromptAdequacyGate",
@@ -45,6 +48,7 @@ def evaluate_prompt_adequacy(prompt: str, *, root_input: dict[str, Any] | None =
         missing=missing,
         clarification_questions=_questions(missing, spec),
         supported_scope=sorted(SUPPORTED_SYSTEM_TYPES),
+        boundary_classification=boundary,
     )
 
 

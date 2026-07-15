@@ -7,7 +7,9 @@ from runtime.contract_registry import ContractRegistry
 from runtime.l4_decision_table import decision_table_catalog, match_prompt_product_rule
 from runtime.l45_model_modes import resolve_model_quality_mode
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
+from runtime.l45_semantic_comparison import compare_l45_semantic_reports
 from runtime.l4_semantic_validation import validate_l45_semantic_proposal
+from runtime.prompt_boundary_classifier import classify_prompt_boundary
 from runtime.prompt_adequacy import evaluate_prompt_adequacy
 from runtime.registry import CapabilityRegistry
 from runtime.semantic_evidence_pack import build_semantic_evidence_pack
@@ -79,9 +81,33 @@ def test_l45_semantic_benchmark_passes_deterministic_cases(tmp_path: Path):
 
     assert report["artifact_type"] == "L45SemanticBenchmarkReport"
     assert report["status"] == "ok"
-    assert report["summary"]["case_count"] >= 4
+    assert report["summary"]["case_count"] >= 20
     assert Path(report["report_path"]).is_file()
     assert any(row["actual"]["replay_path"] for row in report["cases"])
+
+
+def test_prompt_boundary_classifier_marks_unsupported_surfaces():
+    result = classify_prompt_boundary(
+        "Создай мобильное приложение с push-уведомлениями и публикацией в store.",
+        system_type=None,
+        missing=["system_type_defined"],
+    ).to_dict()
+
+    assert result["artifact_type"] == "PromptBoundaryClassification"
+    assert result["boundary"] == "unsupported_product_surface"
+    assert "mobile_app" in result["unsupported_markers"]
+
+
+def test_l45_semantic_comparison_reports_no_clear_difference_for_same_reports(tmp_path: Path):
+    deterministic = run_l45_semantic_benchmark(root=tmp_path, write=False)
+    model = run_l45_semantic_benchmark(root=tmp_path, write=False, use_model=False, model_quality_mode="deterministic")
+
+    comparison = compare_l45_semantic_reports(deterministic_report=deterministic, model_report=model)
+
+    assert comparison["artifact_type"] == "L45SemanticComparisonReport"
+    assert comparison["status"] == "ok"
+    assert comparison["summary"]["case_count"] == deterministic["summary"]["case_count"]
+    assert comparison["summary"]["deterministic_better"] == 0
 
 
 def test_contract_registry_knows_l45_loop_artifacts():
@@ -120,6 +146,25 @@ def test_contract_registry_knows_l45_loop_artifacts():
             "model_quality_mode": "deterministic",
             "summary": {},
             "cases": [],
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L45SemanticComparisonReport",
+            "status": "ok",
+            "summary": {},
+            "cases": [],
+            "interpretation": {},
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "PromptBoundaryClassification",
+            "status": "ok",
+            "boundary": "bounded_supported_class",
+            "confidence": 0.9,
+            "reasons": [],
+            "recommended_action": "route_to_l4_gate",
         }
     )
     contracts.validate_artifact(decision_table_catalog())

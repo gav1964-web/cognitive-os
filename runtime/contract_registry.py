@@ -111,10 +111,20 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "evaluation"],
         "required_fields": ["artifact_type", "status", "model_quality_mode", "summary", "cases"],
     },
+    "L45SemanticComparisonReport": {
+        "producer": "l45_semantic_comparison",
+        "consumers": ["human", "evaluation"],
+        "required_fields": ["artifact_type", "status", "summary", "cases", "interpretation"],
+    },
     "L4DecisionTable": {
         "producer": "l4_decision_table",
         "consumers": ["cognitive_control_plane", "human"],
         "required_fields": ["artifact_type", "status", "rule_count", "rules", "principle"],
+    },
+    "PromptBoundaryClassification": {
+        "producer": "prompt_boundary_classifier",
+        "consumers": ["prompt_adequacy", "cognitive_control_plane", "human"],
+        "required_fields": ["artifact_type", "status", "boundary", "confidence", "reasons", "recommended_action"],
     },
 }
 
