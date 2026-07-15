@@ -149,6 +149,8 @@ def _select_case(prompt: str) -> str | None:
         return "fastapi_csv_aggregator"
     if ("text" in lower or "текст" in lower) and ("stats" in lower or "стат" in lower or "word" in lower or "слов" in lower):
         return "text_stats_cli"
+    if "csv" in lower and ("sort" in lower or "сорт" in lower):
+        return "csv_sort_cli"
     if "jsonl" in lower and ("error" in lower or "лог" in lower or "log" in lower):
         return "json_log_filter_cli"
     if "дублик" in lower or "duplicate" in lower:

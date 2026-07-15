@@ -217,6 +217,7 @@ Current deterministic package classes include:
 
 - JSONL log-filter CLI utility;
 - text statistics CLI utility;
+- CSV sort CLI utility;
 - FastAPI CSV aggregation service;
 - FastAPI in-memory key/value CRUD service.
 
@@ -594,7 +595,7 @@ CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
 
 The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
 
-In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract. For example, a bounded but unsupported Stage 2 prompt such as a CSV sort CLI produces a `new_template_candidate` proposal and a `Stage2TemplateBacklogItem`. That backlog item requires human/engineering review before any deterministic template is added; it is not an automatic generator.
+In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal is validated before it can return to L4.0. For example, the CSV sort CLI moved through this path from backlog candidate to deterministic Stage 2 template through `Stage2TemplateAdmissionResult`; future unsupported bounded prompts still stop at proposal/backlog until a human or engineer admits a template.
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

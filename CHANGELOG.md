@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Promoted `csv_sort_cli` from L4.5 template backlog candidate to admitted deterministic Stage 2 template with project-scoped tests.
+- Added Stage 2 template admission gate and optional model-backed L4.5 semantic proposal mode with deterministic fallback.
 - Added deterministic L4.5 semantic runner, `SemanticHypothesisProposal` validation, and Stage 2 template backlog items for bounded unsupported prompts.
 - Added explicit L4.5 `SemanticHypothesisRequest` contracts for bounded semantic escalation from L4.0 back into deterministic gates.
 - Routed Stage 2 prompt-to-product through L4.0 `CognitiveControlPlaneDecision`, so `PromptAdequacyGate` is now an API input to deterministic build/clarify/stop transitions.

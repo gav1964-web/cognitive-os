@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
+from runtime.local_inference import LocalInferenceConfig
 from runtime.semantic_reasoner import (
     build_semantic_hypothesis_request,
     build_stage2_template_backlog_item,
@@ -166,3 +169,51 @@ def test_semantic_reasoner_blocks_invalid_or_forbidden_proposal():
 
     assert validation["status"] == "blocked"
     assert any(item.startswith("forbidden_actions_requested") for item in validation["violations"])
+
+
+def test_semantic_reasoner_can_use_model_backed_proposal():
+    request = {
+        "artifact_type": "SemanticHypothesisRequest",
+        "layer": "L4.5",
+        "source_decision": {"mode": "prompt_to_product"},
+        "trigger_reasons": ["no_supported_package_template"],
+        "allowed_hypothesis_types": ["new_template_candidate"],
+        "output_contract": {
+            "required_fields": [
+                "hypothesis_type",
+                "proposal",
+                "confidence",
+                "evidence_refs",
+                "risks",
+                "return_to_gate",
+            ],
+        },
+        "forbidden_actions": ["build_package"],
+    }
+    model_payload = {
+        "hypothesis_type": "new_template_candidate",
+        "proposal": {
+            "template_id": "csv_sort_cli",
+            "system_type": "cli",
+            "purpose": "Sort CSV rows",
+            "acceptance_focus": ["sorts rows"],
+            "actions": ["record_backlog_item"],
+        },
+        "confidence": 0.8,
+        "evidence_refs": ["model:evidence"],
+        "risks": ["requires review"],
+        "return_to_gate": True,
+    }
+
+    with patch("runtime.semantic_reasoner.call_json_chat", return_value=model_payload) as mocked:
+        proposal = run_semantic_reasoner(
+            request=request,
+            use_model=True,
+            config=LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="GigaChat-Pro"),
+        )
+
+    assert mocked.called
+    assert proposal["status"] == "ok"
+    assert proposal["hypothesis_type"] == "new_template_candidate"
+    assert proposal["hardening"]["raw_model_output_used"] is True
+    assert proposal["validation"]["status"] == "ok"

@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+
 
 def build_semantic_hypothesis_request(
     *,
@@ -63,9 +65,28 @@ def run_semantic_reasoner(
     *,
     request: dict[str, Any],
     proposal_provider: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    config: LocalInferenceConfig | None = None,
+    use_model: bool = False,
 ) -> dict[str, Any]:
-    raw_proposal = proposal_provider(request) if proposal_provider is not None else _deterministic_proposal(request)
+    raw_proposal: dict[str, Any]
+    model_error: str | None = None
+    model_used = False
+    if proposal_provider is not None:
+        raw_proposal = proposal_provider(request)
+    elif use_model:
+        try:
+            raw_proposal = _model_proposal(request, config=config)
+            model_used = True
+        except LocalInferenceError as exc:
+            raw_proposal = _deterministic_proposal(request)
+            model_error = str(exc)
+    else:
+        raw_proposal = _deterministic_proposal(request)
     proposal = _harden_proposal(request, raw_proposal)
+    proposal["hardening"]["raw_model_output_used"] = model_used
+    if model_error is not None:
+        proposal["hardening"]["model_error"] = model_error
+        proposal["hardening"]["fallback"] = "deterministic_proposal"
     validation = validate_semantic_hypothesis_proposal(request=request, proposal=proposal)
     if validation["status"] != "ok":
         return {
@@ -174,6 +195,35 @@ def _deterministic_proposal(request: dict[str, Any]) -> dict[str, Any]:
     if "semantic_rework_after_contracts_passed" in reasons:
         return _rework_target(request)
     return _knowledge_gap(request)
+
+
+def _model_proposal(request: dict[str, Any], *, config: LocalInferenceConfig | None) -> dict[str, Any]:
+    result = call_json_chat(_messages(request), config=config)
+    if not isinstance(result, dict):
+        raise LocalInferenceError("L4.5 model proposal must be a JSON object")
+    return result
+
+
+def _messages(request: dict[str, Any]) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are Cognitive OS L4.5 Semantic Reasoner. Return only JSON that matches "
+                "the requested SemanticHypothesisProposal contract. You may propose hypotheses, "
+                "but you must not execute, build packages, edit source, mutate registries, promote "
+                "capabilities, or bypass gates."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                "Build a bounded semantic hypothesis proposal for this request. "
+                "Use only allowed_hypothesis_types and respect forbidden_actions.\n"
+                f"{request}"
+            ),
+        },
+    ]
 
 
 def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, Any]:

@@ -7,6 +7,7 @@ from runtime.prompt_adequacy import evaluate_prompt_adequacy
 from runtime.greenfield_scaffold import create_greenfield_scaffold, run_project_verification
 from runtime.greenfield_templates import acceptance_covered
 from runtime.programmer_project_review import review_programmer_project
+from runtime.stage2_template_admission import run_stage2_template_admission
 from runtime.stage2_debug_loop import run_stage2_debug_loop
 from runtime.verified_system_package import build_verified_system_package
 
@@ -29,6 +30,10 @@ FASTAPI_KV_PROMPT = (
     "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, "
     "хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, "
     "README, тесты и команду запуска."
+)
+CSV_SORT_PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, "
+    "сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
 )
 
 
@@ -132,13 +137,45 @@ def test_verified_system_package_builds_fastapi_kv_store(tmp_path: Path):
     assert (Path(report["project_dir"]) / "src" / "kv_store_service" / "store.py").is_file()
 
 
+def test_verified_system_package_builds_csv_sort_cli_after_template_admission(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=CSV_SORT_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert report["tests"]["missing_acceptance"] == []
+    assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is False
+    assert (Path(report["project_dir"]) / "src" / "csv_sort" / "sorter.py").is_file()
+
+
+def test_stage2_template_admission_accepts_csv_sort_cli(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    result = run_stage2_template_admission(
+        root=tmp_path,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        case_name="csv_sort_cli",
+        write=True,
+    )
+
+    assert result["artifact_type"] == "Stage2TemplateAdmissionResult"
+    assert result["status"] == "admitted"
+    assert result["blockers"] == []
+    assert result["invariants"]["admission_does_not_promote_runtime"] is True
+    assert Path(result["report_path"]).is_file()
+
+
 def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_path: Path):
     root = Path(__file__).resolve().parents[2]
     report = build_verified_system_package(
         root=tmp_path,
         prompt=(
             "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, "
-            "сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
+            "нормализует значения в колонке name, сохраняет CSV-файл, имеет README и тесты."
         ),
         curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
         write=False,
@@ -153,7 +190,7 @@ def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_pat
     assert report["semantic_hypothesis_proposal"]["artifact_type"] == "SemanticHypothesisProposal"
     assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "new_template_candidate"
     assert report["stage2_template_backlog_item"]["artifact_type"] == "Stage2TemplateBacklogItem"
-    assert report["stage2_template_backlog_item"]["template_id"] == "csv_sort_cli"
+    assert report["stage2_template_backlog_item"]["template_id"] == "new_stage2_cli_template"
     assert report["stage2_template_backlog_item"]["requires_human_review"] is True
 
 

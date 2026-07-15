@@ -86,6 +86,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "engineer", "stage2_template_curriculum"],
         "required_fields": ["artifact_type", "status", "template_id", "purpose", "requires_human_review", "next_step"],
     },
+    "Stage2TemplateAdmissionResult": {
+        "producer": "stage2_template_admission",
+        "consumers": ["human", "engineer", "verified_system_package"],
+        "required_fields": ["artifact_type", "status", "case", "blockers", "invariants"],
+    },
 }
 
 

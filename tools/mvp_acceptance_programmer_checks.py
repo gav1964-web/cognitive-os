@@ -68,6 +68,21 @@ def verified_system_package_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     return ok, f"status={payload.get('status')}, gate={gate.get('status')}, decision={decision.get('decision')}"
 
 
+def stage2_template_admission_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
+    payload = ctx["payload"]
+    invariants = dict(payload.get("invariants", {})) if isinstance(payload, dict) else {}
+    ok = (
+        ctx["returncode"] == 0
+        and payload.get("artifact_type") == "Stage2TemplateAdmissionResult"
+        and payload.get("status") == "admitted"
+        and payload.get("blockers") == []
+        and invariants.get("source_tree_changes") is False
+        and invariants.get("registry_changes") is False
+        and invariants.get("admission_does_not_promote_runtime") is True
+    )
+    return ok, f"case={payload.get('case')}, status={payload.get('status')}, blockers={payload.get('blockers')}"
+
+
 def stage2_debug_loop_probe_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
     payload = ctx["payload"]
     loop = dict(payload.get("debug_loop", {})) if isinstance(payload, dict) else {}

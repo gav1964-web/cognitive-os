@@ -103,6 +103,15 @@ def test_contract_registry_validates_artifact_api(registry):
             "next_step": "review",
         }
     )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "Stage2TemplateAdmissionResult",
+            "status": "admitted",
+            "case": "csv_sort_cli",
+            "blockers": [],
+            "invariants": {"admission_does_not_promote_runtime": True},
+        }
+    )
 
 
 def test_contract_registry_rejects_incomplete_artifact_api(registry):
