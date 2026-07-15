@@ -189,6 +189,10 @@ def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_pat
     assert report["semantic_hypothesis_request"]["return_path"]["target_layer"] == "L4.0"
     assert report["semantic_hypothesis_proposal"]["artifact_type"] == "SemanticHypothesisProposal"
     assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "new_template_candidate"
+    assert report["l4_semantic_validation"]["artifact_type"] == "L4SemanticValidationResult"
+    assert report["l4_semantic_validation"]["status"] == "accepted"
+    assert report["l4_semantic_validation"]["accepted_action"] == "record_template_backlog"
+    assert report["l4_semantic_validation"]["decision"]["backlog_allowed"] is True
     assert report["stage2_template_backlog_item"]["artifact_type"] == "Stage2TemplateBacklogItem"
     assert report["stage2_template_backlog_item"]["template_id"] == "new_stage2_cli_template"
     assert report["stage2_template_backlog_item"]["requires_human_review"] is True

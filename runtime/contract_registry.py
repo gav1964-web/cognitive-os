@@ -81,6 +81,11 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["cognitive_control_plane", "human"],
         "required_fields": ["artifact_type", "layer", "hypothesis_type", "proposal", "confidence", "evidence_refs", "risks", "return_to_gate"],
     },
+    "L4SemanticValidationResult": {
+        "producer": "cognitive_control_plane",
+        "consumers": ["verified_system_package", "human", "stage2_template_curriculum"],
+        "required_fields": ["artifact_type", "layer", "status", "source_request", "source_proposal", "contract_validation", "quality", "accepted_action", "decision"],
+    },
     "Stage2TemplateBacklogItem": {
         "producer": "semantic_reasoner",
         "consumers": ["human", "engineer", "stage2_template_curriculum"],

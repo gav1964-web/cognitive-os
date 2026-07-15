@@ -589,13 +589,14 @@ L4.5 is represented as a bounded contract, not as an implicit model call. When L
 CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
 -> SemanticHypothesisRequest
 -> SemanticHypothesisProposal
--> optional Stage2TemplateBacklogItem
--> back to L4.0 validation and gates
+-> L4SemanticValidationResult
+-> optional Stage2TemplateBacklogItem / clarification / stop / rework
+-> deterministic L4.0 gates
 ```
 
 The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
 
-In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal is validated before it can return to L4.0. For example, the CSV sort CLI moved through this path from backlog candidate to deterministic Stage 2 template through `Stage2TemplateAdmissionResult`; future unsupported bounded prompts still stop at proposal/backlog until a human or engineer admits a template.
+In the current implementation, `runtime/semantic_reasoner.py` provides a deterministic runner for this contract and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal then passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult`. Stage 2 may create `Stage2TemplateBacklogItem` only when L4.0 accepts the proposal and routes it to `record_template_backlog`; otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. For example, the CSV sort CLI moved through this path from backlog candidate to deterministic Stage 2 template through `Stage2TemplateAdmissionResult`; future unsupported bounded prompts still stop at validated proposal/backlog until a human or engineer admits a template.
 
 If a deterministic schema, planner, or conformance path cannot produce a valid result, the system may ask an LLM for a bounded proposal. That proposal must re-enter the same validation path: Pipeline DSL validation for L3.5, hardened evidence checks for L4 interpretation, executable acceptance obligations for Tester, and conformance checks for Reviewer. A failed deterministic path is a reason to request a hypothesis, not a reason to bypass contracts.
 

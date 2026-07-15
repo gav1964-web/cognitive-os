@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .cognitive_control_plane import run_prompt_product_control_plane
+from .l4_semantic_validation import validate_l45_semantic_proposal
 from .programmer_project_review import run_programmer_project_review
 from .prompt_adequacy import evaluate_prompt_adequacy
 from .semantic_reasoner import (
@@ -38,6 +39,17 @@ def build_verified_system_package(
             context={"prompt": prompt, "supported_template": case_name},
         )
         semantic_proposal = run_semantic_reasoner(request=semantic_request) if semantic_request is not None else None
+        semantic_validation = (
+            validate_l45_semantic_proposal(request=semantic_request, proposal=semantic_proposal)
+            if semantic_request is not None and semantic_proposal is not None
+            else None
+        )
+        stage2_template_backlog_item = (
+            build_stage2_template_backlog_item(semantic_proposal or {})
+            if semantic_validation is not None
+            and semantic_validation["accepted_action"] == "record_template_backlog"
+            else None
+        )
         report = _blocked_report(
             prompt,
             gate,
@@ -45,7 +57,8 @@ def build_verified_system_package(
             control_plane,
             semantic_request,
             semantic_proposal,
-            build_stage2_template_backlog_item(semantic_proposal or {}),
+            semantic_validation,
+            stage2_template_backlog_item,
         )
     else:
         review_run = run_programmer_project_review(
@@ -113,6 +126,7 @@ def _blocked_report(
     control_plane: dict[str, Any],
     semantic_hypothesis_request: dict[str, Any] | None,
     semantic_hypothesis_proposal: dict[str, Any] | None,
+    l4_semantic_validation: dict[str, Any] | None,
     stage2_template_backlog_item: dict[str, Any] | None,
 ) -> dict[str, Any]:
     report = {
@@ -136,6 +150,8 @@ def _blocked_report(
         report["semantic_hypothesis_request"] = semantic_hypothesis_request
     if semantic_hypothesis_proposal is not None:
         report["semantic_hypothesis_proposal"] = semantic_hypothesis_proposal
+    if l4_semantic_validation is not None:
+        report["l4_semantic_validation"] = l4_semantic_validation
     if stage2_template_backlog_item is not None:
         report["stage2_template_backlog_item"] = stage2_template_backlog_item
     return report

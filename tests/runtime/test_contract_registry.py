@@ -95,6 +95,19 @@ def test_contract_registry_validates_artifact_api(registry):
     )
     contracts.validate_artifact(
         {
+            "artifact_type": "L4SemanticValidationResult",
+            "layer": "L4.0",
+            "status": "accepted",
+            "source_request": {"artifact_type": "SemanticHypothesisRequest"},
+            "source_proposal": {"artifact_type": "SemanticHypothesisProposal"},
+            "contract_validation": {"status": "ok"},
+            "quality": {"score": 1.0, "checks": [], "failed_codes": []},
+            "accepted_action": "record_template_backlog",
+            "decision": {"next_action": "record_template_backlog"},
+        }
+    )
+    contracts.validate_artifact(
+        {
             "artifact_type": "Stage2TemplateBacklogItem",
             "status": "candidate",
             "template_id": "csv_sort_cli",

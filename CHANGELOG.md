@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `L4SemanticValidationResult` as the explicit L4.0 gate for L4.5 proposals; Stage 2 template backlog items are now created only after accepted L4 validation.
 - Promoted `csv_sort_cli` from L4.5 template backlog candidate to admitted deterministic Stage 2 template with project-scoped tests.
 - Added Stage 2 template admission gate and optional model-backed L4.5 semantic proposal mode with deterministic fallback.
 - Added deterministic L4.5 semantic runner, `SemanticHypothesisProposal` validation, and Stage 2 template backlog items for bounded unsupported prompts.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
+from runtime.l4_semantic_validation import validate_l45_semantic_proposal
 from runtime.local_inference import LocalInferenceConfig
 from runtime.semantic_reasoner import (
     build_semantic_hypothesis_request,
@@ -128,12 +129,16 @@ def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():
     assert request["return_path"]["target_layer"] == "L4.0"
 
     proposal = run_semantic_reasoner(request=request)
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
     backlog = build_stage2_template_backlog_item(proposal)
 
     assert proposal["artifact_type"] == "SemanticHypothesisProposal"
     assert proposal["status"] == "ok"
     assert proposal["hypothesis_type"] == "new_template_candidate"
     assert proposal["return_to_gate"] is True
+    assert validation["artifact_type"] == "L4SemanticValidationResult"
+    assert validation["status"] == "accepted"
+    assert validation["accepted_action"] == "record_template_backlog"
     assert backlog is not None
     assert backlog["artifact_type"] == "Stage2TemplateBacklogItem"
     assert backlog["requires_human_review"] is True
@@ -169,6 +174,45 @@ def test_semantic_reasoner_blocks_invalid_or_forbidden_proposal():
 
     assert validation["status"] == "blocked"
     assert any(item.startswith("forbidden_actions_requested") for item in validation["violations"])
+
+
+def test_l4_semantic_validation_blocks_l45_proposal_with_forbidden_action():
+    request = {
+        "artifact_type": "SemanticHypothesisRequest",
+        "layer": "L4.5",
+        "trigger_reasons": ["no_supported_package_template"],
+        "allowed_hypothesis_types": ["new_template_candidate"],
+        "output_contract": {
+            "required_fields": [
+                "hypothesis_type",
+                "proposal",
+                "confidence",
+                "evidence_refs",
+                "risks",
+                "return_to_gate",
+            ],
+        },
+        "forbidden_actions": ["build_package"],
+        "return_path": {"target_layer": "L4.0"},
+    }
+    proposal = {
+        "artifact_type": "SemanticHypothesisProposal",
+        "layer": "L4.5",
+        "status": "ok",
+        "hypothesis_type": "new_template_candidate",
+        "proposal": {"template_id": "unsafe", "actions": ["build_package"]},
+        "confidence": 0.8,
+        "evidence_refs": ["test"],
+        "risks": ["unsafe action"],
+        "return_to_gate": True,
+    }
+
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+
+    assert validation["status"] == "blocked"
+    assert validation["accepted_action"] == "blocked"
+    assert "contract_valid" in validation["quality"]["failed_codes"]
+    assert validation["forbidden_actions_observed"] == ["build_package"]
 
 
 def test_semantic_reasoner_can_use_model_backed_proposal():

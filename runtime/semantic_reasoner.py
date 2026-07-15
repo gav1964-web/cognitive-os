@@ -55,7 +55,7 @@ def build_semantic_hypothesis_request(
         ],
         "return_path": {
             "target_layer": "L4.0",
-            "required_step": "validate_semantic_hypothesis_then_rerun_deterministic_gate",
+            "required_step": "emit_l4_semantic_validation_result_then_rerun_deterministic_gate",
         },
         "principle": "L4.5 may propose bounded hypotheses; L4.0 gates decide whether anything can proceed",
     }
@@ -248,6 +248,16 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
             "schema_normalized": True,
         },
     }
+    if proposal["hypothesis_type"] == "clarification_question" and not proposal["proposal"]:
+        proposal["proposal"] = {
+            "question": request.get("question"),
+            "actions": ["ask_clarification"],
+        }
+    elif proposal["hypothesis_type"] == "unsupported_reason" and not proposal["proposal"]:
+        proposal["proposal"] = {
+            "reason": "L4.5 could not map the request into a supported bounded route.",
+            "actions": ["stop_unsupported"],
+        }
     forbidden = set(str(item) for item in request.get("forbidden_actions", []))
     actions = list(proposal["proposal"].get("actions", []))
     safe_actions = [str(item) for item in actions if str(item) not in forbidden]
