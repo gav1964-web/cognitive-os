@@ -113,12 +113,13 @@ The role artifact pipeline now calls one generic dispatcher:
 
 Concrete builder selection lives in `config/artifact_builders.json`.
 
-Current builder ids still point to legacy role-specific implementation modules.
-This is an intermediate compatibility layer. The target state is for those
-builder ids to point to generic artifact builders selected by schema, not
-handwritten role modules.
+Builder ids point to generic artifact builders, not role modules:
 
-`review_findings_v1` is the first migrated builder. It points to
-`runtime.review_findings_builder:build_review_findings`, a role-neutral
-ReviewFindings artifact builder. `runtime.role_reviewer` remains only as a
-compatibility wrapper while legacy imports are removed.
+- `architecture_decision_v1` -> `runtime.architecture_decision_builder`;
+- `technical_spec_v1` -> `runtime.technical_spec_builder`;
+- `implementation_plan_v1` -> `runtime.implementation_plan_builder`;
+- `test_plan_v1` -> `runtime.test_plan_builder`;
+- `review_findings_v1` -> `runtime.review_findings_builder`.
+
+Legacy `runtime.role_*` modules remain only as compatibility wrappers while old
+imports and probes are removed.

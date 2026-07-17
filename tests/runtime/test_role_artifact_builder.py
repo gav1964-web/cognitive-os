@@ -36,3 +36,9 @@ def test_review_findings_builder_is_not_role_module():
     builders = load_artifact_builders()
 
     assert builders["review_findings_v1"]["callable"] == "runtime.review_findings_builder:build_review_findings"
+
+
+def test_no_configured_builder_uses_role_module():
+    builders = load_artifact_builders()
+
+    assert all(".role_" not in str(config["callable"]) for config in builders.values())
