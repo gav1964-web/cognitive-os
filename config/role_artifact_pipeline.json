@@ -4,9 +4,10 @@
     {
       "step_id": "architecture_decision",
       "role_id": "architect",
-      "builder": "runtime.role_architect:run_architect_skill",
+      "builder": "runtime.role_artifact_builder:build_configured_artifact",
       "output_key": "architecture_decision",
       "bindings": {
+        "builder_id": "architecture_decision_v1",
         "goal": "$goal",
         "project_report": "$project_report",
         "advisory_config": "$architect_advisory_config"
@@ -15,27 +16,30 @@
     {
       "step_id": "technical_spec",
       "role_id": "spec_writer",
-      "builder": "runtime.role_spec_writer:run_spec_writer_skill",
+      "builder": "runtime.role_artifact_builder:build_configured_artifact",
       "output_key": "technical_spec",
       "bindings": {
+        "builder_id": "technical_spec_v1",
         "architecture_decision": "$artifacts.architecture_decision"
       }
     },
     {
       "step_id": "implementation_plan",
       "role_id": "implementer",
-      "builder": "runtime.role_implementer:run_implementer_skill",
+      "builder": "runtime.role_artifact_builder:build_configured_artifact",
       "output_key": "implementation_plan",
       "bindings": {
+        "builder_id": "implementation_plan_v1",
         "technical_spec": "$artifacts.technical_spec"
       }
     },
     {
       "step_id": "test_plan",
       "role_id": "tester",
-      "builder": "runtime.role_tester:run_tester_skill",
+      "builder": "runtime.role_artifact_builder:build_configured_artifact",
       "output_key": "test_plan",
       "bindings": {
+        "builder_id": "test_plan_v1",
         "technical_spec": "$artifacts.technical_spec",
         "implementation_plan": "$artifacts.implementation_plan"
       }
@@ -43,9 +47,10 @@
     {
       "step_id": "review_findings",
       "role_id": "reviewer",
-      "builder": "runtime.role_reviewer:run_reviewer_skill",
+      "builder": "runtime.role_artifact_builder:build_configured_artifact",
       "output_key": "review_findings",
       "bindings": {
+        "builder_id": "review_findings_v1",
         "technical_spec": "$artifacts.technical_spec",
         "implementation_plan": "$artifacts.implementation_plan",
         "test_plan": "$artifacts.test_plan",

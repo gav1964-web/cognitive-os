@@ -47,7 +47,9 @@ The runtime should not contain:
 - `runtime/role_questionnaire_sections.py` interprets role question schemas.
 - `runtime/role_knowledge.py` reads role ids and KB defaults from external config.
 - `config/role_artifact_pipeline.json` declares the artifact-builder sequence.
+- `config/artifact_builders.json` maps builder ids to callable implementations and expected contracts.
 - `runtime/role_artifact_interpreter.py` interprets artifact-builder steps.
+- `runtime/role_artifact_builder.py` dispatches configured builder ids.
 
 ## RoleDefinition v1
 
@@ -97,7 +99,7 @@ Role artifact production is also data-driven.
 
 - `step_id`;
 - `role_id`;
-- `builder`;
+- generic `builder`;
 - `output_key`;
 - `bindings`.
 
@@ -105,6 +107,13 @@ The runtime does not know that a specific pipeline must be Architect ->
 SpecWriter -> Implementer -> Tester -> Reviewer. It loads a sequence and
 interprets it.
 
-Current builders still point to legacy role-specific modules. This is an
-intermediate compatibility layer. The target state is for those builders to be
-generic artifact builders selected by schema, not handwritten role modules.
+The role artifact pipeline now calls one generic dispatcher:
+
+`runtime.role_artifact_builder:build_configured_artifact`
+
+Concrete builder selection lives in `config/artifact_builders.json`.
+
+Current builder ids still point to legacy role-specific implementation modules.
+This is an intermediate compatibility layer. The target state is for those
+builder ids to point to generic artifact builders selected by schema, not
+handwritten role modules.

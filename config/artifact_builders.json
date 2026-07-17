@@ -1,0 +1,30 @@
+{
+  "schema_version": "artifact_builders.v1",
+  "builders": {
+    "architecture_decision_v1": {
+      "callable": "runtime.role_architect:run_architect_skill",
+      "artifact_type": "ArchitectureDecisionRecord",
+      "role_id": "architect"
+    },
+    "technical_spec_v1": {
+      "callable": "runtime.role_spec_writer:run_spec_writer_skill",
+      "artifact_type": "TechnicalSpec",
+      "role_id": "spec_writer"
+    },
+    "implementation_plan_v1": {
+      "callable": "runtime.role_implementer:run_implementer_skill",
+      "artifact_type": "ImplementationPlan",
+      "role_id": "implementer"
+    },
+    "test_plan_v1": {
+      "callable": "runtime.role_tester:run_tester_skill",
+      "artifact_type": "TestPlan",
+      "role_id": "tester"
+    },
+    "review_findings_v1": {
+      "callable": "runtime.role_reviewer:run_reviewer_skill",
+      "artifact_type": "ReviewFindings",
+      "role_id": "reviewer"
+    }
+  }
+}
