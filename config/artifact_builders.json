@@ -22,9 +22,12 @@
       "role_id": "tester"
     },
     "review_findings_v1": {
-      "callable": "runtime.role_reviewer:run_reviewer_skill",
+      "callable": "runtime.review_findings_builder:build_review_findings",
       "artifact_type": "ReviewFindings",
-      "role_id": "reviewer"
+      "role_id": "reviewer",
+      "kwargs": {
+        "role_id": "reviewer"
+      }
     }
   }
 }

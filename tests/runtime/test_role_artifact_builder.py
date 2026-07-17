@@ -30,3 +30,9 @@ def test_role_pipeline_uses_generic_builder_dispatcher():
         step["builder"] for step in pipeline["steps"]
     } == {"runtime.role_artifact_builder:build_configured_artifact"}
     assert all("builder_id" in step["bindings"] for step in pipeline["steps"])
+
+
+def test_review_findings_builder_is_not_role_module():
+    builders = load_artifact_builders()
+
+    assert builders["review_findings_v1"]["callable"] == "runtime.review_findings_builder:build_review_findings"

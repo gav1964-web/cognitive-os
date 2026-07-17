@@ -43,7 +43,8 @@ def build_configured_artifact(*, builder_id: str, **kwargs: Any) -> dict[str, An
         raise ArtifactBuilderError(f"unknown artifact builder: {builder_id}")
     config = builders[builder_id]
     function = _load_callable(str(config["callable"]))
-    artifact = function(**kwargs)
+    configured_kwargs = dict(config.get("kwargs") or {})
+    artifact = function(**{**configured_kwargs, **kwargs})
     if not isinstance(artifact, dict):
         raise ArtifactBuilderError(f"builder returned non-object artifact: {builder_id}")
     artifact_type = str(config["artifact_type"])

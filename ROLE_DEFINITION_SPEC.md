@@ -117,3 +117,8 @@ Current builder ids still point to legacy role-specific implementation modules.
 This is an intermediate compatibility layer. The target state is for those
 builder ids to point to generic artifact builders selected by schema, not
 handwritten role modules.
+
+`review_findings_v1` is the first migrated builder. It points to
+`runtime.review_findings_builder:build_review_findings`, a role-neutral
+ReviewFindings artifact builder. `runtime.role_reviewer` remains only as a
+compatibility wrapper while legacy imports are removed.
