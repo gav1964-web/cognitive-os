@@ -121,5 +121,8 @@ Builder ids point to generic artifact builders, not role modules:
 - `test_plan_v1` -> `runtime.test_plan_builder`;
 - `review_findings_v1` -> `runtime.review_findings_builder`.
 
-Legacy `runtime.role_*` modules remain only as compatibility wrappers while old
-imports and probes are removed.
+Legacy role-specific wrapper modules such as `runtime.role_architect`,
+`runtime.role_spec_writer`, `runtime.role_implementer`, `runtime.role_tester`
+and `runtime.role_reviewer` have been removed. Compatibility imports must go
+through `runtime.role_skills`, which is a schema-backed facade over the generic
+artifact dispatcher, not a role implementation path.

@@ -121,7 +121,7 @@ def _test_strategy(
 
 def _acceptance_tests(acceptance: list[dict[str, Any]], target: str) -> list[dict[str, Any]]:
     tests = []
-    for index, item in enumerate(acceptance[:10], start=1):
+    for index, item in enumerate(acceptance, start=1):
         tests.append(
             {
                 "id": f"TEST-AC-{index:03d}",
@@ -129,6 +129,7 @@ def _acceptance_tests(acceptance: list[dict[str, Any]], target: str) -> list[dic
                 "acceptance_id": item.get("id"),
                 "criterion": item.get("criterion"),
                 "method": item.get("verification") or "pytest or review checklist",
+                "execution_mode": "executable_or_manual_review" if index <= 10 else "review_checklist",
             }
         )
     return tests

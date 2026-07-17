@@ -298,6 +298,34 @@ def test_tester_skill_returns_test_plan():
     assert test_plan["forbidden_actions_observed"] == []
 
 
+def test_tester_skill_covers_all_acceptance_criteria_but_bounds_executable_obligations():
+    project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
+    report = analyze_project(project_dir)["project_map_report"]
+    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
+    spec = run_spec_writer_skill(architecture_decision=adr)
+    for index in range(20):
+        spec["acceptance_criteria"].append(
+            {
+                "id": f"AC-EXTRA-{index + 1:03d}",
+                "criterion": f"Extra source-backed acceptance criterion {index + 1}",
+                "verification": "explicit review checklist",
+                "source": f"extra.py:source_{index + 1}",
+            }
+        )
+    implementation = run_implementer_skill(technical_spec=spec)
+
+    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+
+    spec_ids = {row["id"] for row in spec["acceptance_criteria"]}
+    tested_ids = {row["acceptance_id"] for row in test_plan["acceptance_tests"]}
+    executable_positive = [
+        row for row in test_plan["executable_acceptance"]["obligations"] if row.get("kind") == "positive_contract_case"
+    ]
+    assert spec_ids <= tested_ids
+    assert len(executable_positive) == 10
+    assert any(row["execution_mode"] == "review_checklist" for row in test_plan["acceptance_tests"])
+
+
 def test_reviewer_skill_returns_review_findings():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
