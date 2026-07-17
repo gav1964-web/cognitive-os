@@ -13,8 +13,10 @@ from .programmer_project_review import run_programmer_project_review
 from .prompt_adequacy import evaluate_prompt_adequacy
 from .semantic_evidence_pack import build_semantic_evidence_pack
 from .semantic_reasoner import (
+    build_developer_improvement_request,
     build_semantic_hypothesis_request,
     build_stage2_template_backlog_item,
+    build_successful_resolution_candidate,
     run_semantic_reasoner,
 )
 from .stage2_debug_loop import run_stage2_debug_loop
@@ -44,6 +46,8 @@ def build_verified_system_package(
                 "json_log_filter_cli",
                 "text_stats_cli",
                 "csv_sort_cli",
+                "ocr_image_cli",
+                "image_contents_cli",
                 "fastapi_csv_aggregator",
                 "fastapi_kv_store",
             ],
@@ -65,6 +69,18 @@ def build_verified_system_package(
             and semantic_validation["accepted_action"] == "record_template_backlog"
             else None
         )
+        successful_resolution_candidate = (
+            build_successful_resolution_candidate(semantic_proposal or {})
+            if semantic_validation is not None
+            and semantic_validation["accepted_action"] == "record_successful_resolution_candidate"
+            else None
+        )
+        developer_improvement_request = (
+            build_developer_improvement_request(semantic_proposal or {})
+            if semantic_validation is not None
+            and semantic_validation["accepted_action"] == "record_developer_improvement_request"
+            else None
+        )
         report = _blocked_report(
             prompt,
             gate,
@@ -75,6 +91,8 @@ def build_verified_system_package(
             semantic_proposal,
             semantic_validation,
             stage2_template_backlog_item,
+            successful_resolution_candidate,
+            developer_improvement_request,
         )
     else:
         review_run = run_programmer_project_review(
@@ -145,6 +163,8 @@ def _blocked_report(
     semantic_hypothesis_proposal: dict[str, Any] | None,
     l4_semantic_validation: dict[str, Any] | None,
     stage2_template_backlog_item: dict[str, Any] | None,
+    successful_resolution_candidate: dict[str, Any] | None,
+    developer_improvement_request: dict[str, Any] | None,
 ) -> dict[str, Any]:
     report = {
         "artifact_type": "VerifiedSystemPackage",
@@ -173,6 +193,10 @@ def _blocked_report(
         report["l4_semantic_validation"] = l4_semantic_validation
     if stage2_template_backlog_item is not None:
         report["stage2_template_backlog_item"] = stage2_template_backlog_item
+    if successful_resolution_candidate is not None:
+        report["successful_resolution_candidate"] = successful_resolution_candidate
+    if developer_improvement_request is not None:
+        report["developer_improvement_request"] = developer_improvement_request
     return report
 
 
@@ -186,6 +210,13 @@ def _select_case(prompt: str) -> str | None:
         return "text_stats_cli"
     if "csv" in lower and ("sort" in lower or "сорт" in lower):
         return "csv_sort_cli"
+    if ("ocr" in lower or "распозна" in lower) and ("image" in lower or "изображ" in lower or "картин" in lower or "png" in lower or "jpg" in lower):
+        return "ocr_image_cli"
+    if (
+        ("image" in lower or "picture" in lower or "photo" in lower or "изображ" in lower or "картин" in lower or "фото" in lower)
+        and ("content" in lower or "contents" in lower or "list" in lower or "перечисл" in lower or "содерж" in lower or "объект" in lower)
+    ):
+        return "image_contents_cli"
     if "jsonl" in lower and ("error" in lower or "лог" in lower or "log" in lower):
         return "json_log_filter_cli"
     if "дублик" in lower or "duplicate" in lower:

@@ -6,14 +6,12 @@ import ast
 from pathlib import Path
 from typing import Any
 
+from .domain_anchors import domain_flow_anchors
 from .insights import class_fields, function_error_profile, import_rows, project_insights
+from .path_priority import is_test_path, iter_python_files, path_priority
 
 
-EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
 HTTP_METHOD_DECORATORS = {"get", "post", "put", "delete", "patch", "options", "head"}
-LATE_DIRS = {"artifacts", "build", "dist", "docs", "examples", "generated", "scratch", "tests", "tools"}
-EARLY_DIRS = {"app", "apps", "lib", "packages", "src"}
-EARLY_FILES = {"app.py", "main.py", "server.py", "api.py", "__init__.py"}
 
 
 def run(payload: dict[str, object]) -> dict[str, object]:
@@ -28,10 +26,10 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     discovered_python_files = 0
     discovered_test_files = 0
     skipped = []
-    for path in _iter_python_files(root):
+    for path in iter_python_files(root):
         rel_path = path.relative_to(root).as_posix()
         discovered_python_files += 1
-        if _is_test_path(rel_path):
+        if is_test_path(rel_path):
             discovered_test_files += 1
         if len(files) >= max_files:
             skipped.append({"path": rel_path, "reason": "max_files_exceeded"})
@@ -46,7 +44,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
             skipped.append({"path": rel_path, "reason": "SyntaxError", "line": exc.lineno})
             continue
         summary = _summarize_file(tree, rel_path, size)
-        imports.update(summary.pop("imports"))
+        imports.update(summary.get("imports", []))
         import_details.extend(summary.pop("import_details"))
         routes.extend(summary.pop("routes"))
         all_functions.extend(summary.get("functions", []))
@@ -60,6 +58,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "imports": sorted(imports),
         "routes": routes,
         "central_nodes": _central_nodes(all_functions),
+        "domain_flow_anchors": domain_flow_anchors(all_functions),
         "wide_functions": _wide_functions(all_functions),
         "pure_transform_candidates": _pure_transform_candidates(all_functions),
         "contracts": _contracts(files),
@@ -98,7 +97,8 @@ def _summarize_file(tree: ast.AST, rel_path: str, size: int) -> dict[str, Any]:
                     "error_profile": function_error_profile(node),
                 }
             )
-            if _path_priority(rel_path) < 8: routes.extend(_route_rows(node, rel_path))
+            if path_priority(rel_path) < 8:
+                routes.extend(_route_rows(node, rel_path))
     for function in functions:
         function["path"] = rel_path
     return {
@@ -106,7 +106,7 @@ def _summarize_file(tree: ast.AST, rel_path: str, size: int) -> dict[str, Any]:
         "size_bytes": size,
         "classes": classes,
         "functions": functions,
-        "imports": imports,
+        "imports": sorted(imports),
         "import_details": imports_detail,
         "routes": routes,
     }
@@ -159,7 +159,10 @@ def _function_side_effects(node: ast.AST) -> list[str]:
     effects = set()
     for call in calls:
         lower = call.lower()
-        if lower in {"open", "print"} or lower.startswith(("path.write", "json.dump", "shutil.", "os.remove", "os.unlink")):
+        if (
+            lower in {"open", "print", "json.dump"}
+            or lower.startswith(("path.write", "shutil.", "os.remove", "os.unlink"))
+        ):
             effects.add("filesystem")
         if lower.startswith(("path.read", "json.load")):
             effects.add("filesystem_read")
@@ -220,8 +223,13 @@ def _expr_name(node: ast.AST) -> str:
 def _central_nodes(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ranked = sorted(
         functions,
-        key=lambda item: (len(item.get("calls", [])), item.get("loc", 0), item.get("path", ""), item.get("name", "")),
-        reverse=True,
+        key=lambda item: (
+            path_priority(str(item.get("path", ""))),
+            -len(item.get("calls", [])),
+            -int(item.get("loc", 0)),
+            str(item.get("path", "")),
+            str(item.get("name", "")),
+        ),
     )
     return [
         {
@@ -246,7 +254,15 @@ def _wide_functions(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "call_count": len(item.get("calls", [])),
             "side_effects": item.get("side_effects", []),
         }
-        for item in sorted(functions, key=lambda item: item.get("loc", 0), reverse=True)
+        for item in sorted(
+            functions,
+            key=lambda item: (
+                path_priority(str(item.get("path", ""))),
+                -int(item.get("loc", 0)),
+                str(item.get("path", "")),
+                str(item.get("name", "")),
+            ),
+        )
         if item.get("loc", 0) >= 80 or len(item.get("calls", [])) >= 18
     ][:12]
 
@@ -279,25 +295,20 @@ def _pure_transform_candidates(functions: list[dict[str, Any]]) -> list[dict[str
 
 
 def _candidate_priority(item: dict[str, Any]) -> tuple[int, int, str, str]:
-    return (_path_priority(str(item.get("path", ""))), 0, "", "")
+    path = str(item.get("path", ""))
+    name = str(item.get("name", ""))
+    return (path_priority(path), _symbol_extraction_priority(name), "", "")
 
-def _path_priority(path: str) -> int:
-    lowered = path.replace("\\", "/").lower()
-    parts = lowered.split("/")
-    name = parts[-1] if parts else lowered
-    if any(
-        part in {"tests", "test", "bench", "benchmarks", "ci_tools", "docs", "downstream", "examples", "failures-to-investigate", "integration", "scripts", "tasks", "tools"}
-        for part in parts
-    ):
-        return 9
-    helper_names = {"benchmark.py", "bench.py", "noxfile.py", "conftest.py", "testclient.py", "testing.py"}
-    if parts[:2] == ["packaging", "pep517_backend"] or name.endswith(("_benchmark.py", "_bench.py")) or name in helper_names:
-        return 8
-    if lowered.startswith("src/"):
+
+def _symbol_extraction_priority(name: str) -> int:
+    lowered = name.lower()
+    if any(token in lowered for token in ("build_key", "cache_key")):
         return 0
-    if lowered.startswith(("app/", "lib/", "packages/")) or "/" not in lowered and name in EARLY_FILES:
-        return 1
-    return 3
+    if lowered.startswith(("get_cached", "store_", "flush")):
+        return 7
+    if any(token in lowered for token in ("free_port", "listener_pid", "process_pid", "socket")):
+        return 8
+    return 4
 
 
 def _contracts(files: list[dict[str, Any]]) -> dict[str, Any]:
@@ -342,42 +353,6 @@ def _external_dependencies(imports: set[str]) -> dict[str, list[str]]:
         "concurrency": {"asyncio", "concurrent", "threading"},
     }
     return {name: sorted(imports & values) for name, values in categories.items() if imports & values}
-
-
-def _iter_python_files(root: Path):
-    stack = [root]
-    while stack:
-        current = stack.pop()
-        dirs = []
-        files = []
-        for item in current.iterdir():
-            if item.is_dir():
-                if item.name in EXCLUDED_DIRS or item.name.startswith("."):
-                    continue
-                dirs.append(item)
-            elif item.is_file() and item.suffix.lower() == ".py":
-                files.append(item)
-        for item in sorted(files, key=_traversal_key):
-            yield item
-        stack.extend(reversed(sorted(dirs, key=_traversal_key)))
-
-
-def _is_test_path(path: str) -> bool:
-    name = Path(path).name
-    return path.startswith("tests/") or "/tests/" in path or name.startswith("test_") or name.endswith("_test.py")
-
-
-def _traversal_key(path: Path) -> tuple[int, str]:
-    name = path.name.lower()
-    if path.is_dir():
-        if name in EARLY_DIRS:
-            return (0, name)
-        if name in LATE_DIRS:
-            return (9, name)
-        return (3, name)
-    if name in EARLY_FILES:
-        return (0, name)
-    return (3, name)
 
 
 def _resolve_scoped_root(value: str) -> Path:

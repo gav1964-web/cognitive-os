@@ -188,6 +188,54 @@ def test_project_map_report_infers_library_entrypoint_and_demotes_dev_context():
     assert readiness["minimal_extraction_plan"]["capabilities_to_extract"][0]["capability"] == "src/pkg/core.py:normalize"
 
 
+def test_project_map_report_uses_domain_flow_anchor_for_first_slice():
+    result = run(
+        {
+            "tree": {"root": "prefect", "counts": {"files": 3, "directories": 2, "truncated": False}},
+            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": [], "large_artifacts": [], "dependency_files": []},
+            "files": {"files": []},
+            "python_structure": {
+                "imports": [],
+                "routes": [],
+                "files": [
+                    {"path": "prefect/task_engine/runtime.py", "functions": []},
+                    {"path": "prefect/utils/helpers.py", "functions": []},
+                ],
+                "domain_flow_anchors": [
+                    {
+                        "path": "prefect/task_engine/runtime.py",
+                        "name": "run_task_engine",
+                        "line": 1,
+                        "loc": 40,
+                        "call_count": 8,
+                        "side_effects": [],
+                    }
+                ],
+                "central_nodes": [
+                    {
+                        "path": "prefect/utils/helpers.py",
+                        "name": "validate_key",
+                        "line": 1,
+                        "loc": 90,
+                        "call_count": 12,
+                        "side_effects": [],
+                    }
+                ],
+                "wide_functions": [],
+                "pure_transform_candidates": [],
+                "project_insights": {},
+                "contracts": {},
+                "external_dependencies": {},
+            },
+            "runtime_commands": {"commands": []},
+        }
+    )
+
+    capabilities = result["answers"]["6_runtime_extraction_readiness"]["minimal_extraction_plan"]["capabilities_to_extract"]
+    assert capabilities[0]["capability"] == "prefect/task_engine/runtime.py:run_task_engine"
+    assert capabilities[0]["candidate_level"] == "core_flow"
+
+
 def test_project_map_report_skips_non_purpose_doc_headings_for_main_task():
     result = run(
         {

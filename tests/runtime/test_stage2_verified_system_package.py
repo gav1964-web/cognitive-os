@@ -35,6 +35,13 @@ CSV_SORT_PROMPT = (
     "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, "
     "сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
 )
+OCR_PROMPT = (
+    "Напиши локальную CLI-утилиту OCR без сетевых вызовов: вход — путь к изображению PNG/JPG, "
+    "выход — распознанный текст в stdout или текстовый файл. Реальные OCR-зависимости допускаются "
+    "только как optional dependencies, тесты должны работать без Tesseract через injectable backend. "
+    "Нужны README и pytest."
+)
+IMAGE_CONTENTS_PROMPT = "напиши CLI .py, которая перечислит содержимое картинки"
 
 
 def test_prompt_adequacy_gate_accepts_bounded_cli_prompt():
@@ -55,6 +62,16 @@ def test_prompt_adequacy_gate_blocks_vague_prompt():
 
     assert gate["status"] in {"needs_clarification", "unsupported", "too_broad"}
     assert gate["clarification_questions"]
+
+
+def test_prompt_adequacy_gate_accepts_short_image_contents_prompt():
+    gate = evaluate_prompt_adequacy(IMAGE_CONTENTS_PROMPT).to_dict()
+
+    assert gate["status"] == "ready"
+    assert gate["system_type"] == "cli"
+    assert gate["checks"]["inputs_defined"] is True
+    assert gate["checks"]["outputs_defined"] is True
+    assert gate["checks"]["dependencies_policy_defined"] is True
 
 
 def test_verified_system_package_builds_release_artifact(tmp_path: Path):
@@ -153,6 +170,42 @@ def test_verified_system_package_builds_csv_sort_cli_after_template_admission(tm
     assert (Path(report["project_dir"]) / "src" / "csv_sort" / "sorter.py").is_file()
 
 
+def test_verified_system_package_builds_ocr_image_cli(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=OCR_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["system_type"] == "cli"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert report["tests"]["missing_acceptance"] == []
+    assert report["tester_review"]["checks"]["has_dependency_policy"] is True
+    assert report["tester_review"]["checks"]["has_negative_or_edge_test"] is True
+    assert (Path(report["project_dir"]) / "src" / "image_ocr" / "ocr.py").is_file()
+
+
+def test_verified_system_package_builds_image_contents_cli(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=IMAGE_CONTENTS_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["system_type"] == "cli"
+    assert report["release_decision"]["decision"] == "release_ready"
+    assert report["tests"]["missing_acceptance"] == []
+    assert report["tester_review"]["checks"]["has_dependency_policy"] is True
+    assert report["tester_review"]["checks"]["has_negative_or_edge_test"] is True
+    assert (Path(report["project_dir"]) / "src" / "image_contents" / "analyzer.py").is_file()
+
+
 def test_stage2_template_admission_accepts_csv_sort_cli(tmp_path: Path):
     root = Path(__file__).resolve().parents[2]
     result = run_stage2_template_admission(
@@ -190,14 +243,12 @@ def test_verified_system_package_requests_l45_for_ready_unknown_template(tmp_pat
     assert report["semantic_evidence_pack"]["artifact_type"] == "SemanticEvidencePack"
     assert report["semantic_evidence_pack"]["authority"]["may_build_package"] is False
     assert report["semantic_hypothesis_proposal"]["artifact_type"] == "SemanticHypothesisProposal"
-    assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "new_template_candidate"
+    assert report["semantic_hypothesis_proposal"]["hypothesis_type"] == "developer_improvement_request"
     assert report["l4_semantic_validation"]["artifact_type"] == "L4SemanticValidationResult"
     assert report["l4_semantic_validation"]["status"] == "accepted"
-    assert report["l4_semantic_validation"]["accepted_action"] == "record_template_backlog"
-    assert report["l4_semantic_validation"]["decision"]["backlog_allowed"] is True
-    assert report["stage2_template_backlog_item"]["artifact_type"] == "Stage2TemplateBacklogItem"
-    assert report["stage2_template_backlog_item"]["template_id"] == "new_stage2_cli_template"
-    assert report["stage2_template_backlog_item"]["requires_human_review"] is True
+    assert report["l4_semantic_validation"]["accepted_action"] == "record_developer_improvement_request"
+    assert report["developer_improvement_request"]["artifact_type"] == "DeveloperImprovementRequest"
+    assert report["developer_improvement_request"]["requires_developer"] is True
 
 
 def test_stage2_debug_loop_repairs_controlled_fastapi_error(tmp_path: Path):

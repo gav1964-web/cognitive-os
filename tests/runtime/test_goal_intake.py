@@ -62,6 +62,17 @@ def test_goal_intake_asks_target_for_ambiguous_implementation_prompt():
     assert "target" in spec.clarification.missing
 
 
+def test_goal_intake_accepts_greenfield_image_contents_cli_prompt():
+    spec = build_goal_spec("напиши CLI .py, которая перечислит содержимое картинки")
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "image_path" in spec.inputs
+    assert "json" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
 def test_goal_spec_contract_rejects_extra_fields():
     spec = build_goal_spec("Normalize input text and hash it").to_dict()
     spec["extra"] = True
@@ -79,6 +90,20 @@ def test_goal_orchestrator_uses_goal_intake_clarification():
     assert decision.action == "ASK_CLARIFICATION"
     assert decision.reason_code == "GOAL_INTAKE_MISSING_REQUIRED_FIELDS"
     assert decision.clarification_question
+
+
+def test_goal_orchestrator_routes_project_fact_questions_to_answer_capability(tmp_path):
+    registry = CapabilityRegistry(Path(__file__).resolve().parents[2])
+    registry.reset_from_plugins()
+
+    decision = decide_goal_route(
+        "Проанализируй проект F:/ubuntu/test/map и ответь: сколько .py файлов больше 300 строк?",
+        registry,
+        root_input={"path": "F:/ubuntu/test/map"},
+    )
+
+    assert decision.action == "PLAN_WITH_L35"
+    assert decision.required_capabilities[-1] == "project_fact_questions"
 
 
 def test_goal_intake_cli_outputs_goal_spec():

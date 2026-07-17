@@ -93,6 +93,7 @@ def _actual_facts(project_report: dict[str, Any]) -> dict[str, list[str]]:
     summary = dict(project_report.get("summary", {}))
     answers = dict(project_report.get("answers", {}))
     capabilities = dict(answers.get("3_capabilities", {}))
+    execution = dict(answers.get("2_execution", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
     plan = dict(readiness.get("minimal_extraction_plan", {}))
     return {
@@ -101,6 +102,8 @@ def _actual_facts(project_report: dict[str, Any]) -> dict[str, list[str]]:
             set(
                 _strings(capabilities.get("atomic_reusable_capabilities", []))
                 + _sources(plan.get("capabilities_to_extract", []), key="capability")
+                + _api_or_llm_sources(_function_sources(execution.get("central_flow_nodes", [])))
+                + _api_or_llm_sources(_sources(readiness.get("process_boundary_candidates", []), key="target"))
             )
         ),
         "pure_transforms": _function_sources(capabilities.get("pure_transforms", [])),
@@ -126,6 +129,11 @@ def _actual_judgments(adr: dict[str, Any]) -> dict[str, Any]:
             "packaged_copy": _source_strata_paths(source_strata.get("packaged_copy", [])),
         },
     }
+
+
+def _api_or_llm_sources(sources: list[str]) -> list[str]:
+    markers = ("app/api/", "handlers_", "openai", "gigachat", "_llm", "providers/", "p004")
+    return [source for source in sources if any(marker in source for marker in markers)]
 
 
 def _score_facts(expected: dict[str, Any], actual: dict[str, list[str]]) -> dict[str, Any]:

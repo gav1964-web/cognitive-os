@@ -6,6 +6,12 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .semantic_resolution_artifacts import (
+    build_developer_improvement_request,
+    build_successful_resolution_candidate,
+    developer_improvement_request,
+    resolve_with_existing_means_or_developer_request,
+)
 
 
 def build_semantic_hypothesis_request(
@@ -167,35 +173,45 @@ def _question(mode: str, reasons: list[str]) -> str:
             "Can the bounded prompt be mapped to an existing supported package template, "
             "or should it become a clarification/new-template candidate?"
         )
+    if mode == "prompt_to_product" and "prompt_intake_uncertainty" in reasons:
+        return (
+            "The deterministic intake gate is uncertain. Can the prompt be interpreted as a bounded "
+            "supported route with existing means, or should it become clarification/developer work?"
+        )
     if "unsupported_system_type_requires_semantic_classification" in reasons:
         return "Classify the user intent into a supported bounded system type or explain why it is unsupported."
     if "semantic_rework_after_contracts_passed" in reasons:
         return "Explain the semantic mismatch that remains after contract checks passed and propose a bounded rework target."
     return "Resolve the semantic uncertainty without changing execution authority or bypassing runtime contracts."
 
-
 def _allowed_hypothesis_types(mode: str, reasons: list[str]) -> list[str]:
     if mode == "prompt_to_product":
-        allowed = ["template_mapping_candidate", "clarification_question", "unsupported_reason"]
+        allowed = [
+            "successful_existing_resolution",
+            "developer_improvement_request",
+            "template_mapping_candidate",
+            "clarification_question",
+            "unsupported_reason",
+        ]
         if "no_supported_package_template" in reasons:
             allowed.append("new_template_candidate")
         return allowed
     return ["risk_interpretation", "architecture_option", "rework_target", "knowledge_gap"]
-
 
 def _deterministic_proposal(request: dict[str, Any]) -> dict[str, Any]:
     reasons = [str(item) for item in request.get("trigger_reasons", [])]
     mode = str(dict(request.get("source_decision", {})).get("mode") or "")
     context = dict(request.get("evidence_context", {}))
     prompt = str(context.get("prompt") or "")
-    if mode == "prompt_to_product" and "no_supported_package_template" in reasons:
-        return _new_template_candidate(prompt)
+    if mode == "prompt_to_product" and (
+        "no_supported_package_template" in reasons or "prompt_intake_uncertainty" in reasons
+    ):
+        return resolve_with_existing_means_or_developer_request(request, prompt)
     if "unsupported_system_type_requires_semantic_classification" in reasons:
         return _unsupported_reason(prompt)
     if "semantic_rework_after_contracts_passed" in reasons:
         return _rework_target(request)
     return _knowledge_gap(request)
-
 
 def _model_proposal(request: dict[str, Any], *, config: LocalInferenceConfig | None) -> dict[str, Any]:
     result = call_json_chat(_messages(request), config=config)
@@ -264,6 +280,10 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
         fallback = _new_template_candidate(str(dict(request.get("evidence_context", {})).get("prompt") or ""))
         proposal["proposal"] = dict(fallback.get("proposal", {}))
         proposal["hardening"]["proposal_payload_synthesized"] = True
+    elif proposal["hypothesis_type"] == "developer_improvement_request" and not proposal["proposal"]:
+        fallback = developer_improvement_request(str(dict(request.get("evidence_context", {})).get("prompt") or ""))
+        proposal["proposal"] = dict(fallback.get("proposal", {}))
+        proposal["hardening"]["proposal_payload_synthesized"] = True
     if not proposal["risks"] and proposal["hypothesis_type"] in set(request.get("allowed_hypothesis_types", [])):
         proposal["risks"] = _default_risks(str(proposal["hypothesis_type"]))
         proposal["hardening"]["risks_synthesized"] = True
@@ -281,6 +301,14 @@ def _default_risks(hypothesis_type: str) -> list[str]:
         "new_template_candidate": [
             "model omitted explicit risks",
             "human review required before template admission",
+        ],
+        "successful_existing_resolution": [
+            "model omitted explicit risks",
+            "resolution must pass verification and repeated-success admission before KB promotion",
+        ],
+        "developer_improvement_request": [
+            "model omitted explicit risks",
+            "developer request may be incomplete without human review",
         ],
         "template_mapping_candidate": ["model omitted explicit risks", "mapping must be rerun through deterministic gate"],
         "clarification_question": ["model omitted explicit risks", "clarification may still be incomplete"],

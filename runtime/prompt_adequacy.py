@@ -77,13 +77,60 @@ def _checks(prompt: str, spec: dict[str, Any], system_type: str | None) -> dict[
                 "файлов",
                 "каталог",
                 "директор",
+                "image",
+                "picture",
+                "photo",
+                "изображ",
+                "картин",
+                "фото",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
                 "ключ",
                 "key",
             )
         ),
-        "outputs_defined": bool(spec.get("outputs")) and spec.get("outputs") != ["final_report"],
+        "outputs_defined": (bool(spec.get("outputs")) and spec.get("outputs") != ["final_report"])
+        or any(
+            word in lower
+            for word in (
+                "output",
+                "stdout",
+                "json",
+                "csv",
+                "txt",
+                "report",
+                "отчет",
+                "отчёт",
+                "список",
+                "перечисл",
+                "содерж",
+                "текст",
+            )
+        ),
         "constraints_defined": bool(spec.get("constraints")) or _has_dependency_policy(lower),
-        "success_criteria_verifiable": bool(spec.get("success_criteria")) and any(word in lower for word in ("test", "тест", "readme", "csv", "json", "report", "отчет")),
+        "success_criteria_verifiable": bool(spec.get("success_criteria"))
+        and any(
+            word in lower
+            for word in (
+                "test",
+                "тест",
+                "readme",
+                "csv",
+                "json",
+                "report",
+                "отчет",
+                "stdout",
+                "текст",
+                "txt",
+                "список",
+                "перечисл",
+                "list",
+                "contents",
+                "содерж",
+            )
+        ),
         "dependencies_policy_defined": _has_dependency_policy(lower),
         "scope_bounded": not any(word in lower for word in ("любую", "anything", "everything", "полностью всё", "все что нужно")),
     }
@@ -108,7 +155,7 @@ def _system_type(prompt: str) -> str | None:
         return "fastapi_service"
     if "cli" in lower or "утилит" in lower or "command" in lower:
         return "cli"
-    if any(word in lower for word in ("csv", "jsonl", "xlsx", "markdown", "file", "файл")):
+    if any(word in lower for word in ("csv", "jsonl", "xlsx", "markdown", "file", "файл", "image", "picture", "изображ", "картин", "фото")):
         return "file_processing_utility"
     if "local service" in lower or "локальн" in lower:
         return "small_local_service"
@@ -116,7 +163,20 @@ def _system_type(prompt: str) -> str | None:
 
 
 def _has_dependency_policy(lower: str) -> bool:
-    markers = ("без сети", "no live network", "stdlib", "standard library", "без внешних", "локальн", "dependencies", "зависим")
+    markers = (
+        "без сети",
+        "без сетевых",
+        "no live network",
+        "stdlib",
+        "standard library",
+        "cli .py",
+        ".py",
+        "python",
+        "без внешних",
+        "локальн",
+        "dependencies",
+        "зависим",
+    )
     return any(marker in lower for marker in markers)
 
 

@@ -28,6 +28,11 @@ def test_goal_report_preserves_llm_interpretation():
             "task_count": 1,
             "tasks": [{"type": "EXTRACT_CAPABILITY", "target": "app.py:index"}],
         },
+        "architecture_synthesis": {
+            "artifact_type": "ProjectArchitectureSynthesis",
+            "source": "deterministic_architecture_synthesis",
+            "recommended_first_slice": {"name": "first_bounded_capability_slice"},
+        },
     }
 
     report = build_goal_report(session, payload)
@@ -37,4 +42,5 @@ def test_goal_report_preserves_llm_interpretation():
     assert report["level4_project_interpretation"]["layer"] == "L4"
     assert report["level4_project_interpretation"]["confidence"] == "high"
     assert report["analysis_tasks"]["task_count"] == 1
+    assert report["architecture_synthesis"]["artifact_type"] == "ProjectArchitectureSynthesis"
     assert report["layer_packets"][0]["packet_type"] == "INTENT"

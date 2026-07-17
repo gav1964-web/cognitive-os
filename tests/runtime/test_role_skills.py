@@ -245,6 +245,23 @@ def test_implementer_skill_returns_implementation_plan():
     assert spec["extraction_contract"]["candidate"] in plan["implementation_steps"][0]["action"]
     assert plan["patch_scope"]
     assert plan["expected_files"]
+    assert plan["implementation_units"]
+    assert plan["change_plan"]
+    assert plan["implementation_blueprint"]["artifact_type"] == "ImplementationBlueprint"
+    assert plan["implementation_blueprint"]["status"] == "ready"
+    assert plan["implementation_blueprint"]["target"] == spec["extraction_contract"]["candidate"]
+    assert plan["patch_intent"]["artifact_type"] == "PatchIntent"
+    assert plan["patch_intent"]["mode"] == "sandbox_first"
+    assert plan["patch_intent"]["target_symbol"] == spec["extraction_contract"]["candidate"]
+    assert plan["patch_intent"]["apply_source_default"] is False
+    assert plan["executor_handoff"]["artifact_type"] == "ExecutorHandoff"
+    assert plan["executor_handoff"]["recommended_tool"] == "tools/apply_implementation_plan.py"
+    assert plan["executor_handoff"]["apply_source_default"] is False
+    assert plan["patch_package_contract"]["artifact_type"] == "PatchPackage"
+    assert plan["patch_package_contract"]["apply_policy"].startswith("build isolated patch package")
+    assert plan["dependency_policy"]["new_runtime_dependencies"] == "forbidden_by_default"
+    assert plan["quality_gates"]
+    assert plan["debug_rework_policy"]["output_artifact"] == "BoundedReworkPlan"
     assert plan["verification_commands"]
     assert plan["rollback_plan"]["registry_policy"]
     assert plan["acceptance_mapping"]

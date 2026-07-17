@@ -68,6 +68,11 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
     binding = dict(plan.get("contract_binding", {}))
     rollback = dict(plan.get("rollback_plan", {}))
     next_artifact = dict(plan.get("next_artifact", {}))
+    patch_package = dict(plan.get("patch_package_contract", {}))
+    debug_rework = dict(plan.get("debug_rework_policy", {}))
+    blueprint = dict(plan.get("implementation_blueprint", {}))
+    patch_intent = dict(plan.get("patch_intent", {}))
+    executor_handoff = dict(plan.get("executor_handoff", {}))
     return {
         "artifact_type": plan.get("artifact_type"),
         "role": plan.get("role"),
@@ -85,6 +90,24 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
         "verification_commands": _strings(plan.get("verification_commands", [])),
         "implementation_step_ids": _sources(plan.get("implementation_steps", []), key="id"),
         "implementation_actions": _sources(plan.get("implementation_steps", []), key="action"),
+        "implementation_unit_count": len(plan.get("implementation_units", []) if isinstance(plan.get("implementation_units"), list) else []),
+        "change_plan_count": len(plan.get("change_plan", []) if isinstance(plan.get("change_plan"), list) else []),
+        "quality_gate_count": len(plan.get("quality_gates", []) if isinstance(plan.get("quality_gates"), list) else []),
+        "implementation_blueprint_type": blueprint.get("artifact_type"),
+        "implementation_blueprint_status": blueprint.get("status"),
+        "implementation_blueprint_target": blueprint.get("target"),
+        "patch_intent_type": patch_intent.get("artifact_type"),
+        "patch_intent_mode": patch_intent.get("mode"),
+        "patch_intent_target": patch_intent.get("target_symbol"),
+        "patch_intent_apply_source_default": patch_intent.get("apply_source_default"),
+        "executor_handoff_type": executor_handoff.get("artifact_type"),
+        "executor_handoff_tool": executor_handoff.get("recommended_tool"),
+        "executor_handoff_apply_source_default": executor_handoff.get("apply_source_default"),
+        "patch_package_artifact_type": patch_package.get("artifact_type"),
+        "patch_package_apply_policy": patch_package.get("apply_policy"),
+        "dependency_policy": dict(plan.get("dependency_policy", {})).get("new_runtime_dependencies"),
+        "debug_rework_output": debug_rework.get("output_artifact"),
+        "debug_rework_max_attempts": debug_rework.get("max_attempts"),
         "acceptance_mapping_count": len(plan.get("acceptance_mapping", []) if isinstance(plan.get("acceptance_mapping"), list) else []),
         "non_goals": _strings(plan.get("non_goals", [])),
         "forbidden_actions_observed": _strings(plan.get("forbidden_actions_observed", [])),
@@ -109,6 +132,24 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, A
         "required_expected_files_covered": _expected_covered(expected.get("expected_files", []), actual.get("expected_files", [])),
         "rollback_files_cover_expected_files": _expected_covered(actual.get("expected_files", []), actual.get("rollback_files", [])),
         "verification_commands_covered": _expected_covered(expected.get("verification_commands", []), actual.get("verification_commands", [])),
+        "implementation_units_present": int(actual.get("implementation_unit_count") or 0) >= 1,
+        "change_plan_present": int(actual.get("change_plan_count") or 0) >= 3,
+        "quality_gates_present": int(actual.get("quality_gate_count") or 0) >= 3,
+        "implementation_blueprint_present": actual.get("implementation_blueprint_type") == "ImplementationBlueprint"
+        and actual.get("implementation_blueprint_status") == "ready"
+        and actual.get("implementation_blueprint_target") == actual.get("candidate"),
+        "patch_intent_sandbox_first": actual.get("patch_intent_type") == "PatchIntent"
+        and actual.get("patch_intent_mode") == "sandbox_first"
+        and actual.get("patch_intent_target") == actual.get("candidate")
+        and actual.get("patch_intent_apply_source_default") is False,
+        "executor_handoff_present": actual.get("executor_handoff_type") == "ExecutorHandoff"
+        and actual.get("executor_handoff_tool") == "tools/apply_implementation_plan.py"
+        and actual.get("executor_handoff_apply_source_default") is False,
+        "patch_package_contract_present": actual.get("patch_package_artifact_type") == "PatchPackage",
+        "patch_package_requires_human_apply": "human approval" in str(actual.get("patch_package_apply_policy") or "").lower(),
+        "dependency_policy_conservative": actual.get("dependency_policy") == "forbidden_by_default",
+        "debug_rework_policy_present": actual.get("debug_rework_output") == "BoundedReworkPlan"
+        and int(actual.get("debug_rework_max_attempts") or 0) >= 1,
         "required_non_goals_covered": _expected_covered(expected.get("required_non_goals", []), actual.get("non_goals", [])),
         "acceptance_mapping_present": int(actual.get("acceptance_mapping_count") or 0) >= int(expected.get("min_acceptance_mapping_count", 1)),
         "no_forbidden_actions_observed": not actual.get("forbidden_actions_observed"),

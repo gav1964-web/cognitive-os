@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+from .greenfield_csv_sort_template import content_for as csv_sort_content_for
+from .greenfield_image_contents_template import content_for as image_contents_content_for
+from .greenfield_ocr_template import content_for as ocr_content_for
+
 
 CSV_CASE = "fastapi_csv_aggregator"
 KV_CASE = "fastapi_kv_store"
 CSV_SORT_CASE = "csv_sort_cli"
+OCR_CASE = "ocr_image_cli"
+IMAGE_CONTENTS_CASE = "image_contents_cli"
 
 
 def has_case(case_name: str) -> bool:
-    return case_name in {CSV_CASE, KV_CASE, CSV_SORT_CASE}
+    return case_name in {CSV_CASE, KV_CASE, CSV_SORT_CASE, OCR_CASE, IMAGE_CONTENTS_CASE}
 
 
 def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]:
@@ -20,6 +26,22 @@ def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]
             "CSV fixture is sorted by requested column",
             "CLI writes sorted CSV output",
             "missing sort column is rejected",
+            "all tests run from generated project root",
+        ]
+    if case_name == OCR_CASE:
+        return [
+            "image fixture is recognized through an injectable OCR backend",
+            "CLI writes recognized text output",
+            "missing or unsupported images are rejected with controlled errors",
+            "real OCR dependencies are optional and no live network is required",
+            "all tests run from generated project root",
+        ]
+    if case_name == IMAGE_CONTENTS_CASE:
+        return [
+            "image fixture is described through an injectable vision backend",
+            "CLI writes JSON contents output",
+            "missing or unsupported images are rejected with controlled errors",
+            "real vision backend is optional and not required for default tests",
             "all tests run from generated project root",
         ]
     if case_name == KV_CASE:
@@ -46,7 +68,11 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
     if case_name == KV_CASE:
         return _kv_content(path, prompt)
     if case_name == CSV_SORT_CASE:
-        return _csv_sort_content(path, prompt)
+        return csv_sort_content_for(path, prompt)
+    if case_name == OCR_CASE:
+        return ocr_content_for(path, prompt)
+    if case_name == IMAGE_CONTENTS_CASE:
+        return image_contents_content_for(path, prompt)
     if path == "pyproject.toml":
         return _pyproject("csv_aggregator_service")
     if path == "README.md":
@@ -66,26 +92,6 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
     return "# Generated Stage 2 package placeholder.\n"
 
 
-def _csv_sort_content(path: str, prompt: str) -> str:
-    if path == "pyproject.toml":
-        return _cli_pyproject("csv_sort_cli")
-    if path == "README.md":
-        return _csv_sort_readme(prompt)
-    if path.endswith("__init__.py"):
-        return '__all__ = ["__version__"]\n__version__ = "0.1.0"\n'
-    if path.endswith("cli.py"):
-        return _csv_sort_cli()
-    if path.endswith("sorter.py"):
-        return _csv_sorter()
-    if path.endswith("sample.csv"):
-        return "name,value\nbeta,2\nalpha,1\ngamma,3\n"
-    if path.endswith("test_core.py"):
-        return _csv_sort_test_core()
-    if path.endswith("test_cli.py"):
-        return _csv_sort_test_cli()
-    return "# Generated Stage 2 CSV sort package placeholder.\n"
-
-
 def _pyproject(package: str) -> str:
     return (
         "[project]\n"
@@ -95,100 +101,6 @@ def _pyproject(package: str) -> str:
         'dependencies = ["fastapi"]\n\n'
         "[tool.pytest.ini_options]\n"
         'testpaths = ["tests"]\n'
-    )
-
-
-def _cli_pyproject(package: str) -> str:
-    return (
-        "[project]\n"
-        f'name = "{package}"\n'
-        'version = "0.1.0"\n'
-        'requires-python = ">=3.10"\n\n'
-        "[tool.pytest.ini_options]\n"
-        'testpaths = ["tests"]\n'
-    )
-
-
-def _csv_sort_readme(prompt: str) -> str:
-    return (
-        "# csv_sort_cli\n\n"
-        f"Prompt: {prompt}\n\n"
-        "Local CLI utility without external dependencies. It reads a CSV file, "
-        "sorts rows by a named column, and writes a sorted CSV file.\n\n"
-        "Run tests: `python -m pytest tests -q`.\n"
-        "Run CLI: `python -m csv_sort.cli input.csv output.csv --column name`.\n"
-    )
-
-
-def _csv_sorter() -> str:
-    return (
-        "from __future__ import annotations\n\n"
-        "import csv\n"
-        "from pathlib import Path\n\n\n"
-        "def sort_csv(source: str, destination: str, *, column: str = 'name') -> list[dict[str, str]]:\n"
-        "    rows = read_csv(source)\n"
-        "    sorted_rows = sort_rows(rows, column=column)\n"
-        "    write_csv(destination, sorted_rows, fieldnames=list(rows[0].keys()) if rows else [column])\n"
-        "    return sorted_rows\n\n\n"
-        "def read_csv(source: str) -> list[dict[str, str]]:\n"
-        "    with Path(source).open(newline='', encoding='utf-8') as handle:\n"
-        "        reader = csv.DictReader(handle)\n"
-        "        if not reader.fieldnames:\n"
-        "            raise ValueError('CSV header is required')\n"
-        "        return [dict(row) for row in reader]\n\n\n"
-        "def sort_rows(rows: list[dict[str, str]], *, column: str) -> list[dict[str, str]]:\n"
-        "    if not column.strip():\n"
-        "        raise ValueError('sort column is required')\n"
-        "    if rows and column not in rows[0]:\n"
-        "        raise ValueError(f'missing sort column: {column}')\n"
-        "    return sorted(rows, key=lambda row: row.get(column, ''))\n\n\n"
-        "def write_csv(destination: str, rows: list[dict[str, str]], *, fieldnames: list[str]) -> None:\n"
-        "    target = Path(destination)\n"
-        "    target.parent.mkdir(parents=True, exist_ok=True)\n"
-        "    with target.open('w', newline='', encoding='utf-8') as handle:\n"
-        "        writer = csv.DictWriter(handle, fieldnames=fieldnames)\n"
-        "        writer.writeheader()\n"
-        "        writer.writerows(rows)\n"
-    )
-
-
-def _csv_sort_cli() -> str:
-    return (
-        "from __future__ import annotations\n\n"
-        "import argparse\n\n"
-        "from csv_sort.sorter import sort_csv\n\n\n"
-        "def main(argv: list[str] | None = None) -> int:\n"
-        "    parser = argparse.ArgumentParser()\n"
-        "    parser.add_argument('input')\n"
-        "    parser.add_argument('output')\n"
-        "    parser.add_argument('--column', default='name')\n"
-        "    args = parser.parse_args(argv)\n"
-        "    sort_csv(args.input, args.output, column=args.column)\n"
-        "    return 0\n"
-    )
-
-
-def _csv_sort_test_core() -> str:
-    return (
-        "import pytest\n\n"
-        "from csv_sort.sorter import sort_rows\n\n\n"
-        "def test_sort_rows_by_name():\n"
-        "    rows = [{'name': 'beta'}, {'name': 'alpha'}]\n"
-        "    assert sort_rows(rows, column='name') == [{'name': 'alpha'}, {'name': 'beta'}]\n\n\n"
-        "def test_missing_sort_column_is_rejected():\n"
-        "    with pytest.raises(ValueError, match='missing sort column'):\n"
-        "        sort_rows([{'name': 'alpha'}], column='missing')\n"
-    )
-
-
-def _csv_sort_test_cli() -> str:
-    return (
-        "from csv_sort.cli import main\n\n\n"
-        "def test_cli_writes_sorted_csv(tmp_path):\n"
-        "    out = tmp_path / 'sorted.csv'\n"
-        "    assert main(['tests/fixtures/sample.csv', str(out), '--column', 'name']) == 0\n"
-        "    text = out.read_text(encoding='utf-8')\n"
-        "    assert text.splitlines()[1].startswith('alpha,')\n"
     )
 
 

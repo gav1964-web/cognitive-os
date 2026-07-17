@@ -105,7 +105,7 @@ def _checks(
         "has_source_package": bool(source_files),
         "has_cli_entrypoint": _is_api_project(source_text) or any(item.endswith("/cli.py") for item in source_files),
         "cli_uses_argparse": _is_api_project(source_text) or ("import argparse" in source_text and "parse_args" in source_text),
-        "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input')" in source_text and "add_argument('output')" in source_text),
+        "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input'" in source_text and "add_argument('output'" in source_text),
         "has_fastapi_app": not _is_api_project(source_text) or ("FastAPI(" in source_text and "@app." in source_text),
         "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text)),
         "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=" in source_text),

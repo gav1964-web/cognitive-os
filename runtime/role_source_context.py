@@ -177,6 +177,17 @@ def _facts_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, Any]
         )
     for row in _list(readiness.get("process_boundary_candidates")):
         _merge(facts, str(row.get("target")), {"process_boundary_reasons": row.get("reasons", [])})
+    plan = dict(readiness.get("minimal_extraction_plan", {}))
+    for row in _list(plan.get("capabilities_to_extract")):
+        _merge(
+            facts,
+            str(row.get("capability")),
+            {
+                "candidate_level": row.get("candidate_level"),
+                "candidate_score": row.get("candidate_score"),
+                "first_contract": row.get("first_contract"),
+            },
+        )
     for row in _list(readiness.get("long_lived_state")):
         evidence = str(row.get("evidence") or "")
         _merge(

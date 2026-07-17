@@ -238,7 +238,11 @@ def _capability_candidates(python_structure: dict[str, Any], routes: list[dict[s
     pure = [item for item in python_structure.get("pure_transform_candidates", []) if is_core_path(str(item.get("path", "")))]
     candidates = [f"{item.get('path')}:{item.get('name')}" for item in pure[:8]]
     contracts = dict(python_structure.get("contracts", {}))
-    schema_like = [item for item in contracts.get("schema_like_classes", []) if is_core_path(str(item.get("path", "")))]
+    schema_like = [
+        item
+        for item in contracts.get("schema_like_classes", [])
+        if is_core_path(str(item.get("path", ""))) and not str(item.get("name", "")).endswith("Config")
+    ]
     candidates.extend([f"{item.get('path')}:{item.get('name')}" for item in schema_like[:6]])
     if not schema_like:
         candidates.extend([f"{route.get('methods') or ['GET']} {route.get('route')}" for route in routes[:5]])

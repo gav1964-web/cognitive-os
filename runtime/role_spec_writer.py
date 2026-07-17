@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .role_spec_writer_ranking import (
+    candidate_level_bonus as _candidate_level_bonus,
+    name_and_contract_score as _name_and_contract_score,
+    operational_boundary_score as _operational_boundary_score,
+)
 from .role_skill_common import now_iso
 
 
@@ -169,11 +174,30 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
             score += 40
             reasons.append("pure transform candidate")
         elif kind == "central_flow_node":
-            score += 15
-            reasons.append("central flow node, but less bounded than pure transform")
+            score += 45
+            reasons.append("central flow node with subsystem-level evidence")
+        elif kind == "broad_function":
+            score += 38
+            reasons.append("broad function can anchor a meaningful first slice")
         else:
             score += 5
             reasons.append("available source evidence")
+
+        if candidate.get("central_flow_node"):
+            score += 20
+            reasons.append("central flow evidence available")
+        if candidate.get("mixed_responsibilities"):
+            score += 12
+            reasons.append("mixed-responsibility evidence available")
+        if candidate.get("process_boundary_reasons"):
+            score += 8
+            reasons.append("process-boundary evidence available")
+        if candidate.get("candidate_level"):
+            score += _candidate_level_bonus(str(candidate.get("candidate_level")))
+            reasons.append(f"ProjectMapReport ranked as {candidate.get('candidate_level')}")
+        if candidate.get("candidate_score") is not None:
+            score += min(int(candidate.get("candidate_score") or 0), 100) // 20
+            reasons.append("ProjectMapReport candidate score available")
 
         if not side_effects:
             score += 25
@@ -219,50 +243,6 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
             }
         )
     return sorted(ranked, key=lambda item: (-int(item["score"]), int(item["index"]), str(item.get("source") or "")))
-
-
-def _name_and_contract_score(source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
-    lowered = source.lower()
-    args = [str(arg.get("annotation") or "") for arg in list(signature.get("args", []) or []) if isinstance(arg, dict)]
-    text = " ".join([lowered, *args]).lower()
-    score = 0
-    reasons = []
-    if any(token in lowered for token in ("parse_", "normalize", "validate", "build_key", "cache_key")):
-        score += 18
-        reasons.append("deterministic parser/normalizer/key-builder shape")
-    if "memory_state" in side_effects:
-        score -= 35
-        reasons.append("explicit memory/global state mutation")
-    if any(token in text for token in ("request", "response", "middleware", "http", "fastapi", "flask")):
-        score -= 35
-        reasons.append("framework request/response boundary, not first reusable core contract")
-    if any(token in lowered for token in ("handler", "middleware", "endpoint")):
-        score -= 20
-        reasons.append("handler/middleware boundary is less reusable than a core helper")
-    return score, reasons
-
-
-def _operational_boundary_score(source: str, signature: dict[str, Any], claims: list[str]) -> tuple[int, list[str]]:
-    lowered = source.lower()
-    symbol = lowered.rsplit(":", 1)[-1]
-    path = lowered.split(":", 1)[0]
-    args = " ".join(str(arg.get("name") or "") for arg in list(signature.get("args", []) or []) if isinstance(arg, dict))
-    text = " ".join([lowered, symbol, args, *claims]).lower()
-    score = 0
-    reasons = []
-    if path.endswith(("_api.py", "/api.py")) or symbol in {"request", "send", "serve", "run", "main"}:
-        score -= 25
-        reasons.append("API/runtime boundary should not outrank core capability candidates")
-    if any(token in symbol for token in ("reload", "watch", "listen", "dispatch", "route", "emit")):
-        score -= 25
-        reasons.append("operational control function is less reusable as first extraction")
-    if any(token in text for token in ("socket", "subprocess", "server", "event loop", "thread", "process")):
-        score -= 15
-        reasons.append("runtime environment coupling needs later isolation review")
-    if any(token in symbol for token in ("format", "serialize", "deserialize", "encode", "decode", "canonical")):
-        score += 10
-        reasons.append("bounded data-shaping helper is a better extraction target")
-    return score, reasons
 
 
 def _requirement_statement(requirement: str, source: object) -> str:

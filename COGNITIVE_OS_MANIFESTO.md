@@ -46,6 +46,8 @@ Cognitive OS обучается не изменением весов LLM и не
 
 Knowledge Gap Loop использует тот же контрактный принцип: `KnowledgeGap` не является просьбой "подумать еще", а typed request на добычу недостающего факта; `KnowledgeArtifact` не является истиной, а evidence packet с confidence. L4 может принимать решение на основе такого artifact только если confidence и source policy достаточны для текущей задачи.
 
+Knowledge Base является проверяемой инженерной памятью системы, а не самообучающейся моделью. Записи KB распределяются по ролям как API: analyzer получает признаки и source-scope policy, architect получает архетипы/риски/first-slice recipes, spec writer получает контракты, implementer получает implementation recipes, tester получает test strategies, reviewer получает gates, researcher получает gaps/source digests/candidates. Новое знание не попадает в активную KB автоматически: оно проходит несколько подтвержденных кейсов, approval внешнего учителя/корректировщика и approval Codex/developer.
+
 Внешние источники вроде GitHub допустимы только как evidence для поиска идей, библиотек, edge cases и тестовых сценариев. Они не являются authority: запрещено слепо копировать код, считать популярность корректностью, обходить официальную документацию или менять архитектуру без локальных контрактных тестов.
 
 Contract Registry является обязательным runtime-фильтром между планом и исполнением. Capability Registry сообщает, какие инструменты существуют и в каком они состоянии; Contract Registry проверяет, можно ли конкретный capability/packet использовать по формальному контракту прямо сейчас. Это не второй ручной реестр, а производный каталог контрактов из manifests, schemas и packet routes.

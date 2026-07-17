@@ -61,7 +61,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:9c11eaed03de6c12ea98c7f3984a6eab3ef3d4e296a4a9646696cc21a49bdd1a",
+      "version_hash": "sha256:0eb3bd1a717a9f38b7309ceb68f3931bfa7ee938f69bfceeb2da4c5fb842af0b",
       "fallback_for": []
     },
     {
@@ -307,6 +307,22 @@
       ]
     },
     {
+      "id": "project_fact_questions",
+      "version": "0.1.0",
+      "entrypoint": "plugins.project_fact_questions.src.main:run",
+      "input_schema_ref": "plugins/project_fact_questions/schemas/input.json",
+      "output_schema_ref": "plugins/project_fact_questions/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "none",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:6feda0a9a416d938e9a111ebd1df963504077d32003db4f1fd39f7389670fd41",
+      "fallback_for": []
+    },
+    {
       "id": "project_map_report",
       "version": "0.1.0",
       "entrypoint": "plugins.project_map_report.src.main:run",
@@ -319,7 +335,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:94d05f4f381207ea08e2c370cf24d2fa08e9b096ac18bc17fd50322bee59dd5a",
+      "version_hash": "sha256:f5b2d822596944de433a3975f799dd8e75e03f7d152e5ce1b7743c0227c883ff",
       "fallback_for": []
     },
     {
@@ -383,7 +399,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f6c7073072940cfa8412f9f51dcc832f9a9fab131b6d27ca104dbb77e2dedb19",
+      "version_hash": "sha256:806ad8faa32c997784bb16ee5e364d69074fa615275881173e855317e96f1886",
       "fallback_for": []
     },
     {

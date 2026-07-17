@@ -211,13 +211,15 @@ adequate prompt
 -> release decision
 ```
 
-The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts.
+The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts. If intake is uncertain but the prompt still looks like a bounded implementation request, L4.0 emits `prompt_intake_uncertainty` and asks L4.5 to interpret it before a developer changes Cognitive OS.
 
 Current deterministic package classes include:
 
 - JSONL log-filter CLI utility;
 - text statistics CLI utility;
 - CSV sort CLI utility;
+- OCR image CLI utility;
+- image contents CLI utility with optional vision backend;
 - FastAPI CSV aggregation service;
 - FastAPI in-memory key/value CRUD service.
 
@@ -591,14 +593,14 @@ CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
 -> SemanticHypothesisRequest
 -> SemanticHypothesisProposal
 -> L4SemanticValidationResult
--> optional Stage2TemplateBacklogItem / clarification / stop / rework
+-> optional SuccessfulResolutionCandidate / DeveloperImprovementRequest / clarification / stop / rework
 -> optional SemanticProposalReplay
 -> deterministic L4.0 gates
 ```
 
-The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose a template mapping, clarification, unsupported reason, new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
+The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose an existing-route resolution, developer improvement request, template mapping, clarification, unsupported reason, legacy new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
 
-In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. Model output is normalized, forbidden actions are stripped, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with policy review and a human-readable explanation. Stage 2 may create `Stage2TemplateBacklogItem` only when L4.0 accepts the proposal and routes it to `record_template_backlog`; risky prompt boundaries route to `record_template_backlog_requires_human_review`, unsupported product surfaces route to clarification, and neither path mutates templates automatically. Otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
+In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. If a ready prompt has no supported template, or intake is uncertain for a concrete bounded implementation prompt, L4.5 first tries to map it to existing means. A successful mapping becomes `SuccessfulResolutionCandidate`, which can later become a KB/template rule only after repeated verified successes and review. If existing means cannot solve the prompt, L4.5 emits `DeveloperImprovementRequest` for Codex/human implementation work; it does not immediately mutate templates or KB. Model output is normalized, forbidden actions are stripped, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with policy review and a human-readable explanation. Vague prompts and secret/live-risk prompts still route to clarification without developer work, unsupported product surfaces route to clarification, and no path mutates templates automatically. Otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
 
 Run the deterministic L4.5 loop benchmark:
 

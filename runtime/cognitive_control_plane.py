@@ -52,7 +52,7 @@ def run_prompt_product_control_plane(
 ) -> dict[str, Any]:
     gate = _prompt_product_gate(prompt_adequacy, supported_template)
     transition = _prompt_product_transition(prompt_adequacy, gate)
-    escalation = _prompt_product_escalation(prompt_adequacy, gate, llm_invoked)
+    escalation = _prompt_product_escalation(prompt, prompt_adequacy, gate, llm_invoked)
     return {
         "artifact_type": "CognitiveControlPlaneDecision",
         "layer": "L4.0",
@@ -235,6 +235,7 @@ def _prompt_product_transition(prompt_adequacy: dict[str, Any], gate: dict[str, 
 
 
 def _prompt_product_escalation(
+    prompt: str,
     prompt_adequacy: dict[str, Any],
     gate: dict[str, Any],
     llm_invoked: bool,
@@ -242,6 +243,8 @@ def _prompt_product_escalation(
     reasons: list[str] = []
     if prompt_adequacy.get("status") == "ready" and not gate.get("can_build_package"):
         reasons.append("no_supported_package_template")
+    if _is_bounded_intake_uncertainty(prompt, prompt_adequacy):
+        reasons.append("prompt_intake_uncertainty")
     if prompt_adequacy.get("status") == "unsupported" and prompt_adequacy.get("system_type") is None:
         reasons.append("unsupported_system_type_requires_semantic_classification")
     return {
@@ -250,6 +253,45 @@ def _prompt_product_escalation(
         "llm_already_invoked": llm_invoked,
         "policy": "invoke L4.5 only when deterministic prompt gates cannot classify or route an otherwise bounded request",
     }
+
+
+def _is_bounded_intake_uncertainty(prompt: str, prompt_adequacy: dict[str, Any]) -> bool:
+    if prompt_adequacy.get("status") != "needs_clarification":
+        return False
+    lower = prompt.lower()
+    goal_spec = dict(prompt_adequacy.get("goal_spec", {}))
+    boundary = dict(prompt_adequacy.get("boundary_classification", {}))
+    if boundary.get("risk_markers") or boundary.get("unsupported_markers"):
+        return False
+    if any(marker in lower for marker in ("полезную штуку", "что-нибудь", "anything", "do something")):
+        return False
+    has_product_shape = any(marker in lower for marker in ("cli", ".py", "утилит", "script", "fastapi", "service", "служб"))
+    has_domain_signal = any(
+        marker in lower
+        for marker in (
+            "картин",
+            "изображ",
+            "фото",
+            "image",
+            "picture",
+            "csv",
+            "json",
+            "xlsx",
+            "markdown",
+            "pdf",
+            "html",
+            "url",
+            "текст",
+            "файл",
+        )
+    )
+    return (
+        goal_spec.get("intent") == "implementation"
+        and prompt_adequacy.get("system_type") in {"cli", "file_processing_utility", "fastapi_service", "small_local_service"}
+        and boundary.get("boundary") in {"incomplete_bounded_prompt", "bounded_supported_class"}
+        and has_product_shape
+        and has_domain_signal
+    )
 
 
 def _prompt_product_crystallization_backlog(
@@ -279,10 +321,22 @@ def _prompt_product_crystallization_backlog(
 
 def _blocked_no_safe_candidate(artifacts: dict[str, dict[str, Any]]) -> bool:
     for artifact in artifacts.values():
-        text = str(artifact)
-        if "blocked_no_safe_candidate" in text or "no_safe_source_specific_candidate" in text:
+        if _has_blocked_candidate_signal(artifact):
             return True
     return False
+
+
+def _has_blocked_candidate_signal(value: Any) -> bool:
+    if isinstance(value, dict):
+        status = value.get("status")
+        reason = value.get("reason")
+        code = value.get("code")
+        if status == "blocked_no_safe_candidate" or reason == "no_safe_source_specific_candidate" or code == "no_safe_source_specific_candidate":
+            return True
+        return any(_has_blocked_candidate_signal(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_has_blocked_candidate_signal(item) for item in value if isinstance(item, (dict, list)))
+    return value in {"blocked_no_safe_candidate", "no_safe_source_specific_candidate"}
 
 
 def _has_architect_fallback(artifacts: dict[str, dict[str, Any]]) -> bool:

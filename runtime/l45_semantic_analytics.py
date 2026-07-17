@@ -14,6 +14,7 @@ SAFE_RISK_ACTIONS = {
     "ask_clarification",
     "stop_unsupported",
     "record_template_backlog_requires_human_review",
+    "record_developer_improvement_request",
     "blocked",
 }
 
@@ -111,13 +112,14 @@ def _case_category(row: dict[str, Any]) -> str:
     case_id = str(row.get("case_id") or "")
     expected = row.get("expected", {})
     expected_action = str(dict(expected).get("l4_action") if isinstance(expected, dict) else "")
+    boundary = str(_actual(row).get("prompt_boundary") or "")
     if case_id.startswith("generated_"):
         case_id = "_".join(case_id.split("_")[2:])
     if case_id.startswith("known_") or expected_action == "build_verified_system_package":
         return "known_template"
     if expected_action in {"ask_clarification", "stop_unsupported"}:
         return "clarification_or_unsupported"
-    if expected_action == "record_template_backlog_requires_human_review":
+    if boundary in RISK_BOUNDARIES or expected_action == "record_template_backlog_requires_human_review":
         return "risk_boundary"
     return "unknown_template"
 
@@ -133,6 +135,9 @@ def _policy_signals(rows: list[dict[str, Any]]) -> dict[str, int]:
             for row in rows
             if (_actual(row).get("prompt_boundary") or "") in RISK_BOUNDARIES
             and _actual(row).get("l4_action") == "record_template_backlog"
+        ),
+        "developer_improvement_requests": sum(
+            1 for row in rows if _actual(row).get("l4_action") == "record_developer_improvement_request"
         ),
     }
 

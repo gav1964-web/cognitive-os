@@ -70,6 +70,7 @@ def main() -> int:
     from runtime.local_inference import LocalInferenceConfig
     from runtime.memory_index import MemoryIndex
     from runtime.project_deliberation import deliberate_project_report
+    from runtime.project_architecture_synthesis import synthesize_project_architecture
     from runtime.project_signals import generate_project_signals
     from runtime.project_tasks import generate_project_tasks
     from runtime.registry import CapabilityRegistry
@@ -275,6 +276,12 @@ def main() -> int:
                     level35_signals=dict(report["level35_project_signals"]),
                     level4_interpretation=dict(report["level4_project_interpretation"]),
                 )
+                report["architecture_synthesis"] = synthesize_project_architecture(
+                    report,
+                    level35_signals=dict(report["level35_project_signals"]),
+                    level4_interpretation=dict(report["level4_project_interpretation"]),
+                    analysis_tasks=dict(report["analysis_tasks"]),
+                )
                 store.append_event(
                     session,
                     "level4_project_interpreted",
@@ -284,6 +291,7 @@ def main() -> int:
                         "model": cortex_config.model if cortex_config else None,
                         "context_mode": args.l4_context,
                         "analysis_task_count": dict(report["analysis_tasks"]).get("task_count"),
+                        "architecture_synthesis": dict(report["architecture_synthesis"]).get("synthesis_id"),
                     },
                 )
             except LocalInferenceError as exc:

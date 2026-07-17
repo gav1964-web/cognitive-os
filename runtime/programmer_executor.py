@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
+from .programmer_patch_synthesizer import synthesize_patch_package
 
 
 def run_programmer_executor(
@@ -34,11 +35,19 @@ def run_programmer_executor(
     execution_dir = _execution_dir(root)
     execution_dir.mkdir(parents=True, exist_ok=True)
     snapshot = _snapshot_writable_files(execution_dir, project_dir, implementation_plan)
-    patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot)
+    synthesis = synthesize_patch_package(
+        execution_dir=execution_dir,
+        project_dir=project_dir,
+        implementation_plan=implementation_plan,
+        test_plan=test_plan,
+    )
+    execution_project_dir = Path(str(synthesis.get("sandbox_project") or project_dir))
+    patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot, synthesis)
     patch_path = _write_json(execution_dir / "patch_package.json", patch_package)
     test_result = _run_test_result(
         root=root,
-        project_dir=project_dir,
+        project_dir=execution_project_dir,
+        source_project_dir=project_dir,
         implementation_plan=implementation_plan,
         test_plan=test_plan,
         execution_dir=execution_dir,
@@ -52,6 +61,7 @@ def run_programmer_executor(
         "kind": "programmer_executor_result",
         "created_at": _now(),
         "project": project_dir.as_posix(),
+        "execution_project": execution_project_dir.as_posix(),
         "execution_dir": execution_dir.as_posix(),
         "patch_package_path": patch_path.as_posix(),
         "test_result_path": test_result_path.as_posix(),
@@ -113,6 +123,7 @@ def _patch_package(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     snapshot: list[dict[str, Any]],
+    synthesis: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "artifact_type": "PatchPackage",
@@ -128,10 +139,18 @@ def _patch_package(
             {"type": test_plan.get("artifact_type"), "role": test_plan.get("role")},
         ],
         "implementation_target": implementation_plan.get("implementation_target", {}),
+        "implementation_blueprint": implementation_plan.get("implementation_blueprint", {}),
+        "patch_intent": implementation_plan.get("patch_intent", {}),
+        "executor_handoff": implementation_plan.get("executor_handoff", {}),
         "writable_scope": implementation_plan.get("writable_scope", []),
         "expected_files": implementation_plan.get("expected_files", []),
         "snapshot": snapshot,
-        "patches": [],
+        "patch_synthesis": {
+            "status": synthesis.get("status"),
+            "reason": synthesis.get("reason"),
+            "sandbox_project": synthesis.get("sandbox_project"),
+        },
+        "patches": synthesis.get("patches", []),
         "policy": {
             "source_edit_requires_explicit_flag": True,
             "apply_source_enabled": False,
@@ -144,6 +163,7 @@ def _run_test_result(
     *,
     root: Path,
     project_dir: Path,
+    source_project_dir: Path,
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     execution_dir: Path,
@@ -155,6 +175,7 @@ def _run_test_result(
     if not run_verification:
         command_results.append({"command": None, "status": "skipped", "reason": "run_verification=false"})
     else:
+        command_results.append(_run_project_scoped_verification(project_dir, implementation_plan))
         for command in commands[:max_commands]:
             if not _command_allowed(command):
                 command_results.append({"command": command, "status": "skipped", "reason": "not in executor allowlist"})
@@ -175,7 +196,8 @@ def _run_test_result(
         "role": "programmer_executor",
         "status": "failed" if failed else "ok",
         "created_at": _now(),
-        "project": project_dir.as_posix(),
+        "project": source_project_dir.as_posix(),
+        "execution_project": project_dir.as_posix(),
         "implementation_target": implementation_plan.get("implementation_target", {}),
         "commands": command_results,
         "summary": {
@@ -189,6 +211,34 @@ def _run_test_result(
         "source_code_changes": False,
         "registry_changes": False,
     }
+
+
+def _run_project_scoped_verification(project_dir: Path, implementation_plan: dict[str, Any]) -> dict[str, Any]:
+    files = []
+    for file_name in _expected_files(implementation_plan):
+        path = (project_dir / file_name).resolve()
+        try:
+            path.relative_to(project_dir.resolve())
+        except ValueError:
+            return {
+                "command": "project_scoped_py_compile",
+                "status": "failed",
+                "reason": "expected_file_outside_execution_project",
+                "file": file_name,
+            }
+        if path.suffix == ".py" and path.is_file():
+            files.append(file_name)
+    if not files:
+        return {
+            "command": "project_scoped_py_compile",
+            "status": "skipped",
+            "reason": "no_python_expected_files",
+        }
+    command = f"{Path(sys.executable).as_posix()} -m py_compile " + " ".join(files)
+    result = _run_command(command, project_dir)
+    result["kind"] = "project_scoped_py_compile"
+    result["scope"] = files
+    return result
 
 
 def _run_command(command: str, cwd: Path) -> dict[str, Any]:

@@ -13,7 +13,13 @@ from .l4_semantic_validation import validate_l45_semantic_proposal
 from .l45_model_modes import resolve_model_quality_mode
 from .prompt_adequacy import evaluate_prompt_adequacy
 from .semantic_evidence_pack import build_semantic_evidence_pack
-from .semantic_reasoner import build_semantic_hypothesis_request, build_stage2_template_backlog_item, run_semantic_reasoner
+from .semantic_reasoner import (
+    build_developer_improvement_request,
+    build_semantic_hypothesis_request,
+    build_stage2_template_backlog_item,
+    build_successful_resolution_candidate,
+    run_semantic_reasoner,
+)
 from .semantic_replay import build_semantic_replay_record, write_semantic_replay_record
 
 
@@ -23,8 +29,8 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, нормализует значения в колонке name, сохраняет CSV-файл, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "known_csv_sort",
@@ -73,40 +79,40 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "prompt": "Напиши CLI-утилиту с зависимостью requests, которая читает список URL из файла, проверяет HTTP status, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "unknown_csv_deduplicate",
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, удаляет дубликаты по колонке email, сохраняет CSV-файл, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "unknown_json_validator",
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает JSON-файл, валидирует обязательные поля id/name, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "unknown_markdown_link_report",
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает markdown-файл, извлекает ссылки, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "unknown_fastapi_image_metadata",
         "prompt": "Сделай локальную FastAPI-службу с зависимостью fastapi, которая принимает JSON с именем изображения, возвращает JSON metadata report, имеет README, тесты и команду запуска.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "too_broad_anything",
@@ -120,15 +126,15 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "desktop_gui_boundary",
         "prompt": "Напиши desktop GUI приложение без внешних зависимостей, которое читает CSV файл, показывает таблицу, сохраняет JSON отчет, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
+        "expected_hypothesis_type": "developer_improvement_request",
         "expected_l4_action": "ask_clarification",
     },
     {
@@ -136,8 +142,8 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "prompt": "Измени исходники проекта: напиши CLI-утилиту без внешних зависимостей, которая читает JSON-файл, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog_requires_human_review",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "secret_boundary",
@@ -151,32 +157,32 @@ BENCHMARK_CASES: list[dict[str, Any]] = [
         "prompt": "Напиши CLI-скрапер с зависимостью requests, который читает URL, скачивает HTML, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog_requires_human_review",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "small_local_service_unknown",
         "prompt": "Сделай локальный сервис без внешней сети, который принимает JSON-файл, считает checksum, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "xlsx_to_json_unknown",
         "prompt": "Напиши CLI-утилиту с зависимостью openpyxl, которая читает XLSX-файл, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "html_title_knownish_unknown",
         "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает HTML-файл, извлекает title, сохраняет JSON-отчёт, имеет README и тесты.",
         "supported_template": None,
         "expected_escalation": True,
-        "expected_hypothesis_type": "new_template_candidate",
-        "expected_l4_action": "record_template_backlog",
+        "expected_hypothesis_type": "developer_improvement_request",
+        "expected_l4_action": "record_developer_improvement_request",
     },
     {
         "case_id": "unsupported_blockchain_boundary",
@@ -279,12 +285,18 @@ def _run_case(
     proposal = None
     validation = None
     backlog = None
+    successful_resolution = None
+    developer_request = None
     replay_path = None
     if request is not None and policy["mode"] != "blocked_model_untrusted":
         proposal = run_semantic_reasoner(request=request, config=config, use_model=bool(policy["use_model"]))
         validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
         if validation["accepted_action"] == "record_template_backlog":
             backlog = build_stage2_template_backlog_item(proposal)
+        if validation["accepted_action"] == "record_successful_resolution_candidate":
+            successful_resolution = build_successful_resolution_candidate(proposal)
+        if validation["accepted_action"] == "record_developer_improvement_request":
+            developer_request = build_developer_improvement_request(proposal)
         if write:
             replay = build_semantic_replay_record(
                 request=request,
@@ -292,7 +304,11 @@ def _run_case(
                 validation=validation,
                 evidence_pack=evidence_pack,
                 model_quality_mode=str(policy["mode"]),
-                outcome={"stage2_template_backlog_item": backlog},
+                outcome={
+                    "stage2_template_backlog_item": backlog,
+                    "successful_resolution_candidate": successful_resolution,
+                    "developer_improvement_request": developer_request,
+                },
             )
             replay_path = write_semantic_replay_record(root, replay).as_posix()
     actual_action = _actual_action(decision, validation)
@@ -325,6 +341,8 @@ def _run_case(
             "policy_review": (validation or {}).get("policy_review"),
             "l4_action": actual_action,
             "backlog_created": backlog is not None,
+            "successful_resolution_created": successful_resolution is not None,
+            "developer_request_created": developer_request is not None,
             "replay_path": replay_path,
             "raw_model_output_used": dict((proposal or {}).get("hardening", {})).get("raw_model_output_used"),
             "forbidden_actions_stripped": dict((proposal or {}).get("hardening", {})).get("forbidden_actions_stripped"),

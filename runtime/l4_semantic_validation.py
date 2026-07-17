@@ -57,8 +57,15 @@ def validate_l45_semantic_proposal(
             "reason_code": _reason_code(status, failed_codes, str(proposal.get("hypothesis_type") or "")),
             "backlog_allowed": accepted_action == "record_template_backlog",
             "risk_backlog_allowed": accepted_action == "record_template_backlog_requires_human_review",
+            "successful_resolution_candidate_allowed": accepted_action == "record_successful_resolution_candidate",
+            "developer_improvement_request_allowed": accepted_action == "record_developer_improvement_request",
             "human_review_required": accepted_action
-            in {"record_template_backlog", "record_template_backlog_requires_human_review"},
+            in {
+                "record_template_backlog",
+                "record_template_backlog_requires_human_review",
+                "record_successful_resolution_candidate",
+                "record_developer_improvement_request",
+            },
             "clarification_allowed": accepted_action == "ask_clarification",
         },
         "explanation": _explanation(status, accepted_action, failed_codes, proposal),
@@ -125,6 +132,8 @@ def _quality_checks(
 
 def _accepted_action(hypothesis_type: str) -> str:
     return {
+        "successful_existing_resolution": "record_successful_resolution_candidate",
+        "developer_improvement_request": "record_developer_improvement_request",
         "new_template_candidate": "record_template_backlog",
         "template_mapping_candidate": "rerun_deterministic_gate",
         "clarification_question": "ask_clarification",
@@ -144,10 +153,10 @@ def _policy_review(request: dict[str, Any], base_action: str) -> dict[str, Any]:
     applied_rule = "none"
     rationale = "base L4.5 hypothesis route is allowed"
 
-    if base_action == "record_template_backlog" and boundary == "unsupported_product_surface":
+    if base_action in {"record_template_backlog", "record_developer_improvement_request"} and boundary == "unsupported_product_surface":
         accepted_action = "ask_clarification"
         applied_rule = "unsupported_surface_requires_clarification"
-        rationale = "unsupported product surfaces must not become template backlog without a clarified supported scope"
+        rationale = "unsupported product surfaces must be clarified before backlog or developer-work admission"
     elif base_action == "record_template_backlog" and (boundary == "bounded_with_risks" or risk_markers):
         accepted_action = "record_template_backlog_requires_human_review"
         applied_rule = "risk_boundary_requires_human_review"

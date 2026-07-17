@@ -215,6 +215,11 @@ def _target(prompt: str, intent: str, root_input: dict[str, Any]) -> str | None:
 def _inputs(prompt: str, root_input: dict[str, Any]) -> list[str]:
     values = [f"$input.{name}" for name in re.findall(r"\$input\.([A-Za-z_][A-Za-z0-9_]*)", prompt)]
     values.extend(f"$input.{key}" for key in sorted(root_input) if key not in {item[7:] for item in values})
+    lower = prompt.lower()
+    if any(word in lower for word in ("image", "picture", "photo", "изображ", "картин", "фото", "png", "jpg", "jpeg", "webp")):
+        values.append("image_path")
+    elif any(word in lower for word in ("file", "файл")):
+        values.append("file_path")
     return sorted(set(values))
 
 
@@ -224,6 +229,8 @@ def _outputs(goal: str) -> list[str]:
         outputs.append("report")
     if any(word in goal for word in ("json", "file", "файл")):
         outputs.append("file")
+    if any(word in goal for word in ("json", "список", "перечисл", "contents", "содерж")):
+        outputs.append("json")
     if "csv" in goal:
         outputs.append("csv")
     if "xlsx" in goal or "xls" in goal or "excel" in goal:
@@ -240,7 +247,7 @@ def _outputs(goal: str) -> list[str]:
 def _allowed_actions(goal: str) -> list[str]:
     if any(word in goal for word in ("only analyze", "только анализ", "оцен", "посмотри")):
         return ["read", "analyze", "report"]
-    if any(word in goal for word in ("implement", "реализ", "исправ", "change", "edit")):
+    if any(word in goal for word in ("implement", "реализ", "исправ", "change", "edit", "напиши", "сделай", "create", "build")):
         return ["read", "analyze", "write", "test", "report"]
     return ["read", "analyze", "plan", "report"]
 
@@ -251,6 +258,10 @@ def _constraints(goal: str) -> list[str]:
         constraints.append("read_only")
     if any(word in goal for word in ("test", "тест", "провер")):
         constraints.append("verify_with_tests")
+    if any(word in goal for word in ("cli .py", ".py", "python", "без внешних", "без обязательных")):
+        constraints.append("local_python")
+    if any(word in goal for word in ("без сети", "без сетевых", "no network")):
+        constraints.append("no_live_network")
     return constraints
 
 
@@ -275,7 +286,10 @@ def _missing_fields(prompt: str, intent: str, target: str | None, success: list[
         missing.append("objective")
     if intent == "unknown":
         missing.append("intent")
-    if intent in {"analyze_project", "parse_pdf", "convert_markdown", "convert_spreadsheet", "extract_links", "list_files", "implementation"} and not target:
+    target_required_intents = {"analyze_project", "parse_pdf", "convert_markdown", "convert_spreadsheet", "extract_links", "list_files"}
+    if intent == "implementation" and not _is_greenfield_implementation_prompt(lowered):
+        target_required_intents.add("implementation")
+    if intent in target_required_intents and not target:
         missing.append("target")
     if not success:
         missing.append("success_criteria")
@@ -368,6 +382,12 @@ def _target_confidence(target: str | None, root_input: dict[str, Any], missing: 
 def _is_vague(goal: str) -> bool:
     vague_markers = {"help me", "do something", "process this", "handle it", "что-нибудь", "как-нибудь"}
     return len(goal) < 8 or any(marker in goal for marker in vague_markers)
+
+
+def _is_greenfield_implementation_prompt(goal: str) -> bool:
+    has_create_verb = any(word in goal for word in ("напиши", "сделай", "create", "build", "implement"))
+    has_product_shape = any(word in goal for word in ("cli", "утилит", "script", ".py", "fastapi", "service", "служб"))
+    return has_create_verb and has_product_shape
 
 
 def _mentions_project(goal: str) -> bool:

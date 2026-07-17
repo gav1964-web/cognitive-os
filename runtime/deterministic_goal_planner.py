@@ -191,6 +191,71 @@ def _proposal_for(goal: str, required_capabilities: list[str]) -> dict[str, Any]
             ],
             "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
         }
+    if capabilities == (
+        "scan_project_tree",
+        "detect_project_stack",
+        "read_many_files",
+        "extract_python_structure",
+        "extract_runtime_commands",
+        "project_map_report",
+        "project_fact_questions",
+    ):
+        return {
+            "id": "deterministic_project_fact_questions",
+            "version": "0.1.0",
+            "steps": [
+                {
+                    "id": "scan_project_tree",
+                    "capability": "scan_project_tree",
+                    "input": {"path": "$input.path", "max_files": 5000, "max_depth": 8},
+                },
+                {"id": "detect_project_stack", "capability": "detect_project_stack", "input": {"path": "$input.path"}},
+                {
+                    "id": "read_many_files",
+                    "capability": "read_many_files",
+                    "input": {
+                        "root": "$input.path",
+                        "paths": [],
+                        "auto_discover": True,
+                        "max_bytes_per_file": 50000,
+                        "max_files": 12,
+                    },
+                },
+                {
+                    "id": "extract_python_structure",
+                    "capability": "extract_python_structure",
+                    "input": {"root": "$input.path", "max_files": 5000, "max_bytes_per_file": 2000000},
+                },
+                {
+                    "id": "extract_runtime_commands",
+                    "capability": "extract_runtime_commands",
+                    "input": {"root": "$input.path"},
+                },
+                {
+                    "id": "project_map_report",
+                    "capability": "project_map_report",
+                    "input": {
+                        "tree": "$nodes.scan_project_tree.output",
+                        "stack": "$nodes.detect_project_stack.output",
+                        "files": "$nodes.read_many_files.output",
+                        "python_structure": "$nodes.extract_python_structure.output",
+                        "runtime_commands": "$nodes.extract_runtime_commands.output",
+                    },
+                },
+                {
+                    "id": "project_fact_questions",
+                    "capability": "project_fact_questions",
+                    "input": {
+                        "tree": "$nodes.scan_project_tree.output",
+                        "python_structure": "$nodes.extract_python_structure.output",
+                        "project_map_report": "$nodes.project_map_report.output",
+                        "scope": "active_core",
+                        "questions": [],
+                    },
+                },
+            ],
+            "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
+        }
     if capabilities == ("read_text_file", "markdown_to_text", "write_text_file"):
         return {
             "id": "deterministic_markdown_file_to_text_file",

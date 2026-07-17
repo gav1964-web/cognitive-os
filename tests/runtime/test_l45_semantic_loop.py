@@ -17,7 +17,12 @@ from runtime.prompt_boundary_classifier import classify_prompt_boundary
 from runtime.prompt_adequacy import evaluate_prompt_adequacy
 from runtime.registry import CapabilityRegistry
 from runtime.semantic_evidence_pack import build_semantic_evidence_pack
-from runtime.semantic_reasoner import build_semantic_hypothesis_request, run_semantic_reasoner
+from runtime.semantic_reasoner import (
+    build_developer_improvement_request,
+    build_semantic_hypothesis_request,
+    build_successful_resolution_candidate,
+    run_semantic_reasoner,
+)
 from runtime.semantic_replay import build_semantic_replay_record
 
 
@@ -59,7 +64,52 @@ def test_semantic_replay_records_full_request_proposal_validation_path():
 
     assert replay["artifact_type"] == "SemanticProposalReplay"
     assert replay["audit"]["l4_status"] == "accepted"
-    assert replay["outcome"]["next_action"] == "record_template_backlog"
+    assert replay["outcome"]["next_action"] == "record_developer_improvement_request"
+
+
+def test_l45_records_successful_resolution_candidate_for_existing_means():
+    gate = evaluate_prompt_adequacy(
+        "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
+    ).to_dict()
+    decision = run_prompt_product_control_plane(prompt=gate["prompt"], prompt_adequacy=gate, supported_template=None)
+    pack = build_semantic_evidence_pack(
+        control_plane_decision=decision,
+        prompt=gate["prompt"],
+        prompt_adequacy=gate,
+        known_templates=["csv_sort_cli"],
+    )
+    request = build_semantic_hypothesis_request(
+        control_plane_decision=decision,
+        context={"prompt": gate["prompt"], "evidence_pack": pack},
+    )
+    assert request is not None
+
+    proposal = run_semantic_reasoner(request=request)
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+    candidate = build_successful_resolution_candidate(proposal)
+
+    assert proposal["hypothesis_type"] == "successful_existing_resolution"
+    assert validation["accepted_action"] == "record_successful_resolution_candidate"
+    assert candidate is not None
+    assert candidate["requires_repeated_successes"] is True
+
+
+def test_l45_records_developer_request_when_existing_means_fail():
+    gate = evaluate_prompt_adequacy(
+        "Напиши CLI-утилиту с зависимостью openpyxl, которая читает XLSX-файл, сохраняет JSON-отчёт, имеет README и тесты."
+    ).to_dict()
+    decision = run_prompt_product_control_plane(prompt=gate["prompt"], prompt_adequacy=gate, supported_template=None)
+    request = build_semantic_hypothesis_request(control_plane_decision=decision, context={"prompt": gate["prompt"]})
+    assert request is not None
+
+    proposal = run_semantic_reasoner(request=request)
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+    improvement = build_developer_improvement_request(proposal)
+
+    assert proposal["hypothesis_type"] == "developer_improvement_request"
+    assert validation["accepted_action"] == "record_developer_improvement_request"
+    assert improvement is not None
+    assert improvement["requires_developer"] is True
 
 
 def test_l4_decision_table_exposes_crystallization_rules():
@@ -119,7 +169,7 @@ def test_l45_generated_corpus_profiles_are_seeded_and_distinct(tmp_path: Path):
     assert report["status"] == "ok"
     assert report["corpus"]["profile"] == "risk_heavy"
     assert any(
-        row["actual"]["l4_action"] == "record_template_backlog_requires_human_review"
+        row["actual"]["l4_action"] == "record_developer_improvement_request"
         for row in report["cases"]
     )
 
@@ -136,16 +186,16 @@ def test_prompt_boundary_classifier_marks_unsupported_surfaces():
     assert "mobile_app" in result["unsupported_markers"]
 
 
-def test_l4_gate_adds_policy_review_for_risky_l45_template_candidates(tmp_path: Path):
+def test_l4_gate_routes_risky_unknown_templates_to_developer_requests(tmp_path: Path):
     report = run_l45_semantic_benchmark(root=tmp_path, write=False)
     by_id = {row["case_id"]: row for row in report["cases"]}
 
     source_edit = by_id["source_edit_boundary"]
     desktop_gui = by_id["desktop_gui_boundary"]
 
-    assert source_edit["actual"]["l4_action"] == "record_template_backlog_requires_human_review"
+    assert source_edit["actual"]["l4_action"] == "record_developer_improvement_request"
     assert source_edit["actual"]["backlog_created"] is False
-    assert source_edit["actual"]["policy_review"]["applied_rule"] == "risk_boundary_requires_human_review"
+    assert source_edit["actual"]["developer_request_created"] is True
     assert desktop_gui["actual"]["l4_action"] == "ask_clarification"
     assert desktop_gui["actual"]["policy_review"]["applied_rule"] == "unsupported_surface_requires_clarification"
 

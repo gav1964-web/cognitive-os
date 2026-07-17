@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .role_implementer_blueprint import (
+    build_executor_handoff,
+    build_implementation_blueprint,
+    build_patch_intent,
+)
 from .role_skill_common import now_iso
 
 
@@ -16,6 +21,16 @@ def run_implementer_skill(*, technical_spec: dict[str, Any]) -> dict[str, Any]:
     target = _implementation_target(extraction_contract, patch_scope)
     writable_scope = _writable_scope(target)
     expected_files = _expected_files(writable_scope)
+    binding = _contract_binding(extraction_contract, target)
+    change_plan = _change_plan(requirements, patch_scope, target, binding)
+    quality_gates = _quality_gates(expected_files, acceptance)
+    verification_commands = _verification_commands()
+    patch_intent = build_patch_intent(
+        target=target,
+        writable_scope=writable_scope,
+        expected_files=expected_files,
+        verification_commands=verification_commands,
+    )
     return {
         "artifact_type": "ImplementationPlan",
         "role": "implementer",
@@ -27,14 +42,29 @@ def run_implementer_skill(*, technical_spec: dict[str, Any]) -> dict[str, Any]:
             "chosen_architecture_option": technical_spec.get("chosen_architecture_option"),
         },
         "implementation_target": target,
-        "contract_binding": _contract_binding(extraction_contract, target),
+        "contract_binding": binding,
         "patch_scope": patch_scope,
         "evidence_scope": patch_scope,
         "writable_scope": writable_scope,
         "write_scope_policy": "Only writable_scope may be changed; patch_scope/evidence_scope is read-only context.",
         "expected_files": expected_files,
+        "implementation_units": _implementation_units(target, binding, expected_files),
+        "change_plan": change_plan,
+        "implementation_blueprint": build_implementation_blueprint(
+            target=target,
+            binding=binding,
+            change_plan=change_plan,
+            quality_gates=quality_gates,
+            acceptance=acceptance,
+        ),
+        "patch_intent": patch_intent,
+        "executor_handoff": build_executor_handoff(patch_intent=patch_intent),
+        "patch_package_contract": _patch_package_contract(target, writable_scope, expected_files),
+        "dependency_policy": _dependency_policy(technical_spec),
         "implementation_steps": _implementation_steps(requirements, patch_scope, target),
-        "verification_commands": _verification_commands(),
+        "quality_gates": quality_gates,
+        "debug_rework_policy": _debug_rework_policy(),
+        "verification_commands": verification_commands,
         "rollback_plan": _rollback_plan(expected_files),
         "acceptance_mapping": _acceptance_mapping(acceptance),
         "non_goals": technical_spec.get("non_goals", []),
@@ -142,6 +172,156 @@ def _implementation_steps(
             }
         )
     return steps
+
+
+def _implementation_units(
+    target: dict[str, Any],
+    binding: dict[str, Any],
+    expected_files: list[str],
+) -> list[dict[str, Any]]:
+    candidate = target.get("candidate")
+    if not candidate:
+        return []
+    return [
+        {
+            "id": "UNIT-001",
+            "target": candidate,
+            "file": expected_files[0] if expected_files else str(candidate).split(":", 1)[0],
+            "operation": "modify_existing_symbol_or_extract_adjacent_helper",
+            "input_contract": binding.get("input_contract", {}),
+            "output_contract": binding.get("output_contract", {}),
+            "side_effect_policy": binding.get("side_effects", {}),
+            "done_when": "target behavior satisfies mapped acceptance criteria without expanding writable_scope",
+        }
+    ]
+
+
+def _change_plan(
+    requirements: list[dict[str, Any]],
+    patch_scope: list[str],
+    target: dict[str, Any],
+    binding: dict[str, Any],
+) -> list[dict[str, Any]]:
+    candidate = str(target.get("candidate") or "")
+    if target.get("status") == "blocked_no_safe_candidate":
+        return [
+            {
+                "id": "CHANGE-001",
+                "kind": "stop",
+                "target": "TechnicalSpec.extraction_contract",
+                "instruction": "Do not generate a patch until a source-backed candidate exists.",
+            }
+        ]
+    rows = [
+        {
+            "id": "CHANGE-001",
+            "kind": "read_context",
+            "target": candidate,
+            "instruction": "Read candidate source, neighboring evidence_scope, and existing tests before editing.",
+        },
+        {
+            "id": "CHANGE-002",
+            "kind": "contract_shape",
+            "target": candidate,
+            "instruction": _contract_instruction(binding),
+        },
+        {
+            "id": "CHANGE-003",
+            "kind": "scope_guard",
+            "target": candidate,
+            "instruction": "Keep changed files inside writable_scope; use evidence_scope only to understand callers and side effects.",
+        },
+    ]
+    for index, requirement in enumerate(requirements[:4], start=4):
+        rows.append(
+            {
+                "id": f"CHANGE-{index:03d}",
+                "kind": "requirement_delta",
+                "target": candidate,
+                "requirement_id": requirement.get("id"),
+                "instruction": str(requirement.get("statement") or ""),
+                "source": requirement.get("source"),
+            }
+        )
+    if patch_scope:
+        rows.append(
+            {
+                "id": f"CHANGE-{len(rows) + 1:03d}",
+                "kind": "call_site_check",
+                "target": candidate,
+                "instruction": "Verify known callers still satisfy the input/output contract after the candidate change.",
+            }
+        )
+    return rows
+
+
+def _contract_instruction(binding: dict[str, Any]) -> str:
+    inputs = ", ".join(f"{key}: {value}" for key, value in dict(binding.get("input_contract", {})).items())
+    outputs = ", ".join(f"{key}: {value}" for key, value in dict(binding.get("output_contract", {})).items())
+    return f"Preserve or introduce explicit boundary: input {{{inputs or 'payload: Any'}}}; output {{{outputs or 'result: Any'}}}."
+
+
+def _patch_package_contract(
+    target: dict[str, Any],
+    writable_scope: list[str],
+    expected_files: list[str],
+) -> dict[str, Any]:
+    return {
+        "artifact_type": "PatchPackage",
+        "target": target.get("candidate"),
+        "expected_files": expected_files,
+        "allowed_write_scope": writable_scope,
+        "required_sections": ["summary", "patches", "verification", "rollback", "known_limits"],
+        "apply_policy": "build isolated patch package first; direct source apply requires explicit human approval",
+        "forbidden_paths": ["registry/capabilities.json", "artifacts/", ".git/"],
+    }
+
+
+def _dependency_policy(technical_spec: dict[str, Any]) -> dict[str, Any]:
+    constraints = [str(item).lower() for item in technical_spec.get("constraints", [])]
+    allow_new = any("dependency" in item and "allow" in item for item in constraints)
+    return {
+        "new_runtime_dependencies": "allowed_with_explicit_spec_constraint" if allow_new else "forbidden_by_default",
+        "pinning_required": True,
+        "network_required_for_build": False,
+        "reason": "implementation must prefer existing project dependencies unless TechnicalSpec explicitly permits expansion",
+    }
+
+
+def _quality_gates(expected_files: list[str], acceptance: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "GATE-001",
+            "name": "changed_files_within_scope",
+            "check": "changed files are a subset of ImplementationPlan.expected_files",
+            "expected_files": expected_files,
+        },
+        {
+            "id": "GATE-002",
+            "name": "acceptance_criteria_mapped",
+            "check": "each TechnicalSpec acceptance criterion has an implementation note or test obligation",
+            "acceptance_ids": [item.get("id") for item in acceptance[:10]],
+        },
+        {
+            "id": "GATE-003",
+            "name": "no_registry_or_artifact_mutation",
+            "check": "patch package does not mutate registry or generated evidence artifacts",
+        },
+    ]
+
+
+def _debug_rework_policy() -> dict[str, Any]:
+    return {
+        "max_attempts": 2,
+        "input_artifacts": ["TestResult", "ReviewFindings", "PatchPackage"],
+        "failure_classes": ["contract_mismatch", "test_failure", "scope_violation", "dependency_error"],
+        "output_artifact": "BoundedReworkPlan",
+        "stop_conditions": [
+            "same failure class repeats twice",
+            "required change leaves writable_scope",
+            "new dependency is needed but not allowed by TechnicalSpec",
+        ],
+    }
 
 
 def _verification_commands() -> list[str]:

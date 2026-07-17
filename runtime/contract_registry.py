@@ -96,6 +96,16 @@ ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
         "consumers": ["human", "engineer", "stage2_template_curriculum"],
         "required_fields": ["artifact_type", "status", "template_id", "purpose", "requires_human_review", "next_step"],
     },
+    "SuccessfulResolutionCandidate": {
+        "producer": "semantic_reasoner",
+        "consumers": ["human", "knowledge_admission", "stage2_template_curriculum"],
+        "required_fields": ["artifact_type", "status", "resolution_id", "means_used", "verification_plan", "kb_candidate", "next_step"],
+    },
+    "DeveloperImprovementRequest": {
+        "producer": "semantic_reasoner",
+        "consumers": ["human", "developer"],
+        "required_fields": ["artifact_type", "status", "request_id", "missing_capability", "problem", "suggested_work", "next_step"],
+    },
     "Stage2TemplateAdmissionResult": {
         "producer": "stage2_template_admission",
         "consumers": ["human", "engineer", "verified_system_package"],

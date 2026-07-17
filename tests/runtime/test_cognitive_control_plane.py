@@ -5,9 +5,11 @@ from unittest.mock import patch
 from runtime.cognitive_control_plane import run_cognitive_control_plane, run_prompt_product_control_plane
 from runtime.l4_semantic_validation import validate_l45_semantic_proposal
 from runtime.local_inference import LocalInferenceConfig
+from runtime.semantic_evidence_pack import build_semantic_evidence_pack
 from runtime.semantic_reasoner import (
+    build_developer_improvement_request,
     build_semantic_hypothesis_request,
-    build_stage2_template_backlog_item,
+    build_successful_resolution_candidate,
     run_semantic_reasoner,
     validate_semantic_hypothesis_proposal,
 )
@@ -64,6 +66,22 @@ def test_control_plane_escalates_on_architect_fallback():
     assert "architect_advisory_backend_failed" in result["semantic_escalation"]["reasons"]
 
 
+def test_control_plane_ignores_declarative_blocked_if_text():
+    artifacts = _artifacts()
+    artifacts["implementation_plan"]["executor_handoff"] = {
+        "artifact_type": "ExecutorHandoff",
+        "blocked_if": ["ImplementationPlan.implementation_target.status == blocked_no_safe_candidate"],
+    }
+
+    result = run_cognitive_control_plane(
+        goal="Extract first safe capability",
+        artifacts=artifacts,
+        review={"artifact_type": "ReviewFindings", "recommendation": "approve", "conformance_status": "passed"},
+    )
+
+    assert result["semantic_escalation"]["l4_5_required"] is False
+
+
 def test_prompt_product_control_plane_routes_ready_prompt_to_build():
     gate = {
         "artifact_type": "PromptAdequacyGate",
@@ -104,6 +122,60 @@ def test_prompt_product_control_plane_blocks_unclear_prompt_without_build():
     assert result["semantic_escalation"]["l4_5_required"] is False
 
 
+def test_prompt_product_control_plane_escalates_bounded_intake_uncertainty_to_l45():
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "needs_clarification",
+        "system_type": "cli",
+        "reason_code": "PROMPT_ADEQUACY_MISSING_REQUIRED_FIELDS",
+        "goal_spec": {"intent": "implementation"},
+        "boundary_classification": {"boundary": "incomplete_bounded_prompt"},
+    }
+
+    decision = run_prompt_product_control_plane(
+        prompt="напиши CLI .py, которая перечислит содержимое картинки",
+        prompt_adequacy=gate,
+        supported_template=None,
+    )
+
+    assert decision["role_transition"]["next_action"] == "ask_clarification"
+    assert decision["semantic_escalation"]["l4_5_required"] is True
+    assert "prompt_intake_uncertainty" in decision["semantic_escalation"]["reasons"]
+
+
+def test_l45_maps_intake_uncertainty_to_existing_image_contents_route():
+    prompt = "напиши CLI .py, которая перечислит содержимое картинки"
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "needs_clarification",
+        "system_type": "cli",
+        "reason_code": "PROMPT_ADEQUACY_MISSING_REQUIRED_FIELDS",
+        "goal_spec": {"intent": "implementation"},
+        "boundary_classification": {"boundary": "incomplete_bounded_prompt"},
+    }
+    decision = run_prompt_product_control_plane(prompt=prompt, prompt_adequacy=gate, supported_template=None)
+    pack = build_semantic_evidence_pack(
+        control_plane_decision=decision,
+        prompt=prompt,
+        prompt_adequacy=gate,
+        known_templates=["image_contents_cli"],
+    )
+    request = build_semantic_hypothesis_request(
+        control_plane_decision=decision,
+        context={"prompt": prompt, "evidence_pack": pack},
+    )
+
+    assert request is not None
+    proposal = run_semantic_reasoner(request=request)
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+    candidate = build_successful_resolution_candidate(proposal)
+
+    assert proposal["hypothesis_type"] == "successful_existing_resolution"
+    assert validation["accepted_action"] == "record_successful_resolution_candidate"
+    assert candidate is not None
+    assert candidate["resolution_id"] == "map_to_existing_image_contents_cli"
+
+
 def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():
     gate = {
         "artifact_type": "PromptAdequacyGate",
@@ -130,18 +202,18 @@ def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():
 
     proposal = run_semantic_reasoner(request=request)
     validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
-    backlog = build_stage2_template_backlog_item(proposal)
+    improvement = build_developer_improvement_request(proposal)
 
     assert proposal["artifact_type"] == "SemanticHypothesisProposal"
     assert proposal["status"] == "ok"
-    assert proposal["hypothesis_type"] == "new_template_candidate"
+    assert proposal["hypothesis_type"] == "developer_improvement_request"
     assert proposal["return_to_gate"] is True
     assert validation["artifact_type"] == "L4SemanticValidationResult"
     assert validation["status"] == "accepted"
-    assert validation["accepted_action"] == "record_template_backlog"
-    assert backlog is not None
-    assert backlog["artifact_type"] == "Stage2TemplateBacklogItem"
-    assert backlog["requires_human_review"] is True
+    assert validation["accepted_action"] == "record_developer_improvement_request"
+    assert improvement is not None
+    assert improvement["artifact_type"] == "DeveloperImprovementRequest"
+    assert improvement["requires_developer"] is True
 
 
 def test_semantic_reasoner_blocks_invalid_or_forbidden_proposal():

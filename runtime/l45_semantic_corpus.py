@@ -42,12 +42,12 @@ RISK_BOUNDARY_TASKS = [
     (
         "source_edit",
         "Измени исходники проекта: напиши CLI-утилиту без внешних зависимостей, которая читает JSON-файл, сохраняет JSON-отчёт, имеет README и тесты.",
-        "record_template_backlog_requires_human_review",
+        "record_developer_improvement_request",
     ),
     (
         "network_scraper",
         "Напиши CLI-скрапер с зависимостью requests, который читает URL, скачивает HTML, сохраняет JSON-отчёт, имеет README и тесты.",
-        "record_template_backlog_requires_human_review",
+        "record_developer_improvement_request",
     ),
     (
         "desktop_gui",
@@ -119,8 +119,8 @@ def _unknown_cli_cases() -> list[dict[str, Any]]:
                 "prompt": f"Напиши CLI-утилиту {dependency}, которая {action}, имеет README и тесты.",
                 "supported_template": None,
                 "expected_escalation": True,
-                "expected_hypothesis_type": "new_template_candidate",
-                "expected_l4_action": "record_template_backlog",
+                "expected_hypothesis_type": "developer_improvement_request",
+                "expected_l4_action": "record_developer_improvement_request",
             }
         )
     return cases
@@ -133,8 +133,8 @@ def _unknown_fastapi_cases() -> list[dict[str, Any]]:
             "prompt": f"Сделай локальную FastAPI-службу с зависимостью fastapi, которая {action}, имеет README, тесты и команду запуска.",
             "supported_template": None,
             "expected_escalation": True,
-            "expected_hypothesis_type": "new_template_candidate",
-            "expected_l4_action": "record_template_backlog",
+            "expected_hypothesis_type": "developer_improvement_request",
+            "expected_l4_action": "record_developer_improvement_request",
         }
         for task_id, action in FASTAPI_UNKNOWN_TASKS
     ]
@@ -160,7 +160,7 @@ def _risk_boundary_cases() -> list[dict[str, Any]]:
             "prompt": prompt,
             "supported_template": None,
             "expected_escalation": True,
-            "expected_hypothesis_type": "new_template_candidate",
+            "expected_hypothesis_type": "developer_improvement_request",
             "expected_l4_action": expected_action,
         }
         for task_id, prompt, expected_action in RISK_BOUNDARY_TASKS

@@ -1,0 +1,2986 @@
+{
+  "schema_version": "architecture_patterns.v1",
+  "source_scope_policy": {
+    "context_only_parts": [
+      ".github",
+      "_testing",
+      "bench",
+      "benchmarks",
+      "ci_tools",
+      "doc",
+      "docs",
+      "docs_src",
+      "downstream",
+      "examples",
+      "extras",
+      "generated",
+      "integration",
+      "scripts",
+      "scratch",
+      "tasks",
+      "test",
+      "tests",
+      "testing",
+      "tools"
+    ],
+    "prefer_core_prefixes": [
+      "src",
+      "app",
+      "apps",
+      "lib",
+      "packages",
+      "runtime"
+    ],
+    "prefer_core_files": [
+      "app.py",
+      "main.py",
+      "server.py",
+      "api.py",
+      "__init__.py"
+    ],
+    "policy": "Use context-only paths as evidence, but do not select them as first-slice targets when active core alternatives exist."
+  },
+  "records": [
+    {
+      "rule_id": "web_gis_data_application",
+      "record_type": "project_archetype_rule",
+      "priority": 100,
+      "archetype": "web_gis_data_application",
+      "label": "Flask-like map/data application",
+      "match": {
+        "framework_contains_any": [
+          "flask"
+        ],
+        "text_contains_any": [
+          "bbox",
+          "incident",
+          "map"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "broad",
+          "central",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "app.py:index",
+          "features_for_view",
+          "incident_features",
+          "parse_bbox"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is that route handling, map/geodata filtering, imports, and file/database side effects converge around {target}."
+      },
+      "target_architecture_shape": [
+        "HTTP routes stay thin and only validate request parameters plus choose the use case.",
+        "Application services own map viewport queries, incident filtering, import jobs, and export flows.",
+        "Adapters isolate filesystem, SQLite/GeoJSON/MBTiles, external geocoding, and subprocess work.",
+        "Pure geodata transforms such as bbox parsing and point/line filtering get contracts and fast tests."
+      ],
+      "first_slice": {
+        "name": "map_viewport_query_slice",
+        "goal": "Make the map request path explicit before touching import/download jobs.",
+        "target_sources": [
+          "extraction",
+          "central"
+        ],
+        "targets_prefer": [
+          "parse_bbox",
+          "point_in_bbox",
+          "set_incident_data"
+        ],
+        "steps": [
+          "Define a ViewportQuery input contract from request args.",
+          "Extract bbox parsing and geometry filtering as pure capabilities.",
+          "Wrap incident/branch/ATM data fetch behind a read adapter.",
+          "Add contract tests for empty bbox, malformed bbox, and normal viewport result shape."
+        ]
+      },
+      "defer": [
+        "Do not change map data formats, MBTiles/GeoJSON layout, or import scripts until the read/query slice is stable.",
+        "Do not add more download/geocoding behavior before existing side effects are wrapped."
+      ],
+      "verification_extra": "Use fixture map/incident data to verify bbox filtering and serialized response shape."
+    },
+    {
+      "rule_id": "llm_gateway_service",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "llm_gateway_service",
+      "label": "FastAPI LLM gateway/proxy",
+      "match": {
+        "framework_contains_any": [
+          "fastapi"
+        ],
+        "text_contains_any": [
+          "provider",
+          "forward",
+          "chat_completions",
+          "_handle_chat_request"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "process_boundary",
+          "central",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "_forward_once",
+          "_handle_chat_request",
+          "chat_completions",
+          "forward"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the request-forward-normalize path around {target}, where retry, rate-limit state, and upstream failures need one explicit contract."
+      },
+      "target_architecture_shape": [
+        "The public API layer validates OpenAI-compatible requests and attaches request identity.",
+        "A provider selection layer maps model/provider policy without performing network I/O.",
+        "A transport adapter owns upstream calls, timeout, retry, rate-limit, and response normalization boundaries.",
+        "Replay/checkpoint data records request capture, selected provider, upstream status, and normalized response."
+      ],
+      "first_slice": {
+        "name": "chat_completion_proxy_slice",
+        "goal": "Stabilize one request path from API input to normalized upstream response.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "chat_completions",
+          "select_provider",
+          "_forward_once",
+          "_normalize_upstream_response",
+          "_handle_chat_request"
+        ],
+        "steps": [
+          "Define RequestEnvelope and ProviderDecision contracts.",
+          "Keep provider selection pure and test it without network calls.",
+          "Wrap upstream forwarding with timeout, failure packet, and replay-safe request id.",
+          "Verify rate-limit state and normalized response with focused contract tests."
+        ]
+      },
+      "defer": [
+        "Do not add more providers until provider selection and transport failure contracts are stable.",
+        "Do not tune rate limiting before request identity and replay semantics are explicit."
+      ],
+      "verification_extra": "Use fake upstream transport to verify timeout/error normalization without a real provider call."
+    },
+    {
+      "rule_id": "agent_advisory_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 80,
+      "archetype": "agent_advisory_runtime",
+      "label": "agent/advisory runtime",
+      "match": {
+        "text_contains_any": [
+          "advisory",
+          "agent_loop",
+          "capability_acquisition",
+          "run_dialog_agent_loop"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "orchestrators",
+          "central",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "run_dialog_agent_loop",
+          "run_advisory_internal",
+          "run_advisory_request",
+          "run_work_mode_selector"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is hidden control flow around {target}, where memory, tool selection, fallback, and execution decisions should be separated into named steps."
+      },
+      "target_architecture_shape": [
+        "Conversation/advisory entrypoints delegate to an explicit control loop.",
+        "Mode selection, memory append, capability acquisition, tool execution, and fallback are separate capabilities.",
+        "Each loop step emits a compact packet that can be replayed or stopped by policy.",
+        "Process boundaries isolate tool execution and generated plugin rendering from the main loop."
+      ],
+      "first_slice": {
+        "name": "advisory_control_loop_slice",
+        "goal": "Expose one advisory loop as named packets instead of implicit control flow.",
+        "target_sources": [
+          "central",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "run_dialog_agent_loop",
+          "run_advisory_internal",
+          "run_advisory_request",
+          "run_work_mode_selector",
+          "run_stop_or_continue_decider"
+        ],
+        "steps": [
+          "Define packet contracts for mode selection, memory append, execution request, and stop/continue.",
+          "Split side effects away from decision functions.",
+          "Persist enough step artifacts to replay a failed advisory request.",
+          "Add a controlled failure test for fallback and retry/stop behavior."
+        ]
+      },
+      "defer": [
+        "Do not add new roles or tools until one advisory loop is replayable.",
+        "Do not merge memory mutation with control decisions."
+      ],
+      "verification_extra": "Use a stored advisory request to replay stop/continue and fallback decisions."
+    },
+    {
+      "rule_id": "http_cli_client",
+      "record_type": "project_archetype_rule",
+      "priority": 79,
+      "archetype": "http_cli_client",
+      "label": "HTTP CLI client",
+      "match": {
+        "text_contains_any": [
+          "httpie",
+          "httpie/cli",
+          "core.py:program"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "core.py:program",
+          "client.py",
+          "collect_messages",
+          "interpret"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the CLI-to-HTTP execution path around {target}, where argument parsing, request construction, transport, output formatting, and retry/error behavior need explicit boundaries."
+      },
+      "target_architecture_shape": [
+        "CLI parsing produces a typed request command without performing network I/O.",
+        "Request construction and authentication live in a core HTTP request model.",
+        "Transport adapters own network calls, timeout, streaming, and error normalization.",
+        "Output formatting is isolated from request execution and can be tested with captured responses."
+      ],
+      "first_slice": {
+        "name": "cli_http_request_slice",
+        "goal": "Stabilize one CLI request path from parsed arguments to normalized response/output.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "core.py:program",
+          "client.py",
+          "collect_messages",
+          "interpret"
+        ],
+        "steps": [
+          "Define a typed CLIRequest or RequestCommand contract.",
+          "Split argument interpretation from HTTP request construction.",
+          "Wrap transport with timeout/error/result contracts.",
+          "Verify formatting with fixture responses and no live network dependency."
+        ]
+      },
+      "defer": [
+        "Do not add new protocol features until one CLI request path is contract-tested.",
+        "Do not tune output themes before request construction and transport boundaries are explicit."
+      ],
+      "verification_extra": "Use captured HTTP responses and fake transport to test success, timeout, and malformed input."
+    },
+    {
+      "rule_id": "http_client_library",
+      "record_type": "project_archetype_rule",
+      "priority": 78,
+      "archetype": "http_client_library",
+      "label": "HTTP client library",
+      "match": {
+        "project_name_contains_any": [
+          "requests",
+          "httpx"
+        ],
+        "text_contains_any": [
+          "requests",
+          "sessions.py",
+          "adapters.py",
+          "http client",
+          "resolve_redirects"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "sessions.py:resolve_redirects",
+          "adapters.py:send",
+          "sessions.py",
+          "adapters.py"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the request-session-adapter path around {target}, where redirect handling, auth, transport errors, and response normalization need stable contracts."
+      },
+      "target_architecture_shape": [
+        "Public request helpers stay thin and delegate to session/request models.",
+        "Session orchestration owns redirects, cookies, auth, hooks, and retry decisions.",
+        "Transport adapters isolate network I/O, TLS/proxy behavior, timeout, and pool errors.",
+        "Response normalization and exception mapping are contract-tested without live network calls."
+      ],
+      "first_slice": {
+        "name": "http_session_transport_slice",
+        "goal": "Make one request execution path explicit from prepared request to adapter response.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "adapters.py:send",
+          "sessions.py:resolve_redirects",
+          "sessions.py",
+          "auth.py"
+        ],
+        "steps": [
+          "Define PreparedRequestExecution input and TransportResult output contracts.",
+          "Separate redirect/auth orchestration from adapter network execution.",
+          "Wrap adapter errors into a normalized failure packet.",
+          "Add contract tests with fake adapter responses and redirect/auth edge cases."
+        ]
+      },
+      "defer": [
+        "Do not alter public request APIs before the session/adapter slice is characterized.",
+        "Do not rely on live HTTP services for the first verification pass."
+      ],
+      "verification_extra": "Use fake adapters to verify redirect, auth, timeout, and response-shape contracts."
+    },
+    {
+      "rule_id": "workflow_orchestrator",
+      "record_type": "project_archetype_rule",
+      "priority": 92,
+      "archetype": "workflow_orchestrator",
+      "label": "workflow orchestration runtime",
+      "match": {
+        "project_name_contains_any": [
+          "airflow",
+          "prefect"
+        ],
+        "text_contains_any": [
+          "dag",
+          "flow",
+          "task",
+          "scheduler",
+          "orchestration",
+          "worker",
+          "trigger"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "dag",
+          "flow",
+          "task",
+          "scheduler",
+          "trigger",
+          "worker"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is workflow state transition around {target}, where scheduling, retry, trigger, checkpoint, and worker handoff need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Workflow definitions are separated from runtime scheduling and execution state.",
+        "Task/flow execution produces typed state-transition records before persistence or worker handoff.",
+        "Scheduler, trigger, worker, and storage boundaries are isolated behind adapters.",
+        "Retry, resume, cancellation, and terminal failure semantics are contract-tested."
+      ],
+      "first_slice": {
+        "name": "workflow_state_transition_slice",
+        "goal": "Stabilize one workflow/task transition from trigger to scheduled/executed state.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "trigger",
+          "dag",
+          "flow",
+          "task",
+          "scheduler",
+          "worker"
+        ],
+        "steps": [
+          "Define WorkflowRunRequest and WorkflowStateTransition contracts.",
+          "Separate workflow definition parsing from runtime scheduling decisions.",
+          "Wrap worker/storage side effects as explicit transition artifacts.",
+          "Verify success, retry, cancellation, resume, and failed-dependency paths."
+        ]
+      },
+      "defer": [
+        "Do not rewrite the scheduler and worker runtime in one slice.",
+        "Do not change public DAG/flow APIs before state-transition contracts are characterized."
+      ],
+      "verification_extra": "Use fake scheduler/storage/worker fixtures to verify workflow state transitions."
+    },
+    {
+      "rule_id": "automation_engine",
+      "record_type": "project_archetype_rule",
+      "priority": 91,
+      "archetype": "automation_engine",
+      "label": "automation/playbook execution engine",
+      "match": {
+        "project_name_contains_any": [
+          "ansible"
+        ],
+        "text_contains_any": [
+          "playbook",
+          "inventory",
+          "module",
+          "task",
+          "yaml",
+          "templating",
+          "connection"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "playbook",
+          "inventory",
+          "task",
+          "module",
+          "connection",
+          "yaml"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is automation execution around {target}, where inventory, variables, templating, module dispatch, remote I/O, and result normalization need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Playbook/inventory parsing creates typed execution plans before remote side effects.",
+        "Variable resolution and templating are separated from module dispatch.",
+        "Connection, filesystem, and subprocess boundaries are isolated behind adapters.",
+        "Idempotency, changed/failed status, and retry behavior are explicit result contracts."
+      ],
+      "first_slice": {
+        "name": "automation_task_execution_slice",
+        "goal": "Stabilize one task/module execution path from resolved inputs to normalized result.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "task",
+          "module",
+          "inventory",
+          "connection",
+          "yaml"
+        ],
+        "steps": [
+          "Define AutomationTaskRequest and ModuleExecutionResult contracts.",
+          "Separate variable/template resolution from module side effects.",
+          "Make remote connection and filesystem operations adapter-owned.",
+          "Verify ok, changed, failed, skipped, and unreachable cases."
+        ]
+      },
+      "defer": [
+        "Do not mix parser, variable resolution, and remote execution changes in one slice.",
+        "Do not execute live remote actions in first verification."
+      ],
+      "verification_extra": "Use fake inventory and connection fixtures to verify task result contracts."
+    },
+    {
+      "rule_id": "backup_archive_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "backup_archive_tool",
+      "label": "backup/archive tool",
+      "match": {
+        "project_name_contains_any": [
+          "borg"
+        ],
+        "text_contains_any": [
+          "archive",
+          "repository",
+          "backup",
+          "restore",
+          "chunk",
+          "dedup",
+          "manifest"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "archive",
+          "repository",
+          "manifest",
+          "chunk",
+          "restore"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is archive mutation around {target}, where repository locks, manifests, chunk I/O, encryption, and resume semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Archive commands produce typed plans before repository mutation.",
+        "Repository, lock, chunk store, and encryption boundaries are explicit adapters.",
+        "Manifest updates and cache/checkpoint state are separated from data transforms.",
+        "Interrupted backup/restore paths are replay-safe and contract-tested."
+      ],
+      "first_slice": {
+        "name": "archive_repository_mutation_slice",
+        "goal": "Stabilize one archive or restore mutation boundary.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "archive",
+          "repository",
+          "manifest",
+          "chunk",
+          "restore"
+        ],
+        "steps": [
+          "Define ArchiveOperationRequest and RepositoryMutationResult contracts.",
+          "Separate archive planning from repository/chunk side effects.",
+          "Record checkpoint/resume metadata for interrupted operations.",
+          "Verify success, missing chunk, lock conflict, and interrupted resume cases."
+        ]
+      },
+      "defer": [
+        "Do not alter repository format or encryption behavior before adapter contracts exist.",
+        "Do not combine backup and restore refactors in one slice."
+      ],
+      "verification_extra": "Use fixture repositories and fake chunk stores for mutation and resume tests."
+    },
+    {
+      "rule_id": "packaging_freezer",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "packaging_freezer",
+      "label": "application packaging/freezer",
+      "match": {
+        "project_name_contains_any": [
+          "pyinstaller"
+        ],
+        "text_contains_any": [
+          "bootloader",
+          "hook",
+          "spec",
+          "bundle",
+          "freeze",
+          "analysis",
+          "waf"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "analysis",
+          "hook",
+          "spec",
+          "bootloader",
+          "bundle",
+          "waf"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is packaging graph construction around {target}, where import analysis, hooks, bootloader assets, filesystem output, and subprocess build steps need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Spec/import analysis builds a typed bundle graph before filesystem output.",
+        "Hook execution and environment discovery are isolated from graph normalization.",
+        "Bootloader/subprocess/filesystem boundaries are explicit adapters.",
+        "Platform-specific outputs are verified with deterministic fixtures."
+      ],
+      "first_slice": {
+        "name": "bundle_graph_analysis_slice",
+        "goal": "Stabilize one import/spec analysis path into a bundle graph.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "analysis",
+          "hook",
+          "spec",
+          "bootloader",
+          "bundle"
+        ],
+        "steps": [
+          "Define BundleAnalysisInput and BundleGraph contracts.",
+          "Separate import/hook discovery from filesystem bundle emission.",
+          "Wrap subprocess and platform discovery behind adapters.",
+          "Verify missing module, hook failure, platform asset, and deterministic graph cases."
+        ]
+      },
+      "defer": [
+        "Do not change bootloader build behavior before bundle graph contracts are stable.",
+        "Do not rely on host-specific filesystem state in first verification."
+      ],
+      "verification_extra": "Use tiny fixture packages and fake hook/platform adapters."
+    },
+    {
+      "rule_id": "proxy_security_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "proxy_security_tool",
+      "label": "proxy/security inspection tool",
+      "match": {
+        "project_name_contains_any": [
+          "mitmproxy"
+        ],
+        "text_contains_any": [
+          "proxy",
+          "tls",
+          "certificate",
+          "flow",
+          "http",
+          "websocket",
+          "intercept"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "flow",
+          "proxy",
+          "cert",
+          "tls",
+          "intercept",
+          "http"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is intercepted network flow around {target}, where TLS/cert handling, protocol parsing, mutation hooks, and replay safety need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Network flows are normalized before hook execution or UI/reporting.",
+        "TLS/certificate, socket, and protocol parsing boundaries are explicit adapters.",
+        "Flow mutation and replay decisions are separated from transport I/O.",
+        "Security-sensitive failures are quarantined with clear error classes."
+      ],
+      "first_slice": {
+        "name": "proxy_flow_normalization_slice",
+        "goal": "Stabilize one intercepted flow from transport event to normalized flow record.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "flow",
+          "proxy",
+          "cert",
+          "tls",
+          "intercept"
+        ],
+        "steps": [
+          "Define RawProxyEvent and NormalizedFlow contracts.",
+          "Separate TLS/cert and protocol parsing from user hook mutation.",
+          "Classify transport, certificate, and parser failures explicitly.",
+          "Verify HTTP, TLS error, malformed input, and replay-blocked cases."
+        ]
+      },
+      "defer": [
+        "Do not change live transport behavior before normalized flow contracts are tested.",
+        "Do not mix UI and proxy transport changes in one slice."
+      ],
+      "verification_extra": "Use recorded/fake proxy events; do not require live network traffic."
+    },
+    {
+      "rule_id": "desktop_gui_ide",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "desktop_gui_ide",
+      "label": "desktop GUI/IDE application",
+      "match": {
+        "project_name_contains_any": [
+          "spyder"
+        ],
+        "text_contains_any": [
+          "qt",
+          "widget",
+          "plugin",
+          "editor",
+          "lsp",
+          "workspace",
+          "preferences"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "plugin",
+          "widget",
+          "editor",
+          "lsp",
+          "workspace"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is UI/plugin orchestration around {target}, where widget state, plugin lifecycle, editor/LSP events, and filesystem/session state need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "UI widgets emit typed commands/events rather than owning business decisions.",
+        "Plugin lifecycle and editor/LSP adapters are separated from presentation state.",
+        "Filesystem/session/preferences state uses checkpointable models.",
+        "GUI behavior is tested through command/event contracts before full UI tests."
+      ],
+      "first_slice": {
+        "name": "gui_plugin_event_slice",
+        "goal": "Stabilize one plugin or editor event path into a typed command/result.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "plugin",
+          "widget",
+          "editor",
+          "lsp",
+          "workspace"
+        ],
+        "steps": [
+          "Define UiEventCommand and PluginActionResult contracts.",
+          "Separate widget event handling from plugin/editor side effects.",
+          "Wrap LSP/filesystem/session operations behind adapters.",
+          "Verify event, missing plugin, failed LSP, and persisted-state cases."
+        ]
+      },
+      "defer": [
+        "Do not rewrite UI layout and plugin lifecycle together.",
+        "Do not require a live display server for first contract verification."
+      ],
+      "verification_extra": "Use headless command/event tests with fake widget and LSP adapters."
+    },
+    {
+      "rule_id": "ml_app_framework",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "ml_app_framework",
+      "label": "ML app/UI framework",
+      "match": {
+        "project_name_contains_any": [
+          "gradio",
+          "streamlit"
+        ],
+        "text_contains_any": [
+          "component",
+          "blocks",
+          "interface",
+          "dataset",
+          "queue",
+          "frontend",
+          "fastapi"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "blocks",
+          "component",
+          "interface",
+          "queue",
+          "frontend",
+          "api"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is app/component execution around {target}, where UI schema, user callbacks, queueing, file artifacts, and API transport need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Component/app declarations produce typed UI schemas before callback execution.",
+        "User callback execution, queueing, file artifacts, and API transport are separate services.",
+        "Frontend/backend schema compatibility is verified through contract fixtures.",
+        "Long-running inference and upload/download side effects have failure packets."
+      ],
+      "first_slice": {
+        "name": "ml_component_execution_slice",
+        "goal": "Stabilize one component or callback execution path from UI request to response artifact.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "component",
+          "blocks",
+          "interface",
+          "queue",
+          "api"
+        ],
+        "steps": [
+          "Define ComponentInvocation and ComponentResult contracts.",
+          "Separate UI schema normalization from callback execution.",
+          "Wrap queue, file, and network artifacts behind adapters.",
+          "Verify validation error, callback failure, queued execution, and artifact output cases."
+        ]
+      },
+      "defer": [
+        "Do not change frontend protocol and callback runtime in one slice.",
+        "Do not require live model inference in first verification."
+      ],
+      "verification_extra": "Use fake callbacks and fixture component schemas for backend/frontend contract tests."
+    },
+    {
+      "rule_id": "distributed_compute_graph",
+      "record_type": "project_archetype_rule",
+      "priority": 90,
+      "archetype": "distributed_compute_graph",
+      "label": "distributed/dataflow compute graph",
+      "match": {
+        "project_name_contains_any": [
+          "dask"
+        ],
+        "text_contains_any": [
+          "graph",
+          "task",
+          "scheduler",
+          "array",
+          "dataframe",
+          "partition",
+          "blockwise"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "graph",
+          "blockwise",
+          "scheduler",
+          "array",
+          "dataframe",
+          "partition"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is compute graph construction around {target}, where lazy graph nodes, partition metadata, scheduler handoff, and replay semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "User-facing operations build typed compute graph nodes before execution.",
+        "Graph normalization, partition metadata, and scheduler submission are separate services.",
+        "Filesystem/network/distributed scheduler boundaries are adapters.",
+        "Deterministic graph shape and replay behavior are contract-tested."
+      ],
+      "first_slice": {
+        "name": "compute_graph_construction_slice",
+        "goal": "Stabilize one lazy operation into a deterministic compute graph contract.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "blockwise",
+          "graph",
+          "scheduler",
+          "array",
+          "dataframe"
+        ],
+        "steps": [
+          "Define ComputeGraphRequest and NormalizedGraph contracts.",
+          "Separate graph construction from scheduler execution.",
+          "Capture partition/chunk metadata as explicit schema fields.",
+          "Verify deterministic graph, invalid partition, scheduler failure, and replay cases."
+        ]
+      },
+      "defer": [
+        "Do not alter distributed execution while graph construction contracts are unstable.",
+        "Do not mix array/dataframe and scheduler refactors in one slice."
+      ],
+      "verification_extra": "Use small fixture arrays/dataframes and fake scheduler adapters."
+    },
+    {
+      "rule_id": "web_framework_library",
+      "record_type": "project_archetype_rule",
+      "priority": 77,
+      "archetype": "web_framework_library",
+      "label": "web framework library",
+      "match": {
+        "project_name_contains_any": [
+          "django",
+          "flask",
+          "fastapi",
+          "starlette"
+        ],
+        "framework_contains_any": [
+          "flask",
+          "fastapi"
+        ],
+        "text_contains_any": [
+          "django",
+          "flask",
+          "fastapi",
+          "starlette",
+          "werkzeug",
+          "aiohttp",
+          "blueprint",
+          "routing",
+          "middleware",
+          "sansio",
+          "sessions.py"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "sansio/blueprints.py:register",
+          "app.py",
+          "sessions.py:save_session",
+          "cli.py:routes_command"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is framework control flow around {target}, where app setup, routing/blueprint registration, request context, sessions, and CLI helpers need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Public framework objects delegate setup and dispatch decisions to small internal services.",
+        "Routing and blueprint registration have explicit data contracts independent from request execution.",
+        "Request/session context management is separated from user callback execution.",
+        "CLI/debug helpers read framework state but do not own core routing behavior."
+      ],
+      "first_slice": {
+        "name": "framework_routing_registration_slice",
+        "goal": "Stabilize one framework setup path around app/blueprint registration and route visibility.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "sansio/blueprints.py:register",
+          "app.py",
+          "routes_command",
+          "sessions.py:save_session"
+        ],
+        "steps": [
+          "Define a RouteRegistration or BlueprintRegistration contract.",
+          "Separate registration validation from mutation of app routing state.",
+          "Capture request/session side effects as explicit framework state changes.",
+          "Verify duplicate routes, missing endpoints, and session persistence with focused tests."
+        ]
+      },
+      "defer": [
+        "Do not refactor request dispatch and CLI helpers in the same slice.",
+        "Do not change public extension hooks until registration contracts are locked."
+      ],
+      "verification_extra": "Use minimal app fixtures to test blueprint registration, route listing, and session behavior."
+    },
+    {
+      "rule_id": "cli_framework_library",
+      "record_type": "project_archetype_rule",
+      "priority": 76,
+      "archetype": "cli_framework_library",
+      "label": "CLI framework library",
+      "match": {
+        "text_contains_any": [
+          "click",
+          "typer",
+          "command line",
+          "command line interface",
+          "_parse_decls"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "core.py:_parse_decls",
+          "main.py",
+          "callback",
+          "parser"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is command declaration and invocation flow around {target}, where decorators, callback metadata, parameter parsing, context, and terminal I/O should be contract-separated."
+      },
+      "target_architecture_shape": [
+        "Command declaration metadata is separated from terminal I/O and invocation.",
+        "Argument/option parsing produces typed invocation data before callbacks run.",
+        "Context propagation and error rendering are explicit framework services.",
+        "Terminal editing/prompting is isolated behind adapters for deterministic tests."
+      ],
+      "first_slice": {
+        "name": "cli_invocation_contract_slice",
+        "goal": "Stabilize one command declaration-to-invocation path.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "core.py:_parse_decls",
+          "callback",
+          "main.py",
+          "parser",
+          "open_stream"
+        ],
+        "steps": [
+          "Define CommandDeclaration and InvocationContext contracts.",
+          "Separate declaration parsing from callback execution.",
+          "Wrap terminal I/O and editor/prompt behavior behind adapters.",
+          "Verify missing option, invalid type, and callback execution paths with fixture CLI runs."
+        ]
+      },
+      "defer": [
+        "Do not redesign terminal UI and declaration parsing in one slice.",
+        "Do not use docs examples as core capability targets unless source package targets are available."
+      ],
+      "verification_extra": "Use isolated CLI runner fixtures for parsing, callback, and error-rendering contracts."
+    },
+    {
+      "rule_id": "terminal_rendering_library",
+      "record_type": "project_archetype_rule",
+      "priority": 75,
+      "archetype": "terminal_rendering_library",
+      "label": "terminal rendering library",
+      "match": {
+        "text_contains_any": [
+          "rich",
+          "console.py",
+          "pretty.py",
+          "export_svg"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "console.py",
+          "pretty.py:traverse",
+          "export_svg",
+          "_emoji_replace"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is render traversal/output flow around {target}, where object inspection, style state, terminal capabilities, and export formats need stable contracts."
+      },
+      "target_architecture_shape": [
+        "Renderable objects produce an intermediate render tree before terminal/export output.",
+        "Console state and terminal capabilities are passed as explicit context.",
+        "Pretty-print traversal and syntax/highlight logic are pure or fixture-driven where possible.",
+        "Export adapters own SVG/text/HTML serialization boundaries."
+      ],
+      "first_slice": {
+        "name": "terminal_render_pipeline_slice",
+        "goal": "Stabilize one render path from object/input to render segments/export output.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "console.py",
+          "pretty.py:traverse",
+          "export_svg",
+          "print_json"
+        ],
+        "steps": [
+          "Define RenderInput, RenderContext, and RenderSegments contracts.",
+          "Separate traversal/measurement from terminal or export serialization.",
+          "Wrap terminal capability detection as an adapter.",
+          "Verify plain text, styled text, and export output using golden fixtures."
+        ]
+      },
+      "defer": [
+        "Do not change every output format before one render path is characterized.",
+        "Do not mix terminal capability detection with object traversal refactoring."
+      ],
+      "verification_extra": "Use golden render fixtures for plain, styled, and exported outputs."
+    },
+    {
+      "rule_id": "logging_library",
+      "record_type": "project_archetype_rule",
+      "priority": 74,
+      "archetype": "logging_library",
+      "label": "logging library",
+      "match": {
+        "project_name_contains_any": [
+          "loguru",
+          "structlog"
+        ],
+        "text_contains_any": [
+          "loguru",
+          "_logger.py",
+          "_log"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "_logger.py:add",
+          "_logger.py:_log",
+          "_better_exceptions.py:_format_exception"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is logging dispatch around {target}, where sink configuration, record construction, formatting, exception rendering, and concurrency boundaries need contracts."
+      },
+      "target_architecture_shape": [
+        "Logger API calls build typed log records before sink dispatch.",
+        "Sink configuration and lifecycle are separated from message formatting.",
+        "Exception formatting is a pure transform over captured traceback data where possible.",
+        "Concurrency/async boundaries are isolated behind sink adapters."
+      ],
+      "first_slice": {
+        "name": "logging_record_dispatch_slice",
+        "goal": "Stabilize one log call path from message input to sink dispatch.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "_logger.py:_log",
+          "_logger.py:add",
+          "_better_exceptions.py:_format_exception"
+        ],
+        "steps": [
+          "Define LogEvent and SinkDispatch contracts.",
+          "Separate record construction from sink lifecycle and formatting.",
+          "Wrap async/threaded sink behavior with explicit execution policy.",
+          "Verify message formatting, exception rendering, and sink failure cases."
+        ]
+      },
+      "defer": [
+        "Do not change sink lifecycle and exception rendering in the same first slice.",
+        "Do not treat documentation examples as core logging flow."
+      ],
+      "verification_extra": "Use fake sinks and captured exceptions to test formatting, dispatch, and sink failure."
+    },
+    {
+      "rule_id": "embedded_database_library",
+      "record_type": "project_archetype_rule",
+      "priority": 73,
+      "archetype": "embedded_database_library",
+      "label": "embedded document database library",
+      "match": {
+        "project_name_contains_any": [
+          "tinydb"
+        ],
+        "text_contains_any": [
+          "tinydb",
+          "table.py",
+          "database.py",
+          "storages.py",
+          "query"
+        ],
+        "negative_contains_any": [
+          "django"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "table.py:search",
+          "queries.py:_generate_test",
+          "queries.py",
+          "query",
+          "condition",
+          "predicate",
+          "database.py:table",
+          "storages.py:read",
+          "table.py:update"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is table/query flow around {target}, where query matching, document identity, storage persistence, and mutation semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Table APIs expose query/search contracts before storage mutation details.",
+        "Query predicates operate as pure transforms over document snapshots.",
+        "Storage adapters own file/memory persistence and serialization errors behind a separate boundary.",
+        "Update/remove operations define idempotency and document identity semantics after the query contract is characterized."
+      ],
+      "first_slice": {
+        "name": "document_query_contract_slice",
+        "goal": "Stabilize one document query path from condition/predicate to matched document result before changing storage mutation behavior.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "table.py:search",
+          "queries.py:_generate_test",
+          "queries.py",
+          "query",
+          "condition",
+          "predicate",
+          "database.py:table",
+          "storages.py:read",
+          "table.py:update"
+        ],
+        "steps": [
+          "Define QueryRequest, QueryPredicate, and QueryResult contracts.",
+          "Separate query matching from storage read/write operations.",
+          "Treat storage adapters and table mutation as downstream side-effect evidence.",
+          "Verify match, no-match, malformed condition, and storage failure cases."
+        ]
+      },
+      "defer": [
+        "Do not redesign all query operators before one query/search slice is contract-tested.",
+        "Do not change storage formats or mutation semantics before the query contract is explicit."
+      ],
+      "verification_extra": "Use memory and temporary-file storage fixtures to test query matching, no-match behavior, mutation side effects, and persistence failures separately."
+    },
+    {
+      "rule_id": "scheduler_library",
+      "record_type": "project_archetype_rule",
+      "priority": 72,
+      "archetype": "scheduler_library",
+      "label": "in-process scheduler library",
+      "match": {
+        "text_contains_any": [
+          "_schedule_next_run",
+          "run_pending",
+          "scheduler"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "_schedule_next_run",
+          "run_pending",
+          "at(",
+          "__repr__"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is job scheduling flow around {target}, where time calculation, job selection, execution, and error/retry behavior need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Job definitions are separate from clock/time calculation.",
+        "Due-job selection is deterministic for a supplied clock.",
+        "Job execution and error handling are isolated from schedule mutation.",
+        "Time zone and interval parsing are covered by contract tests."
+      ],
+      "first_slice": {
+        "name": "scheduler_due_job_slice",
+        "goal": "Stabilize one scheduling path from job definition to next-run/due-job execution.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "_schedule_next_run",
+          "run_pending",
+          "at("
+        ],
+        "steps": [
+          "Define JobSpec and ClockSnapshot contracts.",
+          "Separate next-run calculation from job execution.",
+          "Make due-job selection deterministic under a fake clock.",
+          "Verify interval, at-time, missed run, and failing job scenarios."
+        ]
+      },
+      "defer": [
+        "Do not change public fluent API before the scheduling calculation contract is stable.",
+        "Do not mix timezone parsing with execution policy in the first slice."
+      ],
+      "verification_extra": "Use fake clock fixtures for next-run, due-job, and missed-run tests."
+    },
+    {
+      "rule_id": "env_config_library",
+      "record_type": "project_archetype_rule",
+      "priority": 71,
+      "archetype": "env_config_library",
+      "label": "environment configuration library",
+      "match": {
+        "text_contains_any": [
+          "dotenv",
+          ".env",
+          "find_dotenv",
+          "load_dotenv",
+          "rewrite"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "main.py:find_dotenv",
+          "main.py:rewrite",
+          "main.py:get_key",
+          "cli.py:run"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is .env discovery/read/write flow around {target}, where parsing, filesystem search, environment mutation, and rewrite semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        ".env parsing produces typed key/value records independent of process environment mutation.",
+        "File discovery and rewrite operations are filesystem adapters with explicit failure packets.",
+        "Environment variable mutation is a separate side-effecting boundary.",
+        "CLI commands delegate to parser/discovery/update services."
+      ],
+      "first_slice": {
+        "name": "dotenv_parse_rewrite_slice",
+        "goal": "Stabilize one .env path from file discovery/parsing to key read or rewrite.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "main.py:find_dotenv",
+          "main.py:rewrite",
+          "main.py:get_key",
+          "cli.py:run"
+        ],
+        "steps": [
+          "Define DotenvDocument and EnvMutation contracts.",
+          "Separate parsing from filesystem discovery and process environment mutation.",
+          "Wrap rewrite operations with atomicity and failure semantics.",
+          "Verify malformed line, missing file, existing key, and rewrite cases."
+        ]
+      },
+      "defer": [
+        "Do not change CLI behavior before parse/rewrite contracts are explicit.",
+        "Do not mutate process environment in tests that can use captured mutation plans."
+      ],
+      "verification_extra": "Use temporary .env fixtures to test parse, lookup, rewrite, and missing-file behavior."
+    },
+    {
+      "rule_id": "orm_database_library",
+      "record_type": "project_archetype_rule",
+      "priority": 81,
+      "archetype": "orm_database_library",
+      "label": "ORM/database library",
+      "match": {
+        "project_name_contains_any": [
+          "sqlalchemy",
+          "psycopg"
+        ],
+        "text_contains_any": [
+          "sqlalchemy",
+          "django/db",
+          "psycopg",
+          "postgres",
+          "database driver",
+          "session",
+          "query",
+          "transaction",
+          "migration"
+        ],
+        "negative_contains_any": [
+          "numpy"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "query",
+          "select",
+          "where",
+          "filter",
+          "condition",
+          "predicate",
+          "session",
+          "transaction",
+          "mapper",
+          "engine",
+          "flush",
+          "commit"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is query/session/transaction flow around {target}, where model metadata, connection ownership, transaction boundaries, and persistence errors need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Public query/model APIs build declarative operations before touching connection lifecycle.",
+        "Condition/filter construction remains testable without a live database where possible.",
+        "Session or unit-of-work logic owns identity map, transaction state, flush/commit/rollback decisions.",
+        "Engine/connection adapters isolate driver I/O, pooling, timeout, and dialect errors."
+      ],
+      "first_slice": {
+        "name": "query_session_transaction_slice",
+        "goal": "Stabilize one query construction and session execution path before changing transaction mutation behavior.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "query",
+          "select",
+          "where",
+          "filter",
+          "condition",
+          "predicate",
+          "session",
+          "transaction",
+          "mapper",
+          "engine",
+          "flush",
+          "commit"
+        ],
+        "steps": [
+          "Define QueryOperation, QueryCondition, and TransactionResult contracts.",
+          "Separate query construction from session/connection side effects.",
+          "Treat flush/commit as downstream mutation boundaries with explicit rollback behavior.",
+          "Verify query, empty result, rollback, and connection failure cases."
+        ]
+      },
+      "defer": [
+        "Do not change public model APIs before one query/session contract is characterized.",
+        "Do not mix migration metadata changes with runtime transaction refactoring."
+      ],
+      "verification_extra": "Use fake or in-memory database fixtures for query, transaction, rollback, and driver-error paths."
+    },
+    {
+      "rule_id": "async_worker_queue",
+      "record_type": "project_archetype_rule",
+      "priority": 68,
+      "archetype": "async_worker_queue",
+      "label": "async worker/queue system",
+      "match": {
+        "project_name_contains_any": [
+          "celery",
+          "rq",
+          "dramatiq"
+        ],
+        "text_contains_any": [
+          "celery",
+          "rq",
+          "worker",
+          "queue",
+          "job",
+          "retry",
+          "task"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "worker",
+          "queue",
+          "job",
+          "task",
+          "retry",
+          "execute"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is worker job flow around {target}, where queue ownership, retry, acknowledgement, checkpoint, and poison-message handling need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Queue ingestion produces typed JobEnvelope records before execution.",
+        "Worker execution, retry policy, acknowledgement, and failure classification are separate services.",
+        "Broker/process boundaries are isolated behind adapters with timeout and reconnect behavior.",
+        "Checkpoint/replay state records job id, attempt, result artifact, and terminal failure reason."
+      ],
+      "first_slice": {
+        "name": "worker_job_execution_slice",
+        "goal": "Stabilize one worker path from queued job envelope to ack/retry/failure result.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "worker",
+          "job",
+          "task",
+          "queue",
+          "retry",
+          "execute"
+        ],
+        "steps": [
+          "Define JobEnvelope and JobExecutionResult contracts.",
+          "Separate broker I/O from job execution and retry decisions.",
+          "Record checkpoint/replay metadata for each attempt.",
+          "Verify success, retryable failure, poison message, and broker failure cases."
+        ]
+      },
+      "defer": [
+        "Do not introduce new worker pools before acknowledgement and retry semantics are explicit.",
+        "Do not combine broker reconnection and task business logic in the first slice."
+      ],
+      "verification_extra": "Use fake broker/queue fixtures for ack, retry, poison-message, and resume behavior."
+    },
+    {
+      "rule_id": "web_scraper_crawler",
+      "record_type": "project_archetype_rule",
+      "priority": 67,
+      "archetype": "web_scraper_crawler",
+      "label": "web scraper/crawler",
+      "match": {
+        "project_name_contains_any": [
+          "scrapy"
+        ],
+        "text_contains_any": [
+          "scrapy",
+          "crawler",
+          "spider",
+          "beautifulsoup",
+          "robots",
+          "downloadermiddleware",
+          "html"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "spider",
+          "crawler",
+          "download",
+          "parse",
+          "middleware",
+          "scheduler"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is fetch-parse-schedule flow around {target}, where URL scheduling, fetch policy, parser drift, cache, rate limits, and output normalization need explicit boundaries."
+      },
+      "target_architecture_shape": [
+        "URL scheduling and frontier state are separated from network fetch execution.",
+        "Fetch adapters own HTTP policy, robots/rate limits, cache, timeout, and retry failures.",
+        "Parsers transform captured HTML/response fixtures into typed extracted items.",
+        "Output pipelines normalize, deduplicate, and persist items with replayable artifacts."
+      ],
+      "first_slice": {
+        "name": "fetch_parse_normalize_slice",
+        "goal": "Stabilize one crawl path from URL request to parsed normalized item.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "spider",
+          "parse",
+          "download",
+          "crawler",
+          "scheduler",
+          "pipeline"
+        ],
+        "steps": [
+          "Define CrawlRequest, FetchResult, and ParsedItem contracts.",
+          "Separate fetch policy from parser logic.",
+          "Use captured HTML fixtures for parser contract tests.",
+          "Verify timeout, parser drift, duplicate item, and cache-hit behavior."
+        ]
+      },
+      "defer": [
+        "Do not tune crawling breadth before one fetch/parse path is fixture-tested.",
+        "Do not rely on live websites for default verification."
+      ],
+      "verification_extra": "Use captured HTML and fake HTTP responses for parser, retry, rate-limit, and cache behavior."
+    },
+    {
+      "rule_id": "dataframe_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 66,
+      "archetype": "dataframe_pipeline",
+      "label": "dataframe/ETL pipeline",
+      "match": {
+        "text_contains_any": [
+          "pandas",
+          "dataframe",
+          "parquet",
+          "etl",
+          "read_csv",
+          "to_csv",
+          "pipeline"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "read_",
+          "to_",
+          "dataframe",
+          "pipeline",
+          "transform",
+          "aggregate"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is data lifecycle flow around {target}, where raw input, parsed frame, normalized data, cache/report artifacts, and schema drift need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Raw input acquisition is stored separately from parsed tabular data.",
+        "Parsing, normalization, validation, aggregation, and report writing are separate pipeline stages.",
+        "Schema and dtype expectations are explicit and testable.",
+        "Cache/checkpoint artifacts are keyed by input hash and transform version."
+      ],
+      "first_slice": {
+        "name": "raw_to_normalized_dataset_slice",
+        "goal": "Stabilize one dataset path from raw input to normalized validated table.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "read_",
+          "parse",
+          "normalize",
+          "transform",
+          "aggregate",
+          "to_"
+        ],
+        "steps": [
+          "Define RawDataset, ParsedFrame, and NormalizedDataset contracts.",
+          "Separate parsing from normalization and report writing.",
+          "Record checkpoint/cache keys for raw and normalized artifacts.",
+          "Verify malformed input, schema drift, empty data, and normal aggregation cases."
+        ]
+      },
+      "defer": [
+        "Do not optimize performance before schema and checkpoint contracts are explicit.",
+        "Do not mix report formatting with data normalization in the first slice."
+      ],
+      "verification_extra": "Use small fixture datasets to test parse, schema validation, normalization, and checkpoint reuse."
+    },
+    {
+      "rule_id": "test_framework_library",
+      "record_type": "project_archetype_rule",
+      "priority": 65,
+      "archetype": "test_framework_library",
+      "label": "test framework library",
+      "match": {
+        "project_name_contains_any": [
+          "pytest",
+          "tox"
+        ],
+        "text_contains_any": [
+          "pytest",
+          "fixture",
+          "collector",
+          "pluginmanager",
+          "assertion",
+          "test runner"
+        ],
+        "negative_contains_any": [
+          "poetry"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "fixture",
+          "collector",
+          "pluginmanager",
+          "runtest",
+          "assertion"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is collection-fixture-execution flow around {target}, where plugin hooks, fixture resolution, test scheduling, assertion rewriting, and reporting need contracts."
+      },
+      "target_architecture_shape": [
+        "Test collection produces a typed TestItem graph before execution.",
+        "Fixture resolution is separate from test function invocation and plugin hook dispatch.",
+        "Assertion rewriting/reporting are explicit transforms over captured execution outcomes.",
+        "Plugin hooks are treated as extension boundaries with compatibility tests."
+      ],
+      "first_slice": {
+        "name": "test_collection_fixture_slice",
+        "goal": "Stabilize one path from test discovery to fixture-bound test invocation.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "fixture",
+          "collector",
+          "pluginmanager",
+          "runtest",
+          "assertion"
+        ],
+        "steps": [
+          "Define TestItem, FixtureRequest, and TestExecutionResult contracts.",
+          "Separate collection from fixture resolution and execution.",
+          "Wrap plugin hook calls with compatibility/error contracts.",
+          "Verify missing fixture, failing test, plugin hook, and reporting cases."
+        ]
+      },
+      "defer": [
+        "Do not alter assertion rewriting and fixture resolution in one first slice.",
+        "Do not treat framework self-tests as first-slice targets when core source targets exist."
+      ],
+      "verification_extra": "Use miniature test packages to verify collection, fixture resolution, plugin hooks, and failure reports."
+    },
+    {
+      "rule_id": "packaging_build_backend",
+      "record_type": "project_archetype_rule",
+      "priority": 64,
+      "archetype": "packaging_build_backend",
+      "label": "packaging/build backend",
+      "match": {
+        "project_name_contains_any": [
+          "pip",
+          "setuptools",
+          "poetry",
+          "flit",
+          "hatch"
+        ],
+        "text_contains_any": [
+          "build backend",
+          "wheel",
+          "sdist",
+          "metadata",
+          "pep517",
+          "installer"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "metadata",
+          "wheel",
+          "sdist",
+          "build",
+          "installer",
+          "pyproject"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is metadata-to-artifact flow around {target}, where source tree discovery, metadata contracts, isolated builds, subprocess execution, and artifact validation need explicit boundaries."
+      },
+      "target_architecture_shape": [
+        "Project metadata parsing is separated from artifact generation.",
+        "Build isolation/subprocess execution is wrapped with timeout and captured logs.",
+        "Wheel/sdist artifact writers emit manifest and validation results.",
+        "Installer/resolver behavior is separate from build-backend protocol handling."
+      ],
+      "first_slice": {
+        "name": "package_metadata_artifact_slice",
+        "goal": "Stabilize one build path from project metadata to validated artifact manifest.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "metadata",
+          "wheel",
+          "sdist",
+          "build",
+          "installer",
+          "pyproject"
+        ],
+        "steps": [
+          "Define ProjectMetadata and BuildArtifactManifest contracts.",
+          "Separate metadata parsing from artifact writing and subprocess execution.",
+          "Capture build logs, artifact paths, and validation findings as replay artifacts.",
+          "Verify missing metadata, build failure, malformed artifact, and happy path cases."
+        ]
+      },
+      "defer": [
+        "Do not add resolver behavior before metadata/artifact contracts are stable.",
+        "Do not execute unbounded build subprocesses without timeout and captured logs."
+      ],
+      "verification_extra": "Use fixture pyproject trees to verify metadata parsing, artifact manifest, build failure, and validation behavior."
+    },
+    {
+      "rule_id": "code_quality_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 79,
+      "archetype": "code_quality_tool",
+      "label": "code formatter/static analysis tool",
+      "match": {
+        "project_name_contains_any": [
+          "black",
+          "flake8",
+          "mypy",
+          "ruff",
+          "pylint"
+        ],
+        "text_contains_any": [
+          "black",
+          "mypy",
+          "ruff",
+          "flake8",
+          "formatter",
+          "type checker",
+          "static analysis",
+          "lint"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "parse",
+          "format",
+          "check",
+          "analyze",
+          "report",
+          "main"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is parse-analyze-transform-report flow around {target}, where source discovery, AST/token analysis, rewrite decisions, diagnostics, and file output need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Source discovery produces typed file inputs before parsing or analysis.",
+        "Parsing/tokenization is separated from formatting or diagnostic decisions.",
+        "Rewrite/report generation is isolated from filesystem mutation.",
+        "Cache and incremental state are keyed by file hash, options, and tool version."
+      ],
+      "first_slice": {
+        "name": "source_parse_analyze_report_slice",
+        "goal": "Stabilize one source-file path from input discovery to diagnostics or formatted output.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "parse",
+          "format",
+          "check",
+          "analyze",
+          "report",
+          "main"
+        ],
+        "steps": [
+          "Define SourceFileInput and AnalysisOrRewriteResult contracts.",
+          "Separate parsing/tokenization from decision and output stages.",
+          "Wrap filesystem writes behind dry-run and atomic-write adapters.",
+          "Verify syntax error, unchanged file, changed file, and diagnostic output cases."
+        ]
+      },
+      "defer": [
+        "Do not tune style or diagnostic rules before source parse/result contracts are stable.",
+        "Do not mutate files in default tests when dry-run output can be asserted."
+      ],
+      "verification_extra": "Use fixture source files to test parse errors, unchanged output, rewritten output, and diagnostics."
+    },
+    {
+      "rule_id": "asgi_wsgi_server_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 86,
+      "archetype": "asgi_wsgi_server_runtime",
+      "label": "ASGI/WSGI server runtime",
+      "match": {
+        "text_contains_any": [
+          "uvicorn",
+          "gunicorn",
+          "hypercorn",
+          "lifespan",
+          "run_wsgi",
+          "serving.py",
+          "server socket",
+          "graceful shutdown"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "serve",
+          "run_wsgi",
+          "lifespan",
+          "protocol",
+          "shutdown"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is protocol lifecycle flow around {target}, where socket/process ownership, request protocol adaptation, concurrency, timeout, and shutdown behavior need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Server startup owns config, sockets, workers, and lifecycle state behind a runtime boundary.",
+        "Protocol adapters convert ASGI/WSGI events to typed request/response envelopes.",
+        "Concurrency, timeout, backpressure, and graceful shutdown are policies, not hidden side effects.",
+        "Health, logs, and lifecycle events are replayable artifacts for failure analysis."
+      ],
+      "first_slice": {
+        "name": "request_protocol_lifecycle_slice",
+        "goal": "Stabilize one protocol request path from accepted connection/event to response or shutdown packet.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "serve",
+          "run_wsgi",
+          "lifespan",
+          "protocol",
+          "shutdown"
+        ],
+        "steps": [
+          "Define ProtocolEvent and ServerLifecycleResult contracts.",
+          "Separate socket/process startup from request protocol adaptation.",
+          "Represent timeout, cancellation, and shutdown as explicit failure packets.",
+          "Verify request, disconnect, timeout, and graceful shutdown cases with fake protocol events."
+        ]
+      },
+      "defer": [
+        "Do not tune worker scaling before lifecycle and timeout contracts are stable.",
+        "Do not depend on real network sockets for first-slice verification."
+      ],
+      "verification_extra": "Use fake ASGI/WSGI event streams to verify lifecycle, timeout, and response behavior."
+    },
+    {
+      "rule_id": "template_rendering_engine",
+      "record_type": "project_archetype_rule",
+      "priority": 74,
+      "archetype": "template_rendering_engine",
+      "label": "template rendering engine",
+      "match": {
+        "text_contains_any": [
+          "jinja",
+          "template loader",
+          "template context",
+          "escape",
+          "render_template",
+          "environment.py",
+          "nodes.py"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "render",
+          "parse",
+          "environment",
+          "loader",
+          "escape"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is parse-context-render flow around {target}, where template loading, context validation, escaping, cache keys, and output formatting need stable contracts."
+      },
+      "target_architecture_shape": [
+        "Template loading returns a typed TemplateSource with origin and cache identity.",
+        "Parsing and compilation are separated from render-time context evaluation.",
+        "Escaping and trust policy are explicit and negative-tested.",
+        "Render output is deterministic for a given template version, context, and environment options."
+      ],
+      "first_slice": {
+        "name": "template_parse_render_slice",
+        "goal": "Make one template path explicit from source loading to rendered output.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "render",
+          "parse",
+          "environment",
+          "loader",
+          "escape"
+        ],
+        "steps": [
+          "Define TemplateSource, RenderContext, and RenderResult contracts.",
+          "Separate loader/cache lookup from parsing and rendering.",
+          "Make escaping/trust policy visible in the contract.",
+          "Verify missing template, invalid context, escaping, and stable render output cases."
+        ]
+      },
+      "defer": [
+        "Do not optimize template cache before source identity and context contracts are stable.",
+        "Do not change public syntax before parser/render behavior is characterized."
+      ],
+      "verification_extra": "Use fixture templates to test missing variables, escaping, loader failure, and deterministic output."
+    },
+    {
+      "rule_id": "auth_security_library",
+      "record_type": "project_archetype_rule",
+      "priority": 85,
+      "archetype": "auth_security_library",
+      "label": "auth/security library",
+      "match": {
+        "text_contains_any": [
+          "oauth",
+          "jwt",
+          "csrf",
+          "permission",
+          "authenticate",
+          "authorization",
+          "token",
+          "session cookie"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "authenticate",
+          "authorize",
+          "validate_token",
+          "permission",
+          "session"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is identity-token-permission flow around {target}, where secret handling, session lifecycle, trust boundaries, and denial semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Identity extraction is separated from credential verification and permission decisions.",
+        "Token/session lifecycle owns expiry, refresh, revocation, and replay/idempotency policy.",
+        "Secrets and cryptographic material never leak into logs, reports, or replay artifacts.",
+        "Negative authorization decisions are first-class results, not incidental exceptions."
+      ],
+      "first_slice": {
+        "name": "identity_token_validation_slice",
+        "goal": "Stabilize one auth path from credential/token input to identity or denial result.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "validate_token",
+          "authenticate",
+          "authorize",
+          "permission",
+          "session"
+        ],
+        "steps": [
+          "Define CredentialInput, IdentityPrincipal, and AuthDecision contracts.",
+          "Separate parsing from verification and permission checks.",
+          "Add redaction policy for secrets in logs and artifacts.",
+          "Verify expired token, malformed token, denied permission, and happy path cases."
+        ]
+      },
+      "defer": [
+        "Do not add providers before one token/session contract is stable.",
+        "Do not record raw secrets in checkpoint or replay artifacts."
+      ],
+      "verification_extra": "Use fake keys/tokens to verify expiry, malformed input, denied permission, and redaction."
+    },
+    {
+      "rule_id": "observability_metrics_tracing",
+      "record_type": "project_archetype_rule",
+      "priority": 72,
+      "archetype": "observability_metrics_tracing",
+      "label": "observability/metrics/tracing system",
+      "match": {
+        "text_contains_any": [
+          "opentelemetry",
+          "prometheus",
+          "metrics",
+          "trace",
+          "span",
+          "telemetry",
+          "exporter"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "emit",
+          "record",
+          "export",
+          "span",
+          "metric"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is event-to-export flow around {target}, where event shape, metric cardinality, sampling, sink failures, and backpressure need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Instrumentation events have typed shape and stable semantic attributes.",
+        "Metric aggregation and trace/span construction are separated from exporter I/O.",
+        "Sampling, cardinality limits, and redaction are explicit policies.",
+        "Exporter failures degrade safely and never break core application execution."
+      ],
+      "first_slice": {
+        "name": "event_to_metric_export_slice",
+        "goal": "Stabilize one telemetry event path from instrumentation input to export result.",
+        "target_sources": [
+          "central",
+          "broad",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "record",
+          "emit",
+          "export",
+          "span",
+          "metric"
+        ],
+        "steps": [
+          "Define TelemetryEvent and ExportResult contracts.",
+          "Separate event normalization from aggregation and exporter I/O.",
+          "Represent exporter failure as a degraded packet with bounded retry.",
+          "Verify cardinality guard, redaction, exporter failure, and happy path cases."
+        ]
+      },
+      "defer": [
+        "Do not add new sinks before one event/export contract is stable.",
+        "Do not allow telemetry export failure to fail the primary workflow."
+      ],
+      "verification_extra": "Use fake exporters to verify dropped events, retry bounds, redaction, and successful export."
+    },
+    {
+      "rule_id": "scientific_compute_library",
+      "record_type": "project_archetype_rule",
+      "priority": 65,
+      "archetype": "scientific_compute_library",
+      "label": "scientific/numerical compute library",
+      "match": {
+        "project_name_contains_any": [
+          "numpy",
+          "scipy",
+          "pandas",
+          "sklearn"
+        ],
+        "text_contains_any": [
+          "numpy",
+          "scipy",
+          "tensor",
+          "linear algebra",
+          "solver",
+          "fft",
+          "matrix"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "array",
+          "compute",
+          "solve",
+          "fit",
+          "transform"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is array-input-compute-result flow around {target}, where shape/dtype contracts, numerical stability, backend policy, and reproducibility need explicit verification."
+      },
+      "target_architecture_shape": [
+        "Inputs declare shape, dtype, units, missing-value policy, and backend expectations.",
+        "Numerical kernels are separated from file/network adapters and plotting/reporting.",
+        "Randomness, tolerance, and backend selection are explicit and reproducible.",
+        "Large intermediate arrays are checkpointed by metadata/hash rather than copied blindly."
+      ],
+      "first_slice": {
+        "name": "array_input_compute_result_slice",
+        "goal": "Stabilize one numerical path from array-like input to computed result.",
+        "target_sources": [
+          "central",
+          "broad"
+        ],
+        "targets_prefer": [
+          "array",
+          "compute",
+          "solve",
+          "fit",
+          "transform"
+        ],
+        "steps": [
+          "Define ArrayInput and ComputeResult contracts with shape/dtype/tolerance.",
+          "Separate numerical kernel from data loading and output formatting.",
+          "Record random seed, backend, and tolerance in verification artifacts.",
+          "Verify bad shape, NaN/missing data, tolerance boundary, and happy path cases."
+        ]
+      },
+      "defer": [
+        "Do not optimize backend dispatch before shape/dtype contracts are stable.",
+        "Do not compare floating outputs without explicit tolerance."
+      ],
+      "verification_extra": "Use small deterministic arrays to verify shape errors, tolerance, NaN policy, and reproducibility."
+    },
+    {
+      "rule_id": "protocol_api_client",
+      "record_type": "project_archetype_rule",
+      "priority": 70,
+      "archetype": "protocol_api_client",
+      "label": "protocol/API client library",
+      "match": {
+        "text_contains_any": [
+          "api client",
+          "transport",
+          "retry",
+          "rate limit",
+          "client session",
+          "request builder",
+          "response parser"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "request",
+          "transport",
+          "send",
+          "parse_response",
+          "retry"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is request-transport-response flow around {target}, where request construction, auth, retries, rate limits, response normalization, and error taxonomy need contracts."
+      },
+      "target_architecture_shape": [
+        "Request builders create typed envelopes before transport execution.",
+        "Auth, retry, rate-limit, and timeout policies are separate from response parsing.",
+        "Transport adapters return normalized success/failure results without leaking provider-specific exceptions.",
+        "Replay artifacts capture request identity and sanitized response/error metadata."
+      ],
+      "first_slice": {
+        "name": "request_transport_response_slice",
+        "goal": "Stabilize one API call path from request builder to normalized response or failure.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "request",
+          "transport",
+          "send",
+          "parse_response",
+          "retry"
+        ],
+        "steps": [
+          "Define ApiRequestEnvelope and ApiResponseResult contracts.",
+          "Separate auth/retry/rate-limit policy from transport execution.",
+          "Normalize provider errors into a stable error taxonomy.",
+          "Verify timeout, rate limit, malformed response, and happy path with fake transport."
+        ]
+      },
+      "defer": [
+        "Do not add more provider endpoints before one request/response contract is stable.",
+        "Do not call live APIs in first-slice verification."
+      ],
+      "verification_extra": "Use fake transports to verify timeout, retry, rate-limit, malformed response, and sanitized artifacts."
+    },
+    {
+      "rule_id": "schema_validation_library",
+      "record_type": "project_archetype_rule",
+      "priority": 84,
+      "archetype": "schema_validation_library",
+      "label": "schema/validation library",
+      "match": {
+        "project_name_contains_any": [
+          "pydantic",
+          "jsonschema",
+          "marshmallow",
+          "cerberus",
+          "voluptuous"
+        ],
+        "text_contains_any": [
+          "pydantic",
+          "jsonschema",
+          "marshmallow",
+          "cerberus",
+          "voluptuous",
+          "schema validation",
+          "data validation",
+          "validation",
+          "schema",
+          "validator"
+        ],
+        "negative_contains_any": [
+          "fastapi"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "validate",
+          "schema",
+          "validator",
+          "model",
+          "deserialize"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is schema-to-validation flow around {target}, where input coercion, error collection, defaults, and serialized output need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Schema/model declarations stay separate from runtime validation and serialization.",
+        "Validation returns structured findings with paths, codes, and original input evidence.",
+        "Coercion/default policies are explicit and versioned.",
+        "Contract tests cover invalid type, missing field, unknown field, and nested schema errors."
+      ],
+      "first_slice": {
+        "name": "schema_validation_contract_slice",
+        "goal": "Stabilize one validation path from raw payload to valid object or structured errors.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "validate",
+          "validator",
+          "schema",
+          "model",
+          "deserialize"
+        ],
+        "steps": [
+          "Define RawPayload, ValidatedObject, and ValidationFinding contracts.",
+          "Separate schema discovery/declaration from runtime validation.",
+          "Make coercion, defaults, and unknown-field policy visible in the result.",
+          "Verify nested errors, missing fields, bad types, and stable serialization."
+        ]
+      },
+      "defer": [
+        "Do not redesign public schema syntax before one validation result contract is characterized.",
+        "Do not collapse validation errors into free-form strings."
+      ],
+      "verification_extra": "Use fixture payloads to verify error paths, coercion/defaults, and serialization stability."
+    },
+    {
+      "rule_id": "cloud_api_sdk",
+      "record_type": "project_archetype_rule",
+      "priority": 83,
+      "archetype": "cloud_api_sdk",
+      "label": "cloud/API SDK",
+      "match": {
+        "project_name_contains_any": [
+          "boto3",
+          "botocore",
+          "azure-core",
+          "google-cloud-storage"
+        ],
+        "text_contains_any": [
+          "boto3",
+          "botocore",
+          "boto",
+          "aws",
+          "azure-core",
+          "google-cloud-storage",
+          "cloud storage",
+          "cloud api",
+          "service client",
+          "resource model",
+          "endpoint"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "client",
+          "session",
+          "resource",
+          "endpoint",
+          "request"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is service-client request flow around {target}, where generated models, auth/session state, retries, endpoints, and response normalization need contracts."
+      },
+      "target_architecture_shape": [
+        "Service/resource model loading is separated from request execution.",
+        "Session, credential, endpoint, retry, and rate-limit policies are explicit.",
+        "Transport adapters normalize provider errors without leaking raw service shapes.",
+        "Generated service metadata is treated as versioned artifacts with compatibility tests."
+      ],
+      "first_slice": {
+        "name": "sdk_service_call_slice",
+        "goal": "Stabilize one SDK operation path from operation model to normalized result.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "client",
+          "session",
+          "endpoint",
+          "request",
+          "resource"
+        ],
+        "steps": [
+          "Define ServiceOperationRequest and ServiceOperationResult contracts.",
+          "Separate model/endpoint resolution from transport execution.",
+          "Represent credential, throttling, and service errors as stable failure packets.",
+          "Verify malformed input, fake service error, throttling, and successful response."
+        ]
+      },
+      "defer": [
+        "Do not add service-specific behavior before the generic operation contract is stable.",
+        "Do not call live cloud APIs in first-slice verification."
+      ],
+      "verification_extra": "Use fake service models and fake transport to verify auth/error/retry paths."
+    },
+    {
+      "rule_id": "async_protocol_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 82,
+      "archetype": "async_protocol_runtime",
+      "label": "async protocol runtime",
+      "match": {
+        "project_name_contains_any": [
+          "uvicorn",
+          "hypercorn",
+          "websockets",
+          "trio",
+          "anyio",
+          "aiohttp",
+          "sanic"
+        ],
+        "text_contains_any": [
+          "uvicorn",
+          "hypercorn",
+          "websockets",
+          "trio",
+          "anyio",
+          "aiohttp",
+          "sanic",
+          "asgi",
+          "asyncio",
+          "protocol",
+          "handshake",
+          "cancel scope",
+          "nursery"
+        ],
+        "negative_contains_any": [
+          "httpx",
+          "uvicorn",
+          "hypercorn"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "protocol",
+          "handshake",
+          "serve",
+          "connect",
+          "nursery",
+          "cancel"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is async protocol flow around {target}, where cancellation, backpressure, handshake state, and timeout semantics must be explicit."
+      },
+      "target_architecture_shape": [
+        "Protocol events are modeled as typed packets independent from socket I/O.",
+        "Cancellation, timeout, backpressure, and close semantics are policies with test fixtures.",
+        "Connection/session state is explicit and replayable.",
+        "Transport errors are normalized before reaching higher-level protocol logic."
+      ],
+      "first_slice": {
+        "name": "async_protocol_event_slice",
+        "goal": "Stabilize one async protocol path from event/handshake to result or controlled close.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "protocol",
+          "handshake",
+          "connect",
+          "serve",
+          "cancel",
+          "nursery"
+        ],
+        "steps": [
+          "Define ProtocolEvent, ConnectionState, and ProtocolDecision contracts.",
+          "Separate socket transport from protocol state transitions.",
+          "Represent cancellation, timeout, and close as structured outcomes.",
+          "Verify handshake failure, cancellation, timeout, and happy message flow."
+        ]
+      },
+      "defer": [
+        "Do not tune performance before protocol state and cancellation contracts are stable.",
+        "Do not rely on real sockets for the first verification slice."
+      ],
+      "verification_extra": "Use fake async event streams to verify handshake, timeout, cancellation, and close behavior."
+    },
+    {
+      "rule_id": "docs_site_generator",
+      "record_type": "project_archetype_rule",
+      "priority": 72,
+      "archetype": "docs_site_generator",
+      "label": "documentation/static site generator",
+      "match": {
+        "text_contains_any": [
+          "mkdocs",
+          "sphinx",
+          "pelican",
+          "markdown",
+          "documentation generator",
+          "site_dir",
+          "nav",
+          "theme",
+          "static site"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "build",
+          "config",
+          "nav",
+          "markdown",
+          "theme"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is config-markdown-render-output flow around {target}, where config parsing, navigation, plugin hooks, and filesystem writes need contracts."
+      },
+      "target_architecture_shape": [
+        "Site configuration parsing is separated from page discovery and rendering.",
+        "Markdown/page transforms produce typed page artifacts before filesystem output.",
+        "Theme/plugin hooks are explicit extension boundaries with failure packets.",
+        "Output manifests record generated files, hashes, and skipped assets."
+      ],
+      "first_slice": {
+        "name": "site_page_render_slice",
+        "goal": "Stabilize one documentation page path from config/source page to output artifact.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "build",
+          "config",
+          "nav",
+          "markdown",
+          "theme"
+        ],
+        "steps": [
+          "Define SiteConfig, SourcePage, and RenderedPageArtifact contracts.",
+          "Separate config/nav parsing from markdown transformation and output writing.",
+          "Wrap plugin/theme hooks as explicit adapters with failure results.",
+          "Verify missing config, malformed markdown, plugin failure, and generated output manifest."
+        ]
+      },
+      "defer": [
+        "Do not rewrite the plugin system before one page-render contract is stable.",
+        "Do not mutate output directories without an artifact manifest."
+      ],
+      "verification_extra": "Use fixture docs trees to verify config errors, page rendering, plugin failure, and output manifest."
+    },
+    {
+      "rule_id": "visualization_plotting_library",
+      "record_type": "project_archetype_rule",
+      "priority": 72,
+      "archetype": "visualization_plotting_library",
+      "label": "visualization/plotting library",
+      "match": {
+        "project_name_contains_any": [
+          "matplotlib",
+          "plotly",
+          "bokeh",
+          "seaborn"
+        ],
+        "text_contains_any": [
+          "matplotlib",
+          "plot",
+          "figure",
+          "axes",
+          "artist",
+          "visualization"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "figure",
+          "axes",
+          "artist",
+          "plot",
+          "draw",
+          "render"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is figure-to-render flow around {target}, where artist state, backend policy, layout, and output serialization need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Plot/figure construction produces explicit scene or artist state before backend rendering.",
+        "Backend selection, font/layout policy, and output format are separate adapters.",
+        "Rendering side effects write through artifact manifests rather than hidden filesystem state.",
+        "Golden fixtures cover layout stability, unsupported backend, and output serialization."
+      ],
+      "first_slice": {
+        "name": "figure_render_artifact_slice",
+        "goal": "Stabilize one plotting path from figure state to rendered artifact manifest.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "figure",
+          "axes",
+          "artist",
+          "plot",
+          "draw",
+          "render"
+        ],
+        "steps": [
+          "Define FigureState, RenderOptions, and RenderArtifact contracts.",
+          "Separate artist/figure state mutation from backend rendering.",
+          "Wrap backend/font/output failures as structured findings.",
+          "Verify minimal plot, invalid backend, layout drift, and output manifest cases."
+        ]
+      },
+      "defer": [
+        "Do not change every backend before one render artifact contract is stable.",
+        "Do not use large binary outputs as primary human-readable evidence."
+      ],
+      "verification_extra": "Use small deterministic plots and artifact manifests for backend and layout verification."
+    },
+    {
+      "rule_id": "media_processing_library",
+      "record_type": "project_archetype_rule",
+      "priority": 71,
+      "archetype": "media_processing_library",
+      "label": "media processing library",
+      "match": {
+        "project_name_contains_any": [
+          "pillow",
+          "moviepy",
+          "imageio",
+          "opencv"
+        ],
+        "text_contains_any": [
+          "pillow",
+          "moviepy",
+          "imageio",
+          "opencv",
+          "opencv-python",
+          "image",
+          "video",
+          "media",
+          "clip",
+          "codec",
+          "ffmpeg"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "open",
+          "save",
+          "clip",
+          "decode",
+          "encode",
+          "ffmpeg"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is media decode-transform-encode flow around {target}, where file/codec boundaries, subprocess calls, large artifacts, and deterministic output need contracts."
+      },
+      "target_architecture_shape": [
+        "Media loading/decoding is separated from pure transforms and encoding/output.",
+        "Codec, duration, size, format, and color/audio policies are explicit inputs.",
+        "Subprocess or native backend execution is isolated with timeout and captured logs.",
+        "Large artifacts are tracked by manifest/hash rather than embedded in reports."
+      ],
+      "first_slice": {
+        "name": "media_decode_transform_encode_slice",
+        "goal": "Stabilize one media path from input artifact to transformed output manifest.",
+        "target_sources": [
+          "central",
+          "process_boundary",
+          "orchestrators"
+        ],
+        "targets_prefer": [
+          "open",
+          "save",
+          "clip",
+          "decode",
+          "encode",
+          "ffmpeg"
+        ],
+        "steps": [
+          "Define MediaInput, TransformSpec, and MediaOutputManifest contracts.",
+          "Separate decode/load, transform, and encode/write stages.",
+          "Wrap codec/backend failures and subprocess timeouts as failure packets.",
+          "Verify bad file, unsupported codec, small fixture transform, and output manifest."
+        ]
+      },
+      "defer": [
+        "Do not optimize codec/backend performance before output contracts are stable.",
+        "Do not load large binary artifacts into human reports."
+      ],
+      "verification_extra": "Use tiny fixture media/images to verify decode errors, transforms, encoding, and manifest hashes."
+    },
+    {
+      "rule_id": "signing_token_utility",
+      "record_type": "project_archetype_rule",
+      "priority": 84,
+      "archetype": "signing_token_utility",
+      "label": "signing/token utility",
+      "match": {
+        "project_name_contains_any": [
+          "itsdangerous",
+          "pyjwt",
+          "python-jose"
+        ],
+        "text_contains_any": [
+          "itsdangerous",
+          "pyjwt",
+          "python-jose",
+          "jose",
+          "jwt",
+          "signer",
+          "signature",
+          "serializer",
+          "token signing"
+        ],
+        "negative_contains_any": [
+          "django"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "sign",
+          "unsign",
+          "serialize",
+          "deserialize",
+          "loads",
+          "dumps",
+          "verify"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is sign-serialize-verify flow around {target}, where secret material, expiry, tamper detection, algorithm policy, and error taxonomy need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Payload serialization is separated from cryptographic signing and verification.",
+        "Secret/key material, algorithm choice, salt/audience, expiry, and clock policy are explicit inputs.",
+        "Tamper, expiry, malformed token, and wrong-key outcomes are stable denial/failure results.",
+        "Logs, reports, and replay artifacts never contain raw secrets or trusted payloads unless redacted."
+      ],
+      "first_slice": {
+        "name": "sign_verify_contract_slice",
+        "goal": "Stabilize one signing path from payload to token and back to verified payload or denial.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "sign",
+          "unsign",
+          "serialize",
+          "deserialize",
+          "loads",
+          "dumps",
+          "verify"
+        ],
+        "steps": [
+          "Define SignedPayloadInput, TokenEnvelope, and VerificationResult contracts.",
+          "Separate payload serialization from signing/verifying and secret lookup.",
+          "Represent tamper, expiry, malformed token, and wrong-key cases as structured outcomes.",
+          "Verify happy path, tampered token, expired token, malformed token, and redaction behavior."
+        ]
+      },
+      "defer": [
+        "Do not add new algorithms or token formats before one sign/verify contract is stable.",
+        "Do not persist raw secrets or unredacted signed payloads in reports or replay artifacts."
+      ],
+      "verification_extra": "Use fake keys and deterministic clocks to verify signing, expiry, tamper detection, malformed input, and redaction."
+    },
+    {
+      "rule_id": "code_generation_toolkit",
+      "record_type": "project_archetype_rule",
+      "priority": 70,
+      "archetype": "code_generation_toolkit",
+      "label": "code generation/plugin factory",
+      "match": {
+        "text_contains_any": [
+          "render_",
+          "generate_code"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "broad",
+          "central",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "render_",
+          "generate",
+          "build_plugin"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is renderer/codegen drift around {target}, so generated artifacts need a shared input/output contract before more generators are added."
+      },
+      "target_architecture_shape": [
+        "A generator contract defines RenderInput, RenderedArtifact, validation findings, and deterministic metadata.",
+        "Renderer modules become focused template/capability implementations behind that contract.",
+        "Build/package orchestration remains outside renderer functions and records artifacts for replay.",
+        "Golden-output and negative contract tests guard generator drift."
+      ],
+      "first_slice": {
+        "name": "generator_contract_slice",
+        "goal": "Make one generator path contract-driven before expanding renderer coverage.",
+        "target_sources": [
+          "extraction",
+          "tasks"
+        ],
+        "targets_prefer": [
+          "build_plugin",
+          "build_plugin_metadata",
+          "generate_code",
+          "render_"
+        ],
+        "steps": [
+          "Introduce a minimal RenderInput -> RenderedArtifact contract for one generator.",
+          "Move template rendering details behind the contract.",
+          "Record generated file list and validation findings as replay artifacts.",
+          "Add golden-output tests and one malformed input test."
+        ]
+      },
+      "defer": [
+        "Do not refactor all renderers at once; prove the generator contract on one representative renderer first.",
+        "Do not change public package shape until generated artifact compatibility is checked."
+      ],
+      "verification_extra": "Use golden generated output plus schema validation for generated artifact metadata."
+    },
+    {
+      "rule_id": "api_service",
+      "record_type": "project_archetype_rule",
+      "priority": 20,
+      "archetype": "api_service",
+      "label": "API service",
+      "match": {
+        "routes_min": 1
+      }
+    },
+    {
+      "rule_id": "script_or_cli_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 10,
+      "archetype": "script_or_cli_tool",
+      "label": "script/CLI project",
+      "match": {
+        "input_contains_any": [
+          "CLI",
+          "script"
+        ]
+      }
+    },
+    {
+      "rule_id": "python_project",
+      "record_type": "project_archetype_rule",
+      "priority": 0,
+      "archetype": "python_project",
+      "label": "Python project",
+      "match": {}
+    }
+  ]
+}
