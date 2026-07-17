@@ -46,6 +46,8 @@ The runtime should not contain:
 - `runtime/role_definitions.py` loads role definitions.
 - `runtime/role_questionnaire_sections.py` interprets role question schemas.
 - `runtime/role_knowledge.py` reads role ids and KB defaults from external config.
+- `config/role_artifact_pipeline.json` declares the artifact-builder sequence.
+- `runtime/role_artifact_interpreter.py` interprets artifact-builder steps.
 
 ## RoleDefinition v1
 
@@ -86,3 +88,23 @@ when a new role needs a genuinely new generic provider or contract mechanism.
 That provider must be role-neutral. For example, adding a generic `sql_schema`
 answer provider is acceptable; adding `run_sql_architect()` as a hard-coded
 role path is not.
+
+## Artifact Pipeline
+
+Role artifact production is also data-driven.
+
+`config/role_artifact_pipeline.json` declares:
+
+- `step_id`;
+- `role_id`;
+- `builder`;
+- `output_key`;
+- `bindings`.
+
+The runtime does not know that a specific pipeline must be Architect ->
+SpecWriter -> Implementer -> Tester -> Reviewer. It loads a sequence and
+interprets it.
+
+Current builders still point to legacy role-specific modules. This is an
+intermediate compatibility layer. The target state is for those builders to be
+generic artifact builders selected by schema, not handwritten role modules.

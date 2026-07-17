@@ -14,15 +14,8 @@ from .cognitive_control_plane import run_cognitive_control_plane
 from .contract_registry import load_artifact_contracts
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
-from .role_skills import (
-    load_skill_registry,
-    run_architect_skill,
-    run_implementer_skill,
-    run_reviewer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-    write_role_artifact,
-)
+from .role_artifact_interpreter import load_role_artifact_pipeline, run_role_artifact_pipeline
+from .role_skill_common import load_skill_registry, write_role_artifact
 from .programmer_executor import run_programmer_executor
 from .transformation_flow import run_transformation_flow
 
@@ -41,10 +34,17 @@ def run_role_pipeline(
     load_skill_registry(root)
     with _pushd(root):
         report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=goal, project_report=report, advisory_config=architect_advisory_config)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    build_pipeline = _pipeline_without_review()
+    artifacts = run_role_artifact_pipeline(
+        goal=goal,
+        project_report=report,
+        architect_advisory_config=architect_advisory_config,
+        pipeline=build_pipeline,
+    )
+    adr = artifacts["architecture_decision"]
+    spec = artifacts["technical_spec"]
+    implementation = artifacts["implementation_plan"]
+    test_plan = artifacts["test_plan"]
     executor = _maybe_run_executor(
         root=root,
         project_dir=project_dir,
@@ -54,12 +54,15 @@ def run_role_pipeline(
         run_executor=run_executor,
     )
     test_result = dict(executor.get("test_result", {})) if executor.get("test_result") else None
-    review = run_reviewer_skill(
-        technical_spec=spec,
-        implementation_plan=implementation,
-        test_plan=test_plan,
+    review_artifacts = run_role_artifact_pipeline(
+        goal=goal,
+        project_report=report,
+        initial_artifacts=artifacts,
+        architect_advisory_config=architect_advisory_config,
         test_result=test_result,
+        pipeline=_review_only_pipeline(),
     )
+    review = review_artifacts["review_findings"]
     artifacts = {
         "architecture_decision": adr,
         "technical_spec": spec,
@@ -109,6 +112,16 @@ def run_role_pipeline(
     if write:
         result["report_path"] = write_role_pipeline_report(root, result).as_posix()
     return result
+
+
+def _pipeline_without_review() -> dict[str, Any]:
+    pipeline = load_role_artifact_pipeline()
+    return {**pipeline, "steps": [step for step in pipeline["steps"] if step.get("output_key") != "review_findings"]}
+
+
+def _review_only_pipeline() -> dict[str, Any]:
+    pipeline = load_role_artifact_pipeline()
+    return {**pipeline, "steps": [step for step in pipeline["steps"] if step.get("output_key") == "review_findings"]}
 
 
 def write_role_pipeline_report(root: Path, payload: dict[str, Any]) -> Path:
