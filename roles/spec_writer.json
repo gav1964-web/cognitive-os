@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "spec_writer",
+  "label": "Spec Writer",
+  "order": 30,
+  "consumes": ["ArchitectureDecisionRecord"],
+  "produces": ["TechnicalSpec"],
+  "kb_filters": {"role_scope": ["spec_writer"]},
+  "policy": {"llm_authority": "hypothesis_only", "source_mutation": "forbidden"},
+  "questions": [
+    {"id": "goal_spec", "question": "Как сформулировать GoalSpec для первого slice?", "answer": {"provider": "helper", "name": "goal_spec", "args": ["$target"]}, "evidence": ["goal", "minimal_extraction_plan"]},
+    {"id": "input_contract", "question": "Какой input contract нужен?", "answer": {"provider": "helper", "name": "contract_field", "args": ["explicit_input_schemas", "$target"]}, "evidence": ["answers.4_contracts_data"], "confidence": "medium"},
+    {"id": "output_contract", "question": "Какой output contract нужен?", "answer": {"provider": "helper", "name": "contract_field", "args": ["explicit_output_schemas", "$target"]}, "evidence": ["answers.4_contracts_data"], "confidence": "medium"},
+    {"id": "data_structures", "question": "Какие структуры данных проходят между модулями?", "answer": {"provider": "ctx", "path": ["contracts", "data_structures"]}, "evidence": ["answers.4_contracts_data.data_structures"]},
+    {"id": "weak_contracts", "question": "Где данные передаются слабо типизированно?", "answer": {"provider": "ctx", "path": ["contracts", "weak_contract_zones"]}, "evidence": ["answers.4_contracts_data.weak_contract_zones"]},
+    {"id": "acceptance", "question": "Какие acceptance criteria нужны?", "answer": {"provider": "helper", "name": "acceptance_criteria", "args": ["$target"]}, "evidence": ["analysis_tasks", "minimal_extraction_plan"]},
+    {"id": "errors", "question": "Какие ошибки нужно описать явно?", "answer": {"provider": "helper", "name": "error_surface"}, "evidence": ["answers.5_errors_state_repro"]},
+    {"id": "dependencies", "question": "Какие внешние зависимости должны быть разрешены или запрещены?", "answer": {"provider": "helper", "name": "external_surface"}, "evidence": ["project_insights.external_imports"]},
+    {"id": "intermediate_artifacts", "question": "Какие промежуточные артефакты стоит сохранять?", "answer": {"provider": "ctx", "path": ["contracts", "intermediate_artifacts"]}, "evidence": ["answers.4_contracts_data.intermediate_artifacts"]},
+    {"id": "out_of_scope", "question": "Что остается out of scope?", "answer": {"provider": "helper", "name": "spec_out_of_scope"}, "evidence": ["role policy"]},
+    {"id": "open_questions", "question": "Какие вопросы нужно уточнить до реализации?", "answer": {"provider": "helper", "name": "open_questions"}, "evidence": ["analysis_tasks", "knowledge_gap"], "confidence": "medium"},
+    {"id": "verification_artifacts", "question": "Какие verification artifacts ожидаются?", "answer": {"provider": "helper", "name": "verification_artifacts", "args": ["$target"]}, "evidence": ["test_surface", "runtime_commands"]}
+  ]
+}

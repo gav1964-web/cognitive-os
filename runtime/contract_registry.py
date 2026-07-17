@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any
 
@@ -15,148 +16,26 @@ class ContractRegistryError(ValueError):
     """Raised when a runtime contract is missing or cannot be used."""
 
 
-ARTIFACT_CONTRACTS: dict[str, dict[str, Any]] = {
-    "GoalSpec": {
-        "producer": "goal_intake",
-        "consumers": ["L4"],
-        "required_fields": ["artifact_type", "intent", "inputs", "outputs", "constraints", "success_criteria"],
-    },
-    "ProjectMapReport": {
-        "producer": "project_analyzer",
-        "consumers": ["architect"],
-        "required_fields": ["artifact_type", "project", "summary"],
-    },
-    "ArchitectureDecisionRecord": {
-        "producer": "architect",
-        "consumers": ["spec_writer"],
-        "required_fields": ["artifact_type", "architecture_options", "chosen_option", "risks", "spec_writer_brief"],
-    },
-    "TechnicalSpec": {
-        "producer": "spec_writer",
-        "consumers": ["implementer", "tester", "reviewer"],
-        "required_fields": ["artifact_type", "requirements", "acceptance_criteria", "traceability_table"],
-    },
-    "ImplementationPlan": {
-        "producer": "implementer",
-        "consumers": ["programmer_executor", "tester", "reviewer"],
-        "required_fields": ["artifact_type", "patch_scope", "expected_files", "verification_commands", "rollback_plan"],
-    },
-    "TestPlan": {
-        "producer": "tester",
-        "consumers": ["programmer_executor", "reviewer"],
-        "required_fields": ["artifact_type", "acceptance_tests", "executable_acceptance", "negative_tests", "regression_risks"],
-    },
-    "PatchPackage": {
-        "producer": "programmer_executor",
-        "consumers": ["tester", "reviewer"],
-        "required_fields": ["artifact_type", "expected_files", "patches", "policy"],
-    },
-    "TestResult": {
-        "producer": "programmer_executor",
-        "consumers": ["reviewer"],
-        "required_fields": ["artifact_type", "status", "commands"],
-    },
-    "ExecutableAcceptanceResult": {
-        "producer": "programmer_executor",
-        "consumers": ["reviewer"],
-        "required_fields": ["artifact_type", "status", "generated_tests", "summary", "command"],
-    },
-    "ReviewFindings": {
-        "producer": "reviewer",
-        "consumers": ["human", "release_gate"],
-        "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation"],
-    },
-    "CognitiveControlPlaneDecision": {
-        "producer": "cognitive_control_plane",
-        "consumers": ["role_pipeline", "semantic_reasoner", "human", "release_gate"],
-        "required_fields": ["artifact_type", "layer", "artifact_promotion_gate", "role_transition", "semantic_escalation"],
-    },
-    "SemanticHypothesisRequest": {
-        "producer": "cognitive_control_plane",
-        "consumers": ["semantic_reasoner", "human"],
-        "required_fields": ["artifact_type", "layer", "source_decision", "trigger_reasons", "question", "output_contract", "forbidden_actions", "return_path"],
-    },
-    "SemanticEvidencePack": {
-        "producer": "cognitive_control_plane",
-        "consumers": ["semantic_reasoner", "human"],
-        "required_fields": ["artifact_type", "layer", "status", "prompt_facts", "control_facts", "forbidden_actions", "authority"],
-    },
-    "SemanticHypothesisProposal": {
-        "producer": "semantic_reasoner",
-        "consumers": ["cognitive_control_plane", "human"],
-        "required_fields": ["artifact_type", "layer", "hypothesis_type", "proposal", "confidence", "evidence_refs", "risks", "return_to_gate"],
-    },
-    "L4SemanticValidationResult": {
-        "producer": "cognitive_control_plane",
-        "consumers": ["verified_system_package", "human", "stage2_template_curriculum"],
-        "required_fields": ["artifact_type", "layer", "status", "source_request", "source_proposal", "contract_validation", "quality", "accepted_action", "decision"],
-    },
-    "Stage2TemplateBacklogItem": {
-        "producer": "semantic_reasoner",
-        "consumers": ["human", "engineer", "stage2_template_curriculum"],
-        "required_fields": ["artifact_type", "status", "template_id", "purpose", "requires_human_review", "next_step"],
-    },
-    "SuccessfulResolutionCandidate": {
-        "producer": "semantic_reasoner",
-        "consumers": ["human", "knowledge_admission", "stage2_template_curriculum"],
-        "required_fields": ["artifact_type", "status", "resolution_id", "means_used", "verification_plan", "kb_candidate", "next_step"],
-    },
-    "DeveloperImprovementRequest": {
-        "producer": "semantic_reasoner",
-        "consumers": ["human", "developer"],
-        "required_fields": ["artifact_type", "status", "request_id", "missing_capability", "problem", "suggested_work", "next_step"],
-    },
-    "Stage2TemplateAdmissionResult": {
-        "producer": "stage2_template_admission",
-        "consumers": ["human", "engineer", "verified_system_package"],
-        "required_fields": ["artifact_type", "status", "case", "blockers", "invariants"],
-    },
-    "SemanticProposalReplay": {
-        "producer": "semantic_replay",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "request", "proposal", "validation", "model_quality_mode", "outcome", "audit"],
-    },
-    "L45SemanticBenchmarkReport": {
-        "producer": "l45_semantic_benchmark",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "model_quality_mode", "summary", "cases"],
-    },
-    "L45SemanticCorpusAnalyticsReport": {
-        "producer": "l45_semantic_analytics",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "source_report", "summary", "boundary_counts", "action_counts"],
-    },
-    "L45RiskPolicyGapReport": {
-        "producer": "l45_semantic_analytics",
-        "consumers": ["human", "evaluation", "cognitive_control_plane"],
-        "required_fields": ["artifact_type", "status", "source_report", "summary", "gaps", "policy_recommendations"],
-    },
-    "L45SemanticComparisonReport": {
-        "producer": "l45_semantic_comparison",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "summary", "cases", "interpretation"],
-    },
-    "L45SemanticEvaluationSuiteReport": {
-        "producer": "l45_semantic_eval_suite",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "config", "summary", "profiles"],
-    },
-    "L45ModelFailureAnalysisReport": {
-        "producer": "l45_model_failure_analysis",
-        "consumers": ["human", "evaluation"],
-        "required_fields": ["artifact_type", "status", "summary", "failures", "recommendations"],
-    },
-    "L4DecisionTable": {
-        "producer": "l4_decision_table",
-        "consumers": ["cognitive_control_plane", "human"],
-        "required_fields": ["artifact_type", "status", "rule_count", "rules", "principle"],
-    },
-    "PromptBoundaryClassification": {
-        "producer": "prompt_boundary_classifier",
-        "consumers": ["prompt_adequacy", "cognitive_control_plane", "human"],
-        "required_fields": ["artifact_type", "status", "boundary", "confidence", "reasons", "recommended_action"],
-    },
-}
+
+ARTIFACT_CONTRACTS_PATH = Path(__file__).resolve().parents[1] / "config" / "artifact_contracts.json"
+
+def load_artifact_contracts(path: str | None = None) -> dict[str, dict[str, Any]]:
+    source = Path(path) if path else ARTIFACT_CONTRACTS_PATH
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "artifact_contracts.v1":
+        raise ContractRegistryError("artifact contracts must use schema_version artifact_contracts.v1")
+    contracts = payload.get("contracts")
+    if not isinstance(contracts, dict):
+        raise ContractRegistryError("artifact contracts must contain contracts object")
+    normalized: dict[str, dict[str, Any]] = {}
+    for artifact_type, contract in contracts.items():
+        if not isinstance(contract, dict):
+            raise ContractRegistryError(f"artifact contract must be object: {artifact_type}")
+        required = contract.get("required_fields")
+        if not isinstance(required, list):
+            raise ContractRegistryError(f"artifact contract requires required_fields list: {artifact_type}")
+        normalized[str(artifact_type)] = dict(contract)
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -181,7 +60,7 @@ class ContractRegistry:
     def __init__(self, capabilities: dict[str, CapabilityContract]) -> None:
         self.capabilities = capabilities
         self.packet_routes = set(LAYER_ROUTES)
-        self.artifacts = {key: dict(value) for key, value in ARTIFACT_CONTRACTS.items()}
+        self.artifacts = load_artifact_contracts()
 
     @classmethod
     def from_capability_registry(cls, registry: CapabilityRegistry) -> "ContractRegistry":

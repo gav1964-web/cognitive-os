@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "project_analyzer",
+  "label": "Project Analyzer",
+  "order": 10,
+  "consumes": ["SourceTree"],
+  "produces": ["ProjectMapReport"],
+  "kb_filters": {"role_scope": ["project_analyzer"]},
+  "policy": {"llm_authority": "none", "source_mutation": "forbidden"},
+  "questions": [
+    {"id": "main_task", "question": "Какую главную пользовательскую задачу решает проект?", "answer": {"provider": "ctx", "path": ["scope", "main_task"]}, "evidence": ["answers.1_scope.main_task"]},
+    {"id": "scenarios", "question": "Какие основные сценарии использования видны по коду?", "answer": {"provider": "ctx", "path": ["scope", "supported_scenarios"]}, "evidence": ["answers.1_scope.supported_scenarios"]},
+    {"id": "inputs", "question": "Что является входом проекта?", "answer": {"provider": "ctx", "path": ["scope", "inputs"]}, "evidence": ["answers.1_scope.inputs"]},
+    {"id": "outputs", "question": "Что является выходом проекта?", "answer": {"provider": "ctx", "path": ["scope", "outputs"]}, "evidence": ["answers.1_scope.outputs"]},
+    {"id": "entrypoints", "question": "Какие entrypoints обнаружены?", "answer": {"provider": "first", "items": [{"provider": "ctx", "path": ["execution", "entrypoints"]}, {"provider": "ctx", "path": ["summary", "entrypoints"]}]}, "evidence": ["answers.2_execution.entrypoints", "summary.entrypoints"]},
+    {"id": "execution_path", "question": "Как выглядит основной execution path?", "answer": {"provider": "ctx", "path": ["execution", "primary_execution_path"]}, "evidence": ["answers.2_execution.primary_execution_path"]},
+    {"id": "stack", "question": "Какие фреймворки и языки определены?", "answer": {"provider": "object", "fields": {"frameworks": {"provider": "ctx", "path": ["summary", "frameworks"]}, "languages": {"provider": "ctx", "path": ["summary", "languages"]}}}, "evidence": ["summary"]},
+    {"id": "flow_nodes", "question": "Какие узлы управляют потоком исполнения?", "answer": {"provider": "ctx", "path": ["execution", "central_flow_nodes"]}, "evidence": ["answers.2_execution.central_flow_nodes"]},
+    {"id": "hidden_orchestration", "question": "Где есть скрытая оркестрация?", "answer": {"provider": "ctx", "path": ["readiness", "hidden_orchestrators"]}, "evidence": ["answers.6_runtime_extraction_readiness.hidden_orchestrators"]},
+    {"id": "mixed_responsibility", "question": "Какие функции смешивают несколько обязанностей?", "answer": {"provider": "ctx", "path": ["readiness", "mixed_responsibility_functions"]}, "evidence": ["answers.6_runtime_extraction_readiness.mixed_responsibility_functions"]},
+    {"id": "external_surface", "question": "Какие внешние зависимости и side effects видны?", "answer": {"provider": "helper", "name": "external_surface"}, "evidence": ["extract_python_structure.project_insights", "answers.6_runtime_extraction_readiness"]},
+    {"id": "archetype", "question": "Какой проектный архетип предполагается?", "answer": {"provider": "helper", "name": "architecture_field", "args": ["matched_rule"]}, "evidence": ["architecture_synthesis.matched_rule"], "confidence": "medium"}
+  ]
+}

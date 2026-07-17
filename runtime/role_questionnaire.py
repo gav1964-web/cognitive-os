@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .role_definitions import role_question_count
 from .role_questionnaire_sections import build_questionnaire_sections
 
 
-QUESTION_COUNT_PER_ROLE = 12
+QUESTION_COUNT_PER_ROLE = role_question_count()
 
 
 def build_role_questionnaire_report(
@@ -39,7 +40,9 @@ def build_role_questionnaire_report(
             "role_count": len(sections),
             "question_count_per_role": {section["role"]: len(section["answers"]) for section in sections},
             "roles_without_full_question_set": [
-                section["role"] for section in sections if len(section["answers"]) < QUESTION_COUNT_PER_ROLE
+                section["role"]
+                for section in sections
+                if QUESTION_COUNT_PER_ROLE and len(section["answers"]) < QUESTION_COUNT_PER_ROLE
             ],
             "high_confidence_answers": sum(
                 1

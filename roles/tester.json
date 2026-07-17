@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "tester",
+  "label": "Tester",
+  "order": 50,
+  "consumes": ["TechnicalSpec", "ImplementationPlan"],
+  "produces": ["TestPlan", "TestResult"],
+  "kb_filters": {"role_scope": ["tester"]},
+  "policy": {"source_mutation": "forbidden", "live_external_calls": "fake_by_default"},
+  "questions": [
+    {"id": "test_surface", "question": "Какая существующая test surface обнаружена?", "answer": {"provider": "helper", "name": "test_surface"}, "evidence": ["extract_python_structure.project_insights.test_surface"]},
+    {"id": "contract_tests", "question": "Какие contract tests можно построить автоматически?", "answer": {"provider": "helper", "name": "contract_tests", "args": ["$target"]}, "evidence": ["answers.4_contracts_data", "minimal_extraction_plan"]},
+    {"id": "negative_tests", "question": "Где нужны hand-written negative tests?", "answer": {"provider": "helper", "name": "negative_tests"}, "evidence": ["answers.5_errors_state_repro", "quarantine_candidates"]},
+    {"id": "fixtures", "question": "Какие fixtures/fakes нужны для внешних зависимостей?", "answer": {"provider": "helper", "name": "fixtures"}, "evidence": ["project_insights.external_imports"]},
+    {"id": "smoke", "question": "Какой smoke test минимален?", "answer": {"provider": "helper", "name": "smoke_test"}, "evidence": ["extract_runtime_commands", "entrypoints"]},
+    {"id": "idempotency", "question": "Что тестировать на idempotency?", "answer": {"provider": "ctx", "path": ["readiness", "idempotency_risks"]}, "evidence": ["answers.6_runtime_extraction_readiness.idempotency_risks"]},
+    {"id": "replay", "question": "Что тестировать на replay/resume?", "answer": {"provider": "ctx", "path": ["readiness", "resume_reuse_plan"]}, "evidence": ["answers.6_runtime_extraction_readiness.resume_reuse_plan"]},
+    {"id": "process_boundary", "question": "Какие process-boundary tests нужны?", "answer": {"provider": "ctx", "path": ["readiness", "process_boundary_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.process_boundary_candidates"]},
+    {"id": "drift", "question": "Где вероятен parser/API drift?", "answer": {"provider": "ctx", "path": ["readiness", "quarantine_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.quarantine_candidates"]},
+    {"id": "regression", "question": "Какие regression tests приоритетны?", "answer": {"provider": "helper", "name": "regression_tests", "args": ["$target"]}, "evidence": ["central_flow_nodes", "minimal_extraction_plan"]},
+    {"id": "gaps", "question": "Какие gaps в тестировании остаются?", "answer": {"provider": "helper", "name": "test_gaps"}, "evidence": ["test_surface", "open_questions"], "confidence": "medium"},
+    {"id": "priority", "question": "Какой порядок тестирования?", "answer": {"provider": "helper", "name": "test_priority", "args": ["$target"]}, "evidence": ["role policy", "risks"]}
+  ]
+}

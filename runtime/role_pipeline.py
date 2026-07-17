@@ -11,6 +11,7 @@ from typing import Any
 
 from .architecture_analysis_document import write_architecture_analysis_document
 from .cognitive_control_plane import run_cognitive_control_plane
+from .contract_registry import load_artifact_contracts
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
 from .role_skills import (
@@ -163,15 +164,11 @@ def _rows_cover_target(rows: object, target: str) -> bool:
 
 def _write_artifacts(root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, str]:
     paths = {}
-    role_by_key = {
-        "architecture_decision": "architect",
-        "technical_spec": "spec_writer",
-        "implementation_plan": "implementer",
-        "test_plan": "tester",
-        "review_findings": "reviewer",
-    }
+    contracts = load_artifact_contracts()
     for key, artifact in artifacts.items():
-        path = write_role_artifact(root, role_by_key[key], artifact)
+        artifact_type = str(artifact.get("artifact_type") or "")
+        producer = str(dict(contracts.get(artifact_type, {})).get("producer") or "unknown")
+        path = write_role_artifact(root, producer, artifact)
         artifact["artifact_path"] = path.as_posix()
         paths[key] = path.as_posix()
     return paths

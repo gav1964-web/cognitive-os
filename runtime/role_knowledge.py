@@ -6,26 +6,10 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Any
 
-
-ROLE_ORDER = (
-    "project_analyzer",
-    "architect",
-    "spec_writer",
-    "implementer",
-    "tester",
-    "reviewer",
-    "researcher",
-)
+from .role_definitions import load_role_record_defaults, role_ids
 
 
-RECORD_ROLE_DEFAULTS = {
-    "project_archetype_rule": ["project_analyzer", "architect", "spec_writer"],
-    "capability_pattern": ["architect", "spec_writer", "implementer", "tester"],
-    "risk_pattern": ["architect", "tester", "reviewer"],
-    "project_lesson": ["architect", "spec_writer", "reviewer"],
-    "architecture_pattern_backlog_item": ["project_analyzer", "architect", "researcher"],
-    "kb_candidate": ["researcher", "architect", "reviewer"],
-}
+ROLE_ORDER = role_ids()
 
 
 @dataclass(frozen=True)
@@ -45,7 +29,9 @@ def record_roles(record: dict[str, Any]) -> list[str]:
     explicit = record.get("role_scope")
     if isinstance(explicit, list) and explicit:
         return _known_roles(explicit)
-    return list(RECORD_ROLE_DEFAULTS.get(str(record.get("record_type")), ["architect"]))
+    defaults = load_role_record_defaults()
+    fallback = list(ROLE_ORDER[:1]) or ["unassigned"]
+    return list(defaults.get(str(record.get("record_type")), fallback))
 
 
 def evidence_strength(record: dict[str, Any]) -> str:
@@ -116,5 +102,6 @@ def _record_id(record: dict[str, Any]) -> str:
 
 
 def _known_roles(values: list[Any]) -> list[str]:
-    roles = [str(value) for value in values if str(value) in ROLE_ORDER]
-    return roles or ["architect"]
+    known = set(ROLE_ORDER)
+    roles = [str(value) for value in values if str(value) in known]
+    return roles or list(ROLE_ORDER[:1]) or ["unassigned"]
