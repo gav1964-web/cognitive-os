@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from runtime.role_spec_writer import run_spec_writer_skill
+from runtime.role_skills import run_spec_writer_skill
 
 
 def test_spec_writer_demotes_constructor_logging_and_generic_predicate_targets():

@@ -61,7 +61,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:0eb3bd1a717a9f38b7309ceb68f3931bfa7ee938f69bfceeb2da4c5fb842af0b",
+      "version_hash": "sha256:68befeb61104593f399fcc43d7b1c94a3221b759628c5377088b782ff428f158",
       "fallback_for": []
     },
     {
@@ -335,7 +335,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f5b2d822596944de433a3975f799dd8e75e03f7d152e5ce1b7743c0227c883ff",
+      "version_hash": "sha256:0b29d547ef92ec2a88e7e846fa5751018446466c7e1729202898a2415cc61a7c",
       "fallback_for": []
     },
     {

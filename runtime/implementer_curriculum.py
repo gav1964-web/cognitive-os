@@ -8,9 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .project_benchmark import analyze_project
-from .role_architect import run_architect_skill
-from .role_implementer import run_implementer_skill
-from .role_spec_writer import run_spec_writer_skill
+from .role_skills import run_architect_skill, run_implementer_skill, run_spec_writer_skill
 
 
 REFERENCE_QUALITY = "teacher_reference_not_ground_truth"

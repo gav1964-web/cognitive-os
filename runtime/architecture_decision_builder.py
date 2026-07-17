@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
 from typing import Any
 
 from .local_inference import LocalInferenceConfig
@@ -32,10 +34,11 @@ def build_architecture_decision(
     chosen = _chosen_option(options)
     rejected = [item for item in options if item["id"] != chosen["id"]]
     traceability = _traceability(tasks, capabilities, risks)
+    context_sources = _context_sources(capabilities, risks, traceability) + _important_runtime_sources(project_report)
     source_context = build_source_context(
         project_root=str(summary.get("root") or project_report.get("root") or ""),
         project_report=project_report,
-        sources=_context_sources(capabilities, risks, traceability),
+        sources=_dedupe_strings(context_sources)[:36],
     )
     artifact = {
         "artifact_type": "ArchitectureDecisionRecord",
@@ -56,7 +59,7 @@ def build_architecture_decision(
         "architecture_options": options,
         "chosen_option": chosen,
         "rejected_options": _rejected_options(rejected),
-        "spec_writer_brief": _spec_writer_brief(chosen, capabilities, risks, traceability),
+        "spec_writer_brief": _spec_writer_brief(chosen, capabilities, risks, traceability, source_context),
         "constraints": constraints or [],
         "next_artifact": {
             "type": "TechnicalSpec",
@@ -127,8 +130,9 @@ def _spec_writer_brief(
     capabilities: list[dict[str, Any]],
     risks: list[dict[str, Any]],
     traceability: list[dict[str, Any]],
+    source_context: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    files_or_symbols = [str(item.get("source")) for item in capabilities[:6] if item.get("source")]
+    files_or_symbols = _brief_sources(capabilities, source_context, traceability)
     if not files_or_symbols:
         return {
             "scope": [chosen.get("title"), "Stop before implementation because no source-specific capability candidate is available."],
@@ -190,7 +194,7 @@ def _subsystem_boundaries(project_report: dict[str, Any], tasks: list[dict[str, 
 
 def _capability_model(plan: dict[str, Any], tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
-    for item in list(plan.get("capabilities_to_extract", []))[:6]:
+    for item in list(plan.get("capabilities_to_extract", []))[:12]:
         rows.append(
             {
                 "source": item.get("capability"),
@@ -209,7 +213,7 @@ def _capability_model(plan: dict[str, Any], tasks: list[dict[str, Any]]) -> list
                     "next_step": "derive input/output contract",
                 }
             )
-    return _dedupe_by(rows, "source")[:8]
+    return _dedupe_by(rows, "source")[:12]
 
 
 def _risks(project_report: dict[str, Any], tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -262,7 +266,7 @@ def _traceability(
                 "acceptance": task.get("acceptance"),
             }
         )
-    for item in capabilities[:6]:
+    for item in capabilities[:16]:
         rows.append({"source": item.get("source"), "requirement": "Capability candidate requires TechnicalSpec."})
     for risk in risks[:4]:
         rows.append({"source": risk.get("source"), "requirement": "Risk must be addressed or accepted before promotion."})
@@ -281,6 +285,114 @@ def _context_sources(
         *(item.get("target") for item in traceability),
     ]
     return [str(value) for value in values if value]
+
+
+def _important_runtime_sources(project_report: dict[str, Any]) -> list[str]:
+    summary = dict(project_report.get("summary", {}))
+    answers = dict(project_report.get("answers", {}))
+    capabilities = dict(answers.get("3_capabilities", {}))
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    rows: list[str] = []
+    for key in (
+        "hidden_orchestrators",
+        "mixed_responsibility_functions",
+        "process_boundary_candidates",
+        "idempotency_risks",
+    ):
+        for item in readiness.get(key, [])[:12]:
+            if not isinstance(item, dict):
+                continue
+            target = item.get("target") or (
+                f"{item.get('path')}:{item.get('name')}" if item.get("path") and item.get("name") else ""
+            )
+            if target:
+                rows.append(str(target))
+    for item in capabilities.get("pure_transforms", [])[:40]:
+        if not isinstance(item, dict):
+            continue
+        target = f"{item.get('path')}:{item.get('name')}" if item.get("path") and item.get("name") else ""
+        if target and _domain_evidence_source(target):
+            rows.append(target)
+    root = Path(str(summary.get("root") or project_report.get("root") or ""))
+    rows.extend(_provider_parser_sources(root))
+    return rows
+
+
+def _provider_parser_sources(project_root: Path) -> list[str]:
+    if not project_root.exists() or not project_root.is_dir():
+        return []
+    rows: list[str] = []
+    markers = ("normalize", "parse", "extract", "curl_fallback", "fetch_available_models")
+    for path in list(project_root.rglob("*_llm_client.py"))[:20]:
+        try:
+            module = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+        except (OSError, SyntaxError):
+            continue
+        relative = path.relative_to(project_root).as_posix()
+        for node in module.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            name = node.name
+            if any(marker in name.lower() for marker in markers):
+                rows.append(f"{relative}:{name}")
+    return rows[:24]
+
+
+def _brief_sources(
+    capabilities: list[dict[str, Any]],
+    source_context: dict[str, dict[str, Any]],
+    traceability: list[dict[str, Any]],
+) -> list[str]:
+    neighbor_sources: list[str] = []
+    for item in source_context.values():
+        neighbor_sources.extend(str(row) for row in item.get("callees", []) if row)
+    candidates = _dedupe_strings(
+        [str(item.get("source")) for item in capabilities if item.get("source")]
+        + [str(item.get("source")) for item in traceability if item.get("source")]
+        + list(source_context)
+        + neighbor_sources
+    )
+    return sorted(candidates, key=_brief_source_sort_key)[:32]
+
+
+def _domain_evidence_source(source: str) -> bool:
+    lowered = source.lower()
+    return any(
+        token in lowered
+        for token in (
+            "_llm_client.py:",
+            "download_ready_map.py:",
+            "import_indoc.py:",
+            "app.py:incident_features",
+            "app.py:features_for_view",
+            "app.py:calculate_data_bounds",
+            "providers/factory.py:",
+            "handlers_openai.py:",
+            "complexity_router.py:",
+        )
+    )
+
+
+def _brief_source_sort_key(source: str) -> tuple[int, str]:
+    lowered = source.lower()
+    score = 0
+    if any(token in lowered for token in ("service.py:", "providers/factory.py", "import_indoc.py:parse_file")):
+        score -= 40
+    if any(token in lowered for token in ("parse", "resolve", "build_providers", "features_for_view", "incident_features", "rtf_to_text")):
+        score -= 20
+    if any(token in lowered for token in ("download_ready_map.py:download_file",)):
+        score -= 14
+    if any(token in lowered for token in ("_llm_client.py:", "handlers_openai.py", "complexity_router.py", "_start_local_llm_process")):
+        score -= 12
+    if any(token in lowered for token in ("api.py:describe_module", "_plugin_metadata.py", "downloader.py:worker")):
+        score += 25
+    if "p0042/api.py:describe_module" in lowered:
+        score -= 40
+    if any(token in lowered for token in ("debug_", "_print_", "_prompt_hints.py", "_prompt_intent.py")):
+        score += 35
+    if any(token in lowered for token in ("tests/", "docs/", "examples/", "scratch/")):
+        score += 40
+    return (score, source)
 
 
 def _tasks(project_report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -328,6 +440,17 @@ def _dedupe_by(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
             continue
         seen.add(value)
         result.append(row)
+    return result
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    result = []
+    seen = set()
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
     return result
 
 

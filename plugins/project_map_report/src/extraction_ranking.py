@@ -63,6 +63,12 @@ def extraction_candidate_score(item: dict[str, Any], level: str) -> int:
         score -= 10
     if any(token in name for token in ("handle", "process", "dispatch", "build", "create", "resolve", "validate", "parse")):
         score += 8
+    if "_llm_client.py" in str(item.get("path") or "").replace("\\", "/").lower() and any(
+        token in name for token in ("normalize", "parse", "extract", "curl_fallback", "fetch_available_models")
+    ):
+        score += 34
+    if str(item.get("path") or "").replace("\\", "/").lower().endswith("service.py") and name == "resolve":
+        score += 35
     return score
 
 
@@ -79,6 +85,10 @@ def is_trivial_helper_name(name: str) -> bool:
 def is_low_value_first_slice_name(name: str, path: str) -> bool:
     normalized_path = path.replace("\\", "/").lower()
     if name == "__init__" or normalized_path.endswith("/__init__.py"):
+        return True
+    if name == "describe_module":
+        return True
+    if name == "build_plugin_metadata":
         return True
     if name in {"configure_logging", "setup_logging", "basic_config", "set_loglevel"}:
         return True

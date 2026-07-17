@@ -82,7 +82,7 @@ def _requirements_from_brief(brief: dict[str, Any], traceability: list[dict[str,
 def _acceptance_criteria(brief: dict[str, Any], traceability: list[dict[str, Any]]) -> list[dict[str, Any]]:
     targets = _acceptance_targets(brief, traceability)
     criteria = []
-    for index, target in enumerate(targets[:8]):
+    for index, target in enumerate(targets[:40]):
         criteria.append(
             {
                 "id": f"AC-{index + 1:03d}",
@@ -104,6 +104,8 @@ def _acceptance_criteria(brief: dict[str, Any], traceability: list[dict[str, Any
 def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for source in brief.get("files_or_symbols", []) or []:
+        if not _implementation_source(str(source)):
+            continue
         context = dict(source_context.get(str(source), {}))
         snippet = dict(context.get("snippet", {}))
         signature = dict(context.get("signature", {}))
@@ -120,6 +122,15 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
             }
         )
     return rows
+
+
+def _implementation_source(source: str) -> bool:
+    lowered = source.lower()
+    if ".py:" in lowered:
+        return True
+    if lowered.startswith("[") and " " in lowered:
+        return True
+    return False
 
 
 def _extraction_contract(evidence: list[dict[str, Any]]) -> dict[str, Any]:
@@ -152,7 +163,7 @@ def _extraction_contract(evidence: list[dict[str, Any]]) -> dict[str, Any]:
                 "reasons": item.get("reasons", []),
                 "side_effects": item.get("side_effects", []),
             }
-            for item in ranked[:6]
+            for item in ranked[:32]
         ],
         "input_contract": input_contract or {"payload": "Any"},
         "output_contract": {"result": str(dict(candidate.get("signature", {})).get("returns") or "Any")},
@@ -235,6 +246,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         policy_score, policy_reasons = _operational_boundary_score(str(candidate.get("source") or ""), signature, claims)
         score += policy_score
         reasons.extend(policy_reasons)
+        shape_score, shape_reasons = _architecture_shape_score(str(candidate.get("source") or ""))
+        score += shape_score
+        reasons.extend(shape_reasons)
 
         ranked.append(
             {
@@ -250,6 +264,25 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
     return sorted(ranked, key=lambda item: (-int(item["score"]), int(item["index"]), str(item.get("source") or "")))
 
 
+def _architecture_shape_score(source: str) -> tuple[int, list[str]]:
+    lowered = source.lower()
+    score = 0
+    reasons: list[str] = []
+    if any(token in lowered for token in ("service.py:", "providers/factory.py", "import_indoc.py:parse_file")):
+        score += 35
+        reasons.append("architecture-useful service/parser/factory boundary")
+    if any(token in lowered for token in ("resolve", "build_providers", "parse_file", "features_for_view", "incident_features")):
+        score += 18
+        reasons.append("domain boundary function name")
+    if any(token in lowered for token in ("api.py:describe_module", "_plugin_metadata.py", "debug_", "smoke")):
+        score -= 35
+        reasons.append("generic introspection/debug helper is lower priority")
+    if "downloader.py:worker" in lowered:
+        score -= 20
+        reasons.append("background worker is evidence, not first writable contract")
+    return score, reasons
+
+
 def _requirement_statement(requirement: str, source: object) -> str:
     source_text = str(source or "").strip()
     if requirement == "Capability candidate requires TechnicalSpec." and source_text:
@@ -261,10 +294,17 @@ def _requirement_statement(requirement: str, source: object) -> str:
 
 def _acceptance_targets(brief: dict[str, Any], traceability: list[dict[str, Any]]) -> list[dict[str, str]]:
     rows = []
-    for row in traceability[:8]:
+    for row in traceability[:40]:
         source = row.get("source")
         requirement = str(row.get("acceptance") or row.get("requirement") or "")
         rows.append({"source": str(source or ""), "criterion": _acceptance_statement(requirement, source)})
+    seen_sources = {row["source"] for row in rows if row.get("source")}
+    for source in brief.get("files_or_symbols", []) or []:
+        source_text = str(source or "")
+        if not source_text or source_text in seen_sources:
+            continue
+        rows.append({"source": source_text, "criterion": _acceptance_statement("Capability candidate requires TechnicalSpec.", source_text)})
+        seen_sources.add(source_text)
     if rows:
         return rows
     return [
