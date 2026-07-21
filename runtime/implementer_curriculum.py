@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from .project_benchmark import analyze_project
-from .role_skills import run_architect_skill, run_implementer_skill, run_spec_writer_skill
 
 
 REFERENCE_QUALITY = "teacher_reference_not_ground_truth"
@@ -38,9 +38,12 @@ def run_curriculum_case(*, root: Path, reference_path: Path) -> dict[str, Any]:
     _validate_teacher_reference(reference_path, reference)
     project_dir = _resolve_project_dir(root, reference_path, reference)
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"Implementer curriculum pass for {reference_path.parent.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    plan = run_implementer_skill(technical_spec=spec)
+    artifacts = run_configured_role_prefix(
+        goal=f"Implementer curriculum pass for {reference_path.parent.name}",
+        project_report=project_report,
+        until_artifact_type="ImplementationPlan",
+    )
+    plan = artifact_by_type(artifacts, "ImplementationPlan")
     actual = _actual_plan(plan)
     score = _score_plan(dict(reference.get("expected_plan", {})), actual)
     backlog = _improvement_backlog(score)
@@ -114,8 +117,10 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
 
 
 def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    plan_producer = producer_for_artifact_type("ImplementationPlan")
+    test_producer = producer_for_artifact_type("TestPlan")
     checks = {
-        "artifact_is_implementation_plan": actual.get("artifact_type") == "ImplementationPlan" and actual.get("role") == "implementer",
+        "artifact_is_implementation_plan": actual.get("artifact_type") == "ImplementationPlan" and actual.get("role") == plan_producer,
         "candidate_matches": actual.get("candidate") == expected.get("candidate"),
         "binding_targets_candidate": actual.get("binding_candidate") == actual.get("candidate"),
         "bound_to_extraction_contract": actual.get("binding_status") == "bound_to_extraction_contract",
@@ -152,7 +157,7 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, A
         "acceptance_mapping_present": int(actual.get("acceptance_mapping_count") or 0) >= int(expected.get("min_acceptance_mapping_count", 1)),
         "no_forbidden_actions_observed": not actual.get("forbidden_actions_observed"),
         "registry_policy_protects_registry": "do not edit registry" in str(actual.get("registry_policy") or "").lower(),
-        "next_role_is_tester": actual.get("next_role") == "tester",
+        "next_role_targets_next_configured_producer": actual.get("next_role") == test_producer,
     }
     warnings = [name for name, ok in checks.items() if not ok]
     return {"score": _ratio(sum(1 for ok in checks.values() if ok), len(checks)), "checks": checks, "warnings": warnings}

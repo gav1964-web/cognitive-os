@@ -15,6 +15,7 @@ from .contract_registry import load_artifact_contracts
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
 from .role_artifact_interpreter import load_role_artifact_pipeline, run_role_artifact_pipeline
+from .role_gate_runner import run_role_gate_report
 from .role_skill_common import load_skill_registry, write_role_artifact
 from .programmer_executor import run_programmer_executor
 from .transformation_flow import run_transformation_flow
@@ -76,6 +77,7 @@ def run_role_pipeline(
         review=review,
         llm_invoked=bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
     )
+    role_gates = run_role_gate_report(artifacts=artifacts, project_report=report)
     paths = _write_artifacts(root, artifacts) if write else {}
     human_documents = _write_human_documents(root, report, adr, spec) if write else {}
     next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
@@ -96,6 +98,7 @@ def run_role_pipeline(
         "next_action": next_action,
         "architect_advisory": adr.get("architect_advisory", {}),
         "cognitive_control_plane": control_plane,
+        "role_gates": role_gates,
         "role_quality": _role_quality(spec, implementation, test_plan, review),
         "artifacts": _artifact_summary(artifacts, paths),
         "human_documents": human_documents,

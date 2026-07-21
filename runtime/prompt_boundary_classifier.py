@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from .prompt_intake_rules import marker_groups
+
 
 @dataclass(frozen=True)
 class PromptBoundaryClassification:
@@ -23,26 +25,8 @@ class PromptBoundaryClassification:
 
 def classify_prompt_boundary(prompt: str, *, system_type: str | None, missing: list[str]) -> PromptBoundaryClassification:
     lower = prompt.lower()
-    unsupported = _markers(
-        lower,
-        {
-            "mobile_app": ["mobile", "android", "ios", "мобильн", "store", "push"],
-            "desktop_gui": ["desktop", "gui", "qt", "tkinter", "electron", "десктоп"],
-            "browser_extension": ["browser extension", "chrome extension", "расширение браузера"],
-            "blockchain": ["blockchain", "smart contract", "web3"],
-            "game_engine": ["unity", "unreal"],
-        },
-    )
-    risks = _markers(
-        lower,
-        {
-            "source_edit": ["измени исходники", "edit source", "исправь проект", "patch project"],
-            "secrets": ["api key", "secret", "token", "пароль", "секрет"],
-            "live_network": ["scrape", "скрапер", "download from", "live network", "внешний api"],
-            "deployment": ["deploy", "publish", "production", "store"],
-            "unbounded": ["любую", "anything", "everything", "полностью всё", "все что нужно"],
-        },
-    )
+    unsupported = _markers(lower, marker_groups("unsupported"))
+    risks = _markers(lower, marker_groups("risk"))
     if "unbounded" in risks or "scope_bounded" in missing:
         return _classification("too_broad", 0.85, ["scope is unbounded"], "ask_clarification", unsupported, risks)
     if unsupported:

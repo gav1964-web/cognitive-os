@@ -22,7 +22,8 @@ human goal
 -> controlled execution artifacts
 ```
 
-This repository is currently an **MVP / research preview**, not a production framework.
+This repository is currently a **research preview / executable architecture prototype**, not a production framework.
+The near-term MVP target is narrower and more concrete: **Prompt -> Verified Local Automation Package**.
 
 ## Why This Exists
 
@@ -187,6 +188,12 @@ Level 4 contains role skills, not autonomous all-powerful agents:
 | Tester | TechnicalSpec + ImplementationPlan | `TestPlan` | defines verification, does not execute tests |
 | Reviewer | spec + plan + tests + optional result | `ReviewFindings` | reviews, does not patch or promote |
 
+Role identities, descriptions, capabilities, order, chain settings, builder settings and policies are not source-code constants. The active source of truth is `config/role_directory.json`. Its v2 entries also declare role contracts, gates, fallback policy, LLM policy, KB admission policy, stop conditions and quality criteria. Runtime code interprets that directory through generic loaders, `runtime/configured_role_pipeline.py` runs configured prefixes by artifact type, `runtime/role_operational_policy.py` validates operational completeness, `runtime/role_gate_runner.py` executes configured gates/quality criteria against produced artifacts, and `runtime/role_skills.py` exposes only `run_role_skill(role_id, **inputs)`. Legacy split files such as `roles/*.json`, `config/artifact_builders.json`, `config/role_artifact_pipeline.json` and `config/role_record_defaults.json` may remain as migration/import material, but they are not the active authority for which roles exist.
+
+`RoleGateReport` is also a control artifact. It supports `advisory`, `strict`, and `release_required` modes: advisory mode records failed gates without blocking, strict mode blocks role-chain acceptance on failed gates, and release-required mode is the package/release gate that requires clean role artifacts before downstream promotion.
+
+The same configuration-first invariant is now monitored directly. `tools/config_doctor.py` emits `ConfigDoctorReport` for loader and cross-reference integrity; `tools/config_coverage.py` emits advisory `ConfigCoverageReport` for templates, rules, transforms and sandbox profiles exercised by tests/trial registries; every `VerifiedSystemPackage` embeds a `RuleTrace` that names the config sources behind the decision; and `tools/config_mutation_sandbox.py` validates a proposed JSON config replacement without touching the active file.
+
 ### Capability Foundry
 
 Foundry is the controlled lifecycle for turning extracted or generated functionality into reusable capabilities:
@@ -211,7 +218,7 @@ adequate prompt
 -> release decision
 ```
 
-The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts. If intake is uncertain but the prompt still looks like a bounded implementation request, L4.0 emits `prompt_intake_uncertainty` and asks L4.5 to interpret it before a developer changes Cognitive OS.
+The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts. If intake is uncertain but the prompt still looks like a bounded implementation request, L4.0 emits `prompt_intake_uncertainty` and asks L4.5 to interpret it before a developer changes Cognitive OS. If the prompt is a bounded behavior or limitation question about a supported domain, L4.0 emits `behavior_question_uncertainty`; L4.5 must either answer from evidence or return a `DeveloperImprovementRequest` for fact-based behavior-question answering.
 
 Current deterministic package classes include:
 
@@ -220,8 +227,40 @@ Current deterministic package classes include:
 - CSV sort CLI utility;
 - OCR image CLI utility;
 - image contents CLI utility with optional vision backend;
+- image table to Excel/CSV/HTML/DOC/RTF CLI utility with injectable OCR/text backend, `--ocr-text-file`, optional OpenAI-compatible vision/OCR backend, stdlib XLSX writer, CSV writer, legacy XLS-compatible HTML writer, plain HTML writer, DOC-compatible HTML writer and RTF writer;
+- generic file conversion CLI utility driven by `GenericFileConversionRecipe`, `LibraryBindingRecipe` and `AdapterImplementationPlan`, for prompts such as `.xls -> .png`, `.md -> .rtf`, `.txt -> .html` or `.jpg -> .doc`, with adapter boundary, advisory library candidates, implemented stdlib adapters where safe and dependency-free fixture tests;
 - FastAPI CSV aggregation service;
 - FastAPI in-memory key/value CRUD service.
+
+Generic file converters are intentionally not stored as one KB/template per extension pair. Stage 2 extracts source/target extensions into `GenericFileConversionRecipe`, derives advisory backend candidates into `LibraryBindingRecipe`, then records `AdapterImplementationPlan`. Safe stdlib backends such as `.txt -> .html`, a bounded `.md -> .rtf` subset and `.jpg/.jpeg/.png -> .doc` as DOC-compatible HTML with embedded image are implemented inside generated `file_converter_cli/adapters.py`; heavier backends remain explicit candidates behind the same adapter contract. Candidate libraries do not grant permission to install dependencies, call network or bypass tests. Repeated verified recipes may later become KB candidates, but the default path is recipe-driven rather than format-template-driven.
+
+When a bounded prompt cannot be handled by the deterministic intake/KB route, Stage 2 now uses a fallback autonomy loop instead of immediately asking a developer to patch Cognitive OS:
+
+```text
+unknown or uncertain prompt
+-> L4.5 SemanticHypothesisProposal
+-> L4SemanticValidationResult
+-> SandboxAttemptSpec
+-> bounded sandbox attempt for an existing mapped route
+-> tester verification
+-> SuccessfulResolutionCandidate or DeveloperImprovementRequest
+```
+
+The loop lives in `runtime/fallback_autonomy_loop.py`. It is deliberately narrow: L4.5 may propose a route, but it still cannot build packages, execute arbitrary code, edit source, mutate the registry or promote KB records. Stage 2 may only attempt an already known generated-package route inside the isolated sandbox. Before execution, `runtime/sandbox_attempt_spec.py` creates `SandboxAttemptSpec`: a typed API artifact that names the attempt kind, case, runner, project-scoped verification commands, allowed operations, forbidden operations and invariants. The attempt policy is data-driven through `registry/sandbox_attempt_policy.json`; if that registry file is missing or invalid, the runtime falls back to a minimal safe default rather than granting extra authority. The first active policy supports `existing_stage2_case` for mapped cases such as `image_contents_cli` and `csv_sort_cli`, plus `bounded_adapter_recipe` for `generic_file_converter_cli`. The adapter recipe path embeds `GenericFileConversionRecipe`, `LibraryBindingRecipe` and `AdapterImplementationPlan`; it may select only fixture or stdlib adapter backends and still forbids dependency install, network, registry mutation, user source edits and model-generated code execution. Non-allowlisted routes block before any package attempt. If model-backed L4.5 gives a valid but weaker hypothesis while deterministic evidence already maps the prompt to an existing route, proposal hardening records `deterministic_existing_route_rescue=true` and uses the verified route candidate. If that attempt passes verification, the release report is marked ready and the loop writes a staged `KnowledgeCandidate` with `auto_promote=false`; if it fails or has no executable mapping, the output remains a developer handoff.
+
+Verified packages include a `ProgrammerSandboxGate` that records project directory presence, verification status, tester approval, and the invariant that user source and registries were not modified.
+
+For bounded implementation prompts that pass adequacy but have no supported deterministic package template, Stage 2 may invoke `runtime/llm_sandbox_implementation.py`. This is not free-form source editing: the model is treated as a hypothesis source, executable code is generated only from an allowlisted sandbox contract, verification runs inside `artifacts/llm_sandbox_implementations/*`, and the result keeps `promotion_allowed=false`. The allowlist is data-driven by `registry/sandbox_programmer_operations.json`; runtime validates stored `text_expression` operations with AST hardening and supports allowlisted stdlib profiles such as line sort/unique, CSV row count/sort/filter/select/sum/JSON records, HTML table to CSV, JSON extract/keys/pretty-print. If deterministic registry matching fails and `use_model=true`, L4.5/GigaChat Lite may normalize the prompt to one existing `operation_id` from that registry; invalid ids, low confidence and provider errors remain controlled blocks. Each sandbox implementation plan now includes a `SandboxOperationGraph` from `runtime/sandbox_operation_graph.py`: a typed read/parse/transform/serialize/write/verify chain with parser/serializer choices, side-effect boundaries, evidence links, and invariants. The graph is an API artifact for L4/L4.5, programmer, tester and admission gates, not prose explanation and not an execution permission. The registry is configurable, but it is not an arbitrary-code execution channel. A verified sandbox result then passes through `runtime/sandbox_programmer_admission.py`; if tester/reviewer admission succeeds, Stage 2 may mark it `release_ready_with_risks` while still forbidding user-source, registry, and KB mutation. With `--write`, the success is also staged as a weak `KnowledgeCandidate` under `artifacts/knowledge_candidates`; repeated verified cases plus teacher/Codex approval are still required before any KB/template crystallization.
+
+The prompt-normalization field trial is runnable with:
+
+```powershell
+python tools\sandbox_prompt_field_trial.py --root . --use-model --write
+```
+
+It runs natural-language prompt variants through deterministic matching plus the L4.5 registry-operation normalizer and reports verified packages, controlled blocks, selected operations and strategy counts.
+
+The first bounded composition recipes are also supported through `registry/sandbox_programmer_compositions.json`: CSV rows can be filtered, column-selected and serialized as JSON records, and text can be trimmed then uppercased. Composition remains deterministic and allowlisted; runtime validates that every step references an existing operation record, represents the chain in `SandboxOperationGraph` as multiple transform nodes, and does not allow arbitrary DAG generation.
 
 If tester review requests rework, Stage 2 uses a bounded contract debug loop:
 
@@ -278,7 +317,7 @@ python tools/product_slice.py --root . --curriculum-dir curricula/programmer_pro
 
 ## Current MVP Status
 
-Current snapshot: **MVP-ready for controlled analysis/planning, sandbox programmer-executor, Foundry, and verified-package field trials. Stage 3 product-slice work has started as the next controlled track.**
+Current snapshot: **foundation-ready for controlled analysis/planning, sandbox programmer-executor, Foundry, and verified-package field trials. The product MVP target is now `Prompt -> Verified Local Automation Package`; Stage 3 product-slice work remains a controlled post-foundation track.**
 
 Verified areas include:
 
@@ -425,6 +464,10 @@ Those folders are local field-trial outputs or cloned external corpora, not sour
 
 Evaluation tasks live under `evaluation/`. They are source-controlled because they define the comparison corpus used to test Cognitive OS against direct-agent baselines.
 
+The corpus can be extended through `tools/evaluation_corpus.py --count 20 --write`. Each generated task preserves the same API shape: `prompt.md`, `direct_agent/`, `cognitive_os/`, `metrics.json`, and `verdict.md`. Empty `not_run` metrics are allowed as placeholders, but every completed task must compare the same prompt and constraints for both routes.
+
+`tools/evaluation_run_cognitive_os.py` runs the Cognitive OS route for selected tasks. `tools/evaluation_run_direct_agent.py` runs a deliberately small direct-agent baseline that does not use Cognitive OS contracts. The direct baseline is allowed to return controlled `blocked`; it must not invent unsupported dependency handling just to look competitive.
+
 ## Quickstart
 
 The commands below assume Python 3.10+.
@@ -488,6 +531,49 @@ The machine-local `map`, `5`, and `004` field trials are also opt-in:
 ```bash
 python tools/mvp_acceptance.py --root . --skip-pytest --local-project-trials
 ```
+
+### 5.1 Run the Local Automation MVP trial
+
+```bash
+python tools/local_automation_mvp_trial.py --root . --write
+```
+
+This product-facing trial checks `Prompt -> Verified Local Automation Package`:
+the registry-driven corpus in `registry/local_automation_mvp_cases.json`,
+including verified CLI packages, image/document automation, local FastAPI
+services, sandbox operation composition, sandbox atomic operations including
+file-transform, `argv -> stdout`, `argv -> file`, `stdin -> stdout`,
+`stdin -> file` and `file -> stdout` CLI shapes, controlled refusal for
+out-of-scope GUI/SQL/deploy/live-network/source-edit prompts, and
+`needs_clarification` routing for underspecified bounded prompts.
+
+Sandbox programmer packages now carry an explicit interface contract selected
+from `registry/interface_contracts.json`. The first active contracts are
+`argv_stdout_numeric_expression`, `argv_to_file_numeric_expression`,
+`stdin_to_stdout_text_transform`, `stdin_to_file_text_transform`,
+`file_to_stdout_text_transform` and `file_to_file_text_transform`; they are API
+artifacts between intake, programmer, tester and reviewer, not prose comments.
+Each package also carries an `OperationRecipe`: a contract artifact that binds
+the selected interface, transform, optional expression, input/output shapes and
+evidence before code generation. Deterministic recipe parsing handles clean
+input-channel/output-channel/transform prompts without adding a new registry
+operation for every combination. L4.5 may propose an OperationRecipe only after
+deterministic matching and operation-id normalization fail with a clean no-match;
+invalid ids, low confidence, unsupported interfaces and unsupported transforms
+remain controlled blocks.
+Allowed OperationRecipe contracts, transforms, deterministic markers,
+contract-to-profile bindings, transform expressions and the L4.5 recipe prompt
+are loaded from `config/operation_recipe_rules.json`.
+Sandbox programmer profile policy, parser shape, graph family and tester
+admission shape are loaded from `config/sandbox_programmer_profiles.json`.
+Sandbox release/admission/evaluation policy, including required evidence checks,
+release decision labels, limitations and forbidden actions, is loaded from
+`config/sandbox_release_policy.json`.
+Verified sandbox packages also include `GeneratedPackageEvaluation`: a compact
+evidence score over prompt presence, selected operation evidence, interface
+contract, recipe/contract match, operation graph, README, tests, sandbox
+verification, tester admission, and no-mutation invariants. It is an additional
+release-facing artifact, not a substitute for pytest or reviewer admission.
 
 ### 6. Run the Project Analyzer benchmark
 
@@ -563,6 +649,7 @@ In the current MVP:
 - many readiness and field-trial paths are deterministic;
 - L3.5 planner proposals must validate before execution;
 - the external L4 profile defaults to `GigaChat-Pro` through `http://127.0.0.1:8000/v1` and can be overridden with `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`;
+- the L4.5 intent/semantic fallback profile defaults to the lightweight GigaChat model id `GigaChat Lite` through the same OpenAI-compatible gateway and can be overridden with `COGNITIVE_OS_L45_MODEL` / `COGNITIVE_OS_L45_BASE_URL`;
 - L4 calls remain explicit and use a controlled deterministic fallback when the configured cortex provider is unavailable;
 - LLM outputs are advisory hypotheses or bounded role artifacts, not direct execution authority;
 - L4 project interpretation records must distinguish raw model output from hardened output, including quality warnings, hardening actions, and whether the raw model output was clean.
@@ -594,13 +681,29 @@ CognitiveControlPlaneDecision.semantic_escalation.l4_5_required=true
 -> SemanticHypothesisProposal
 -> L4SemanticValidationResult
 -> optional SuccessfulResolutionCandidate / DeveloperImprovementRequest / clarification / stop / rework
+-> optional SandboxAttemptSpec and FallbackAutonomyLoop sandbox verification for an existing route
 -> optional SemanticProposalReplay
 -> deterministic L4.0 gates
 ```
 
 The request names allowed hypothesis types, forbidden actions, output contract and return path. L4.5 may propose an existing-route resolution, developer improvement request, template mapping, clarification, unsupported reason, legacy new template candidate, architecture option, risk interpretation, rework target or knowledge gap. It may not execute pipelines, edit source, mutate registry, build packages, promote capabilities or bypass L4.0/L3.5/L2 contracts.
 
-In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. If a ready prompt has no supported template, or intake is uncertain for a concrete bounded implementation prompt, L4.5 first tries to map it to existing means. A successful mapping becomes `SuccessfulResolutionCandidate`, which can later become a KB/template rule only after repeated verified successes and review. If existing means cannot solve the prompt, L4.5 emits `DeveloperImprovementRequest` for Codex/human implementation work; it does not immediately mutate templates or KB. Model output is normalized, forbidden actions are stripped, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with policy review and a human-readable explanation. Vague prompts and secret/live-risk prompts still route to clarification without developer work, unsupported product surfaces route to clarification, and no path mutates templates automatically. Otherwise the result becomes clarification, stop, rework, knowledge-gap recording, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
+L4/L4.5 are configuration-first layers. The active policy lives in
+`config/runtime_interpreter_policy.json`: new prompt variants, roles,
+role policies, interface combinations, architecture patterns and supported
+bounded recipes should be expressed as configuration, registry, curriculum,
+recipe or KB records by default. Python changes are reserved for reusable
+interpreter primitives, safe adapter boundaries, validators, bug fixes and
+verification harnesses. The explicit target is that at least 90 percent of new
+task support at this layer should avoid Python-code changes.
+Prompt intake markers and boundary groups live in
+`config/prompt_intake_rules.json`; prompt-to-Stage-2-template routing lives in
+`config/stage2_template_routes.json`; L4 prompt-to-product transition and
+escalation reason rules live in `config/l4_decision_rules.json`; L4.5
+existing-means mappings and developer request profiles live in
+`config/semantic_resolution_rules.json`.
+
+In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. The default model-backed L4.5 profile uses the lightweight GigaChat model id `GigaChat Lite`, intentionally separated from the larger L4 cortex profile. If a ready prompt has no supported template, intake is uncertain for a concrete bounded implementation prompt, or the prompt is a bounded behavior/limitation question, L4.5 first tries to map it to existing means. A successful mapping becomes `SuccessfulResolutionCandidate`, which can later become a KB/template rule only after repeated verified successes and review. `runtime/fallback_autonomy_loop.py` can then attempt that mapped existing route in the Stage 2 sandbox and run normal tester verification; this is the intended bridge between "LLM proposed a route" and "the system actually produced a verified package". If model-backed L4.5 misses a route that deterministic evidence can prove, hardening rescues the proposal as an existing-route candidate and records the rescue in audit fields. If existing means cannot solve the prompt, or the sandbox attempt fails, L4.5/Stage 2 emits `DeveloperImprovementRequest` for Codex/human implementation work; it does not immediately mutate templates or KB. Stage 2 CLI can request a real L4.5 model proposal with `tools/verified_system_package.py --use-l45-llm`; provider failure is captured in proposal hardening and falls back to deterministic proposal. Model output is normalized, forbidden actions are stripped, weak route misses may be rescued by deterministic evidence, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with policy review and a human-readable explanation. Vague prompts and secret/live-risk prompts still route to clarification without developer work, unsupported product surfaces route to clarification, and no path mutates templates automatically. Otherwise the result becomes clarification, stop, rework, knowledge-gap recording, sandbox-verified package, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
 
 Run the deterministic L4.5 loop benchmark:
 
@@ -615,7 +718,7 @@ python tools\l45_semantic_benchmark.py --root . --use-model --model-quality-mode
 python tools\l45_semantic_compare.py --deterministic-report artifacts\l45_semantic_benchmark\l45_semantic_benchmark_deterministic.json --model-report artifacts\l45_semantic_benchmark\l45_semantic_benchmark_model_propose_only.json --write
 ```
 
-The current local trial corpus has 22 prompt-boundary and unknown-template cases. In the latest run, deterministic routing passed `22/22`; the live `GigaChat-Pro` propose-only run invoked the model on 13 escalated cases, matched deterministic action on 19/22 cases, passed L4 validation on 10/13 model proposals, and did not beat the deterministic route. The conclusion is intentionally conservative: use L4.5 as a bounded proposal source with replay and validation, then crystallize useful repeated patterns into L4.0 code.
+The current local trial corpus has 22 prompt-boundary and unknown-template cases. In the latest recorded run, deterministic routing passed `22/22`; the live propose-only run invoked the model on 13 escalated cases, matched deterministic action on 19/22 cases, passed L4 validation on 10/13 model proposals, and did not beat the deterministic route. The conclusion is intentionally conservative: use L4.5 as a bounded proposal source with replay and validation, then crystallize useful repeated patterns into L4.0 code.
 
 For broader local field trials, generate a seeded matrix corpus instead of hand-maintaining hundreds of static cases:
 
@@ -717,3 +820,5 @@ The goal is not to claim general autonomy. The goal is to make the path from hum
 ## License
 
 MIT License. See `LICENSE`.
+
+

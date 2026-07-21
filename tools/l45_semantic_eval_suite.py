@@ -32,7 +32,7 @@ def main() -> int:
     )
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--base-url", default=os.environ.get("COGNITIVE_OS_L45_BASE_URL", os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1")))
-    parser.add_argument("--model", default=os.environ.get("COGNITIVE_OS_L45_MODEL", os.environ.get("COGNITIVE_OS_L4_MODEL", "GigaChat-Pro")))
+    parser.add_argument("--model", default=os.environ.get("COGNITIVE_OS_L45_MODEL", "GigaChat Lite"))
     parser.add_argument("--timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L45_TIMEOUT", os.environ.get("COGNITIVE_OS_L4_TIMEOUT", "120"))))
     parser.add_argument("--api-key-env", default=os.environ.get("COGNITIVE_OS_L45_API_KEY_ENV", os.environ.get("COGNITIVE_OS_L4_API_KEY_ENV", "COGNITIVE_OS_L4_API_KEY")))
     args = parser.parse_args()

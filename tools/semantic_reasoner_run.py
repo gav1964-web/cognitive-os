@@ -33,10 +33,11 @@ def main() -> int:
         choices=["deterministic", "model_propose_only", "model_with_human_review", "blocked_model_untrusted"],
         default=None,
     )
-    parser.add_argument("--base-url", default=os.environ.get("COGNITIVE_OS_L45_BASE_URL", os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1")))
-    parser.add_argument("--model", default=os.environ.get("COGNITIVE_OS_L45_MODEL", os.environ.get("COGNITIVE_OS_L4_MODEL", "GigaChat-Pro")))
-    parser.add_argument("--timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L45_TIMEOUT", os.environ.get("COGNITIVE_OS_L4_TIMEOUT", "120"))))
-    parser.add_argument("--api-key-env", default=os.environ.get("COGNITIVE_OS_L45_API_KEY_ENV", os.environ.get("COGNITIVE_OS_L4_API_KEY_ENV", "COGNITIVE_OS_L4_API_KEY")))
+    default_l45 = LocalInferenceConfig.from_l45_env()
+    parser.add_argument("--base-url", default=default_l45.base_url)
+    parser.add_argument("--model", default=default_l45.model)
+    parser.add_argument("--timeout", type=float, default=default_l45.timeout_seconds)
+    parser.add_argument("--api-key-env", default=os.environ.get("COGNITIVE_OS_L45_API_KEY_ENV", "COGNITIVE_OS_L45_API_KEY"))
     args = parser.parse_args()
 
     request_path = Path(args.request_json).resolve()

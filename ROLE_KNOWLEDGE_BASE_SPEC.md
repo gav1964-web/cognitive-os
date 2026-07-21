@@ -83,6 +83,8 @@ Review summary:
 
 ```bash
 python tools/knowledge_candidates.py --root . report
+python tools/knowledge_candidates.py --root . report --grouped
+python tools/knowledge_candidates.py --root . review
 ```
 
 Manual write:
@@ -91,7 +93,16 @@ Manual write:
 python tools/knowledge_candidates.py --root . write --candidate candidate.json
 ```
 
-The report lists candidates by status and record type and exposes `ready_for_human_merge`, but it still does not merge records automatically.
+Review actions:
+
+```bash
+python tools/knowledge_candidates.py --root . approve-teacher --candidate-id kbc_xxx
+python tools/knowledge_candidates.py --root . approve-codex --candidate-id kbc_xxx
+python tools/knowledge_candidates.py --root . reject --candidate-id kbc_xxx --reason "not enough evidence"
+python tools/knowledge_candidates.py --root . merge --candidate-id kbc_xxx
+```
+
+The report lists candidates by status and record type and exposes `ready_for_human_merge`, but it still does not merge records automatically. The `merge` command is intentionally a controlled block: it shows whether the candidate is ready and reminds the operator that active KB edits must be performed as an explicit human-reviewed source change.
 
 ## External Imports
 

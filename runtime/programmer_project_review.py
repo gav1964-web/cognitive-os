@@ -16,12 +16,17 @@ def run_programmer_project_review(
     curriculum_dir: Path,
     case_name: str,
     write: bool = False,
+    output_dir: Path | None = None,
+    reference_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    reference_path = curriculum_dir / case_name / "teacher_reference.json"
-    if not reference_path.is_file():
-        raise FileNotFoundError(f"unknown programmer curriculum case: {case_name}")
-    reference = json.loads(reference_path.read_text(encoding="utf-8"))
-    scaffold = create_greenfield_scaffold(root=root, case_name=case_name, reference=reference)
+    if reference_override is None:
+        reference_path = curriculum_dir / case_name / "teacher_reference.json"
+        if not reference_path.is_file():
+            raise FileNotFoundError(f"unknown programmer curriculum case: {case_name}")
+        reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    else:
+        reference = dict(reference_override)
+    scaffold = create_greenfield_scaffold(root=root, case_name=case_name, reference=reference, output_dir=output_dir)
     tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
     report = {
         "status": "ok" if tester_review["recommendation"] in {"approve", "approve_with_risks"} else "needs_rework",

@@ -143,6 +143,27 @@ def test_prompt_product_control_plane_escalates_bounded_intake_uncertainty_to_l4
     assert "prompt_intake_uncertainty" in decision["semantic_escalation"]["reasons"]
 
 
+def test_prompt_product_control_plane_escalates_behavior_question_to_l45():
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "needs_clarification",
+        "system_type": "file_processing_utility",
+        "reason_code": "GOAL_SPEC_NEEDS_CLARIFICATION",
+        "goal_spec": {"intent": "unknown"},
+        "boundary_classification": {"boundary": "incomplete_bounded_prompt"},
+    }
+
+    decision = run_prompt_product_control_plane(
+        prompt="Что произойдет, если изображение табличной сметы будет повернуто на 90 градусов?",
+        prompt_adequacy=gate,
+        supported_template=None,
+    )
+
+    assert decision["role_transition"]["next_action"] == "ask_clarification"
+    assert decision["semantic_escalation"]["l4_5_required"] is True
+    assert "behavior_question_uncertainty" in decision["semantic_escalation"]["reasons"]
+
+
 def test_l45_maps_intake_uncertainty_to_existing_image_contents_route():
     prompt = "напиши CLI .py, которая перечислит содержимое картинки"
     gate = {
@@ -174,6 +195,39 @@ def test_l45_maps_intake_uncertainty_to_existing_image_contents_route():
     assert validation["accepted_action"] == "record_successful_resolution_candidate"
     assert candidate is not None
     assert candidate["resolution_id"] == "map_to_existing_image_contents_cli"
+
+
+def test_l45_converts_behavior_question_clarification_to_developer_request():
+    prompt = "Что произойдет, если изображение табличной сметы будет повернуто на 90 градусов?"
+    gate = {
+        "artifact_type": "PromptAdequacyGate",
+        "status": "needs_clarification",
+        "system_type": "file_processing_utility",
+        "reason_code": "GOAL_SPEC_NEEDS_CLARIFICATION",
+        "goal_spec": {"intent": "unknown"},
+        "boundary_classification": {"boundary": "incomplete_bounded_prompt"},
+    }
+    decision = run_prompt_product_control_plane(prompt=prompt, prompt_adequacy=gate, supported_template=None)
+    request = build_semantic_hypothesis_request(
+        control_plane_decision=decision,
+        context={"prompt": prompt},
+    )
+    model_payload = {
+        "hypothesis_type": "clarification_question",
+        "proposal": {"question": "Which project should be inspected?", "actions": ["ask_clarification"]},
+        "confidence": 0.6,
+        "evidence_refs": ["model"],
+        "risks": ["may need evidence"],
+        "return_to_gate": True,
+    }
+
+    assert request is not None
+    with patch("runtime.semantic_reasoner.call_json_chat", return_value=model_payload):
+        proposal = run_semantic_reasoner(request=request, use_model=True, config=LocalInferenceConfig(base_url="http://test", model="mock"))
+
+    assert proposal["hardening"]["raw_model_output_used"] is True
+    assert proposal["hypothesis_type"] == "developer_improvement_request"
+    assert proposal["proposal"]["missing_capability"] == "fact_based_behavior_question_answering_capability"
 
 
 def test_prompt_product_control_plane_requests_l45_for_ready_unknown_template():

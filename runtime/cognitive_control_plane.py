@@ -9,6 +9,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .l4_decision_table import (
+    match_prompt_product_rule,
+    match_prompt_product_transition_rule,
+    prompt_product_escalation_reason,
+    terminal_secret_risk_markers,
+    terminal_unsupported_markers,
+)
+
 
 def run_cognitive_control_plane(
     *,
@@ -214,23 +222,20 @@ def _prompt_product_gate(prompt_adequacy: dict[str, Any], supported_template: st
 
 def _prompt_product_transition(prompt_adequacy: dict[str, Any], gate: dict[str, Any]) -> dict[str, Any]:
     prompt_status = prompt_adequacy.get("status")
-    if gate.get("can_build_package"):
-        next_action = "build_verified_system_package"
-        reason = "prompt_ready_and_template_supported"
-    elif prompt_status in {"needs_clarification", "too_broad"}:
-        next_action = "ask_clarification"
-        reason = f"prompt_{prompt_status}"
-    elif prompt_status == "unsupported":
-        next_action = "stop_unsupported"
-        reason = "prompt_unsupported_by_policy"
-    else:
-        next_action = "stop_unsupported"
-        reason = "no_supported_package_template"
+    boundary = dict(prompt_adequacy.get("boundary_classification", {}))
+    rule = match_prompt_product_transition_rule(
+        prompt_adequacy_status=str(prompt_status or ""),
+        supported_template=str(gate.get("supported_template") or "") or None,
+        terminal_unsupported_boundary=_is_terminal_unsupported_boundary(boundary),
+    )
+    next_action = str((rule or {}).get("next_action") or "stop_unsupported")
+    reason = str((rule or {}).get("reason_code") or "no_supported_package_template")
     return {
         "status": "decided",
         "next_action": next_action,
         "reason_code": reason,
-        "controller": "deterministic_prompt_product_transition_v0.1",
+        "controller": "configured_prompt_product_transition_v0.2",
+        "rule_id": (rule or {}).get("rule_id"),
     }
 
 
@@ -241,18 +246,36 @@ def _prompt_product_escalation(
     llm_invoked: bool,
 ) -> dict[str, Any]:
     reasons: list[str] = []
-    if prompt_adequacy.get("status") == "ready" and not gate.get("can_build_package"):
-        reasons.append("no_supported_package_template")
+    boundary = dict(prompt_adequacy.get("boundary_classification", {}))
+    if (
+        prompt_adequacy.get("status") == "ready"
+        and not gate.get("can_build_package")
+        and not _is_terminal_unsupported_boundary(boundary)
+        and not _has_terminal_secret_risk(boundary)
+    ):
+        reasons.append(prompt_product_escalation_reason("ready_missing_template"))
     if _is_bounded_intake_uncertainty(prompt, prompt_adequacy):
-        reasons.append("prompt_intake_uncertainty")
+        reasons.append(prompt_product_escalation_reason("bounded_intake_uncertainty"))
+    if _is_bounded_behavior_question(prompt, prompt_adequacy):
+        reasons.append(prompt_product_escalation_reason("bounded_behavior_question"))
     if prompt_adequacy.get("status") == "unsupported" and prompt_adequacy.get("system_type") is None:
-        reasons.append("unsupported_system_type_requires_semantic_classification")
+        reasons.append(prompt_product_escalation_reason("unsupported_system_type"))
     return {
         "l4_5_required": bool(reasons),
         "reasons": reasons,
         "llm_already_invoked": llm_invoked,
         "policy": "invoke L4.5 only when deterministic prompt gates cannot classify or route an otherwise bounded request",
     }
+
+
+def _is_terminal_unsupported_boundary(boundary: dict[str, Any]) -> bool:
+    unsupported = set(str(item) for item in boundary.get("unsupported_markers", []))
+    return bool(unsupported & terminal_unsupported_markers())
+
+
+def _has_terminal_secret_risk(boundary: dict[str, Any]) -> bool:
+    risks = set(str(item) for item in boundary.get("risk_markers", []))
+    return bool(risks & terminal_secret_risk_markers())
 
 
 def _is_bounded_intake_uncertainty(prompt: str, prompt_adequacy: dict[str, Any]) -> bool:
@@ -276,7 +299,11 @@ def _is_bounded_intake_uncertainty(prompt: str, prompt_adequacy: dict[str, Any])
             "picture",
             "csv",
             "json",
+            "yaml",
+            "yml",
             "xlsx",
+            "xls",
+            "png",
             "markdown",
             "pdf",
             "html",
@@ -286,7 +313,7 @@ def _is_bounded_intake_uncertainty(prompt: str, prompt_adequacy: dict[str, Any])
         )
     )
     return (
-        goal_spec.get("intent") == "implementation"
+        goal_spec.get("intent") in {"implementation", "convert_spreadsheet"}
         and prompt_adequacy.get("system_type") in {"cli", "file_processing_utility", "fastapi_service", "small_local_service"}
         and boundary.get("boundary") in {"incomplete_bounded_prompt", "bounded_supported_class"}
         and has_product_shape
@@ -294,6 +321,48 @@ def _is_bounded_intake_uncertainty(prompt: str, prompt_adequacy: dict[str, Any])
     )
 
 
+def _is_bounded_behavior_question(prompt: str, prompt_adequacy: dict[str, Any]) -> bool:
+    if prompt_adequacy.get("status") != "needs_clarification":
+        return False
+    boundary = dict(prompt_adequacy.get("boundary_classification", {}))
+    if boundary.get("risk_markers") or boundary.get("unsupported_markers"):
+        return False
+    lower = prompt.lower()
+    has_question_shape = any(
+        marker in lower
+        for marker in (
+            "что произойдет",
+            "что будет",
+            "как повед",
+            "what happens",
+            "what will happen",
+            "behavior",
+            "behaviour",
+        )
+    )
+    has_supported_domain_signal = any(
+        marker in lower
+        for marker in (
+            "изображ",
+            "картин",
+            "фото",
+            "image",
+            "picture",
+            "ocr",
+            "excel",
+            "xlsx",
+            "таблиц",
+            "csv",
+            "json",
+            "файл",
+        )
+    )
+    return (
+        prompt_adequacy.get("system_type") in {"cli", "file_processing_utility", "small_local_service", "fastapi_service"}
+        and boundary.get("boundary") in {"incomplete_bounded_prompt", "bounded_supported_class"}
+        and has_question_shape
+        and has_supported_domain_signal
+    )
 def _prompt_product_crystallization_backlog(
     transition: dict[str, Any],
     gate: dict[str, Any],

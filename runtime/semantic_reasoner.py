@@ -178,6 +178,12 @@ def _question(mode: str, reasons: list[str]) -> str:
             "The deterministic intake gate is uncertain. Can the prompt be interpreted as a bounded "
             "supported route with existing means, or should it become clarification/developer work?"
         )
+    if mode == "prompt_to_product" and "behavior_question_uncertainty" in reasons:
+        return (
+            "The user asks about behavior or limitations of an existing/generated capability. "
+            "Can this be answered from existing evidence, or should Cognitive OS request a developer "
+            "capability for fact-based behavior-question answering?"
+        )
     if "unsupported_system_type_requires_semantic_classification" in reasons:
         return "Classify the user intent into a supported bounded system type or explain why it is unsupported."
     if "semantic_rework_after_contracts_passed" in reasons:
@@ -186,6 +192,11 @@ def _question(mode: str, reasons: list[str]) -> str:
 
 def _allowed_hypothesis_types(mode: str, reasons: list[str]) -> list[str]:
     if mode == "prompt_to_product":
+        if "behavior_question_uncertainty" in reasons:
+            return [
+                "successful_existing_resolution",
+                "developer_improvement_request",
+            ]
         allowed = [
             "successful_existing_resolution",
             "developer_improvement_request",
@@ -204,7 +215,9 @@ def _deterministic_proposal(request: dict[str, Any]) -> dict[str, Any]:
     context = dict(request.get("evidence_context", {}))
     prompt = str(context.get("prompt") or "")
     if mode == "prompt_to_product" and (
-        "no_supported_package_template" in reasons or "prompt_intake_uncertainty" in reasons
+        "no_supported_package_template" in reasons
+        or "prompt_intake_uncertainty" in reasons
+        or "behavior_question_uncertainty" in reasons
     ):
         return resolve_with_existing_means_or_developer_request(request, prompt)
     if "unsupported_system_type_requires_semantic_classification" in reasons:
@@ -214,7 +227,7 @@ def _deterministic_proposal(request: dict[str, Any]) -> dict[str, Any]:
     return _knowledge_gap(request)
 
 def _model_proposal(request: dict[str, Any], *, config: LocalInferenceConfig | None) -> dict[str, Any]:
-    result = call_json_chat(_messages(request), config=config)
+    result = call_json_chat(_messages(request), config=config or LocalInferenceConfig.from_l45_env())
     if not isinstance(result, dict):
         raise LocalInferenceError("L4.5 model proposal must be a JSON object")
     return result
@@ -264,8 +277,30 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
             "schema_normalized": True,
             "proposal_payload_synthesized": False,
             "risks_synthesized": False,
+            "deterministic_existing_route_rescue": False,
         },
     }
+    if "behavior_question_uncertainty" in set(str(item) for item in request.get("trigger_reasons", [])):
+        if proposal["hypothesis_type"] != "successful_existing_resolution":
+            fallback = developer_improvement_request(str(dict(request.get("evidence_context", {})).get("prompt") or ""))
+            proposal["hypothesis_type"] = "developer_improvement_request"
+            proposal["proposal"] = dict(fallback.get("proposal", {}))
+            proposal["confidence"] = min(proposal["confidence"], 0.76)
+            proposal["evidence_refs"] = list(fallback.get("evidence_refs", []))
+            proposal["risks"] = list(fallback.get("risks", []))
+            proposal["return_to_gate"] = True
+            proposal["hardening"]["proposal_payload_synthesized"] = True
+    elif _is_prompt_to_product_existing_route_request(request) and proposal["hypothesis_type"] != "successful_existing_resolution":
+        deterministic = _deterministic_proposal(request)
+        if deterministic.get("hypothesis_type") == "successful_existing_resolution":
+            proposal["hardening"]["model_hypothesis_type"] = proposal["hypothesis_type"]
+            proposal["hypothesis_type"] = "successful_existing_resolution"
+            proposal["proposal"] = dict(deterministic.get("proposal", {}))
+            proposal["confidence"] = max(proposal["confidence"], _bounded_float(deterministic.get("confidence"), default=0.75))
+            proposal["evidence_refs"] = list(deterministic.get("evidence_refs", []))
+            proposal["risks"] = list(deterministic.get("risks", []))
+            proposal["return_to_gate"] = True
+            proposal["hardening"]["deterministic_existing_route_rescue"] = True
     if proposal["hypothesis_type"] == "clarification_question" and not proposal["proposal"]:
         proposal["proposal"] = {
             "question": request.get("question"),
@@ -294,6 +329,17 @@ def _harden_proposal(request: dict[str, Any], raw: dict[str, Any]) -> dict[str, 
         proposal["proposal"]["actions"] = safe_actions
         proposal["hardening"]["forbidden_actions_stripped"] = True
     return proposal
+
+
+def _is_prompt_to_product_existing_route_request(request: dict[str, Any]) -> bool:
+    mode = str(dict(request.get("source_decision", {})).get("mode") or "")
+    allowed = set(str(item) for item in request.get("allowed_hypothesis_types", []))
+    reasons = set(str(item) for item in request.get("trigger_reasons", []))
+    return (
+        mode == "prompt_to_product"
+        and "successful_existing_resolution" in allowed
+        and bool({"no_supported_package_template", "prompt_intake_uncertainty"} & reasons)
+    )
 
 
 def _default_risks(hypothesis_type: str) -> list[str]:

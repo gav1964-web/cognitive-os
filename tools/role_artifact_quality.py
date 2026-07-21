@@ -13,15 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.role_artifact_quality import evaluate_role_artifacts
+from runtime.role_artifact_interpreter import run_role_artifact_pipeline
 from runtime.project_benchmark import analyze_project
 from runtime.role_skill_common import load_skill_registry
-from runtime.role_skills import (
-    run_architect_skill,
-    run_implementer_skill,
-    run_reviewer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-)
 
 
 def main() -> int:
@@ -59,20 +53,8 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, object]:
     with _pushd(root):
         project_report = analyze_project(project_dir)["project_map_report"]
     goal = f"Produce clear ADR and TechnicalSpec for first safe transformation in {project_dir.name}"
-    adr = run_architect_skill(goal=goal, project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
-    review = run_reviewer_skill(technical_spec=spec, implementation_plan=implementation, test_plan=test_plan)
-    quality = evaluate_role_artifacts(
-        {
-            "architecture_decision": adr,
-            "technical_spec": spec,
-            "implementation_plan": implementation,
-            "test_plan": test_plan,
-            "review_findings": review,
-        }
-    )
+    artifacts = run_role_artifact_pipeline(goal=goal, project_report=project_report)
+    quality = evaluate_role_artifacts(artifacts)
     return {"project": project_dir.name, "status": "ok" if quality["passed"] else "failed", "quality": quality}
 
 

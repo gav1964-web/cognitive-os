@@ -4,48 +4,56 @@
   "prompt_hash": "sha256:pending",
   "routes": {
     "direct_agent": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
-      "missed_requirements": 0,
+      "executor": "direct_agent_baseline",
+      "model": "deterministic_direct_baseline",
+      "status": "blocked",
+      "requirement_coverage": 0.2,
+      "missed_requirements": 1,
       "invented_requirements": 0,
       "tests_passed": 0,
       "tests_total": 0,
       "verification_status": "not_run",
       "repair_cycles": 0,
-      "runtime_seconds": null,
-      "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "runtime_seconds": 0.0,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.2,
       "source_safety_violations": 0,
-      "review_blockers": 0,
-      "human_correction_minutes": null
+      "review_blockers": 1,
+      "human_correction_minutes": 0,
+      "release_decision": "blocked",
+      "project_dir": null,
+      "block_reason": "direct baseline does not implement local FastAPI service generation"
     },
     "cognitive_os": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
+      "executor": "cognitive_os_stage2",
+      "model": "deterministic_or_configured_l45",
+      "status": "completed",
+      "requirement_coverage": 0.9,
       "missed_requirements": 0,
       "invented_requirements": 0,
-      "tests_passed": 0,
-      "tests_total": 0,
-      "verification_status": "not_run",
+      "tests_passed": 3,
+      "tests_total": 3,
+      "verification_status": "passed",
       "repair_cycles": 0,
-      "runtime_seconds": null,
-      "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "runtime_seconds": 0.985,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.9,
       "source_safety_violations": 0,
       "review_blockers": 0,
-      "human_correction_minutes": null
+      "human_correction_minutes": 0,
+      "release_decision": "release_ready",
+      "report_path": "F:/ubuntu/test/9/artifacts/verified_system_packages/verified_system_package_20260720T055049335612Z.json",
+      "project_dir": "F:/ubuntu/test/9/artifacts/programmer_prompt_curriculum/fastapi_csv_aggregator_20260720T055048361762Z"
     }
   },
   "comparison": {
-    "winner": "undecided",
-    "cognitive_os_advantages": [],
+    "winner": "cognitive_os",
+    "cognitive_os_advantages": [
+      "completed where direct baseline blocked"
+    ],
     "direct_agent_advantages": [],
     "no_difference": [],
-    "confidence": 0.0
+    "confidence": 0.55
   },
   "invariants": {
     "same_original_prompt": true,
@@ -54,6 +62,5 @@
     "teacher_reference_is_ground_truth": false,
     "source_mutation_detected": false
   },
-  "verdict": "not_evaluated"
+  "verdict": "cognitive_os_wins_baseline"
 }
-

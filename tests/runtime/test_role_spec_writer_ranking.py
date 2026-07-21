@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from runtime.role_skills import run_spec_writer_skill
+from runtime.configured_role_pipeline import producer_for_artifact_type
+from runtime.role_skills import run_role_skill
+
+
+def _run_spec_writer(architecture_decision: dict):
+    return run_role_skill(producer_for_artifact_type("TechnicalSpec"), architecture_decision=architecture_decision)
 
 
 def test_spec_writer_demotes_constructor_logging_and_generic_predicate_targets():
@@ -53,7 +58,7 @@ def test_spec_writer_demotes_constructor_logging_and_generic_predicate_targets()
         },
     }
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run_spec_writer(adr)
 
     assert spec["extraction_contract"]["candidate"] == "pkg/providers/factory.py:build_providers_from_config"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
@@ -93,7 +98,7 @@ def test_spec_writer_prefers_read_query_contract_over_write_operation():
         },
     }
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run_spec_writer(adr)
 
     assert spec["extraction_contract"]["candidate"] == "tinydb/table.py:search"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
@@ -145,7 +150,7 @@ def test_spec_writer_prefers_database_search_over_generic_get_and_storage_adapte
         },
     }
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run_spec_writer(adr)
 
     assert spec["extraction_contract"]["candidate"] == "tinydb/table.py:search"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
@@ -194,7 +199,7 @@ def test_spec_writer_prefers_representative_lifecycle_slice_over_domain_utility(
         },
     }
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run_spec_writer(adr)
 
     assert spec["extraction_contract"]["candidate"] == "spyder/api/widgets/main_widget.py:create_window"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}

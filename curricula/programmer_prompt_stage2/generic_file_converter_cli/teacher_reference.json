@@ -1,0 +1,46 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши локальную CLI .py утилиту без обязательных внешних зависимостей: вход - путь к файлу .source, выход - файл .target с тем же базовым именем или указанным output path. Реальная конвертация должна быть отделена adapter boundary; default tests работают без внешних библиотек и сети через deterministic fixture adapter.",
+  "expected_steps": [
+    "classify prompt as bounded generic file-conversion CLI",
+    "extract source and target extensions into GenericFileConversionRecipe",
+    "create isolated reusable file_converter_cli scaffold with README and tests",
+    "define adapter boundary and dependency policy",
+    "reject missing or unsupported inputs with controlled errors",
+    "run project-scoped tests and produce release instructions"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "conversion_recipe.json",
+    "library_binding_recipe.json",
+    "adapter_implementation_plan.json",
+    "src/file_converter_cli/__init__.py",
+    "src/file_converter_cli/cli.py",
+    "src/file_converter_cli/converter.py",
+    "src/file_converter_cli/adapters.py",
+    "tests/fixtures/input.source",
+    "tests/test_converter.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "conversion recipe captures source and target formats",
+    "library binding recipe proposes bounded adapter candidates",
+    "adapter implementation plan selects implemented stdlib backend or fallback",
+    "CLI writes target output through adapter boundary",
+    "missing or unsupported inputs are rejected with controlled errors",
+    "default tests run without real conversion dependencies or network",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "generic_file_conversion_recipe",
+    "library_binding_recipe",
+    "adapter_implementation_plan",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "project_scoped_tests",
+    "dependency_policy"
+  ]
+}

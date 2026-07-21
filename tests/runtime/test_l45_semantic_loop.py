@@ -94,6 +94,42 @@ def test_l45_records_successful_resolution_candidate_for_existing_means():
     assert candidate["requires_repeated_successes"] is True
 
 
+def test_l45_hardening_rescues_model_miss_with_existing_route():
+    gate = evaluate_prompt_adequacy("сделай CLI .py, которая опиши фото").to_dict()
+    decision = run_prompt_product_control_plane(prompt=gate["prompt"], prompt_adequacy=gate, supported_template=None)
+    pack = build_semantic_evidence_pack(
+        control_plane_decision=decision,
+        prompt=gate["prompt"],
+        prompt_adequacy=gate,
+        known_templates=["image_contents_cli"],
+    )
+    request = build_semantic_hypothesis_request(
+        control_plane_decision=decision,
+        context={"prompt": gate["prompt"], "evidence_pack": pack},
+    )
+    assert request is not None
+
+    def weak_model(_: dict) -> dict:
+        return {
+            "artifact_type": "SemanticHypothesisProposal",
+            "hypothesis_type": "developer_improvement_request",
+            "proposal": {"actions": ["record_developer_improvement_request"]},
+            "confidence": 0.41,
+            "evidence_refs": ["model_guess"],
+            "risks": ["model missed existing route"],
+            "return_to_gate": True,
+        }
+
+    proposal = run_semantic_reasoner(request=request, proposal_provider=weak_model)
+    validation = validate_l45_semantic_proposal(request=request, proposal=proposal)
+
+    assert proposal["hypothesis_type"] == "successful_existing_resolution"
+    assert proposal["proposal"]["resolution_id"] == "map_to_existing_image_contents_cli"
+    assert proposal["hardening"]["deterministic_existing_route_rescue"] is True
+    assert proposal["hardening"]["model_hypothesis_type"] == "developer_improvement_request"
+    assert validation["accepted_action"] == "record_successful_resolution_candidate"
+
+
 def test_l45_records_developer_request_when_existing_means_fail():
     gate = evaluate_prompt_adequacy(
         "Напиши CLI-утилиту с зависимостью openpyxl, которая читает XLSX-файл, сохраняет JSON-отчёт, имеет README и тесты."
@@ -311,6 +347,50 @@ def test_l45_hardening_synthesizes_missing_model_risks():
     assert proposal["hardening"]["risks_synthesized"] is True
     assert proposal["risks"]
     assert validation["status"] == "accepted"
+
+
+def test_l45_model_path_uses_lightweight_gigachat_default(monkeypatch):
+    request = {
+        "artifact_type": "SemanticHypothesisRequest",
+        "layer": "L4.5",
+        "source_decision": {"mode": "prompt_to_product"},
+        "trigger_reasons": ["prompt_intake_uncertainty"],
+        "allowed_hypothesis_types": ["developer_improvement_request"],
+        "output_contract": {
+            "required_fields": [
+                "hypothesis_type",
+                "proposal",
+                "confidence",
+                "evidence_refs",
+                "risks",
+                "return_to_gate",
+            ],
+        },
+        "forbidden_actions": ["build_package"],
+        "return_path": {"target_layer": "L4.0"},
+        "evidence_context": {"prompt": "добавь вывод в новый формат"},
+    }
+    captured = {}
+
+    def fake_call_json_chat(_messages, *, config=None):
+        captured["config"] = config
+        return {
+            "hypothesis_type": "developer_improvement_request",
+            "proposal": {"request_id": "test", "actions": ["record_developer_improvement_request"]},
+            "confidence": 0.7,
+            "evidence_refs": ["test"],
+            "risks": ["bounded model proposal"],
+            "return_to_gate": True,
+        }
+
+    monkeypatch.delenv("COGNITIVE_OS_L45_MODEL", raising=False)
+    monkeypatch.setattr("runtime.semantic_reasoner.call_json_chat", fake_call_json_chat)
+
+    proposal = run_semantic_reasoner(request=request, use_model=True)
+
+    assert proposal["hardening"]["raw_model_output_used"] is True
+    assert captured["config"].model == "GigaChat Lite"
+    assert captured["config"].provider_label == "external_l45_intent_resolver"
 
 
 def test_contract_registry_knows_l45_loop_artifacts():

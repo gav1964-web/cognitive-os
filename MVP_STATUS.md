@@ -1,13 +1,31 @@
 # MVP_STATUS.md
-**Baseline snapshot: Cognitive OS MVP**
+**Baseline snapshot: Cognitive OS foundation and Local Automation MVP target**
 
-Updated after the July 14, 2026 clean-checkout CI and documentation-alignment pass.
+Updated after the July 21, 2026 configuration-first diagnostics and verification pass.
 
 ## Current Verdict
 
-Status: `MVP-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; Stage 3 product-slice track started`.
+Status: `foundation-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; product MVP target is Prompt -> Verified Local Automation Package`.
 
-The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. The general Programmer Executor still blocks source apply. A separate specialized reviewed patch gate can apply an explicitly approved, validated sandbox package after source-identity checks and timestamped backup creation; it is not an autonomous general-purpose source editor.
+The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. This is not yet a general product MVP. The next concrete MVP target is a locally verifiable automation contour: prompt intake, sandbox package generation, tests, README, verification report, review/release decision, and controlled refusal outside scope.
+
+## Product MVP Target
+
+Target: `Prompt -> Verified Local Automation Package`.
+
+In scope: Python CLI tools, local small services without GUI, file/document/image/text/archive/table/structured-data automation, OCR/vision flows with fixture/injectable tests, web/API clients or scraping with fixture/mock tests, project analysis and improvement planning.
+
+Out of scope for this MVP: GUI applications, SQL databases as required runtime state, production deployment, uncontrolled dependency installation, mandatory live-network acceptance, direct source mutation without explicit approval, and free execution of LLM-generated code.
+
+Smoke command:
+
+```bash
+python tools/local_automation_mvp_trial.py --root . --write
+```
+
+Current smoke corpus: `registry/local_automation_mvp_cases.json`, 39 cases across Python CLI, image automation, document automation, local small service, operation composition, sandbox atomic operations, controlled refusal and `needs_clarification` routing. Latest local run: `39/39 passed`, pass rate `1.0`.
+
+Latest repository verification: `python -X utf8 -m pytest -q` -> `505 passed`; `python tools/config_doctor.py --root .` -> `8/8 passed, 0 warnings`; `python tools/config_coverage.py --root .` -> `50/50 config entities covered`.
 
 ## Verified Layers
 
@@ -20,6 +38,7 @@ The system can accept a bounded user goal, classify it through Level 4, plan kno
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
 | L3.5 spinal layer | Mandatory goal-runtime facade selects memory/deterministic/graph/optional-LLM routes, emits MotorPlanPacket/SignalPacket, receives correlated L2 events/interrupts and applies bounded recovery without executing plugins | `runtime/spinal_planner.py`, `runtime/goal_runtime.py`, `tools/spinal_benchmark.py` |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
+| L4/L4.5 config-first diagnostics | Config catalogs load cleanly, cross-references are checked, Stage 2 decisions carry `RuleTrace`, and config mutation proposals validate in sandbox before application | `tools/config_doctor.py --root .`, `tools/config_coverage.py --root .`, `tests/runtime/test_config_diagnostics.py` |
 | Stage 3 product slice | `ProductSliceSpec` wraps a verified package with requirements, scenarios, architecture decision, task graph, documentation/scenario review, executable product debug loop, 8-case benchmark and release decision | `tools/product_slice.py`, `tools/product_debug_loop_probe.py`, `tools/product_slice_benchmark.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
 | Knowledge Gap Loop | Installed-package probe, official-docs fetch and optional GitHub metadata evidence are implemented | knowledge tests |

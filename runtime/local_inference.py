@@ -35,6 +35,20 @@ class LocalInferenceConfig:
             provider_label=os.environ.get("COGNITIVE_OS_LLM_PROVIDER", "local"),
         )
 
+    @classmethod
+    def from_l45_env(cls) -> "LocalInferenceConfig":
+        return cls(
+            base_url=os.environ.get("COGNITIVE_OS_L45_BASE_URL", "http://127.0.0.1:8000/v1").rstrip("/"),
+            model=os.environ.get("COGNITIVE_OS_L45_MODEL", "GigaChat Lite"),
+            timeout_seconds=float(os.environ.get("COGNITIVE_OS_L45_TIMEOUT", "60")),
+            response_format=os.environ.get("COGNITIVE_OS_L45_RESPONSE_FORMAT", "1").lower()
+            in {"1", "true", "yes", "on"},
+            api_key=os.environ.get(os.environ.get("COGNITIVE_OS_L45_API_KEY_ENV", "COGNITIVE_OS_L45_API_KEY"))
+            or os.environ.get("COGNITIVE_OS_L45_API_KEY")
+            or None,
+            provider_label="external_l45_intent_resolver",
+        )
+
 
 def call_json_chat(messages: list[dict[str, str]], *, config: LocalInferenceConfig | None = None) -> dict[str, Any]:
     cfg = config or LocalInferenceConfig.from_env()

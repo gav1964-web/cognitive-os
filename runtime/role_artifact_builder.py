@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
+from .role_directory import load_role_directory, role_builder_config
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT_BUILDERS_PATH = ROOT / "config" / "artifact_builders.json"
@@ -19,6 +21,8 @@ class ArtifactBuilderError(RuntimeError):
 
 @lru_cache(maxsize=1)
 def load_artifact_builders(path: str | None = None) -> dict[str, dict[str, Any]]:
+    if path is None:
+        return _builders_from_role_directory()
     source = Path(path) if path else ARTIFACT_BUILDERS_PATH
     payload = json.loads(source.read_text(encoding="utf-8"))
     if payload.get("schema_version") != "artifact_builders.v1":
@@ -37,11 +41,16 @@ def load_artifact_builders(path: str | None = None) -> dict[str, dict[str, Any]]
     return normalized
 
 
-def build_configured_artifact(*, builder_id: str, **kwargs: Any) -> dict[str, Any]:
+def build_configured_artifact(*, builder_id: str | None = None, role_id: str | None = None, **kwargs: Any) -> dict[str, Any]:
     builders = load_artifact_builders()
-    if builder_id not in builders:
-        raise ArtifactBuilderError(f"unknown artifact builder: {builder_id}")
-    config = builders[builder_id]
+    if role_id is not None:
+        config = role_builder_config(role_id)
+        builder_id = str(config.get("builder_id") or role_id)
+        config["role_id"] = role_id
+    else:
+        if builder_id not in builders:
+            raise ArtifactBuilderError(f"unknown artifact builder: {builder_id}")
+        config = builders[str(builder_id)]
     function = _load_callable(str(config["callable"]))
     configured_kwargs = dict(config.get("kwargs") or {})
     artifact = function(**{**configured_kwargs, **kwargs})
@@ -56,6 +65,22 @@ def build_configured_artifact(*, builder_id: str, **kwargs: Any) -> dict[str, An
     if artifact.get("role") != role_id:
         raise ArtifactBuilderError(f"builder {builder_id} returned role {artifact.get('role')} instead of {role_id}")
     return artifact
+
+
+def _builders_from_role_directory() -> dict[str, dict[str, Any]]:
+    directory = load_role_directory()
+    builders: dict[str, dict[str, Any]] = {}
+    for role_id, role in dict(directory.get("roles") or {}).items():
+        builder = role.get("artifact_builder")
+        if not isinstance(builder, dict):
+            continue
+        builder_id = str(builder.get("builder_id") or "")
+        if not builder_id:
+            raise ArtifactBuilderError(f"role artifact_builder requires builder_id: {role_id}")
+        config = dict(builder)
+        config["role_id"] = str(role_id)
+        builders[builder_id] = config
+    return builders
 
 
 def _load_callable(spec: str) -> Callable[..., Any]:

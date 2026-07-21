@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .project_benchmark import analyze_project
-from .role_skills import run_architect_skill
+from .role_skills import run_role_skill
 
 
 FACT_CATEGORIES = [
@@ -59,7 +59,8 @@ def run_curriculum_case(*, root: Path, reference_path: Path) -> dict[str, Any]:
     project_dir = _resolve_project_dir(root, reference_path, reference)
     outputs = analyze_project(project_dir)
     project_report = outputs["project_map_report"]
-    adr = run_architect_skill(
+    adr = run_role_skill(
+        "architect",
         goal=f"Architect curriculum pass for {reference_path.parent.name}",
         project_report=project_report,
     )

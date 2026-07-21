@@ -73,6 +73,44 @@ def test_goal_intake_accepts_greenfield_image_contents_cli_prompt():
     assert spec.clarification is None
 
 
+def test_goal_intake_accepts_semantic_cli_argument_program_prompt():
+    spec = build_goal_spec("программе как параметры передаются два числа и она должна в терминале вывести их сумму")
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "two_numeric_cli_args" in spec.inputs
+    assert "stdout" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_three_arg_numeric_cli_expression_prompt():
+    spec = build_goal_spec(
+        "напиши программу CLI которая принимает три аргумента, первые два перемножает, "
+        "результат складывает с третьим и выводит результат, например 22*6+3"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "three_numeric_cli_args" in spec.inputs
+    assert "stdout" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_project_change_prompt_with_target():
+    spec = build_goal_spec(
+        "Доработай проект 12: CLI должна читать изображение табличной сметы и выводить .xlsx, .csv и .xls. Тесты без сети."
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert spec.target == "12"
+    assert "write" in spec.allowed_actions
+    assert "csv" in spec.outputs
+    assert "spreadsheet" in spec.outputs
+
+
 def test_goal_spec_contract_rejects_extra_fields():
     spec = build_goal_spec("Normalize input text and hash it").to_dict()
     spec["extra"] = True

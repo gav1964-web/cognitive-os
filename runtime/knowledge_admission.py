@@ -91,6 +91,73 @@ def write_kb_candidate(candidate: dict[str, Any], *, root: Path, subdir: str = "
     return path
 
 
+def update_kb_candidate_review(
+    *,
+    root: Path,
+    candidate_id: str,
+    teacher_approved: bool | None = None,
+    codex_approved: bool | None = None,
+    rejected_reason: str | None = None,
+    subdir: str = "artifacts/knowledge_candidates",
+    min_confirmed_cases: int = MIN_CONFIRMED_CASES,
+) -> dict[str, Any]:
+    """Apply human review marks to a staged candidate without promoting it."""
+
+    path = root / subdir / f"{candidate_id}.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"knowledge candidate not found: {candidate_id}")
+    candidate = json.loads(path.read_text(encoding="utf-8"))
+    if str(candidate.get("candidate_id")) != candidate_id:
+        raise ValueError(f"candidate id mismatch in {path}")
+    if rejected_reason:
+        candidate["status"] = "rejected"
+        candidate["reason"] = rejected_reason
+        candidate["rejected_at"] = datetime.now(timezone.utc).isoformat()
+    else:
+        if teacher_approved is not None:
+            candidate["teacher_approved"] = bool(teacher_approved)
+        if codex_approved is not None:
+            candidate["codex_approved"] = bool(codex_approved)
+        status, reason = _admission_status(
+            confirmed_cases=len(_confirmed_cases(list(candidate.get("source_cases") or []))),
+            teacher_approved=bool(candidate.get("teacher_approved")),
+            codex_approved=bool(candidate.get("codex_approved")),
+            min_confirmed_cases=min_confirmed_cases,
+        )
+        candidate["status"] = status
+        candidate["reason"] = reason
+        candidate["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+    path.write_text(json.dumps(candidate, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "artifact_type": "KnowledgeCandidateReviewUpdate",
+        "status": "ok",
+        "candidate_id": candidate_id,
+        "candidate_status": candidate.get("status"),
+        "reason": candidate.get("reason"),
+        "path": path.as_posix(),
+        "automatic_merge_performed": False,
+    }
+
+
+def build_manual_merge_block(*, root: Path, candidate_id: str, subdir: str = "artifacts/knowledge_candidates") -> dict[str, Any]:
+    """Return an explicit controlled block for KB merge until a human edits KB records."""
+
+    path = root / subdir / f"{candidate_id}.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"knowledge candidate not found: {candidate_id}")
+    candidate = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        "artifact_type": "KnowledgeCandidateManualMerge",
+        "status": "blocked",
+        "candidate_id": candidate_id,
+        "candidate_status": candidate.get("status"),
+        "reason": "automatic KB merge is forbidden; human must merge the proposed record explicitly",
+        "candidate_ready": can_promote_candidate(candidate),
+        "automatic_merge_performed": False,
+        "path": path.as_posix(),
+    }
+
+
 def load_kb_candidates(*, root: Path, subdir: str = "artifacts/knowledge_candidates") -> list[dict[str, Any]]:
     """Load persisted staged candidates."""
 

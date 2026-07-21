@@ -6,14 +6,17 @@ import sys
 from pathlib import Path
 
 from runtime.knowledge_admission import (
+    build_manual_merge_block,
     build_kb_candidate,
     can_promote_candidate,
     grouped_candidate_report,
     kb_candidate_from_generic_project,
     knowledge_candidate_report,
     load_kb_candidates,
+    update_kb_candidate_review,
     write_kb_candidate,
 )
+from runtime.knowledge_review_console import build_knowledge_review_console
 
 
 def test_kb_candidate_needs_multiple_confirmed_cases():
@@ -159,3 +162,41 @@ def test_knowledge_candidates_cli_report(tmp_path):
     payload = json.loads(report.stdout)
     assert payload["candidate_count"] == 1
     assert payload["by_status"] == {"ready_for_human_merge": 1}
+
+
+def test_kb_candidate_review_updates_and_manual_merge_block(tmp_path):
+    candidate = build_kb_candidate(
+        record_type="successful_resolution_candidate",
+        proposed_record={"lesson_id": "text_upper_cli"},
+        source_cases=[{"project": f"p{i}", "status": "verified"} for i in range(3)],
+        teacher_reference="sandbox runs",
+    )
+    write_kb_candidate(candidate, root=tmp_path)
+
+    first = update_kb_candidate_review(root=tmp_path, candidate_id=candidate["candidate_id"], teacher_approved=True)
+    second = update_kb_candidate_review(root=tmp_path, candidate_id=candidate["candidate_id"], codex_approved=True)
+    merge = build_manual_merge_block(root=tmp_path, candidate_id=candidate["candidate_id"])
+
+    assert first["candidate_status"] == "needs_codex_approval"
+    assert second["candidate_status"] == "ready_for_human_merge"
+    assert merge["status"] == "blocked"
+    assert merge["candidate_ready"] is True
+    assert merge["automatic_merge_performed"] is False
+
+
+def test_knowledge_review_console_groups_action_queues(tmp_path):
+    candidate = build_kb_candidate(
+        record_type="successful_resolution_candidate",
+        proposed_record={"rule_id": "stage2_route_image_contents_cli", "label": "image contents route"},
+        source_cases=[{"project": "p1", "status": "verified"}],
+        teacher_reference="sandbox",
+    )
+    write_kb_candidate(candidate, root=tmp_path)
+
+    report = build_knowledge_review_console(root=tmp_path)
+
+    assert report["artifact_type"] == "KnowledgeReviewConsole"
+    assert report["status"] == "ok"
+    assert report["candidate_count"] == 1
+    assert report["queues"]["collect_more_cases"][0]["proposed_id"] == "stage2_route_image_contents_cli"
+    assert "run more verified cases before requesting approval" in report["next_actions"]

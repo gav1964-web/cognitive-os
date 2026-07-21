@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from .greenfield_csv_sort_template import content_for as csv_sort_content_for
+from .greenfield_generic_file_converter_template import content_for as generic_file_converter_content_for
 from .greenfield_image_contents_template import content_for as image_contents_content_for
+from .greenfield_image_table_excel_template import content_for as image_table_excel_content_for
 from .greenfield_ocr_template import content_for as ocr_content_for
 
 
@@ -12,10 +14,20 @@ KV_CASE = "fastapi_kv_store"
 CSV_SORT_CASE = "csv_sort_cli"
 OCR_CASE = "ocr_image_cli"
 IMAGE_CONTENTS_CASE = "image_contents_cli"
+IMAGE_TABLE_EXCEL_CASE = "image_table_to_excel_cli"
+GENERIC_FILE_CONVERTER_CASE = "generic_file_converter_cli"
 
 
 def has_case(case_name: str) -> bool:
-    return case_name in {CSV_CASE, KV_CASE, CSV_SORT_CASE, OCR_CASE, IMAGE_CONTENTS_CASE}
+    return case_name in {
+        CSV_CASE,
+        KV_CASE,
+        CSV_SORT_CASE,
+        OCR_CASE,
+        IMAGE_CONTENTS_CASE,
+        IMAGE_TABLE_EXCEL_CASE,
+        GENERIC_FILE_CONVERTER_CASE,
+    }
 
 
 def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]:
@@ -42,6 +54,26 @@ def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]
             "CLI writes JSON contents output",
             "missing or unsupported images are rejected with controlled errors",
             "real vision backend is optional and not required for default tests",
+            "all tests run from generated project root",
+        ]
+    if case_name == IMAGE_TABLE_EXCEL_CASE:
+        return [
+            "image table fixture is parsed through an injectable OCR backend",
+            "recognized OCR text can be supplied through a UTF-8 text file",
+            "CLI writes XLSX, CSV, legacy XLS-compatible, HTML, DOC-compatible and RTF outputs",
+            "default output path uses the same base image name with the requested suffix",
+            "missing images and unavailable OCR backend are rejected with controlled errors",
+            "real vision OCR backend is optional and not required for default tests",
+            "all tests run from generated project root",
+        ]
+    if case_name == GENERIC_FILE_CONVERTER_CASE:
+        return [
+            "conversion recipe captures source and target formats",
+            "library binding recipe proposes bounded adapter candidates",
+            "adapter implementation plan selects implemented stdlib backend or fallback",
+            "CLI writes target output through adapter boundary",
+            "missing or unsupported inputs are rejected with controlled errors",
+            "default tests run without real conversion dependencies or network",
             "all tests run from generated project root",
         ]
     if case_name == KV_CASE:
@@ -73,6 +105,10 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
         return ocr_content_for(path, prompt)
     if case_name == IMAGE_CONTENTS_CASE:
         return image_contents_content_for(path, prompt)
+    if case_name == IMAGE_TABLE_EXCEL_CASE:
+        return image_table_excel_content_for(path, prompt)
+    if case_name == GENERIC_FILE_CONVERTER_CASE:
+        return generic_file_converter_content_for(path, prompt)
     if path == "pyproject.toml":
         return _pyproject("csv_aggregator_service")
     if path == "README.md":
@@ -330,3 +366,4 @@ def _test_api() -> str:
         "    response = TestClient(app).post('/aggregate', json={'csv_text': 'bad,data\\n1,2\\n'})\n"
         "    assert response.status_code == 400\n"
     )
+

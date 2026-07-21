@@ -86,3 +86,18 @@ def test_local_inference_emits_usage_telemetry_without_prompt_content():
     assert records[0]["total_tokens"] == 14
     assert records[0]["model"] == "GigaChat-Pro"
     assert "secret prompt" not in str(records)
+
+
+def test_l45_inference_defaults_to_lightweight_gigachat_profile(monkeypatch):
+    monkeypatch.delenv("COGNITIVE_OS_L45_BASE_URL", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_MODEL", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_TIMEOUT", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY_ENV", raising=False)
+
+    config = LocalInferenceConfig.from_l45_env()
+
+    assert config.base_url == "http://127.0.0.1:8000/v1"
+    assert config.model == "GigaChat Lite"
+    assert config.timeout_seconds == 60
+    assert config.provider_label == "external_l45_intent_resolver"

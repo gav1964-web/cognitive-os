@@ -5,23 +5,21 @@ from pathlib import Path
 
 from runtime.project_benchmark import analyze_project
 from runtime.local_inference import LocalInferenceConfig
-from runtime.role_skills import (
-    run_architect_skill,
-    run_implementer_skill,
-    run_reviewer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-)
+from runtime.role_skills import run_role_skill
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _run(role_id: str, **inputs):
+    return run_role_skill(role_id, **inputs)
 
 
 def test_architect_skill_returns_typed_adr():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
 
-    artifact = run_architect_skill(goal="Extract first safe capability", project_report=report)
+    artifact = _run("architect", goal="Extract first safe capability", project_report=report)
 
     assert artifact["artifact_type"] == "ArchitectureDecisionRecord"
     assert artifact["role"] == "architect"
@@ -45,7 +43,7 @@ def test_architect_skill_llm_advisory_falls_back():
     report = analyze_project(project_dir)["project_map_report"]
     config = LocalInferenceConfig(base_url="http://127.0.0.1:9/v1", model="missing", timeout_seconds=0.05)
 
-    artifact = run_architect_skill(goal="Extract first safe capability", project_report=report, advisory_config=config)
+    artifact = _run("architect", goal="Extract first safe capability", project_report=report, advisory_config=config)
 
     assert artifact["status"] == "ok"
     assert artifact["architect_advisory"]["source"] == "deterministic_fallback"
@@ -72,7 +70,7 @@ def test_architect_skill_accepts_mocked_llm_advisory(monkeypatch):
     monkeypatch.setattr("runtime.role_architect_llm.call_json_chat", fake_call_json_chat)
     config = LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="mock", provider_label="test_llm")
 
-    artifact = run_architect_skill(goal="Extract first safe capability", project_report=report, advisory_config=config)
+    artifact = _run("architect", goal="Extract first safe capability", project_report=report, advisory_config=config)
 
     assert artifact["architect_advisory"]["source"] == "test_llm"
     assert artifact["architect_advisory"]["llm_invoked"] is True
@@ -101,7 +99,7 @@ def test_architect_skill_sends_evidence_sources_to_llm(monkeypatch):
     monkeypatch.setattr("runtime.role_architect_llm.call_json_chat", fake_call_json_chat)
     config = LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="mock", provider_label="test_llm")
 
-    artifact = run_architect_skill(goal="Extract first safe capability", project_report=report, advisory_config=config)
+    artifact = _run("architect", goal="Extract first safe capability", project_report=report, advisory_config=config)
 
     assert artifact["architect_advisory"]["accepted"] is False
     assert "main.py:normalize_text" in captured["payload"]["evidence_sources"]
@@ -125,7 +123,7 @@ def test_architect_skill_rejects_generic_llm_advisory(monkeypatch):
     monkeypatch.setattr("runtime.role_architect_llm.call_json_chat", fake_call_json_chat)
     config = LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="mock", provider_label="test_llm")
 
-    artifact = run_architect_skill(goal="Extract first safe capability", project_report=report, advisory_config=config)
+    artifact = _run("architect", goal="Extract first safe capability", project_report=report, advisory_config=config)
 
     assert artifact["architect_advisory"]["llm_invoked"] is True
     assert artifact["architect_advisory"]["accepted"] is False
@@ -153,7 +151,7 @@ def test_architect_skill_rejects_duplicate_llm_risk(monkeypatch):
     monkeypatch.setattr("runtime.role_architect_llm.call_json_chat", fake_call_json_chat)
     config = LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="mock", provider_label="test_llm")
 
-    artifact = run_architect_skill(goal="Assess scraper", project_report=report, advisory_config=config)
+    artifact = _run("architect", goal="Assess scraper", project_report=report, advisory_config=config)
 
     assert artifact["architect_advisory"]["accepted"] is False
     assert artifact["architect_advisory"]["rejected_items"][0]["reason"] == "duplicates existing risk"
@@ -162,9 +160,9 @@ def test_architect_skill_rejects_duplicate_llm_risk(monkeypatch):
 def test_spec_writer_skill_returns_technical_spec():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run("spec_writer", architecture_decision=adr)
 
     assert spec["artifact_type"] == "TechnicalSpec"
     assert spec["role"] == "spec_writer"
@@ -219,7 +217,7 @@ def test_spec_writer_prefers_core_transform_over_runtime_boundary():
         },
     }
 
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    spec = _run("spec_writer", architecture_decision=adr)
 
     assert spec["extraction_contract"]["candidate"] == "pkg/core.py:normalize_headers"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
@@ -230,10 +228,10 @@ def test_spec_writer_prefers_core_transform_over_runtime_boundary():
 def test_implementer_skill_returns_implementation_plan():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
 
-    plan = run_implementer_skill(technical_spec=spec)
+    plan = _run("implementer", technical_spec=spec)
 
     assert plan["artifact_type"] == "ImplementationPlan"
     assert plan["role"] == "implementer"
@@ -272,11 +270,11 @@ def test_implementer_skill_returns_implementation_plan():
 def test_tester_skill_returns_test_plan():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
+    implementation = _run("implementer", technical_spec=spec)
 
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    test_plan = _run("tester", technical_spec=spec, implementation_plan=implementation)
 
     assert test_plan["artifact_type"] == "TestPlan"
     assert test_plan["role"] == "tester"
@@ -301,8 +299,8 @@ def test_tester_skill_returns_test_plan():
 def test_tester_skill_covers_all_acceptance_criteria_but_bounds_executable_obligations():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
     for index in range(20):
         spec["acceptance_criteria"].append(
             {
@@ -312,9 +310,9 @@ def test_tester_skill_covers_all_acceptance_criteria_but_bounds_executable_oblig
                 "source": f"extra.py:source_{index + 1}",
             }
         )
-    implementation = run_implementer_skill(technical_spec=spec)
+    implementation = _run("implementer", technical_spec=spec)
 
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    test_plan = _run("tester", technical_spec=spec, implementation_plan=implementation)
 
     spec_ids = {row["id"] for row in spec["acceptance_criteria"]}
     tested_ids = {row["acceptance_id"] for row in test_plan["acceptance_tests"]}
@@ -329,12 +327,13 @@ def test_tester_skill_covers_all_acceptance_criteria_but_bounds_executable_oblig
 def test_reviewer_skill_returns_review_findings():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
+    implementation = _run("implementer", technical_spec=spec)
+    test_plan = _run("tester", technical_spec=spec, implementation_plan=implementation)
 
-    review = run_reviewer_skill(
+    review = _run(
+        "reviewer",
         technical_spec=spec,
         implementation_plan=implementation,
         test_plan=test_plan,
@@ -359,13 +358,14 @@ def test_reviewer_skill_returns_review_findings():
 def test_reviewer_rejects_writable_scope_expansion():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
+    implementation = _run("implementer", technical_spec=spec)
+    test_plan = _run("tester", technical_spec=spec, implementation_plan=implementation)
     test_plan["test_strategy"]["writable_scope"] = implementation["patch_scope"]
 
-    review = run_reviewer_skill(
+    review = _run(
+        "reviewer",
         technical_spec=spec,
         implementation_plan=implementation,
         test_plan=test_plan,
@@ -380,12 +380,13 @@ def test_reviewer_rejects_writable_scope_expansion():
 def test_reviewer_rejects_failed_executable_acceptance_result():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
     report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal="Extract first safe capability", project_report=report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    implementation = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=implementation)
+    adr = _run("architect", goal="Extract first safe capability", project_report=report)
+    spec = _run("spec_writer", architecture_decision=adr)
+    implementation = _run("implementer", technical_spec=spec)
+    test_plan = _run("tester", technical_spec=spec, implementation_plan=implementation)
 
-    review = run_reviewer_skill(
+    review = _run(
+        "reviewer",
         technical_spec=spec,
         implementation_plan=implementation,
         test_plan=test_plan,
@@ -404,7 +405,7 @@ def test_architect_skill_runs_on_benchmark_corpus():
         if not project_dir.is_dir():
             continue
         report = analyze_project(project_dir)["project_map_report"]
-        artifact = run_architect_skill(goal=f"Assess {project_dir.name}", project_report=report)
+        artifact = _run("architect", goal=f"Assess {project_dir.name}", project_report=report)
         assert artifact["status"] == "ok", project_dir.name
         assert artifact["chosen_option"]["id"], project_dir.name
         assert artifact["spec_writer_brief"]["scope"], project_dir.name

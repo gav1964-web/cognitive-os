@@ -4,48 +4,60 @@
   "prompt_hash": "sha256:pending",
   "routes": {
     "direct_agent": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
+      "executor": "direct_agent_baseline",
+      "model": "deterministic_direct_baseline",
+      "status": "completed",
+      "requirement_coverage": 0.75,
       "missed_requirements": 0,
       "invented_requirements": 0,
-      "tests_passed": 0,
-      "tests_total": 0,
-      "verification_status": "not_run",
+      "tests_passed": 1,
+      "tests_total": 1,
+      "verification_status": "passed",
       "repair_cycles": 0,
-      "runtime_seconds": null,
-      "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "runtime_seconds": 0.562,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.75,
       "source_safety_violations": 0,
       "review_blockers": 0,
-      "human_correction_minutes": null
+      "human_correction_minutes": 0,
+      "release_decision": "completed",
+      "project_dir": "F:/ubuntu/test/9/artifacts/evaluation_direct_agent/task03_markdown_to_rtf_cli",
+      "block_reason": null
     },
     "cognitive_os": {
-      "executor": "not_run",
-      "model": "not_run",
-      "status": "not_run",
-      "requirement_coverage": 0.0,
+      "executor": "cognitive_os_stage2",
+      "model": "deterministic_or_configured_l45",
+      "status": "completed",
+      "requirement_coverage": 0.9,
       "missed_requirements": 0,
       "invented_requirements": 0,
-      "tests_passed": 0,
-      "tests_total": 0,
-      "verification_status": "not_run",
+      "tests_passed": 8,
+      "tests_total": 8,
+      "verification_status": "passed",
       "repair_cycles": 0,
-      "runtime_seconds": null,
-      "estimated_cost": null,
-      "artifact_completeness": 0.0,
+      "runtime_seconds": 0.877,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.9,
       "source_safety_violations": 0,
       "review_blockers": 0,
-      "human_correction_minutes": null
+      "human_correction_minutes": 0,
+      "release_decision": "release_ready",
+      "report_path": "F:/ubuntu/test/9/artifacts/verified_system_packages/verified_system_package_20260720T055047525201Z.json",
+      "project_dir": "F:/ubuntu/test/9/artifacts/programmer_prompt_curriculum/generic_file_converter_cli_20260720T055046658723Z"
     }
   },
   "comparison": {
-    "winner": "undecided",
-    "cognitive_os_advantages": [],
-    "direct_agent_advantages": [],
-    "no_difference": [],
-    "confidence": 0.0
+    "winner": "cognitive_os",
+    "cognitive_os_advantages": [
+      "stronger review and safety artifacts"
+    ],
+    "direct_agent_advantages": [
+      "simpler route"
+    ],
+    "no_difference": [
+      "both routes completed"
+    ],
+    "confidence": 0.45
   },
   "invariants": {
     "same_original_prompt": true,
@@ -54,6 +66,5 @@
     "teacher_reference_is_ground_truth": false,
     "source_mutation_detected": false
   },
-  "verdict": "not_evaluated"
+  "verdict": "cognitive_os_wins_baseline"
 }
-

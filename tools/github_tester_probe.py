@@ -13,12 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import (
-    run_architect_skill,
-    run_implementer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-)
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -77,7 +72,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
             "registry_changes": False,
             "teacher_reference_is_ground_truth": False,
             "automatic_code_changes_from_own_output": False,
-            "reviewer_not_in_scope": True,
+            "downstream_roles_not_in_scope": True,
             "foundry_or_promote_not_in_scope": True,
         },
         "cases": cases,
@@ -86,10 +81,13 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub Tester probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    plan = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=plan)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub Tester probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="TestPlan",
+    )
+    plan = artifact_by_type(artifacts, "ImplementationPlan")
+    test_plan = artifact_by_type(artifacts, "TestPlan")
     target = str(dict(test_plan.get("test_target", {})).get("candidate") or "")
     implementation_target = str(dict(plan.get("implementation_target", {})).get("candidate") or "")
     strategy = dict(test_plan.get("test_strategy", {}))
@@ -167,7 +165,7 @@ def _blocked_reason(project_report: dict[str, Any]) -> str:
 
 def _quality_score(test_plan: dict[str, Any], target: str, implementation_target: str, writable_scope: list[str], forbidden: list[str]) -> float:
     score = 0.0
-    if test_plan.get("artifact_type") == "TestPlan" and test_plan.get("role") == "tester":
+    if test_plan.get("artifact_type") == "TestPlan" and test_plan.get("role") == producer_for_artifact_type("TestPlan"):
         score += 0.15
     if target and target == implementation_target:
         score += 0.2

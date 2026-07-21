@@ -12,6 +12,12 @@ from .role_definitions import load_role_record_defaults, role_ids
 ROLE_ORDER = role_ids()
 
 
+def role_order() -> tuple[str, ...]:
+    """Return the active role order from external role definitions."""
+
+    return role_ids()
+
+
 @dataclass(frozen=True)
 class RoleKnowledgeView:
     role: str
@@ -30,7 +36,8 @@ def record_roles(record: dict[str, Any]) -> list[str]:
     if isinstance(explicit, list) and explicit:
         return _known_roles(explicit)
     defaults = load_role_record_defaults()
-    fallback = list(ROLE_ORDER[:1]) or ["unassigned"]
+    active_roles = role_order()
+    fallback = list(active_roles[:1]) or ["unassigned"]
     return list(defaults.get(str(record.get("record_type")), fallback))
 
 
@@ -59,13 +66,14 @@ def enrich_record_for_role(record: dict[str, Any]) -> dict[str, Any]:
 def role_knowledge_distribution(records: list[dict[str, Any]]) -> dict[str, Any]:
     """Summarize how the current KB is distributed across roles."""
 
-    by_role: dict[str, list[dict[str, Any]]] = {role: [] for role in ROLE_ORDER}
+    active_roles = role_order()
+    by_role: dict[str, list[dict[str, Any]]] = {role: [] for role in active_roles}
     for record in records:
         enriched = enrich_record_for_role(record)
         for role in enriched["role_scope"]:
             by_role.setdefault(role, []).append(enriched)
     views = []
-    for role in ROLE_ORDER:
+    for role in active_roles:
         rows = by_role.get(role, [])
         record_types = Counter(str(row.get("record_type") or "unknown") for row in rows)
         views.append(
@@ -102,6 +110,7 @@ def _record_id(record: dict[str, Any]) -> str:
 
 
 def _known_roles(values: list[Any]) -> list[str]:
-    known = set(ROLE_ORDER)
+    active_roles = role_order()
+    known = set(active_roles)
     roles = [str(value) for value in values if str(value) in known]
-    return roles or list(ROLE_ORDER[:1]) or ["unassigned"]
+    return roles or list(active_roles[:1]) or ["unassigned"]

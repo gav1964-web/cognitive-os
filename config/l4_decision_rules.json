@@ -1,0 +1,106 @@
+{
+  "schema_version": "l4_decision_rules.v1",
+  "status": "active",
+  "principle": "repeated semantic decisions should crystallize into deterministic rules, gates, templates or tests",
+  "rules": [
+    {
+      "rule_id": "prompt_ready_template_supported",
+      "scope": "prompt_to_product",
+      "priority": 10,
+      "conditions": {
+        "prompt_adequacy_status": "ready",
+        "supported_template": "present"
+      },
+      "next_action": "build_verified_system_package",
+      "reason_code": "prompt_ready_and_template_supported",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "prompt_terminal_unsupported_boundary",
+      "scope": "prompt_to_product",
+      "priority": 20,
+      "conditions": {
+        "terminal_unsupported_boundary": true
+      },
+      "next_action": "ask_clarification",
+      "reason_code": "unsupported_boundary_requires_clarification",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "prompt_needs_clarification",
+      "scope": "prompt_to_product",
+      "priority": 30,
+      "conditions": {
+        "prompt_adequacy_status": "needs_clarification"
+      },
+      "next_action": "ask_clarification",
+      "reason_code": "prompt_needs_clarification",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "prompt_too_broad",
+      "scope": "prompt_to_product",
+      "priority": 31,
+      "conditions": {
+        "prompt_adequacy_status": "too_broad"
+      },
+      "next_action": "ask_clarification",
+      "reason_code": "prompt_too_broad",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "prompt_unsupported",
+      "scope": "prompt_to_product",
+      "priority": 40,
+      "conditions": {
+        "prompt_adequacy_status": "unsupported"
+      },
+      "next_action": "stop_unsupported",
+      "reason_code": "prompt_unsupported_by_policy",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "prompt_ready_template_missing",
+      "scope": "prompt_to_product",
+      "priority": 50,
+      "conditions": {
+        "prompt_adequacy_status": "ready",
+        "supported_template": "missing"
+      },
+      "next_action": "request_l45_semantic_hypothesis",
+      "reason_code": "no_supported_package_template",
+      "llm_allowed": true
+    },
+    {
+      "rule_id": "l45_new_template_candidate_accepted",
+      "scope": "semantic_validation",
+      "priority": 10,
+      "conditions": {
+        "l4_semantic_validation_status": "accepted",
+        "hypothesis_type": "new_template_candidate"
+      },
+      "next_action": "record_template_backlog",
+      "reason_code": "l45_new_template_candidate_accepted_by_l4_gate",
+      "llm_allowed": false
+    },
+    {
+      "rule_id": "l45_proposal_blocked",
+      "scope": "semantic_validation",
+      "priority": 20,
+      "conditions": {
+        "l4_semantic_validation_status": "blocked"
+      },
+      "next_action": "blocked",
+      "reason_code": "l45_proposal_failed_l4_validation",
+      "llm_allowed": false
+    }
+  ],
+  "terminal_unsupported_markers": ["mobile_app", "browser_extension", "blockchain", "game_engine"],
+  "terminal_secret_risk_markers": ["secrets"],
+  "prompt_escalation_reasons": {
+    "ready_missing_template": "no_supported_package_template",
+    "bounded_intake_uncertainty": "prompt_intake_uncertainty",
+    "bounded_behavior_question": "behavior_question_uncertainty",
+    "unsupported_system_type": "unsupported_system_type_requires_semantic_classification"
+  }
+}

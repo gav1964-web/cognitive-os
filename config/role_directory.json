@@ -1,0 +1,261 @@
+{
+  "schema_version": "role_directory.v2",
+  "status": "active",
+  "policy": {
+    "roles_are_source_of_truth": true,
+    "runtime_is_interpreter": true,
+    "role_specific_python_facades": false
+  },
+  "roles": {
+    "project_analyzer": {
+      "label": "Project Analyzer",
+      "order": 10,
+      "description": "Builds ProjectMapReport from bounded project evidence.",
+      "capabilities": ["scan_project", "extract_facts", "answer_project_questions"],
+      "consumes": ["SourceTree"],
+      "produces": ["ProjectMapReport"],
+      "kb_filters": {"role_scope": ["project_analyzer"]},
+      "policy": {"llm_authority": "none", "source_mutation": "forbidden"},
+      "contract": {
+        "inputs": [{"name": "source_tree", "artifact_type": "SourceTree", "required": true}],
+        "outputs": [{"name": "project_map_report", "artifact_type": "ProjectMapReport", "required": true}]
+      },
+      "gates": ["project_path_exists", "python_project_scope", "bounded_file_scan"],
+      "fallback_policy": {"on_missing_evidence": "emit_controlled_gap", "on_unsupported_project": "stop_unsupported"},
+      "llm_policy": {"allowed": false, "reason": "project facts must be extracted deterministically"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["path_outside_scope", "no_python_files", "scan_contract_failure"],
+      "quality_criteria": ["answers_source_linked", "entrypoints_detected", "runtime_extraction_readiness_present"]
+    },
+    "architect": {
+      "label": "Architect",
+      "order": 20,
+      "description": "Turns project facts and a goal into an ArchitectureDecisionRecord.",
+      "capabilities": ["choose_architecture_boundary", "rank_options", "surface_risks"],
+      "consumes": ["ProjectMapReport"],
+      "produces": ["ArchitectureDecisionRecord"],
+      "kb_filters": {"role_scope": ["architect"]},
+      "policy": {"llm_authority": "hypothesis_only", "source_mutation": "forbidden"},
+      "contract": {
+        "inputs": [{"name": "project_report", "artifact_type": "ProjectMapReport", "required": true}],
+        "outputs": [{"name": "architecture_decision", "artifact_type": "ArchitectureDecisionRecord", "required": true}]
+      },
+      "gates": ["project_report_has_evidence", "chosen_option_required", "traceability_required"],
+      "fallback_policy": {"on_low_confidence": "request_l45_semantic_hypothesis", "on_no_safe_candidate": "emit_blocked_adr"},
+      "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["no_source_evidence", "forbidden_source_target", "mutation_requested"],
+      "quality_criteria": ["decision_has_source_evidence", "risks_are_actionable", "handoff_is_typed"],
+      "artifact_builder": {
+        "builder_id": "architecture_decision_v1",
+        "callable": "runtime.architecture_decision_builder:build_architecture_decision",
+        "artifact_type": "ArchitectureDecisionRecord",
+        "kwargs": {"role_id": "architect", "next_role_id": "spec_writer"}
+      }
+    },
+    "spec_writer": {
+      "label": "Spec Writer",
+      "order": 30,
+      "description": "Converts an ArchitectureDecisionRecord into an implementable TechnicalSpec.",
+      "capabilities": ["write_contracts", "define_acceptance", "preserve_scope"],
+      "consumes": ["ArchitectureDecisionRecord"],
+      "produces": ["TechnicalSpec"],
+      "kb_filters": {"role_scope": ["spec_writer"]},
+      "policy": {"llm_authority": "hypothesis_only", "source_mutation": "forbidden"},
+      "contract": {
+        "inputs": [{"name": "architecture_decision", "artifact_type": "ArchitectureDecisionRecord", "required": true}],
+        "outputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}]
+      },
+      "gates": ["adr_chosen_option_present", "ranked_candidate_present", "acceptance_criteria_required"],
+      "fallback_policy": {"on_contract_gap": "return_to_architect", "on_semantic_gap": "request_l45_semantic_hypothesis"},
+      "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["missing_adr", "unverifiable_acceptance", "scope_not_bounded"],
+      "quality_criteria": ["requirements_verifiable", "traceability_table_present", "implementation_handoff_typed"],
+      "artifact_builder": {
+        "builder_id": "technical_spec_v1",
+        "callable": "runtime.technical_spec_builder:build_technical_spec",
+        "artifact_type": "TechnicalSpec",
+        "kwargs": {"role_id": "spec_writer", "next_role_id": "implementer"}
+      }
+    },
+    "implementer": {
+      "label": "Implementer",
+      "order": 40,
+      "description": "Converts a TechnicalSpec into a bounded ImplementationPlan.",
+      "capabilities": ["plan_patch", "bind_contracts", "prepare_executor_handoff"],
+      "consumes": ["TechnicalSpec"],
+      "produces": ["ImplementationPlan", "PatchPackage"],
+      "kb_filters": {"role_scope": ["implementer"]},
+      "policy": {
+        "source_mutation": "forbidden_without_approval",
+        "dependency_expansion": "explicit_only",
+        "llm_authority": "hypothesis_only"
+      },
+      "contract": {
+        "inputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}],
+        "outputs": [
+          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true},
+          {"name": "patch_package", "artifact_type": "PatchPackage", "required": false}
+        ]
+      },
+      "gates": ["technical_spec_contract_present", "writable_scope_bounded", "verification_commands_allowlisted"],
+      "fallback_policy": {"on_missing_template": "request_l45_semantic_hypothesis", "on_failed_sandbox": "emit_developer_improvement_request"},
+      "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["source_edit_without_approval", "dependency_policy_violation", "unbounded_patch_scope"],
+      "quality_criteria": ["plan_has_patch_intent", "executor_handoff_present", "rollback_policy_present"],
+      "artifact_builder": {
+        "builder_id": "implementation_plan_v1",
+        "callable": "runtime.implementation_plan_builder:build_implementation_plan",
+        "artifact_type": "ImplementationPlan",
+        "kwargs": {"role_id": "implementer", "next_role_id": "tester"}
+      }
+    },
+    "tester": {
+      "label": "Tester",
+      "order": 50,
+      "description": "Converts a TechnicalSpec and ImplementationPlan into a TestPlan.",
+      "capabilities": ["define_contract_tests", "define_negative_tests", "fake_external_calls_by_default"],
+      "consumes": ["TechnicalSpec", "ImplementationPlan"],
+      "produces": ["TestPlan", "TestResult"],
+      "kb_filters": {"role_scope": ["tester"]},
+      "policy": {"source_mutation": "forbidden", "live_external_calls": "fake_by_default"},
+      "contract": {
+        "inputs": [
+          {"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true},
+          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}
+        ],
+        "outputs": [
+          {"name": "test_plan", "artifact_type": "TestPlan", "required": true},
+          {"name": "test_result", "artifact_type": "TestResult", "required": false}
+        ]
+      },
+      "gates": ["contract_test_matrix_required", "negative_tests_required", "external_calls_faked_by_default"],
+      "fallback_policy": {"on_missing_acceptance": "return_to_spec_writer", "on_unverifiable_plan": "return_to_implementer"},
+      "llm_policy": {"allowed": false, "reason": "tester MVP uses deterministic contract checks"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["live_external_call_required", "missing_implementation_plan", "no_verifiable_acceptance"],
+      "quality_criteria": ["negative_tests_present", "contract_matrix_targets_candidate", "verification_is_project_scoped"],
+      "artifact_builder": {
+        "builder_id": "test_plan_v1",
+        "callable": "runtime.test_plan_builder:build_test_plan",
+        "artifact_type": "TestPlan",
+        "kwargs": {"role_id": "tester", "next_role_id": "reviewer"}
+      }
+    },
+    "reviewer": {
+      "label": "Reviewer",
+      "order": 60,
+      "description": "Reviews spec, plan, tests and optional result into ReviewFindings.",
+      "capabilities": ["check_conformance", "block_unsafe_changes", "request_rework"],
+      "consumes": ["TechnicalSpec", "ImplementationPlan", "TestPlan"],
+      "produces": ["ReviewFindings"],
+      "kb_filters": {"role_scope": ["reviewer"]},
+      "policy": {"source_mutation": "forbidden", "approval_required_for_promotion": true},
+      "contract": {
+        "inputs": [
+          {"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true},
+          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true},
+          {"name": "test_plan", "artifact_type": "TestPlan", "required": true},
+          {"name": "test_result", "artifact_type": "TestResult", "required": false}
+        ],
+        "outputs": [{"name": "review_findings", "artifact_type": "ReviewFindings", "required": true}]
+      },
+      "gates": ["scope_preserved", "contract_violations_checked", "promotion_requires_human_review"],
+      "fallback_policy": {"on_review_block": "bounded_rework_plan", "on_semantic_uncertainty": "request_l45_semantic_hypothesis"},
+      "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["unsafe_source_mutation", "contract_violation", "unreviewed_promotion"],
+      "quality_criteria": ["recommendation_explicit", "risks_have_mitigation", "review_target_matches_plan"],
+      "artifact_builder": {
+        "builder_id": "review_findings_v1",
+        "callable": "runtime.review_findings_builder:build_review_findings",
+        "artifact_type": "ReviewFindings",
+        "kwargs": {"role_id": "reviewer"}
+      }
+    },
+    "researcher": {
+      "label": "Researcher",
+      "order": 70,
+      "description": "Handles bounded knowledge gaps and evidence candidates.",
+      "capabilities": ["plan_research", "collect_evidence_candidates", "prepare_kb_candidates"],
+      "consumes": ["KnowledgeGapPacket", "ProjectMapReport"],
+      "produces": ["EvidenceCandidate", "KnowledgeGapPacket"],
+      "kb_filters": {"role_scope": ["researcher"]},
+      "policy": {
+        "llm_authority": "hypothesis_only",
+        "kb_admission": "requires_repeated_cases_and_human_approval"
+      },
+      "contract": {
+        "inputs": [
+          {"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": true},
+          {"name": "project_report", "artifact_type": "ProjectMapReport", "required": false}
+        ],
+        "outputs": [
+          {"name": "evidence_candidate", "artifact_type": "EvidenceCandidate", "required": false},
+          {"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": false}
+        ]
+      },
+      "gates": ["evidence_refs_required", "source_attribution_required", "kb_admission_policy_required"],
+      "fallback_policy": {"on_no_evidence": "emit_knowledge_gap", "on_repeated_verified_cases": "stage_kb_candidate"},
+      "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false, "requires_codex_approval": true},
+      "stop_conditions": ["no_evidence_refs", "unattributed_claim", "auto_promotion_requested"],
+      "quality_criteria": ["candidate_has_evidence", "facts_and_judgments_separated", "approval_gates_declared"]
+    }
+  },
+  "pipeline": [
+    {
+      "step_id": "architecture_decision",
+      "role_id": "architect",
+      "output_key": "architecture_decision",
+      "bindings": {
+        "goal": "$goal",
+        "project_report": "$project_report",
+        "advisory_config": "$advisory_config"
+      }
+    },
+    {
+      "step_id": "technical_spec",
+      "role_id": "spec_writer",
+      "output_key": "technical_spec",
+      "bindings": {"architecture_decision": "$artifacts.architecture_decision"}
+    },
+    {
+      "step_id": "implementation_plan",
+      "role_id": "implementer",
+      "output_key": "implementation_plan",
+      "bindings": {"technical_spec": "$artifacts.technical_spec"}
+    },
+    {
+      "step_id": "test_plan",
+      "role_id": "tester",
+      "output_key": "test_plan",
+      "bindings": {
+        "technical_spec": "$artifacts.technical_spec",
+        "implementation_plan": "$artifacts.implementation_plan"
+      }
+    },
+    {
+      "step_id": "review_findings",
+      "role_id": "reviewer",
+      "output_key": "review_findings",
+      "bindings": {
+        "technical_spec": "$artifacts.technical_spec",
+        "implementation_plan": "$artifacts.implementation_plan",
+        "test_plan": "$artifacts.test_plan",
+        "test_result": "$test_result"
+      }
+    }
+  ],
+  "record_type_defaults": {
+    "project_archetype_rule": ["project_analyzer", "architect", "spec_writer"],
+    "capability_pattern": ["architect", "spec_writer", "implementer", "tester"],
+    "risk_pattern": ["architect", "tester", "reviewer"],
+    "project_lesson": ["architect", "spec_writer", "reviewer"],
+    "architecture_pattern_backlog_item": ["project_analyzer", "architect", "researcher"],
+    "kb_candidate": ["researcher", "architect", "reviewer"],
+    "successful_resolution_candidate": ["researcher", "implementer", "tester", "reviewer"]
+  }
+}

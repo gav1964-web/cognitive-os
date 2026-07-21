@@ -1,0 +1,83 @@
+{
+  "schema_version": "sandbox_release_policy.v1",
+  "status": "active",
+  "generated_package_evaluation": {
+    "required_checks": [
+      "prompt_present",
+      "sandbox_verified",
+      "verification_passed",
+      "operation_selected",
+      "operation_has_evidence",
+      "interface_contract_present",
+      "operation_recipe_present",
+      "recipe_matches_contract",
+      "operation_graph_present",
+      "readme_present",
+      "tests_present",
+      "tester_admission_passed",
+      "source_not_modified",
+      "registry_not_modified",
+      "promotion_forbidden",
+      "raw_llm_not_executed"
+    ],
+    "verdicts": {
+      "passed": "package evidence is complete for the current bounded MVP gate",
+      "minor_gaps": "package is likely usable but has evidence gaps",
+      "blocked": "package should not be treated as release-ready without rework"
+    },
+    "minor_gap_score_threshold": 0.8
+  },
+  "sandbox_programmer_admission": {
+    "required_checks": [
+      "sandbox_result_verified",
+      "has_pyproject",
+      "has_readme",
+      "has_source_cli",
+      "has_tests",
+      "has_fixture_evidence",
+      "cli_uses_argparse",
+      "cli_accepts_input_output",
+      "has_transform_contract_test",
+      "has_cli_output_test",
+      "has_negative_test",
+      "readme_has_run_command",
+      "promotion_still_forbidden",
+      "source_tree_unchanged",
+      "registry_unchanged",
+      "llm_output_not_executed_directly"
+    ],
+    "recommendation": {
+      "passed": "approve_with_risks",
+      "failed": "request_rework"
+    },
+    "release_decision": {
+      "passed": "release_ready_with_risks",
+      "failed": "blocked",
+      "passed_reason": "bounded sandbox package passed tester/reviewer admission; source apply still requires human approval",
+      "failed_reason": "bounded sandbox package failed admission checks"
+    },
+    "known_limitations": [
+      "generated from allowlisted sandbox contract, not a general programmer",
+      "not promoted to KB/template without repeated confirmed cases and approval"
+    ],
+    "forbidden_actions_enforced": [
+      "edit_user_source_tree",
+      "mutate_registry",
+      "promote_to_kb",
+      "execute_raw_model_output"
+    ]
+  },
+  "sandbox_implementation_result": {
+    "allowed_side_effects": ["write output file inside user-selected path"],
+    "forbidden_side_effects": ["modify source repository", "modify KB", "network access"],
+    "next_action": "review_then_consider_kb_candidate_after_repeated_confirmed_cases",
+    "promotion_allowed": false,
+    "source_code_changes": false,
+    "registry_changes": false,
+    "llm_policy": {
+      "llm_output_executed_directly": false,
+      "allowlisted_contract_required": true,
+      "sandbox_only": true
+    }
+  }
+}

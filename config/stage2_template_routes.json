@@ -1,0 +1,101 @@
+{
+  "schema_version": "stage2_template_routes.v1",
+  "status": "active",
+  "known_templates": [
+    "json_log_filter_cli",
+    "text_stats_cli",
+    "csv_sort_cli",
+    "ocr_image_cli",
+    "image_contents_cli",
+    "image_table_to_excel_cli",
+    "generic_file_converter_cli",
+    "fastapi_csv_aggregator",
+    "fastapi_kv_store",
+    "duplicate_file_finder",
+    "batch_renamer_cli",
+    "json_config_merger",
+    "static_site_indexer"
+  ],
+  "routes": [
+    {
+      "case": "fastapi_kv_store",
+      "all": ["fastapi"],
+      "any": ["key", "ключ", "crud", "items"]
+    },
+    {
+      "case": "fastapi_csv_aggregator",
+      "all": ["fastapi", "csv"],
+      "any": ["агрег", "aggreg"]
+    },
+    {
+      "case": "text_stats_cli",
+      "any_groups": [
+        ["text", "текст"],
+        ["stats", "стат", "word", "слов"]
+      ]
+    },
+    {
+      "case": "csv_sort_cli",
+      "all": ["csv"],
+      "any": ["sort", "сорт"]
+    },
+    {
+      "case": "generic_file_converter_cli",
+      "predicate": "file_conversion_prompt"
+    },
+    {
+      "case": "image_table_to_excel_cli",
+      "any_groups": [
+        ["image", "picture", "photo", "изображ", "картин", "фото"],
+        ["excel", "xlsx", "xls", "csv", "html", "doc", "rtf", "таблиц", "таблич", "смет"]
+      ]
+    },
+    {
+      "case": "ocr_image_cli",
+      "any_groups": [
+        ["ocr", "распозна"],
+        ["image", "изображ", "картин", "png", "jpg"]
+      ]
+    },
+    {
+      "case": "image_contents_cli",
+      "any_groups": [
+        ["image", "picture", "photo", "изображ", "картин", "фото"],
+        ["content", "contents", "list", "перечисл", "содерж", "объект"]
+      ]
+    },
+    {
+      "case": "json_log_filter_cli",
+      "all": ["jsonl"],
+      "any": ["error", "лог", "log"]
+    },
+    {
+      "case": "duplicate_file_finder",
+      "any": ["дублик", "duplicate"]
+    },
+    {
+      "case": "batch_renamer_cli",
+      "any": ["переимен", "rename"]
+    },
+    {
+      "case": "json_config_merger",
+      "any_groups": [
+        ["json"],
+        ["merge", "объедин", "base.json", "override.json"]
+      ]
+    },
+    {
+      "case": "static_site_indexer",
+      "any": ["static", "статическ"],
+      "any_groups_optional": [
+        ["html"],
+        ["title", "ссыл", "links"]
+      ]
+    }
+  ],
+  "continuation": {
+    "format_change_verbs": ["дополн", "добав", "доработ", "расшир", "теперь", "также", "also", "add"],
+    "format_output_markers": ["вывод", "output", "format", "формат", ".rtf", ".doc", ".html", ".csv", ".xls", ".xlsx"],
+    "known_output_formats": ["xlsx", "csv", "xls", "html", "doc", "rtf"]
+  }
+}

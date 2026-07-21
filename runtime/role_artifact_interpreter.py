@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
+from .role_directory import load_role_directory
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ROLE_ARTIFACT_PIPELINE_PATH = ROOT / "config" / "role_artifact_pipeline.json"
@@ -19,6 +21,8 @@ class RoleArtifactInterpreterError(RuntimeError):
 
 @lru_cache(maxsize=1)
 def load_role_artifact_pipeline(path: str | None = None) -> dict[str, Any]:
+    if path is None:
+        return _pipeline_from_role_directory()
     source = Path(path) if path else ROLE_ARTIFACT_PIPELINE_PATH
     payload = json.loads(source.read_text(encoding="utf-8"))
     if payload.get("schema_version") != "role_artifact_pipeline.v1":
@@ -53,17 +57,20 @@ def run_role_artifact_pipeline(
     context: dict[str, Any] = {
         "goal": goal,
         "project_report": project_report,
+        "advisory_config": architect_advisory_config,
         "architect_advisory_config": architect_advisory_config,
         "test_result": test_result,
         "executable_acceptance_result": executable_acceptance_result,
         "artifacts": dict(initial_artifacts or {}),
     }
     for step in payload["steps"]:
-        builder = _load_callable(str(step["builder"]))
+        builder = _load_callable(str(step.get("builder") or "runtime.role_artifact_builder:build_configured_artifact"))
         kwargs = {
             str(name): _resolve_binding(value, context)
             for name, value in dict(step.get("bindings", {})).items()
         }
+        if "role_id" not in kwargs:
+            kwargs["role_id"] = str(step["role_id"])
         artifact = builder(**kwargs)
         if not isinstance(artifact, dict):
             raise RoleArtifactInterpreterError(f"builder returned non-object artifact: {step['builder']}")
@@ -74,6 +81,16 @@ def run_role_artifact_pipeline(
             )
         context["artifacts"][str(step["output_key"])] = artifact
     return dict(context["artifacts"])
+
+
+def _pipeline_from_role_directory() -> dict[str, Any]:
+    directory = load_role_directory()
+    steps = []
+    for step in list(directory.get("pipeline") or []):
+        row = dict(step)
+        row["builder"] = "runtime.role_artifact_builder:build_configured_artifact"
+        steps.append(row)
+    return {"schema_version": "role_artifact_pipeline.v1", "source": "config/role_directory.json", "steps": steps}
 
 
 def _resolve_binding(value: Any, context: dict[str, Any]) -> Any:

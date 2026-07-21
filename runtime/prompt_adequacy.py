@@ -7,9 +7,7 @@ from typing import Any
 
 from .goal_intake import build_goal_spec
 from .prompt_boundary_classifier import classify_prompt_boundary
-
-
-SUPPORTED_SYSTEM_TYPES = {"cli", "file_processing_utility", "small_local_service", "fastapi_service"}
+from .prompt_intake_rules import load_prompt_intake_rules, markers
 
 
 @dataclass(frozen=True)
@@ -31,9 +29,10 @@ class PromptAdequacyGate:
 
 
 def evaluate_prompt_adequacy(prompt: str, *, root_input: dict[str, Any] | None = None) -> PromptAdequacyGate:
+    rules = load_prompt_intake_rules()
     spec = build_goal_spec(prompt, root_input=root_input).to_dict()
-    system_type = _system_type(prompt)
-    checks = _checks(prompt, spec, system_type)
+    system_type = _system_type(prompt, rules=rules)
+    checks = _checks(prompt, spec, system_type, rules=rules)
     missing = [name for name, passed in checks.items() if not passed]
     boundary = classify_prompt_boundary(prompt, system_type=system_type, missing=missing).to_dict()
     status, reason = _status(spec, system_type, missing)
@@ -46,98 +45,41 @@ def evaluate_prompt_adequacy(prompt: str, *, root_input: dict[str, Any] | None =
         goal_spec=spec,
         checks=checks,
         missing=missing,
-        clarification_questions=_questions(missing, spec),
-        supported_scope=sorted(SUPPORTED_SYSTEM_TYPES),
+        clarification_questions=_questions(missing, spec, rules=rules),
+        supported_scope=sorted(str(item) for item in rules["supported_system_types"]),
         boundary_classification=boundary,
     )
 
 
-def _checks(prompt: str, spec: dict[str, Any], system_type: str | None) -> dict[str, bool]:
+def _checks(prompt: str, spec: dict[str, Any], system_type: str | None, *, rules: dict[str, Any]) -> dict[str, bool]:
     lower = prompt.lower()
-    greenfield_ok = spec.get("intent") == "implementation" and system_type in SUPPORTED_SYSTEM_TYPES
+    supported = set(str(item) for item in rules["supported_system_types"])
+    greenfield_ok = spec.get("intent") in {"implementation", "convert_spreadsheet", "file_conversion"} and system_type in supported
+    simple_cli_transform = _simple_cli_transform_prompt(lower, rules=rules)
+    cli_argument_program = _cli_argument_program_prompt(lower, rules=rules)
     return {
         "goal_understood": spec.get("intent") != "unknown" and (spec.get("status") == "ready" or greenfield_ok),
-        "system_type_defined": system_type in SUPPORTED_SYSTEM_TYPES,
+        "system_type_defined": system_type in supported,
         "inputs_defined": bool(spec.get("inputs"))
-        or any(
-            word in lower
-            for word in (
-                "input",
-                "file",
-                "directory",
-                "folder",
-                "csv",
-                "json",
-                "jsonl",
-                "html",
-                "url",
-                "принимает",
-                "читает",
-                "файл",
-                "файлов",
-                "каталог",
-                "директор",
-                "image",
-                "picture",
-                "photo",
-                "изображ",
-                "картин",
-                "фото",
-                "png",
-                "jpg",
-                "jpeg",
-                "webp",
-                "ключ",
-                "key",
-            )
-        ),
+        or simple_cli_transform
+        or cli_argument_program
+        or _has_any_marker(lower, markers("input_markers", rules=rules)),
         "outputs_defined": (bool(spec.get("outputs")) and spec.get("outputs") != ["final_report"])
-        or any(
-            word in lower
-            for word in (
-                "output",
-                "stdout",
-                "json",
-                "csv",
-                "txt",
-                "report",
-                "отчет",
-                "отчёт",
-                "список",
-                "перечисл",
-                "содерж",
-                "текст",
-            )
-        ),
-        "constraints_defined": bool(spec.get("constraints")) or _has_dependency_policy(lower),
-        "success_criteria_verifiable": bool(spec.get("success_criteria"))
-        and any(
-            word in lower
-            for word in (
-                "test",
-                "тест",
-                "readme",
-                "csv",
-                "json",
-                "report",
-                "отчет",
-                "stdout",
-                "текст",
-                "txt",
-                "список",
-                "перечисл",
-                "list",
-                "contents",
-                "содерж",
-            )
-        ),
-        "dependencies_policy_defined": _has_dependency_policy(lower),
-        "scope_bounded": not any(word in lower for word in ("любую", "anything", "everything", "полностью всё", "все что нужно")),
+        or simple_cli_transform
+        or cli_argument_program
+        or _has_any_marker(lower, markers("output_markers", rules=rules)),
+        "constraints_defined": bool(spec.get("constraints")) or _has_dependency_policy(lower, rules=rules),
+        "success_criteria_verifiable": simple_cli_transform
+        or cli_argument_program
+        or (bool(spec.get("success_criteria")) and _has_any_marker(lower, markers("success_criteria_markers", rules=rules))),
+        "dependencies_policy_defined": _has_dependency_policy(lower, rules=rules),
+        "scope_bounded": not _has_any_marker(lower, markers("scope_unbounded_markers", rules=rules)),
     }
 
 
 def _status(spec: dict[str, Any], system_type: str | None, missing: list[str]) -> tuple[str, str]:
-    greenfield_ok = spec.get("intent") == "implementation" and system_type in SUPPORTED_SYSTEM_TYPES
+    supported = set(str(item) for item in load_prompt_intake_rules()["supported_system_types"])
+    greenfield_ok = spec.get("intent") in {"implementation", "convert_spreadsheet", "file_conversion"} and system_type in supported
     if spec.get("status") == "needs_clarification" and not greenfield_ok:
         return "needs_clarification", "GOAL_SPEC_NEEDS_CLARIFICATION"
     if system_type is None:
@@ -149,49 +91,44 @@ def _status(spec: dict[str, Any], system_type: str | None, missing: list[str]) -
     return "ready", "PROMPT_ADEQUATE"
 
 
-def _system_type(prompt: str) -> str | None:
+def _system_type(prompt: str, *, rules: dict[str, Any] | None = None) -> str | None:
+    rules = rules or load_prompt_intake_rules()
     lower = prompt.lower()
-    if "fastapi" in lower or "http" in lower or "endpoint" in lower or "служб" in lower:
-        return "fastapi_service"
-    if "cli" in lower or "утилит" in lower or "command" in lower:
+    if _cli_argument_program_prompt(lower, rules=rules):
         return "cli"
-    if any(word in lower for word in ("csv", "jsonl", "xlsx", "markdown", "file", "файл", "image", "picture", "изображ", "картин", "фото")):
-        return "file_processing_utility"
-    if "local service" in lower or "локальн" in lower:
-        return "small_local_service"
+    for row in rules.get("system_type_rules", []):
+        if _has_any_marker(lower, [str(item) for item in row.get("markers", [])]):
+            return str(row["system_type"])
     return None
 
 
-def _has_dependency_policy(lower: str) -> bool:
-    markers = (
-        "без сети",
-        "без сетевых",
-        "no live network",
-        "stdlib",
-        "standard library",
-        "cli .py",
-        ".py",
-        "python",
-        "без внешних",
-        "локальн",
-        "dependencies",
-        "зависим",
-    )
-    return any(marker in lower for marker in markers)
+def _has_dependency_policy(lower: str, *, rules: dict[str, Any]) -> bool:
+    return _has_any_marker(lower, markers("dependency_policy_markers", rules=rules)) or _cli_argument_program_prompt(lower, rules=rules)
 
 
-def _questions(missing: list[str], spec: dict[str, Any]) -> list[str]:
+def _simple_cli_transform_prompt(lower: str, *, rules: dict[str, Any]) -> bool:
+    if not (_has_any_marker(lower, ["cli", "утилит", ".py"]) or _cli_argument_program_prompt(lower, rules=rules)):
+        return False
+    return _has_any_marker(lower, markers("simple_cli_transform_markers", rules=rules))
+
+
+def _cli_argument_program_prompt(lower: str, *, rules: dict[str, Any] | None = None) -> bool:
+    rules = rules or load_prompt_intake_rules()
+    cli_rules = dict(rules.get("cli_argument_program") or {})
+    has_program = _has_any_marker(lower, [str(item) for item in cli_rules.get("program_markers", [])])
+    has_args = _has_any_marker(lower, [str(item) for item in cli_rules.get("argument_markers", [])])
+    has_terminal_output = _has_any_marker(lower, [str(item) for item in cli_rules.get("terminal_output_markers", [])])
+    return (has_program or "cli" in lower) and has_args and has_terminal_output
+
+
+def _questions(missing: list[str], spec: dict[str, Any], *, rules: dict[str, Any]) -> list[str]:
     if not missing:
         return []
     questions = list(dict(spec.get("clarification") or {}).get("questions") or [])
-    mapping = {
-        "system_type_defined": "What bounded system type should be produced: CLI, FastAPI service, file utility, or local service?",
-        "inputs_defined": "What are the concrete inputs and their formats?",
-        "outputs_defined": "What files, API responses, or reports should be produced?",
-        "constraints_defined": "What constraints should apply, including network and dependency policy?",
-        "success_criteria_verifiable": "What tests or observable criteria prove the result works?",
-        "dependencies_policy_defined": "Are external dependencies allowed, or should the package stay stdlib/local-only?",
-        "scope_bounded": "Which narrow first version should be built instead of the broad request?",
-    }
+    mapping = dict(rules.get("clarification_questions") or {})
     questions.extend(mapping[item] for item in missing if item in mapping)
     return questions[:5]
+
+
+def _has_any_marker(lower: str, values: list[str]) -> bool:
+    return any(marker in lower for marker in values)

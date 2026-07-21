@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .role_directory import load_role_directory
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ROLE_DEFINITIONS_DIR = ROOT / "roles"
@@ -40,6 +42,8 @@ class RoleDefinition:
 
 @lru_cache(maxsize=1)
 def load_role_definitions(path: str | None = None) -> list[RoleDefinition]:
+    if path is None:
+        return _load_role_definitions_from_directory()
     source = Path(path) if path else ROLE_DEFINITIONS_DIR
     if not source.exists():
         return []
@@ -52,6 +56,17 @@ def load_role_definitions(path: str | None = None) -> list[RoleDefinition]:
 
 @lru_cache(maxsize=1)
 def load_role_record_defaults(path: str | None = None) -> dict[str, list[str]]:
+    if path is None:
+        payload = load_role_directory()
+        defaults = payload.get("record_type_defaults", {})
+        if not isinstance(defaults, dict):
+            raise ValueError("role directory must contain record_type_defaults object")
+        role_set = set(role_ids())
+        return {
+            str(record_type): [str(role) for role in roles if str(role) in role_set]
+            for record_type, roles in defaults.items()
+            if isinstance(roles, list)
+        }
     source = Path(path) if path else ROLE_RECORD_DEFAULTS_PATH
     if not source.exists():
         return {}
@@ -105,3 +120,29 @@ def _parse_role_definition(payload: dict[str, Any], path: Path) -> RoleDefinitio
         policy=dict(payload.get("policy") or {}),
         questions=questions,
     )
+
+
+def _load_role_definitions_from_directory() -> list[RoleDefinition]:
+    directory = load_role_directory()
+    definitions = []
+    for role_id, role in dict(directory.get("roles") or {}).items():
+        legacy_path = ROLE_DEFINITIONS_DIR / f"{role_id}.json"
+        questions: list[dict[str, Any]] = []
+        if legacy_path.is_file():
+            legacy_payload = json.loads(legacy_path.read_text(encoding="utf-8"))
+            raw_questions = legacy_payload.get("questions", [])
+            if isinstance(raw_questions, list):
+                questions = [dict(item) for item in raw_questions if isinstance(item, dict)]
+        definitions.append(
+            RoleDefinition(
+                role_id=str(role_id),
+                label=str(role.get("label") or role_id),
+                order=int(role.get("order") or 0),
+                consumes=[str(item) for item in role.get("consumes", [])],
+                produces=[str(item) for item in role.get("produces", [])],
+                kb_filters=dict(role.get("kb_filters") or {}),
+                policy=dict(role.get("policy") or {}),
+                questions=questions,
+            )
+        )
+    return sorted(definitions, key=lambda row: (row.order, row.role_id))
