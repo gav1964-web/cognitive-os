@@ -65,6 +65,7 @@ def run_benchmark_case(project_dir: Path) -> dict[str, Any]:
         "level35_project_signals": advisory["level35_project_signals"],
         "level4_project_interpretation": advisory["level4_project_interpretation"],
         "analysis_tasks": advisory["analysis_tasks"],
+        "architecture_synthesis": advisory["architecture_synthesis"],
     }
 
 

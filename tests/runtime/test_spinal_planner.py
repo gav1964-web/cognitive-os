@@ -35,6 +35,8 @@ def test_spinal_planner_builds_deterministic_motor_plan() -> None:
     assert result["motor_plan_packet"]["packet_type"] == "MOTOR_PLAN"
     assert result["motor_plan_packet"]["payload"]["capability_chain"] == ["normalize_text", "hash_payload"]
     assert result["motor_plan_packet"]["payload"]["execution_policy"]["execute_plugins"] is False
+    assert result["selection_diagnostics"]["summary"]["active"] > 0
+    assert result["selection_diagnostics"]["schema_policy"]
     assert result["signal_packet"]["payload"]["signals"][0]["type"] == "MOTOR_PLAN_READY"
     assert score_spinal_result(result, registry)["passed"] is True
 
@@ -81,6 +83,7 @@ def test_spinal_planner_uses_llm_only_as_validated_proposal() -> None:
     assert result["status"] == "planned"
     assert result["planner"] == "local_llm_graph_planner"
     assert result["pipeline"]["id"] == "llm_select_hash"
+    assert result["selection_diagnostics"]["llm_fallback"]["authority"] == "proposal_only_validated_by_pipeline_dsl"
     assert result["motor_plan_packet"]["payload"]["validation"]["pipeline_dsl_validated"] is True
     assert score_spinal_result(result, registry)["passed"] is True
 
@@ -90,8 +93,13 @@ def test_spinal_planner_turns_interrupt_into_motor_signal() -> None:
     interrupt = interrupt_packet(
         correlation_id="goal_spinal_3",
         interrupt={
+            "type": "CRITICAL_INTERRUPT",
+            "pipeline_id": "fetch_pipeline",
+            "failed_node_id": "fetch",
             "error_class": "transient",
             "capability_id": "fetch_html",
+            "error_fingerprint": {"exception_type": "TimeoutError", "traceback_hash": "test"},
+            "state_ref": "checkpoint_test",
             "capability_status": "active",
             "suggested_actions": [],
         },

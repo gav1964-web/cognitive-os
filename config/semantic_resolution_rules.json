@@ -1,0 +1,124 @@
+{
+  "schema_version": "semantic_resolution_rules.v1",
+  "status": "active",
+  "existing_resolution_rules": [
+    {
+      "rule_id": "csv_sort_cli",
+      "predicate": "csv_sort_prompt",
+      "required_template": "csv_sort_cli",
+      "resolution_id": "map_to_existing_csv_sort_cli",
+      "means_used": ["known_template:csv_sort_cli", "prompt_to_product_gate"],
+      "verification_plan": ["rerun deterministic gate with supported_template=csv_sort_cli", "build package", "run pytest"],
+      "kb_candidate": {
+        "pattern": "CSV sort prompts map to csv_sort_cli",
+        "role_scope": "prompt_to_product",
+        "evidence_strength": "weak"
+      },
+      "confidence": 0.82,
+      "evidence_refs": ["known_templates.csv_sort_cli", "PromptAdequacyGate.status=ready"],
+      "risks": ["mapping must be rerun through deterministic gate", "KB promotion requires repeated successes"]
+    },
+    {
+      "rule_id": "image_contents_cli",
+      "predicate": "image_contents_prompt",
+      "required_template": "image_contents_cli",
+      "resolution_id": "map_to_existing_image_contents_cli",
+      "means_used": ["known_template:image_contents_cli", "prompt_intake_semantic_interpretation"],
+      "verification_plan": [
+        "rerun deterministic gate after intake interpretation",
+        "build image_contents_cli package",
+        "run project-scoped pytest"
+      ],
+      "kb_candidate": {
+        "pattern": "Short image contents CLI prompts map to image_contents_cli",
+        "role_scope": "prompt_to_product",
+        "evidence_strength": "weak"
+      },
+      "confidence": 0.78,
+      "evidence_refs": ["known_templates.image_contents_cli", "PromptAdequacyGate.status=needs_clarification"],
+      "risks": ["short prompt may still need output format clarification", "KB promotion requires repeated successes"]
+    },
+    {
+      "rule_id": "generic_file_converter_cli",
+      "predicate": "file_conversion_prompt",
+      "required_template": "generic_file_converter_cli",
+      "resolution_id": "map_to_bounded_adapter_recipe_generic_file_converter",
+      "means_used": [
+        "known_template:generic_file_converter_cli",
+        "generic_file_conversion_recipe",
+        "library_binding_recipe",
+        "adapter_implementation_plan"
+      ],
+      "verification_plan": [
+        "build GenericFileConversionRecipe",
+        "build LibraryBindingRecipe",
+        "build AdapterImplementationPlan",
+        "validate SandboxAttemptSpec bounded_adapter_recipe",
+        "build generic_file_converter_cli package",
+        "run project-scoped pytest"
+      ],
+      "kb_candidate": {
+        "pattern": "Simple extension-pair conversion prompts map to bounded adapter recipe",
+        "role_scope": "prompt_to_product",
+        "evidence_strength": "weak"
+      },
+      "confidence": 0.8,
+      "evidence_refs": [
+        "known_templates.generic_file_converter_cli",
+        "GenericFileConversionRecipe.source_target_extensions"
+      ],
+      "risks": [
+        "real conversion fidelity depends on selected adapter backend",
+        "KB promotion requires repeated successes"
+      ],
+      "include_conversion_recipe": true
+    }
+  ],
+  "developer_request_rules": [
+    {
+      "rule_id": "behavior_question",
+      "predicate": "behavior_question",
+      "request_id": "add_behavior_question_answering_route",
+      "missing_capability": "fact_based_behavior_question_answering_capability",
+      "problem": "L4.5 could not answer a bounded behavior/limitation question from existing KB, project evidence, or supported templates.",
+      "acceptance_focus": [
+        "behavior questions are routed separately from prompt-to-product generation",
+        "answer is grounded in README, source code, tests, and verification artifacts",
+        "unknown behavior produces explicit limitation/developer request instead of hallucination",
+        "LLM may propose an answer only as a bounded hypothesis validated by L4.0 evidence checks"
+      ]
+    },
+    {
+      "rule_id": "image_contents",
+      "predicate": "image_contents_prompt",
+      "request_id": "add_image_contents_cli_route",
+      "missing_capability": "image_contents_cli_template_or_vision_analysis_capability",
+      "problem": "L4.5 could not solve this adequate prompt with existing templates/capabilities.",
+      "acceptance_focus": [
+        "image input path accepted by CLI",
+        "visible contents returned as JSON items/summary/limitations",
+        "vision analyzer is optional/injectable for tests",
+        "missing, unsupported, and unavailable-backend errors are controlled"
+      ]
+    },
+    {
+      "rule_id": "ocr_image",
+      "predicate": "ocr_prompt",
+      "request_id": "add_ocr_image_cli_route",
+      "missing_capability": "ocr_image_cli_template_or_image_ocr_capability",
+      "problem": "L4.5 could not solve this adequate prompt with existing templates/capabilities.",
+      "acceptance_focus": [
+        "image input path accepted by CLI",
+        "recognized text written to stdout or text file",
+        "OCR backend is optional/injectable for tests",
+        "missing and unsupported images have controlled errors"
+      ]
+    }
+  ],
+  "default_developer_request": {
+    "request_id": "add_stage2_template_or_generic_cli_builder",
+    "missing_capability": "supported_existing_means_for_prompt_to_product",
+    "problem": "L4.5 could not solve this adequate prompt with existing templates/capabilities.",
+    "acceptance_focus": ["bounded prompt can be built or explicitly rejected", "tests and README are generated"]
+  }
+}

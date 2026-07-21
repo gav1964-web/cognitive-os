@@ -104,14 +104,15 @@ def _append_file(
     lower_name = item.name.lower()
     if lower_name in NOTABLE_NAMES or lower_name.endswith((".bat", ".sh", ".ps1")):
         notable_files.append(rel_path)
-    files.append(
-        {
-            "path": rel_path,
-            "extension": extension,
-            "size_bytes": item.stat().st_size,
-            "depth": depth,
-        }
-    )
+    row = {
+        "path": rel_path,
+        "extension": extension,
+        "size_bytes": item.stat().st_size,
+        "depth": depth,
+    }
+    if extension == ".py":
+        row["line_count"] = _line_count(item)
+    files.append(row)
 
 
 def _is_noise_path(relative: Path, include_hidden: bool) -> bool:
@@ -119,6 +120,13 @@ def _is_noise_path(relative: Path, include_hidden: bool) -> bool:
     if any(part in DEFAULT_EXCLUDED_DIRS for part in parts):
         return True
     return not include_hidden and any(part.startswith(".") for part in parts)
+
+
+def _line_count(path: Path) -> int:
+    try:
+        return len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+    except OSError:
+        return 0
 
 
 def _resolve_scoped_path(value: str) -> Path:

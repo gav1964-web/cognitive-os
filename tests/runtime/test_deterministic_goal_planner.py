@@ -56,6 +56,33 @@ def test_deterministic_goal_planner_builds_scan_project_tree_plan():
     assert planned["pipeline"]["nodes"][-1]["input"]["tree"] == "$nodes.scan_project_tree.output"
 
 
+def test_deterministic_goal_planner_builds_project_fact_question_plan():
+    root = Path(__file__).resolve().parents[2]
+    registry = CapabilityRegistry(root)
+    registry.reset_from_plugins()
+
+    planned = plan_from_required_capabilities(
+        "Analyze project and answer simple file questions",
+        [
+            "scan_project_tree",
+            "detect_project_stack",
+            "read_many_files",
+            "extract_python_structure",
+            "extract_runtime_commands",
+            "project_map_report",
+            "project_fact_questions",
+        ],
+        registry,
+    )
+
+    assert planned is not None
+    assert [node["capability"] for node in planned["pipeline"]["nodes"]][-2:] == [
+        "project_map_report",
+        "project_fact_questions",
+    ]
+    assert planned["pipeline"]["nodes"][-1]["input"]["tree"] == "$nodes.scan_project_tree.output"
+
+
 def test_goal_run_list_files_uses_deterministic_planner():
     root = Path(__file__).resolve().parents[2]
     # Use a clean runtime root so a matured memory template cannot supersede

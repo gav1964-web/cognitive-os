@@ -1,0 +1,41 @@
+{
+  "schema_version": "runtime_interpreter_policy.v1",
+  "status": "active",
+  "principle": "At L4 and L4.5, runtime code is an interpreter of external contracts, roles, policies, recipes and knowledge records. New tasks should change configuration or registries by default, not Python code.",
+  "configuration_first_layers": ["L4", "L4.5"],
+  "default_task_change_route": {
+    "new_supported_prompt_variant": "update_registry_or_kb",
+    "new_input_output_combination": "update_interface_contract_or_operation_recipe",
+    "new_role": "update_role_directory",
+    "new_role_policy": "update_role_directory",
+    "new_known_architecture_pattern": "update_knowledge_base",
+    "new_stage2_case": "update_curriculum_or_recipe_registry",
+    "unsupported_but_bounded_task": "l45_hypothesis_then_developer_improvement_request"
+  },
+  "code_change_allowed_only_for": [
+    "new interpreter primitive",
+    "new safe adapter boundary",
+    "new artifact validator",
+    "new deterministic parser required by repeated confirmed cases",
+    "bug fix in existing interpreter",
+    "test harness or verification improvement"
+  ],
+  "code_change_forbidden_for": [
+    "adding one-off role knowledge",
+    "adding one-off prompt wording",
+    "adding role identity as Python constant",
+    "executing raw LLM output",
+    "auto-promoting KB records",
+    "bypassing artifact contracts"
+  ],
+  "target_distribution": {
+    "configuration_or_registry_change_percent": 90,
+    "code_interpreter_change_percent": 10
+  },
+  "required_evidence_before_code_change": [
+    "configuration route is missing or insufficient",
+    "existing interpreter cannot express the task safely",
+    "change adds a reusable primitive rather than a one-off solution",
+    "tests cover the new primitive and its refusal path"
+  ]
+}

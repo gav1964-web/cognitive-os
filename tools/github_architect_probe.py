@@ -13,7 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import run_architect_skill
+from runtime.role_skills import run_role_skill
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -86,7 +86,8 @@ def run_probe(*, root: Path, projects_dir: Path, label: str, limit: int = 0) -> 
 def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
     outputs = analyze_project(project_dir)
     project_report = outputs["project_map_report"]
-    adr = run_architect_skill(
+    adr = run_role_skill(
+        "architect",
         goal=f"GitHub Architect probe for {project_dir.name}",
         project_report=project_report,
         constraints=[

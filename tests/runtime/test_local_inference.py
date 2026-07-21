@@ -7,6 +7,9 @@ from runtime.local_inference import LocalInferenceConfig, _loads_json_object, ca
 
 
 class _FakeResponse:
+    def __init__(self, payload=None):
+        self.payload = payload or {"choices": [{"message": {"content": "{\"action\":\"STOP\"}"}}]}
+
     def __enter__(self):
         return self
 
@@ -14,7 +17,7 @@ class _FakeResponse:
         return None
 
     def read(self):
-        return json.dumps({"choices": [{"message": {"content": "{\"action\":\"STOP\"}"}}]}).encode("utf-8")
+        return json.dumps(self.payload).encode("utf-8")
 
 
 def test_local_inference_openai_like_json_call():
@@ -59,3 +62,42 @@ def test_local_inference_adds_bearer_token_when_configured():
         )
 
     assert mocked.call_args.args[0].headers["Authorization"] == "Bearer secret-token"
+
+
+def test_local_inference_emits_usage_telemetry_without_prompt_content():
+    records = []
+    response = _FakeResponse(
+        {
+            "model": "GigaChat-Pro",
+            "choices": [{"message": {"content": '{"ok": true}'}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 4, "total_tokens": 14},
+        }
+    )
+    config = LocalInferenceConfig(
+        base_url="http://127.0.0.1:8000/v1",
+        model="GigaChat-Pro",
+        provider_label="external_l4",
+        telemetry_sink=records.append,
+    )
+
+    with patch("runtime.local_inference.request.urlopen", return_value=response):
+        assert call_json_chat([{"role": "user", "content": "secret prompt"}], config=config) == {"ok": True}
+
+    assert records[0]["total_tokens"] == 14
+    assert records[0]["model"] == "GigaChat-Pro"
+    assert "secret prompt" not in str(records)
+
+
+def test_l45_inference_defaults_to_lightweight_gigachat_profile(monkeypatch):
+    monkeypatch.delenv("COGNITIVE_OS_L45_BASE_URL", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_MODEL", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_TIMEOUT", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY_ENV", raising=False)
+
+    config = LocalInferenceConfig.from_l45_env()
+
+    assert config.base_url == "http://127.0.0.1:8000/v1"
+    assert config.model == "GigaChat Lite"
+    assert config.timeout_seconds == 60
+    assert config.provider_label == "external_l45_intent_resolver"

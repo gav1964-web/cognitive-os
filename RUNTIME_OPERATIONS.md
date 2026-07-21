@@ -30,6 +30,8 @@ python tools/queue_status.py --root .
 python tools/queue_status.py --root . --status failed
 ```
 
+Каждая краткая запись job содержит `packet_count` - количество сохраненных межслойных packets в результате. Полный packet trace, adaptations и output конкретного job доступны через `job_inspect.py`.
+
 Архивировать terminal jobs:
 
 ```text
@@ -115,3 +117,75 @@ python tools/runtime_smoke.py --root .
 ```text
 python tools/runtime_smoke.py --root . --skip-pytest
 ```
+
+### 7. Acceptance
+
+Portable deterministic gate, используемый CI после pytest:
+
+```text
+python tools/mvp_acceptance.py --root . --skip-pytest
+```
+
+Живой L4 quality probe и локальные corpus не входят в portable gate и подключаются явно:
+
+```text
+python tools/mvp_acceptance.py --root . --skip-pytest --live-l4
+python tools/mvp_acceptance.py --root . --skip-pytest --local-project-trials
+```
+
+`--live-l4` требует доступный model provider. `--local-project-trials` требует локальные `F:/ubuntu/test/map`, `5`, `004` и загруженный `benchmarks/github_full_trial_10`; эти данные не входят в чистый checkout.
+
+Default-профиль внешнего L4 использует `GigaChat-Pro` через `http://127.0.0.1:8000/v1`. Его можно переопределить без изменения кода:
+
+```powershell
+$env:COGNITIVE_OS_L4_MODEL = "GigaChat-Pro"
+$env:COGNITIVE_OS_L4_BASE_URL = "http://127.0.0.1:8000/v1"
+```
+
+Детерминированный acceptance не вызывает L4. Токены расходуются только при явном `--live-l4`, `--use-l4-llm` или `--interpret-project-llm`.
+
+### 8. L4.5 semantic-loop field trials
+
+Curated deterministic smoke:
+
+```text
+python tools/l45_semantic_benchmark.py --root . --write
+```
+
+Seeded generated corpus with explicit profile:
+
+```text
+python tools/l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --corpus-profile balanced --write
+python tools/l45_semantic_benchmark.py --root . --generated-corpus-size 200 --seed 45 --corpus-profile risk_heavy --write
+```
+
+Aggregate route/boundary analytics and risk-policy gaps from a saved report:
+
+```text
+python tools/l45_semantic_analytics.py --report artifacts/l45_semantic_benchmark/l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
+python tools/l45_policy_gap.py --report artifacts/l45_semantic_benchmark/l45_semantic_benchmark_deterministic_generated_risk_heavy.json --write
+```
+
+Healthy risk policy result: `L45RiskPolicyGapReport.status=ok` and `summary.gap_count=0`.
+
+Run the multi-profile evaluation suite:
+
+```text
+python tools/l45_semantic_eval_suite.py --root . --generated-corpus-size 50 --profiles balanced risk_heavy unknown_template_heavy known_template_regression --write
+```
+
+Opt-in model-backed comparison over a smaller corpus:
+
+```text
+python tools/l45_semantic_eval_suite.py --root . --generated-corpus-size 20 --profiles risk_heavy unknown_template_heavy --include-model --model-quality-mode model_propose_only --write
+```
+
+The suite report is `L45SemanticEvaluationSuiteReport`. Model-backed runs compare proposals with deterministic routing; they do not make model output authoritative.
+
+Analyze model-backed failures after a suite run:
+
+```text
+python tools/l45_model_failure_analysis.py --suite-report artifacts/l45_semantic_benchmark/l45_semantic_evaluation_suite_model.json --write
+```
+
+The report is `L45ModelFailureAnalysisReport` and groups model failures by L4 validation failed codes.

@@ -1,4 +1,16 @@
-from plugins.project_map_report.src.doc_purpose import purpose_heading, purpose_sentence
+from plugins.project_map_report.src.doc_purpose import docs_text, purpose_heading, purpose_sentence
+
+
+def test_docs_text_excludes_dependency_manifests_and_hidden_caches() -> None:
+    files = {
+        "files": [
+            {"path": "requirements.txt", "text": "fastapi\nuvicorn\npytest"},
+            {"path": ".pytest_cache/README.md", "text": "pytest cache"},
+            {"path": "docs/overview.md", "text": "# Gateway\n\nRoutes chat requests to providers."},
+        ]
+    }
+
+    assert docs_text(files) == "# Gateway\n\nRoutes chat requests to providers."
 
 
 def test_purpose_sentence_skips_not_included_section() -> None:

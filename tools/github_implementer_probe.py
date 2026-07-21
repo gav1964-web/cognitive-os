@@ -13,7 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import run_architect_skill, run_implementer_skill, run_spec_writer_skill
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -72,7 +72,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
             "registry_changes": False,
             "teacher_reference_is_ground_truth": False,
             "automatic_code_changes_from_own_output": False,
-            "tester_reviewer_not_in_scope": True,
+            "downstream_roles_not_in_scope": True,
             "foundry_or_promote_not_in_scope": True,
         },
         "cases": cases,
@@ -81,9 +81,13 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub Implementer probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    plan = run_implementer_skill(technical_spec=spec)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub Implementer probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="ImplementationPlan",
+    )
+    spec = artifact_by_type(artifacts, "TechnicalSpec")
+    plan = artifact_by_type(artifacts, "ImplementationPlan")
     contract = dict(spec.get("extraction_contract", {}))
     target = dict(plan.get("implementation_target", {}))
     binding = dict(plan.get("contract_binding", {}))
@@ -166,7 +170,7 @@ def _quality_score(
     writable_scope: list[str],
 ) -> float:
     score = 0.0
-    if plan.get("artifact_type") == "ImplementationPlan" and plan.get("role") == "implementer":
+    if plan.get("artifact_type") == "ImplementationPlan" and plan.get("role") == producer_for_artifact_type("ImplementationPlan"):
         score += 0.15
     if candidate and candidate == dict(spec.get("extraction_contract", {})).get("candidate"):
         score += 0.2

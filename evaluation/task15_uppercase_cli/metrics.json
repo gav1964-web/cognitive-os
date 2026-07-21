@@ -1,0 +1,70 @@
+{
+  "task_id": "task15_uppercase_cli",
+  "task_class": "cli_utility",
+  "prompt_hash": "sha256:308db0a1900803f4fe2d5927ee0d626edb4934122f3df8c438aa5241a8c33620",
+  "routes": {
+    "direct_agent": {
+      "executor": "direct_agent_baseline",
+      "model": "deterministic_direct_baseline",
+      "status": "completed",
+      "requirement_coverage": 0.75,
+      "missed_requirements": 0,
+      "invented_requirements": 0,
+      "tests_passed": 1,
+      "tests_total": 1,
+      "verification_status": "passed",
+      "repair_cycles": 0,
+      "runtime_seconds": 0.556,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.75,
+      "source_safety_violations": 0,
+      "review_blockers": 0,
+      "human_correction_minutes": 0,
+      "release_decision": "completed",
+      "project_dir": "F:/ubuntu/test/9/artifacts/evaluation_direct_agent/task15_uppercase_cli",
+      "block_reason": null
+    },
+    "cognitive_os": {
+      "executor": "cognitive_os_stage2",
+      "model": "deterministic_or_configured_l45",
+      "status": "completed",
+      "requirement_coverage": 0.9,
+      "missed_requirements": 0,
+      "invented_requirements": 0,
+      "tests_passed": 3,
+      "tests_total": 3,
+      "verification_status": "passed",
+      "repair_cycles": 0,
+      "runtime_seconds": 0.731,
+      "estimated_cost": 0.0,
+      "artifact_completeness": 0.9,
+      "source_safety_violations": 0,
+      "review_blockers": 0,
+      "human_correction_minutes": 0,
+      "release_decision": "release_ready_with_risks",
+      "report_path": "F:/ubuntu/test/9/artifacts/verified_system_packages/verified_system_package_20260719T174419781545Z.json",
+      "project_dir": "F:/ubuntu/test/9/artifacts/llm_sandbox_implementations/upper_20260719T174419063421Z"
+    }
+  },
+  "comparison": {
+    "winner": "cognitive_os",
+    "cognitive_os_advantages": [
+      "stronger review and safety artifacts"
+    ],
+    "direct_agent_advantages": [
+      "simpler route"
+    ],
+    "no_difference": [
+      "both routes completed"
+    ],
+    "confidence": 0.45
+  },
+  "invariants": {
+    "same_original_prompt": true,
+    "same_constraints": true,
+    "manual_corrections_recorded": false,
+    "teacher_reference_is_ground_truth": false,
+    "source_mutation_detected": false
+  },
+  "verdict": "cognitive_os_wins_baseline"
+}

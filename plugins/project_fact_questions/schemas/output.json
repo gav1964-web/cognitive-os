@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["artifact_type", "answers"],
+  "properties": {
+    "artifact_type": { "type": "string" },
+    "scope": { "type": "string" },
+    "answers": { "type": "object" },
+    "evidence_policy": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -21,13 +21,17 @@ def test_control_plane_summarizes_and_inspects_jobs(tmp_path):
         retry_policy={},
     )
     job_id = queue.enqueue(pipeline, {"value": "control"}, priority=7)
+    claimed = queue.claim_next("control-test")
+    assert claimed is not None
+    queue.complete(job_id, result={"status": "ok", "layer_packets": [{"packet_type": "execution_event"}]})
 
     summary = queue_summary(tmp_path)
     inspected = inspect_job(tmp_path, job_id)
     report = runtime_report(tmp_path)
 
-    assert summary["counts"]["queued"] == 1
+    assert summary["counts"]["succeeded"] == 1
     assert summary["jobs"][0]["priority"] == 7
+    assert summary["jobs"][0]["packet_count"] == 1
     assert inspected["job"]["job_id"] == job_id
     assert report["queue"]["total"] == 1
 

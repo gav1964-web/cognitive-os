@@ -16,12 +16,17 @@ def run_programmer_project_review(
     curriculum_dir: Path,
     case_name: str,
     write: bool = False,
+    output_dir: Path | None = None,
+    reference_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    reference_path = curriculum_dir / case_name / "teacher_reference.json"
-    if not reference_path.is_file():
-        raise FileNotFoundError(f"unknown programmer curriculum case: {case_name}")
-    reference = json.loads(reference_path.read_text(encoding="utf-8"))
-    scaffold = create_greenfield_scaffold(root=root, case_name=case_name, reference=reference)
+    if reference_override is None:
+        reference_path = curriculum_dir / case_name / "teacher_reference.json"
+        if not reference_path.is_file():
+            raise FileNotFoundError(f"unknown programmer curriculum case: {case_name}")
+        reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    else:
+        reference = dict(reference_override)
+    scaffold = create_greenfield_scaffold(root=root, case_name=case_name, reference=reference, output_dir=output_dir)
     tester_review = review_programmer_project(scaffold=scaffold, reference=reference)
     report = {
         "status": "ok" if tester_review["recommendation"] in {"approve", "approve_with_risks"} else "needs_rework",
@@ -105,7 +110,7 @@ def _checks(
         "has_source_package": bool(source_files),
         "has_cli_entrypoint": _is_api_project(source_text) or any(item.endswith("/cli.py") for item in source_files),
         "cli_uses_argparse": _is_api_project(source_text) or ("import argparse" in source_text and "parse_args" in source_text),
-        "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input')" in source_text and "add_argument('output')" in source_text),
+        "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input'" in source_text and "add_argument('output'" in source_text),
         "has_fastapi_app": not _is_api_project(source_text) or ("FastAPI(" in source_text and "@app." in source_text),
         "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text)),
         "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=" in source_text),

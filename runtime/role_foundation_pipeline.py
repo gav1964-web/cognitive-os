@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from .architecture_analysis_document import write_architecture_analysis_document
+from .configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
+from .contract_registry import load_artifact_contracts
 from .local_inference import LocalInferenceConfig
 from .project_benchmark import analyze_project
 from .role_skill_common import load_skill_registry, write_role_artifact
-from .role_skills import run_architect_skill, run_spec_writer_skill
 
 
 def run_role_foundation_pipeline(
@@ -28,17 +29,18 @@ def run_role_foundation_pipeline(
     with _pushd(root):
         project_map_report = analyze_project(project_dir)["project_map_report"]
     project_artifact = _project_map_artifact(project_dir, goal, project_map_report)
-    adr = run_architect_skill(
+    built_artifacts = run_configured_role_prefix(
         goal=goal,
         project_report=project_map_report,
-        advisory_config=architect_advisory_config,
+        architect_advisory_config=architect_advisory_config,
+        until_artifact_type="TechnicalSpec",
     )
-    spec = run_spec_writer_skill(architecture_decision=adr)
     artifacts = {
         "project_map_report": project_artifact,
-        "architecture_decision": adr,
-        "technical_spec": spec,
+        **built_artifacts,
     }
+    adr = artifact_by_type(artifacts, "ArchitectureDecisionRecord")
+    spec = artifact_by_type(artifacts, "TechnicalSpec")
     paths = _write_artifacts(root, artifacts) if write else {}
     human_documents = _write_human_documents(root, artifacts) if write else {}
     score = score_role_foundation(artifacts, paths if write else None)
@@ -172,7 +174,7 @@ def write_role_foundation_report(root: Path, payload: dict[str, Any]) -> Path:
 def _project_map_artifact(project_dir: Path, goal: str, project_map_report: dict[str, Any]) -> dict[str, Any]:
     return {
         "artifact_type": "ProjectMapReport",
-        "role": "project_analyzer",
+        "role": producer_for_artifact_type("ProjectMapReport"),
         "status": "ok",
         "created_at": _now(),
         "goal": goal,
@@ -184,14 +186,12 @@ def _project_map_artifact(project_dir: Path, goal: str, project_map_report: dict
 
 
 def _write_artifacts(root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, str]:
-    roles = {
-        "project_map_report": "project_analyzer",
-        "architecture_decision": "architect",
-        "technical_spec": "spec_writer",
-    }
     paths = {}
+    contracts = load_artifact_contracts()
     for key, artifact in artifacts.items():
-        path = write_role_artifact(root, roles[key], artifact)
+        artifact_type = str(artifact.get("artifact_type") or "")
+        role = str(dict(contracts.get(artifact_type, {})).get("producer") or artifact.get("role") or "unknown")
+        path = write_role_artifact(root, role, artifact)
         artifact["artifact_path"] = path.as_posix()
         paths[key] = path.as_posix()
     return paths

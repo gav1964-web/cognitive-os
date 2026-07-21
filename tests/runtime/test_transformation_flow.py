@@ -279,7 +279,7 @@ def test_dependency_policy_blocks_subprocess_boundaries():
 
 def _copy_workspace(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
-    for name in ("runtime", "tools", "plugins", "pipelines", "registry", "generated", "benchmarks"):
+    for name in ("runtime", "tools", "plugins", "pipelines", "registry", "generated", "benchmarks", "config"):
         src = ROOT / name
         dst = workspace / name
         if src.is_dir():

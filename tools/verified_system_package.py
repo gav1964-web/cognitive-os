@@ -21,6 +21,9 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--curriculum-dir", default="curricula/programmer_prompt_local_10")
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--use-l45-llm", action="store_true")
+    parser.add_argument("--no-llm-sandbox-implementation", action="store_true")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
 
@@ -33,6 +36,9 @@ def main() -> int:
         prompt=args.prompt,
         curriculum_dir=curriculum_dir,
         write=args.write,
+        output_dir=Path(args.output_dir).resolve() if args.output_dir else None,
+        use_l45_model=args.use_l45_llm,
+        allow_llm_sandbox_implementation=not args.no_llm_sandbox_implementation,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] in {"ok", "blocked"} else 2

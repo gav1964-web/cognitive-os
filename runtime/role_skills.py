@@ -1,21 +1,26 @@
-"""Typed role skills facade."""
+"""Generic role skill interpreter.
+
+Role identities and capabilities live in config/role_directory.json.
+This module intentionally exposes no role-specific run_* functions.
+"""
 
 from __future__ import annotations
 
-from .role_architect import run_architect_skill
-from .role_implementer import run_implementer_skill
-from .role_reviewer import run_reviewer_skill
+from typing import Any
+
+from .role_artifact_builder import build_configured_artifact
 from .role_skill_common import RoleSkillError, load_skill_registry, write_role_artifact
-from .role_spec_writer import run_spec_writer_skill
-from .role_tester import run_tester_skill
+
+
+def run_role_skill(role_id: str, **inputs: Any) -> dict[str, Any]:
+    """Run a role by interpreting its role_directory entry."""
+
+    return build_configured_artifact(role_id=role_id, **inputs)
+
 
 __all__ = [
     "RoleSkillError",
     "load_skill_registry",
-    "run_architect_skill",
-    "run_implementer_skill",
-    "run_reviewer_skill",
-    "run_spec_writer_skill",
-    "run_tester_skill",
+    "run_role_skill",
     "write_role_artifact",
 ]

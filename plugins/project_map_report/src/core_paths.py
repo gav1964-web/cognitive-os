@@ -17,19 +17,25 @@ def classify_source_path(path: str) -> dict[str, str]:
     if any(
         part in {
             ".github",
+            "_testing",
             "bench",
             "benchmarks",
+            "doc",
             "docs",
+            "docs_src",
             "examples",
+            "extras",
             "generated",
             "ci_tools",
             "downstream",
             "failures-to-investigate",
+            "external-deps",
             "scripts",
             "scratch",
             "tasks",
             "test",
             "tests",
+            "testing",
             "tools",
             "__pycache__",
         }
@@ -38,12 +44,17 @@ def classify_source_path(path: str) -> dict[str, str]:
         return {"path": path, "kind": "context_only", "reason": "non_core_context_directory"}
     if parts[:2] == ["packaging", "pep517_backend"]:
         return {"path": path, "kind": "context_only", "reason": "build_backend_context"}
+    if "waflib" in parts:
+        return {"path": path, "kind": "context_only", "reason": "vendored_build_helper"}
     if (
         name.startswith(("make_", "build_", "setup_"))
         or name.endswith(("_benchmark.py", "_bench.py"))
-        or name in {"benchmark.py", "bench.py", "noxfile.py", "setup.py"}
+        or name in {"benchmark.py", "bench.py", "noxfile.py", "setup.py", "runtests.py", "hatch_build.py", "install_dev_repos.py"}
+        or name in {"documentation.py", "docs.py"}
     ):
         return {"path": path, "kind": "context_only", "reason": "build_or_packaging_helper"}
+    if "integrations" in parts and ("aws" in parts or any(part.startswith("prefect-") for part in parts)):
+        return {"path": path, "kind": "context_only", "reason": "optional_integration_adapter"}
     if (
         name == "conftest.py"
         or name in {"testclient.py", "testing.py"}

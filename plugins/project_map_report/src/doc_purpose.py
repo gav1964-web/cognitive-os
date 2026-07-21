@@ -21,9 +21,21 @@ NON_PURPOSE_HEADINGS = {
 def docs_text(files: dict[str, Any]) -> str:
     texts = []
     for item in sorted(files.get("files", []), key=_doc_priority):
-        if str(item.get("path", "")).lower().endswith((".md", ".rst", ".txt")):
+        path = str(item.get("path", "")).lower().replace("\\", "/")
+        if _is_purpose_doc(path):
             texts.append(str(item.get("text", ""))[:3000])
     return "\n".join(texts).strip()
+
+
+def _is_purpose_doc(path: str) -> bool:
+    name = path.rsplit("/", 1)[-1]
+    if not path.endswith((".md", ".rst", ".txt")):
+        return False
+    if any(part.startswith(".") for part in path.split("/")[:-1]):
+        return False
+    if name.startswith(("requirements", "constraints")) or name in {"license.txt", "notice.txt"}:
+        return False
+    return True
 
 
 def purpose_heading(docs: str) -> str:

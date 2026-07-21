@@ -237,12 +237,32 @@ def _pipeline_candidate(summary: dict[str, Any], routes: list[dict[str, Any]], c
 def _capability_candidates(python_structure: dict[str, Any], routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
     pure = [item for item in python_structure.get("pure_transform_candidates", []) if is_core_path(str(item.get("path", "")))]
     candidates = [f"{item.get('path')}:{item.get('name')}" for item in pure[:8]]
+    candidates.extend(_provider_parser_capabilities(python_structure))
     contracts = dict(python_structure.get("contracts", {}))
-    schema_like = [item for item in contracts.get("schema_like_classes", []) if is_core_path(str(item.get("path", "")))]
+    schema_like = [
+        item
+        for item in contracts.get("schema_like_classes", [])
+        if is_core_path(str(item.get("path", ""))) and not str(item.get("name", "")).endswith("Config")
+    ]
     candidates.extend([f"{item.get('path')}:{item.get('name')}" for item in schema_like[:6]])
     if not schema_like:
         candidates.extend([f"{route.get('methods') or ['GET']} {route.get('route')}" for route in routes[:5]])
-    return candidates[:15]
+    return list(dict.fromkeys(candidates))[:24]
+
+
+def _provider_parser_capabilities(python_structure: dict[str, Any]) -> list[str]:
+    markers = ("normalize", "parse", "extract", "curl_fallback", "fetch_available_models")
+    rows = []
+    for file_row in python_structure.get("files", []):
+        path = str(file_row.get("path") or "")
+        normalized = path.replace("\\", "/").lower()
+        if not is_core_path(path) or not normalized.endswith("_llm_client.py"):
+            continue
+        for function in file_row.get("functions", []):
+            name = str(function.get("name") or "")
+            if any(marker in name.lower() for marker in markers):
+                rows.append(f"{path}:{name}")
+    return rows[:12]
 
 
 def _core_pure_transforms(python_structure: dict[str, Any]) -> list[dict[str, Any]]:

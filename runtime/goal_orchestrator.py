@@ -196,7 +196,7 @@ def _infer_existing_capabilities(goal: str) -> list[str]:
     if ("project" in goal or "проект" in goal) and (
         "analyze" in goal or "analyse" in goal or "scan" in goal or "map" in goal or "проанализ" in goal
     ):
-        return [
+        capabilities = [
             "scan_project_tree",
             "detect_project_stack",
             "read_many_files",
@@ -204,6 +204,9 @@ def _infer_existing_capabilities(goal: str) -> list[str]:
             "extract_runtime_commands",
             "project_map_report",
         ]
+        if _mentions_project_fact_questions(goal):
+            capabilities.append("project_fact_questions")
+        return capabilities
     if ("normalize" in goal or "normalise" in goal) and "hash" in goal:
         return ["normalize_text", "hash_payload"]
     if "translate" in goal or "translation" in goal:
@@ -239,6 +242,21 @@ def _missing_capability_hint(goal: str) -> str | None:
     if "audio" in goal or "transcribe" in goal:
         return "transcribe_audio"
     return None
+
+
+def _mentions_project_fact_questions(goal: str) -> bool:
+    markers = {
+        "answer",
+        "question",
+        "questions",
+        "вопрос",
+        "вопросы",
+        "ответь",
+        "сколько",
+        "какие файлы",
+        "в каких файлах",
+    }
+    return any(marker in goal for marker in markers)
 
 
 def _is_vague(goal: str) -> bool:

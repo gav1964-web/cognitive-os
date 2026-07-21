@@ -30,6 +30,12 @@ def validate_payload(payload: Any, schema: dict[str, Any], *, label: str) -> Non
             if key not in payload:
                 raise SchemaValidationError(f"{label} missing required key: {key}")
         properties = schema.get("properties", {})
+        if schema.get("additionalProperties") is False:
+            unexpected = sorted(set(payload) - set(properties))
+            if unexpected:
+                raise SchemaValidationError(
+                    f"{label} contains unexpected properties: {', '.join(unexpected)}"
+                )
         for key, value in payload.items():
             if key in properties:
                 _validate_value(value, properties[key], label=f"{label}.{key}")

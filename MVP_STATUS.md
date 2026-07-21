@@ -1,32 +1,53 @@
 # MVP_STATUS.md
-**Baseline snapshot: Cognitive OS MVP**
+**Baseline snapshot: Cognitive OS foundation and Local Automation MVP target**
 
-Generated after the July 6, 2026 field pass.
+Updated after the July 21, 2026 configuration-first diagnostics and verification pass.
 
 ## Current Verdict
 
-Status: `MVP-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; Stage 3 product-slice track started`.
+Status: `foundation-ready for controlled analysis/planning, sandbox programmer-executor and Foundry field trials; product MVP target is Prompt -> Verified Local Automation Package`.
 
-The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. Direct source patch application is still blocked in MVP.
+The system can accept a bounded user goal, classify it through Level 4, plan known routes through Level 3.5, execute deterministic capability chains through runtime, produce project-analysis reports, run the role pipeline, produce an isolated programmer-executor `PatchPackage`/`TestResult`, prepare a Foundry candidate, build Stage 2 verified packages, and wrap a release-ready package into a Stage 3 `ProductSliceSpec` without modifying the analyzed source project or changing the runtime registry automatically. This is not yet a general product MVP. The next concrete MVP target is a locally verifiable automation contour: prompt intake, sandbox package generation, tests, README, verification report, review/release decision, and controlled refusal outside scope.
+
+## Product MVP Target
+
+Target: `Prompt -> Verified Local Automation Package`.
+
+In scope: Python CLI tools, local small services without GUI, file/document/image/text/archive/table/structured-data automation, OCR/vision flows with fixture/injectable tests, web/API clients or scraping with fixture/mock tests, project analysis and improvement planning.
+
+Out of scope for this MVP: GUI applications, SQL databases as required runtime state, production deployment, uncontrolled dependency installation, mandatory live-network acceptance, direct source mutation without explicit approval, and free execution of LLM-generated code.
+
+Smoke command:
+
+```bash
+python tools/local_automation_mvp_trial.py --root . --write
+```
+
+Current smoke corpus: `registry/local_automation_mvp_cases.json`, 39 cases across Python CLI, image automation, document automation, local small service, operation composition, sandbox atomic operations, controlled refusal and `needs_clarification` routing. Latest local run: `39/39 passed`, pass rate `1.0`.
+
+Latest repository verification: `python -X utf8 -m pytest -q` -> `505 passed`; `python tools/config_doctor.py --root .` -> `8/8 passed, 0 warnings`; `python tools/config_coverage.py --root .` -> `50/50 config entities covered`.
 
 ## Verified Layers
 
 | Layer | Current state | Evidence |
 | --- | --- | --- |
 | L1 capabilities | Plugin catalog, schemas and contract tests pass | `tools/check_plugins.py --root .` |
-| L2 runtime | Pipeline execution, checkpointing, process boundary, queue/worker pool pass acceptance | `tools/mvp_acceptance.py --skip-pytest` |
-| L2.5 registry | Capability Registry and Contract Registry validate active capabilities | `tools/registry_doctor.py --root .` |
-| L3 interrupt/policy | Quarantine, controlled stop and fallback paths are exercised | MVP acceptance |
+| L2 runtime | Sync/async pipeline execution, checkpointing, process boundary and queue/worker pool emit correlated execution-event/interrupt packets; durable jobs persist recovery traces | `tests/runtime/test_goal_runtime.py`, `tests/runtime/test_async_executor.py`, `tests/runtime/test_worker_pool.py` |
+| L2.5 registry | Capability Registry and read-only Contract Registry validate active capabilities, packet routes and role artifact APIs | `tools/registry_doctor.py --root .`, `tests/runtime/test_contract_registry.py` |
+| L3 interrupt/policy | Quarantine, fallback, repeated fallback failure, adaptation-budget stop and blocked escalation are exercised in sync/async paths | MVP acceptance and vertical runtime tests |
 | L3.2 Foundry | Spec/candidate/dry-run promotion path works; promotion still requires explicit approval | `project_transform.py` |
-| L3.5 spinal layer | Contract facade builds MotorPlanPacket/SignalPacket from IntentPacket, validates Pipeline DSL, supports deterministic and optional local-LLM proposal routes, and adapts L2 interrupts without executing plugins | `runtime/spinal_planner.py`, `tests/runtime/test_spinal_planner.py` |
+| L3.5 spinal layer | Mandatory goal-runtime facade selects memory/deterministic/graph/optional-LLM routes, emits MotorPlanPacket/SignalPacket, receives correlated L2 events/interrupts and applies bounded recovery without executing plugins | `runtime/spinal_planner.py`, `runtime/goal_runtime.py`, `tools/spinal_benchmark.py` |
 | L4 cortex/roles | Project Analyzer, Architect, SpecWriter, Implementer Planner, sandbox Programmer Executor, Tester and Reviewer pass readiness gates | `role_mvp_readiness.py` |
+| L4/L4.5 config-first diagnostics | Config catalogs load cleanly, cross-references are checked, Stage 2 decisions carry `RuleTrace`, and config mutation proposals validate in sandbox before application | `tools/config_doctor.py --root .`, `tools/config_coverage.py --root .`, `tests/runtime/test_config_diagnostics.py` |
 | Stage 3 product slice | `ProductSliceSpec` wraps a verified package with requirements, scenarios, architecture decision, task graph, documentation/scenario review, executable product debug loop, 8-case benchmark and release decision | `tools/product_slice.py`, `tools/product_debug_loop_probe.py`, `tools/product_slice_benchmark.py` |
 | Memory/dialogue | Advisory memory and dialogue context exist, but do not execute or mutate runtime state | MVP acceptance |
 | Knowledge Gap Loop | Installed-package probe, official-docs fetch and optional GitHub metadata evidence are implemented | knowledge tests |
 
+The portable CI gate runs repository-contained deterministic checks only. Live L4 evaluation is opt-in through `--live-l4`; Local-3 and downloaded GitHub corpora are opt-in through `--local-project-trials`.
+
 ## Role Readiness
 
-Latest readiness report: `artifacts/field_trials/role_mvp_readiness_20260707T053507623879Z.md`.
+Latest verified command: `python tools/role_mvp_readiness.py --root .` on July 14, 2026. Generated reports under `artifacts/` are machine-local evidence and are not committed as repository fixtures.
 
 | Role | Status | Score |
 | --- | --- | ---: |
@@ -34,11 +55,11 @@ Latest readiness report: `artifacts/field_trials/role_mvp_readiness_20260707T053
 | Architect | `MVP-ready` | `1.0` |
 | SpecWriter | `MVP-ready` | `1.0` |
 | Implementer Planner | `MVP-ready` | `1.0` |
-| Programmer Executor | `MVP-ready in sandbox/no-source-edit mode` | `1.0` |
+| Programmer Executor | `MVP-ready; sandbox/no-source-edit by default` | `1.0` |
 | Tester | `MVP-ready` | `1.0` |
 | Reviewer | `MVP-ready` | `1.0` |
 
-These scores mean the deterministic planning and sandbox execution gates are green. They do not mean the system is generally intelligent, self-learning, or safe to edit arbitrary projects without review. The programmer executor currently creates isolated patch/test artifacts; direct source edits remain disabled.
+These scores mean the deterministic planning and sandbox execution gates are green. They do not mean the system is generally intelligent, self-learning, or safe to edit arbitrary projects without review. The general Programmer Executor creates isolated patch/test artifacts and rejects `--apply-source`; only the separate reviewed patch gate may apply a validated specialized package after explicit approval and backup.
 
 ## Field Trial: Project 5
 
@@ -84,7 +105,7 @@ Project Transform previously chose a framework middleware candidate before the c
 
 ## Foundry Extraction Hardening v0.1
 
-Additional live extraction cases were run after the project `5` pass:
+Additional machine-local live extraction cases were run after the project `5` pass. Their projects and generated reports are field-trial evidence, not portable repository fixtures:
 
 | Project | Selected target | Result | Report |
 | --- | --- | --- | --- |
@@ -112,7 +133,9 @@ The `004` case is intentionally blocked at `PROPOSE` after trying the ranked can
 * Official docs fetch is allowlisted excerpt/hash evidence, not free browsing.
 * Semantic long-term dialogue memory remains intentionally limited.
 * The analyzed external project is treated as read-only.
+* Direct standalone executor calls retain their deterministic default policy when no recovery handler is supplied; `goal_run.py`, async integration and worker pool use the typed spinal recovery controller.
+* Live L4 and machine-local project corpora are evaluation tracks, not mandatory clean-checkout CI dependencies.
 
 ## Next Best Step
 
-The next engineering step is to add richer product-scenario probes for the 8-case Stage 3 corpus, then decide whether network/spreadsheet adapter cases are mature enough to join the main benchmark.
+The next engineering step is to compare deterministic and live local-LLM L3.5 proposals on the same benchmark corpus, including route quality, latency and controlled invalid-output fallback.

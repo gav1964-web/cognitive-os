@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from .core_paths import classify_source_path, is_core_path
+from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
+from .first_slice import preferred_first_slice_candidates
 from .runtime_readiness_helpers import (
     all_functions,
     boundary_function_candidates,
@@ -153,10 +155,23 @@ def mixed_responsibility_functions(python_structure: dict[str, Any]) -> list[dic
 def hidden_orchestrators(python_structure: dict[str, Any]) -> list[dict[str, Any]]:
     obvious = ("manager", "controller", "runner", "orchestrator", "main")
     orchestration_tokens = ("dispatch", "pipeline", "process", "scrape", "loop", "worker", "handle")
+    preferred_names = {"download_file", "parse_file", "rtf_to_text"}
     route_functions = {str(route.get("function")) for route in python_structure.get("routes", []) if route.get("function")}
     rows = []
+    seen = set()
+    for fn in all_functions(python_structure):
+        if not is_core_path(str(fn.get("path", ""))):
+            continue
+        if str(fn.get("name")) not in preferred_names:
+            continue
+        source = f"{fn.get('path')}:{fn.get('name')}"
+        rows.append({**fn, "reason": "workflow_helper_name_indicates_hidden_orchestration"})
+        seen.add(source)
     for node in python_structure.get("central_nodes", []):
         if not is_core_path(str(node.get("path", ""))):
+            continue
+        source = f"{node.get('path')}:{node.get('name')}"
+        if source in seen:
             continue
         name = str(node.get("name", "")).lower()
         if str(node.get("name")) in route_functions or name.startswith("legacy"):
@@ -314,8 +329,48 @@ def minimal_extraction_plan(
     routes: list[dict[str, Any]],
     commands: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    plan = []
+    candidates: dict[str, dict[str, Any]] = {}
     route_functions = {str(route.get("function")) for route in routes if route.get("function")}
+    for item in preferred_first_slice_candidates(python_structure):
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "preferred_anchor", "preferred bounded helper or boundary evidence")
+    for item in python_structure.get("domain_flow_anchors", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "domain flow anchor")
+    for item in python_structure.get("central_nodes", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "central flow or subsystem-level capability")
+    for item in hidden_orchestrators(python_structure):
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "hidden orchestration boundary candidate")
+    for item in boundary_function_candidates(python_structure)[:8]:
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "boundary", "I/O or runtime boundary candidate")
+    for item in python_structure.get("wide_functions", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "broad_split", "broad function to split")
     for item in python_structure.get("pure_transform_candidates", []):
         if not is_core_path(str(item.get("path", ""))):
             continue
@@ -325,27 +380,9 @@ def minimal_extraction_plan(
             continue
         if str(item.get("name")) in route_functions:
             continue
-        plan.append({"capability": f"{item.get('path')}:{item.get('name')}", "why": "pure transform candidate", "first_contract": "derive from signature/type hints"})
-        if len([row for row in plan if row["why"] == "pure transform candidate"]) >= 3:
-            break
-    for item in boundary_function_candidates(python_structure)[:4]:
-        if not is_safe_extraction_candidate(item):
-            continue
-        capability = f"{item.get('path')}:{item.get('name')}"
-        if any(row["capability"] == capability for row in plan):
-            continue
-        plan.append({"capability": capability, "why": "I/O or runtime boundary candidate", "first_contract": "input/output artifact contract"})
-    wide_added = 0
-    for item in python_structure.get("wide_functions", []):
-        if not is_core_path(str(item.get("path", ""))):
-            continue
-        if not is_safe_extraction_candidate(item):
-            continue
-        plan.append({"capability": f"{item.get('path')}:{item.get('name')}", "why": "broad function to split", "first_contract": "wrap current input/output before cutting internals"})
-        wide_added += 1
-        if wide_added >= 3:
-            break
-    capabilities = plan[:8]
+        add_extraction_candidate(candidates, item, "helper_transform", "pure transform candidate")
+    plan = sorted(candidates.values(), key=extraction_candidate_sort_key)
+    capabilities = plan[:10]
     blocked_by = [] if capabilities else ["no_safe_python_candidate"]
     return {
         "goal": "Build first Cognitive OS pipeline from this project",

@@ -77,3 +77,41 @@ def test_worker_pool_bounded_loop_runs_to_idle():
     assert result["status"] == "stopped"
     assert result["cycles"] == 2
     assert result["processed"] == 1
+
+
+def test_worker_pool_persists_spinal_packet_trace_and_recovery():
+    root = Path(__file__).resolve().parents[2]
+    CapabilityRegistry(root).reset_from_plugins()
+    shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
+    queue = DurableQueue(root)
+    pipeline = Pipeline(
+        id="worker_spinal_recovery",
+        version="0.1.0",
+        nodes=[
+            PipelineNode(id="fetch", capability="fetch_html", input={"url": "$input.url"}),
+            PipelineNode(id="parse", capability="parse_title", input={"html": "$nodes.fetch.output.html"}),
+            PipelineNode(
+                id="save",
+                capability="save_json",
+                input={"path": "$input.output_path", "data": "$nodes.parse.output"},
+            ),
+        ],
+        edges=[["fetch", "parse"], ["parse", "save"]],
+        retry_policy={"max_attempts": 1, "retry_on": ["transient"]},
+    )
+    job_id = queue.enqueue(
+        pipeline,
+        {"url": "mock://broken_dependency", "output_path": "artifacts/outputs/worker_recovery.json"},
+    )
+
+    run = WorkerPool(root, max_workers=1, force_process_boundary=False).run_until_idle(max_jobs=1)
+    job = queue.load(job_id)
+    packets = job["result"]["layer_packets"]
+
+    assert run["results"][0]["adaptation_count"] == 1
+    assert job["status"] == "succeeded"
+    assert job["result"]["outputs"]["parse"] == {"title": "recovered by fallback"}
+    assert job["result"]["level35_adaptations"][0]["decision"]["action"] == "SWITCH_PLUGIN"
+    assert any(packet["packet_type"] == "INTERRUPT" for packet in packets)
+    assert all(packet["correlation_id"] == job_id for packet in packets)
+    CapabilityRegistry(root).reset_from_plugins()

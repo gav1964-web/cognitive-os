@@ -13,7 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import run_architect_skill, run_spec_writer_skill
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -72,7 +72,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
             "registry_changes": False,
             "teacher_reference_is_ground_truth": False,
             "automatic_code_changes_from_own_output": False,
-            "implementer_tester_reviewer_not_in_scope": True,
+            "downstream_roles_not_in_scope": True,
         },
         "cases": cases,
     }
@@ -80,8 +80,12 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub SpecWriter probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub SpecWriter probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="TechnicalSpec",
+    )
+    spec = artifact_by_type(artifacts, "TechnicalSpec")
     contract = dict(spec.get("extraction_contract", {}))
     candidate = str(contract.get("candidate") or "")
     ranked = [str(row.get("source")) for row in contract.get("ranked_candidates", []) if isinstance(row, dict)]
@@ -157,7 +161,7 @@ def _quality_score(
     forbidden: list[str],
 ) -> float:
     score = 0.0
-    if spec.get("artifact_type") == "TechnicalSpec" and spec.get("role") == "spec_writer":
+    if spec.get("artifact_type") == "TechnicalSpec" and spec.get("role") == producer_for_artifact_type("TechnicalSpec"):
         score += 0.2
     if candidate:
         score += 0.2

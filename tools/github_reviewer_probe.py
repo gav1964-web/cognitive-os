@@ -13,13 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import (
-    run_architect_skill,
-    run_implementer_skill,
-    run_reviewer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-)
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -86,11 +80,13 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub Reviewer probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    plan = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=plan)
-    review = run_reviewer_skill(technical_spec=spec, implementation_plan=plan, test_plan=test_plan)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub Reviewer probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="ReviewFindings",
+    )
+    plan = artifact_by_type(artifacts, "ImplementationPlan")
+    review = artifact_by_type(artifacts, "ReviewFindings")
     coverage = dict(review.get("coverage_assessment", {}))
     target = str(dict(review.get("review_target", {})).get("candidate") or "")
     implementation_target = str(dict(plan.get("implementation_target", {})).get("candidate") or "")
@@ -168,7 +164,7 @@ def _quality_score(
     forbidden: list[str],
 ) -> float:
     score = 0.0
-    if review.get("artifact_type") == "ReviewFindings" and review.get("role") == "reviewer":
+    if review.get("artifact_type") == "ReviewFindings" and review.get("role") == producer_for_artifact_type("ReviewFindings"):
         score += 0.15
     if target and target == implementation_target:
         score += 0.2

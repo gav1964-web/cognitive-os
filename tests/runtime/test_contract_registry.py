@@ -25,6 +25,7 @@ def test_contract_registry_builds_capability_and_packet_catalog(registry):
 
     assert any(item["id"] == "normalize_text" for item in catalog["capabilities"])
     assert {"source_layer": "L4", "target_layer": "L3.5", "packet_type": "INTENT"} in catalog["packet_routes"]
+    assert any(item["artifact_type"] == "TechnicalSpec" for item in catalog["artifacts"])
 
 
 def test_contract_registry_rejects_non_executable_capability(registry):
@@ -59,3 +60,75 @@ def test_contract_registry_validates_layer_packet_routes(registry):
     )
 
     ContractRegistry.from_capability_registry(registry).validate_layer_packet(packet)
+
+
+def test_contract_registry_validates_artifact_api(registry):
+    contracts = ContractRegistry.from_capability_registry(registry)
+    contracts.validate_artifact(
+        {
+            "artifact_type": "ReviewFindings",
+            "findings": [],
+            "risk_assessment": [],
+            "recommendation": "approve",
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "CognitiveControlPlaneDecision",
+            "layer": "L4.0",
+            "artifact_promotion_gate": {"status": "passed"},
+            "role_transition": {"next_action": "run_project_transform"},
+            "semantic_escalation": {"l4_5_required": False},
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "SemanticHypothesisProposal",
+            "layer": "L4.5",
+            "hypothesis_type": "new_template_candidate",
+            "proposal": {},
+            "confidence": 0.7,
+            "evidence_refs": [],
+            "risks": [],
+            "return_to_gate": True,
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "L4SemanticValidationResult",
+            "layer": "L4.0",
+            "status": "accepted",
+            "source_request": {"artifact_type": "SemanticHypothesisRequest"},
+            "source_proposal": {"artifact_type": "SemanticHypothesisProposal"},
+            "contract_validation": {"status": "ok"},
+            "quality": {"score": 1.0, "checks": [], "failed_codes": []},
+            "accepted_action": "record_template_backlog",
+            "decision": {"next_action": "record_template_backlog"},
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "Stage2TemplateBacklogItem",
+            "status": "candidate",
+            "template_id": "csv_sort_cli",
+            "purpose": "sort csv",
+            "requires_human_review": True,
+            "next_step": "review",
+        }
+    )
+    contracts.validate_artifact(
+        {
+            "artifact_type": "Stage2TemplateAdmissionResult",
+            "status": "admitted",
+            "case": "csv_sort_cli",
+            "blockers": [],
+            "invariants": {"admission_does_not_promote_runtime": True},
+        }
+    )
+
+
+def test_contract_registry_rejects_incomplete_artifact_api(registry):
+    with pytest.raises(ContractRegistryError, match="missing fields"):
+        ContractRegistry.from_capability_registry(registry).validate_artifact(
+            {"artifact_type": "TechnicalSpec", "requirements": []}
+        )

@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "reviewer",
+  "label": "Reviewer",
+  "order": 60,
+  "consumes": ["TechnicalSpec", "ImplementationPlan", "TestPlan"],
+  "produces": ["ReviewFindings"],
+  "kb_filters": {"role_scope": ["reviewer"]},
+  "policy": {"source_mutation": "forbidden", "approval_required_for_promotion": true},
+  "questions": [
+    {"id": "blocking_risks", "question": "Есть ли blocking risks?", "answer": {"provider": "helper", "name": "blocking_risks"}, "evidence": ["ProjectMapReport.risks", "analysis_tasks"]},
+    {"id": "security", "question": "Есть ли security/privacy risks?", "answer": {"provider": "helper", "name": "security_risks"}, "evidence": ["imports", "weak_contract_zones"], "confidence": "medium"},
+    {"id": "source_safety", "question": "Соблюдена ли source edit safety policy?", "answer": {"provider": "constant", "value": "Да: questionnaire only; source projects are read-only evidence."}, "evidence": ["report.policy"]},
+    {"id": "dependency_drift", "question": "Есть ли dependency drift risk?", "answer": {"provider": "ctx", "path": ["readiness", "quarantine_candidates"]}, "evidence": ["quarantine_candidates"]},
+    {"id": "error_taxonomy", "question": "Достаточно ли error taxonomy?", "answer": {"provider": "helper", "name": "error_surface"}, "evidence": ["answers.5_errors_state_repro"]},
+    {"id": "state_replay", "question": "Есть ли state/replay risk?", "answer": {"provider": "ctx", "path": ["readiness", "resume_reuse_plan"]}, "evidence": ["resume_reuse_plan"], "confidence": "medium"},
+    {"id": "observability", "question": "Хватает ли observability/logging?", "answer": {"provider": "helper", "name": "observability"}, "evidence": ["project_insights", "runtime_commands"], "confidence": "medium"},
+    {"id": "source_noise", "question": "Не загрязнен ли анализ docs/tests/examples?", "answer": {"provider": "helper", "name": "source_noise"}, "evidence": ["source_strata"], "confidence": "medium"},
+    {"id": "ambiguous", "question": "Какие факты выглядят неоднозначными?", "answer": {"provider": "helper", "name": "ambiguous_facts"}, "evidence": ["open_questions", "knowledge_gap"], "confidence": "medium"},
+    {"id": "kb_impact", "question": "Какой KB impact у проекта?", "answer": {"provider": "helper", "name": "kb_impact"}, "evidence": ["architecture_synthesis", "knowledge_gap"], "confidence": "medium"},
+    {"id": "release", "question": "Какое release decision по первому slice?", "answer": {"provider": "helper", "name": "release_decision"}, "evidence": ["risks", "minimal_extraction_plan"]},
+    {"id": "approvals", "question": "Какие approvals нужны?", "answer": {"provider": "helper", "name": "approvals"}, "evidence": ["role policy", "risk surface"]}
+  ]
+}
