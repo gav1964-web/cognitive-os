@@ -30,6 +30,7 @@ def test_role_pipeline_returns_next_action(tmp_path):
     assert result["transform"]["status"] == "skipped"
     assert Path(result["report_path"]).exists()
     assert Path(result["human_documents"]["architecture_analysis"]).exists()
+    assert Path(result["human_documents"]["technical_spec"]).exists()
     assert result["artifacts"]["review_findings"]["artifact_type"] == "ReviewFindings"
 
 
@@ -55,6 +56,7 @@ def test_role_pipeline_cli_writes_report():
 
     assert payload["status"] == "ok"
     assert Path(payload["report_path"]).exists()
+    assert Path(payload["human_documents"]["technical_spec"]).exists()
 
 
 def test_role_pipeline_can_run_transform():

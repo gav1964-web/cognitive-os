@@ -46,6 +46,7 @@ def main() -> int:
         base_url=args.base_url.rstrip("/"),
         model=args.model,
         timeout_seconds=args.timeout,
+        response_format=default_l45.response_format,
         api_key=os.environ.get(args.api_key_env) or None,
         provider_label="external_l45",
     )

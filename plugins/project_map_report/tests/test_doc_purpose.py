@@ -13,6 +13,20 @@ def test_docs_text_excludes_dependency_manifests_and_hidden_caches() -> None:
     assert docs_text(files) == "# Gateway\n\nRoutes chat requests to providers."
 
 
+def test_docs_text_prefers_canonical_root_readme_before_topic_readmes() -> None:
+    files = {
+        "files": [
+            {"path": "README.dialects.rst", "text": "Developing new Dialects\n========================"},
+            {"path": "README.rst", "text": "SQLAlchemy\n==========\n\nThe Python SQL Toolkit and Object Relational Mapper"},
+        ]
+    }
+
+    docs = docs_text(files)
+
+    assert docs.startswith("SQLAlchemy")
+    assert purpose_sentence(docs) == "The Python SQL Toolkit and Object Relational Mapper"
+
+
 def test_purpose_sentence_skips_not_included_section() -> None:
     docs = """# Offline Kursk Map Package
 

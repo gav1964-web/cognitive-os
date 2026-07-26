@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from runtime.models import Pipeline, PipelineNode
-from runtime.pipeline import PipelineValidationError, load_pipeline, validate_pipeline
+from runtime.models import ExecutionContext, Pipeline, PipelineNode
+from runtime.pipeline import PipelineValidationError, load_pipeline, resolve_node_input, validate_pipeline
 from runtime.registry import CapabilityRegistry
 
 
@@ -77,3 +77,23 @@ def test_pipeline_validation_rejects_cycles(registry):
     )
     with pytest.raises(PipelineValidationError, match="cycle"):
         validate_pipeline(pipeline, registry)
+
+
+def test_resolve_node_input_resolves_nested_input_refs():
+    pipeline = Pipeline(id="nested", version="0.1.0", nodes=[], edges=[], retry_policy={})
+    context = ExecutionContext(
+        pipeline=pipeline,
+        root_input={"question": "существует ли кэш обращений к LLM", "path": "F:/ubuntu/test/5.1"},
+        state="RUNNING",
+    )
+
+    resolved = resolve_node_input(
+        context,
+        {
+            "questions": ["$input.question"],
+            "meta": {"root": "$input.path"},
+        },
+    )
+
+    assert resolved["questions"] == ["существует ли кэш обращений к LLM"]
+    assert resolved["meta"]["root"] == "F:/ubuntu/test/5.1"

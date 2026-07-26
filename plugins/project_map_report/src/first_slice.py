@@ -38,6 +38,21 @@ PREFERRED_FIRST_SLICE_PRIORITY = {
     "_handle_chat_request": 7,
     "flush": 8,
     "chat_completions": 9,
+    "truncate_context": 10,
+    "summarize_older_context": 11,
+    "count_message_tokens": 12,
+    "choose_provider": 13,
+    "select_provider": 14,
+    "fallback_strategy": 15,
+    "send_to_model": 0,
+    "extract_json_from_model_response": 1,
+    "check_single_module_output": 2,
+    "clean_module_output": 3,
+    "goal_to_spec": 4,
+    "regenerate_module": 5,
+    "fix_module_until_success": 6,
+    "docker_run": 7,
+    "docker_build": 8,
 }
 
 

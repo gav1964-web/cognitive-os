@@ -68,14 +68,14 @@ def test_local_inference_emits_usage_telemetry_without_prompt_content():
     records = []
     response = _FakeResponse(
         {
-            "model": "GigaChat-Pro",
+            "model": "deepseek/deepseek-chat",
             "choices": [{"message": {"content": '{"ok": true}'}}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 4, "total_tokens": 14},
         }
     )
     config = LocalInferenceConfig(
         base_url="http://127.0.0.1:8000/v1",
-        model="GigaChat-Pro",
+        model="deepseek/deepseek-chat",
         provider_label="external_l4",
         telemetry_sink=records.append,
     )
@@ -84,20 +84,22 @@ def test_local_inference_emits_usage_telemetry_without_prompt_content():
         assert call_json_chat([{"role": "user", "content": "secret prompt"}], config=config) == {"ok": True}
 
     assert records[0]["total_tokens"] == 14
-    assert records[0]["model"] == "GigaChat-Pro"
+    assert records[0]["model"] == "deepseek/deepseek-chat"
     assert "secret prompt" not in str(records)
 
 
-def test_l45_inference_defaults_to_lightweight_gigachat_profile(monkeypatch):
+def test_l45_inference_defaults_to_deepseek_profile(monkeypatch):
     monkeypatch.delenv("COGNITIVE_OS_L45_BASE_URL", raising=False)
     monkeypatch.delenv("COGNITIVE_OS_L45_MODEL", raising=False)
     monkeypatch.delenv("COGNITIVE_OS_L45_TIMEOUT", raising=False)
+    monkeypatch.delenv("COGNITIVE_OS_L45_RESPONSE_FORMAT", raising=False)
     monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY", raising=False)
     monkeypatch.delenv("COGNITIVE_OS_L45_API_KEY_ENV", raising=False)
 
     config = LocalInferenceConfig.from_l45_env()
 
     assert config.base_url == "http://127.0.0.1:8000/v1"
-    assert config.model == "GigaChat Lite"
+    assert config.model == "deepseek/deepseek-chat"
     assert config.timeout_seconds == 60
+    assert config.response_format is False
     assert config.provider_label == "external_l45_intent_resolver"

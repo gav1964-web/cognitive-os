@@ -7,6 +7,7 @@ from typing import Any
 
 
 EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
+CONTEXT_DIRS = {"fixlog", "workspace"}
 LANGUAGE_BY_EXTENSION = {
     ".bat": "Batch",
     ".css": "CSS",
@@ -19,7 +20,7 @@ LANGUAGE_BY_EXTENSION = {
     ".xlsx": "Excel",
 }
 DEPENDENCY_FILES = {"requirements.txt", "pyproject.toml", "package.json", "setup.py"}
-ENTRYPOINT_NAMES = {"app.py", "main.py", "server.py", "manage.py"}
+ENTRYPOINT_NAMES = {"api_server.py", "app.py", "main.py", "server.py", "manage.py"}
 LARGE_ARTIFACT_BYTES = 50 * 1024 * 1024
 
 
@@ -39,7 +40,10 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         if suffix:
             extension_counts[suffix] = extension_counts.get(suffix, 0) + 1
         lower_name = item.name.lower()
-        size = item.stat().st_size
+        try:
+            size = item.stat().st_size
+        except OSError:
+            continue
         if lower_name in DEPENDENCY_FILES:
             content = _read_small_text(item)
             dependency_text += "\n" + content.lower()
@@ -72,12 +76,22 @@ def _iter_project_files(root: Path):
     stack = [root]
     while stack:
         current = stack.pop()
-        for item in sorted(current.iterdir(), key=lambda path: path.name.lower()):
-            if item.is_dir():
-                if item.name in EXCLUDED_DIRS or item.name.startswith(".") or item.name.lower().endswith("_install_package"):
+        try:
+            children = sorted(current.iterdir(), key=lambda path: path.name.lower())
+        except OSError:
+            continue
+        for item in children:
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                continue
+            if is_dir:
+                lower_name = item.name.lower()
+                if item.name in EXCLUDED_DIRS or lower_name in CONTEXT_DIRS or item.name.startswith(".") or lower_name.endswith("_install_package"):
                     continue
                 stack.append(item)
-            elif item.is_file():
+            elif is_file:
                 yield item
 
 
@@ -111,9 +125,29 @@ def _is_context_path(path: str) -> bool:
     parts = lowered.split("/")
     name = parts[-1] if parts else lowered
     if any(
-        part in {"bench", "benchmarks", "ci_tools", "docs", "downstream", "examples", "failures-to-investigate", "integration", "scripts", "tasks", "test", "tests", "tools"}
+        part in {
+            "bench",
+            "benchmarks",
+            "ci_tools",
+            "docs",
+            "downstream",
+            "examples",
+            "failures-to-investigate",
+            "fixlog",
+            "integration",
+            "scripts",
+            "tasks",
+            "test",
+            "tests",
+            "tools",
+            "workspace",
+        }
         for part in parts
     ):
+        return True
+    if name.startswith("pipeline_backup_") or "_backup_" in name:
+        return True
+    if len(parts) >= 2 and parts[0] == "vx" and parts[1] == "autofix":
         return True
     if parts[:2] == ["packaging", "pep517_backend"]:
         return True

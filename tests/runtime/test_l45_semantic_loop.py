@@ -349,7 +349,7 @@ def test_l45_hardening_synthesizes_missing_model_risks():
     assert validation["status"] == "accepted"
 
 
-def test_l45_model_path_uses_lightweight_gigachat_default(monkeypatch):
+def test_l45_model_path_uses_deepseek_default(monkeypatch):
     request = {
         "artifact_type": "SemanticHypothesisRequest",
         "layer": "L4.5",
@@ -389,7 +389,8 @@ def test_l45_model_path_uses_lightweight_gigachat_default(monkeypatch):
     proposal = run_semantic_reasoner(request=request, use_model=True)
 
     assert proposal["hardening"]["raw_model_output_used"] is True
-    assert captured["config"].model == "GigaChat Lite"
+    assert captured["config"].model == "deepseek/deepseek-chat"
+    assert captured["config"].response_format is False
     assert captured["config"].provider_label == "external_l45_intent_resolver"
 
 

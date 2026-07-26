@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .interface_contracts import load_interface_contracts
+from .greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from .l4_decision_table import load_l4_decision_rules
 from .operation_recipe_rules import load_operation_recipe_rules
 from .prompt_intake_rules import load_prompt_intake_rules
@@ -17,6 +18,7 @@ from .sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from .sandbox_release_policy import load_sandbox_release_policy
 from .semantic_resolution_rules import load_semantic_resolution_rules
 from .stage2_template_routes import load_stage2_template_routes
+from .web_extraction_profiles import load_web_extraction_profiles
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +53,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_role_directory(catalogs),
             _check_stage2_routes(catalogs, base),
             _check_semantic_resolution(catalogs),
+            _check_web_extraction_profiles(catalogs),
             _check_operation_recipes(catalogs),
             _check_sandbox_programmer(catalogs),
             _check_sandbox_attempt_policy(catalogs, base),
@@ -88,11 +91,13 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "prompt_intake_rules": load_prompt_intake_rules(str(root / "config" / "prompt_intake_rules.json")),
         "semantic_resolution_rules": load_semantic_resolution_rules(str(root / "config" / "semantic_resolution_rules.json")),
         "stage2_template_routes": load_stage2_template_routes(str(root / "config" / "stage2_template_routes.json")),
+        "web_extraction_profiles": load_web_extraction_profiles(str(root / "config" / "web_extraction_profiles.json")),
         "operation_recipe_rules": load_operation_recipe_rules(str(root / "config" / "operation_recipe_rules.json")),
         "sandbox_programmer_profiles": load_sandbox_programmer_profiles(str(root / "config" / "sandbox_programmer_profiles.json")),
         "sandbox_release_policy": load_sandbox_release_policy(str(root / "config" / "sandbox_release_policy.json")),
         "l4_decision_rules": load_l4_decision_rules(str(root / "config" / "l4_decision_rules.json")),
         "interface_contracts": load_interface_contracts(root),
+        "greenfield_architecture_patterns": load_greenfield_architecture_patterns(str(root / "config" / "greenfield_architecture_patterns.json")),
         "sandbox_operations": _read_json(root / "registry" / "sandbox_programmer_operations.json"),
         "sandbox_compositions": _read_json(root / "registry" / "sandbox_programmer_compositions.json"),
         "sandbox_attempt_policy": _read_json(root / "registry" / "sandbox_attempt_policy.json"),
@@ -149,6 +154,23 @@ def _check_semantic_resolution(catalogs: dict[str, Any]) -> _Check:
         required = str(dict(row).get("required_template") or "")
         if required not in known:
             check.errors.append(f"semantic_rule_unknown_template:{required}")
+    return check
+
+
+def _check_web_extraction_profiles(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("web_extraction_profiles_integrity")
+    seen = set()
+    for row in catalogs["web_extraction_profiles"].get("profiles", []):
+        host = str(dict(row).get("host") or "")
+        kind = str(dict(row).get("target_kind") or "")
+        key = (host, kind)
+        if key in seen:
+            check.errors.append(f"duplicate_web_extraction_profile:{kind}:{host}")
+        seen.add(key)
+        if not host or "." not in host:
+            check.errors.append(f"invalid_web_extraction_host:{host}")
+        if kind not in {"news"}:
+            check.warnings.append(f"unknown_web_extraction_target_kind:{kind}:{host}")
     return check
 
 

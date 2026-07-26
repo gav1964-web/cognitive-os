@@ -41,13 +41,14 @@ def deliberate_project_report(
     evidence = digest if context_mode == "compact" else facts
     signals = level35_signals or {}
     if not _is_external_cortex(config):
-        return _fallback_deliberation(
+        fallback = _fallback_deliberation(
             digest,
             signals,
             error="external Level 4 cortex provider is required",
             config=config,
             context_mode=context_mode,
         )
+        return harden_deliberation(fallback, digest)
     try:
         result = call_json_chat(_messages(evidence, signals, context_mode=context_mode), config=config)
     except LocalInferenceError as exc:
@@ -55,16 +56,18 @@ def deliberate_project_report(
             try:
                 result = call_json_chat(_messages(digest, signals, context_mode="compact"), config=config)
             except LocalInferenceError as compact_exc:
-                return _fallback_deliberation(digest, signals, error=str(compact_exc), config=config, context_mode="compact_after_overflow")
+                fallback = _fallback_deliberation(digest, signals, error=str(compact_exc), config=config, context_mode="compact_after_overflow")
+                return harden_deliberation(fallback, digest)
             missing = sorted(REQUIRED_KEYS - set(result))
             if missing:
-                return _fallback_deliberation(
+                fallback = _fallback_deliberation(
                     digest,
                     signals,
                     error=f"missing keys after compact retry: {', '.join(missing)}",
                     config=config,
                     context_mode="compact_after_overflow",
                 )
+                return harden_deliberation(fallback, digest)
             result = _normalize_deliberation(result)
             result["source"] = config.provider_label
             result["layer"] = "L4"
@@ -74,10 +77,12 @@ def deliberate_project_report(
             result["signal_count"] = len(signals.get("signals", []))
             result["context_retry_reason"] = str(exc)
             return harden_deliberation(result, digest)
-        return _fallback_deliberation(digest, signals, error=str(exc), config=config, context_mode=context_mode)
+        fallback = _fallback_deliberation(digest, signals, error=str(exc), config=config, context_mode=context_mode)
+        return harden_deliberation(fallback, digest)
     missing = sorted(REQUIRED_KEYS - set(result))
     if missing:
-        return _fallback_deliberation(digest, signals, error=f"missing keys: {', '.join(missing)}", config=config, context_mode=context_mode)
+        fallback = _fallback_deliberation(digest, signals, error=f"missing keys: {', '.join(missing)}", config=config, context_mode=context_mode)
+        return harden_deliberation(fallback, digest)
     result = _normalize_deliberation(result)
     result["source"] = "local_llm"
     if config and config.provider_label != "local":
@@ -173,23 +178,30 @@ def _fallback_deliberation(
     config: LocalInferenceConfig | None,
     context_mode: str,
 ) -> dict[str, Any]:
-    frameworks = ", ".join(facts.get("frameworks", []) or []) or "unknown stack"
+    domain_profile = dict(facts.get("domain_profile") or {})
+    frameworks = ", ".join(facts.get("frameworks", []) or [])
+    project_label = frameworks or _domain_label(domain_profile) or "unknown stack"
     task = facts.get("task") or "Project purpose is not explicit in deterministic facts."
+    summary = str(task) if facts.get("task") else f"{project_label} project. {task}"
     signal_rows = [row for row in signals.get("signals", []) if isinstance(row, dict)]
     capability_hints = [
         str(row.get("target") or row.get("type"))
         for row in signal_rows
-        if row.get("type") in {"CAPABILITY_CANDIDATE", "PIPELINE_CANDIDATE", "RECOVERY_LOOP_CANDIDATE"}
+        if row.get("type")
+        in {
+            "CAPABILITY_CANDIDATE",
+            "PIPELINE_CANDIDATE",
+            "RECOVERY_LOOP_CANDIDATE",
+            "MVP_EXTRACTION_CANDIDATE",
+            "PROCESS_BOUNDARY_CANDIDATE",
+        }
     ][:3]
-    refactor_hints = [
-        str(row.get("suggested_action") or row.get("target"))
-        for row in signal_rows
-        if row.get("type") in {"BROAD_FUNCTION", "WEAK_CONTRACT", "UNKNOWN_BOUNDARY"}
-    ][:3]
+    refactor_hints = [_signal_refactor_hint(row) for row in _rank_refactor_signals(signal_rows)]
+    refactor_hints = list(dict.fromkeys(item for item in refactor_hints if item))[:3]
     loop = facts.get("loop", []) or ["Select one entrypoint, run it, capture failure, retry/switch/stop."]
     return {
-        "executive_summary": f"{frameworks} project. {task}",
-        "capability_decomposition": capability_hints or list(facts.get("capabilities", [])[:3]),
+        "executive_summary": summary,
+        "capability_decomposition": capability_hints or _fallback_capabilities_from_facts(facts),
         "refactor_plan": refactor_hints or ["Review entrypoints, contracts, and recovery boundaries."],
         "cognitive_loop": "; ".join(str(item) for item in loop[:3]),
         "open_questions": ["Validate boundaries and user-facing scenarios with a human reviewer."],
@@ -203,3 +215,124 @@ def _fallback_deliberation(
         "signal_count": len(signal_rows),
         "fallback_reason": error,
     }
+
+
+def _domain_label(domain_profile: dict[str, Any]) -> str:
+    kind = str(domain_profile.get("kind") or "").replace("_", " ").strip()
+    return kind if kind else ""
+
+
+def _fallback_capabilities_from_facts(facts: dict[str, Any]) -> list[str]:
+    runtime = dict(facts.get("runtime_extraction") or {})
+    extraction = runtime.get("extraction") or []
+    rows = [
+        str(row.get("capability"))
+        for row in extraction
+        if isinstance(row, dict) and row.get("capability")
+    ]
+    if rows:
+        return rows[:3]
+    return list(facts.get("capabilities", [])[:3])
+
+
+def _signal_refactor_hint(row: dict[str, Any]) -> str:
+    target = str(row.get("target") or "").strip()
+    action = str(row.get("suggested_action") or "").strip()
+    if target and action:
+        return f"{action}: {target}"
+    return target or action
+
+
+def _rank_refactor_signals(signal_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    useful_types = {
+        "IDEMPOTENCY_RISK",
+        "PROCESS_BOUNDARY_CANDIDATE",
+        "MVP_EXTRACTION_CANDIDATE",
+        "BROAD_FUNCTION",
+        "WEAK_CONTRACT",
+        "UNKNOWN_BOUNDARY",
+    }
+    rows = [row for row in signal_rows if row.get("type") in useful_types and row.get("target")]
+    rows.sort(key=_refactor_signal_sort_key)
+    selected: list[dict[str, Any]] = []
+    seen_types: set[str] = set()
+    seen_groups: set[str] = set()
+    for row in rows:
+        signal_type = str(row.get("type") or "")
+        if signal_type in seen_types:
+            continue
+        group = _target_group(str(row.get("target") or ""))
+        if group in seen_groups:
+            alternative = _first_unseen_group(rows, signal_type, seen_groups)
+            if alternative is not None:
+                row = alternative
+                group = _target_group(str(row.get("target") or ""))
+        selected.append(row)
+        seen_types.add(signal_type)
+        seen_groups.add(group)
+        if len(selected) >= 3:
+            return selected
+    for row in rows:
+        if row not in selected:
+            selected.append(row)
+        if len(selected) >= 6:
+            break
+    return selected
+
+
+def _refactor_signal_sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
+    signal_type = str(row.get("type") or "")
+    target = str(row.get("target") or "").lower()
+    type_priority = {
+        "MVP_EXTRACTION_CANDIDATE": 0,
+        "PROCESS_BOUNDARY_CANDIDATE": 1,
+        "IDEMPOTENCY_RISK": 2,
+        "BROAD_FUNCTION": 3,
+        "WEAK_CONTRACT": 4,
+        "UNKNOWN_BOUNDARY": 5,
+    }.get(signal_type, 9)
+    return (type_priority, _target_priority(signal_type, target), target)
+
+
+def _first_unseen_group(rows: list[dict[str, Any]], signal_type: str, seen_groups: set[str]) -> dict[str, Any] | None:
+    for row in rows:
+        if str(row.get("type") or "") != signal_type:
+            continue
+        if _target_group(str(row.get("target") or "")) not in seen_groups:
+            return row
+    return None
+
+
+def _target_priority(signal_type: str, target: str) -> int:
+    if signal_type == "MVP_EXTRACTION_CANDIDATE":
+        if any(marker in target for marker in ("send_to_model", "llm", "model", "provider")):
+            return -2
+        if any(marker in target for marker in ("docker_run", "docker_build")):
+            return 0
+        return 1
+    if signal_type == "PROCESS_BOUNDARY_CANDIDATE":
+        if "docker_run" in target:
+            return -2
+        if "docker_build" in target:
+            return -1
+        if "clean_docker" in target:
+            return 2
+        return 0
+    if signal_type == "IDEMPOTENCY_RISK":
+        if any(marker in target for marker in ("write_files", "copy_template", "save_to_template")):
+            return -2
+        if any(marker in target for marker in ("docker_run", "docker_build")):
+            return 1
+        return 0
+    return 0
+
+
+def _target_group(target: str) -> str:
+    lowered = target.lower()
+    if any(marker in lowered for marker in ("send_to_model", "llm", "model", "provider")):
+        return "llm_boundary"
+    if any(marker in lowered for marker in ("docker_run", "docker_build", "clean_docker", "subprocess")):
+        return "process_boundary"
+    if any(marker in lowered for marker in ("write_files", "copy_template", "save_to_template", "filesystem")):
+        return "filesystem_mutation"
+    return lowered

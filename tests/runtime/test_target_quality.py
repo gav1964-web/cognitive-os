@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from runtime.target_quality import target_quality_report
+from runtime.target_quality import semantic_target_quality_report, target_quality_report
 
 
 def test_target_quality_marks_representative_target_good():
@@ -35,3 +35,171 @@ def test_target_quality_marks_missing_target_blocked():
     report = target_quality_report({"selected_extraction_candidate": ""})
 
     assert report["status"] == "blocked"
+
+
+def test_semantic_target_quality_accepts_bounded_factory_contract():
+    report = semantic_target_quality_report(
+        "app/providers/factory.py:build_providers_from_config",
+        ranked_candidates=["app/providers/factory.py:build_providers_from_config"],
+        source_evidence=["app/providers/factory.py:build_providers_from_config"],
+        selection_reason="central flow node; input contract can be inferred from signature",
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 85
+
+
+def test_semantic_target_quality_flags_meta_runtime_targets():
+    meta = semantic_target_quality_report(
+        "p0048/_capability_acquisition.py:acquire_capability",
+        ranked_candidates=["p0048/_capability_acquisition.py:acquire_capability"],
+        source_evidence=["p0048/_capability_acquisition.py:acquire_capability"],
+    )
+    boundary = semantic_target_quality_report(
+        "app/main.py:provider_url",
+        ranked_candidates=["app/main.py:provider_url"],
+        source_evidence=["app/main.py:provider_url"],
+    )
+
+    assert meta["status"] in {"suspicious", "poor"}
+    assert boundary["status"] in {"suspicious", "poor"}
+
+
+def test_semantic_target_quality_accepts_llm_repair_hypothesis_boundary():
+    report = semantic_target_quality_report(
+        "AutoFix/auto_dev_agent.py:send_to_model",
+        ranked_candidates=["AutoFix/auto_dev_agent.py:send_to_model"],
+        source_evidence=["AutoFix/auto_dev_agent.py:send_to_model"],
+        selection_reason="LLM hypothesis boundary is central to repair-attempt contract",
+    )
+
+    assert report["status"] == "strong"
+    assert "LLM repair hypothesis boundary" in " ".join(report["reasons"])
+
+
+def test_semantic_target_quality_does_not_treat_iniconfig_as_icon_utility():
+    report = semantic_target_quality_report(
+        "src/iniconfig/_parse.py:parse_ini_data",
+        ranked_candidates=["src/iniconfig/_parse.py:parse_ini_data"],
+        source_evidence=["src/iniconfig/_parse.py:parse_ini_data"],
+        selection_reason="deterministic parser/normalizer/validator shape",
+    )
+
+    assert report["status"] == "strong"
+    assert "icon" not in " ".join(report["reasons"])
+
+
+def test_semantic_target_quality_penalizes_string_facade_over_markup_escape_boundary():
+    weak = semantic_target_quality_report(
+        "src/markupsafe/__init__.py:capitalize",
+        ranked_candidates=["src/markupsafe/__init__.py:capitalize"],
+        source_evidence=["src/markupsafe/__init__.py:capitalize"],
+        selection_reason="pure transform candidate",
+    )
+    strong = semantic_target_quality_report(
+        "src/markupsafe/__init__.py:escape",
+        ranked_candidates=["src/markupsafe/__init__.py:escape"],
+        source_evidence=["src/markupsafe/__init__.py:escape"],
+        selection_reason="pure transform candidate",
+    )
+
+    assert weak["status"] in {"suspicious", "poor"}
+    assert strong["status"] == "strong"
+
+
+def test_semantic_target_quality_accepts_connection_lifecycle_boundary():
+    report = semantic_target_quality_report(
+        "httpcore/_async/socks_proxy.py:_init_socks5_connection",
+        ranked_candidates=["httpcore/_async/socks_proxy.py:_init_socks5_connection"],
+        source_evidence=["httpcore/_async/socks_proxy.py:_init_socks5_connection"],
+        selection_reason="input contract can be inferred from signature",
+    )
+
+    assert report["status"] == "strong"
+
+
+def test_semantic_target_quality_accepts_exception_formatting_boundary():
+    report = semantic_target_quality_report(
+        "py/_code/_py2traceback.py:format_exception_only",
+        ranked_candidates=["py/_code/_py2traceback.py:format_exception_only"],
+        source_evidence=["py/_code/_py2traceback.py:format_exception_only"],
+        selection_reason="bounded data-shaping helper is a better extraction target",
+    )
+
+    assert report["score"] >= 95
+    assert report["status"] == "strong"
+
+
+def test_semantic_target_quality_accepts_signed_token_boundary():
+    report = semantic_target_quality_report(
+        "src/itsdangerous/timed.py:unsign",
+        ranked_candidates=["src/itsdangerous/timed.py:unsign"],
+        source_evidence=["src/itsdangerous/timed.py:unsign"],
+    )
+
+    assert report["score"] >= 95
+    assert report["status"] == "strong"
+
+
+def test_semantic_target_quality_penalizes_cli_bootstrap_helpers():
+    parse_args = semantic_target_quality_report(
+        "prompt_lab.py:parse_args",
+        ranked_candidates=["prompt_lab.py:parse_args"],
+        source_evidence=["prompt_lab.py:parse_args"],
+        selection_reason="deterministic parser/normalizer/validator shape",
+    )
+    ignored = semantic_target_quality_report(
+        "map.py:is_ignored",
+        ranked_candidates=["map.py:is_ignored"],
+        source_evidence=["map.py:is_ignored"],
+        selection_reason="pure transform candidate",
+    )
+
+    assert parse_args["status"] in {"suspicious", "poor"}
+    assert ignored["status"] in {"suspicious", "poor"}
+
+
+def test_semantic_target_quality_allows_prompt_lab_first_slice_target():
+    report = semantic_target_quality_report(
+        "prompt_lab.py:analyze_validation_results",
+        ranked_candidates=["prompt_lab.py:analyze_validation_results"],
+        source_evidence=["prompt_lab.py:analyze_validation_results"],
+        selection_reason="ProjectArchitectureSynthesis first-slice target takes precedence over convenience-only pure transforms",
+    )
+
+    assert report["status"] in {"acceptable", "strong"}
+    assert report["score"] >= 65
+
+
+def test_semantic_target_quality_accepts_calculate_provider_and_mock_contracts():
+    calculate = semantic_target_quality_report(
+        "main.py:calculate",
+        ranked_candidates=["main.py:calculate"],
+        source_evidence=["main.py:calculate"],
+        selection_reason="pure transform candidate",
+    )
+    provider = semantic_target_quality_report(
+        "api.py:list_provider_capabilities",
+        ranked_candidates=["api.py:list_provider_capabilities"],
+        source_evidence=["api.py:list_provider_capabilities"],
+    )
+    mock_wrapper = semantic_target_quality_report(
+        "src/pytest_mock/plugin.py:assert_has_calls_wrapper",
+        ranked_candidates=["src/pytest_mock/plugin.py:assert_has_calls_wrapper"],
+        source_evidence=["src/pytest_mock/plugin.py:assert_has_calls_wrapper"],
+        selection_reason="pure transform candidate",
+    )
+
+    assert calculate["status"] == "strong"
+    assert provider["status"] == "strong"
+    assert mock_wrapper["status"] == "strong"
+
+
+def test_semantic_target_quality_demotes_health_probe():
+    report = semantic_target_quality_report(
+        "api.py:health",
+        ranked_candidates=["api.py:health"],
+        source_evidence=["api.py:health"],
+    )
+
+    assert report["status"] in {"suspicious", "poor"}

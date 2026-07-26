@@ -14,6 +14,7 @@ CAPABILITY_PATTERNS_PATH = KNOWLEDGE_DIR / "capability_patterns.json"
 RISK_PATTERNS_PATH = KNOWLEDGE_DIR / "risk_patterns.json"
 PROJECT_LESSONS_PATH = KNOWLEDGE_DIR / "project_lessons.json"
 BACKLOG_PATH = KNOWLEDGE_DIR / "backlog.json"
+ROLE_QA_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "role_qa" / "synthetic_role_qa.json"
 
 
 @lru_cache(maxsize=1)
@@ -71,7 +72,23 @@ def load_all_knowledge_records() -> list[dict[str, Any]]:
         + list(load_risk_patterns().get("records", []))
         + list(load_project_lessons().get("records", []))
         + list(load_knowledge_backlog().get("records", []))
+        + load_role_qa_records()
     )
+
+
+def load_role_qa_records(path: str | None = None) -> list[dict[str, Any]]:
+    """Load role-scoped Q/A records that live inside the KB."""
+
+    source = Path(path) if path else ROLE_QA_PATH
+    if not source.is_file():
+        return []
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "synthetic_role_qa.v1":
+        raise ValueError("role QA KB must use schema_version synthetic_role_qa.v1")
+    records = payload.get("records")
+    if not isinstance(records, list):
+        raise ValueError("role QA KB must contain records array")
+    return [dict(row) for row in records if isinstance(row, dict) and row.get("record_type") == "role_qa"]
 
 
 def _load_records(path: Path, record_type: str, id_field: str) -> dict[str, Any]:
@@ -217,6 +234,8 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     project_text = _project_text(facts)
     project_name = _project_name(str(facts.get("root") or "")).lower()
     input_text = " ".join(str(item) for item in facts.get("inputs", [])).lower()
+    domain_profile = dict(facts.get("domain_profile") or {})
+    domain_kind = str(domain_profile.get("kind") or "").lower()
 
     negative = _strings(match.get("negative_contains_any") or match.get("negative_signals"))
     blocked = [needle for needle in negative if needle.lower() in project_text]
@@ -229,6 +248,7 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
 
     project_names = _strings(match.get("project_name_contains_any"))
     project_name_matched = False
+    domain_profile_matched = False
     if project_names:
         found = [needle for needle in project_names if needle.lower() in project_name]
         if found:
@@ -236,10 +256,21 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
             score += 60 + len(found) * 10
             reasons.append("project name contains " + ", ".join(found[:3]))
 
+    domain_kinds = _strings(match.get("domain_profile_kind") or match.get("domain_profile_kinds"))
+    if domain_kinds:
+        found = [needle for needle in domain_kinds if needle.lower() == domain_kind]
+        if not found and not project_name_matched:
+            return 0, []
+        if found:
+            domain_profile_matched = True
+            score += 180 + len(found) * 10
+            reasons.append("domain profile is " + ", ".join(found[:3]))
+    anchored = project_name_matched or domain_profile_matched
+
     frameworks = _strings(match.get("framework_contains_any"))
     if frameworks:
         found = [needle for needle in frameworks if needle.lower() in framework_text]
-        if not found and not project_name_matched:
+        if not found and not anchored:
             return 0, []
         if found:
             score += 40 + len(found) * 5
@@ -248,7 +279,7 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     text_needles = _strings(match.get("text_contains_any"))
     if text_needles:
         found = [needle for needle in text_needles if needle.lower() in project_text]
-        if not found and not project_name_matched:
+        if not found and not anchored:
             return 0, []
         if found:
             score += 30 + len(found) * 3
@@ -257,7 +288,7 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     input_needles = _strings(match.get("input_contains_any"))
     if input_needles:
         found = [needle for needle in input_needles if needle.lower() in input_text]
-        if not found and not project_name_matched:
+        if not found and not anchored:
             return 0, []
         if found:
             score += 15 + len(found) * 3
@@ -286,6 +317,8 @@ def _project_text(facts: dict[str, Any]) -> str:
         + facts.get("central", [])
         + facts.get("broad", [])
         + facts.get("capabilities", [])
+        + facts.get("domain_anchors", [])
+        + [str(item) for item in facts.get("routes", [])]
         + facts.get("entrypoints", [])
         + facts.get("scenarios", [])
         + [str(item) for item in facts.get("schemas", [])]

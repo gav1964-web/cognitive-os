@@ -13,15 +13,18 @@
       "downstream",
       "examples",
       "extras",
+      "fixlog",
       "generated",
       "integration",
       "scripts",
       "scratch",
       "tasks",
+      "template",
       "test",
       "tests",
       "testing",
-      "tools"
+      "tools",
+      "workspace"
     ],
     "prefer_core_prefixes": [
       "src",
@@ -41,6 +44,159 @@
     "policy": "Use context-only paths as evidence, but do not select them as first-slice targets when active core alternatives exist."
   },
   "records": [
+    {
+      "rule_id": "ml_competition_inference_script",
+      "record_type": "project_archetype_rule",
+      "priority": 93,
+      "archetype": "ml_competition_inference_script",
+      "label": "ML competition inference script",
+      "match": {
+        "text_contains_any": [
+          "pandas",
+          "torch",
+          "transformers",
+          "prompts.csv",
+          "submission.csv",
+          "local_submission.csv",
+          "model.generate",
+          "faiss"
+        ],
+        "domain_profile_kind": [
+          "ml_competition_inference_script"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "generate_response",
+          "postprocess",
+          "read_csv",
+          "to_csv"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the notebook/script inference path around {target}, where CSV inputs, model loading, token secrets, GPU/runtime dependencies, and submission output need explicit contracts and fixture-based verification."
+      },
+      "target_architecture_shape": [
+        "Data loading, model loading, inference, postprocessing, quality scoring, and submission writing are separate capabilities.",
+        "Model/provider credentials are read from environment or secret storage, never hardcoded in source.",
+        "Heavy model and GPU boundaries are injectable so tests can use fake tokenizer/model fixtures.",
+        "Input CSV schema, output submission schema, and failed-row handling are explicit contracts.",
+        "Large data/index artifacts are treated as external artifacts with manifests, not active source files."
+      ],
+      "first_slice": {
+        "name": "ml_inference_submission_slice",
+        "goal": "Stabilize one CSV prompt-to-submission row path without requiring live model inference in tests.",
+        "target_sources": [
+          "central",
+          "broad",
+          "extraction",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "x31.py:generate_response",
+          "x31.py:postprocess",
+          "x31.py"
+        ],
+        "steps": [
+          "Define PromptRow, ModelGenerationRequest, GeneratedAnswer, PostprocessedAnswer, and SubmissionRow contracts.",
+          "Separate model/tokenizer loading from per-row generation and inject fake model fixtures for tests.",
+          "Remove hardcoded tokens and move credentials to environment/secret references.",
+          "Verify malformed CSV row, model failure, empty generation, postprocessing edge case, and deterministic submission schema."
+        ]
+      },
+      "defer": [
+        "Do not require downloading or running a 7B model for first contract tests.",
+        "Do not treat notebook checkpoints, generated JSONL, FAISS indexes, pickle files, or submission outputs as active source.",
+        "Do not auto-install dependencies inside the core inference script without a sandboxed dependency policy."
+      ],
+      "verification_extra": "Use tiny CSV fixtures and fake tokenizer/model objects to verify row processing and submission output without live HuggingFace/GPU calls."
+    },
+    {
+      "rule_id": "llm_auto_repair_loop",
+      "record_type": "project_archetype_rule",
+      "priority": 96,
+      "archetype": "llm_auto_repair_loop",
+      "label": "LLM-assisted auto-repair loop",
+      "match": {
+        "project_name_contains_any": [
+          "autofix"
+        ],
+        "text_contains_any": [
+          "autodevagent",
+          "auto_dev_agent.py",
+          "send_to_model",
+          "write_files",
+          "docker_build",
+          "docker_run",
+          "copy_template",
+          "run_prompt",
+          "llm repair"
+        ],
+        "min_score": 80,
+        "domain_profile_kind": [
+          "llm_auto_repair_loop"
+        ]
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "auto_dev_agent.py:run",
+          "send_to_model",
+          "write_files",
+          "docker_run",
+          "docker_build",
+          "copy_template"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the repair loop around {target}, where LLM output, file mutation, Docker execution, retry state, and template promotion need explicit contracts and gates."
+      },
+      "target_architecture_shape": [
+        "The repair loop is modeled as typed stages: workspace preparation, verification run, failure capture, LLM hypothesis, patch package validation, bounded retry, and promotion decision.",
+        "LLM output is treated as an untrusted hypothesis package, never as executable authority.",
+        "File updates pass through path scope, schema validation, diff preview, and tests before being applied.",
+        "Docker build/run boundaries have timeout, captured logs, artifact manifests, and replay-safe attempt ids.",
+        "Secrets and provider configuration are read from environment or secret stores, never from committed project files."
+      ],
+      "first_slice": {
+        "name": "repair_attempt_contract_slice",
+        "goal": "Stabilize one repair attempt from Docker failure to validated patch package without changing promotion behavior.",
+        "target_sources": [
+          "domain_anchors",
+          "extraction",
+          "central",
+          "orchestrators",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "auto_dev_agent.py:send_to_model",
+          "auto_dev_agent.py:write_files",
+          "auto_dev_agent.py:docker_run",
+          "auto_dev_agent.py:docker_build",
+          "auto_dev_agent.py:run"
+        ],
+        "steps": [
+          "Define RepairAttemptInput, FailureEvidence, ModelPatchProposal, PatchValidationResult, and AttemptOutcome contracts.",
+          "Validate model JSON before writing files: allowed relative paths, expected file set, text-only payloads, and diff preview.",
+          "Wrap Docker build/run with timeout, captured stdout/stderr, exit code, and artifact paths.",
+          "Add tests for invalid JSON, path traversal, missing required file, build failure, run failure, and successful promotion gate."
+        ]
+      },
+      "defer": [
+        "Do not let LLM output mutate source/template files before patch validation and review gates exist.",
+        "Do not tune prompts before the repair attempt contract and evidence package are stable.",
+        "Do not store provider secrets in source-controlled config."
+      ],
+      "verification_extra": "Use fake LLM responses and fake Docker runner fixtures to verify patch validation, retry stop, and promotion decisions without live provider calls."
+    },
     {
       "rule_id": "web_gis_data_application",
       "record_type": "project_archetype_rule",
@@ -103,20 +259,138 @@
       "verification_extra": "Use fixture map/incident data to verify bbox filtering and serialized response shape."
     },
     {
+      "rule_id": "prompt_lab_evaluation_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 98,
+      "archetype": "prompt_lab_evaluation_runtime",
+      "label": "prompt evaluation and enrichment lab",
+      "purpose_summary": "Run a prompt laboratory that renders validation/enrichment templates, calls an LLM provider, records runs, analyzes results, and exposes CLI/API operations for repeatable prompt quality experiments.",
+      "scenario_summary": [
+        "Initialize and maintain a prompt-lab workspace with cases, templates, reports, and baseline policy.",
+        "Render validation and enrichment prompts without solving the user task directly.",
+        "Call configured LLM providers through controlled CLI/API operations and persist raw/structured responses.",
+        "Analyze validation, enrichment, auto-loop, smoke, and stability runs into reproducible conclusions.",
+        "Expose FastAPI endpoints and background jobs for long-running prompt-lab operations."
+      ],
+      "input_summary": [
+        "raw user prompts and prompt cases",
+        "validation/enrichment templates",
+        "LLM provider configuration",
+        "HTTP API requests",
+        "prompt-lab workspace files"
+      ],
+      "output_summary": [
+        "rendered prompts",
+        "LLM raw responses",
+        "validation/enrichment reports",
+        "job state and progress records",
+        "analysis conclusions and baseline artifacts"
+      ],
+      "match": {
+        "text_contains_any": [
+          "prompt_lab.py",
+          "prompt_lab_api.py",
+          "render_validation_prompt",
+          "render_enrichment_prompt",
+          "run_validation_once",
+          "run_enrichment",
+          "run_auto_loop_once",
+          "analyze_auto_loop_results",
+          "baseline_policy",
+          "prompt-lab"
+        ],
+        "required_contains_any": [
+          "prompt_lab",
+          "render_validation_prompt",
+          "render_enrichment_prompt",
+          "run_validation_once",
+          "run_auto_loop_once"
+        ],
+        "min_score": 3
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "process_boundary",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "run_auto_loop_once",
+          "run_validation_once",
+          "run_enrichment",
+          "analyze_validation_results",
+          "analyze_auto_loop_results",
+          "create_app",
+          "submit_job"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the experiment workflow around {target}, where prompt templates, LLM calls, stored run artifacts, analysis conclusions, and background job state need typed contracts and replay rules."
+      },
+      "target_architecture_shape": [
+        "Prompt cases, template rendering, LLM execution, result parsing, analysis, and baseline promotion are separate typed stages.",
+        "LLM responses are treated as untrusted experiment outputs and stored with provider/model/config metadata.",
+        "CLI commands and FastAPI endpoints remain thin boundaries over shared prompt-lab services.",
+        "Long-running API jobs have explicit state, idempotency keys, progress records, cancellation, and terminal status contracts.",
+        "Prompt-lab workspace files are versioned artifacts, not hidden global state."
+      ],
+      "first_slice": {
+        "name": "prompt_lab_run_artifact_slice",
+        "goal": "Stabilize one prompt-lab run from rendered prompt to persisted result and analysis-ready artifact.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "process_boundary",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "prompt_lab.py:run_validation_once",
+          "prompt_lab.py:run_auto_loop_once",
+          "prompt_lab.py:analyze_validation_results",
+          "prompt_lab.py:analyze_auto_loop_results",
+          "prompt_lab_api.py:submit_job",
+          "prompt_lab_api.py:create_app"
+        ],
+        "steps": [
+          "Define PromptCase, RenderedPrompt, LLMRunRequest, LLMRunResult, RunArtifact, and AnalysisSummary contracts.",
+          "Separate deterministic prompt rendering and result analysis from live LLM/provider calls.",
+          "Persist run metadata with provider, model, template, case id, timestamp, output path, and parsing status.",
+          "Verify malformed LLM response, missing workspace artifact, repeated idempotency key, failed provider call, and successful analysis summary."
+        ]
+      },
+      "defer": [
+        "Do not rewrite the full prompt_lab.py monolith before one run-artifact contract is stable.",
+        "Do not tune prompt wording before run storage, parsing, and analysis contracts are reproducible.",
+        "Do not treat prompt-lab reports as source of truth without evidence links to run artifacts."
+      ],
+      "verification_extra": "Use fake LLM responses and fixture prompt-lab workspaces to verify run artifact creation and analysis without live provider calls."
+    },
+    {
       "rule_id": "llm_gateway_service",
       "record_type": "project_archetype_rule",
       "priority": 90,
       "archetype": "llm_gateway_service",
       "label": "FastAPI LLM gateway/proxy",
       "match": {
-        "framework_contains_any": [
-          "fastapi"
-        ],
         "text_contains_any": [
           "provider",
           "forward",
           "chat_completions",
           "_handle_chat_request"
+        ],
+        "required_contains_any": [
+          "/v1/chat/completions",
+          "/chat/completions",
+          "chat_completions",
+          "_handle_chat_request"
+        ],
+        "negative_contains_any": [
+          "prompt_lab.py",
+          "prompt_lab_api.py",
+          "render_validation_prompt",
+          "render_enrichment_prompt",
+          "run_auto_loop_once"
         ]
       },
       "diagnosis": {
@@ -167,6 +441,195 @@
         "Do not tune rate limiting before request identity and replay semantics are explicit."
       ],
       "verification_extra": "Use fake upstream transport to verify timeout/error normalization without a real provider call."
+    },
+    {
+      "rule_id": "prompt_to_code_compiler_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "prompt_to_code_compiler_pipeline",
+      "label": "prompt-to-code engineering compilation pipeline",
+      "purpose_summary": "Transform bounded user intent into validated engineering artifacts: specification, architecture plan, compile graph, code units, tests, patch preview, and run/replay metadata.",
+      "scenario_summary": [
+        "Accept a bounded user prompt or project change request and turn it into structured engineering artifacts.",
+        "Generate and validate specifications, architecture records, contracts, and compile units before materializing code.",
+        "Lower plans into code/source units while preserving evidence, run state, cache identity, and replay metadata.",
+        "Expose API or CLI operations for sessions, generation, artifacts, patch preview, and project packaging.",
+        "Keep generated/debug/legacy trees isolated from active runtime source until explicit promotion gates pass."
+      ],
+      "input_summary": [
+        "user intent or project change request",
+        "existing project files and templates",
+        "specification and architecture artifacts",
+        "LLM hypothesis outputs",
+        "session/cache/run-state records"
+      ],
+      "output_summary": [
+        "GoalSpec/TechnicalSpec style artifacts",
+        "architecture plan and compile graph",
+        "validated compile units or generated source package",
+        "tests and verification reports",
+        "patch preview and replay metadata"
+      ],
+      "match": {
+        "text_contains_any": [
+          "plugin_studio",
+          "compile_units",
+          "build_compile_graph",
+          "spec_generator",
+          "architecture_generator",
+          "incremental_lowering",
+          "lower_project_incremental",
+          "contracts_generator",
+          "code_source_materializer",
+          "orchestrate"
+        ],
+        "required_contains_any": [
+          "compile_units",
+          "build_compile_graph",
+          "spec_generator",
+          "plugin_studio",
+          "incremental_lowering"
+        ],
+        "negative_contains_any": [
+          "/v1/chat/completions",
+          "/chat/completions",
+          "chat_completions",
+          "_handle_chat_request"
+        ],
+        "min_score": 3
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "build_compile_graph",
+          "orchestrate",
+          "lower_project_incremental",
+          "build_spec_prompts",
+          "_build_canonical_spec",
+          "build_post_spec_state"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the artifact pipeline around {target}, where user intent, spec generation, architecture/code lowering, compile units, cache, and generated output need typed stage contracts."
+      },
+      "target_architecture_shape": [
+        "User intent, generated spec, architecture plan, compile graph, code units, tests, and patch preview are separate typed artifacts.",
+        "LLM output is treated as an untrusted hypothesis package and validated before becoming compile units.",
+        "Session/run state, caches, and generated output directories are explicit adapters, not hidden globals.",
+        "Each stage has replay metadata: input artifact hash, model/config snapshot, generated artifact path, validation result, and failure packet.",
+        "Prompt/code/template helpers are support surfaces; first extraction should target a stage contract or compile graph boundary."
+      ],
+      "first_slice": {
+        "name": "compile_graph_contract_slice",
+        "goal": "Stabilize one spec/plan-to-compile-graph boundary before changing orchestration or generated code output.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "llm/compile_units.py:build_compile_graph",
+          "build_compile_graph",
+          "llm/incremental_lowering.py:lower_project_incremental",
+          "core/orchestrator.py:orchestrate",
+          "llm/prompt_templates.py:build_spec_prompts",
+          "llm/spec_generator.py:_build_canonical_spec"
+        ],
+        "steps": [
+          "Define SpecArtifact, ArchitecturePlan, CompileGraph, CompileUnit, and CompileGraphValidationResult contracts.",
+          "Separate prompt/spec generation from deterministic compile graph construction.",
+          "Attach cache/run-state references as explicit inputs instead of reading hidden session state.",
+          "Verify missing section, malformed plan, duplicate unit, unsupported file target, and replayed compile graph cases."
+        ]
+      },
+      "defer": [
+        "Do not rewrite core/orchestrator.py before the compile graph contract is stable.",
+        "Do not change generated code materialization and patch preview in the same slice.",
+        "Do not treat generated run folders as active source."
+      ],
+      "verification_extra": "Use tiny spec/plan fixtures and fake LLM outputs to verify compile graph construction without live model calls."
+    },
+    {
+      "rule_id": "multi_agent_orchestration_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 94,
+      "archetype": "multi_agent_orchestration_runtime",
+      "label": "multi-agent orchestration runtime",
+      "match": {
+        "framework_contains_any": [
+          "fastapi"
+        ],
+        "text_contains_any": [
+          "a2a",
+          "agentcard",
+          "agent",
+          "consensus",
+          "orchestrator",
+          "group_manager",
+          "pipeline"
+        ],
+        "domain_profile_kind": [
+          "multi_agent_orchestration_runtime"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "orchestrators",
+          "central",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "core/orchestrator/orchestrator.py",
+          "core/orchestrator/group_manager.py",
+          "core/consensus/engine.py:run_consensus",
+          "core/a2a_protocol/protocol.py",
+          "api/main.py"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the agent-group orchestration path around {target}, where A2A messages, consensus decisions, retries, runtime state, and API/WebSocket adapters need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "API and WebSocket adapters validate requests and publish status, but do not own agent orchestration decisions.",
+        "The orchestrator owns pipeline/group execution as explicit state transitions with replay-safe run identifiers.",
+        "Consensus is a separate capability with typed participant responses, quorum policy, failure packets, and deterministic aggregation.",
+        "A2A protocol objects define the inter-agent message API and remain independent from concrete agents.",
+        "Agent implementations stay behind capability contracts and can fail or be quarantined without corrupting the pipeline state."
+      ],
+      "first_slice": {
+        "name": "agent_consensus_orchestration_slice",
+        "goal": "Stabilize one agent-group execution path from request to A2A task dispatch and consensus result.",
+        "target_sources": [
+          "orchestrators",
+          "central",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "core/orchestrator/orchestrator.py",
+          "core/orchestrator/group_manager.py",
+          "core/consensus/engine.py:run_consensus",
+          "core/a2a_protocol/protocol.py",
+          "api/main.py:_execute_pipeline_background"
+        ],
+        "steps": [
+          "Define AgentRunRequest, A2ATaskEnvelope, ConsensusInput, ConsensusResult, and AgentFailurePacket contracts.",
+          "Separate API/WebSocket adapters from orchestration and consensus state transitions.",
+          "Wrap each agent call with timeout, retry policy, quarantine signal, and replay-safe task id.",
+          "Add tests for happy-path consensus, failed agent response, quorum failure, malformed A2A message, and resume after partial execution."
+        ]
+      },
+      "defer": [
+        "Do not tune prompts or add more agents before the orchestration/consensus contract is stable.",
+        "Do not treat generated logs, .env files, packaged snapshots, or archive copies as active source.",
+        "Do not collapse A2A protocol, consensus policy, and API status formatting into one capability."
+      ],
+      "verification_extra": "Use fake A2A clients and captured task envelopes to test consensus/orchestration without live LLM providers."
     },
     {
       "rule_id": "agent_advisory_runtime",
@@ -589,7 +1052,14 @@
           "freeze",
           "analysis",
           "waf"
-        ]
+        ],
+        "required_contains_any": [
+          "pyinstaller",
+          "bootloader",
+          "freeze",
+          "bundle"
+        ],
+        "min_score": 2
       },
       "diagnosis": {
         "primary_sources": [
@@ -660,6 +1130,16 @@
           "http",
           "websocket",
           "intercept"
+        ],
+        "negative_contains_any": [
+          "/v1/chat/completions",
+          "/chat/completions",
+          "chat_completions",
+          "_handle_chat_request",
+          "prompt_lab.py",
+          "prompt_lab_api.py",
+          "render_validation_prompt",
+          "render_enrichment_prompt"
         ]
       },
       "diagnosis": {
@@ -955,6 +1435,16 @@
           "middleware",
           "sansio",
           "sessions.py"
+        ],
+        "negative_contains_any": [
+          "/v1/chat/completions",
+          "/chat/completions",
+          "chat_completions",
+          "_handle_chat_request",
+          "prompt_lab.py",
+          "prompt_lab_api.py",
+          "render_validation_prompt",
+          "render_enrichment_prompt"
         ]
       },
       "diagnosis": {

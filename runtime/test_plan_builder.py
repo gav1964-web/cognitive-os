@@ -22,6 +22,7 @@ def build_test_plan(
     implementation_target = dict(implementation_plan.get("implementation_target", {}))
     contract_binding = dict(implementation_plan.get("contract_binding", {}))
     target = _target_name(implementation_target, patch_scope)
+    dependency_policy = _dependency_policy(technical_spec, implementation_plan, target)
     return {
         "artifact_type": "TestPlan",
         "role": role_id,
@@ -33,7 +34,8 @@ def build_test_plan(
         ],
         "test_target": _test_target(implementation_target, contract_binding, target),
         "contract_test_matrix": _contract_test_matrix(contract_binding, target),
-        "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target),
+        "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target, dependency_policy),
+        "dependency_policy": dependency_policy,
         "acceptance_tests": _acceptance_tests(acceptance, target),
         "executable_acceptance": _executable_acceptance(acceptance, contract_binding, target),
         "negative_tests": _negative_tests(target, contract_binding),
@@ -107,6 +109,7 @@ def _test_strategy(
     evidence_scope: list[str],
     writable_scope: list[str],
     target: str,
+    dependency_policy: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "target": target,
@@ -116,6 +119,43 @@ def _test_strategy(
         "read_only_context": [item for item in evidence_scope if item not in (writable_scope or [target])],
         "levels": ["contract", "negative", "regression", "acceptance"],
         "principle": "verify writable_scope against the TechnicalSpec without turning evidence_scope into write scope",
+        "external_calls": dependency_policy.get("external_calls", "none_detected"),
+    }
+
+
+def _dependency_policy(
+    technical_spec: dict[str, Any],
+    implementation_plan: dict[str, Any],
+    target: str,
+) -> dict[str, Any]:
+    text = " ".join(
+        [
+            target,
+            str(technical_spec.get("error_model", "")),
+            str(technical_spec.get("interface_contracts", "")),
+            str(implementation_plan.get("patch_scope", "")),
+            str(implementation_plan.get("evidence_scope", "")),
+        ]
+    ).lower()
+    external = any(
+        token in text
+        for token in (
+            "api",
+            "browser",
+            "external_boundary_failure",
+            "http",
+            "llm",
+            "network",
+            "provider",
+            "subprocess",
+        )
+    )
+    if not external:
+        return {"external_calls": "none_detected", "default_mode": "in_process_contract_tests"}
+    return {
+        "external_calls": "fake_by_default",
+        "default_mode": "fake/mock/stub external HTTP, LLM, browser and subprocess calls in contract tests",
+        "real_integration": "separate opt-in integration test only with explicit credentials/config and timeout budget",
     }
 
 

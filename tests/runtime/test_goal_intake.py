@@ -144,6 +144,25 @@ def test_goal_orchestrator_routes_project_fact_questions_to_answer_capability(tm
     assert decision.required_capabilities[-1] == "project_fact_questions"
 
 
+def test_goal_intake_accepts_project_fact_question_without_clarification():
+    spec = build_goal_spec(
+        "По проекту F:/ubuntu/test/5.1 ответь на вопрос: какой порт используется для подключения клиентов"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "project_fact_question"
+    assert spec.target == "F:/ubuntu/test/5.1"
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_project_provider_probe():
+    spec = build_goal_spec("По проекту F:/ubuntu/test/5.1 запусти сервер и протестируй работу с провайдерами")
+
+    assert spec.status == "ready"
+    assert spec.intent == "project_provider_probe"
+    assert spec.target == "F:/ubuntu/test/5.1"
+
+
 def test_goal_intake_cli_outputs_goal_spec():
     result = subprocess.run(
         [

@@ -6,6 +6,26 @@ from typing import Any
 
 from .core_paths import is_core_path
 from .doc_purpose import docs_text, purpose_heading, purpose_sentence
+from .domain_profile import infer_domain_profile
+from .error_model_answers import (
+    error_handling_hints,
+    likely_error_types,
+    minimal_loop,
+    reproducibility,
+    state_to_preserve,
+)
+from .execution_contract_answers import (
+    artifacts_to_persist,
+    auto_contract_feasibility,
+    capability_candidates,
+    command_summary,
+    data_structures,
+    execution_path,
+    fallback_logic,
+    pipeline_candidate,
+    looks_like_python_library,
+    weak_contract_zones,
+)
 from .runtime_readiness import (
     best_effort_dataflows,
     contract_test_strategy,
@@ -37,46 +57,48 @@ def build_answers(
     insights = dict(python_structure.get("project_insights", {}))
     docs = docs_text(files)
     project_type = _project_type(summary, imports)
+    domain_profile = infer_domain_profile(summary, files, python_structure, routes, imports)
     return {
         "1_scope": {
-            "main_task": _main_task(project_type, summary, docs),
-            "supported_scenarios": _scenarios(summary, routes, commands),
-            "inputs": _inputs(routes, commands, imports),
-            "outputs": _outputs(routes, commands, imports, stack),
+            "main_task": _main_task(project_type, summary, docs, domain_profile),
+            "supported_scenarios": _scenarios(summary, routes, commands, domain_profile),
+            "inputs": _inputs(routes, commands, imports, domain_profile),
+            "outputs": _outputs(routes, commands, imports, stack, domain_profile),
             "code_areas": _code_areas(python_structure),
             "test_surface": insights.get("test_surface", {}),
+            "domain_profile": domain_profile,
         },
         "2_execution": {
             "entrypoints": summary.get("entrypoints", []),
-            "runtime_commands": [_command_summary(command) for command in commands[:10]],
-            "primary_execution_path": _execution_path(summary, routes, commands),
+            "runtime_commands": [command_summary(command) for command in commands[:10]],
+            "primary_execution_path": execution_path(summary, routes, commands, domain_profile),
             "central_flow_nodes": _active_nodes(python_structure.get("central_nodes", []))[:8],
             "implicit_orchestration": _active_nodes(python_structure.get("wide_functions", []))[:8],
             "internal_import_hubs": _active_nodes(insights.get("import_graph", []))[:8],
-            "pipeline_candidate": _pipeline_candidate(summary, routes, commands),
+            "pipeline_candidate": pipeline_candidate(summary, routes, commands),
         },
         "3_capabilities": {
-            "atomic_reusable_capabilities": _capability_candidates(python_structure, routes, commands),
+            "atomic_reusable_capabilities": capability_candidates(python_structure, routes, commands),
             "pure_transforms": _core_pure_transforms(python_structure),
             "too_broad_functions": _active_nodes(python_structure.get("wide_functions", []))[:8],
             "environment_dependencies": python_structure.get("external_dependencies", {}),
-            "fallback_logic": _fallback_logic(python_structure, docs),
+            "fallback_logic": fallback_logic(python_structure, docs),
         },
         "4_contracts_data": {
-            "main_data_structures": _data_structures(python_structure),
+            "main_data_structures": data_structures(python_structure),
             "explicit_schemas": dict(python_structure.get("contracts", {})).get("schema_like_classes", []),
             "schema_fields": insights.get("schema_fields", [])[:8],
-            "weak_contract_zones": _weak_contract_zones(python_structure),
-            "artifacts_to_persist": _artifacts_to_persist(imports, stack),
-            "auto_contract_feasibility": _auto_contract_feasibility(python_structure),
+            "weak_contract_zones": weak_contract_zones(python_structure),
+            "artifacts_to_persist": artifacts_to_persist(imports, stack),
+            "auto_contract_feasibility": auto_contract_feasibility(python_structure),
         },
         "5_errors_state_repro": {
-            "likely_error_types": _likely_error_types(risks, imports),
-            "explicit_error_handling": _error_handling_hints(python_structure),
+            "likely_error_types": likely_error_types(risks, imports),
+            "explicit_error_handling": error_handling_hints(python_structure),
             "error_details": insights.get("error_handling", {}),
-            "state_to_preserve": _state_to_preserve(imports, stack),
-            "reproducibility": _reproducibility(files, stack, commands),
-            "minimal_cognitive_loop": _minimal_loop(routes, commands),
+            "state_to_preserve": state_to_preserve(imports, stack),
+            "reproducibility": reproducibility(files, stack, commands),
+            "minimal_cognitive_loop": minimal_loop(routes, commands),
         },
         "6_runtime_extraction_readiness": {
             "data_lifecycle": data_lifecycle(project_type, routes, commands, python_structure),
@@ -137,7 +159,16 @@ def _project_type(summary: dict[str, Any], imports: set[str]) -> str:
     return "Python project"
 
 
-def _main_task(project_type: str, summary: dict[str, Any], docs: str) -> str:
+def _main_task(project_type: str, summary: dict[str, Any], docs: str, domain_profile: dict[str, Any] | None = None) -> str:
+    profile = dict(domain_profile or {})
+    if profile.get("purpose_summary"):
+        return str(profile["purpose_summary"])
+    if profile.get("kind") == "llm_provider_gateway":
+        return "Provide a unified OpenAI-compatible gateway for routing chat/completion requests across multiple LLM providers."
+    if profile.get("kind") == "llm_auto_repair_loop":
+        return "Run an LLM-assisted auto-repair loop: copy a template workspace, build/run it in Docker, send failures to an LLM, apply proposed file updates, and retry."
+    if profile.get("kind") == "ml_competition_inference_script":
+        return "Run an ML competition inference workflow: load prompt/test CSV rows, generate model answers, postprocess them, and write a submission-style CSV."
     if docs:
         sentence = purpose_sentence(docs)
         if sentence:
@@ -153,9 +184,44 @@ def _main_task(project_type: str, summary: dict[str, Any], docs: str) -> str:
     return f"Run project-specific Python workflows through detected entrypoints ({entrypoints})."
 
 
-def _scenarios(summary: dict[str, Any], routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
+def _scenarios(
+    summary: dict[str, Any],
+    routes: list[dict[str, Any]],
+    commands: list[dict[str, Any]],
+    domain_profile: dict[str, Any] | None = None,
+) -> list[str]:
+    profile = dict(domain_profile or {})
+    if profile.get("scenario_summary"):
+        return [str(item) for item in profile.get("scenario_summary", []) if item][:5]
     scenarios = []
     route_names = {route.get("route") for route in routes}
+    if profile.get("kind") == "llm_provider_gateway":
+        scenarios.extend(
+            [
+                "Accept OpenAI-compatible chat/completion requests.",
+                "Route requests to configured LLM providers and model profiles.",
+                "Normalize provider responses and errors into gateway API responses.",
+            ]
+        )
+    if profile.get("kind") == "llm_auto_repair_loop":
+        scenarios.extend(
+            [
+                "Copy a template project into a disposable workspace.",
+                "Build and run the workspace through Docker Compose.",
+                "Send build/runtime failures plus project files to an LLM for repair suggestions.",
+                "Apply returned file updates and retry until success or attempt budget is exhausted.",
+                "Persist successful workspace files back into the template.",
+            ]
+        )
+    if profile.get("kind") == "ml_competition_inference_script":
+        scenarios.extend(
+            [
+                "Load prompt/test rows from CSV data files.",
+                "Load tokenizer/model artifacts or external model dependencies.",
+                "Generate answers for each row and postprocess model output.",
+                "Write a submission-style CSV with generated answers.",
+            ]
+        )
     if routes:
         scenarios.append(f"Serve HTTP API/web requests across {len(routes)} detected routes.")
     if any(command.get("purpose") == "install_dependencies" for command in commands):
@@ -166,13 +232,35 @@ def _scenarios(summary: dict[str, Any], routes: list[dict[str, Any]], commands: 
         scenarios.append("Rebuild derived data artifacts from scripts.")
     if "/v1/chat/completions" in route_names or "/chat" in route_names:
         scenarios.append("Handle chat/completion API requests.")
+    if not scenarios and looks_like_python_library(summary):
+        scenarios.extend(
+            [
+                "Import package modules and call public library APIs from user code.",
+                "Transform caller-provided Python objects into library results or side effects.",
+                "Handle domain-specific errors at package/API boundaries.",
+            ]
+        )
     if not scenarios and summary.get("entrypoints"):
         scenarios.append("Run CLI/tooling entrypoints detected in the project tree.")
     return scenarios[:5]
 
 
-def _inputs(routes: list[dict[str, Any]], commands: list[dict[str, Any]], imports: set[str]) -> list[str]:
+def _inputs(
+    routes: list[dict[str, Any]],
+    commands: list[dict[str, Any]],
+    imports: set[str],
+    domain_profile: dict[str, Any] | None = None,
+) -> list[str]:
+    profile = dict(domain_profile or {})
+    if profile.get("input_summary"):
+        return [str(item) for item in profile.get("input_summary", []) if item][:8]
     inputs = []
+    if profile.get("kind") == "llm_provider_gateway":
+        inputs.extend(["OpenAI-compatible chat/completion requests", "provider/model routing configuration"])
+    if profile.get("kind") == "llm_auto_repair_loop":
+        inputs.extend(["template source files", "Docker build/run logs", "LLM repair JSON"])
+    if profile.get("kind") == "ml_competition_inference_script":
+        inputs.extend(["prompt/test CSV rows", "model/tokenizer configuration", "large model/index artifacts"])
     if routes:
         inputs.append("HTTP requests")
     if commands:
@@ -184,8 +272,23 @@ def _inputs(routes: list[dict[str, Any]], commands: list[dict[str, Any]], import
     return inputs or ["not enough evidence"]
 
 
-def _outputs(routes: list[dict[str, Any]], commands: list[dict[str, Any]], imports: set[str], stack: dict[str, Any]) -> list[str]:
+def _outputs(
+    routes: list[dict[str, Any]],
+    commands: list[dict[str, Any]],
+    imports: set[str],
+    stack: dict[str, Any],
+    domain_profile: dict[str, Any] | None = None,
+) -> list[str]:
+    profile = dict(domain_profile or {})
+    if profile.get("output_summary"):
+        return [str(item) for item in profile.get("output_summary", []) if item][:8]
     outputs = []
+    if profile.get("kind") == "llm_provider_gateway":
+        outputs.extend(["OpenAI-compatible chat/completion responses", "normalized provider error responses"])
+    if profile.get("kind") == "llm_auto_repair_loop":
+        outputs.extend(["updated workspace/template files", "Docker build/run status", "repair attempt history"])
+    if profile.get("kind") == "ml_competition_inference_script":
+        outputs.extend(["submission CSV rows", "generated answer text", "runtime/model failure evidence"])
     if routes:
         outputs.append("HTTP/API responses")
     if imports & {"json", "csv", "openpyxl", "zipfile"}:
@@ -212,185 +315,9 @@ def _code_areas(python_structure: dict[str, Any]) -> dict[str, list[str]]:
     }
 
 
-def _command_summary(command: dict[str, Any]) -> dict[str, str]:
-    return {"path": str(command.get("path")), "purpose": str(command.get("purpose")), "command": _representative_command(command.get("commands") or [])}
-
-
-def _execution_path(summary: dict[str, Any], routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
-    if routes:
-        return ["HTTP request", "framework router", "route handler", "domain/provider functions", "JSON/HTTP response"]
-    if commands:
-        return ["script invocation", "environment checks", "Python entrypoint", "project workflow", "filesystem/API side effects"]
-    if summary.get("entrypoints"):
-        return ["entrypoint invocation", "Python module execution", "result or side effect"]
-    return ["not enough evidence"]
-
-
-def _pipeline_candidate(summary: dict[str, Any], routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
-    if routes:
-        return ["validate request", "load config/state", "call handler/core logic", "handle errors", "return response"]
-    if commands:
-        return ["prepare environment", "read inputs", "transform/process", "write artifacts", "report status"]
-    return ["scan inputs", "process", "emit output"]
-
-
-def _capability_candidates(python_structure: dict[str, Any], routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
-    pure = [item for item in python_structure.get("pure_transform_candidates", []) if is_core_path(str(item.get("path", "")))]
-    candidates = [f"{item.get('path')}:{item.get('name')}" for item in pure[:8]]
-    candidates.extend(_provider_parser_capabilities(python_structure))
-    contracts = dict(python_structure.get("contracts", {}))
-    schema_like = [
-        item
-        for item in contracts.get("schema_like_classes", [])
-        if is_core_path(str(item.get("path", ""))) and not str(item.get("name", "")).endswith("Config")
-    ]
-    candidates.extend([f"{item.get('path')}:{item.get('name')}" for item in schema_like[:6]])
-    if not schema_like:
-        candidates.extend([f"{route.get('methods') or ['GET']} {route.get('route')}" for route in routes[:5]])
-    return list(dict.fromkeys(candidates))[:24]
-
-
-def _provider_parser_capabilities(python_structure: dict[str, Any]) -> list[str]:
-    markers = ("normalize", "parse", "extract", "curl_fallback", "fetch_available_models")
-    rows = []
-    for file_row in python_structure.get("files", []):
-        path = str(file_row.get("path") or "")
-        normalized = path.replace("\\", "/").lower()
-        if not is_core_path(path) or not normalized.endswith("_llm_client.py"):
-            continue
-        for function in file_row.get("functions", []):
-            name = str(function.get("name") or "")
-            if any(marker in name.lower() for marker in markers):
-                rows.append(f"{path}:{name}")
-    return rows[:12]
-
-
 def _core_pure_transforms(python_structure: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         item
         for item in python_structure.get("pure_transform_candidates", [])
         if is_core_path(str(item.get("path", "")))
     ][:12]
-
-
-def _fallback_logic(python_structure: dict[str, Any], docs: str) -> list[str]:
-    hints = []
-    text = docs.lower()
-    if "fallback" in text or "retry" in text or "degradation" in text:
-        hints.append("Fallback/retry/degradation mentioned in docs.")
-    for node in python_structure.get("central_nodes", []):
-        name = str(node.get("name", "")).lower()
-        if any(token in name for token in ("fallback", "retry", "recover", "handle")):
-            hints.append(f"Function name suggests fallback/error handling: {node.get('path')}:{node.get('name')}")
-    return hints[:8] or ["not enough evidence"]
-
-
-def _data_structures(python_structure: dict[str, Any]) -> list[str]:
-    contracts = dict(python_structure.get("contracts", {}))
-    names = [f"{item.get('path')}:{item.get('name')}" for item in contracts.get("schema_like_classes", [])]
-    typed = [f"{item.get('path')}:{item.get('name')}" for item in contracts.get("typed_functions", [])[:8]]
-    return (names + typed)[:15] or ["not enough evidence"]
-
-
-def _weak_contract_zones(python_structure: dict[str, Any]) -> list[str]:
-    contracts = dict(python_structure.get("contracts", {}))
-    return [f"{item.get('path')}:{item.get('name')}" for item in contracts.get("untyped_functions", [])[:12]]
-
-
-def _artifacts_to_persist(imports: set[str], stack: dict[str, Any]) -> list[str]:
-    artifacts = ["raw input", "normalized/parsed output", "execution logs", "final report"]
-    if imports & {"sqlite3", "sqlalchemy"}:
-        artifacts.append("database checkpoints")
-    if imports & {"requests", "httpx", "openai"}:
-        artifacts.append("external API request/response cache")
-    if stack.get("large_artifacts"):
-        artifacts.append("large derived artifacts manifest")
-    return artifacts
-
-
-def _auto_contract_feasibility(python_structure: dict[str, Any]) -> str:
-    contracts = dict(python_structure.get("contracts", {}))
-    typed = len(contracts.get("typed_functions", []))
-    untyped = len(contracts.get("untyped_functions", []))
-    if typed >= untyped:
-        return "good: type hints/schema-like classes provide enough seeds for generated contracts"
-    if typed:
-        return "partial: combine type hints with tests/docstrings to infer contracts"
-    return "weak: many functions need explicit schemas or annotations first"
-
-
-def _likely_error_types(risks: list[dict[str, str]], imports: set[str]) -> list[str]:
-    errors = {"bad input", "runtime bug"}
-    if imports & {"requests", "httpx", "openai"}:
-        errors.update({"timeout", "external API failure"})
-    if imports & {"subprocess"}:
-        errors.add("dependency/process failure")
-    if any(risk.get("code") == "unpinned_dependencies" for risk in risks):
-        errors.add("dependency drift")
-    return sorted(errors)
-
-
-def _error_handling_hints(python_structure: dict[str, Any]) -> list[str]:
-    hints = []
-    for node in python_structure.get("central_nodes", []):
-        if any(token in str(node.get("name", "")).lower() for token in ("handle", "error", "retry", "fallback")):
-            hints.append(f"{node.get('path')}:{node.get('name')}")
-    return hints or ["not enough evidence from static summary"]
-
-
-def _state_to_preserve(imports: set[str], stack: dict[str, Any]) -> list[str]:
-    state = ["input payload", "config snapshot", "code/plugin version", "execution log"]
-    if imports & {"sqlite3", "sqlalchemy"}:
-        state.append("database state or migration version")
-    if stack.get("large_artifacts"):
-        state.append("artifact manifest/checksums")
-    return state
-
-
-def _reproducibility(files: dict[str, Any], stack: dict[str, Any], commands: list[dict[str, Any]]) -> str:
-    has_deps = bool(stack.get("dependency_files"))
-    has_readme = any("readme" in str(item.get("path", "")).lower() for item in files.get("files", []))
-    has_command = bool(commands)
-    if has_deps and has_readme and has_command:
-        return "moderate: dependencies, docs and runtime commands are discoverable; pinning/checkpoints still need audit"
-    if has_deps:
-        return "partial: dependency files exist, but runtime/docs evidence is incomplete"
-    return "weak: reproducibility needs explicit dependencies, config and run instructions"
-
-
-def _minimal_loop(routes: list[dict[str, Any]], commands: list[dict[str, Any]]) -> list[str]:
-    if routes:
-        first = routes[0]
-        return [
-            f"call route {first.get('methods') or ['GET']} {first.get('route')}",
-            "capture request/response",
-            "simulate bad input or provider failure",
-            "emit interrupt packet",
-            "retry/switch/stop",
-            "write final report",
-        ]
-    if commands:
-        first = commands[0]
-        return [
-            f"run script {first.get('path')}",
-            "capture stdout/stderr and artifacts",
-            "simulate missing dependency or bad input",
-            "emit interrupt packet",
-            "retry/switch/stop",
-            "write final report",
-        ]
-    return ["select entrypoint", "capture input/output", "inject controlled failure", "interrupt", "final report"]
-
-
-def _representative_command(commands: list[str]) -> str:
-    priority_markers = ("python", "pip install", "pytest", "npm ", "pnpm ", "yarn ", "uvicorn", "flask")
-    for marker in priority_markers:
-        for command in commands:
-            lower = command.lower()
-            if marker in lower and not lower.startswith(("if ", "echo ", "set ")):
-                return command
-    for command in commands:
-        lower = command.lower()
-        if not lower.startswith(("if ", "echo ", "set ")):
-            return command
-    return commands[0] if commands else ""

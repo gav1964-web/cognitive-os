@@ -379,7 +379,7 @@ def test_semantic_reasoner_can_use_model_backed_proposal():
         proposal = run_semantic_reasoner(
             request=request,
             use_model=True,
-            config=LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="GigaChat-Pro"),
+            config=LocalInferenceConfig(base_url="http://127.0.0.1:8000/v1", model="deepseek/deepseek-chat"),
         )
 
     assert mocked.called

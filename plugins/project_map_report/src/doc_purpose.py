@@ -55,11 +55,20 @@ def purpose_sentence(docs: str) -> str:
     lines = docs.splitlines()
     paragraph: list[str] = []
     seen_top_heading = False
-    for line in lines:
+    skip_next_underline = False
+    for index, line in enumerate(lines):
         stripped = line.strip()
+        if skip_next_underline:
+            skip_next_underline = False
+            continue
         if not stripped:
             if paragraph:
                 break
+            continue
+        next_stripped = lines[index + 1].strip() if index + 1 < len(lines) else ""
+        if next_stripped and set(next_stripped) <= {"=", "-", "~"}:
+            seen_top_heading = True
+            skip_next_underline = True
             continue
         if stripped.startswith("##") and seen_top_heading and not paragraph:
             break
@@ -85,12 +94,16 @@ def purpose_sentence(docs: str) -> str:
 def _doc_priority(item: dict[str, Any]) -> tuple[int, str]:
     path = str(item.get("path", "")).lower()
     name = path.rsplit("/", 1)[-1]
-    if name.startswith("readme") and "/" not in path:
+    if name in {"readme.md", "readme.rst", "readme.txt"} and "/" not in path:
         return (0, path)
-    if name.startswith("readme"):
+    if name.startswith("readme") and "/" not in path:
         return (2, path)
-    if path.startswith(("docs/", "examples/", "tests/")):
+    if name in {"readme.md", "readme.rst", "readme.txt"}:
         return (3, path)
+    if name.startswith("readme"):
+        return (4, path)
+    if path.startswith(("docs/", "examples/", "tests/")):
+        return (5, path)
     return (1, path)
 
 

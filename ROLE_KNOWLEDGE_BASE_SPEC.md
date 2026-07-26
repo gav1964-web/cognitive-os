@@ -29,6 +29,24 @@ Required invariants:
 - records do not execute arbitrary code;
 - role outputs cite matched record ids and matched evidence.
 
+## Project Analyzer Archetype Profiles
+
+`project_archetype_rule` records may expose a Project Analyzer-facing profile:
+
+- `purpose_summary`;
+- `scenario_summary`;
+- `input_summary`;
+- `output_summary`.
+
+When these fields are present and the rule matches source evidence, `ProjectMapReport.answers.1_scope` may use them as its human-readable project purpose, scenarios, inputs and outputs. This keeps domain recognition in declarative KB records instead of hardcoding every project type in Python.
+
+The runtime must still treat this as advisory evidence, not ground truth:
+
+- the matched `domain_profile.kind` and `knowledge_rule` are recorded in `ProjectMapReport`;
+- the profile cannot select implementation targets by itself;
+- `role_artifact_quality` must warn when `main_task` conflicts with the matched `domain_profile`;
+- adding a new archetype should normally require only a reviewed KB record plus tests, not role-specific source edits.
+
 ## Evidence Strength
 
 Records may carry `evidence_strength`:
@@ -67,7 +85,34 @@ Implemented contract:
 
 - `runtime/role_knowledge.py`
 - `runtime/knowledge_admission.py`
+- `runtime/knowledge_usage_telemetry.py`
 - `tools/knowledge_candidates.py`
+
+## Usage Telemetry
+
+Runtime must record real KB usage as explicit events, not infer it later from prose reports.
+
+Default event log:
+
+```text
+artifacts/telemetry/knowledge_usage.jsonl
+```
+
+Each line is a `KnowledgeUsageEvent` with:
+
+- `event_type`: `kb_preflight_skipped`, `kb_preflight_gap`, `kb_rule_match` or `external_knowledge_probe`;
+- `role`: consuming role such as `goal_orchestrator`, `architect` or `researcher`;
+- `source`: KB source or acquisition capability;
+- `rule_id` / `gap_id` when applicable;
+- `status`, `confidence`, `query` and compact details.
+
+Summary command:
+
+```bash
+python tools/knowledge_usage_report.py --root .
+```
+
+This telemetry is operational evidence. It does not promote KB records and does not replace candidate admission.
 
 ## Candidate Storage
 
@@ -103,6 +148,42 @@ python tools/knowledge_candidates.py --root . merge --candidate-id kbc_xxx
 ```
 
 The report lists candidates by status and record type and exposes `ready_for_human_merge`, but it still does not merge records automatically. The `merge` command is intentionally a controlled block: it shows whether the candidate is ready and reminds the operator that active KB edits must be performed as an explicit human-reviewed source change.
+
+## Synthetic Role Q/A Records
+
+Generated role question/answer pairs may be stored directly in the active KB tree, but only as low-trust advisory records. They are not a separate shadow memory and they are not ground truth.
+
+Default storage:
+
+```text
+knowledge/role_qa/synthetic_role_qa.json
+```
+
+Each record must carry an explicit provenance and trust passport:
+
+- `record_type=role_qa`;
+- `role_id` and `role_scope`;
+- `origin.kind=synthetic_seed` for deterministic template seeds or `origin.kind=llm_synthetic_seed` for model-generated seeds;
+- `trust_level=synthetic_seed`;
+- `answer_state=seeded`;
+- `evidence_strength=synthetic`;
+- feedback counters: `positive_count`, `negative_count`, `last_cases`, `promotion_ready`;
+- policy flags forbidding automatic promotion, source mutation, registry mutation and bypassing evidence checks.
+
+Runtime may retrieve these records as role-specific hints. L4/L4.5 must still bind answers to project evidence, schemas, tests or explicit gaps. A synthetic Q/A answer can improve recall, but it cannot override facts from the analyzed project and cannot authorize code execution.
+
+LLM-generated Q/A seeds are allowed only through the same contract. The model is used to improve linguistic and semantic variety, not to create authority. Runtime hardening must overwrite any model claim of `verified`, `high confidence`, source mutation rights or KB promotion rights back to low-trust candidate semantics.
+
+Feedback changes record state, not authority:
+
+```text
+seeded
+-> observed_positive        after one positive case
+-> confirmed_candidate      after several positive cases and no negatives
+-> needs_review             after any negative case
+```
+
+Current default confirmation gate is three positive cases with zero negative cases. Even then the record remains a candidate and still requires teacher/corrector review, Codex/developer approval and human-reviewed KB merge before it can become stronger active knowledge.
 
 ## External Imports
 

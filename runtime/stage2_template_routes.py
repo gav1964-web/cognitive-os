@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .generic_file_conversion_recipe import is_file_conversion_prompt
+from .web_extraction_profiles import has_known_web_extraction_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,6 +95,8 @@ def _route_matches(route: dict[str, Any], *, prompt: str, lower: str) -> bool:
 def _predicate_matches(predicate: str, prompt: str) -> bool:
     if predicate == "file_conversion_prompt":
         return is_file_conversion_prompt(prompt)
+    if predicate == "known_news_site_profile_prompt":
+        return has_known_web_extraction_profile(prompt, target_kind="news")
     return False
 
 

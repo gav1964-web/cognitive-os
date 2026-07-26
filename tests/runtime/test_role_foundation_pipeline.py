@@ -30,9 +30,16 @@ def test_role_foundation_pipeline_writes_three_artifacts():
     assert result["artifacts"]["technical_spec"]["artifact_type"] == "TechnicalSpec"
     assert result["score"]["checks"]["spec_has_source_evidence"] is True
     assert result["score"]["checks"]["spec_has_extraction_contract"] is True
+    assert result["score"]["checks"]["spec_has_work_plan_contract"] is True
     assert result["score"]["checks"]["spec_contract_candidate_ranked_first"] is True
     assert result["score"]["checks"]["spec_contract_has_selection_reason"] is True
     assert result["score"]["checks"]["spec_acceptance_is_source_linked"] is True
+    assert result["score"]["checks"]["architect_red_team_passed"] is True
+    assert result["score"]["checks"]["spec_writer_red_team_passed"] is True
+    assert result["score"]["checks"]["human_documents_quality_passed"] is True
+    assert result["architect_red_team"]["handoff_verdict"] == "ready_for_spec_writer"
+    assert result["score"]["human_document_quality"]["status"] == "pass"
+    assert result["spec_writer_red_team"]["handoff_verdict"] == "ready_for_implementer"
     assert result["safety"]["source_code_changes"] is False
     assert result["safety"]["registry_changes"] is False
     assert result["safety"]["foundry_invoked"] is False
@@ -40,9 +47,17 @@ def test_role_foundation_pipeline_writes_three_artifacts():
     doc_path = Path(result["human_documents"]["architecture_analysis"])
     assert doc_path.exists()
     doc_text = doc_path.read_text(encoding="utf-8")
-    assert "# Architecture Analysis" in doc_text
-    assert "## Capability Candidates" in doc_text
+    assert "# Анализ архитектуры" in doc_text
+    assert "## Кандидаты в capabilities" in doc_text
     assert "main.py:normalize_text" in doc_text
+    spec_doc_path = Path(result["human_documents"]["technical_spec"])
+    assert spec_doc_path.exists()
+    spec_doc_text = spec_doc_path.read_text(encoding="utf-8")
+    assert "# Техническое задание" in spec_doc_text
+    assert "## Первый рабочий срез" in spec_doc_text
+    assert "## Связанные interface contracts" in spec_doc_text
+    assert "## Validation gates и failure modes" in spec_doc_text
+    assert "main.py:normalize_text" in spec_doc_text
     for summary in result["artifacts"].values():
         assert Path(summary["path"]).exists()
 
@@ -86,6 +101,107 @@ def test_role_foundation_benchmark_single_project():
     assert report["cases"][0]["expected_best_extraction_candidate"] == "main.py:normalize_text"
     assert report["cases"][0]["score"]["checks"]["spec_contract_matches_expected_candidate"] is True
     assert Path(report["report_path"]).exists()
+
+
+def test_role_foundation_blocks_dirty_portfolio_before_adr_and_spec(tmp_path):
+    portfolio = tmp_path / "portfolio"
+    current = portfolio / "20260101_current"
+    legacy = portfolio / "20250101_legacy"
+    current.mkdir(parents=True)
+    legacy.mkdir(parents=True)
+    (current / "requirements.txt").write_text("fastapi==0.115.0\n", encoding="utf-8")
+    (current / "main.py").write_text(
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip().lower()\n",
+        encoding="utf-8",
+    )
+    (legacy / "main.py").write_text(
+        "def old_entrypoint(value):\n"
+        "    return value\n",
+        encoding="utf-8",
+    )
+
+    result = run_role_foundation_pipeline(
+        root=ROOT,
+        project_dir=portfolio,
+        goal="Analyze mixed portfolio",
+        write=False,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["blocker"] == "scope_selection_required"
+    assert result["milestone"] == "ProjectMapReport -> ScopeSelectionReport"
+    assert set(result["artifacts"]) == {"project_map_report", "scope_selection_report"}
+    assert "architecture_decision" not in result["artifacts"]
+    assert "technical_spec" not in result["artifacts"]
+    assert result["score"]["checks"]["adr_not_built"] is True
+    assert result["score"]["checks"]["technical_spec_not_built"] is True
+    scope = result["scope_selection_report"]
+    assert scope["status"] == "blocked_until_scope_selected"
+    assert scope["selection_confidence"] == "ambiguous"
+    assert scope["preferred_candidate"] is None
+    assert scope["blocked_downstream_artifacts"] == ["ArchitectureDecisionRecord", "TechnicalSpec"]
+    assert {row["path"] for row in scope["candidate_roots"]} >= {"20260101_current", "20250101_legacy"}
+
+
+def test_role_foundation_writes_scope_selection_document_for_dirty_portfolio(tmp_path):
+    portfolio = tmp_path / "portfolio"
+    current = portfolio / "20260101_current"
+    legacy = portfolio / "20250101_legacy"
+    current.mkdir(parents=True)
+    legacy.mkdir(parents=True)
+    (current / "requirements.txt").write_text("fastapi==0.115.0\n", encoding="utf-8")
+    (current / "main.py").write_text("def normalize(value: str) -> str:\n    return value.strip()\n", encoding="utf-8")
+    (legacy / "main.py").write_text("def old_entrypoint(value):\n    return value\n", encoding="utf-8")
+
+    result = run_role_foundation_pipeline(
+        root=ROOT,
+        project_dir=portfolio,
+        goal="Analyze mixed portfolio",
+        write=True,
+    )
+
+    assert result["status"] == "blocked"
+    doc_path = Path(result["human_documents"]["scope_selection"])
+    assert doc_path.exists()
+    text = doc_path.read_text(encoding="utf-8")
+    assert "# Выбор активного корня проекта" in text
+    assert "20260101_current" in text
+    assert "ArchitectureDecisionRecord" not in result["artifacts"]
+    assert Path(result["report_path"]).exists()
+
+
+def test_role_foundation_active_root_runs_downstream_on_selected_slice(tmp_path):
+    portfolio = tmp_path / "portfolio"
+    current = portfolio / "20260101_current"
+    legacy = portfolio / "20250101_legacy"
+    current.mkdir(parents=True)
+    legacy.mkdir(parents=True)
+    (current / "requirements.txt").write_text("click==8.3.0\n", encoding="utf-8")
+    (current / "main.py").write_text(
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip().lower()\n\n"
+        "def main() -> None:\n"
+        "    print(normalize(' A '))\n",
+        encoding="utf-8",
+    )
+    (legacy / "main.py").write_text("def old_entrypoint(value):\n    return value\n", encoding="utf-8")
+
+    result = run_role_foundation_pipeline(
+        root=ROOT,
+        project_dir=portfolio,
+        active_root="20260101_current",
+        goal="Analyze selected active root",
+        write=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["project"].endswith("20260101_current")
+    assert result["portfolio_root"].endswith("portfolio")
+    assert result["active_root_decision"]["selected_relative_path"] == "20260101_current"
+    assert result["artifacts"]["active_root_decision"]["artifact_type"] == "ActiveRootDecision"
+    assert result["artifacts"]["architecture_decision"]["artifact_type"] == "ArchitectureDecisionRecord"
+    assert result["artifacts"]["technical_spec"]["artifact_type"] == "TechnicalSpec"
 
 
 def test_role_foundation_cli_single_project():

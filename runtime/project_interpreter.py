@@ -19,6 +19,7 @@ def interpret_project_report(
     signal_config: LocalInferenceConfig | None = None,
     cortex_config: LocalInferenceConfig | None = None,
     context_mode: str = "expanded",
+    root: str | None = None,
 ) -> dict[str, Any]:
     level35_signals = generate_project_signals(report, config=signal_config or config)
     level4_interpretation = deliberate_project_report(
@@ -36,6 +37,7 @@ def interpret_project_report(
         level35_signals=level35_signals,
         level4_interpretation=level4_interpretation,
         analysis_tasks=analysis_tasks,
+        root=root,
     )
     knowledge_gap = project_research_gap_from_synthesis(architecture_synthesis)
     research_plan = build_research_plan(knowledge_gap) if knowledge_gap else None

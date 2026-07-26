@@ -12,6 +12,8 @@ def test_core_paths_treat_support_files_as_context_only():
         "external-deps/python-lsp-server/pylsp/plugins/symbols.py",
         "bootloader/waflib/Scripting.py",
         "src/integrations/prefect-aws/infra/worker/service_stack.py",
+        "autofix_docker/generated_v2/pipeline.py",
+        "autofix_docker/generated-run/pipeline.py",
     ]:
         result = classify_source_path(path)
 

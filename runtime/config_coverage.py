@@ -11,6 +11,7 @@ from .operation_recipe_rules import load_operation_recipe_rules
 from .sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from .semantic_resolution_rules import load_semantic_resolution_rules
 from .stage2_template_routes import load_stage2_template_routes
+from .web_extraction_profiles import load_web_extraction_profiles
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +38,16 @@ def build_config_coverage_report(root: Path | None = None) -> dict[str, Any]:
         ),
         _coverage_section(
             "semantic_resolution_rules",
-            [str(row.get("rule_id") or "") for row in load_semantic_resolution_rules(str(base / "config" / "semantic_resolution_rules.json")).get("existing_resolution_rules", [])],
+            [
+                str(row.get("rule_id") or "")
+                for group in ("existing_resolution_rules", "developer_request_rules")
+                for row in load_semantic_resolution_rules(str(base / "config" / "semantic_resolution_rules.json")).get(group, [])
+            ],
+            haystack,
+        ),
+        _coverage_section(
+            "web_extraction_profiles",
+            [str(row.get("host") or "") for row in load_web_extraction_profiles(str(base / "config" / "web_extraction_profiles.json")).get("profiles", [])],
             haystack,
         ),
         _coverage_section(

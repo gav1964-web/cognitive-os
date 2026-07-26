@@ -88,9 +88,10 @@ def _project_analyzer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
     arch = runs["architect_github"]
     summary = dict(arch.get("summary", {}))
     blocked = int(summary.get("blocked_no_safe_candidate") or 0)
+    entry_surface = int(summary.get("entrypoint_or_library_surface_present") or summary.get("entrypoints_present") or 0)
     checks = {
         "github_projects_covered": arch.get("project_count") == 10,
-        "entrypoints_or_blocked_present": int(summary.get("entrypoints_present") or 0) + blocked == arch.get("project_count"),
+        "entrypoints_or_blocked_present": entry_surface + blocked == arch.get("project_count"),
         "capability_or_blocked_present": int(summary.get("capability_model_present") or 0) + blocked == arch.get("project_count"),
         "forbidden_sources_absent": summary.get("forbidden_capability_sources") == 0,
         "source_projects_read_only": summary.get("source_code_changes") == 0,

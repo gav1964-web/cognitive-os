@@ -33,6 +33,8 @@ def test_prompt_intake_rules_reject_unknown_system_type(tmp_path: Path):
   "success_criteria_markers": [],
   "simple_cli_transform_markers": [],
   "scope_unbounded_markers": [],
+  "implementation_markers": [],
+  "project_fact_question_markers": [],
   "cli_argument_program": {},
   "boundary_marker_groups": {"unsupported": {}, "risk": {}},
   "clarification_questions": {}

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .core_paths import classify_source_path, is_core_path
+from .extraction_plan_filters import suppress_whole_workflow_wrappers
 from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
 from .first_slice import preferred_first_slice_candidates
 from .runtime_readiness_helpers import (
@@ -381,7 +382,7 @@ def minimal_extraction_plan(
         if str(item.get("name")) in route_functions:
             continue
         add_extraction_candidate(candidates, item, "helper_transform", "pure transform candidate")
-    plan = sorted(candidates.values(), key=extraction_candidate_sort_key)
+    plan = suppress_whole_workflow_wrappers(sorted(candidates.values(), key=extraction_candidate_sort_key))
     capabilities = plan[:10]
     blocked_by = [] if capabilities else ["no_safe_python_candidate"]
     return {

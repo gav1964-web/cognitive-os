@@ -115,7 +115,22 @@ def _checks(
         "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text)),
         "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=" in source_text),
         "has_tests": bool(test_files),
-        "has_core_test": any(item.endswith(("test_core.py", "test_aggregator.py", "test_store.py")) for item in test_files),
+        "has_core_test": any(
+            item.endswith(
+                (
+                    "test_core.py",
+                    "test_aggregator.py",
+                    "test_store.py",
+                    "test_parser.py",
+                    "test_csv_writer.py",
+                    "test_converter.py",
+                    "test_finder.py",
+                    "test_merger.py",
+                    "test_indexer.py",
+                )
+            )
+            for item in test_files
+        ),
         "has_cli_test": _is_api_project(source_text) or any(item.endswith("test_cli.py") for item in test_files),
         "has_fixture": _is_api_project(source_text) or any("/fixtures/" in item.replace("\\", "/") for item in files),
         "has_negative_or_edge_test": _has_negative_or_edge_test(test_text, file_texts),
@@ -145,7 +160,7 @@ def _findings(checks: dict[str, bool], files: list[str]) -> list[dict[str, str]]
 
 def _risks(scaffold: dict[str, Any], checks: dict[str, bool]) -> list[dict[str, str]]:
     risks = []
-    if scaffold.get("case") in {"ixbt_news_scraper", "url_status_checker_cli"}:
+    if scaffold.get("case") in {"ixbt_news_scraper", "news_site_scraper_cli", "url_status_checker_cli"}:
         risks.append(
             {
                 "target": "network",

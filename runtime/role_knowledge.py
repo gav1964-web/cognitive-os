@@ -45,7 +45,7 @@ def evidence_strength(record: dict[str, Any]) -> str:
     """Classify record evidence strength without treating it as truth."""
 
     explicit = str(record.get("evidence_strength") or "").strip().lower()
-    if explicit in {"weak", "medium", "strong", "verified"}:
+    if explicit in {"synthetic", "weak", "medium", "strong", "verified"}:
         return explicit
     if record.get("status") == "implemented_v1":
         return "verified"
@@ -102,7 +102,7 @@ def records_for_role(records: list[dict[str, Any]], role: str) -> list[dict[str,
 
 
 def _record_id(record: dict[str, Any]) -> str:
-    for key in ("rule_id", "pattern_id", "risk_id", "lesson_id", "candidate_id"):
+    for key in ("rule_id", "pattern_id", "risk_id", "lesson_id", "candidate_id", "qa_id"):
         value = record.get(key)
         if value:
             return str(value)

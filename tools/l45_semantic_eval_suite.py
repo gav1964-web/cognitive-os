@@ -31,9 +31,10 @@ def main() -> int:
         default="model_propose_only",
     )
     parser.add_argument("--write", action="store_true")
-    parser.add_argument("--base-url", default=os.environ.get("COGNITIVE_OS_L45_BASE_URL", os.environ.get("COGNITIVE_OS_L4_BASE_URL", "http://127.0.0.1:8000/v1")))
-    parser.add_argument("--model", default=os.environ.get("COGNITIVE_OS_L45_MODEL", "GigaChat Lite"))
-    parser.add_argument("--timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L45_TIMEOUT", os.environ.get("COGNITIVE_OS_L4_TIMEOUT", "120"))))
+    default_l45 = LocalInferenceConfig.from_l45_env()
+    parser.add_argument("--base-url", default=os.environ.get("COGNITIVE_OS_L45_BASE_URL", os.environ.get("COGNITIVE_OS_L4_BASE_URL", default_l45.base_url)))
+    parser.add_argument("--model", default=os.environ.get("COGNITIVE_OS_L45_MODEL", default_l45.model))
+    parser.add_argument("--timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L45_TIMEOUT", os.environ.get("COGNITIVE_OS_L4_TIMEOUT", str(default_l45.timeout_seconds)))))
     parser.add_argument("--api-key-env", default=os.environ.get("COGNITIVE_OS_L45_API_KEY_ENV", os.environ.get("COGNITIVE_OS_L4_API_KEY_ENV", "COGNITIVE_OS_L4_API_KEY")))
     args = parser.parse_args()
 
@@ -41,6 +42,7 @@ def main() -> int:
         base_url=args.base_url.rstrip("/"),
         model=args.model,
         timeout_seconds=args.timeout,
+        response_format=default_l45.response_format,
         api_key=os.environ.get(args.api_key_env) or None,
         provider_label="external_l45",
     )

@@ -33,6 +33,8 @@ def load_prompt_intake_rules(path: str | None = None) -> dict[str, Any]:
         "success_criteria_markers",
         "simple_cli_transform_markers",
         "scope_unbounded_markers",
+        "implementation_markers",
+        "project_fact_question_markers",
         "cli_argument_program",
         "boundary_marker_groups",
         "clarification_questions",

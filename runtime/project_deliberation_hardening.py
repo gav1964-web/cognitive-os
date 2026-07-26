@@ -97,14 +97,35 @@ def _clean_task(task: str) -> str:
 def _grounded_list(value: Any, facts: dict[str, Any], *, kind: str) -> list[str]:
     rows = [str(item) for item in value if _is_grounded_item(str(item), facts, kind=kind)] if isinstance(value, list) else []
     if rows:
+        if kind == "refactor":
+            return [_humanize_refactor_item(item) for item in rows[:3]]
         return rows[:3]
     fallback = _capability_fallback(facts) if kind == "capability" else _refactor_fallback(facts)
     return (rows + [item for item in fallback if item not in rows])[:3]
 
 
+def _humanize_refactor_item(text: str) -> str:
+    target = text
+    if ":" in text:
+        action, _, tail = text.partition(":")
+        action = action.strip()
+        target = tail.strip()
+        if action == "inspect_weak_contract" and target:
+            return f"Define explicit input/output contract for {target}"
+        if action == "split_mixed_responsibilities" and target:
+            return f"Split mixed responsibilities in {target}"
+        if action == "add_idempotency_or_replay_guard" and target:
+            return f"Add idempotency/replay guard around {target}"
+        if action == "prefer_process_boundary" and target:
+            return f"Wrap process boundary {target} with timeout and captured artifacts"
+        if action == "draft_first_pipeline_capability" and target:
+            return f"Define first pipeline capability contract for {target}"
+    return text
+
+
 def _is_grounded_item(text: str, facts: dict[str, Any], *, kind: str) -> bool:
     lowered = text.lower()
-    bad = ("optimize", "human-readable", "integration with other libraries", "pipeline", "clarity", "future")
+    bad = ("optimize", "human-readable", "integration with other libraries", "clarity", "future")
     if any(marker in lowered for marker in bad) or _template_placeholder(text):
         return False
     if kind == "refactor" and any(marker in lowered for marker in ("extract logic", "separate modules", "improve modularity", "enhance modularity")):
@@ -139,6 +160,15 @@ def _terms_from_value(value: Any) -> set[str]:
 
 
 def _capability_fallback(facts: dict[str, Any]) -> list[str]:
+    runtime = dict(facts.get("runtime_extraction") or {})
+    extraction = runtime.get("extraction") or []
+    runtime_rows = [
+        str(row.get("capability"))
+        for row in extraction
+        if isinstance(row, dict) and row.get("capability")
+    ]
+    if runtime_rows:
+        return runtime_rows[:3]
     rows = [str(item) for item in facts.get("capabilities", [])[:3]]
     if rows:
         return rows
@@ -157,6 +187,16 @@ def _capability_fallback(facts: dict[str, Any]) -> list[str]:
 
 def _refactor_fallback(facts: dict[str, Any]) -> list[str]:
     rows = []
+    runtime = dict(facts.get("runtime_extraction") or {})
+    capability = _preferred_runtime_item(runtime.get("extraction", []), key="capability", preferred=("send_to_model", "llm", "model", "provider"))
+    if capability:
+        rows.append(f"Define first pipeline capability contract for {capability}")
+    process = _preferred_runtime_item(runtime.get("process_boundary", []), key="target", preferred=("docker_run", "docker_build"))
+    if process:
+        rows.append(f"Wrap process boundary {process} with timeout and captured artifacts")
+    idempotency = _preferred_runtime_item(runtime.get("idempotency", []), key="target", preferred=("write_files", "copy_template", "save_to_template"))
+    if idempotency:
+        rows.append(f"Add idempotency/replay guard around {idempotency}")
     rows.extend(f"Review hotspot {item.get('target')}" for item in facts.get("hotspots", [])[:2] if isinstance(item, dict) and item.get("target"))
     rows.extend(f"Harden weak contract {item}" for item in facts.get("weak_contracts", [])[:2])
     if rows:
@@ -164,6 +204,17 @@ def _refactor_fallback(facts: dict[str, Any]) -> list[str]:
     if not facts.get("entrypoints"):
         return ["Add or identify a product-level entrypoint before extraction"]
     return ["Map core boundaries before extracting runtime capabilities"]
+
+
+def _preferred_runtime_item(rows: Any, *, key: str, preferred: tuple[str, ...]) -> str:
+    if not isinstance(rows, list):
+        return ""
+    candidates = [str(row.get(key) or "") for row in rows if isinstance(row, dict) and row.get(key)]
+    for marker in preferred:
+        for candidate in candidates:
+            if marker in candidate.lower():
+                return candidate
+    return candidates[0] if candidates else ""
 
 
 def _grounded_open_questions(facts: dict[str, Any]) -> list[str]:
@@ -188,7 +239,17 @@ def _template_placeholder(text: str) -> bool:
 
 def _has_evidence_anchor(text: str, facts: dict[str, Any]) -> bool:
     values = []
-    for key in ("entrypoints", "capabilities", "schemas", "weak_contracts", "central", "broad", "hotspots", "boundaries"):
+    for key in (
+        "entrypoints",
+        "capabilities",
+        "schemas",
+        "weak_contracts",
+        "central",
+        "broad",
+        "hotspots",
+        "boundaries",
+        "runtime_extraction",
+    ):
         values.extend(_flatten_strings(facts.get(key)))
     ignored = {"main", "config", "index", "server", "handler", "project"}
     lowered = text.lower()

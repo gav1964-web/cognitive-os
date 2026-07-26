@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from .generic_file_conversion_recipe import is_file_conversion_prompt
+from .prompt_intake_rules import markers as prompt_markers
 from .schema import validate_payload
 
 
@@ -174,6 +175,10 @@ def merge_clarification(prompt: str, answer: str) -> str:
 def _intent(goal: str) -> str:
     if is_file_conversion_prompt(goal):
         return "file_conversion"
+    if _looks_like_project_provider_probe(goal):
+        return "project_provider_probe"
+    if _looks_like_project_fact_question(goal):
+        return "project_fact_question"
     if _looks_like_cli_program_request(goal):
         return "implementation"
     if any(word in goal for word in ("analyze", "analyse", "scan", "map", "проанализ")) and _mentions_project(goal):
@@ -194,7 +199,7 @@ def _intent(goal: str) -> str:
         return "extract_links"
     if "list" in goal and "file" in goal:
         return "list_files"
-    if any(word in goal for word in ("build", "implement", "create", "change", "edit", "extend", "add", "сделай", "реализ", "напиши", "доработ", "дополн", "добав", "измени", "расшир")):
+    if _has_implementation_marker(goal):
         return "implementation"
     return "unknown"
 
@@ -268,7 +273,7 @@ def _outputs(goal: str) -> list[str]:
 def _allowed_actions(goal: str) -> list[str]:
     if any(word in goal for word in ("only analyze", "только анализ", "оцен", "посмотри")):
         return ["read", "analyze", "report"]
-    if any(word in goal for word in ("implement", "реализ", "исправ", "change", "edit", "extend", "add", "напиши", "сделай", "create", "build", "доработ", "дополн", "добав", "измени", "расшир")) or _looks_like_cli_program_request(goal):
+    if _has_implementation_marker(goal) or _looks_like_cli_program_request(goal):
         return ["read", "analyze", "write", "test", "report"]
     if is_file_conversion_prompt(goal):
         return ["read", "analyze", "write", "test", "report"]
@@ -291,6 +296,10 @@ def _constraints(goal: str) -> list[str]:
 
 
 def _success_criteria(intent: str, goal: str, outputs: list[str]) -> list[str]:
+    if intent == "project_provider_probe":
+        return ["server startup and provider health probe are reported"]
+    if intent == "project_fact_question":
+        return ["the project fact question is answered from source evidence"]
     if intent == "analyze_project":
         return ["project purpose, entrypoints, capabilities, contracts, risks, and next steps are reported"]
     if intent == "implementation":
@@ -313,7 +322,7 @@ def _missing_fields(prompt: str, intent: str, target: str | None, success: list[
         missing.append("objective")
     if intent == "unknown":
         missing.append("intent")
-    target_required_intents = {"analyze_project", "parse_pdf", "convert_markdown", "convert_spreadsheet", "extract_links", "list_files"}
+    target_required_intents = {"analyze_project", "project_provider_probe", "project_fact_question", "parse_pdf", "convert_markdown", "convert_spreadsheet", "extract_links", "list_files"}
     if intent == "implementation" and not _is_greenfield_implementation_prompt(lowered):
         target_required_intents.add("implementation")
     if intent in target_required_intents and not target:
@@ -412,13 +421,30 @@ def _is_vague(goal: str) -> bool:
 
 
 def _is_greenfield_implementation_prompt(goal: str) -> bool:
-    has_create_verb = any(word in goal for word in ("напиши", "сделай", "create", "build", "implement"))
-    has_product_shape = any(word in goal for word in ("cli", "утилит", "script", ".py", "fastapi", "service", "служб"))
+    has_create_verb = _has_implementation_marker(goal)
+    has_product_shape = any(word in goal for word in ("cli", "утилит", "script", ".py", "fastapi", "service", "служб", "сервер"))
     return (has_create_verb and has_product_shape) or _looks_like_cli_program_request(goal)
 
 
 def _mentions_project(goal: str) -> bool:
     return "project" in goal or "проект" in goal
+
+
+def _looks_like_project_fact_question(goal: str) -> bool:
+    return _mentions_project(goal) and any(marker in goal for marker in prompt_markers("project_fact_question_markers"))
+
+
+def _has_implementation_marker(goal: str) -> bool:
+    return any(marker in goal for marker in prompt_markers("implementation_markers"))
+
+
+def _looks_like_project_provider_probe(goal: str) -> bool:
+    if not _mentions_project(goal):
+        return False
+    has_server = any(token in goal for token in ("server", "сервер", "gateway", "шлюз"))
+    has_probe = any(token in goal for token in ("provider", "providers", "провайдер", "провайдеры", "провайдерами"))
+    has_action = any(token in goal for token in ("run", "start", "test", "probe", "запусти", "запустить", "протестируй", "проверь"))
+    return has_server and has_probe and has_action
 
 
 def _looks_like_cli_program_request(goal: str) -> bool:

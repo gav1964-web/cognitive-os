@@ -34,7 +34,11 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         if len(files) >= max_files:
             skipped.append({"path": rel_path, "reason": "max_files_exceeded"})
             continue
-        size = path.stat().st_size
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            skipped.append({"path": rel_path, "reason": type(exc).__name__})
+            continue
         if size > max_bytes:
             skipped.append({"path": rel_path, "reason": "too_large", "size_bytes": size})
             continue

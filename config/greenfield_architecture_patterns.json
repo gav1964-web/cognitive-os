@@ -1,0 +1,724 @@
+{
+  "schema_version": "greenfield_architecture_patterns.v1",
+  "status": "active",
+  "defaults": {
+    "pattern_id": "generic_product",
+    "system_type": "cli",
+    "product_summary": "Bounded local software package from a user prompt.",
+    "architecture_style": "bounded local package with explicit interface, core logic and adapter boundaries",
+    "components": [
+      {
+        "id": "interface",
+        "purpose": "Входная граница системы.",
+        "inputs": ["request"],
+        "outputs": ["response"]
+      },
+      {
+        "id": "core_service",
+        "purpose": "Основная бизнес-логика.",
+        "inputs": ["validated input"],
+        "outputs": ["domain result"]
+      },
+      {
+        "id": "adapters",
+        "purpose": "Изоляция внешних side effects.",
+        "inputs": ["operation plan"],
+        "outputs": ["operation result"]
+      }
+    ],
+    "main_scenarios": [
+      {
+        "id": "main",
+        "description": "Выполнить основной пользовательский сценарий.",
+        "success": "typed result returned"
+      }
+    ],
+    "interfaces": [
+      {
+        "name": "main entrypoint",
+        "input": "request",
+        "output": "response"
+      }
+    ],
+    "data_model": [
+      {
+        "name": "Request",
+        "fields": "payload"
+      },
+      {
+        "name": "Response",
+        "fields": "result or error"
+      }
+    ],
+    "data_lifecycle": [
+      {
+        "stage": "input",
+        "shape": "request"
+      },
+      {
+        "stage": "validation",
+        "shape": "validated request"
+      },
+      {
+        "stage": "transform",
+        "shape": "domain result"
+      },
+      {
+        "stage": "output",
+        "shape": "response"
+      }
+    ],
+    "external_boundaries": [],
+    "research_hints": [
+      {
+        "topic": "closest existing domain documentation",
+        "use_for": "уточнить терминологию, допустимые backend и типовые ограничения перед реализацией",
+        "evidence_policy": "advisory only; verify with official docs or human-provided facts before implementation",
+        "authority": "candidate_evidence"
+      },
+      {
+        "topic": "existing open-source examples",
+        "use_for": "найти похожие adapter boundaries, tests and failure modes",
+        "evidence_policy": "do not copy code or behavior without license/security review",
+        "authority": "candidate_evidence"
+      }
+    ],
+    "architecture_options": [
+      {
+        "id": "bounded_core_with_adapters",
+        "status": "chosen",
+        "decision": "Начать с typed core contract and replaceable adapters.",
+        "tradeoffs": "Быстрее проверяется и безопаснее расширяется, но требует явного описания adapter policy."
+      },
+      {
+        "id": "single_script_with_inline_effects",
+        "status": "rejected",
+        "decision": "Не смешивать parsing, decisions and side effects in one script.",
+        "tradeoffs": "Быстро для прототипа, но плохо тестируется и ломает replay/retry."
+      }
+    ],
+    "security_policy": ["External side effects must be isolated and testable."],
+    "state_and_replay_policy": [
+      {
+        "owner": "runtime",
+        "state": "request/result",
+        "resume": "persist inputs for replay"
+      }
+    ],
+    "risks": [
+      {
+        "severity": "medium",
+        "risk": "unclear_external_boundary",
+        "mitigation": "define adapter policy before implementation"
+      }
+    ],
+    "non_goals": [
+      "Не делать production deployment без отдельного решения.",
+      "Не хранить секреты в логах или репозитории.",
+      "Не исполнять subprocess из core logic."
+    ],
+    "open_questions": ["Какие точные входные и выходные форматы должны быть обязательными в MVP?"],
+    "scope": ["Спроектировать bounded greenfield package."],
+    "primary_contract": {
+      "name": "Request -> Response",
+      "input": "request",
+      "output": "response",
+      "side_effect_policy": "adapter-only"
+    },
+    "acceptance_focus": ["contract tests", "negative tests", "README/run instructions"],
+    "constraints": ["local-first", "tests required"]
+  },
+  "patterns": [
+    {
+      "pattern_id": "openvpn_server",
+      "match_any": ["openvpn"],
+      "system_type": "small_local_service",
+      "product_summary": "Локальный сервер управления OpenVPN-клиентами: принимает запрос на клиента, проверяет его, готовит certificate operation plan, генерирует .ovpn profile/config и изолирует опасные операции с CA/OpenVPN process adapter.",
+      "architecture_style": "hexagonal service: API boundary -> application service -> pure config/profile builders -> CA/OpenVPN adapters",
+      "components": [
+        {"id": "api_boundary", "purpose": "Принимает HTTP/CLI request, валидирует envelope и возвращает JSON/файл.", "inputs": ["client request"], "outputs": ["typed response"]},
+        {"id": "client_provisioning_service", "purpose": "Оркестрирует создание/обновление клиента без прямых subprocess side effects.", "inputs": ["validated request"], "outputs": ["profile artifact or typed error"]},
+        {"id": "profile_generator", "purpose": "Детерминированно строит client .ovpn profile из сертификатных ссылок и route policy.", "inputs": ["client refs", "server endpoint", "routes"], "outputs": [".ovpn profile text"]},
+        {"id": "server_config_renderer", "purpose": "Детерминированно рендерит OpenVPN server config из policy.", "inputs": ["server policy"], "outputs": ["server config text"]},
+        {"id": "certificate_authority_adapter", "purpose": "Изолирует issue/revoke/list certificate operations.", "inputs": ["certificate operation plan"], "outputs": ["certificate refs or typed failure"]},
+        {"id": "openvpn_process_adapter", "purpose": "Изолирует validate/reload/restart OpenVPN process operations.", "inputs": ["validated config path"], "outputs": ["process operation result"]},
+        {"id": "audit_store", "purpose": "Фиксирует client/version/action ids для replay и расследования.", "inputs": ["operation event"], "outputs": ["audit record"]}
+      ],
+      "main_scenarios": [
+        {"id": "create_client", "description": "Создать клиента и вернуть .ovpn profile.", "success": "profile generated without leaking private key in logs"},
+        {"id": "revoke_client", "description": "Отозвать клиента и зафиксировать audit event.", "success": "certificate operation is idempotent"},
+        {"id": "render_server_config", "description": "Собрать server config и проверить его до reload.", "success": "config validation passes before process restart"},
+        {"id": "controlled_failure", "description": "Вернуть typed error при CA/OpenVPN adapter failure.", "success": "no partial state is treated as success"}
+      ],
+      "interfaces": [
+        {"name": "POST /clients", "input": "ClientProvisionRequest", "output": "ClientProfileResponse | ErrorResponse"},
+        {"name": "DELETE /clients/{client_id}", "input": "client_id", "output": "RevokeClientResponse | ErrorResponse"},
+        {"name": "POST /server/config/render", "input": "ServerPolicy", "output": "ServerConfigResponse | ErrorResponse"},
+        {"name": "GET /clients/{client_id}/profile", "input": "client_id", "output": ".ovpn profile or controlled 404"}
+      ],
+      "data_model": [
+        {"name": "ClientProvisionRequest", "fields": "client_id, display_name, ttl_days, routes, dns_policy"},
+        {"name": "CertificateOperationPlan", "fields": "client_id, operation, idempotency_key, ttl_days"},
+        {"name": "ClientProfile", "fields": "client_id, server_endpoint, cert_refs, routes, profile_text"},
+        {"name": "AuditEvent", "fields": "event_id, client_id, action, status, created_at"}
+      ],
+      "data_lifecycle": [
+        {"stage": "input", "shape": "raw client/API request"},
+        {"stage": "validation", "shape": "validated ClientProvisionRequest"},
+        {"stage": "planning", "shape": "CertificateOperationPlan without side effects"},
+        {"stage": "adapter_execution", "shape": "CA/OpenVPN operation result behind process boundary"},
+        {"stage": "rendering", "shape": "ClientProfile/server config artifact"},
+        {"stage": "output", "shape": "profile/config response or typed error"},
+        {"stage": "audit", "shape": "persisted operation event"}
+      ],
+      "external_boundaries": [
+        {"target": "certificate_authority_adapter", "side_effects": ["filesystem", "subprocess", "secret_material"], "policy": "process boundary, idempotency key, no secret logging"},
+        {"target": "openvpn_process_adapter", "side_effects": ["subprocess", "service_state"], "policy": "validate config before atomic replace/reload"},
+        {"target": "profile_artifact_store", "side_effects": ["filesystem", "secret_material"], "policy": "scoped write, encrypted/private permissions"}
+      ],
+      "research_hints": [
+        {
+          "topic": "OpenVPN Management Interface",
+          "use_for": "runtime-статус, список подключенных клиентов и ограниченные команды демона, но не переписывание OpenVPN protocol",
+          "evidence_policy": "перед реализацией проверить по официальной документации OpenVPN; считать кандидатом интерфейса",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "OpenVPN Access Server XML-RPC/API",
+          "use_for": "коммерческие установки Access Server, где действительно доступен product API",
+          "evidence_policy": "до выбора проверить тип установки и совместимость API с пользователем",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "easy-rsa, openssl or existing PKI",
+          "use_for": "backend выпуска/отзыва сертификатов за certificate_authority_adapter",
+          "evidence_policy": "выбор adapter требует явного решения пользователя или fixture-only MVP",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "existing OpenVPN admin panels/libraries",
+          "use_for": "поиск рисков, UX/API-идей и примеров adapter boundary",
+          "evidence_policy": "не копировать код; перед использованием нужен license/security review",
+          "authority": "candidate_evidence"
+        }
+      ],
+      "architecture_options": [
+        {
+          "id": "management_interface_plus_profile_service",
+          "status": "chosen",
+          "decision": "Строить management/profile service вокруг OpenVPN и CA adapters, а не реализовывать внутренности VPN-протокола.",
+          "tradeoffs": "MVP остается реалистичным, тестируемым и безопасным; при этом решения по CA и управлению daemon зависят от конкретного deployment."
+        },
+        {
+          "id": "pure_python_openvpn_protocol_server",
+          "status": "rejected",
+          "decision": "Не реализовывать OpenVPN protocol, crypto и packet transport в прикладном коде.",
+          "tradeoffs": "Слишком широкий и security-critical путь, который плохо подходит для MVP verification."
+        },
+        {
+          "id": "access_server_xml_rpc_only",
+          "status": "rejected",
+          "decision": "Не привязывать всю архитектуру к OpenVPN Access Server до подтверждения такого deployment пользователем.",
+          "tradeoffs": "Подходит для одного типа установки, но исключает community OpenVPN/easy-rsa сценарии."
+        },
+        {
+          "id": "install_script_only",
+          "status": "rejected",
+          "decision": "Не сводить продукт к одноразовому installation script.",
+          "tradeoffs": "Может подготовить host, но не дает durable client management, audit и replay."
+        }
+      ],
+      "security_policy": [
+        "Не логировать private key/profile contents.",
+        "Все certificate operations выполнять через idempotency key.",
+        "Разделить pure profile/config rendering и side-effecting adapters.",
+        "OpenVPN reload/restart только после validate + atomic config write.",
+        "Любой adapter failure возвращает typed error и quarantine signal."
+      ],
+      "state_and_replay_policy": [
+        {"owner": "certificate_authority_adapter", "state": "issued/revoked cert ids", "resume": "reuse operation result by idempotency key"},
+        {"owner": "openvpn_process_adapter", "state": "active config version", "resume": "rollback or keep previous config on failure"},
+        {"owner": "audit_store", "state": "operation journal", "resume": "append-only event record"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "secret_material_leak", "mitigation": "never log private keys; return profile only through explicit endpoint/policy"},
+        {"severity": "high", "risk": "partial_certificate_or_config_state", "mitigation": "idempotency keys, atomic writes, audit journal"},
+        {"severity": "medium", "risk": "subprocess_or_service_failure", "mitigation": "adapter boundary, timeout, typed failure, quarantine"},
+        {"severity": "medium", "risk": "unbounded_network_exposure", "mitigation": "local-only default, explicit auth/TLS decision before deployment"}
+      ],
+      "non_goals_extra": ["Не реализовывать полноценный CA/OpenVPN daemon внутри core сервиса."],
+      "open_questions": [
+        "Нужен HTTP API, CLI или оба интерфейса?",
+        "Какой backend CA допустим: easy-rsa, openssl, existing PKI, mock-only MVP?",
+        "Где хранить profile artifacts и audit journal?",
+        "Нужна ли аутентификация API в первом MVP?"
+      ],
+      "scope": [
+        "Спроектировать MVP сервера управления OpenVPN-клиентами.",
+        "Описать API/CLI boundary, core service, profile/config builders и side-effect adapters.",
+        "Зафиксировать security/idempotency/replay требования до реализации."
+      ],
+      "primary_contract": {
+        "name": "ClientProvisionRequest -> ClientProfileResponse",
+        "input": "client_id, ttl_days, routes, dns_policy, server endpoint policy",
+        "output": ".ovpn profile artifact metadata or typed ErrorResponse",
+        "side_effect_policy": "pure planning/rendering first; CA/OpenVPN side effects only through adapters"
+      },
+      "acceptance_focus": [
+        "contract tests for request validation",
+        "profile/config rendering tests without OpenVPN installed",
+        "negative tests for invalid client id and adapter failure",
+        "secret redaction/audit tests",
+        "idempotency/replay tests for certificate operations"
+      ],
+      "constraints": ["local-first", "no secret logging", "fake adapters in tests", "no live OpenVPN requirement for unit tests"]
+    },
+    {
+      "pattern_id": "web_news_scraper_cli",
+      "match_any": ["скрапер", "scraper", "scrape", "новост", "news", "cnews", "ixbt"],
+      "system_type": "file_processing_utility",
+      "product_summary": "Локальная CLI-утилита получает первую страницу новостного сайта, извлекает список новостей и сохраняет CSV с устойчивым контрактом колонок и fixture-first проверкой без обязательного live network.",
+      "architecture_style": "CLI boundary -> fetcher adapter -> HTML parser/extractor -> news normalizer -> CSV serializer",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает source URL или fixture HTML path и output CSV path.", "inputs": ["argv"], "outputs": ["exit code", "CSV path or typed error"]},
+        {"id": "fetcher_adapter", "purpose": "Изолирует HTTP-запрос к новостному сайту с timeout, user-agent и optional retry/rate-limit policy.", "inputs": ["URL", "fetch policy"], "outputs": ["HTML text or typed fetch error"]},
+        {"id": "html_news_parser", "purpose": "Извлекает кандидаты новостей из HTML без сетевых side effects.", "inputs": ["HTML text", "site profile"], "outputs": ["RawNewsItem list"]},
+        {"id": "news_normalizer", "purpose": "Нормализует заголовки, относительные ссылки, даты, summary и source.", "inputs": ["RawNewsItem list", "base URL"], "outputs": ["NewsItem list"]},
+        {"id": "csv_serializer", "purpose": "Пишет CSV с детерминированным header и UTF-8 encoding.", "inputs": ["NewsItem list", "output path"], "outputs": ["written CSV metadata"]},
+        {"id": "fixture_store", "purpose": "Хранит HTML fixture для тестов parser/CSV без live network.", "inputs": ["captured HTML sample"], "outputs": ["versioned fixture"]}
+      ],
+      "main_scenarios": [
+        {"id": "scrape_live_frontpage", "description": "Получить первую страницу сайта и сохранить найденные новости в CSV.", "success": "CSV содержит header и одну или более валидных строк при доступном сайте"},
+        {"id": "parse_fixture", "description": "Разобрать сохраненный HTML fixture без сети.", "success": "parser returns stable NewsItem rows"},
+        {"id": "empty_or_changed_markup", "description": "Обработать пустую или изменившуюся верстку.", "success": "typed warning/error вместо падения или ложного успеха"},
+        {"id": "network_failure", "description": "Вернуть controlled fetch error при timeout/DNS/HTTP failure.", "success": "CSV не считается успешным результатом без явного warning/status"}
+      ],
+      "interfaces": [
+        {"name": "news scraper CLI", "input": "source_url_or_fixture_path output.csv --site-profile cnews", "output": "CSV file + exit code"},
+        {"name": "parse_news_items()", "input": "HTML text + SiteProfile", "output": "list[NewsItem]"},
+        {"name": "write_news_csv()", "input": "list[NewsItem] + output path", "output": "CSV artifact metadata"}
+      ],
+      "data_model": [
+        {"name": "ScrapeRequest", "fields": "source, output_path, site_profile, network_policy"},
+        {"name": "RawNewsItem", "fields": "title_raw, href_raw, date_raw, summary_raw"},
+        {"name": "NewsItem", "fields": "title, url, date, summary, source"},
+        {"name": "ScrapeResult", "fields": "output_path, row_count, warnings, source_url"}
+      ],
+      "data_lifecycle": [
+        {"stage": "input", "shape": "CLI argv with URL/fixture and CSV output path"},
+        {"stage": "fetch_or_read", "shape": "HTML text from fetcher adapter or fixture file"},
+        {"stage": "parse", "shape": "RawNewsItem candidates from selectors/fallback link rules"},
+        {"stage": "normalize", "shape": "NewsItem list with absolute URLs and cleaned text"},
+        {"stage": "serialize", "shape": "UTF-8 CSV with stable header"},
+        {"stage": "verify", "shape": "row count, warnings and fixture/live smoke evidence"}
+      ],
+      "external_boundaries": [
+        {"target": "fetcher_adapter", "side_effects": ["network"], "policy": "timeout, user-agent, rate-limit, optional live smoke; tests use fixtures"},
+        {"target": "csv_serializer", "side_effects": ["filesystem"], "policy": "write only requested output path"},
+        {"target": "fixture_store", "side_effects": ["filesystem"], "policy": "read-only during tests unless fixture refresh is explicit"}
+      ],
+      "research_hints": [
+        {
+          "topic": "target site HTML structure",
+          "use_for": "подобрать стабильные selectors/fallback extraction rules for the front page",
+          "evidence_policy": "verify on captured fixture and record parser limitations; do not assume markup stability",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "robots.txt and acceptable request policy",
+          "use_for": "определить допустимость live scraping, rate limit и user-agent",
+          "evidence_policy": "check before enabling repeated live runs; default tests must not require network",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "site RSS/feed/API alternatives",
+          "use_for": "prefer structured feed/API over brittle HTML parsing when available",
+          "evidence_policy": "treat feed/API as candidate backend and verify output contract equivalence",
+          "authority": "candidate_evidence"
+        }
+      ],
+      "architecture_options": [
+        {
+          "id": "fixture_first_html_scraper_cli",
+          "status": "chosen",
+          "decision": "Начать с CLI, fixture-first HTML parser и optional live fetcher adapter.",
+          "tradeoffs": "Дает проверяемую локальную версию и реальный live smoke; но parser требует поддержки при изменении верстки сайта."
+        },
+        {
+          "id": "rss_or_feed_adapter",
+          "status": "rejected",
+          "decision": "Не выбирать feed/API как единственный backend до проверки наличия и покрытия первой страницы.",
+          "tradeoffs": "Более устойчиво, если feed есть, но может не совпадать с составом первой страницы."
+        },
+        {
+          "id": "browser_automation_scraper",
+          "status": "rejected",
+          "decision": "Не начинать с Playwright/Selenium для MVP.",
+          "tradeoffs": "Может справиться с динамической страницей, но тяжелее, медленнее и требует отдельной sandbox/browser policy."
+        }
+      ],
+      "security_policy": [
+        "Default tests do not call live network.",
+        "Live scraping must use timeout, user-agent and conservative rate limit.",
+        "Do not execute scripts from downloaded HTML.",
+        "Write only the requested CSV output path.",
+        "Changed markup must produce warnings or controlled failure, not silent success."
+      ],
+      "state_and_replay_policy": [
+        {"owner": "fixture_store", "state": "captured HTML fixture version", "resume": "re-run parser/serializer tests from fixture"},
+        {"owner": "scrape_result", "state": "source URL, row count, warnings", "resume": "compare new live output against fixture expectations"},
+        {"owner": "csv_serializer", "state": "output CSV artifact", "resume": "overwrite only explicit output path or use temp+atomic replace"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "markup_drift_empty_csv", "mitigation": "fallback extraction rules, minimum row-count check and warning/error on zero rows"},
+        {"severity": "medium", "risk": "live_network_unavailable_or_blocked", "mitigation": "fixture-first tests and optional live smoke"},
+        {"severity": "medium", "risk": "robots_or_rate_limit_violation", "mitigation": "research robots/request policy before repeated runs"},
+        {"severity": "medium", "risk": "duplicate_or_navigation_links", "mitigation": "deduplicate by canonical URL and filter service/comment links"}
+      ],
+      "non_goals_extra": [
+        "Не делать crawler по всему сайту в первом MVP.",
+        "Не использовать browser automation без отдельного решения."
+      ],
+      "open_questions": [
+        "Какие CSV columns обязательны: title, url, date, summary, source?",
+        "Нужен ли live network в обычном запуске или только optional smoke?",
+        "Какой минимум строк считать успешным результатом для CNews первой страницы?",
+        "Разрешен ли fallback на RSS/feed/API, если он найден?"
+      ],
+      "scope": [
+        "Спроектировать CLI news scraper для первой страницы заданного сайта.",
+        "Зафиксировать fetcher adapter, parser/normalizer, CSV serializer и fixture-first tests.",
+        "Описать controlled behavior для сетевых ошибок и изменившейся HTML-разметки."
+      ],
+      "primary_contract": {
+        "name": "NewsScrapeRequest -> NewsCsvResult",
+        "input": "source URL or fixture HTML path, output CSV path, site profile",
+        "output": "CSV artifact metadata with row_count/warnings or typed ErrorResponse",
+        "side_effect_policy": "network only through fetcher adapter; filesystem write only through csv_serializer"
+      },
+      "acceptance_focus": [
+        "parser fixture test for target-site-like HTML",
+        "CSV writer stable header test",
+        "CLI fixture test without network",
+        "zero-row/markup drift negative test",
+        "optional live smoke documents row_count and warnings"
+      ],
+      "constraints": ["fixture-first", "optional live network", "stdlib parser acceptable", "no browser automation by default"]
+    },
+    {
+      "pattern_id": "reverse_geocode_cli",
+      "match_any": ["координат", "coordinates", "latitude", "longitude", "lat", "lon", "геокод", "geocode", "населен", "город", "адрес"],
+      "system_type": "cli",
+      "product_summary": "Локальная CLI-утилита принимает координаты latitude/longitude, валидирует диапазоны, вызывает изолированный reverse-geocoding backend и выводит название населенного пункта или typed error.",
+      "architecture_style": "CLI boundary -> coordinate validator -> reverse geocoder adapter -> settlement normalizer -> stdout/JSON serializer",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает latitude/longitude как позиционные аргументы или flags и управляет форматом вывода.", "inputs": ["argv"], "outputs": ["exit code", "stdout or output artifact"]},
+        {"id": "coordinate_validator", "purpose": "Проверяет числовой формат координат и допустимые диапазоны.", "inputs": ["raw lat/lon strings"], "outputs": ["ValidatedCoordinates or typed error"]},
+        {"id": "reverse_geocoder_adapter", "purpose": "Инкапсулирует внешний API или локальный geocoding backend.", "inputs": ["ValidatedCoordinates", "backend policy"], "outputs": ["RawGeocodeCandidate list or typed backend error"]},
+        {"id": "settlement_normalizer", "purpose": "Выбирает и нормализует название населенного пункта из geocoder response.", "inputs": ["RawGeocodeCandidate list"], "outputs": ["SettlementResult"]},
+        {"id": "result_serializer", "purpose": "Печатает название в stdout или JSON/CSV при расширении форматов.", "inputs": ["SettlementResult"], "outputs": ["stdout text or typed response"]}
+      ],
+      "main_scenarios": [
+        {"id": "lookup_settlement", "description": "Передать lat/lon и получить название ближайшего населенного пункта.", "success": "stdout contains settlement name and exit code is 0"},
+        {"id": "invalid_coordinates", "description": "Передать нечисловые или вне диапазона координаты.", "success": "controlled validation error and non-zero exit code"},
+        {"id": "backend_unavailable", "description": "Geocoder backend недоступен или вернул timeout/429/5xx.", "success": "typed backend error without fake settlement name"},
+        {"id": "ambiguous_result", "description": "Backend вернул несколько кандидатов или только административную область.", "success": "policy returns best settlement with confidence/warning or asks for clarification"}
+      ],
+      "interfaces": [
+        {"name": "reverse-geocode CLI", "input": "lat lon [--format text|json] [--backend provider]", "output": "settlement name or ErrorResponse"},
+        {"name": "resolve_settlement()", "input": "ValidatedCoordinates + backend policy", "output": "SettlementResult | GeocodeError"}
+      ],
+      "data_model": [
+        {"name": "CoordinateLookupRequest", "fields": "latitude, longitude, output_format, backend_id"},
+        {"name": "ValidatedCoordinates", "fields": "latitude: -90..90, longitude: -180..180"},
+        {"name": "RawGeocodeCandidate", "fields": "display_name, address fields, distance/confidence optional, provider_metadata"},
+        {"name": "SettlementResult", "fields": "settlement_name, settlement_type, country, region, confidence, provider"}
+      ],
+      "data_lifecycle": [
+        {"stage": "input", "shape": "CLI argv strings"},
+        {"stage": "validation", "shape": "ValidatedCoordinates"},
+        {"stage": "backend_lookup", "shape": "RawGeocodeCandidate list from adapter or fixture"},
+        {"stage": "normalization", "shape": "SettlementResult with confidence/warnings"},
+        {"stage": "output", "shape": "stdout text or JSON response"},
+        {"stage": "verification", "shape": "fixture tests and optional live smoke"}
+      ],
+      "external_boundaries": [
+        {"target": "reverse_geocoder_adapter", "side_effects": ["network", "optional_local_dataset"], "policy": "timeout, rate-limit, provider policy; tests use fake/fixture backend"},
+        {"target": "local_geocoder_dataset", "side_effects": ["filesystem", "large_data"], "policy": "explicit dataset path/version; not bundled by default"},
+        {"target": "stdout_serializer", "side_effects": ["stdout"], "policy": "stable text output for scripts"}
+      ],
+      "research_hints": [
+        {
+          "topic": "reverse geocoding provider policy",
+          "use_for": "выбрать допустимый backend: Nominatim/OpenStreetMap, commercial API, local geocoder или fixture-only MVP",
+          "evidence_policy": "verify terms, rate limits and required user-agent/API key before live network use",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "offline geocoding datasets",
+          "use_for": "оценить возможность работы без сети через OSM/geonames extract or local spatial index",
+          "evidence_policy": "requires explicit dataset source, size, update policy and license review",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "settlement field mapping",
+          "use_for": "определить порядок выбора city/town/village/hamlet/suburb/county from provider response",
+          "evidence_policy": "must be encoded as deterministic normalization policy and fixture-tested",
+          "authority": "candidate_evidence"
+        }
+      ],
+      "architecture_options": [
+        {
+          "id": "provider_adapter_with_fixture_tests",
+          "status": "chosen",
+          "decision": "Начать с provider adapter и fixture/fake backend, чтобы отделить CLI/core от конкретного geocoder API.",
+          "tradeoffs": "Быстро дает рабочий контракт и тесты без сети; live качество зависит от выбранного provider и его политики."
+        },
+        {
+          "id": "offline_osm_dataset",
+          "status": "rejected",
+          "decision": "Не начинать с полной локальной OSM/GeoNames базы в MVP.",
+          "tradeoffs": "Хорошо для приватности и offline, но требует большой dataset, spatial index, update/license policy."
+        },
+        {
+          "id": "hardcoded_coordinate_table",
+          "status": "rejected",
+          "decision": "Не подменять reverse geocoding ручной таблицей координат.",
+          "tradeoffs": "Подходит только для toy fixtures и не решает пользовательскую задачу в реальном мире."
+        }
+      ],
+      "security_policy": [
+        "Не логировать API keys or provider tokens.",
+        "Live provider calls must use timeout, user-agent and rate-limit policy.",
+        "Default tests must use fake/fixture backend without network.",
+        "Invalid coordinates must fail before any network call.",
+        "If confidence is low, output must include warning or controlled no_match result."
+      ],
+      "state_and_replay_policy": [
+        {"owner": "fixture_backend", "state": "coordinate -> provider response fixtures", "resume": "re-run normalization tests without network"},
+        {"owner": "provider_adapter", "state": "optional cache keyed by rounded coordinates/provider", "resume": "cache is advisory and must not hide provider errors"},
+        {"owner": "result_serializer", "state": "stdout/result artifact", "resume": "recompute from stored fixture or cached raw response"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "provider_policy_or_rate_limit_violation", "mitigation": "verify terms, rate-limit and user-agent/API key policy before enabling live use"},
+        {"severity": "high", "risk": "ambiguous_or_wrong_settlement", "mitigation": "deterministic settlement field priority, confidence/warnings and fixture tests"},
+        {"severity": "medium", "risk": "invalid_coordinate_order", "mitigation": "explicit lat/lon flags, range validation and examples"},
+        {"severity": "medium", "risk": "network_unavailable", "mitigation": "fake backend in tests and typed backend error in runtime"}
+      ],
+      "non_goals_extra": [
+        "Не строить полноценный GIS/spatial database в первом MVP.",
+        "Не гарантировать юридически точное административное деление без выбранного authoritative dataset."
+      ],
+      "open_questions": [
+        "Какой backend допустим: внешний API, локальная база или оба режима?",
+        "Нужен только stdout с названием или JSON с confidence/region/provider?",
+        "Как трактовать координаты рядом с границей населенных пунктов?",
+        "Допускается ли API key/secret или нужен provider без ключа?"
+      ],
+      "scope": [
+        "Спроектировать CLI reverse geocoding utility для координат latitude/longitude.",
+        "Зафиксировать validation, geocoder adapter, settlement normalization и output contract.",
+        "Описать fake/fixture tests и controlled behavior для provider failures."
+      ],
+      "primary_contract": {
+        "name": "CoordinateLookupRequest -> SettlementResult",
+        "input": "latitude, longitude, backend policy and output format",
+        "output": "settlement name/result with confidence or typed ErrorResponse",
+        "side_effect_policy": "network/local dataset only through reverse_geocoder_adapter"
+      },
+      "acceptance_focus": [
+        "coordinate range validation tests",
+        "fixture geocoder response normalization tests",
+        "CLI stdout contract test",
+        "backend timeout/error negative test",
+        "ambiguous/no settlement warning test"
+      ],
+      "constraints": ["fixture-first", "optional live provider", "explicit provider policy", "no bundled large GIS dataset by default"]
+    },
+    {
+      "pattern_id": "fastapi_csv_aggregator",
+      "match_any": ["fastapi", "csv", "агрег"],
+      "system_type": "fastapi_service",
+      "product_summary": "Локальная FastAPI-служба принимает CSV, валидирует колонки, считает агрегаты и возвращает JSON-отчет без live-network зависимостей.",
+      "architecture_style": "HTTP boundary -> validation service -> pure aggregation core -> report serializer",
+      "components": [
+        {"id": "api_boundary", "purpose": "Принимает upload/request и возвращает JSON response.", "inputs": ["multipart/form-data or file path request"], "outputs": ["typed JSON response"]},
+        {"id": "csv_validator", "purpose": "Проверяет наличие колонок, кодировку и форму строк.", "inputs": ["raw CSV bytes/text"], "outputs": ["ValidatedCsvTable or typed error"]},
+        {"id": "aggregation_core", "purpose": "Считает агрегаты чистой функцией без I/O.", "inputs": ["ValidatedCsvTable", "AggregationSpec"], "outputs": ["AggregationResult"]},
+        {"id": "report_serializer", "purpose": "Преобразует результат в JSON-отчет.", "inputs": ["AggregationResult"], "outputs": ["JSON object"]}
+      ],
+      "interfaces": [
+        {"name": "POST /aggregate", "input": "CSV file + AggregationSpec", "output": "AggregationReport | ErrorResponse"},
+        {"name": "GET /health", "input": "none", "output": "service status"}
+      ],
+      "data_model": [
+        {"name": "AggregationSpec", "fields": "group_by, metrics, required_columns"},
+        {"name": "ValidatedCsvTable", "fields": "columns, rows, warnings"},
+        {"name": "AggregationReport", "fields": "groups, totals, row_count, warnings"}
+      ],
+      "external_boundaries": [
+        {"target": "http_server", "side_effects": ["network_socket"], "policy": "local-only default; tests use ASGI client"},
+        {"target": "file_upload", "side_effects": ["memory", "temporary_file_optional"], "policy": "size limit and cleanup"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "bad_csv_or_schema_drift", "mitigation": "explicit schema validation and negative tests"},
+        {"severity": "medium", "risk": "large_file_memory_pressure", "mitigation": "document size limit and streaming/backpressure decision"}
+      ],
+      "open_questions": [
+        "Какие колонки и агрегаты обязательны в первом MVP?",
+        "Нужен upload файла, путь к локальному файлу или оба варианта?",
+        "Какой максимальный размер CSV допустим?"
+      ],
+      "scope": [
+        "Спроектировать FastAPI-сервис для CSV aggregation.",
+        "Зафиксировать request/response contracts, validation errors и fixture-based tests."
+      ],
+      "primary_contract": {
+        "name": "CsvAggregationRequest -> AggregationReport",
+        "input": "CSV file/text and aggregation spec",
+        "output": "JSON aggregation report or typed ErrorResponse",
+        "side_effect_policy": "HTTP/file boundary only; aggregation core is pure"
+      },
+      "acceptance_focus": ["ASGI endpoint tests with fixture CSV", "schema validation negative tests", "pure aggregation unit tests"],
+      "constraints": ["local-first", "fixture tests", "no mandatory live network"]
+    },
+    {
+      "pattern_id": "file_converter_cli",
+      "match_any": ["конвертер", "convert", "xlsx", "xls", "csv", "rtf", "doc", "html", "png"],
+      "system_type": "file_processing_utility",
+      "product_summary": "CLI file-conversion utility with parser, transform, serializer and explicit dependency/backend policy.",
+      "architecture_style": "CLI boundary -> format detector -> parser adapter -> pure intermediate model -> serializer adapter",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает input/output paths и flags.", "inputs": ["argv"], "outputs": ["exit code and console message"]},
+        {"id": "format_detector", "purpose": "Определяет source/target format and backend.", "inputs": ["paths", "flags"], "outputs": ["ConversionPlan"]},
+        {"id": "parser_adapter", "purpose": "Читает source format за границей зависимости.", "inputs": ["input file", "ConversionPlan"], "outputs": ["IntermediateDocument"]},
+        {"id": "conversion_core", "purpose": "Преобразует intermediate model без I/O.", "inputs": ["IntermediateDocument"], "outputs": ["IntermediateDocument"]},
+        {"id": "serializer_adapter", "purpose": "Записывает target format.", "inputs": ["IntermediateDocument", "output path"], "outputs": ["written artifact metadata"]}
+      ],
+      "interfaces": [
+        {"name": "converter CLI", "input": "input_path output_path --format optional", "output": "target file + exit code"}
+      ],
+      "data_model": [
+        {"name": "ConversionPlan", "fields": "source_format, target_format, backend, dependency_policy"},
+        {"name": "IntermediateDocument", "fields": "tables, text_blocks, images, metadata"},
+        {"name": "ConversionResult", "fields": "output_path, warnings, backend_used"}
+      ],
+      "external_boundaries": [
+        {"target": "parser_adapter", "side_effects": ["filesystem", "optional_dependency"], "policy": "backend selected by explicit dependency policy"},
+        {"target": "serializer_adapter", "side_effects": ["filesystem"], "policy": "write only requested output path"}
+      ],
+      "risks": [
+        {"severity": "medium", "risk": "format_feature_loss", "mitigation": "document supported subset and round-trip limitations"},
+        {"severity": "medium", "risk": "optional_dependency_missing", "mitigation": "controlled error or stdlib fallback where possible"}
+      ],
+      "open_questions": [
+        "Какие source и target форматы обязательны в первом MVP?",
+        "Разрешены ли внешние библиотеки для конкретных форматов?",
+        "Нужна ли batch-конвертация каталога или только один файл?"
+      ],
+      "scope": [
+        "Спроектировать CLI conversion utility.",
+        "Разделить parser/serializer adapters и pure intermediate model.",
+        "Зафиксировать dependency policy and fixture acceptance tests."
+      ],
+      "primary_contract": {
+        "name": "ConversionRequest -> ConversionResult",
+        "input": "input path, output path, source/target formats",
+        "output": "written target artifact metadata or typed ErrorResponse",
+        "side_effect_policy": "filesystem writes only through serializer adapter"
+      },
+      "acceptance_focus": ["fixture conversion tests", "missing dependency negative tests", "invalid file/path tests"],
+      "constraints": ["project-scoped paths", "dependency policy required", "no source tree mutation"]
+    },
+    {
+      "pattern_id": "ocr_image_cli",
+      "match_any": ["ocr", "распозна", "картин", "изображ", "image", "photo", "webp", "jpg"],
+      "system_type": "file_processing_utility",
+      "product_summary": "CLI image/OCR utility that loads an image, normalizes orientation if needed, extracts text or visible contents and writes a structured result.",
+      "architecture_style": "CLI boundary -> image loader adapter -> preprocessing pipeline -> recognition adapter -> structured output serializer",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает image path, output format and confidence flags.", "inputs": ["argv"], "outputs": ["exit code and report path"]},
+        {"id": "image_loader", "purpose": "Читает изображение и metadata.", "inputs": ["image path"], "outputs": ["ImageFrame"]},
+        {"id": "preprocessor", "purpose": "Нормализует orientation/size/contrast без потери исходника.", "inputs": ["ImageFrame"], "outputs": ["NormalizedImageFrame"]},
+        {"id": "recognition_adapter", "purpose": "Инкапсулирует OCR/vision backend.", "inputs": ["NormalizedImageFrame"], "outputs": ["RecognizedContent"]},
+        {"id": "result_serializer", "purpose": "Пишет txt/json/csv/html report.", "inputs": ["RecognizedContent"], "outputs": ["output artifact"]}
+      ],
+      "interfaces": [
+        {"name": "image contents CLI", "input": "image_path --output result.json", "output": "recognized content report"}
+      ],
+      "data_model": [
+        {"name": "ImageFrame", "fields": "path, format, width, height, exif_orientation"},
+        {"name": "RecognizedContent", "fields": "text_blocks, objects, confidence, warnings"},
+        {"name": "RecognitionResult", "fields": "output_path, backend_used, confidence_summary"}
+      ],
+      "external_boundaries": [
+        {"target": "image_loader", "side_effects": ["filesystem", "image_codec_dependency"], "policy": "controlled decode errors"},
+        {"target": "recognition_adapter", "side_effects": ["optional_dependency", "optional_model"], "policy": "fixture/mocked tests required; no live provider mandatory"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "ocr_backend_unavailable", "mitigation": "backend adapter with controlled fallback/refusal"},
+        {"severity": "medium", "risk": "rotated_or_low_quality_image", "mitigation": "orientation preprocessing and confidence warnings"}
+      ],
+      "open_questions": [
+        "Нужен OCR текста, перечисление объектов на изображении или оба режима?",
+        "Какие output formats обязательны: txt, json, csv, html?",
+        "Разрешены ли OCR/vision зависимости или нужен fixture-only MVP?"
+      ],
+      "scope": [
+        "Спроектировать CLI для image recognition/OCR.",
+        "Зафиксировать image preprocessing, recognition adapter and output contracts."
+      ],
+      "primary_contract": {
+        "name": "ImageRecognitionRequest -> RecognizedContent",
+        "input": "image path and output format",
+        "output": "structured recognized content or typed ErrorResponse",
+        "side_effect_policy": "filesystem read/write only; recognition backend isolated"
+      },
+      "acceptance_focus": ["fixture image tests", "rotated image handling tests", "backend unavailable negative tests"],
+      "constraints": ["no live provider mandatory", "explicit backend policy", "preserve original image"]
+    },
+    {
+      "pattern_id": "json_compare_cli",
+      "match_any": ["json", "сравн", "diff"],
+      "system_type": "cli",
+      "product_summary": "CLI utility compares two JSON files, normalizes structures and emits a machine-readable diff/report.",
+      "architecture_style": "CLI boundary -> JSON parser -> normalizer -> diff core -> report serializer",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает два пути и flags сравнения.", "inputs": ["argv"], "outputs": ["exit code and report"]},
+        {"id": "json_parser", "purpose": "Читает и валидирует JSON.", "inputs": ["file paths"], "outputs": ["ParsedJsonPair or typed error"]},
+        {"id": "normalizer", "purpose": "Применяет порядок ключей/ignore rules.", "inputs": ["ParsedJsonPair", "DiffOptions"], "outputs": ["NormalizedJsonPair"]},
+        {"id": "diff_core", "purpose": "Строит различия чистой функцией.", "inputs": ["NormalizedJsonPair"], "outputs": ["JsonDiff"]},
+        {"id": "report_serializer", "purpose": "Пишет text/json/html report.", "inputs": ["JsonDiff"], "outputs": ["report artifact"]}
+      ],
+      "interfaces": [
+        {"name": "json-diff CLI", "input": "left.json right.json --format json", "output": "diff report + exit code"}
+      ],
+      "data_model": [
+        {"name": "DiffOptions", "fields": "ignore_keys, order_insensitive_arrays, output_format"},
+        {"name": "JsonDiff", "fields": "added, removed, changed, unchanged_count"}
+      ],
+      "external_boundaries": [
+        {"target": "json_parser", "side_effects": ["filesystem"], "policy": "read-only input files"},
+        {"target": "report_serializer", "side_effects": ["filesystem_optional"], "policy": "write only requested report path"}
+      ],
+      "risks": [
+        {"severity": "medium", "risk": "large_nested_json", "mitigation": "depth/size limits and clear error"},
+        {"severity": "medium", "risk": "ambiguous_array_semantics", "mitigation": "explicit order policy flag"}
+      ],
+      "open_questions": [
+        "Массивы сравнивать как ordered или unordered?",
+        "Нужен ли список игнорируемых ключей?",
+        "Какой формат отчета основной: stdout, json, html?"
+      ],
+      "scope": ["Спроектировать JSON compare CLI with explicit diff contract."],
+      "primary_contract": {
+        "name": "JsonCompareRequest -> JsonDiff",
+        "input": "two JSON file paths and diff options",
+        "output": "diff report or typed ErrorResponse",
+        "side_effect_policy": "read-only inputs; optional report write"
+      },
+      "acceptance_focus": ["nested JSON diff tests", "invalid JSON negative tests", "array policy tests"],
+      "constraints": ["stdlib JSON first", "project-scoped report path"]
+    }
+  ]
+}

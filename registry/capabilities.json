@@ -1,6 +1,22 @@
 {
   "capabilities": [
     {
+      "id": "apply_project_change_recipe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.apply_project_change_recipe.src.main:run",
+      "input_schema_ref": "plugins/apply_project_change_recipe/schemas/input.json",
+      "output_schema_ref": "plugins/apply_project_change_recipe/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:de6b3f98ab8e5a7dcaf9ab5d9ee1e09f8608ab380e9d72fd8baa2d0880902f49",
+      "fallback_for": []
+    },
+    {
       "id": "csv_to_spreadsheet",
       "version": "0.1.0",
       "entrypoint": "plugins.csv_to_spreadsheet.src.main:run",
@@ -29,7 +45,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:da12787c65b825863c0a1f837c8922a2142557f823e7ccec3b4ae61a530866df",
+      "version_hash": "sha256:decf995525656727ba2b05c6d2c1fc4a8f3997ae21d5419fdfb4862c55c975df",
       "fallback_for": []
     },
     {
@@ -61,7 +77,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:68befeb61104593f399fcc43d7b1c94a3221b759628c5377088b782ff428f158",
+      "version_hash": "sha256:b4c32909bf444f53bb4ddf824e1d8d38498729686f3a9d2f4ba1fdb34d8d6b74",
       "fallback_for": []
     },
     {
@@ -77,7 +93,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:580a9aebcad0a4da05d71725f23a4348007171c26d363e5805b1deeee082d483",
+      "version_hash": "sha256:a078ec952fab2df009811e34ec4020df7191938734dff05911c24115c25546a7",
       "fallback_for": []
     },
     {
@@ -314,12 +330,12 @@
       "output_schema_ref": "plugins/project_fact_questions/schemas/output.json",
       "determinism_grade": "A",
       "side_effects": {
-        "filesystem": "none",
+        "filesystem": "read_only",
         "network": "none",
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:6feda0a9a416d938e9a111ebd1df963504077d32003db4f1fd39f7389670fd41",
+      "version_hash": "sha256:05c62a279064ed441cde9dc0aedb910fa519a02e2a13bd138cef404fa480f08d",
       "fallback_for": []
     },
     {
@@ -335,7 +351,23 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:0b29d547ef92ec2a88e7e846fa5751018446466c7e1729202898a2415cc61a7c",
+      "version_hash": "sha256:7c01bb30894fbaae978a94a298de8d94c39b1f9c232f1b764433de342a62aff9",
+      "fallback_for": []
+    },
+    {
+      "id": "project_provider_probe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.project_provider_probe.src.main:run",
+      "input_schema_ref": "plugins/project_provider_probe/schemas/input.json",
+      "output_schema_ref": "plugins/project_provider_probe/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "allowlist",
+        "secrets": "declared"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:3a2e6d1606b61040debb3b2477f5a8a6acca8af1d87130e8f78191daf260dce1",
       "fallback_for": []
     },
     {
@@ -351,7 +383,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f142e8c8fb71114d24117759423f2552cffbc638b5e4e9c36b8aba1853eea764",
+      "version_hash": "sha256:a8c5d6815afb0c5f1d6ae57ca2e2ceff4b8c0dc615918d8f3bbe809dca2b2ef5",
       "fallback_for": []
     },
     {
@@ -368,6 +400,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:b36bb3dde5ab9626bc3b6b3b29ef2e2881098fd52bc510f3b43e5c1c5fc64520",
+      "fallback_for": []
+    },
+    {
+      "id": "replace_text_in_project",
+      "version": "0.1.0",
+      "entrypoint": "plugins.replace_text_in_project.src.main:run",
+      "input_schema_ref": "plugins/replace_text_in_project/schemas/input.json",
+      "output_schema_ref": "plugins/replace_text_in_project/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:8a3760ea508210d740664246a12552b01e9aeb35c4e918d4a9efdf9bf467dd85",
       "fallback_for": []
     },
     {
@@ -399,7 +447,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:806ad8faa32c997784bb16ee5e364d69074fa615275881173e855317e96f1886",
+      "version_hash": "sha256:1b598ad9f4c387cb618a4b202496c7136f6d86ea23c94390dab166e03cb73bba",
       "fallback_for": []
     },
     {

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .role_directory import load_role_directory
+from .spec_writer_red_team import red_team_technical_spec
 
 
 def run_role_gate_report(
@@ -173,6 +174,45 @@ def _runtime_extraction_readiness_present(artifact: dict[str, Any], artifacts: d
     return bool(answers.get("6_runtime_extraction_readiness")), "runtime extraction readiness answer exists"
 
 
+def _task_inputs_outputs_and_code_areas_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    scope = _project_answer(project_report, "1_scope", "1_project_purpose_and_boundaries")
+    return bool(scope.get("main_task") and scope.get("inputs") and scope.get("outputs") and isinstance(scope.get("code_areas"), dict)), "scope has task, inputs, outputs and code areas"
+
+
+def _entrypoints_or_runtime_commands_detected(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    execution = _project_answer(project_report, "2_execution", "2_entrypoints_and_execution_flow")
+    readiness = _project_answer(project_report, "6_runtime_extraction_readiness")
+    plan = dict(readiness.get("minimal_extraction_plan", {}))
+    return bool(execution.get("entrypoints") or execution.get("runtime_commands") or execution.get("central_flow_nodes") or plan.get("capabilities_to_extract")), "entrypoints, commands or inferred execution anchors exist"
+
+
+def _execution_path_pipeline_candidate_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    execution = _project_answer(project_report, "2_execution", "2_entrypoints_and_execution_flow")
+    return bool(execution.get("primary_execution_path") or execution.get("pipeline_candidate")), "execution path or pipeline candidate exists"
+
+
+def _capability_candidates_or_controlled_gap_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    capabilities = _project_answer(project_report, "3_capabilities")
+    readiness = _project_answer(project_report, "6_runtime_extraction_readiness")
+    plan = dict(readiness.get("minimal_extraction_plan", {}))
+    return bool(capabilities.get("atomic_reusable_capabilities") or capabilities.get("pure_transforms") or capabilities.get("too_broad_functions") or plan.get("capabilities_to_extract")), "capability candidate or extraction plan exists"
+
+
+def _contracts_data_and_weak_zones_reported(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contracts = _project_answer(project_report, "4_contracts_data")
+    return bool(contracts.get("main_data_structures") and isinstance(contracts.get("weak_contract_zones", []), list)), "data structures and weak contract zones are reported"
+
+
+def _errors_state_reproducibility_explicit(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    errors = _project_answer(project_report, "5_errors_state_repro")
+    return bool(errors.get("likely_error_types") and errors.get("state_to_preserve") and errors.get("minimal_cognitive_loop")), "errors, state and reproducibility are explicit"
+
+
+def _runtime_extraction_plan_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    readiness = _project_answer(project_report, "6_runtime_extraction_readiness")
+    return bool(dict(readiness.get("minimal_extraction_plan", {})).get("capabilities_to_extract")), "minimal extraction plan exists"
+
+
 def _project_report_has_evidence(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(project_report.get("answers") or artifact.get("source_context")), "source evidence exists"
 
@@ -196,6 +236,30 @@ def _risks_are_actionable(artifact: dict[str, Any], artifacts: dict[str, dict[st
 
 def _handoff_is_typed(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(artifact.get("next_artifact") or artifact.get("spec_writer_brief")), "typed handoff fields exist"
+
+
+def _options_include_tradeoffs(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    options = artifact.get("architecture_options", [])
+    ok = isinstance(options, list) and len(options) >= 2 and all(isinstance(row, dict) and row.get("tradeoffs") for row in options[:3])
+    return ok, "architecture options include tradeoffs"
+
+
+def _subsystem_boundaries_have_inputs_outputs(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    boundaries = artifact.get("subsystem_boundaries", [])
+    ok = isinstance(boundaries, list) and bool(boundaries) and all(
+        isinstance(row, dict) and row.get("owned_files") and row.get("inputs") and row.get("outputs")
+        for row in boundaries[:4]
+    )
+    return ok, "subsystem boundaries have owned files, inputs and outputs"
+
+
+def _data_lifecycle_and_state_model_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    return bool(artifact.get("data_lifecycle") and artifact.get("state_model")), "ADR data lifecycle and state model exist"
+
+
+def _spec_writer_brief_has_contract_targets(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    brief = dict(artifact.get("spec_writer_brief", {}))
+    return bool(brief.get("contract_targets") or brief.get("blocked_by")), "SpecWriter brief has contract targets or controlled block"
 
 
 def _adr_chosen_option_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
@@ -222,6 +286,70 @@ def _traceability_table_present(artifact: dict[str, Any], artifacts: dict[str, d
 
 def _implementation_handoff_typed(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(dict(artifact.get("implementation_handoff", {})).get("recommended_role")), "implementation handoff names next producer"
+
+
+def _interface_contracts_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("extraction_contract", {}))
+    if contract.get("status") == "blocked_no_safe_candidate":
+        return True, "blocked contract does not require interface contracts"
+    rows = artifact.get("interface_contracts", [])
+    ok = isinstance(rows, list) and bool(rows) and all(
+        isinstance(row, dict) and row.get("source") and row.get("input_contract") and row.get("output_contract")
+        for row in rows[:6]
+    )
+    return ok, "interface contracts exist"
+
+
+def _data_lifecycle_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    if artifact.get("data_lifecycle"):
+        return True, "artifact data lifecycle exists"
+    readiness = _project_answer(project_report, "6_runtime_extraction_readiness")
+    return bool(readiness.get("data_lifecycle")), "ProjectMapReport data lifecycle exists"
+
+
+def _error_model_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    rows = artifact.get("error_model", [])
+    return bool(isinstance(rows, list) and rows and all(isinstance(row, dict) and row.get("handling") for row in rows[:4])), "TechnicalSpec error model exists"
+
+
+def _acceptance_criteria_source_linked(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    rows = artifact.get("acceptance_criteria", [])
+    ok = isinstance(rows, list) and bool(rows) and any(isinstance(row, dict) and row.get("source") for row in rows)
+    return ok, "acceptance criteria include source evidence"
+
+
+def _state_and_replay_policy_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    return bool(artifact.get("state_and_replay_policy")), "TechnicalSpec state and replay policy exists"
+
+
+def _contract_shapes_specific(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("extraction_contract", {}))
+    if contract.get("status") == "blocked_no_safe_candidate" or contract.get("contract_family"):
+        return True, "contract is blocked or domain-shaped"
+    values = list(dict(contract.get("input_contract", {})).values()) + list(dict(contract.get("output_contract", {})).values())
+    ok = bool(values) and all(str(value).strip().lower() not in {"", "any", "none"} for value in values)
+    return ok, "TechnicalSpec contract shapes are specific"
+
+
+def _side_effect_gates_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("extraction_contract", {}))
+    side_effects = dict(contract.get("side_effects", {}))
+    declared = list(side_effects.get("declared", []) or [])
+    if not declared:
+        return True, "selected contract has no declared side effects"
+    ok = bool(
+        side_effects.get("requires_validation_gate")
+        or side_effects.get("requires_process_boundary")
+        or side_effects.get("idempotency_required")
+        or side_effects.get("retry_policy")
+    )
+    return ok, "side-effecting TechnicalSpec contract has an explicit gate"
+
+
+def _spec_writer_red_team_passed(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    adr = dict(artifacts.get("architecture_decision", {}))
+    report = red_team_technical_spec(artifact, adr)
+    return report.get("status") == "pass", f"SpecWriter red-team verdict is {report.get('handoff_verdict')}"
 
 
 def _technical_spec_contract_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
@@ -341,6 +469,15 @@ def _unknown_check(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]
     return False, "unknown role gate or quality criterion"
 
 
+def _project_answer(project_report: dict[str, Any], *keys: str) -> dict[str, Any]:
+    answers = dict(project_report.get("answers", {}))
+    for key in keys:
+        value = answers.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
 _CHECKS = {
     "project_path_exists": _project_path_exists,
     "python_project_scope": _python_project_scope,
@@ -348,16 +485,35 @@ _CHECKS = {
     "answers_source_linked": _answers_source_linked,
     "entrypoints_detected": _entrypoints_detected,
     "runtime_extraction_readiness_present": _runtime_extraction_readiness_present,
+    "task_inputs_outputs_and_code_areas_present": _task_inputs_outputs_and_code_areas_present,
+    "entrypoints_or_runtime_commands_detected": _entrypoints_or_runtime_commands_detected,
+    "execution_path_pipeline_candidate_present": _execution_path_pipeline_candidate_present,
+    "capability_candidates_or_controlled_gap_present": _capability_candidates_or_controlled_gap_present,
+    "contracts_data_and_weak_zones_reported": _contracts_data_and_weak_zones_reported,
+    "errors_state_reproducibility_explicit": _errors_state_reproducibility_explicit,
+    "data_lifecycle_present": _data_lifecycle_present,
+    "runtime_extraction_plan_present": _runtime_extraction_plan_present,
     "project_report_has_evidence": _project_report_has_evidence,
     "chosen_option_required": _chosen_option_required,
     "traceability_required": _traceability_required,
     "decision_has_source_evidence": _decision_has_source_evidence,
     "risks_are_actionable": _risks_are_actionable,
     "handoff_is_typed": _handoff_is_typed,
+    "options_include_tradeoffs": _options_include_tradeoffs,
+    "subsystem_boundaries_have_inputs_outputs": _subsystem_boundaries_have_inputs_outputs,
+    "data_lifecycle_and_state_model_present": _data_lifecycle_and_state_model_present,
+    "spec_writer_brief_has_contract_targets": _spec_writer_brief_has_contract_targets,
     "adr_chosen_option_present": _adr_chosen_option_present,
     "ranked_candidate_present": _ranked_candidate_present,
     "acceptance_criteria_required": _acceptance_criteria_required,
     "requirements_verifiable": _requirements_verifiable,
+    "interface_contracts_present": _interface_contracts_present,
+    "error_model_present": _error_model_present,
+    "acceptance_criteria_source_linked": _acceptance_criteria_source_linked,
+    "contract_shapes_specific": _contract_shapes_specific,
+    "side_effect_gates_present": _side_effect_gates_present,
+    "spec_writer_red_team_passed": _spec_writer_red_team_passed,
+    "state_and_replay_policy_present": _state_and_replay_policy_present,
     "traceability_table_present": _traceability_table_present,
     "implementation_handoff_typed": _implementation_handoff_typed,
     "technical_spec_contract_present": _technical_spec_contract_present,

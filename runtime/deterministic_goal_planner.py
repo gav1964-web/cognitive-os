@@ -224,7 +224,7 @@ def _proposal_for(goal: str, required_capabilities: list[str]) -> dict[str, Any]
                 {
                     "id": "extract_python_structure",
                     "capability": "extract_python_structure",
-                    "input": {"root": "$input.path", "max_files": 5000, "max_bytes_per_file": 2000000},
+                    "input": {"root": "$input.path", "max_files": 50, "max_bytes_per_file": 200000},
                 },
                 {
                     "id": "extract_runtime_commands",
@@ -250,7 +250,7 @@ def _proposal_for(goal: str, required_capabilities: list[str]) -> dict[str, Any]
                         "python_structure": "$nodes.extract_python_structure.output",
                         "project_map_report": "$nodes.project_map_report.output",
                         "scope": "active_core",
-                        "questions": [],
+                        "questions": ["$input.question"],
                     },
                 },
             ],
@@ -323,6 +323,60 @@ def _proposal_for(goal: str, required_capabilities: list[str]) -> dict[str, Any]
                     "id": "save",
                     "capability": "save_json",
                     "input": {"path": "$input.output_path", "data": "$nodes.parse.output"},
+                },
+            ],
+            "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
+        }
+    if capabilities == ("replace_text_in_project",):
+        return {
+            "id": "deterministic_replace_text_in_project",
+            "version": "0.1.0",
+            "steps": [
+                {
+                    "id": "replace_text_in_project",
+                    "capability": "replace_text_in_project",
+                    "input": {
+                        "root": "$input.path",
+                        "old_value": "$input.old_value",
+                        "new_value": "$input.new_value",
+                        "paths": "$input.candidate_paths",
+                        "max_replacements": "$input.max_replacements",
+                    },
+                },
+            ],
+            "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
+        }
+    if capabilities == ("apply_project_change_recipe",):
+        return {
+            "id": "deterministic_apply_project_change_recipe",
+            "version": "0.1.0",
+            "steps": [
+                {
+                    "id": "apply_project_change_recipe",
+                    "capability": "apply_project_change_recipe",
+                    "input": {
+                        "root": "$input.path",
+                        "recipe_id": "$input.recipe_id",
+                    },
+                },
+            ],
+            "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},
+        }
+    if capabilities == ("project_provider_probe",):
+        return {
+            "id": "deterministic_project_provider_probe",
+            "version": "0.1.0",
+            "steps": [
+                {
+                    "id": "project_provider_probe",
+                    "capability": "project_provider_probe",
+                    "input": {
+                        "root": "$input.path",
+                        "base_url": "$input.base_url",
+                        "timeout_seconds": "$input.timeout_seconds",
+                        "max_providers": "$input.max_providers",
+                        "message": "$input.message",
+                    },
                 },
             ],
             "retry_policy": {"max_attempts": 1, "retry_on": ["transient"]},

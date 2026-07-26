@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-
-OPENCV_IMPORT_ROOTS = {"cv2", "opencv", "opencv_python", "opencv-python"}
-FILESYSTEM_IMPORT_ROOTS = {"os", "pathlib", "shutil", "tempfile", "glob", "zipfile", "tarfile", "io"}
-FILESYSTEM_EFFECTS = {"filesystem", "filesystem_read"}
+from .code_fact_analyzers import code_fact_answers
+from .import_fact_extractors import import_fact_answers
+from .query_spec import query_answers, selected_query_answer
+from .symbol_query import selected_symbol_query_answer, symbol_query_answers
+from .text_fact_extractors import text_fact_answers
+from runtime.project_fact_rules import answer_key_for_question
 
 
 def run(payload: dict[str, object]) -> dict[str, object]:
@@ -15,92 +18,59 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     python_structure = dict(payload["python_structure"])  # type: ignore[index]
     project_map_report = dict(payload.get("project_map_report") or {})
     scope = str(payload.get("scope") or "all")
+    questions = [str(item) for item in payload.get("questions", [])]
     allowed_paths = _allowed_paths(project_map_report, scope)
-    py_files = _filter_rows(_python_files(tree, python_structure), allowed_paths)
-    over_300 = [
-        {"path": row["path"], "line_count": row["line_count"]}
-        for row in py_files
-        if int(row.get("line_count") or 0) > 300
-    ]
-    opencv_files = _opencv_files(python_structure, allowed_paths)
-    disk_files = _disk_files(python_structure, allowed_paths)
+    file_rows = _filter_rows(_file_rows(tree), allowed_paths)
+    answers = code_fact_answers(tree, python_structure)
+    answers.update(import_fact_answers(python_structure, allowed_paths))
+    answers.update(text_fact_answers(tree, python_structure))
+    answers.update(query_answers(questions, file_rows))
+    answers.update(symbol_query_answers(questions, python_structure))
     return {
         "artifact_type": "ProjectFactQuestionAnswers",
         "scope": scope if allowed_paths is not None else "all",
-        "answers": {
-            "py_files_over_300_lines": {
-                "count": len(over_300),
-                "files": sorted(over_300, key=lambda row: (-int(row["line_count"]), str(row["path"]))),
-            },
-            "opencv_usage": {
-                "count": len(opencv_files),
-                "files": opencv_files,
-            },
-            "disk_work": {
-                "count": len(disk_files),
-                "files": disk_files,
-            },
-        },
-        "evidence_policy": "static Project Analyzer evidence only; no LLM inference",
+        "answers": answers,
+        "selected_answers": _selected_answers(questions, answers),
+        "evidence_policy": "static Project Analyzer evidence plus declarative ProjectFactQuerySpec execution; no LLM inference",
     }
 
 
-def _python_files(tree: dict[str, Any], python_structure: dict[str, Any]) -> list[dict[str, Any]]:
+def _selected_answers(questions: list[str], answers: dict[str, Any]) -> list[dict[str, Any]]:
+    selected = []
+    for question in questions:
+        query_answer = selected_query_answer(question, answers)
+        if query_answer is not None:
+            answer_key, answer = query_answer
+            selected.append({"question": question, "answer_key": answer_key, "answer": answer})
+            continue
+        symbol_answer = selected_symbol_query_answer(question, answers)
+        if symbol_answer is not None:
+            answer_key, answer = symbol_answer
+            selected.append({"question": question, "answer_key": answer_key, "answer": answer})
+            continue
+        answer_key = answer_key_for_question(question)
+        if answer_key and answer_key in answers:
+            selected.append({"question": question, "answer_key": answer_key, "answer": answers[answer_key]})
+    return selected
+
+
+def _file_rows(tree: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for item in tree.get("files", []):
         if not isinstance(item, dict):
             continue
         path = str(item.get("path") or "")
-        if path.endswith(".py"):
-            rows.append({"path": path, "line_count": int(item.get("line_count") or 0)})
-    if rows:
-        return rows
-    # Fallback for older scan_project_tree payloads: exact line counts may be unavailable.
-    return [
-        {"path": str(item.get("path") or ""), "line_count": 0}
-        for item in python_structure.get("files", [])
-        if str(item.get("path") or "").endswith(".py")
-    ]
-
-
-def _opencv_files(python_structure: dict[str, Any], allowed_paths: set[str] | None) -> list[dict[str, Any]]:
-    rows = []
-    for file_row in python_structure.get("files", []):
-        if not isinstance(file_row, dict):
+        if not path:
             continue
-        path = str(file_row.get("path") or "")
-        if allowed_paths is not None and path not in allowed_paths:
-            continue
-        imports = {str(item).split(".", 1)[0].lower() for item in file_row.get("imports", [])}
-        evidence = sorted(imports & OPENCV_IMPORT_ROOTS)
-        if evidence:
-            rows.append({"path": path, "evidence": [f"import:{item}" for item in evidence]})
-    return sorted(rows, key=lambda row: str(row["path"]))
-
-
-def _disk_files(python_structure: dict[str, Any], allowed_paths: set[str] | None) -> list[dict[str, Any]]:
-    rows = []
-    for file_row in python_structure.get("files", []):
-        if not isinstance(file_row, dict):
-            continue
-        path = str(file_row.get("path") or "")
-        if allowed_paths is not None and path not in allowed_paths:
-            continue
-        evidence = _disk_import_evidence(file_row)
-        for function in file_row.get("functions", []):
-            effects = set(function.get("side_effects", []) or [])
-            if effects & FILESYSTEM_EFFECTS:
-                evidence.append(
-                    f"function:{function.get('name')}:{','.join(sorted(effects & FILESYSTEM_EFFECTS))}"
-                )
-        if evidence:
-            rows.append({"path": path, "evidence": sorted(set(evidence))})
-    return sorted(rows, key=lambda row: str(row["path"]))
-
-
-def _disk_import_evidence(file_row: dict[str, Any]) -> list[str]:
-    imports = {str(item).split(".", 1)[0].lower() for item in file_row.get("imports", [])}
-    return [f"import:{item}" for item in sorted(imports & FILESYSTEM_IMPORT_ROOTS)]
+        rows.append(
+            {
+                "path": path,
+                "extension": str(item.get("extension") or ""),
+                "size_bytes": int(item.get("size_bytes") or 0),
+                "line_count": int(item.get("line_count") or 0),
+            }
+        )
+    return rows
 
 
 def _allowed_paths(project_map_report: dict[str, Any], scope: str) -> set[str] | None:

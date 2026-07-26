@@ -76,6 +76,20 @@
   ],
   "developer_request_rules": [
     {
+      "rule_id": "unknown_news_site_profile",
+      "predicate": "unknown_news_site_profile_prompt",
+      "request_id": "add_web_extraction_profile_for_requested_news_site",
+      "missing_capability": "web_extraction_site_profile_for_requested_news_site",
+      "problem": "L4.5 could not build a site-specific news scraper because the requested host has no verified web extraction profile.",
+      "acceptance_focus": [
+        "requested host is researched before package route admission",
+        "site profile records evidence, target section, link markers, selectors or parser strategy",
+        "fixture HTML is captured or synthesized from observed structure",
+        "default tests stay offline and live smoke remains optional",
+        "unknown non-news sites produce clarification or controlled stop instead of a fake scraper"
+      ]
+    },
+    {
       "rule_id": "behavior_question",
       "predicate": "behavior_question",
       "request_id": "add_behavior_question_answering_route",

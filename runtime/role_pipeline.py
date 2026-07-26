@@ -18,6 +18,7 @@ from .role_artifact_interpreter import load_role_artifact_pipeline, run_role_art
 from .role_gate_runner import run_role_gate_report
 from .role_skill_common import load_skill_registry, write_role_artifact
 from .programmer_executor import run_programmer_executor
+from .technical_spec_document import write_technical_spec_document
 from .transformation_flow import run_transformation_flow
 
 
@@ -196,14 +197,21 @@ def _write_human_documents(
     architecture_decision: dict[str, Any],
     technical_spec: dict[str, Any],
 ) -> dict[str, str]:
-    path = write_architecture_analysis_document(
+    architecture_path = write_architecture_analysis_document(
         root=root,
         project_report={"content": project_report, "project": architecture_decision.get("project")},
         architecture_decision=architecture_decision,
         technical_spec=technical_spec,
         output_group="pipelines",
     )
-    return {"architecture_analysis": path.as_posix()}
+    spec_path = write_technical_spec_document(
+        root=root,
+        project_report={"content": project_report, "project": architecture_decision.get("project")},
+        architecture_decision=architecture_decision,
+        technical_spec=technical_spec,
+        output_group="pipelines",
+    )
+    return {"architecture_analysis": architecture_path.as_posix(), "technical_spec": spec_path.as_posix()}
 
 
 def _artifact_summary(artifacts: dict[str, dict[str, Any]], paths: dict[str, str]) -> dict[str, dict[str, Any]]:

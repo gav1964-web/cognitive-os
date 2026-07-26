@@ -80,3 +80,65 @@ def test_extraction_ranking_prefers_domain_contract_targets():
     ranked = sorted(candidates.values(), key=extraction_candidate_sort_key)
 
     assert ranked[0]["capability"] == "airflow/api/common/trigger_dag.py:_trigger_dag"
+
+
+def test_extraction_ranking_prefers_config_provider_and_classifier_over_lifecycle_wrappers():
+    candidates = {}
+    for item in [
+        {"path": "app/api/server.py", "name": "lifespan", "loc": 160, "call_count": 24},
+        {"path": "app/api/server.py", "name": "_ensure_local_llm_provider", "loc": 120, "call_count": 18},
+        {"path": "app/api/routing.py", "name": "resolve_openai_route", "loc": 110, "call_count": 16},
+        {"path": "app/core/config.py", "name": "load_config", "loc": 70, "call_count": 5},
+        {"path": "app/providers/adapters.py", "name": "generate_result", "loc": 80, "call_count": 5},
+        {"path": "app/gigachat/judge.py", "name": "classify", "loc": 60, "call_count": 4},
+    ]:
+        add_extraction_candidate(candidates, item, "core_flow", "central flow")
+
+    ranked = sorted(candidates.values(), key=extraction_candidate_sort_key)
+    ranked_sources = [row["capability"] for row in ranked]
+
+    assert set(ranked_sources[:3]) == {
+        "app/providers/adapters.py:generate_result",
+        "app/core/config.py:load_config",
+        "app/gigachat/judge.py:classify",
+    }
+    assert ranked_sources[-1] == "app/api/server.py:lifespan"
+
+
+def test_extraction_ranking_demotes_background_worker_wrapper():
+    candidates = {}
+    for item in [
+        {"path": "downloader.py", "name": "worker", "loc": 140, "call_count": 24},
+        {"path": "downloader.py", "name": "create_mbtiles", "loc": 90, "call_count": 5},
+        {"path": "geocode_addresses.py", "name": "geocode", "loc": 80, "call_count": 5},
+    ]:
+        add_extraction_candidate(candidates, item, "core_flow", "central flow")
+
+    ranked = sorted(candidates.values(), key=extraction_candidate_sort_key)
+
+    assert ranked[0]["capability"] != "downloader.py:worker"
+
+
+def test_extraction_ranking_prefers_descriptors_resource_probes_and_typed_llm_payloads():
+    candidates = {}
+    for item in [
+        {"path": "p00420/api.py", "name": "build_plugin", "loc": 120, "call_count": 20},
+        {"path": "p004/api.py", "name": "run_build_pipeline", "loc": 120, "call_count": 20},
+        {"path": "p0041/_llm_client.py", "name": "extract_json_object", "loc": 80, "call_count": 12},
+        {"path": "p0041/_llm_client.py", "name": "extract_llm_payload", "loc": 80, "call_count": 12},
+        {"path": "p0041/api.py", "name": "describe_module", "loc": 30, "call_count": 2},
+        {"path": "app/api/server.py", "name": "free_port", "loc": 25, "call_count": 2},
+        {"path": "app/api/handlers_arena.py", "name": "call_provider_arena", "loc": 90, "call_count": 10},
+    ]:
+        add_extraction_candidate(candidates, item, "core_flow", "central flow")
+
+    ranked = sorted(candidates.values(), key=extraction_candidate_sort_key)
+    ranked_sources = [row["capability"] for row in ranked]
+
+    assert "p0041/api.py:describe_module" in ranked_sources[:4]
+    assert "app/api/server.py:free_port" in ranked_sources[:4]
+    assert ranked_sources.index("p0041/_llm_client.py:extract_llm_payload") < ranked_sources.index(
+        "p0041/_llm_client.py:extract_json_object"
+    )
+    assert ranked_sources.index("p00420/api.py:build_plugin") > ranked_sources.index("p0041/api.py:describe_module")
+    assert ranked_sources.index("app/api/handlers_arena.py:call_provider_arena") > ranked_sources.index("app/api/server.py:free_port")

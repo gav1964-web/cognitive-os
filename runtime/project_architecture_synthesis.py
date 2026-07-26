@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from .knowledge_usage_telemetry import record_knowledge_usage
 from .role_knowledge import role_knowledge_distribution
 from .project_facts import facts_from_project_report, llm_fact_digest
 from .project_architecture_knowledge import (
@@ -28,6 +29,7 @@ def synthesize_project_architecture(
     level35_signals: dict[str, Any],
     level4_interpretation: dict[str, Any],
     analysis_tasks: dict[str, Any],
+    root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Turn facts, impulses, and backlog into a project-specific strategy."""
 
@@ -36,6 +38,21 @@ def synthesize_project_architecture(
     knowledge = load_architecture_knowledge()
     match = match_architecture_rule(digest, knowledge)
     rule = match["rule"]
+    record_knowledge_usage(
+        event_type="kb_rule_match",
+        role="architect",
+        source="architecture_patterns",
+        root=root,
+        rule_id=str(rule.get("rule_id") or ""),
+        status="matched",
+        confidence=_confidence(digest, _bottlenecks(digest, analysis_tasks), match),
+        query=str(digest.get("root") or ""),
+        details={
+            "score": match.get("score"),
+            "matched_because": match.get("matched_because", []),
+            "candidate_count": len(match.get("candidate_rules", [])),
+        },
+    )
     profile = _profile(digest, rule, match)
     bottlenecks = _bottlenecks(digest, analysis_tasks)
     first_slice = _first_slice(rule, digest, analysis_tasks, knowledge)
@@ -89,6 +106,10 @@ def _profile(facts: dict[str, Any], rule: dict[str, Any], match: dict[str, Any])
     return {
         "archetype": rule.get("archetype"),
         "label": rule.get("label"),
+        "purpose_summary": rule.get("purpose_summary"),
+        "scenario_summary": _strings(rule.get("scenario_summary"))[:6],
+        "input_summary": _strings(rule.get("input_summary"))[:8],
+        "output_summary": _strings(rule.get("output_summary"))[:8],
         "root": str(facts.get("root") or ""),
         "frameworks": [str(item) for item in facts.get("frameworks", [])],
         "inputs": [str(item) for item in facts.get("inputs", [])],
@@ -228,6 +249,8 @@ def _source_targets(sources: Any, facts: dict[str, Any], analysis_tasks: dict[st
             rows.extend(str(item) for item in facts.get("central", []))
         elif source == "broad":
             rows.extend(str(item) for item in facts.get("broad", []))
+        elif source == "domain_anchors":
+            rows.extend(str(item) for item in facts.get("domain_anchors", []))
         elif source == "extraction":
             rows.extend(str(row.get("capability") or "") for row in runtime.get("extraction", []) if isinstance(row, dict))
         elif source == "process_boundary":
@@ -330,7 +353,11 @@ def _find_contains(rows: list[str], needle: str) -> str:
 def _is_context_only_target(target: str, knowledge: dict[str, Any]) -> bool:
     parts = _target_path(target).lower().replace("\\", "/").split("/")
     context_parts = set(_strings(dict(knowledge.get("source_scope_policy") or {}).get("context_only_parts")))
-    return any(part in context_parts for part in parts)
+    return any(part in context_parts or _is_generated_context_part(part) for part in parts)
+
+
+def _is_generated_context_part(part: str) -> bool:
+    return part == "generated" or part.startswith("generated_") or part.startswith("generated-")
 
 
 def _target_rank(target: str, knowledge: dict[str, Any]) -> tuple[int, int, str]:

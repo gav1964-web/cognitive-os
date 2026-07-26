@@ -2,6 +2,17 @@
   "schema_version": "prompt_intake_rules.v1",
   "status": "active",
   "supported_system_types": ["cli", "file_processing_utility", "small_local_service", "fastapi_service"],
+  "system_type_overrides": [
+    {
+      "system_type": "cli",
+      "all_groups": [
+        ["скрапер", "scraper", "scrape"],
+        ["новост", "news"],
+        ["csv", ".csv"],
+        ["cli", "программ", "утилит", "вывед", "формирует"]
+      ]
+    }
+  ],
   "system_type_rules": [
     {
       "system_type": "fastapi_service",
@@ -28,6 +39,10 @@
         "markdown",
         "file",
         "файл",
+        "scraper",
+        "scrape",
+        "скрапер",
+        "новост",
         "image",
         "picture",
         "изображ",
@@ -37,7 +52,7 @@
     },
     {
       "system_type": "small_local_service",
-      "markers": ["local service", "локальн"]
+      "markers": ["local service", "локальн", "сервер", "server", "openvpn"]
     }
   ],
   "dependency_policy_markers": [
@@ -51,6 +66,14 @@
     "python",
     "без внешних",
     "локальн",
+    "сервер",
+    "openvpn",
+    "ixbt",
+    "ixbt.com",
+    "scraper",
+    "scrape",
+    "скрапер",
+    "новост",
     "dependencies",
     "зависим"
   ],
@@ -69,6 +92,14 @@
     "rtf",
     "png",
     "url",
+    "http",
+    "https",
+    "ixbt",
+    "ixbt.com",
+    "scraper",
+    "scrape",
+    "скрапер",
+    "новост",
     "принимает",
     "читает",
     "файл",
@@ -86,7 +117,10 @@
     "jpeg",
     "webp",
     "ключ",
-    "key"
+    "key",
+    "клиент",
+    "client",
+    "openvpn"
   ],
   "output_markers": [
     "output",
@@ -105,7 +139,10 @@
     "список",
     "перечисл",
     "содерж",
-    "текст"
+    "текст",
+    "сервер",
+    "service",
+    "api"
   ],
   "success_criteria_markers": [
     "test",
@@ -125,7 +162,9 @@
     "перечисл",
     "list",
     "contents",
-    "содерж"
+    "содерж",
+    "сервер",
+    "api"
   ],
   "simple_cli_transform_markers": [
     "uppercase",
@@ -154,6 +193,55 @@
     "по краям"
   ],
   "scope_unbounded_markers": ["любую", "anything", "everything", "полностью всё", "все что нужно"],
+  "implementation_markers": [
+    "build",
+    "implement",
+    "create",
+    "change",
+    "edit",
+    "extend",
+    "add",
+    "replace",
+    "remove",
+    "disable",
+    "сделай",
+    "создай",
+    "реализ",
+    "напиши",
+    "доработ",
+    "дополн",
+    "добав",
+    "измени",
+    "замени",
+    "заменить",
+    "убери",
+    "убрать",
+    "отключи",
+    "отключить",
+    "запрети",
+    "запретить",
+    "расшир"
+  ],
+  "project_fact_question_markers": [
+    "answer",
+    "question",
+    "what ",
+    "which ",
+    "how many",
+    "ответ",
+    "ответь",
+    "вопрос",
+    "какой",
+    "какая",
+    "какие",
+    "сколько",
+    "где",
+    "в каких",
+    "есть ли",
+    "существует ли",
+    "дай рекомендации",
+    "имеет ли смысл"
+  ],
   "cli_argument_program": {
     "program_markers": ["программ", "program", "script", "скрипт"],
     "argument_markers": ["параметр", "аргумент", "argument", "parameter", "argv"],
@@ -176,12 +264,12 @@
     }
   },
   "clarification_questions": {
-    "system_type_defined": "What bounded system type should be produced: CLI, FastAPI service, file utility, or local service?",
-    "inputs_defined": "What are the concrete inputs and their formats?",
-    "outputs_defined": "What files, API responses, or reports should be produced?",
-    "constraints_defined": "What constraints should apply, including network and dependency policy?",
-    "success_criteria_verifiable": "What tests or observable criteria prove the result works?",
-    "dependencies_policy_defined": "Are external dependencies allowed, or should the package stay stdlib/local-only?",
-    "scope_bounded": "Which narrow first version should be built instead of the broad request?"
+    "system_type_defined": "Какой ограниченный тип системы нужно получить: CLI, FastAPI service, file utility или local service?",
+    "inputs_defined": "Какие конкретные входы и форматы должны поддерживаться?",
+    "outputs_defined": "Какие файлы, API-ответы или отчеты должны быть результатом?",
+    "constraints_defined": "Какие ограничения действуют, включая сеть и политику зависимостей?",
+    "success_criteria_verifiable": "Какие тесты или наблюдаемые критерии докажут, что результат работает?",
+    "dependencies_policy_defined": "Разрешены ли внешние зависимости или пакет должен остаться stdlib/local-only?",
+    "scope_bounded": "Какую узкую первую версию нужно сделать вместо широкого запроса?"
   }
 }

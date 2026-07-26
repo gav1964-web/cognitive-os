@@ -24,7 +24,8 @@
     "src/ixbt_news_scraper/csv_writer.py",
     "tests/fixtures/ixbt_news.html",
     "tests/test_parser.py",
-    "tests/test_csv_writer.py"
+    "tests/test_csv_writer.py",
+    "tests/test_cli.py"
   ],
   "acceptance_criteria": [
     "parser works from fixture without network",

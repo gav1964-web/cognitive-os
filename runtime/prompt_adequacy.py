@@ -96,6 +96,9 @@ def _system_type(prompt: str, *, rules: dict[str, Any] | None = None) -> str | N
     lower = prompt.lower()
     if _cli_argument_program_prompt(lower, rules=rules):
         return "cli"
+    override = _system_type_override(lower, rules=rules)
+    if override is not None:
+        return override
     for row in rules.get("system_type_rules", []):
         if _has_any_marker(lower, [str(item) for item in row.get("markers", [])]):
             return str(row["system_type"])
@@ -121,6 +124,18 @@ def _cli_argument_program_prompt(lower: str, *, rules: dict[str, Any] | None = N
     return (has_program or "cli" in lower) and has_args and has_terminal_output
 
 
+def _system_type_override(lower: str, *, rules: dict[str, Any]) -> str | None:
+    for row in rules.get("system_type_overrides", []):
+        if not isinstance(row, dict):
+            continue
+        if not _has_all_marker_groups(lower, row.get("all_groups", [])):
+            continue
+        if row.get("any") and not _has_any_marker(lower, [str(item) for item in row.get("any", [])]):
+            continue
+        return str(row.get("system_type") or "")
+    return None
+
+
 def _questions(missing: list[str], spec: dict[str, Any], *, rules: dict[str, Any]) -> list[str]:
     if not missing:
         return []
@@ -132,3 +147,10 @@ def _questions(missing: list[str], spec: dict[str, Any], *, rules: dict[str, Any
 
 def _has_any_marker(lower: str, values: list[str]) -> bool:
     return any(marker in lower for marker in values)
+
+
+def _has_all_marker_groups(lower: str, groups: Any) -> bool:
+    for group in groups or []:
+        if not _has_any_marker(lower, [str(item) for item in group]):
+            return False
+    return True

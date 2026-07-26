@@ -6,6 +6,9 @@ from .greenfield_csv_sort_template import content_for as csv_sort_content_for
 from .greenfield_generic_file_converter_template import content_for as generic_file_converter_content_for
 from .greenfield_image_contents_template import content_for as image_contents_content_for
 from .greenfield_image_table_excel_template import content_for as image_table_excel_content_for
+from .greenfield_news_scraper_template import acceptance_for as news_scraper_acceptance_for
+from .greenfield_news_scraper_template import content_for as news_scraper_content_for
+from .greenfield_news_scraper_template import expected_artifacts as news_scraper_expected_artifacts
 from .greenfield_ocr_template import content_for as ocr_content_for
 
 
@@ -16,6 +19,7 @@ OCR_CASE = "ocr_image_cli"
 IMAGE_CONTENTS_CASE = "image_contents_cli"
 IMAGE_TABLE_EXCEL_CASE = "image_table_to_excel_cli"
 GENERIC_FILE_CONVERTER_CASE = "generic_file_converter_cli"
+NEWS_SITE_SCRAPER_CASE = "news_site_scraper_cli"
 
 
 def has_case(case_name: str) -> bool:
@@ -27,6 +31,7 @@ def has_case(case_name: str) -> bool:
         IMAGE_CONTENTS_CASE,
         IMAGE_TABLE_EXCEL_CASE,
         GENERIC_FILE_CONVERTER_CASE,
+        NEWS_SITE_SCRAPER_CASE,
     }
 
 
@@ -76,6 +81,8 @@ def acceptance_for(case_name: str, verification: dict[str, object]) -> list[str]
             "default tests run without real conversion dependencies or network",
             "all tests run from generated project root",
         ]
+    if case_name == NEWS_SITE_SCRAPER_CASE:
+        return news_scraper_acceptance_for(verification)
     if case_name == KV_CASE:
         return [
             "FastAPI app exposes health and item endpoints",
@@ -109,6 +116,8 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
         return image_table_excel_content_for(path, prompt)
     if case_name == GENERIC_FILE_CONVERTER_CASE:
         return generic_file_converter_content_for(path, prompt)
+    if case_name == NEWS_SITE_SCRAPER_CASE:
+        return news_scraper_content_for(path, prompt)
     if path == "pyproject.toml":
         return _pyproject("csv_aggregator_service")
     if path == "README.md":
@@ -126,6 +135,12 @@ def content_for_case(artifact: str, case_name: str, prompt: str) -> str:
     if path.endswith("test_api.py"):
         return _test_api()
     return "# Generated Stage 2 package placeholder.\n"
+
+
+def expected_artifacts_for_case(case_name: str, prompt: str) -> list[str]:
+    if case_name == NEWS_SITE_SCRAPER_CASE:
+        return news_scraper_expected_artifacts()
+    return []
 
 
 def _pyproject(package: str) -> str:

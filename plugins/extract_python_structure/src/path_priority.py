@@ -40,7 +40,7 @@ EARLY_DIRS = {
     "spyder",
     "src",
 }
-EARLY_FILES = {"app.py", "main.py", "server.py", "api.py", "__init__.py"}
+EARLY_FILES = {"api_server.py", "app.py", "main.py", "server.py", "api.py", "__init__.py"}
 
 
 def iter_python_files(root: Path):
@@ -49,12 +49,21 @@ def iter_python_files(root: Path):
         current = stack.pop()
         dirs = []
         files = []
-        for item in current.iterdir():
-            if item.is_dir():
-                if item.name in EXCLUDED_DIRS or item.name.startswith("."):
+        try:
+            children = list(current.iterdir())
+        except OSError:
+            continue
+        for item in children:
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                continue
+            if is_dir:
+                if item.name in EXCLUDED_DIRS or _is_generated_context_dir(item.name) or item.name.startswith("."):
                     continue
                 dirs.append(item)
-            elif item.is_file() and item.suffix.lower() == ".py":
+            elif is_file and item.suffix.lower() == ".py":
                 files.append(item)
         for item in sorted(files, key=traversal_key):
             yield item
@@ -71,7 +80,7 @@ def traversal_key(path: Path) -> tuple[int, str]:
     if path.is_dir():
         if name in EARLY_DIRS:
             return (0, name)
-        if name in LATE_DIRS:
+        if name in LATE_DIRS or _is_generated_context_dir(name):
             return (9, name)
         return (3, name)
     if name in EARLY_FILES:
@@ -106,7 +115,7 @@ def path_priority(path: str) -> int:
             "tools",
         }
         for part in parts
-    ):
+    ) or any(_is_generated_context_dir(part) for part in parts):
         return 9
     helper_names = {"benchmark.py", "bench.py", "noxfile.py", "conftest.py", "testclient.py", "testing.py"}
     if parts[:2] == ["packaging", "pep517_backend"] or name.endswith(("_benchmark.py", "_bench.py")) or name in helper_names:
@@ -118,3 +127,8 @@ def path_priority(path: str) -> int:
     if any(part in {"borg", "dask", "gradio", "mitmproxy", "prefect", "pyinstaller", "scrapy", "spyder"} for part in parts[:2]):
         return 1
     return 3
+
+
+def _is_generated_context_dir(name: str) -> bool:
+    lowered = name.lower()
+    return lowered == "generated" or lowered.startswith("generated_") or lowered.startswith("generated-")

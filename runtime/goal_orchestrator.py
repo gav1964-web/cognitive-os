@@ -9,8 +9,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from .capability_routes import match_capability_route, missing_capability_hint
 from .goal_intake import GoalSpec, build_goal_spec
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .prompt_intake_rules import markers as prompt_markers
 from .registry import CapabilityRegistry
 
 
@@ -193,6 +195,19 @@ def _has_capabilities(registry: CapabilityRegistry, capability_ids: list[str]) -
 
 
 def _infer_existing_capabilities(goal: str) -> list[str]:
+    configured = match_capability_route(goal)
+    if configured:
+        return configured
+    if ("project" in goal or "проект" in goal) and _mentions_project_fact_questions(goal):
+        return [
+            "scan_project_tree",
+            "detect_project_stack",
+            "read_many_files",
+            "extract_python_structure",
+            "extract_runtime_commands",
+            "project_map_report",
+            "project_fact_questions",
+        ]
     if ("project" in goal or "проект" in goal) and (
         "analyze" in goal or "analyse" in goal or "scan" in goal or "map" in goal or "проанализ" in goal
     ):
@@ -217,6 +232,8 @@ def _infer_existing_capabilities(goal: str) -> list[str]:
         return ["spreadsheet_to_csv"]
     if _mentions_csv_to_spreadsheet(goal):
         return ["csv_to_spreadsheet"]
+    if _mentions_project_text_replacement(goal):
+        return ["replace_text_in_project"]
     if "markdown" in goal and ("rtf" in goal or "rich text" in goal):
         return ["read_text_file", "markdown_to_rtf", "write_text_file"]
     if "markdown" in goal and ("plain text" in goal or "text file" in goal or "to text" in goal):
@@ -229,34 +246,11 @@ def _infer_existing_capabilities(goal: str) -> list[str]:
 
 
 def _missing_capability_hint(goal: str) -> str | None:
-    if "project" in goal or "проект" in goal:
-        return "scan_project_tree"
-    if "translate" in goal or "translation" in goal:
-        return "translate_text"
-    if "pdf" in goal:
-        return "parse_pdf"
-    if "xlsx" in goal or "xls" in goal or "spreadsheet" in goal or "csv" in goal:
-        return "spreadsheet_conversion"
-    if "image" in goal or "ocr" in goal:
-        return "image_or_ocr_processing"
-    if "audio" in goal or "transcribe" in goal:
-        return "transcribe_audio"
-    return None
+    return missing_capability_hint(goal)
 
 
 def _mentions_project_fact_questions(goal: str) -> bool:
-    markers = {
-        "answer",
-        "question",
-        "questions",
-        "вопрос",
-        "вопросы",
-        "ответь",
-        "сколько",
-        "какие файлы",
-        "в каких файлах",
-    }
-    return any(marker in goal for marker in markers)
+    return any(marker in goal for marker in prompt_markers("project_fact_question_markers"))
 
 
 def _is_vague(goal: str) -> bool:
@@ -277,6 +271,13 @@ def _mentions_csv_to_spreadsheet(goal: str) -> bool:
     return "csv" in goal and any(token in goal for token in ("xlsx", "spreadsheet", "excel")) and (
         "csv to" in goal or "from csv" in goal or "to xlsx" in goal or "to spreadsheet" in goal or "to excel" in goal
     )
+
+
+def _mentions_project_text_replacement(goal: str) -> bool:
+    has_replace = any(token in goal for token in ("replace", "change", "edit", "замени", "заменить", "измени"))
+    has_project_target = "project" in goal or "проект" in goal
+    has_values = any(char.isdigit() for char in goal) or "$input.old_value" in goal
+    return has_replace and has_project_target and has_values
 
 
 def _l4_messages(goal: str, registry: CapabilityRegistry, *, goal_spec: GoalSpec | None = None) -> list[dict[str, str]]:

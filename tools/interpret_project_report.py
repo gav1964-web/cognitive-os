@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 try:
-    from tools.l4_defaults import l4_base_url, l4_model
+    from tools.l4_defaults import l4_base_url, l4_model, l4_response_format
 except ModuleNotFoundError:  # Direct `python tools/interpret_project_report.py` execution.
-    from l4_defaults import l4_base_url, l4_model
+    from l4_defaults import l4_base_url, l4_model, l4_response_format
 
 
 LOCAL_L4_FORBIDDEN_MODELS = {
@@ -37,7 +37,7 @@ def main() -> int:
     parser.add_argument("--l4-model", default=l4_model())
     parser.add_argument("--l4-timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L4_TIMEOUT", "120")))
     parser.add_argument("--l4-api-key-env", default=os.environ.get("COGNITIVE_OS_L4_API_KEY_ENV", "COGNITIVE_OS_L4_API_KEY"))
-    parser.add_argument("--l4-no-response-format", action="store_true")
+    parser.add_argument("--l4-no-response-format", action="store_true", default=not l4_response_format())
     parser.add_argument("--l4-context", choices=["expanded", "compact"], default=os.environ.get("COGNITIVE_OS_L4_CONTEXT", "expanded"))
     args = parser.parse_args()
 

@@ -47,28 +47,39 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     directories: list[str] = []
     extensions: dict[str, int] = {}
     notable_files: list[str] = []
-    skipped = {"directories": 0, "files": 0, "too_deep": 0, "truncated_files": 0}
+    skipped = {"directories": 0, "files": 0, "too_deep": 0, "truncated_files": 0, "inaccessible_directories": 0, "inaccessible_files": 0}
     stack = [(root, 0)]
     while stack:
         current, parent_depth = stack.pop()
-        for item in sorted(current.iterdir(), key=lambda path: path.name.lower()):
+        try:
+            children = sorted(current.iterdir(), key=lambda path: path.name.lower())
+        except OSError:
+            skipped["inaccessible_directories"] += 1
+            continue
+        for item in children:
             relative = item.relative_to(root)
             depth = len(relative.parts) - 1
             rel_path = relative.as_posix()
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                skipped["inaccessible_files"] += 1
+                continue
             if _is_noise_path(relative, include_hidden):
-                if item.is_dir():
+                if is_dir:
                     skipped["directories"] += 1
                 else:
                     skipped["files"] += 1
                 continue
-            if item.is_dir():
+            if is_dir:
                 if parent_depth >= max_depth:
                     skipped["too_deep"] += 1
                     continue
                 directories.append(rel_path)
                 stack.append((item, parent_depth + 1))
                 continue
-            if not item.is_file():
+            if not is_file:
                 skipped["files"] += 1
                 continue
             if len(files) >= max_files:
@@ -104,10 +115,14 @@ def _append_file(
     lower_name = item.name.lower()
     if lower_name in NOTABLE_NAMES or lower_name.endswith((".bat", ".sh", ".ps1")):
         notable_files.append(rel_path)
+    try:
+        size = item.stat().st_size
+    except OSError:
+        return
     row = {
         "path": rel_path,
         "extension": extension,
-        "size_bytes": item.stat().st_size,
+        "size_bytes": size,
         "depth": depth,
     }
     if extension == ".py":

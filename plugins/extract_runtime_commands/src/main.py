@@ -15,7 +15,12 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     skipped = []
     for script in _iter_scripts(root):
         rel_path = script.relative_to(root).as_posix()
-        if script.stat().st_size > 100_000:
+        try:
+            size = script.stat().st_size
+        except OSError as exc:
+            skipped.append({"path": rel_path, "reason": type(exc).__name__})
+            continue
+        if size > 100_000:
             skipped.append({"path": rel_path, "reason": "too_large"})
             continue
         lines = script.read_text(encoding="utf-8", errors="ignore").splitlines()
@@ -67,12 +72,21 @@ def _iter_scripts(root: Path):
     stack = [root]
     while stack:
         current = stack.pop()
-        for item in sorted(current.iterdir(), key=lambda path: path.name.lower()):
-            if item.is_dir():
+        try:
+            children = sorted(current.iterdir(), key=lambda path: path.name.lower())
+        except OSError:
+            continue
+        for item in children:
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                continue
+            if is_dir:
                 if item.name in EXCLUDED_DIRS or item.name.startswith("."):
                     continue
                 stack.append(item)
-            elif item.is_file() and item.suffix.lower() in SCRIPT_EXTENSIONS:
+            elif is_file and item.suffix.lower() in SCRIPT_EXTENSIONS:
                 yield item
 
 

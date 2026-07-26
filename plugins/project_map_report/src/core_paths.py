@@ -12,6 +12,18 @@ def classify_source_path(path: str) -> dict[str, str]:
     parts = lowered.split("/")
     name = parts[-1] if parts else lowered
     stem = name[:-3] if name.endswith(".py") else name
+    if "fixlog" in parts or any(part.startswith("attempt_") for part in parts):
+        return {"path": path, "kind": "context_only", "reason": "generated_fix_attempt_log"}
+    if "workspace" in parts:
+        return {"path": path, "kind": "context_only", "reason": "generated_runtime_workspace"}
+    if any(_is_generated_context_part(part) for part in parts):
+        return {"path": path, "kind": "context_only", "reason": "generated_context_directory"}
+    if name.startswith("pipeline_backup_") or "_backup_" in name:
+        return {"path": path, "kind": "legacy_noise", "reason": "generated_backup_snapshot"}
+    if len(parts) >= 2 and parts[0] == "vx" and parts[1] == "autofix":
+        return {"path": path, "kind": "packaged_copy", "reason": "nested_project_copy"}
+    if len(parts) >= 2 and _looks_like_snapshot_dir(parts[0]):
+        return {"path": path, "kind": "packaged_copy", "reason": "nested_snapshot_copy"}
     if name.startswith("project_analyzer_old") or lowered.startswith("_project_analyzer_") or name == "project_analyzer.py":
         return {"path": path, "kind": "legacy_noise", "reason": "legacy_project_analyzer_branch"}
     if any(
@@ -26,6 +38,7 @@ def classify_source_path(path: str) -> dict[str, str]:
             "examples",
             "extras",
             "generated",
+            "fixlog",
             "ci_tools",
             "downstream",
             "failures-to-investigate",
@@ -33,10 +46,12 @@ def classify_source_path(path: str) -> dict[str, str]:
             "scripts",
             "scratch",
             "tasks",
+            "template",
             "test",
             "tests",
             "testing",
             "tools",
+            "workspace",
             "__pycache__",
         }
         for part in parts
@@ -69,3 +84,15 @@ def classify_source_path(path: str) -> dict[str, str]:
     if parts and parts[0].startswith("p004"):
         return {"path": path, "kind": "active_core", "reason": "active_p004_family"}
     return {"path": path, "kind": "active_core", "reason": "default_core_source"}
+
+
+def _is_generated_context_part(part: str) -> bool:
+    return part == "generated" or part.startswith("generated_") or part.startswith("generated-")
+
+
+def _looks_like_snapshot_dir(part: str) -> bool:
+    lowered = part.lower()
+    if lowered.endswith(("_backup", "-backup", "_copy", "-copy")):
+        return True
+    chunks = lowered.replace("-", "_").split("_")
+    return any(len(chunk) == 8 and chunk.isdigit() and chunk.startswith(("20", "19")) for chunk in chunks)

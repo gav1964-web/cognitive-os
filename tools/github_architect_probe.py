@@ -84,6 +84,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str, limit: int = 0) -> 
 
 
 def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
+    git_before = _git_status(project_dir)
     outputs = analyze_project(project_dir)
     project_report = outputs["project_map_report"]
     adr = run_role_skill(
@@ -101,7 +102,9 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
     source_context = dict(adr.get("source_context", {}))
     report_summary = dict(project_report.get("summary", {}))
     entrypoints = [str(item) for item in report_summary.get("entrypoints", [])]
-    quality = _quality_score(entrypoints, capability_sources, source_context, forbidden_sources)
+    library_surface = _library_surface_present(project_dir, project_report, capability_sources)
+    report_quality = _project_report_quality(project_report)
+    quality = _quality_score(entrypoints, library_surface, capability_sources, source_context, forbidden_sources, report_quality)
     status = "ok" if quality >= 0.75 and not forbidden_sources else "needs_review"
     if blocked_reason == "no_safe_python_candidate" and not capability_sources and not forbidden_sources:
         status = "blocked_ok"
@@ -114,6 +117,8 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
         "blocked_reason": blocked_reason,
         "summary": {
             "entrypoints": entrypoints,
+            "library_surface_present": library_surface,
+            "project_report_quality": report_quality["score"],
             "frameworks": report_summary.get("frameworks", []),
             "languages": report_summary.get("languages", []),
             "risks": project_report.get("risks", []),
@@ -125,8 +130,9 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
         "risk_count": len(adr.get("risks", [])),
         "source_context_sources": sorted(source_context)[:12],
         "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
-        "source_code_changes": _git_dirty(project_dir),
+        "source_code_changes": _git_status(project_dir) != git_before,
         "report_excerpt": _report_excerpt(project_report),
+        "report_quality": report_quality,
     }
 
 
@@ -152,6 +158,16 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "needs_review": count - ok - blocked,
         "avg_quality_score": round(sum(float(case["quality_score"]) for case in cases) / count, 3) if count else 0.0,
         "entrypoints_present": sum(1 for case in cases if case["summary"]["entrypoints"]),
+        "library_surface_present": sum(1 for case in cases if case["summary"].get("library_surface_present")),
+        "entrypoint_or_library_surface_present": sum(
+            1 for case in cases if case["summary"]["entrypoints"] or case["summary"].get("library_surface_present")
+        ),
+        "avg_project_report_quality": round(
+            sum(float(case["summary"].get("project_report_quality") or 0.0) for case in cases) / count, 3
+        )
+        if count
+        else 0.0,
+        "weak_project_reports": sum(1 for case in cases if float(case["summary"].get("project_report_quality") or 0.0) < 0.85),
         "capability_model_present": sum(1 for case in cases if case["capability_sources"]),
         "forbidden_capability_sources": sum(len(case["forbidden_capability_sources"]) for case in cases),
         "source_code_changes": sum(1 for case in cases if case["source_code_changes"]),
@@ -169,20 +185,92 @@ def _blocked_reason(project_report: dict[str, Any]) -> str:
 
 def _quality_score(
     entrypoints: list[str],
+    library_surface: bool,
     capability_sources: list[str],
     source_context: dict[str, Any],
     forbidden_sources: list[str],
+    report_quality: dict[str, Any] | float,
 ) -> float:
+    report_score = float(report_quality.get("score", 0.0) if isinstance(report_quality, dict) else report_quality)
     score = 0.0
-    if entrypoints:
-        score += 0.25
+    if entrypoints or library_surface:
+        score += 0.15
     if capability_sources:
-        score += 0.25
+        score += 0.2
     if source_context:
-        score += 0.25
+        score += 0.2
     if not forbidden_sources:
-        score += 0.25
+        score += 0.2
+    score += 0.25 * report_score
     return round(score, 3)
+
+
+def _project_report_quality(project_report: dict[str, Any]) -> dict[str, Any]:
+    answers = dict(project_report.get("answers", {}))
+    scope = dict(answers.get("1_scope", {}))
+    execution = dict(answers.get("2_execution", {}))
+    capabilities = dict(answers.get("3_capabilities", {}))
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    issues: list[str] = []
+    score = 1.0
+
+    main_task = str(scope.get("main_task") or "").strip().lower()
+    if not main_task or main_task in {"not enough evidence", "none"}:
+        score -= 0.25
+        issues.append("missing_main_task")
+    if any(token in main_task for token in ("not enough evidence", "run project-specific python workflows")):
+        score -= 0.16
+        issues.append("generic_main_task")
+
+    scenarios = [item for item in scope.get("supported_scenarios", []) if str(item).strip()]
+    if len(scenarios) < 2:
+        score -= 0.14
+        issues.append("thin_supported_scenarios")
+
+    execution_path = [str(item).lower() for item in execution.get("primary_execution_path", [])]
+    if not execution_path or "not enough evidence" in " ".join(execution_path):
+        score -= 0.16
+        issues.append("weak_execution_path")
+
+    capability_count = len(capabilities.get("atomic_reusable_capabilities", []) or []) + len(capabilities.get("pure_transforms", []) or [])
+    if capability_count < 3:
+        score -= 0.12
+        issues.append("thin_capability_model")
+
+    dataflows = readiness.get("dataflows", []) or []
+    lifecycle = readiness.get("data_lifecycle", []) or []
+    if not dataflows and not lifecycle:
+        score -= 0.12
+        issues.append("missing_data_lifecycle")
+
+    return {"score": round(max(0.0, score), 3), "issues": issues}
+
+
+def _library_surface_present(project_dir: Path, project_report: dict[str, Any], capability_sources: list[str]) -> bool:
+    """Detect Python package/API projects that legitimately have no CLI or HTTP entrypoint."""
+    summary = dict(project_report.get("summary", {}))
+    if summary.get("entrypoints"):
+        return False
+    languages = {str(item).lower() for item in summary.get("languages", [])}
+    if "python" not in languages or not capability_sources:
+        return False
+
+    packaging_files = ("pyproject.toml", "setup.py", "setup.cfg")
+    has_packaging = any((project_dir / name).exists() for name in packaging_files)
+    has_import_root = any(_has_importable_package_dir(project_dir / name) for name in ("src", "lib", project_dir.name.split("__")[-1]))
+    has_public_init = any(
+        path.name == "__init__.py" and not _is_forbidden_source(path.relative_to(project_dir).as_posix())
+        for path in project_dir.rglob("__init__.py")
+    )
+    active_core = dict(dict(project_report.get("answers", {})).get("1_scope", {})).get("code_areas", {}).get("core_logic", [])
+    has_core_package_paths = any(str(path).endswith(".py") and "/" in str(path).replace("\\", "/") for path in active_core)
+    return bool(has_packaging and (has_import_root or has_public_init or has_core_package_paths))
+
+
+def _has_importable_package_dir(path: Path) -> bool:
+    if not path.exists() or not path.is_dir():
+        return False
+    return any(child.is_dir() and (child / "__init__.py").exists() for child in path.iterdir())
 
 
 def _capability_sources(adr: dict[str, Any]) -> list[str]:
@@ -217,7 +305,7 @@ def _is_forbidden_source(value: str) -> bool:
     return any(token in normalized for token in FORBIDDEN_SOURCE_TOKENS)
 
 
-def _git_dirty(project_dir: Path) -> bool:
+def _git_status(project_dir: Path) -> str:
     try:
         result = subprocess.run(
             ["git", "-C", str(project_dir), "status", "--porcelain"],
@@ -227,8 +315,8 @@ def _git_dirty(project_dir: Path) -> bool:
             timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return True
-    return bool(result.stdout.strip())
+        return "__git_status_unavailable__"
+    return result.stdout.strip()
 
 
 def _markdown(report: dict[str, Any]) -> str:

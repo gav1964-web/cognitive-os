@@ -14,7 +14,9 @@
     "duplicate_file_finder",
     "batch_renamer_cli",
     "json_config_merger",
-    "static_site_indexer"
+    "static_site_indexer",
+    "ixbt_news_scraper",
+    "news_site_scraper_cli"
   ],
   "routes": [
     {
@@ -90,6 +92,23 @@
       "any_groups_optional": [
         ["html"],
         ["title", "ссыл", "links"]
+      ]
+    },
+    {
+      "case": "ixbt_news_scraper",
+      "all": ["csv"],
+      "any_groups": [
+        ["ixbt", "ixbt.com"],
+        ["скрапер", "scraper", "scrape", "news", "новост"]
+      ]
+    },
+    {
+      "case": "news_site_scraper_cli",
+      "predicate": "known_news_site_profile_prompt",
+      "all": ["csv"],
+      "any_groups": [
+        ["скрапер", "scraper", "scrape", "news", "новост"],
+        ["http://", "https://", ".ru", ".com", "site", "сайт"]
       ]
     }
   ],

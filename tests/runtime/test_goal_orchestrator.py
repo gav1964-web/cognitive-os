@@ -152,6 +152,51 @@ def test_goal_run_cli_requests_capability_spec():
         assert Path(payload["capability_spec_request"]["spec"]).exists()
 
 
+def test_goal_run_project_development_prompt_generates_synthesis(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    project = root / "artifacts" / "test_project_development_prompt"
+    if project.exists():
+        shutil.rmtree(project)
+    project.mkdir(parents=True)
+    try:
+        (project / "app.py").write_text(
+            "\n".join(
+                [
+                    "def normalize_name(value: str) -> str:",
+                    "    return value.strip().lower()",
+                    "",
+                    "def handle_request(request):",
+                    "    name = normalize_name(request['name'])",
+                    "    return {'name': name}",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(root / "tools" / "goal_run.py"),
+                "--root",
+                str(root),
+                "--goal",
+                f"Проанализируй проект {project} и предложи развитие проекта",
+                "--input-json",
+                json.dumps({"path": project.as_posix()}),
+                "--execute",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+    payload = json.loads(result.stdout)
+
+    assert "project_map_report" in payload["execution"]["outputs"]
+    assert payload["analysis_tasks"]["source"] == "deterministic_task_synthesizer"
+    assert payload["architecture_synthesis"]["artifact_type"] == "ProjectArchitectureSynthesis"
+
+
 def test_goal_orchestrator_can_use_llm_for_route_decision():
     root = Path(__file__).resolve().parents[2]
     registry = CapabilityRegistry(root)

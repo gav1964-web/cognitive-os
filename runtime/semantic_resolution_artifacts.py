@@ -7,6 +7,7 @@ from typing import Any
 
 from .generic_file_conversion_recipe import build_conversion_recipe, is_file_conversion_prompt
 from .semantic_resolution_rules import load_semantic_resolution_rules
+from .web_extraction_profiles import has_known_web_extraction_profile
 
 
 def build_successful_resolution_candidate(proposal: dict[str, Any]) -> dict[str, Any] | None:
@@ -127,6 +128,8 @@ def _predicate_matches(predicate: str, prompt: str, lower: str) -> bool:
         return _looks_like_behavior_question(lower)
     if predicate == "ocr_prompt":
         return "ocr" in lower or "распозна" in lower
+    if predicate == "unknown_news_site_profile_prompt":
+        return _looks_like_news_site_scraper(lower) and not has_known_web_extraction_profile(prompt, target_kind="news")
     return False
 
 
@@ -152,6 +155,13 @@ def _looks_like_behavior_question(lower: str) -> bool:
     )
     has_condition = any(marker in lower for marker in ("если", "if ", "when ", "при "))
     return has_question_shape and has_condition
+
+
+def _looks_like_news_site_scraper(lower: str) -> bool:
+    has_csv = "csv" in lower or ".csv" in lower
+    has_web_target = any(marker in lower for marker in ("http://", "https://", ".ru", ".com", ".africa", "сайт", "site"))
+    has_news_scraper = any(marker in lower for marker in ("скрапер", "scraper", "scrape", "news", "новост"))
+    return has_csv and has_web_target and has_news_scraper
 
 
 def _known_templates(request: dict[str, Any]) -> set[str]:

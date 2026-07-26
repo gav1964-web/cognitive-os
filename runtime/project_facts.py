@@ -30,12 +30,14 @@ def facts_from_project_report(report: dict[str, Any]) -> dict[str, Any]:
         "goal_id": report.get("goal_id"),
         "summary": summary,
         "risks": project_report.get("risks", [])[:8],
+        "domain_anchors": _domain_anchor_refs(python_structure, scope.get("domain_profile", {}), limit=12),
         "scope": {
             "main_task": scope.get("main_task"),
             "supported_scenarios": scope.get("supported_scenarios", [])[:5],
             "inputs": scope.get("inputs", [])[:8],
             "outputs": scope.get("outputs", [])[:8],
             "test_surface": scope.get("test_surface", {}),
+            "domain_profile": scope.get("domain_profile", {}),
         },
         "execution": {
             "entrypoints": execution.get("entrypoints", [])[:8],
@@ -102,10 +104,13 @@ def llm_fact_digest(facts: dict[str, Any]) -> dict[str, Any]:
         "dirs": summary.get("directory_count"),
         "routes_count": summary.get("routes"),
         "task": scope.get("main_task"),
+        "domain_profile": scope.get("domain_profile", {}),
         "scenarios": scope.get("supported_scenarios", [])[:4],
         "inputs": scope.get("inputs", [])[:5],
         "outputs": scope.get("outputs", [])[:5],
         "entrypoints": execution.get("entrypoints", [])[:5],
+        "routes": facts.get("routes", [])[:8],
+        "domain_anchors": facts.get("domain_anchors", [])[:10],
         "central": _node_refs(execution.get("central_flow_nodes", []), limit=4),
         "broad": _node_refs(capabilities.get("too_broad_functions", []), limit=4),
         "capabilities": capabilities.get("atomic_reusable_capabilities", [])[:8],
@@ -195,6 +200,104 @@ def _compact_extraction_plan(plan: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _domain_anchor_refs(python_structure: dict[str, Any], domain_profile: dict[str, Any], *, limit: int) -> list[str]:
+    kind = str(domain_profile.get("kind") or "").lower()
+    if kind == "multi_agent_orchestration_runtime":
+        preferred = {
+            "run_consensus",
+            "execute_pipeline",
+            "_execute_pipeline_background",
+            "_execute_group",
+            "execute_group",
+            "create_task",
+            "send_task",
+            "broadcast_group_update",
+            "handle_message",
+            "register_agent",
+        }
+        refs = []
+        for file_row in python_structure.get("files", []):
+            path = str(file_row.get("path") or "")
+            if not path or _is_contextual_path(path):
+                continue
+            if not any(token in path.lower() for token in ("orchestrator", "consensus", "a2a_protocol", "api/main", "websockets")):
+                continue
+            for function in file_row.get("functions", []):
+                name = str(function.get("name") or "")
+                if name in preferred or any(token in name.lower() for token in ("consensus", "pipeline", "group", "task", "message")):
+                    refs.append(_node_ref({"path": path, "name": name, "loc": function.get("loc")}))
+        return sorted(set(refs), key=lambda ref: (_multi_agent_anchor_priority(ref), ref))[:limit]
+    if kind == "llm_provider_gateway" or _has_chat_completion_route(python_structure):
+        refs = []
+        for route in python_structure.get("routes", []):
+            if not isinstance(route, dict):
+                continue
+            route_text = str(route.get("route") or "")
+            function = str(route.get("function") or "")
+            path = str(route.get("path") or "")
+            if "chat/completions" in route_text or "chat_completions" in function or "_handle_chat_request" in function:
+                refs.append(f"{path}:{function} {route_text}".strip())
+        for file_row in python_structure.get("files", []):
+            path = str(file_row.get("path") or "")
+            if not path or _is_contextual_path(path):
+                continue
+            for function in file_row.get("functions", []):
+                name = str(function.get("name") or "")
+                if name in {"chat_completions", "_handle_chat_request", "build_providers_from_config", "select_provider"}:
+                    refs.append(_node_ref({"path": path, "name": name, "loc": function.get("loc")}))
+        return sorted(set(refs))[:limit]
+    if kind != "llm_auto_repair_loop":
+        return []
+    preferred = {
+        "send_to_model",
+        "extract_json_from_model_response",
+        "write_files",
+        "docker_run",
+        "docker_build",
+        "goal_to_spec",
+        "check_single_module_output",
+        "clean_module_output",
+        "regenerate_module",
+        "fix_module_until_success",
+    }
+    refs = []
+    for file_row in python_structure.get("files", []):
+        path = str(file_row.get("path") or "")
+        if not path or _is_contextual_path(path):
+            continue
+        for function in file_row.get("functions", []):
+            name = str(function.get("name") or "")
+            if name in preferred:
+                refs.append(_node_ref({"path": path, "name": name, "loc": function.get("loc")}))
+    return sorted(set(refs), key=lambda ref: (_repair_anchor_priority(ref), ref))[:limit]
+
+
+def _multi_agent_anchor_priority(ref: str) -> int:
+    lowered = ref.lower()
+    priority = (
+        "core/orchestrator/orchestrator.py",
+        "core/orchestrator/group_manager.py",
+        "core/consensus/engine.py:run_consensus",
+        "core/a2a_protocol/protocol.py",
+        "api/main.py:_execute_pipeline_background",
+    )
+    for index, token in enumerate(priority):
+        if token in lowered:
+            return index
+    return 99
+
+
+def _has_chat_completion_route(python_structure: dict[str, Any]) -> bool:
+    for route in python_structure.get("routes", []) or []:
+        if not isinstance(route, dict):
+            continue
+        route_text = str(route.get("route") or "").lower()
+        function = str(route.get("function") or "").lower()
+        if "chat/completions" in route_text or "chat_completions" in function:
+            return True
+    return False
+
+
 def _node_refs(nodes: list[dict[str, Any]], *, limit: int) -> list[str]:
     refs = []
     for node in nodes[:limit]:
@@ -203,6 +306,28 @@ def _node_refs(nodes: list[dict[str, Any]], *, limit: int) -> list[str]:
             ref += f"({node.get('loc')} loc)"
         refs.append(ref)
     return refs
+
+
+def _repair_anchor_priority(ref: str) -> int:
+    name = ref.split(":", 1)[-1].split("(", 1)[0]
+    priority = {
+        "send_to_model": 0,
+        "extract_json_from_model_response": 1,
+        "write_files": 2,
+        "check_single_module_output": 3,
+        "clean_module_output": 4,
+        "goal_to_spec": 5,
+        "regenerate_module": 6,
+        "fix_module_until_success": 7,
+        "docker_run": 8,
+        "docker_build": 9,
+    }
+    return priority.get(name, 50)
+
+
+def _is_contextual_path(path: str) -> bool:
+    parts = path.lower().replace("\\", "/").split("/")
+    return any(part in {"test", "tests", "example", "examples", "dist", "build"} or part.startswith(("generated_", "generated-")) for part in parts)
 
 
 def _subsystems(

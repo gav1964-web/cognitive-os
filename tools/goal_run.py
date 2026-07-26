@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 try:
-    from tools.l4_defaults import l4_base_url, l4_model
+    from tools.l4_defaults import l4_base_url, l4_model, l4_response_format
 except ModuleNotFoundError:  # Direct `python tools/goal_run.py` execution.
-    from l4_defaults import l4_base_url, l4_model
+    from l4_defaults import l4_base_url, l4_model, l4_response_format
 
 LOCAL_L4_FORBIDDEN_MODELS = {
     "local",
@@ -43,7 +43,7 @@ def main() -> int:
     parser.add_argument("--l4-base-url", default=l4_base_url())
     parser.add_argument("--l4-model", default=l4_model())
     parser.add_argument("--l4-timeout", type=float, default=float(os.environ.get("COGNITIVE_OS_L4_TIMEOUT", "120"))); parser.add_argument("--l4-api-key-env", default=os.environ.get("COGNITIVE_OS_L4_API_KEY_ENV", "COGNITIVE_OS_L4_API_KEY"))
-    parser.add_argument("--l4-no-response-format", action="store_true")
+    parser.add_argument("--l4-no-response-format", action="store_true", default=not l4_response_format())
     parser.add_argument("--l4-context", choices=["expanded", "compact"], default=os.environ.get("COGNITIVE_OS_L4_CONTEXT", "expanded"))
     args = parser.parse_args()
 
@@ -59,6 +59,7 @@ def main() -> int:
         success_criteria,
     )
     from runtime.dialogue_memory import DialogueMemory
+    from runtime.followup_context import resolve_followup_goal
     from runtime.goal_intake import build_goal_spec
     from runtime.goal_orchestrator import decide_goal_route, decide_goal_route_with_llm
     from runtime.goal_report import build_goal_report
@@ -73,6 +74,7 @@ def main() -> int:
     from runtime.project_architecture_synthesis import synthesize_project_architecture
     from runtime.project_signals import generate_project_signals
     from runtime.project_tasks import generate_project_tasks
+    from runtime.project_interpreter import interpret_project_report
     from runtime.registry import CapabilityRegistry
 
     registry = CapabilityRegistry(root)
@@ -82,6 +84,7 @@ def main() -> int:
     if not isinstance(root_input, dict):
         print(json.dumps({"status": "failed", "error": "--input-json must decode to object"}, ensure_ascii=True, indent=2))
         return 2
+    followup_resolution = None
     if args.goal_id:
         session = store.load(args.goal_id)
         root_input = dict(session.get("root_input") or root_input)
@@ -92,6 +95,18 @@ def main() -> int:
             print(json.dumps({"status": "failed", "error": "--goal is required when --goal-id is not provided"}, ensure_ascii=True, indent=2))
             return 2
         session = store.create(args.goal, root_input=root_input)
+        followup_resolution = resolve_followup_goal(root, args.goal, root_input)
+        if followup_resolution is not None:
+            root_input = dict(followup_resolution["root_input"])
+            session["root_input"] = root_input
+            session["effective_goal"] = str(followup_resolution["effective_goal"])
+            store.append_event(
+                session,
+                "followup_context_resolved",
+                dict(followup_resolution["resolved_reference"]),
+            )
+        else:
+            followup_resolution = None
     goal = str(session.get("effective_goal") or session["goal"])
     dialogue_preflight = None
     if args.dialogue_id:
@@ -112,8 +127,17 @@ def main() -> int:
             },
         )
     memory_index = MemoryIndex(root)
-    memory_preflight = memory_index.search(goal, limit=3)
+    memory_preflight = memory_index.search(goal, limit=3, available_capabilities=set(registry.capabilities))
     goal_spec = build_goal_spec(goal, root_input=root_input)
+    if goal_spec.intent in {"analyze_project", "project_fact_question"} and goal_spec.target:
+        root_input.setdefault("path", goal_spec.target)
+        root_input.setdefault("question", goal)
+    if goal_spec.intent == "project_provider_probe" and goal_spec.target:
+        root_input.setdefault("path", goal_spec.target)
+        root_input.setdefault("base_url", "http://127.0.0.1:9000")
+        root_input.setdefault("timeout_seconds", 60)
+        root_input.setdefault("max_providers", 0)
+        root_input.setdefault("message", "Привет!")
     store.append_event(
         session,
         "goal_intake",
@@ -134,7 +158,7 @@ def main() -> int:
             "template_match_count": len(memory_preflight.get("template_matches", [])),
         },
     )
-    knowledge = knowledge_preflight(goal, root_input)
+    knowledge = knowledge_preflight(goal, root_input, root=root)
     store.append_event(
         session,
         "knowledge_preflight",
@@ -192,6 +216,7 @@ def main() -> int:
         "goal_id": session["goal_id"],
         "goal_intake": goal_spec.to_dict(),
         "dialogue_preflight": dialogue_preflight,
+        "followup_resolution": followup_resolution,
         "memory_preflight": memory_preflight,
         "knowledge_preflight": knowledge,
         "knowledge_gaps": knowledge.get("knowledge_gaps", []),
@@ -281,6 +306,7 @@ def main() -> int:
                     level35_signals=dict(report["level35_project_signals"]),
                     level4_interpretation=dict(report["level4_project_interpretation"]),
                     analysis_tasks=dict(report["analysis_tasks"]),
+                    root=root,
                 )
                 store.append_event(
                     session,
@@ -297,6 +323,28 @@ def main() -> int:
             except LocalInferenceError as exc:
                 report["level4_project_interpretation"] = {"status": "failed", "error": str(exc)}
                 store.append_event(session, "project_interpretation_failed", {"error": str(exc)})
+        elif (
+            is_project_analysis(decision.required_capabilities)
+            and _wants_project_development_proposal(goal)
+            and "project_map_report" in dict(report.get("execution") or {}).get("outputs", {})
+        ):
+            interpretation = interpret_project_report(
+                report,
+                config=None,
+                signal_config=None,
+                cortex_config=None,
+                context_mode=args.l4_context,
+                root=root.as_posix(),
+            )
+            report.update(interpretation)
+            store.append_event(
+                session,
+                "project_development_proposal_generated",
+                {
+                    "analysis_task_count": dict(report["analysis_tasks"]).get("task_count"),
+                    "architecture_synthesis": dict(report["architecture_synthesis"]).get("synthesis_id"),
+                },
+            )
     final_report = build_goal_report(session, report)
     report_path = store.write_report(session, final_report)
     MemoryIndex(root).upsert_report(final_report, report_path)
@@ -320,6 +368,24 @@ def _cortex_config(args: argparse.Namespace, config_cls: type) -> object:
         api_key=api_key or None,
         provider_label="external_l4",
     )
+
+
+def _wants_project_development_proposal(goal: str) -> bool:
+    lowered = goal.lower()
+    markers = [
+        "предложи развитие",
+        "развитие проекта",
+        "предложения по развитию",
+        "предложения по улучшению",
+        "улучшить проект",
+        "улучшению проекта",
+        "куда дальше",
+        "следующие шаги",
+        "development proposal",
+        "improvement proposal",
+        "next steps",
+    ]
+    return any(marker in lowered for marker in markers)
 
 
 def _write_spec_request(root: Path, capability_id: str, goal: str) -> Path:

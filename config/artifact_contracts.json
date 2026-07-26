@@ -26,6 +26,41 @@
         "summary"
       ]
     },
+    "ScopeSelectionReport": {
+      "producer": "project_analyzer",
+      "consumers": [
+        "human",
+        "role_pipeline"
+      ],
+      "required_fields": [
+        "artifact_type",
+        "status",
+        "root",
+        "reason",
+        "recommended_action",
+        "selection_confidence",
+        "candidate_roots",
+        "blocked_downstream_artifacts"
+      ]
+    },
+    "ActiveRootDecision": {
+      "producer": "human",
+      "consumers": [
+        "role_pipeline",
+        "project_analyzer",
+        "architect",
+        "spec_writer"
+      ],
+      "required_fields": [
+        "artifact_type",
+        "status",
+        "portfolio_root",
+        "selected_root",
+        "selected_relative_path",
+        "source",
+        "decision_policy"
+      ]
+    },
     "ArchitectureDecisionRecord": {
       "producer": "architect",
       "consumers": [
@@ -35,7 +70,11 @@
         "artifact_type",
         "architecture_options",
         "chosen_option",
+        "rejected_options",
+        "first_slice_contract",
         "risks",
+        "traceability",
+        "source_context",
         "spec_writer_brief"
       ]
     },
@@ -49,6 +88,10 @@
       "required_fields": [
         "artifact_type",
         "requirements",
+        "source_evidence",
+        "extraction_contract",
+        "work_plan_contract",
+        "interface_contracts",
         "acceptance_criteria",
         "traceability_table"
       ]

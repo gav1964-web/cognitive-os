@@ -63,7 +63,7 @@ def content_for(artifact: str, case_name: str, prompt: str) -> str:
     if path.endswith("test_converter.py"):
         return _test_converter()
     if path.endswith("test_cli.py"):
-        return _test_cli()
+        return _test_cli(case_name)
     if path.endswith("__init__.py"):
         return '__all__ = ["__version__"]\n__version__ = "0.1.0"\n'
     if path.endswith("cli.py"):
@@ -123,12 +123,22 @@ def _ixbt_cli() -> str:
     return (
         "from __future__ import annotations\n\n"
         "import argparse\n\n\n"
+        "from pathlib import Path\n\n"
+        "from ixbt_news_scraper.csv_writer import write_news_csv\n"
+        "from ixbt_news_scraper.fetcher import fetch_html\n"
+        "from ixbt_news_scraper.parser import parse_news_items\n\n\n"
         "def main(argv: list[str] | None = None) -> int:\n"
         "    parser = argparse.ArgumentParser()\n"
-        "    parser.add_argument('url', nargs='?')\n"
-        "    parser.add_argument('output', nargs='?')\n"
-        "    parser.parse_args(argv)\n"
+        "    parser.add_argument('input')\n"
+        "    parser.add_argument('output')\n"
+        "    args = parser.parse_args(argv)\n"
+        "    html = fetch_html(args.input) if args.input.startswith(('http://', 'https://')) else Path(args.input).read_text(encoding='utf-8')\n"
+        "    rows = parse_news_items(html)\n"
+        "    write_news_csv(args.output, rows)\n"
         "    return 0\n"
+        "\n\n"
+        "if __name__ == '__main__':\n"
+        "    raise SystemExit(main())\n"
     )
 
 
@@ -153,9 +163,13 @@ def _contracts_module() -> str:
 def _fetcher_module() -> str:
     return (
         "from __future__ import annotations\n\n\n"
+        "from urllib.request import Request, urlopen\n\n\n"
         "DEFAULT_USER_AGENT = 'cognitive-os-scaffold/0.1'\n\n\n"
         "def fetch_html(url: str, *, timeout: float = 15.0, user_agent: str = DEFAULT_USER_AGENT) -> str:\n"
-        "    raise NotImplementedError('live fetching is disabled in default tests')\n"
+        "    request = Request(url, headers={'User-Agent': user_agent})\n"
+        "    with urlopen(request, timeout=timeout) as response:\n"
+        "        encoding = response.headers.get_content_charset() or 'utf-8'\n"
+        "        return response.read().decode(encoding, errors='replace')\n"
     )
 
 
@@ -186,7 +200,32 @@ def _parser_module() -> str:
         "            if self._current['title'] and self._current['url']: self.items.append(self._current)\n"
         "            self._current = None\n\n\n"
         "def parse_news_items(html: str) -> list[dict[str, str]]:\n"
-        "    parser = _NewsParser(); parser.feed(html); return parser.items\n"
+        "    parser = _NewsParser(); parser.feed(html)\n"
+        "    return parser.items or _parse_news_links(html)\n\n\n"
+        "class _NewsLinkParser(HTMLParser):\n"
+        "    def __init__(self) -> None:\n"
+        "        super().__init__(); self.items=[]; self._current=None\n\n"
+        "    def handle_starttag(self, tag, attrs):\n"
+        "        href = dict(attrs).get('href') if tag == 'a' else None\n"
+        "        if href and '/news/' in href and '#comments' not in href:\n"
+        "            self._current = {'title':'', 'url': urljoin('https://www.ixbt.com', href.split('#', 1)[0]), 'date':'', 'summary':'', 'source':'ixbt.com'}\n\n"
+        "    def handle_data(self, data):\n"
+        "        if self._current is not None:\n"
+        "            self._current['title'] = ' '.join((self._current['title'] + ' ' + data).split())\n\n"
+        "    def handle_endtag(self, tag):\n"
+        "        if tag == 'a' and self._current is not None:\n"
+        "            title = self._current['title'].strip()\n"
+        "            if len(title) >= 20 and title.lower() not in {'лента новостей'}:\n"
+        "                self.items.append(self._current)\n"
+        "            self._current = None\n\n\n"
+        "def _parse_news_links(html: str) -> list[dict[str, str]]:\n"
+        "    parser = _NewsLinkParser(); parser.feed(html)\n"
+        "    seen=set(); rows=[]\n"
+        "    for item in parser.items:\n"
+        "        if item['url'] in seen:\n"
+        "            continue\n"
+        "        seen.add(item['url']); rows.append(item)\n"
+        "    return rows\n"
     )
 
 
@@ -324,6 +363,16 @@ def _test_parser() -> str:
         "    rows = parse_news_items(html)\n"
         "    assert rows[0]['title'] == 'Example news'\n"
         "    assert rows[0]['date'] == '2026-07-07'\n"
+        "\n\n"
+        "def test_parser_handles_empty_or_malformed_html():\n"
+        "    assert parse_news_items('') == []\n"
+        "    assert parse_news_items('<html><body>missing article</body></html>') == []\n"
+        "\n\n"
+        "def test_parser_extracts_news_link_fallback():\n"
+        "    html = \"<a href='/news/2026/07/22/example.html'>Очень важная новость про технологии</a>\"\n"
+        "    rows = parse_news_items(html)\n"
+        "    assert rows[0]['url'] == 'https://www.ixbt.com/news/2026/07/22/example.html'\n"
+        "    assert rows[0]['title'] == 'Очень важная новость про технологии'\n"
     )
 
 
@@ -359,7 +408,17 @@ def _test_converter() -> str:
     )
 
 
-def _test_cli() -> str:
+def _test_cli(case_name: str) -> str:
+    if case_name == "ixbt_news_scraper":
+        return (
+            "import csv\n\n"
+            "from ixbt_news_scraper.cli import main\n\n\n"
+            "def test_cli_writes_csv_from_fixture_without_network(tmp_path):\n"
+            "    output = tmp_path / 'news.csv'\n"
+            "    assert main(['tests/fixtures/ixbt_news.html', str(output)]) == 0\n"
+            "    rows = list(csv.DictReader(output.open(encoding='utf-8')))\n"
+            "    assert rows[0]['title'] == 'Example news'\n"
+        )
     return (
         "from pathlib import Path\n\n\n"
         "def test_cli_main_returns_zero(tmp_path):\n"

@@ -29,6 +29,12 @@
         "type": "object"
       }
     },
+    "domain_flow_anchors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "wide_functions": {
       "type": "array",
       "items": {

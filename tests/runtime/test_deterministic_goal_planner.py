@@ -168,6 +168,55 @@ def test_deterministic_goal_planner_builds_translate_plan():
     assert planned["pipeline"]["nodes"][0]["input"]["target_language"] == "German"
 
 
+def test_deterministic_goal_planner_builds_replace_text_plan():
+    root = Path(__file__).resolve().parents[2]
+    registry = CapabilityRegistry(root)
+    registry.reset_from_plugins()
+
+    planned = plan_from_required_capabilities(
+        "По проекту F:/ubuntu/test/5.1 замени порт подключения клиентов 8000 на 9000",
+        ["replace_text_in_project"],
+        registry,
+    )
+
+    assert planned is not None
+    assert planned["pipeline"]["nodes"][0]["capability"] == "replace_text_in_project"
+    assert planned["pipeline"]["nodes"][0]["input"]["old_value"] == "$input.old_value"
+
+
+def test_deterministic_goal_planner_builds_provider_probe_plan():
+    root = Path(__file__).resolve().parents[2]
+    registry = CapabilityRegistry(root)
+    registry.reset_from_plugins()
+
+    planned = plan_from_required_capabilities(
+        "По проекту F:/ubuntu/test/5.1 запусти сервер и протестируй работу с провайдерами",
+        ["project_provider_probe"],
+        registry,
+    )
+
+    assert planned is not None
+    assert planned["pipeline"]["nodes"][0]["capability"] == "project_provider_probe"
+    assert planned["pipeline"]["nodes"][0]["input"]["base_url"] == "$input.base_url"
+
+
+def test_deterministic_goal_planner_builds_disable_gigachat_auto_model_plan():
+    root = Path(__file__).resolve().parents[2]
+    registry = CapabilityRegistry(root)
+    registry.reset_from_plugins()
+
+    planned = plan_from_required_capabilities(
+        "По проекту F:/ubuntu/test/5.1 убери возможность автовыбора модели у провайдера GigaChat",
+        ["apply_project_change_recipe"],
+        registry,
+    )
+
+    assert planned is not None
+    assert planned["pipeline"]["nodes"][0]["capability"] == "apply_project_change_recipe"
+    assert planned["pipeline"]["nodes"][0]["input"]["root"] == "$input.path"
+    assert planned["pipeline"]["nodes"][0]["input"]["recipe_id"] == "$input.recipe_id"
+
+
 def test_goal_run_translate_uses_promoted_capability():
     root = Path(__file__).resolve().parents[2]
     # Use a clean runtime root so a matured memory template cannot supersede

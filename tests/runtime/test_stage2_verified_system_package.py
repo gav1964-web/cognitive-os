@@ -54,6 +54,7 @@ IMAGE_TABLE_EXCEL_PROMPT = (
 XLS_TO_PNG_PROMPT = "напиши конвертер .xls в .png"
 MD_TO_RTF_GENERIC_PROMPT = "напиши конвертер .md в .rtf"
 SUM_TWO_NUMBERS_PROMPT = "программе как параметры передаются два числа и она должна в терминале вывести их сумму"
+IXBT_NEWS_SCRAPER_PROMPT = "создай скрапер новостей с первой страницы ixbt.com и выведи их в .csv файл"
 
 
 def test_prompt_adequacy_gate_accepts_bounded_cli_prompt():
@@ -95,6 +96,23 @@ def test_prompt_adequacy_gate_accepts_semantic_cli_argument_program():
     assert gate["checks"]["outputs_defined"] is True
     assert gate["checks"]["dependencies_policy_defined"] is True
     assert gate["clarification_questions"] == []
+
+
+def test_prompt_adequacy_gate_accepts_bounded_ixbt_scraper_prompt():
+    gate = evaluate_prompt_adequacy(IXBT_NEWS_SCRAPER_PROMPT).to_dict()
+
+    assert gate["status"] == "ready"
+    assert gate["system_type"] == "cli"
+    assert gate["checks"]["inputs_defined"] is True
+    assert gate["checks"]["outputs_defined"] is True
+    assert gate["checks"]["dependencies_policy_defined"] is True
+
+
+def test_prompt_adequacy_gate_classifies_news_site_scraper_url_as_cli():
+    gate = evaluate_prompt_adequacy("создай скрапер новостей с первой страницы https://3dnews.ru/ и выведи их в .csv файл").to_dict()
+
+    assert gate["status"] == "ready"
+    assert gate["system_type"] == "cli"
 
 
 def test_verified_system_package_builds_release_artifact(tmp_path: Path):
@@ -196,6 +214,62 @@ def test_verified_system_package_builds_csv_sort_cli_after_template_admission(tm
     assert report["tests"]["missing_acceptance"] == []
     assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is False
     assert (Path(report["project_dir"]) / "src" / "csv_sort" / "sorter.py").is_file()
+
+
+def test_verified_system_package_builds_ixbt_news_scraper(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt=IXBT_NEWS_SCRAPER_PROMPT,
+        curriculum_dir=root / "curricula" / "programmer_prompt_local_10",
+        write=True,
+    )
+
+    assert report["status"] == "ok"
+    assert report["release_decision"]["decision"] == "release_ready_with_risks"
+    assert report["cognitive_control_plane"]["prompt_product_gate"]["supported_template"] == "ixbt_news_scraper"
+    assert report["tests"]["missing_acceptance"] == []
+    assert (Path(report["project_dir"]) / "src" / "ixbt_news_scraper" / "cli.py").is_file()
+    assert (Path(report["project_dir"]) / "tests" / "fixtures" / "ixbt_news.html").is_file()
+
+
+def test_verified_system_package_builds_general_news_site_scraper(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt="создай скрапер новостей с первой страницы https://3dnews.ru/ и выведи их в .csv файл",
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+    )
+
+    project_dir = Path(report["project_dir"])
+
+    assert report["status"] == "ok"
+    assert report["release_decision"]["decision"] == "release_ready_with_risks"
+    assert report["cognitive_control_plane"]["prompt_product_gate"]["supported_template"] == "news_site_scraper_cli"
+    assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is False
+    assert report["tests"]["missing_acceptance"] == []
+    assert (project_dir / "src" / "news_site_scraper" / "cli.py").is_file()
+    assert (project_dir / "src" / "news_site_scraper" / "site_profile.py").is_file()
+    assert (project_dir / "tests" / "fixtures" / "news_page.html").is_file()
+
+
+def test_verified_system_package_blocks_unknown_news_site_without_profile(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    report = build_verified_system_package(
+        root=tmp_path,
+        prompt="создай скрапер новостей с сайта https://zindi.africa/ и выведи их в .csv файл",
+        curriculum_dir=root / "curricula" / "programmer_prompt_stage2",
+        write=True,
+        allow_llm_sandbox_implementation=False,
+    )
+
+    assert report["status"] == "blocked"
+    assert report["selected_case"] is None
+    assert report["cognitive_control_plane"]["prompt_product_gate"]["supported_template"] is None
+    assert report["cognitive_control_plane"]["semantic_escalation"]["l4_5_required"] is True
+    assert report["developer_improvement_request"]["missing_capability"] == "web_extraction_site_profile_for_requested_news_site"
+    assert report["developer_improvement_request"]["request_id"] == "add_web_extraction_profile_for_requested_news_site"
 
 
 def test_verified_system_package_builds_ocr_image_cli(tmp_path: Path):
