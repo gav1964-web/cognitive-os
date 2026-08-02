@@ -7,6 +7,7 @@ from runtime.executable_acceptance_policy import (
     sample_value,
     skipped_recovery_hint,
 )
+from runtime.executable_acceptance_materializers import materialize
 
 
 def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs():
@@ -25,6 +26,9 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert sample_value("Callable[[dict], str]", "id_of") == {"__fixture__": "callable_id_of"}
     assert sample_value("ParseFloat", "parse_float") == {"__fixture__": "callable_float"}
     assert sample_value("ConfigParser", "cfg") == {"__fixture__": "configparser_flake8_empty"}
+    assert sample_value("Graph", "G") == {"__fixture__": "networkx_graph_path"}
+    assert sample_value("int", "iterations") == 1
+    assert sample_value("bool", "include_initial_labels") is False
     assert sample_value("BytesIO", "body") == {"__fixture__": "bytes_io_empty"}
     assert sample_value("parserinfo", "info") == {"__fixture__": "dateutil_parserinfo_minimal"}
     assert sample_value("_ymd", "ymd") == {"__fixture__": "dateutil_ymd"}
@@ -32,3 +36,4 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert sample_value("str", "src") == '"sample"'
     assert sample_value("bool", "enabled") is True
     assert sample_value("bool", "enabled", signature_mode=True) is False
+    assert materialize({"iterations": "sample", "digest_size": "sample"}) == {"iterations": 1, "digest_size": 8}

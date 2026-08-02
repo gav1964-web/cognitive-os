@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance_loading import cleanup_dependency_stubs, import_path, load_supported_callable
+from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy, method_fixture_policy, sample_value, skipped_recovery_hint
 
 
@@ -220,7 +221,7 @@ def positive_samples_execute(
         try:
             with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
                 payload = {**dict(defaults or {}), **_mapped_given(dict(row.get("given", {})), mapping or {})}
-                result = func(**_materialize(payload))
+                result = func(**materialize(payload))
                 if inspect.isawaitable(result):
                     result = asyncio.run(result)
                 if not _positive_result_matches_expect(result, dict(row.get("expect") or {})):
@@ -313,7 +314,7 @@ def _load_method_callable(path: Path, symbol: str, module: object | None) -> dic
         return {"callable": None, "detail": f"{class_name}.{symbol}: instance_fixture_required"}
     attrs = dict(dict(policy.get("instance_attribute_profiles") or {}).get(f"{class_name}.{symbol}") or {})
     for key, value in attrs.items():
-        setattr(instance, key, _materialize(value))
+        setattr(instance, key, materialize(value))
     bound = getattr(instance, symbol, None)
     return {"callable": bound, "method": match, "instance_attributes": attrs} if callable(bound) else {"callable": None, "detail": f"{class_name}.{symbol}: method_not_bound"}
 
@@ -346,37 +347,6 @@ def _unique_method_match(path: Path, symbol: str) -> dict[str, str] | None:
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == symbol:
                 matches.append({"class_name": node.name, "method_name": symbol})
     return matches[0] if len(matches) == 1 else None
-
-
-def _materialize(value: Any) -> Any:
-    if isinstance(value, dict):
-        fixture = value.get("__fixture__")
-        if fixture == "callable_id_of":
-            return lambda schema: schema.get("$id") if isinstance(schema, dict) else None
-        if fixture == "callable_items":
-            return lambda schema: schema.items() if hasattr(schema, "items") else []
-        if fixture == "callable_identity":
-            return lambda value, *args, **kwargs: value
-        if fixture == "callable_float":
-            return lambda value, *args, **kwargs: float(value)
-        if fixture == "configparser_flake8_empty":
-            parser = __import__("configparser").RawConfigParser(); parser.add_section("flake8:local-plugins"); return parser
-        if fixture == "bytes_io_empty":
-            return __import__("io").BytesIO(b"")
-        if fixture == "bytes_empty":
-            return b""
-        if fixture == "dateutil_parserinfo_minimal":
-            return type("Info", (), {"hms": lambda self, value: None, "jump": lambda self, value: False, "ampm": lambda self, value: None, "month": lambda self, value: None})()
-        if fixture == "dateutil_result":
-            return type("Result", (), {"hour": None, "minute": None, "second": None, "microsecond": None})()
-        if fixture == "dateutil_ymd":
-            return type("YMD", (list,), {"append": lambda self, value, label=None: list.append(self, value), "could_be_day": lambda self, value: True})()
-        if fixture == "pytest_source_minimal":
-            return type("Source", (), {"lines": ["x = 1"], "raw_lines": ["x = 1"], "__str__": lambda self: "\n".join(self.lines)})()
-        return {key: _materialize(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_materialize(item) for item in value]
-    return value
 
 
 def _module_profile_attrs(module_profiles: dict[str, list[str]]) -> dict[str, dict[str, Any]]:

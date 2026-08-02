@@ -19,7 +19,7 @@ def load_project_evolution_policy(path: str | None = None) -> dict[str, Any]:
     payload = json.loads(Path(path or DEFAULT_PATH).read_text(encoding="utf-8"))
     if payload.get("schema_version") != "project_evolution_policy.v1":
         raise ProjectEvolutionPolicyError("project evolution policy must use schema_version project_evolution_policy.v1")
-    for field_name in ("principles", "evolution_change_types", "promotion_gates", "anti_patterns"):
+    for field_name in ("principles", "evolution_rules", "evolution_change_types", "promotion_gates", "anti_patterns"):
         if not payload.get(field_name):
             raise ProjectEvolutionPolicyError(f"project evolution policy missing {field_name}")
     if not isinstance(payload.get("status_threshold"), (int, float)):
@@ -42,20 +42,22 @@ def evaluate_project_evolution(change: dict[str, Any], *, policy: dict[str, Any]
         missing.extend(f"{change_type}:{item}" for item in sorted(required - evidence))
         if required.issubset(evidence):
             score += int(row.get("score") or 0)
-    blockers = _anti_pattern_blockers(change, policy)
+    blockers = sorted(set(_anti_pattern_blockers(change, policy)) | set(_rule_blockers(change, evidence, policy)))
     gate_reports = {
         name: _gate_status(score, evidence, change, dict(gate))
         for name, gate in dict(policy.get("promotion_gates") or {}).items()
     }
     readiness = _readiness(score, missing, blockers, policy)
     gate_ok = any(dict(row).get("passed") for row in gate_reports.values())
+    status_ok = not blockers and (gate_ok or readiness >= float(policy.get("status_threshold") or 0.8))
     return {
         "artifact_type": "ProjectEvolutionReport",
-        "status": "ok" if gate_ok or readiness >= float(policy.get("status_threshold") or 0.8) else "needs_work",
+        "status": "ok" if status_ok else "needs_work",
         "evolution_score": score,
         "readiness": readiness,
         "missing_evidence": missing,
         "blockers": blockers,
+        "rules": sorted(dict(policy.get("evolution_rules") or {})),
         "promotion_gates": gate_reports,
     }
 
@@ -64,6 +66,32 @@ def _anti_pattern_blockers(change: dict[str, Any], policy: dict[str, Any]) -> li
     declared = {str(item) for item in list(change.get("anti_patterns") or []) if item}
     known = {str(item) for item in list(policy.get("anti_patterns") or [])}
     return sorted(declared & known)
+
+
+def _rule_blockers(change: dict[str, Any], evidence: set[str], policy: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    target_gates = {str(item) for item in list(change.get("target_gates") or []) if item}
+    for rule in dict(policy.get("evolution_rules") or {}).values():
+        row = dict(rule or {})
+        blocker = str(row.get("blocker") or "")
+        if not blocker:
+            continue
+        if _blocked_gate_applies(row, target_gates) and str(row.get("required_evidence") or "") not in evidence:
+            blockers.append(blocker)
+        if row.get("metric") and int(change.get(str(row["metric"])) or 0) > 0:
+            blockers.append(blocker)
+        if row.get("boundary_track") and change.get("boundary_track") == row["boundary_track"]:
+            required = str(row.get("required_evidence") or "")
+            if required and required not in evidence:
+                blockers.append(blocker)
+        if row.get("blocker") == "line_limit_check_missing" and "line_limit_check" not in evidence:
+            blockers.append(blocker)
+    return sorted(set(blockers))
+
+
+def _blocked_gate_applies(rule: dict[str, Any], target_gates: set[str]) -> bool:
+    blocked_gate = str(rule.get("blocked_gate") or "")
+    return bool(blocked_gate and blocked_gate in target_gates)
 
 
 def _gate_status(score: int, evidence: set[str], change: dict[str, Any], gate: dict[str, Any]) -> dict[str, Any]:

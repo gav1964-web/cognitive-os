@@ -6,8 +6,39 @@
     "kb_or_config_before_code_branch",
     "no_source_project_mutation_in_field_trials",
     "bounded_complexity_before_new_capability",
-    "regression_suite_before_readiness_claim"
+    "regression_suite_before_readiness_claim",
+    "meta_only_is_not_callable_evidence",
+    "native_extensions_are_separate_boundary_track"
   ],
+  "evolution_rules": {
+    "score_growth_requires_independent_holdout": {
+      "blocked_gate": "role_score_9_7",
+      "required_evidence": "independent_holdout",
+      "blocker": "score_growth_without_independent_holdout"
+    },
+    "previous_field_cannot_validate_new_level": {
+      "blocked_gate": "role_score_9_7",
+      "required_evidence": "independent_holdout",
+      "blocker": "reused_field_as_new_level_evidence"
+    },
+    "false_callable_is_regression": {
+      "metric": "false_callable_regressions",
+      "blocker": "false_callable_regression"
+    },
+    "meta_only_is_not_callable": {
+      "metric": "meta_only_delta_as_callable",
+      "blocker": "meta_only_counted_as_callable"
+    },
+    "native_extension_boundary_is_separate_track": {
+      "boundary_track": "native_extension",
+      "required_evidence": "native_extension_boundary",
+      "blocker": "native_extension_mixed_into_pure_python_score"
+    },
+    "line_limit_blocks_promotion": {
+      "required_evidence": "line_limit_check",
+      "blocker": "line_limit_check_missing"
+    }
+  },
   "evolution_change_types": {
     "field_validated_capability": {
       "required_evidence": ["field_report", "regression_tests", "no_source_changes"],
@@ -44,6 +75,12 @@
   },
   "anti_patterns": [
     "score_increase_without_field_delta",
+    "score_growth_without_independent_holdout",
+    "reused_field_as_new_level_evidence",
+    "false_callable_regression",
+    "meta_only_counted_as_callable",
+    "native_extension_mixed_into_pure_python_score",
+    "line_limit_check_missing",
     "project_specific_branch_without_kb_record",
     "broad_dependency_stub_without_field_win",
     "new_runtime_code_when_policy_config_would_work",

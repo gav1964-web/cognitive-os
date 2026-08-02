@@ -22,6 +22,11 @@ human goal
 -> controlled execution artifacts
 ```
 
+Code is not the only carrier of system knowledge. If requirements, architecture,
+contracts, and acceptance criteria are explicit enough, an implementation can be
+reproduced, checked, and improved as code generators evolve without changing the
+architecture itself.
+
 This repository is currently a **research preview / executable architecture prototype**, not a production framework.
 The near-term MVP target is narrower and more concrete: **Prompt -> Verified Local Automation Package**.
 
@@ -177,6 +182,12 @@ GoalSpec
 -> TestPlan
 -> ReviewFindings
 ```
+
+This is the practical meaning of the project philosophy: durable knowledge about
+the system lives in requirements, architecture decisions, technical contracts,
+test plans, review findings, policies, and evidence trails. Source code is an
+important materialization of that knowledge, but it is not the only source of
+truth.
 
 Each artifact defines what the next layer may rely on, what it must not invent, and what evidence or constraints must survive the handoff.
 

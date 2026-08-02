@@ -280,6 +280,39 @@ def test_executable_acceptance_uses_pytest_source_fixture(tmp_path: Path):
     }
 
 
+def test_executable_acceptance_uses_networkx_graph_fixture(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "networkx"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text(
+        "class Graph:\n"
+        "    def __init__(self):\n"
+        "        self.edges = []\n"
+        "        self.nodes = {}\n"
+        "    def add_edge(self, left, right, **attrs):\n"
+        "        self.edges.append((left, right, attrs))\n"
+        "        self.nodes.setdefault(left, {})\n"
+        "        self.nodes.setdefault(right, {})\n",
+        encoding="utf-8",
+    )
+    (project / "module.py").write_text(
+        "def graph_hash(G, node_attr=None):\n"
+        "    return {'node_count': len(G.nodes), 'node_attr': node_attr, 'edge_count': len(G.edges)}\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:graph_hash", {}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["argument_defaults"]["module.py:graph_hash"] == {"G": {"__fixture__": "networkx_graph_path"}}
+
+
 def test_executable_acceptance_rejects_none_result_for_result_contract(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

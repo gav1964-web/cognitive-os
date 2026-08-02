@@ -135,7 +135,7 @@ def _check_patch_synthesis_policy(catalogs: dict[str, Any]) -> _Check:
 def _check_project_evolution_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("project_evolution_policy_integrity")
     policy = dict(catalogs["project_evolution_policy"])
-    for field_name in ("principles", "evolution_change_types", "promotion_gates", "anti_patterns"):
+    for field_name in ("principles", "evolution_rules", "evolution_change_types", "promotion_gates", "anti_patterns"):
         if not policy.get(field_name):
             check.errors.append(f"project_evolution_policy_missing:{field_name}")
     gates = dict(policy.get("promotion_gates") or {})
@@ -148,6 +148,17 @@ def _check_project_evolution_policy(catalogs: dict[str, Any]) -> _Check:
     changes = dict(policy.get("evolution_change_types") or {})
     if "kb_crystallization" not in changes or "field_validated_capability" not in changes:
         check.errors.append("project_evolution_policy_missing:core_change_types")
+    rules = dict(policy.get("evolution_rules") or {})
+    for rule_name in (
+        "score_growth_requires_independent_holdout",
+        "previous_field_cannot_validate_new_level",
+        "false_callable_is_regression",
+        "meta_only_is_not_callable",
+        "native_extension_boundary_is_separate_track",
+        "line_limit_blocks_promotion",
+    ):
+        if not dict(rules.get(rule_name) or {}).get("blocker"):
+            check.errors.append(f"project_evolution_policy_missing:evolution_rules.{rule_name}.blocker")
     return check
 
 def _check_technical_spec_policy(catalogs: dict[str, Any]) -> _Check:
