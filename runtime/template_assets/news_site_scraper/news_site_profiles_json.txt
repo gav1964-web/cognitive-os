@@ -1,0 +1,25 @@
+{
+  "common_blocked_path_markers": [
+    "/redirect", "/about", "/contact", "/contacts", "/vacancies", "/service", "/services",
+    "/market", "/rubric", "/story", "/stories", "/tag", "/tags", "/authors", "/author",
+    "/search", "/login", "/auth", "/subscribe", "/subscription", "/newsletter", "/newsletters",
+    "/terms", "/privacy", "/cookies", "/advertising", "/reviews", "/review", "/ratings", "/comments"
+  ],
+  "common_blocked_titles": [
+    "новости", "лента новостей", "все новости", "новости hardware", "новости software",
+    "аналитика", "конференции", "контакты", "вакансии", "образование", "все обзоры",
+    "газета газета", "about", "contact", "contacts", "subscribe", "subscription",
+    "newsletters", "newsletter", "terms", "privacy", "see all reviews", "reviews", "читать далее"
+  ],
+  "generic": {
+    "link_markers": ["/news/", "/article/", "/articles/", "/blog/", "/post/"],
+    "article_path_patterns": ["/(20\\d{2})/(\\d{1,2})/(\\d{1,2})/", "/(\\d{1,2})/(\\d{1,2})/(20\\d{2})/", "/news/[^/]+", "/article/[^/]+", "/articles/[^/]+", "/blog/[^/]+", "/post/[^/]+"]
+  },
+  "profiles": [
+    {"host_contains": "3dnews.ru", "source": "3dnews.ru", "link_markers": ["/news/", "/software-news/", "/hardware-news/"], "article_path_patterns": ["^/\\d{6,}(?:/|$|-)"]},
+    {"host_contains": "cnews.ru", "source": "cnews.ru", "link_markers": ["/news/", "/articles/"], "article_path_patterns": ["/news/(?:top|line)/20\\d{2}-\\d{2}-\\d{2}_"]},
+    {"host_contains": "ixbt.com", "source": "ixbt.com", "link_markers": ["/news/"], "article_path_patterns": ["/news/20\\d{2}/\\d{2}/\\d{2}/[^/]+\\.html$"]},
+    {"host_contains": "rbc.ru", "source": "rbc.ru", "link_markers": ["/politics/", "/business/", "/economics/", "/society/", "/finances/"], "article_path_patterns": ["/(?:politics|business|economics|technology_and_media|society|finances|life|realty|sport)/20\\d{2}/"]},
+    {"host_contains": "habr.com", "source": "habr.com", "link_markers": ["/ru/articles/", "/ru/news/", "/en/articles/", "/en/news/"], "article_path_patterns": ["/(?:ru|en)/(?:articles|news)/\\d+/?$"]}
+  ]
+}

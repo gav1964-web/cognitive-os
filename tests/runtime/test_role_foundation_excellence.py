@@ -3,6 +3,7 @@ from __future__ import annotations
 from runtime.role_foundation_excellence import (
     _backlog_pressure,
     _github_spec_semantic_floor,
+    _score_project_analyzer,
     _semantic_score,
     _strong_ratio,
 )
@@ -35,6 +36,31 @@ def test_semantic_score_penalizes_suspicious_targets():
 def test_backlog_pressure_caps_at_one():
     assert _backlog_pressure({"backlog_items": 4}, {"backlog_items": 8}) == 0.6
     assert _backlog_pressure({"backlog_items": 30}) == 1.0
+
+
+def test_project_analyzer_excellence_does_not_score_penalize_backlog_notes():
+    result = _score_project_analyzer(
+        {
+            "architect_local": {
+                "summary": {"fact_recall": 1.0, "fact_precision": 1.0, "backlog_items": 0},
+                "cases": [{"fact_score": {"recall": 1.0, "precision": 1.0}}],
+            },
+            "architect_external": {
+                "summary": {"fact_recall": 0.98, "fact_precision": 0.97, "backlog_items": 7},
+                "cases": [{"fact_score": {"recall": 0.94, "precision": 0.94}}],
+            },
+            "architect_github": {
+                "project_count": 2,
+                "summary": {"ok": 2, "avg_quality_score": 1.0},
+                "cases": [{"quality_score": 1.0, "summary": {"project_report_quality": 1.0}}],
+            },
+        },
+        target_score=9.2,
+    )
+
+    assert result["score"] == 9.4
+    assert result["target_met"] is True
+    assert result["metrics"]["backlog_is_score_blocking"] is False
 
 
 def test_spec_writer_excellence_uses_worst_project_floor():
@@ -72,8 +98,23 @@ def test_target_quality_treats_factory_query_and_make_contracts_as_strong():
         assert quality["status"] == "strong"
 
 
+def test_target_quality_accepts_resource_displayhook_and_protocol_state_targets():
+    for target in (
+        "certifi/core.py:contents",
+        "src/werkzeug/debug/console.py:displayhook",
+        "h11/_connection.py:our_state",
+    ):
+        quality = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+            selection_reason="pure transform candidate",
+        )
+        assert quality["status"] == "strong"
+
+
 def test_target_quality_keeps_response_boundary_acceptable_not_strong():
-    target = "src/flask/app.py:make_response"
+    target = "app.py:make_response"
 
     quality = semantic_target_quality_report(
         target,

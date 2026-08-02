@@ -33,6 +33,8 @@ def build_product_architecture_record(
         "product_summary": str(pattern.get("product_summary") or ""),
         "system_type": gate.get("system_type") or pattern.get("system_type"),
         "architecture_style": str(pattern.get("architecture_style") or ""),
+        "product_output_contract": _product_output_contract(pattern),
+        "real_world_edge_cases": _real_world_edge_cases(pattern),
         "components": components,
         "main_scenarios": scenarios,
         "interfaces": _list(pattern, "interfaces"),
@@ -54,6 +56,8 @@ def build_product_architecture_record(
             "chosen_architecture_option": _chosen_architecture_option(pattern),
             "acceptance_focus": _list(pattern, "acceptance_focus"),
             "constraints": _list(pattern, "constraints"),
+            "product_output_contract": _product_output_contract(pattern),
+            "real_world_edge_cases": _real_world_edge_cases(pattern),
         },
         "forbidden_actions_observed": [],
         "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
@@ -112,3 +116,29 @@ def _chosen_architecture_option(pattern: dict[str, Any]) -> dict[str, Any] | Non
         if isinstance(option, dict) and option.get("status") == "chosen":
             return dict(option)
     return None
+
+
+def _product_output_contract(pattern: dict[str, Any]) -> dict[str, Any]:
+    primary = dict(pattern.get("primary_contract") or {})
+    lifecycle = _list(pattern, "data_lifecycle")
+    output_stage = next((row for row in lifecycle if isinstance(row, dict) and row.get("stage") == "output"), {})
+    return {
+        "primary_output": primary.get("output"),
+        "user_visible_shape": dict(output_stage).get("shape"),
+        "constraints": _list(pattern, "constraints"),
+    }
+
+
+def _real_world_edge_cases(pattern: dict[str, Any]) -> list[dict[str, Any]]:
+    result = []
+    edge_markers = ("live", "plain", "cyrillic", "unicode", "iri", "noisy", "empty", "malformed", "timeout", "partial")
+    scenarios = _list(pattern, "main_scenarios")
+    for scenario in _list(pattern, "main_scenarios"):
+        if not isinstance(scenario, dict):
+            continue
+        text = " ".join(str(scenario.get(key, "")) for key in ("id", "description", "success")).lower()
+        if any(marker in text for marker in edge_markers):
+            result.append(dict(scenario))
+    if result:
+        return result[:8]
+    return [dict(row) for row in scenarios[:3] if isinstance(row, dict)]

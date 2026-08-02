@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import urlparse
+
+
+@dataclass(frozen=True)
+class SiteProfile:
+    base_url: str
+    source: str
+    link_markers: tuple[str, ...]
+    article_path_patterns: tuple[str, ...]
+    blocked_path_markers: tuple[str, ...]
+    blocked_titles: tuple[str, ...]
+
+
+def _profile(base_url: str, source: str, link_markers: list[str], article_path_patterns: list[str], config: dict) -> SiteProfile:
+    return SiteProfile(
+        base_url,
+        source,
+        tuple(link_markers),
+        tuple(article_path_patterns),
+        tuple(config.get('common_blocked_path_markers') or []),
+        tuple(config.get('common_blocked_titles') or []),
+    )
+
+
+def profile_for(base_url: str) -> SiteProfile:
+    parsed = urlparse(base_url if '://' in base_url else 'https://' + base_url)
+    host = parsed.netloc or parsed.path
+    root = f'{parsed.scheme or "https"}://{host}'
+    config = _load_profiles()
+    for profile in config.get('profiles') or []:
+        marker = str(profile.get('host_contains') or '')
+        if marker and marker in host:
+            return _profile(
+                root + '/',
+                str(profile.get('source') or marker),
+                list(profile.get('link_markers') or []),
+                list(profile.get('article_path_patterns') or []),
+                config,
+            )
+    generic = dict(config.get('generic') or {})
+    return _profile(
+        root + '/',
+        host or 'unknown',
+        list(generic.get('link_markers') or []),
+        list(generic.get('article_path_patterns') or []),
+        config,
+    )
+
+
+def _load_profiles() -> dict:
+    path = Path(__file__).with_name('news_site_profiles.json')
+    return json.loads(path.read_text(encoding='utf-8'))

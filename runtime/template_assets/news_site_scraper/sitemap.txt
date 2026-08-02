@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+import re
+import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
+
+from news_site_scraper.site_profile import SiteProfile
+
+
+class _RobotsParser(HTMLParser):
+    pass
+
+
+def discover_sitemap_urls(html: str, profile: SiteProfile) -> list[str]:
+    candidates = [urljoin(profile.base_url, '/sitemap.xml'), urljoin(profile.base_url, '/sitemap-news.xml')]
+    for match in re.findall(r'https?://[^\s"\']*sitemap[^\s"\']*\.xml', html, flags=re.I):
+        candidates.append(match)
+    unique: list[str] = []
+    seen: set[str] = set()
+    for url in candidates:
+        key = url.rstrip('/').lower()
+        if key not in seen and _same_host(url, profile.base_url):
+            seen.add(key)
+            unique.append(url)
+    return unique[:4]
+
+
+def rows_from_sitemap(xml_text: str, profile: SiteProfile) -> list[dict[str, str]]:
+    try:
+        root = ET.fromstring(xml_text.strip().lstrip('\ufeff'))
+    except ET.ParseError:
+        return []
+    urls = [_text(loc) for loc in root.findall('.//{*}loc')]
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for url in urls:
+        if not url or not _same_host(url, profile.base_url):
+            continue
+        title = _title_from_url(url)
+        row = {'title': title, 'url': url, 'date': _date_from_url(url), 'summary': '', 'source': profile.source}
+        if _looks_article_url(url, profile) and url.rstrip('/').lower() not in seen:
+            seen.add(url.rstrip('/').lower())
+            rows.append(row)
+    return rows
+
+
+def _looks_article_url(url: str, profile: SiteProfile) -> bool:
+    path = urlparse(url).path.lower()
+    if any(marker in path for marker in profile.blocked_path_markers):
+        return False
+    if any(re.search(pattern, path) for pattern in profile.article_path_patterns):
+        return True
+    if any(marker in path for marker in profile.link_markers):
+        leaf = path.rstrip('/').rsplit('/', 1)[-1]
+        return len(leaf) >= 8 and ('-' in leaf or leaf.endswith('.html'))
+    return False
+
+
+def _title_from_url(url: str) -> str:
+    leaf = urlparse(url).path.rstrip('/').rsplit('/', 1)[-1]
+    leaf = re.sub(r'\.(?:html?|php)$', '', leaf)
+    text = leaf.replace('-', ' ').replace('_', ' ').strip()
+    return text[:1].upper() + text[1:] if text else url
+
+
+def _date_from_url(url: str) -> str:
+    match = re.search(r'/(20\d{2})/(\d{2})/(\d{2})/', url)
+    return '-'.join(match.groups()) if match else ''
+
+
+def _text(element) -> str:
+    return ' '.join((element.text or '').split())
+
+
+def _same_host(url: str, base_url: str) -> bool:
+    left = urlparse(url).netloc.lower().removeprefix('www.')
+    right = urlparse(base_url).netloc.lower().removeprefix('www.')
+    return bool(left and right and left == right)

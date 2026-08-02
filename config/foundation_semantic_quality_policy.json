@@ -1,0 +1,115 @@
+{
+  "schema_version": "foundation_semantic_quality_policy.v1",
+  "status_threshold": 8.8,
+  "specific_text": {
+    "min_length": 32,
+    "generic_phrases": [
+      "improve",
+      "best practices",
+      "make it better",
+      "as needed",
+      "handle everything",
+      "not enough evidence"
+    ]
+  },
+  "domain_profile": {
+    "generic_kind": "generic",
+    "minimum_confidence": 0.55,
+    "generic_allowed_when_no_frameworks_and_entrypoints_lte": 1
+  },
+  "project_analyzer": {
+    "minimum_supported_scenarios": 2,
+    "minimum_data_lifecycle_stages": 3,
+    "minimum_source_refs": 3,
+    "minimum_evidence_claims": 3,
+    "safe_blockers": ["no_safe_python_candidate"],
+    "library_domain_marker_min_hits": 2,
+    "marketing_purpose_markers": [
+      "trusted by",
+      "mars missions",
+      "badge",
+      "sponsor",
+      "star history",
+      "downloads",
+      "since 20"
+    ],
+    "library_domain_markers": [
+      "library",
+      "parser",
+      "protocol",
+      "database",
+      "encoding",
+      "decoding",
+      "metadata",
+      "hook",
+      "converter",
+      "serializer"
+    ],
+    "check_weights": {
+      "purpose_avoids_marketing_blurb": 4,
+      "generic_profile_not_masking_library_domain": 3,
+      "scenarios_inputs_outputs_are_rich": 2
+    }
+  },
+  "architect": {
+    "minimum_options": 2,
+    "minimum_source_context_refs": 3,
+    "generic_archetypes": ["", "generic"],
+    "domain_slice_marker_min_hits": 2,
+    "generic_first_slice_names": [
+      "automation_task_execution_slice",
+      "workflow_state_transition_slice",
+      "minimal_safe_extraction"
+    ],
+    "domain_slice_markers": [
+      "parser",
+      "protocol",
+      "frame",
+      "header",
+      "metadata",
+      "hook",
+      "database",
+      "converter",
+      "serializer"
+    ],
+    "check_weights": {
+      "first_slice_not_generic_when_domain_cues_exist": 4,
+      "domain_profile_carried_to_architecture": 3,
+      "spec_target_is_within_architect_slice": 3
+    }
+  },
+  "spec_writer": {
+    "minimum_requirements": 3,
+    "minimum_acceptance_criteria": 3,
+    "minimum_traceability_rows": 3,
+    "negative_case_tokens": [
+      "malformed",
+      "invalid",
+      "empty",
+      "timeout",
+      "failure",
+      "error",
+      "negative",
+      "bad input"
+    ],
+    "weak_contract_shapes": ["", "any", "none", "object"]
+    ,
+    "check_weights": {
+      "io_contract_shapes_specific": 4,
+      "requirements_and_acceptance_are_implementable": 3,
+      "traceability_links_sources_to_acceptance": 3
+    }
+  },
+  "source_reference": {
+    "tokens": [":", "/", "\\"],
+    "suffixes": [".py"]
+  },
+  "side_effect_policy": {
+    "accepted_policy_fields": [
+      "requires_validation_gate",
+      "requires_process_boundary",
+      "idempotency_required",
+      "retry_policy"
+    ]
+  }
+}

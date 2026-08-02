@@ -1,0 +1,97 @@
+{
+  "schema_version": "technical_spec_policy.v1",
+  "context_only_source_path_tokens": [
+    "/.github/",
+    "/bench/",
+    "/benchmarks/",
+    "/doc/",
+    "/docs/",
+    "/examples/",
+    "/scripts/",
+    "/tasks/",
+    "/test/",
+    "/tests/",
+    "/testing/",
+    "/tools/",
+    "/__pycache__/"
+  ],
+  "snippet_analysis": {
+    "allowed_external_names": [
+      "Any",
+      "Dict",
+      "List",
+      "Optional",
+      "Path",
+      "model",
+      "np",
+      "pd",
+      "self",
+      "time",
+      "tokenizer",
+      "torch"
+    ],
+    "high_confidence_unresolved_sets": [
+      ["pipe", "output"]
+    ]
+  },
+  "contract_type_inference": {
+    "ignored_return_annotations": ["any", "typing.any", "none"],
+    "argument_rules": [
+      {"type": "RequestLike", "exact": ["request", "req"], "contains_any": ["request"]},
+      {"type": "ResponseLike", "exact": ["response", "resp"], "contains_any": ["response"]},
+      {"type": "PathLike", "contains_any": ["path", "file", "filename"]},
+      {"type": "UrlString", "contains_any": ["url", "uri"]},
+      {"type": "str", "contains_any": ["text", "message", "content"]},
+      {"type": "MappingLike", "contains_any": ["headers", "options", "config", "data", "payload"]},
+      {"type": "SequenceLike", "contains_any": ["items", "args"]},
+      {"type": "int", "contains_any": ["index", "count", "line"]}
+    ],
+    "payload_rules": [
+      {"type": "RenderContext", "source_contains_any": ["rich", "console", "format"]},
+      {"type": "CliInput", "source_contains_any": ["cli", "args", "command"]},
+      {"type": "ExceptionContext", "source_contains_any": ["exception"]},
+      {"type": "ScheduleTimeInput", "source_contains_any": ["schedule"], "source_suffixes": [":at"]},
+      {"type": "PluginHookContext", "source_contains_any": ["hook", "plugin"]}
+    ],
+    "result_rules": [
+      {"type": "Iterable[ConsoleRenderable]", "source_contains_any": ["__rich_console__"]},
+      {"type": "FormattedHelpRenderable", "source_contains_any": ["rich_format", "format_help"]},
+      {"type": "FormattedText", "source_contains_any": ["format"]},
+      {"type": "ParsedStructure", "source_contains_any": ["interpret", "parse"]},
+      {"type": "ScheduleBuilder", "source_contains_any": ["schedule"], "source_suffixes": [":at"]},
+      {"type": "PluginHookResult", "source_contains_any": ["hook"]},
+      {"type": "Iterable[ResultItem]", "snippet_contains_any": ["yield "]},
+      {"type": "MappingLike", "snippet_contains_any": ["return {", "dict("]},
+      {"type": "SequenceLike", "snippet_contains_any": ["return ["]},
+      {"type": "str", "snippet_contains_any": ["return str", "return \"\""]}
+    ]
+  },
+  "side_effect_process_boundary": ["network", "subprocess", "filesystem", "filesystem_write", "database"],
+  "semantic_rerank": {
+    "scan_limit": 12,
+    "strong_semantic_delta": 8,
+    "strong_score_slack": 35,
+    "strong_close_semantic_delta": 6,
+    "strong_close_score_slack": 10,
+    "generic_semantic_delta": 18,
+    "generic_score_slack": 20
+  },
+  "first_slice_scope": {
+    "enforce_candidate_within_targets": true,
+    "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
+  },
+  "architecture_shape_score": {
+    "positive_source_tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
+    "positive_source_bonus": 35,
+    "positive_source_reason": "architecture-useful service/parser/factory boundary",
+    "positive_symbol_tokens": ["resolve", "build_providers", "parse_file", "features_for_view", "incident_features"],
+    "positive_symbol_bonus": 18,
+    "positive_symbol_reason": "domain boundary function name",
+    "negative_source_tokens": ["api.py:describe_module", "_plugin_metadata.py", "debug_", "smoke"],
+    "negative_source_penalty": 35,
+    "negative_source_reason": "generic introspection/debug helper is lower priority",
+    "background_worker_tokens": ["downloader.py:worker"],
+    "background_worker_penalty": 20,
+    "background_worker_reason": "background worker is evidence, not first writable contract"
+  }
+}

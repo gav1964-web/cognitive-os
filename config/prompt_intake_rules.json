@@ -8,7 +8,7 @@
       "all_groups": [
         ["скрапер", "scraper", "scrape"],
         ["новост", "news"],
-        ["csv", ".csv"],
+        ["csv", ".csv", "md", ".md", "markdown", "json", ".json"],
         ["cli", "программ", "утилит", "вывед", "формирует"]
       ]
     }
@@ -21,6 +21,10 @@
     {
       "system_type": "cli",
       "markers": ["cli", "утилит", "command"]
+    },
+    {
+      "system_type": "cli",
+      "markers": ["поиск в интернете", "internet search", "web search"]
     },
     {
       "system_type": "file_processing_utility",
@@ -47,7 +51,11 @@
         "picture",
         "изображ",
         "картин",
-        "фото"
+        "фото",
+        "web search",
+        "internet search",
+        "поиск в интернете",
+        "суммари"
       ]
     },
     {
@@ -74,6 +82,14 @@
     "scrape",
     "скрапер",
     "новост",
+    "поиск в интернете",
+    "поиска в интернете",
+    "интернет",
+    "поиск",
+    "internet search",
+    "web search",
+    "search",
+    "search provider",
     "dependencies",
     "зависим"
   ],
@@ -83,6 +99,9 @@
     "directory",
     "folder",
     "csv",
+    "md",
+    ".md",
+    "markdown",
     "json",
     "jsonl",
     "yaml",
@@ -100,6 +119,11 @@
     "scrape",
     "скрапер",
     "новост",
+    "фраз",
+    "query",
+    "search",
+    "поиск",
+    "интернет",
     "принимает",
     "читает",
     "файл",
@@ -129,6 +153,9 @@
     "yaml",
     "yml",
     "csv",
+    "md",
+    ".md",
+    "markdown",
     "txt",
     "doc",
     "rtf",
@@ -142,13 +169,22 @@
     "текст",
     "сервер",
     "service",
-    "api"
+    "api",
+    "summary",
+    "summar",
+    "суммари",
+    "резюме",
+    "источник",
+    "ссылк"
   ],
   "success_criteria_markers": [
     "test",
     "тест",
     "readme",
     "csv",
+    "md",
+    ".md",
+    "markdown",
     "json",
     "report",
     "отчет",
@@ -164,7 +200,13 @@
     "contents",
     "содерж",
     "сервер",
-    "api"
+    "api",
+    "summary",
+    "summar",
+    "суммари",
+    "резюме",
+    "источник",
+    "ссылк"
   ],
   "simple_cli_transform_markers": [
     "uppercase",

@@ -60,7 +60,7 @@ def _findings(
     target = str(dict(implementation_plan.get("implementation_target", {})).get("candidate") or "")
     tested_target = str(dict(test_plan.get("test_target", {})).get("candidate") or "")
     if dict(implementation_plan.get("implementation_target", {})).get("status") == "blocked_no_safe_candidate":
-        findings.append(_finding("blocked_no_safe_candidate", "info", "Implementation is blocked until source-specific extraction evidence exists."))
+        findings.append(_finding("blocked_no_safe_candidate", "high", "Implementation is blocked until source-specific extraction evidence exists."))
         return findings
     if target and tested_target != target:
         findings.append(_finding("test_target_mismatch", "high", "TestPlan target does not match ImplementationPlan target."))
@@ -150,6 +150,28 @@ def _conformance_checks(
     tested_acceptance = {str(item.get("acceptance_id")) for item in test_plan.get("acceptance_tests", []) if item.get("acceptance_id")}
     executable = dict(test_plan.get("executable_acceptance", {}))
     obligations = list(executable.get("obligations", []))
+    if _blocked_handoff(implementation_plan, test_plan):
+        return [
+            _check(
+                "artifact_chain_present",
+                technical_spec.get("artifact_type") == "TechnicalSpec"
+                and implementation_plan.get("artifact_type") == "ImplementationPlan"
+                and test_plan.get("artifact_type") == "TestPlan",
+                "TechnicalSpec, ImplementationPlan and TestPlan must be present.",
+            ),
+            _check(
+                "blocked_handoff_preserved",
+                dict(implementation_plan.get("contract_binding", {})).get("binding_status") == "blocked_no_safe_candidate"
+                and test_plan.get("status") == "blocked_no_safe_candidate",
+                "Blocked TechnicalSpec handoff must stay blocked for Tester and Reviewer.",
+            ),
+            _check(
+                "blocked_matrix_present",
+                bool(test_plan.get("contract_test_matrix")),
+                "Tester must publish blocked-handoff verification rows.",
+            ),
+            _check("forbidden_actions_clean", not forbidden_observed, "No role artifact may report forbidden actions.", {"observed": forbidden_observed}),
+        ]
     return [
         _check(
             "artifact_chain_present",
@@ -219,8 +241,14 @@ def _architecture_drift(technical_spec: dict[str, Any], implementation_plan: dic
 
 def _rework_tasks(findings: list[dict[str, Any]], risks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     tasks = []
-    for index, item in enumerate([*findings, *risks], start=1):
-        if item.get("severity") not in {"high", "medium"}:
+    actionable = [
+        item
+        for item in [*findings, *risks]
+        if item.get("severity") == "high"
+        or (item in findings and item.get("severity") == "medium")
+    ]
+    for index, item in enumerate(actionable, start=1):
+        if item.get("code") == "no_blocking_findings":
             continue
         tasks.append(
             {
@@ -262,6 +290,13 @@ def _review_target(implementation_plan: dict[str, Any], test_plan: dict[str, Any
         "binding_status": dict(implementation_plan.get("contract_binding", {})).get("binding_status"),
         "writable_scope": list(implementation_plan.get("writable_scope", [])),
     }
+
+
+def _blocked_handoff(implementation_plan: dict[str, Any], test_plan: dict[str, Any]) -> bool:
+    return (
+        dict(implementation_plan.get("implementation_target", {})).get("status") == "blocked_no_safe_candidate"
+        or test_plan.get("status") == "blocked_no_safe_candidate"
+    )
 
 
 def _coverage_assessment(

@@ -1,0 +1,30 @@
+{
+  "schema_version": "tester_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/simple_cli_tool",
+  "teacher_profile": "tester",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_test_plan": {
+    "candidate": "main.py:normalize_text",
+    "writable_scope": [
+      "main.py:normalize_text"
+    ],
+    "min_contract_matrix_count": 2,
+    "min_acceptance_test_count": 4,
+    "min_negative_test_count": 2,
+    "min_smoke_count": 3,
+    "min_regression_risk_count": 1,
+    "min_executable_obligation_count": 5,
+    "dependency_external_calls": "fake_by_default"
+  },
+  "teacher_review": {
+    "project_condition": "small CLI where Tester must verify normalize_text without expanding scope",
+    "expected_test_behavior": [
+      "target normalize_text exactly",
+      "cover input/output contract and malformed input",
+      "keep load/write helpers as read-only regression context"
+    ],
+    "known_risks": [
+      "load_text/write_json are filesystem context and must use fixture or tmp-path tests"
+    ]
+  }
+}

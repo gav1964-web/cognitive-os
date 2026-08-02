@@ -274,6 +274,150 @@
       "constraints": ["local-first", "no secret logging", "fake adapters in tests", "no live OpenVPN requirement for unit tests"]
     },
     {
+      "pattern_id": "web_research_summarizer_cli",
+      "match_any": ["поиск в интернете", "internet search", "web search", "суммари", "summarize", "summary", "топ-15", "top-15"],
+      "system_type": "cli",
+      "product_summary": "Локальная CLI-утилита принимает обычную поисковую фразу пользователя, получает до 15 web results через default search adapter или optional JSON endpoint, загружает страницы/статьи через fetch adapter, извлекает основной текст и snippets, строит одно краткое итоговое summary и сохраняет отчет с компактным списком источников.",
+      "architecture_style": "CLI boundary -> SearchProviderAdapter -> ArticleFetcherAdapter -> ArticleExtractor -> SummarizerCore -> single-summary Markdown/JSON report serializer",
+      "components": [
+        {"id": "cli_boundary", "purpose": "Принимает обычный user query, output path, top limit and optional fixture/JSON endpoint options.", "inputs": ["argv"], "outputs": ["exit code", "report path or typed error"]},
+        {"id": "search_provider_adapter", "purpose": "Изолирует default live search, optional JSON endpoint and fixture result source.", "inputs": ["query", "top_n", "provider policy"], "outputs": ["SearchResult list with title/url/snippet or typed search error"]},
+        {"id": "article_fetcher_adapter", "purpose": "Нормализует IRI/кириллические URL, загружает HTML для выбранных результатов с timeout/user-agent or fixture path.", "inputs": ["SearchResult URLs"], "outputs": ["HTML text per URL or typed fetch warning"]},
+        {"id": "article_extractor", "purpose": "Очищает HTML, extracts readable article text and tolerates noisy aggregator pages.", "inputs": ["HTML text", "source URL", "search snippet"], "outputs": ["Article text artifact"]},
+        {"id": "summarizer_core", "purpose": "Строит одно итоговое extractive summary по набору статей, используя snippets as strong signal and preserving source traceability.", "inputs": ["query", "Article list"], "outputs": ["ResearchReport with combined summary and source items"]},
+        {"id": "report_serializer", "purpose": "Пишет Markdown or JSON report with one final summary, compact source list and warnings.", "inputs": ["ResearchReport", "output path"], "outputs": ["written report metadata"]}
+      ],
+      "main_scenarios": [
+        {"id": "fixture_research", "description": "Разобрать fixture search results and article HTML without network.", "success": "report contains one summary section and compact source links"},
+        {"id": "live_research_plain_query", "description": "Use ordinary Russian or English user query without requiring JSON input or endpoint configuration.", "success": "default search adapter returns top-N results and report is produced"},
+        {"id": "cyrillic_url_research", "description": "Search result contains Cyrillic path/query URL.", "success": "fetcher quotes IRI safely instead of raising InvalidURL"},
+        {"id": "noisy_news_aggregator", "description": "Search result points to news/person aggregator page with lots of unrelated text.", "success": "summary uses snippets/article text and emits one bounded combined summary, not one huge section per source"},
+        {"id": "empty_results", "description": "Search provider returns no usable results.", "success": "controlled report with warning instead of crash"},
+        {"id": "malformed_article", "description": "Article HTML is empty, malformed or non-article.", "success": "warning is recorded and remaining articles are still summarized"}
+      ],
+      "interfaces": [
+        {"name": "web research CLI", "input": "query output_path --top 15 [--fixture-search/--search-endpoint-template]", "output": "Markdown/JSON report with one summary + compact sources + exit code"},
+        {"name": "SearchProviderAdapter", "input": "query + top_n + provider policy", "output": "list[SearchResult]"},
+        {"name": "ArticleExtractor", "input": "SearchResult + HTML", "output": "Article"},
+        {"name": "SummarizerCore", "input": "query + list[Article]", "output": "ResearchReport"}
+      ],
+      "data_model": [
+        {"name": "SearchResult", "fields": "title, url, snippet"},
+        {"name": "Article", "fields": "title, url, text, snippet"},
+        {"name": "SummaryItem", "fields": "title, url, summary"},
+        {"name": "ResearchReport", "fields": "query, combined summary/items, warnings"}
+      ],
+      "data_lifecycle": [
+        {"stage": "input", "shape": "query/top/output/provider options"},
+        {"stage": "search", "shape": "raw provider payload -> SearchResult list"},
+        {"stage": "fetch", "shape": "HTML text per selected URL"},
+        {"stage": "extract", "shape": "Article text artifacts"},
+        {"stage": "summarize", "shape": "ResearchReport with one combined summary and source-linked SummaryItem rows"},
+        {"stage": "output", "shape": "Markdown or JSON report with Summary and Sources sections"}
+      ],
+      "external_boundaries": [
+        {"target": "search_provider_adapter", "side_effects": ["network_optional"], "policy": "fixture-first tests; live plain-query default adapter plus optional JSON endpoint; timeout and user-agent"},
+        {"target": "article_fetcher_adapter", "side_effects": ["network_optional"], "policy": "top-15 max, IRI-to-URI normalization, timeout, user-agent and controlled fetch errors"},
+        {"target": "report_serializer", "side_effects": ["filesystem"], "policy": "write only requested report path"}
+      ],
+      "research_hints": [
+        {
+          "topic": "search provider API or self-hosted search backend",
+          "use_for": "выбрать законный источник top results: default html/lite search adapter, provider API, local index, SearxNG/metasearch, or fixture-only MVP",
+          "evidence_policy": "verify provider terms, rate limits, API key and result schema before live use",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "article extraction libraries",
+          "use_for": "оценить optional adapters such as readability/trafilatura/newspaper-like extraction",
+          "evidence_policy": "stdlib fixture extractor remains default; external libraries require dependency/license review",
+          "authority": "candidate_evidence"
+        },
+        {
+          "topic": "summarization backend policy",
+          "use_for": "decide whether one combined extractive summary is enough or whether LLM abstractive summary is allowed",
+          "evidence_policy": "LLM summary requires explicit provider/privacy/cost policy and source-grounding checks",
+          "authority": "candidate_evidence"
+        }
+      ],
+      "architecture_options": [
+        {
+          "id": "fixture_first_search_fetch_extract_summarize",
+          "status": "chosen",
+          "decision": "Начать со stdlib fixture-first CLI, default plain-query search adapter and optional provider endpoint behind the same contract.",
+          "tradeoffs": "Пакет проверяется локально и может отвечать на обычный query, но live quality depends on search markup, aggregator noise and provider terms."
+        },
+        {
+          "id": "direct_browser_scraping_everything",
+          "status": "rejected",
+          "decision": "Не начинать с browser automation or scraping arbitrary search result pages.",
+          "tradeoffs": "Может выглядеть универсальнее, но хуже воспроизводится, чаще нарушает policies and is harder to test."
+        },
+        {
+          "id": "llm_summarizes_raw_web_without_evidence",
+          "status": "rejected",
+          "decision": "Не отдавать LLM сырые URL without extracted evidence and source links.",
+          "tradeoffs": "Быстрее для демо, но повышает риск hallucination and unverifiable summaries."
+        }
+      ],
+      "security_policy": [
+        "Do not run live network during default tests.",
+        "Live search from a plain query must go through the default adapter or explicit endpoint policy.",
+        "Limit fetched pages to top-15 before network fanout.",
+        "Normalize IRI/cyrillic URLs before fetch.",
+        "Do not execute page scripts or external content.",
+        "Reports must preserve source URLs and produce one concise user-facing summary."
+      ],
+      "state_and_replay_policy": [
+        {"owner": "fixture_store", "state": "search results and article HTML fixtures", "resume": "rerun parser/summarizer without network"},
+        {"owner": "search_provider_adapter", "state": "optional raw provider response", "resume": "cache only as explicit future feature"},
+        {"owner": "report_serializer", "state": "summary report artifact", "resume": "recompute from stored fixtures or raw responses"}
+      ],
+      "risks": [
+        {"severity": "high", "risk": "provider_terms_or_rate_limit_violation", "mitigation": "keep tests fixture-only and route live query through explicit search adapter policies"},
+        {"severity": "high", "risk": "hallucinated_or_unsourced_summary", "mitigation": "extractive combined summary by default and compact source list"},
+        {"severity": "high", "risk": "cyrillic_or_iri_url_failure", "mitigation": "normalize IRI to URI before fetch and cover Cyrillic URL test"},
+        {"severity": "medium", "risk": "noisy_aggregator_pages", "mitigation": "use snippets as summary evidence and bound the final combined summary"},
+        {"severity": "medium", "risk": "article_markup_drift", "mitigation": "extractor fixture tests, warnings for empty article text"},
+        {"severity": "medium", "risk": "network_timeout_or_partial_results", "mitigation": "timeouts, per-article warnings and partial report policy"}
+      ],
+      "non_goals_extra": [
+        "Не строить собственный web-scale search index в первом MVP.",
+        "Не обходить robots/provider terms.",
+        "Не делать abstractive LLM summary без отдельной privacy/provider policy."
+      ],
+      "open_questions": [
+        "Какой live search provider разрешен для production use?",
+        "Нужен Markdown, JSON или оба формата отчета?",
+        "Какая длина одного итогового summary считается приемлемой?",
+        "Разрешена ли LLM summarization или только local extractive combined summary?",
+        "Нужно ли сохранять raw search/article fixtures for replay?"
+      ],
+      "scope": [
+        "Спроектировать CLI web research utility for plain user query -> top results -> one final summary.",
+        "Разделить search/fetch/extract/summarize/report boundaries.",
+        "Зафиксировать fixture-first tests, live network policy, Cyrillic URL handling and source-grounded output."
+      ],
+      "primary_contract": {
+        "name": "WebResearchRequest -> ResearchReport",
+        "input": "query, top_n<=15, provider policy, output path",
+        "output": "Markdown/JSON report with one concise summary, compact source links and warnings",
+        "side_effect_policy": "network only through default/explicit adapters; tests fixture-only"
+      },
+      "acceptance_focus": [
+        "fixture search provider tests",
+        "plain query default search adapter tests",
+        "top-15 limit tests",
+        "Cyrillic URL normalization tests",
+        "HTML extraction fixture tests",
+        "single combined summary and compact source-link tests",
+        "noisy aggregator page tests",
+        "empty/malformed article negative tests",
+        "README dependency/live-network policy"
+      ],
+      "constraints": ["fixture-first", "stdlib default", "plain query input", "optional live network", "top-15 maximum", "one final summary", "source links required", "Cyrillic URL safe"]
+    },
+    {
       "pattern_id": "web_news_scraper_cli",
       "match_any": ["скрапер", "scraper", "scrape", "новост", "news", "cnews", "ixbt"],
       "system_type": "file_processing_utility",

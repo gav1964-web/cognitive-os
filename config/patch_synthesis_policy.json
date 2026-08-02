@@ -1,0 +1,31 @@
+{
+  "schema_version": "patch_synthesis_policy.v1",
+  "recipes": {
+    "required_input_guard": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "required_input_guard_synthesized",
+      "operation_kind": "insert_required_input_guard",
+      "max_required_inputs": 8,
+      "missing_input_case": {
+        "kind": "malformed_input_case",
+        "given": {}
+      },
+      "positive_case_kind": "positive_contract_case",
+      "ignored_signature_parameters": ["self", "cls"],
+      "already_present_markers": [
+        "{key} required",
+        "'{key}' not in kwargs",
+        "\"{key}\" not in kwargs"
+      ],
+      "named_argument_guard": [
+        "if {key} is None:",
+        "    raise ValueError(\"{key} required\")"
+      ],
+      "kwargs_guard": [
+        "if \"{key}\" not in {kwargs}:",
+        "    raise ValueError(\"{key} required\")"
+      ]
+    }
+  }
+}

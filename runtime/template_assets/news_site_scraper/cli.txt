@@ -1,0 +1,382 @@
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+from news_site_scraper.article_summary import enrich_missing_summaries
+from news_site_scraper.browser_fetcher import fetch_rendered_html
+from news_site_scraper.failure_report import write_failure_report
+from news_site_scraper.collection_plan import build_collection_plan
+from news_site_scraper.fetcher import fetch_html
+from news_site_scraper.llm_extractor import diagnose_extraction_failure, execute_strategy_candidate, summarize_rows_with_llm
+from news_site_scraper.parser import parse_news_items
+from news_site_scraper.profile_promotion import apply_approved_profile_patch, run_kb_patch_proposal, run_profile_promotion_gate
+from news_site_scraper import profile_proposal, source_methods
+from news_site_scraper.report_writer import write_news_report
+from news_site_scraper.site_profile import profile_for
+from news_site_scraper.run_report import NewsSiteRunEvent, write_run_report
+from news_site_scraper.source_discovery import discover_news_article_rows, discover_news_sources, discover_news_sources_with_llm, load_seed_sites
+from news_site_scraper.source_methods import _browser_rows, _feed_rows, _fetch_front_page, _local_browser_required_diagnosis, _looks_browser_required, _sitemap_rows
+
+
+def _sync_source_method_hooks() -> None:
+    source_methods.fetch_html = fetch_html
+    source_methods.fetch_rendered_html = fetch_rendered_html
+    source_methods.diagnose_extraction_failure = diagnose_extraction_failure
+    source_methods.execute_strategy_candidate = execute_strategy_candidate
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input')
+    parser.add_argument('output')
+    parser.add_argument('--promote-profile-proposal', action='store_true')
+    parser.add_argument('--kb-patch-proposal', action='store_true')
+    parser.add_argument('--apply-approved-profile', action='store_true')
+    parser.add_argument('--profiles-json', default=None)
+    parser.add_argument('--proposal-html', default=None)
+    parser.add_argument('--also-input', action='append', default=[])
+    parser.add_argument('--use-popular-sites', action='store_true')
+    parser.add_argument('--source-discovery', choices=('auto', 'search', 'static'), default='auto')
+    parser.add_argument('--source-search-url', default='https://duckduckgo.com/html/')
+    parser.add_argument('--source-llm-mode', choices=('auto', 'on', 'off'), default='auto')
+    parser.add_argument('--llm-base-url', default='http://127.0.0.1:8000/v1')
+    parser.add_argument('--llm-model', default='deepseek/deepseek-chat')
+    parser.add_argument('--topic', '--query', dest='topic', default=None)
+    parser.add_argument('--base-url', default=None)
+    parser.add_argument('--top', type=int, default=10)
+    parser.add_argument('--top-per-site', type=int, default=None)
+    parser.add_argument('--total-top', type=int, default=None)
+    parser.add_argument('--max-sites', type=int, default=10)
+    parser.add_argument('--site-timeout', type=float, default=15.0)
+    parser.add_argument('--total-timeout', type=float, default=120.0)
+    parser.add_argument('--fail-policy', choices=('partial', 'strict'), default='partial')
+    parser.add_argument('--dedupe', choices=('title_url', 'canonical_url', 'semantic'), default='title_url')
+    parser.add_argument('--workers', type=int, default=1)
+    parser.add_argument('--summary-mode', choices=('heuristic', 'llm', 'off'), default='heuristic')
+    parser.add_argument('--run-report', default=None)
+    parser.add_argument('--profile-proposal', default=None)
+    parser.add_argument('--no-llm-fallback', action='store_true')
+    parser.add_argument('--browser', choices=('auto', 'always', 'off'), default='auto')
+    parser.add_argument('--browser-timeout-ms', type=int, default=10000)
+    args = parser.parse_args(argv)
+    _sync_source_method_hooks()
+    if args.promote_profile_proposal:
+        run_profile_promotion_gate(args.input, args.output, html_path=args.proposal_html, requested_top=args.top)
+        return 0
+    if args.kb_patch_proposal:
+        run_kb_patch_proposal(args.input, args.output)
+        return 0
+    if args.apply_approved_profile:
+        apply_approved_profile_patch(args.input, args.output, profiles_path=args.profiles_json)
+        return 0
+    per_site_top = args.top_per_site if args.top_per_site is not None else args.top
+    requested_top = max(0, min(per_site_top, 10))
+    total_top = None if args.total_top is None else max(0, args.total_top)
+    max_sites = max(1, args.max_sites)
+    if args.use_popular_sites and Path(args.output).suffix.lower() != '.md':
+        print('popular-sites topic mode writes one Markdown report; use an .md output path', file=sys.stderr)
+        return 6
+    total_started = time.monotonic()
+    all_rows: list[dict[str, str]] = []
+    run_events: list[NewsSiteRunEvent] = []
+    any_live = False
+    input_values = _input_values(args, max_sites)
+    if not input_values:
+        print('no source sites selected for collection', file=sys.stderr)
+        return 3
+    plan = build_collection_plan(
+        input_values,
+        top_per_site=requested_top,
+        total_top=total_top,
+        max_sites=max_sites,
+        site_timeout=args.site_timeout,
+        total_timeout=args.total_timeout,
+        fail_policy=args.fail_policy,
+        dedupe=args.dedupe,
+        workers=args.workers,
+        summary_mode=args.summary_mode,
+    )
+    for input_value, source_rows, is_live, status_code in _collect_all_inputs(plan, args, total_started):
+        if time.monotonic() - total_started > args.total_timeout:
+            print('total timeout exceeded before all sites were processed', file=sys.stderr)
+            if args.fail_policy == 'strict':
+                return 5
+            break
+        if status_code and (len(plan.inputs) == 1 or args.fail_policy == 'strict'):
+            run_events.append(NewsSiteRunEvent(input_value, len(source_rows), status_code, is_live, 'failed'))
+            if args.run_report:
+                write_run_report(args.run_report, plan=plan, events=run_events, total_items=len(all_rows), summary_mode=args.summary_mode)
+            if args.profile_proposal and is_live:
+                _write_profile_proposal_for_input(args.profile_proposal, input_value, args, requested_top)
+            return status_code
+        any_live = any_live or is_live
+        all_rows = _merge_rows(all_rows, source_rows, mode=plan.dedupe)
+        run_events.append(NewsSiteRunEvent(input_value, len(source_rows), status_code, is_live, 'ok' if status_code == 0 else 'partial'))
+        if plan.total_top is not None and len(all_rows) >= plan.total_top:
+            all_rows = all_rows[:plan.total_top]
+            break
+    if not all_rows:
+        print('no news items parsed from any input', file=sys.stderr)
+        return 3
+    if args.topic:
+        all_rows = _filter_rows_by_topic(all_rows, args.topic)
+        if not all_rows:
+            all_rows = _topic_search_rows(args, total_top or 20)
+            if not all_rows:
+                print(f'no collected news items matched topic {args.topic!r}', file=sys.stderr)
+                return 7
+            any_live = True
+    if plan.total_top is not None:
+        all_rows = all_rows[:plan.total_top]
+    summary_text = _summary_text(all_rows, args.summary_mode)
+    write_news_report(args.output, all_rows, fixture=not any_live, summary_text=summary_text)
+    if args.run_report:
+        write_run_report(args.run_report, plan=plan, events=run_events, total_items=len(all_rows), summary_mode=args.summary_mode)
+    return 0
+
+
+def _input_values(args, max_sites: int) -> list[str]:
+    if args.use_popular_sites:
+        return _popular_sites(args, max_sites)
+    return [args.input, *args.also_input][:max_sites]
+
+
+def _popular_sites(args, max_sites: int) -> list[str]:
+    topic = args.topic or ('' if args.input == 'popular' else args.input) or 'top news'
+    if args.source_discovery in {'auto', 'search'}:
+        try:
+            discovered = discover_news_sources(
+                topic,
+                max_sites=max_sites,
+                fetcher=fetch_html,
+                search_url=args.source_search_url,
+                timeout=args.site_timeout,
+            )
+        except Exception as exc:
+            print(f'source discovery failed: {exc}', file=sys.stderr)
+            discovered = []
+        if discovered:
+            print(f'discovered {len(discovered)} news sources for topic {topic!r}', file=sys.stderr)
+            return discovered[:max_sites]
+    if args.source_discovery in {'auto', 'search'} and args.source_llm_mode in {'auto', 'on'}:
+        try:
+            proposed = discover_news_sources_with_llm(topic, max_sites=max_sites, base_url=args.llm_base_url, model=args.llm_model)
+        except Exception as exc:
+            print(f'LLM source discovery failed: {exc}', file=sys.stderr)
+            proposed = []
+        if proposed:
+            print(f'LLM proposed {len(proposed)} validated news sources for topic {topic!r}', file=sys.stderr)
+            return proposed[:max_sites]
+    if args.source_discovery == 'search':
+        print('source discovery returned no news sources', file=sys.stderr)
+        return []
+    print('using static seed news sources because live source discovery was unavailable', file=sys.stderr)
+    return load_seed_sites(max_sites)
+
+
+def _topic_search_rows(args, total_top: int) -> list[dict[str, str]]:
+    if not args.use_popular_sites or not args.topic or args.source_discovery not in {'auto', 'search'}:
+        return []
+    try:
+        rows = discover_news_article_rows(
+            args.topic,
+            max_items=max(1, min(total_top, 20)),
+            fetcher=fetch_html,
+            search_url=args.source_search_url,
+            timeout=args.site_timeout,
+        )
+    except Exception as exc:
+        print(f'topic article discovery failed: {exc}', file=sys.stderr)
+        return []
+    if rows:
+        print(f'topic article discovery returned {len(rows)} candidate articles', file=sys.stderr)
+        return enrich_missing_summaries(rows, fetch_html=fetch_html, max_article_fetches=min(5, len(rows)))
+    return []
+
+
+def _filter_rows_by_topic(rows: list[dict[str, str]], topic: str) -> list[dict[str, str]]:
+    tokens = [token for token in _normalize_topic(topic).split() if token]
+    if not tokens:
+        return rows
+    return [row for row in rows if all(_topic_token_matches(row, token) for token in tokens)]
+
+
+def _topic_token_matches(row: dict[str, str], token: str) -> bool:
+    aliases = {
+        'trump': ('trump', 'трамп'),
+        'трамп': ('trump', 'трамп'),
+        'putin': ('putin', 'путин', 'путина', 'путину', 'путиным'),
+        'путин': ('putin', 'путин', 'путина', 'путину', 'путиным'),
+        'путина': ('putin', 'путин', 'путина', 'путину', 'путиным'),
+        'zelensky': ('zelensky', 'zelenskyy', 'зеленский', 'зеленского'),
+        'зеленский': ('zelensky', 'zelenskyy', 'зеленский', 'зеленского'),
+    }
+    haystack = _normalize_topic(' '.join(str(row.get(key, '')) for key in ('title', 'summary', 'source', 'url')))
+    return any(alias in haystack for alias in aliases.get(token, (token,)))
+
+
+def _normalize_topic(value: str) -> str:
+    lowered = value.lower().replace('ё', 'е')
+    return ''.join(ch if ch.isalnum() or ch.isspace() else ' ' for ch in lowered)
+
+
+def _collect_all_inputs(plan, args, total_started: float):
+    if plan.workers <= 1 or len(plan.inputs) <= 1:
+        for input_value in plan.inputs:
+            yield (input_value, *_collect_rows_from_input(input_value, args, plan.top_per_site, plan.site_timeout))
+        return
+    max_workers = max(1, min(plan.workers, len(plan.inputs), plan.max_sites))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_collect_rows_from_input, input_value, args, plan.top_per_site, plan.site_timeout): input_value
+            for input_value in plan.inputs
+        }
+        try:
+            completed = as_completed(futures, timeout=plan.total_timeout)
+            for future in completed:
+                if time.monotonic() - total_started > plan.total_timeout:
+                    break
+                input_value = futures[future]
+                try:
+                    yield (input_value, *future.result())
+                except Exception as exc:
+                    print(f'failed to process input {input_value}: {exc}', file=sys.stderr)
+                    yield input_value, [], input_value.startswith(('http://', 'https://')), 2
+        except FuturesTimeoutError:
+            for future, input_value in futures.items():
+                if not future.done():
+                    future.cancel()
+                    print(f'timed out before input completed: {input_value}', file=sys.stderr)
+                    yield input_value, [], input_value.startswith(('http://', 'https://')), 5
+
+
+def _summary_text(rows: list[dict[str, str]], summary_mode: str) -> str | None:
+    if summary_mode == 'off':
+        return ''
+    if summary_mode != 'llm':
+        return None
+    summary = summarize_rows_with_llm(rows)
+    return summary or None
+
+
+def _write_profile_proposal_for_input(path: str, input_value: str, args, requested_top: int) -> None:
+    if not input_value.startswith(('http://', 'https://')):
+        return
+    try:
+        html = _fetch_front_page(input_value, args.site_timeout)
+    except Exception as exc:
+        profile_proposal.write_profile_proposal(path, url=input_value, html='', requested_top=requested_top, error=str(exc))
+        return
+    profile_proposal.write_profile_proposal(path, url=input_value, html=html, requested_top=requested_top)
+
+
+def _collect_rows_from_input(input_value: str, args, requested_top: int, site_timeout: float) -> tuple[list[dict[str, str]], bool, int]:
+    is_url = input_value.startswith(('http://', 'https://'))
+    base_url = args.base_url or (input_value if is_url else 'https://example.test/')
+    profile = profile_for(base_url)
+    try:
+        html = _fetch_front_page(input_value, site_timeout) if is_url else Path(input_value).read_text(encoding='utf-8')
+    except Exception as exc:
+        print(f'failed to read input {input_value}: {exc}', file=sys.stderr)
+        return [], is_url, 2
+    diagnosis = None
+    browser_attempted = False
+    rows = parse_news_items(html, profile)[:requested_top]
+    browser_shell = is_url and _looks_browser_required(html)
+    if is_url and len(rows) < requested_top and args.browser == 'always':
+        browser_attempted = True
+        browser_rows = _browser_rows(input_value, profile, requested_top, args.browser_timeout_ms)
+        print(f'browser fallback returned {len(browser_rows)} candidate news items', file=sys.stderr)
+        rows = _merge_rows(rows, browser_rows)[:requested_top]
+        if len(rows) < requested_top and diagnosis is None:
+            diagnosis = _local_browser_required_diagnosis(input_value, 'explicit browser mode did not produce validated news items')
+    if is_url and len(rows) < requested_top and args.browser == 'auto' and browser_shell:
+        diagnosis = _local_browser_required_diagnosis(input_value)
+        browser_attempted = True
+        browser_rows = _browser_rows(input_value, profile, requested_top, args.browser_timeout_ms)
+        print(f'browser fallback returned {len(browser_rows)} candidate news items', file=sys.stderr)
+        rows = _merge_rows(rows, browser_rows)[:requested_top]
+    if is_url and len(rows) < requested_top and not browser_shell:
+        rows = _merge_rows(_feed_rows(html, profile, requested_top, fetch_html), rows)[:requested_top]
+    if is_url and len(rows) < requested_top and not browser_shell:
+        rows = _merge_rows(rows, _sitemap_rows(html, profile, requested_top, fetch_html))[:requested_top]
+    if is_url and len(rows) < requested_top and not args.no_llm_fallback:
+        print('deterministic extraction incomplete; attempting LLM fallback', file=sys.stderr)
+        diagnosis = diagnosis or diagnose_extraction_failure(html, profile, requested_top=requested_top)
+        strategy = dict(diagnosis.get('strategy_candidate') or {})
+        print(f"LLM diagnosis strategy={strategy.get('strategy_type', 'unknown')}", file=sys.stderr)
+        llm_rows = execute_strategy_candidate(strategy, profile, requested_top=requested_top, fetcher=fetch_html)
+        print(f'LLM fallback returned {len(llm_rows)} candidate news items', file=sys.stderr)
+        rows = _merge_rows(rows, llm_rows)[:requested_top]
+        if len(rows) < requested_top and strategy.get('strategy_type') == 'browser_required' and args.browser != 'off' and not browser_attempted:
+            browser_attempted = True
+            browser_rows = _browser_rows(input_value, profile, requested_top, args.browser_timeout_ms)
+            print(f'browser fallback returned {len(browser_rows)} candidate news items', file=sys.stderr)
+            rows = _merge_rows(rows, browser_rows)[:requested_top]
+    if is_url and not rows:
+        if diagnosis is not None:
+            write_failure_report(args.output, url=input_value, requested_top=requested_top, diagnosis=diagnosis, rows_found=0)
+        print(f'no news items parsed from live URL {input_value}', file=sys.stderr)
+        return [], is_url, 3
+    if is_url and len(rows) < requested_top:
+        if diagnosis is not None:
+            write_failure_report(args.output, url=input_value, requested_top=requested_top, diagnosis=diagnosis, rows_found=len(rows))
+        print(f'parsed only {len(rows)} news items from live URL {input_value}, requested {requested_top}', file=sys.stderr)
+        return rows, is_url, 4
+    if is_url:
+        rows = enrich_missing_summaries(rows, fetch_html=fetch_html)
+    return rows, is_url, 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _merge_rows(*groups: list[dict[str, str]], mode: str = 'title_url') -> list[dict[str, str]]:
+    merged: list[dict[str, str]] = []
+    seen: set[tuple[str, str] | str] = set()
+    for group in groups:
+        for row in group:
+            key = _dedupe_key(row, mode)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(row)
+    return merged
+
+
+def _dedupe_key(row: dict[str, str], mode: str) -> tuple[str, str] | str:
+    title = row.get('title', '').strip().lower()
+    url = row.get('url', '').strip().lower()
+    if mode == 'canonical_url':
+        return _canonical_url(url) or (title, url)
+    if mode == 'semantic':
+        return (_semantic_title_key(title), _canonical_url(url))
+    return (title, url)
+
+
+def _canonical_url(url: str) -> str:
+    return url.split('#', 1)[0].split('?', 1)[0].rstrip('/').lower()
+
+
+def _semantic_title_key(title: str) -> str:
+    cleaned = ''.join(ch.lower() if ch.isalnum() or ch.isspace() else ' ' for ch in title)
+    return ' '.join(cleaned.split()[:12])
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -127,6 +127,31 @@ The same packet/recovery contract is used by synchronous goal execution,
 `layer_packets` and `level35_adaptations`, so recovery decisions survive process
 boundaries and can be audited after a worker finishes.
 
+### Unified Entry Route
+
+Normal user prompts should enter through one configured entrypoint:
+
+```bash
+python tools/cognitive_os.py --root . --prompt "..."
+```
+
+`tools/cognitive_os.py` calls `runtime/cognitive_os_entry.py`, which builds a
+`CognitiveOSEntryRouteDecision` before any pipeline starts. The route decision is
+selected from `config/cognitive_os_entry_routes.json`, using prompt adequacy,
+Stage 2 template availability, optional `--project-dir`, and explicit mode. The
+current configured pipelines are:
+
+- `prompt_to_product`: `PromptAdequacyGate -> Stage2TemplateRoute -> VerifiedSystemPackage`
+- `greenfield_architect_spec`: `UserPrompt -> ProductArchitectureRecord -> ProductTechnicalSpec`
+- `project_foundation_analysis`: `ProjectMapReport -> ArchitectureDecisionRecord -> TechnicalSpec`
+- `clarification`: `PromptAdequacyGate -> ClarificationPacket`
+
+Older commands such as `tools/verified_system_package.py`,
+`tools/greenfield_role_run.py`, `tools/role_foundation_run.py`, and
+`tools/goal_run.py` remain useful as lower-level runners and diagnostics, but
+they are no longer the intended product-facing dispatcher. This prevents Codex
+or a human operator from silently choosing the first module by hand.
+
 ## Key Concepts
 
 ### Crystal / Liquid Split
@@ -183,24 +208,31 @@ Level 4 contains role skills, not autonomous all-powerful agents:
 | Project Analyzer | project files | `ProjectMapReport` | reports evidence, does not rewrite source |
 | Architect | project report + goal | `ArchitectureDecisionRecord` | does not write code or mutate registry |
 | SpecWriter | ADR | `TechnicalSpec` | does not broaden chosen architecture scope |
-| Implementer Planner | TechnicalSpec | `ImplementationPlan` | does not write code |
+| Implementer Planner | TechnicalSpec / ProductTechnicalSpec | `ImplementationPlan` | does not write code |
 | Programmer Executor | ImplementationPlan | `PatchPackage` + `TestResult` | MVP mode is sandbox/no-source-edit |
 | Tester | TechnicalSpec + ImplementationPlan | `TestPlan` | defines verification, does not execute tests |
 | Reviewer | spec + plan + tests + optional result | `ReviewFindings` | reviews, does not patch or promote |
 
-Current hardening focus is deliberately narrow: `Project Analyzer -> Architect -> SpecWriter`.
-This foundation contour must produce more than MVP-shaped placeholders:
+Current hardening has a staged contour. The foundation remains `Project Analyzer -> Architect -> SpecWriter`, and the downstream readiness gates now cover `Implementer Planner -> Tester` before moving on to Reviewer/Executor depth.
+The foundation contour must produce more than MVP-shaped placeholders:
 
 - `ProjectMapReport` must contain source-backed purpose, boundaries, entrypoints, execution path, reusable capabilities, contract/data observations, errors/state/reproducibility notes, data lifecycle and a minimal extraction plan.
 - `ArchitectureDecisionRecord` must turn those facts into subsystem boundaries with inputs/outputs, architecture options with tradeoffs, chosen/rejected decisions, rejected-option score deltas and deferral conditions, source-linked risks with impact/mitigation/evidence, data/state models and a typed brief for SpecWriter.
 - `TechnicalSpec` must preserve the chosen scope as an API artifact: requirements, interface contracts, data lifecycle, error model, acceptance criteria, traceability, state/replay policy and bounded implementation handoff.
+- Project type coverage is KB-driven. `knowledge/architecture_patterns/project_archetypes.json` contains scenario/input/output summaries for project archetypes such as SDKs, workflow runtimes, web frameworks, ML UI frameworks, scientific/media libraries, observability tooling, services, CLI tools and generic Python packages. Analyzer code interprets these records; new project types should be added as KB/config records and validated by field trials, not hard-coded as role branches.
+- First-slice semantics are config-driven. `config/semantic_target_profiles.json` currently contains 77 contract-family profiles, including compute graphs, import graphs, crawler settings, workflow triggers, chat-template rendering, URL-query mutation, source-file parsing, framework dependency analysis, SSH connection boundaries, template project generation, runtime message dispatch, static-site build, web raw-data rendering, CLI option processing, pipeline registry composition, isolated build environment lifecycle, websocket protocol-send, plugin hook dispatch, SDK resource factory, dataset loading, app launch, data-expectation metric, SQL translation and tokenizer conversion boundaries. These profiles enrich ranking, contracts, validation gates and failure modes without adding role-specific Python branches.
 - For untyped Python, SpecWriter may emit conservative inferred shapes such as `RequestLike`, `MappingLike`, `ParsedStructure`, `RenderContext` or `InferredValue`; it must not hand off raw `Any -> Any`. Inferred contracts are implementation obligations, not proof: Implementer/Tester must confirm or refine them with source evidence and negative tests.
+- `TechnicalSpec.human_review` carries decision points, non-goals and review notes for people while the JSON artifact remains the machine API for the next role.
 - `TechnicalSpec.extraction_contract.semantic_quality` is a separate advisory signal. It distinguishes a well-formed contract from an architecturally useful first slice and flags meta-infrastructure, runtime-boundary, trivial accessor and support/helper targets for review.
 - `ArchitectRedTeamReport` is the deterministic handoff gate before SpecWriter. It rejects ADRs without option tradeoffs, explained rejected options, bounded source-backed first slice with selection policy, actionable risk model, actionable SpecWriter brief, source context for brief targets, source-linked traceability and explicit forbidden-action enforcement. An `ArchitectureDecisionRecord` is ready for SpecWriter only with `handoff_verdict=ready_for_spec_writer`.
-- `SpecWriterRedTeamReport` is the deterministic handoff gate before Implementer. It rejects weak `Any -> Any` contracts, side-effecting targets without validation/idempotency/process/retry gates, missing candidate acceptance, missing interface contract for the selected target, and first-slice traceability gaps. A `TechnicalSpec` is implementation-ready only with `handoff_verdict=ready_for_implementer`.
+- `SpecWriterRedTeamReport` is the deterministic handoff gate before Implementer. It rejects weak `Any -> Any` contracts, side-effecting targets without validation/idempotency/process/retry gates, missing candidate acceptance, missing interface contract for the selected target, first-slice traceability gaps, and `TechnicalSpec.extraction_contract.candidate` values outside `ArchitectureDecisionRecord.first_slice_contract.targets`. A `TechnicalSpec` is implementation-ready only with `handoff_verdict=ready_for_implementer`.
 - With `write=True`, the contour writes human-readable Markdown documents for review: `human_documents.architecture_analysis` and `human_documents.technical_spec`. These documents are reading surfaces over the typed JSON artifacts, not replacement protocols. `HumanRoleDocumentQualityReport` checks that they preserve the machine chain (`ProjectMapReport -> ArchitectureDecisionRecord -> TechnicalSpec`), Russian human-readable sections, evidence/traceability, validation gates, acceptance criteria, and implementation handoff.
 
-Implementer, Programmer Executor, Tester and Reviewer remain present in the repository, but they are not the active quality-expansion target for this stage.
+Implementer Planner and Tester now have explicit curriculum gates. Implementer readiness is measured by `tools/implementer_curriculum.py`; Tester readiness is measured by `tools/tester_curriculum.py`. Both reports publish `avg_score`, `worst_case_score`, `ready_threshold=0.92` and `ready_by_worst_case`, and progression is judged by the worst project rather than by average score. Tester must preserve `writable_scope`, keep `evidence_scope` as read-only context, produce contract/negative/acceptance tests, and default filesystem/network/provider/subprocess boundaries to fake/fixture-backed tests.
+
+Reviewer now has the same curriculum gate style through `tools/reviewer_curriculum.py`. It checks that `ReviewFindings` confirms target coverage, preserves scope, reports no contract violations or architecture drift, distinguishes residual risks from blocking rework, and uses worst-case readiness instead of average-only scoring.
+
+Programmer Executor remains present in the repository, but it is not yet the active quality-expansion target for this stage.
 
 Greenfield prompts use a separate planning contour. A request such as "create a server" must not be forced through `ProjectMapReport -> extraction_contract` for an existing source tree. The supported planning path is:
 
@@ -210,7 +242,9 @@ UserPrompt
 -> ProductTechnicalSpec
 ```
 
-`ProductArchitectureRecord` describes product scenarios, components, interfaces, data model, external boundaries, research hints, architecture options, chosen/rejected decisions, security policy, state/replay policy, risks and open questions. `ResearchHints` are advisory evidence requests, not claims that external research has already been performed. `ArchitectureOptions` force the architect to compare a chosen path with rejected alternatives, for example choosing an OpenVPN management/profile service over implementing the OpenVPN protocol in application code. `ProductTechnicalSpec` turns that into requirements, component contracts, primary contract, selected architecture option, error model, acceptance criteria and implementation handoff. This contour still does not write code or mutate the registry; it prepares reviewed architecture and ТЗ for a future Implementer step.
+`ProductArchitectureRecord` describes product scenarios, components, interfaces, data model, external boundaries, research hints, architecture options, chosen/rejected decisions, security policy, state/replay policy, risks and open questions. `ResearchHints` are advisory evidence requests, not claims that external research has already been performed. `ArchitectureOptions` force the architect to compare a chosen path with rejected alternatives, for example choosing an OpenVPN management/profile service over implementing the OpenVPN protocol in application code. `ProductTechnicalSpec` turns that into requirements, component contracts, primary contract, selected architecture option, error model, acceptance criteria and implementation handoff. This contour still does not write code or mutate the registry; it prepares reviewed architecture and ТЗ for the Implementer Planner.
+
+Implementer Planner now has two explicit modes. For existing projects it consumes `TechnicalSpec.extraction_contract` and produces a bounded extraction/refactor `ImplementationPlan`. For greenfield prompts it consumes `ProductTechnicalSpec` and produces `implementation_target.mode=greenfield_project`, `greenfield_project_plan`, expected package files, component implementation units, adapter boundaries, fixture-first verification commands, dependency policy, acceptance mapping and sandbox-first `ExecutorHandoff`. This is still a plan artifact, not code generation and not permission to edit user source.
 
 Open questions are also part of the machine contract. The default Architect mode is `continue_with_assumptions`: open questions are carried into the human architecture document, TechnicalSpec manual review section, risks and handoff, but the pipeline still proceeds to SpecWriter. For stricter intake, `tools/greenfield_role_run.py --question-mode ask_user` runs Architect only, writes `ProductArchitectureRecord`, returns `status=needs_clarification` and emits a `clarification_prompt` that can be shown to the user before generating `ProductTechnicalSpec`.
 
@@ -240,6 +274,8 @@ Role identities, descriptions, capabilities, order, chain settings, builder sett
 
 The same configuration-first invariant is now monitored directly. `tools/config_doctor.py` emits `ConfigDoctorReport` for loader and cross-reference integrity; `tools/config_coverage.py` emits advisory `ConfigCoverageReport` for templates, rules, transforms and sandbox profiles exercised by tests/trial registries; every `VerifiedSystemPackage` embeds a `RuleTrace` that names the config sources behind the decision; and `tools/config_mutation_sandbox.py` validates a proposed JSON config replacement without touching the active file.
 
+First-slice target scoring is also configuration-driven. `config/semantic_target_profiles.json` stores semantic contract families, including ML generation, agent consensus and LLM repair hypothesis boundaries, while `config/target_quality_policy.json` stores the target-quality and SpecWriter-ranking policy groups used to reward bounded contracts and demote support, bootstrap, liveness, mutation and runtime-boundary candidates. `config/technical_spec_policy.json` stores SpecWriter source-scope, snippet-analysis, inferred type, side-effect boundary, semantic-rerank policy and strict first-slice scope enforcement: when Architect provides `first_slice_contract.targets`, SpecWriter must choose the best candidate inside that bounded set instead of widening the handoff from `spec_writer_brief`. `config/architecture_decision_policy.json` stores Architect fallback archetype/slice and source-selection policy. `config/architecture_synthesis_policy.json` stores architecture synthesis defaults: bottleneck ordering, task-focus priority, fallback first-slice shape, verification steps, defer policy and confidence thresholds. `config/foundation_semantic_quality_policy.json` stores the three-role semantic quality thresholds, generic-text guards, source-reference markers and minimum evidence counts used by the field-trial scorer. Runtime modules interpret these records; new recurring first-slice knowledge should be added as policy/profile data with regression evidence, not hardcoded into role logic.
+
 ### Capability Foundry
 
 Foundry is the controlled lifecycle for turning extracted or generated functionality into reusable capabilities:
@@ -261,10 +297,13 @@ adequate prompt
 -> isolated generated package
 -> tests
 -> tester review
+-> GeneratedProductQuality
 -> release decision
 ```
 
 The `PromptAdequacyGate` is not only a report. It is an API input to the L4.0 control plane. Stage 2 now advances only when `CognitiveControlPlaneDecision.role_transition.next_action` is `build_verified_system_package`; vague prompts route to clarification, unsupported prompts stop, and bounded-but-unknown package requests can escalate to L4.5 as a hypothesis request without bypassing contracts. If intake is uncertain but the prompt still looks like a bounded implementation request, L4.0 emits `prompt_intake_uncertainty` and asks L4.5 to interpret it before a developer changes Cognitive OS. If the prompt is a bounded behavior or limitation question about a supported domain, L4.0 emits `behavior_question_uncertainty`; L4.5 must either answer from evidence or return a `DeveloperImprovementRequest` for fact-based behavior-question answering.
+
+The user-facing result of Stage 2 is the generated working project directory, not the intermediate role artifacts. `GoalSpec`, `TechnicalSpec`, `ImplementationPlan`, tester review and other records are internal API artifacts between layers and roles. The release report now includes `GeneratedProductQuality`: a product-level gate with threshold `0.92` that checks runnable source layout, CLI/service entrypoint, visible input/output contract, controlled error paths, README run/test instructions, project-scoped verification, clean release directory and case-specific behavior. A package should not be presented as above-MVP ready only because files and tests exist.
 
 Current deterministic package classes include:
 
@@ -275,7 +314,8 @@ Current deterministic package classes include:
 - image contents CLI utility with optional vision backend;
 - image table to Excel/CSV/HTML/DOC/RTF CLI utility with injectable OCR/text backend, `--ocr-text-file`, optional OpenAI-compatible vision/OCR backend, stdlib XLSX writer, CSV writer, legacy XLS-compatible HTML writer, plain HTML writer, DOC-compatible HTML writer and RTF writer;
 - generic file conversion CLI utility driven by `GenericFileConversionRecipe`, `LibraryBindingRecipe` and `AdapterImplementationPlan`, for prompts such as `.xls -> .png`, `.md -> .rtf`, `.txt -> .html` or `.jpg -> .doc`, with adapter boundary, advisory library candidates, implemented stdlib adapters where safe and dependency-free fixture tests;
-- profile-gated news-site scraper CLI utility for prompts such as `https://3dnews.ru/ -> CSV`, with a verified host profile, fixture-first parser tests, stable CSV contract, bounded fetcher adapter, timeout/user-agent and optional live smoke only;
+- profile-gated news-site scraper CLI utility for prompts such as `https://3dnews.ru/ -> CSV`, with a `SiteProfile` contract, allowlisted `STRATEGY_REGISTRY` (`html_links`, `json_ld`, `rss_atom`, `sitemap`, `browser_dom`, diagnostic-only `api_probe`), optional known-host article patterns, generic unknown-host discovery, schema.org JSON-LD extraction, RSS/Atom fallback, sitemap discovery, bounded LLM fallback over fetched evidence, explicit `--browser auto|always|off` modes backed by an optional Playwright browser-render adapter for `browser_required` diagnoses, `NewsExtractionFailureReport` for unsupported/live-blocked pages, navigation/service-link rejection, fixture-first parser tests, stable CSV/Markdown/JSON contracts, bounded fetcher adapter, timeout/user-agent and optional live smoke only;
+- web research summarizer CLI utility that accepts a search phrase, limits results to top 15, uses fixture-only tests by default, supports an explicit live JSON search endpoint adapter, extracts article text, summarizes results, and writes Markdown or JSON with source links;
 - FastAPI CSV aggregation service;
 - FastAPI in-memory key/value CRUD service.
 
@@ -295,7 +335,7 @@ unknown or uncertain prompt
 
 The loop lives in `runtime/fallback_autonomy_loop.py`. It is deliberately narrow: L4.5 may propose a route, but it still cannot build packages, execute arbitrary code, edit source, mutate the registry or promote KB records. Stage 2 may only attempt an already known generated-package route inside the isolated sandbox. Before execution, `runtime/sandbox_attempt_spec.py` creates `SandboxAttemptSpec`: a typed API artifact that names the attempt kind, case, runner, project-scoped verification commands, allowed operations, forbidden operations and invariants. The attempt policy is data-driven through `registry/sandbox_attempt_policy.json`; if that registry file is missing or invalid, the runtime falls back to a minimal safe default rather than granting extra authority. The first active policy supports `existing_stage2_case` for mapped cases such as `image_contents_cli` and `csv_sort_cli`, plus `bounded_adapter_recipe` for `generic_file_converter_cli`. The adapter recipe path embeds `GenericFileConversionRecipe`, `LibraryBindingRecipe` and `AdapterImplementationPlan`; it may select only fixture or stdlib adapter backends and still forbids dependency install, network, registry mutation, user source edits and model-generated code execution. Non-allowlisted routes block before any package attempt. If model-backed L4.5 gives a valid but weaker hypothesis while deterministic evidence already maps the prompt to an existing route, proposal hardening records `deterministic_existing_route_rescue=true` and uses the verified route candidate. If that attempt passes verification, the release report is marked ready and the loop writes a staged `KnowledgeCandidate` with `auto_promote=false`; if it fails or has no executable mapping, the output remains a developer handoff.
 
-Verified packages include a `ProgrammerSandboxGate` that records project directory presence, verification status, tester approval, and the invariant that user source and registries were not modified.
+Verified packages include a `ProgrammerSandboxGate` that records project directory presence, verification status, tester approval, and the invariant that user source and registries were not modified. They also include `GeneratedProductQuality`; this is the product-facing readiness signal for whether Cognitive OS produced a usable package at the current threshold.
 
 For bounded implementation prompts that pass adequacy but have no supported deterministic package template, Stage 2 may invoke `runtime/llm_sandbox_implementation.py`. This is not free-form source editing: the model is treated as a hypothesis source, executable code is generated only from an allowlisted sandbox contract, verification runs inside `artifacts/llm_sandbox_implementations/*`, and the result keeps `promotion_allowed=false`. The allowlist is data-driven by `registry/sandbox_programmer_operations.json`; runtime validates stored `text_expression` operations with AST hardening and supports allowlisted stdlib profiles such as line sort/unique, CSV row count/sort/filter/select/sum/JSON records, HTML table to CSV, JSON extract/keys/pretty-print. If deterministic registry matching fails and `use_model=true`, L4.5/Deepseek may normalize the prompt to one existing `operation_id` from that registry; invalid ids, low confidence and provider errors remain controlled blocks. Each sandbox implementation plan now includes a `SandboxOperationGraph` from `runtime/sandbox_operation_graph.py`: a typed read/parse/transform/serialize/write/verify chain with parser/serializer choices, side-effect boundaries, evidence links, and invariants. The graph is an API artifact for L4/L4.5, programmer, tester and admission gates, not prose explanation and not an execution permission. The registry is configurable, but it is not an arbitrary-code execution channel. A verified sandbox result then passes through `runtime/sandbox_programmer_admission.py`; if tester/reviewer admission succeeds, Stage 2 may mark it `release_ready_with_risks` while still forbidding user-source, registry, and KB mutation. With `--write`, the success is also staged as a weak `KnowledgeCandidate` under `artifacts/knowledge_candidates`; repeated verified cases plus teacher/Codex approval are still required before any KB/template crystallization.
 
@@ -749,10 +789,35 @@ Prompt intake markers and boundary groups live in
 `config/web_extraction_profiles.json`; L4 prompt-to-product transition and
 escalation reason rules live in `config/l4_decision_rules.json`; L4.5
 existing-means mappings and developer request profiles live in
-`config/semantic_resolution_rules.json`. The news-site scraper route is
-profile-gated: a prompt with an unknown host such as `zindi.africa` must produce
-an L4.5/developer-improvement artifact for site profiling instead of pretending
-that a generic scraper is release-ready.
+`config/semantic_resolution_rules.json`; source target semantics and
+SpecWriter contract-family hints live in `config/semantic_target_profiles.json`.
+`runtime/semantic_target_profiles.py` is only the matcher/interpreter for those
+records: profile ids, exact/prefix/contains symbol matchers, path markers,
+exclusions, score/ranking adjustments, benign runtime-boundary markers, typed
+input/output contracts, side-effect policy, validation gates and failure
+modes are data, not role/domain branches in Python. Adding a new bounded
+semantic target family should normally be a JSON/profile change plus tests; a
+Python change is justified only when the interpreter needs a reusable matcher
+primitive or validator that the current schema cannot express. The news-site scraper route is
+profile-gated: known hosts can carry stricter article path patterns, while unknown
+hosts use a generic `SiteProfile` with same-host checks, navigation/service
+exclusions and article-like path rules. A generic profile may build a package,
+but live output is still risk-gated: if the requested top count is not parsed, the
+CLI must return controlled failure instead of pretending that arbitrary live
+HTML is supported. Browser rendering is an explicit operator-controlled mode:
+`--browser auto` is the default and tries rendering only after an L4.5
+`browser_required` diagnosis, `--browser always` tries rendered extraction before
+LLM fallback when deterministic HTML/RSS is insufficient, and `--browser off`
+forbids the browser path. The generated package declares `.[browser]` as an
+optional dependency and documents `python -m playwright install chromium`; if
+that adapter is unavailable or still cannot produce validated same-host news
+items, it writes a
+`NewsExtractionFailureReport` with diagnosis, strategy type, risks and next
+actions instead of placeholder news. Feed and sitemap probing are budgeted with
+short per-request timeouts so anti-bot/403 pages cannot stall the whole CLI
+before the browser or failure-report path runs. L4.5 may recommend a strategy
+type, but only allowlisted strategies in `strategy_registry.py` can be executed;
+`api_probe` is diagnostic-only until a concrete adapter contract is added.
 
 In the current implementation, `runtime/semantic_evidence_pack.py` first builds a bounded `SemanticEvidencePack` with prompt facts, failed gates, known templates, forbidden actions and explicit non-authority. `runtime/semantic_reasoner.py` then provides a deterministic runner for the request and an explicit model-backed mode through the configured OpenAI-compatible L4.5 gateway. The default model-backed L4.5 profile uses `deepseek/deepseek-chat`, intentionally separated from local L3.5 profiles and still constrained by L4 validation. If a ready prompt has no supported template, intake is uncertain for a concrete bounded implementation prompt, or the prompt is a bounded behavior/limitation question, L4.5 first tries to map it to existing means. A successful mapping becomes `SuccessfulResolutionCandidate`, which can later become a KB/template rule only after repeated verified successes and review. `runtime/fallback_autonomy_loop.py` can then attempt that mapped existing route in the Stage 2 sandbox and run normal tester verification; this is the intended bridge between "LLM proposed a route" and "the system actually produced a verified package". If model-backed L4.5 misses a route that deterministic evidence can prove, hardening rescues the proposal as an existing-route candidate and records the rescue in audit fields. If existing means cannot solve the prompt, or the sandbox attempt fails, L4.5/Stage 2 emits `DeveloperImprovementRequest` for Codex/human implementation work; it does not immediately mutate templates or KB. Stage 2 CLI can request a real L4.5 model proposal with `tools/verified_system_package.py --use-l45-llm`; provider failure is captured in proposal hardening and falls back to deterministic proposal. Model output is normalized, forbidden actions are stripped, weak route misses may be rescued by deterministic evidence, and the proposal passes through `runtime/l4_semantic_validation.py`, which emits `L4SemanticValidationResult` with policy review and a human-readable explanation. Vague prompts and secret/live-risk prompts still route to clarification without developer work, unsupported product surfaces route to clarification, and no path mutates templates automatically. Otherwise the result becomes clarification, stop, rework, knowledge-gap recording, sandbox-verified package, or blocked output. `runtime/semantic_replay.py` can persist `SemanticProposalReplay` records for model/prompt/hardening comparison, and `runtime/l45_semantic_benchmark.py` plus `tools/l45_semantic_benchmark.py` run a deterministic semantic-loop benchmark. Model usage is explicit through quality modes: `deterministic`, `model_propose_only`, `model_with_human_review`, and `blocked_model_untrusted`.
 

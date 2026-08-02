@@ -1,0 +1,702 @@
+import csv
+import json
+
+from pathlib import Path
+
+from news_site_scraper.cli import main
+
+
+def test_collection_plan_records_multi_site_policy():
+    from news_site_scraper.collection_plan import build_collection_plan
+    plan = build_collection_plan(
+        ['https://ixbt.com/', 'https://3dnews.ru/', 'https://cnews.ru/'],
+        top_per_site=20,
+        total_top=25,
+        max_sites=2,
+        site_timeout=0.1,
+        total_timeout=0.2,
+        fail_policy='partial',
+        dedupe='semantic',
+        workers=99,
+        summary_mode='llm',
+    )
+    assert plan.artifact_type == 'NewsCollectionPlan'
+    assert plan.inputs == ('https://ixbt.com/', 'https://3dnews.ru/')
+    assert plan.top_per_site == 10
+    assert plan.workers == 8
+    assert plan.summary_mode == 'llm'
+
+
+def test_site_profile_is_loaded_from_json_data_file():
+    from news_site_scraper.site_profile import profile_for
+    profile = profile_for('https://ixbt.com/')
+    assert profile.source == 'ixbt.com'
+    assert '/news/' in profile.link_markers
+
+
+def test_popular_sites_contract_and_dockerfile_exist():
+    root = Path(__file__).resolve().parents[1]
+    dockerfile = root / 'Dockerfile'
+    popular_sites = root / 'src' / 'news_site_scraper' / 'popular_news_sites.json'
+    assert dockerfile.is_file()
+    assert 'ENTRYPOINT ["python", "-m", "news_site_scraper.cli"]' in dockerfile.read_text(encoding='utf-8')
+    bat = (root / 'run_news_scraper.bat').read_text(encoding='utf-8')
+    assert 'PYTHONPATH=%ROOT%src' in bat
+    assert 'python -m news_site_scraper.cli' in bat
+    payload = json.loads(popular_sites.read_text(encoding='utf-8'))
+    assert len(payload['sites']) == 10
+    assert payload['sites'][0]['url'].startswith('https://')
+
+
+def test_source_discovery_extracts_top_news_sources_from_search_results():
+    from news_site_scraper.source_discovery import discover_news_sources
+    search_html = """
+    <a href='/l/?uddg=https%3A%2F%2Fwww.reuters.com%2Fworld%2Fus%2Ftrump-story'>Reuters Trump story</a>
+    <a href='/l/?uddg=https%3A%2F%2Fapnews.com%2Farticle%2Ftrump-story'>AP Trump story</a>
+    <a href='https://duckduckgo.com/about'>Search engine noise</a>
+    <a href='http://www.w3.org/TR/html4/'>HTML spec noise</a>
+    <a href='https://www.cnn.com/politics/trump-story'>CNN Trump story</a>
+    """
+    def fake_fetch(url, **kwargs):
+        assert 'Trump+news' in url
+        return search_html
+    assert discover_news_sources('Trump', max_sites=3, fetcher=fake_fetch) == [
+        'https://www.reuters.com/',
+        'https://apnews.com/',
+        'https://www.cnn.com/',
+    ]
+
+
+def test_cli_popular_sites_mode_discovers_sources_filters_topic_and_writes_single_md_summary(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    pages = {
+        'https://duckduckgo.com/html/?q=Trump+news': """
+        <a href='/l/?uddg=https%3A%2F%2Fwww.reuters.com%2Fworld%2Fus%2Ftrump-a'>Reuters</a>
+        <a href='/l/?uddg=https%3A%2F%2Fapnews.com%2Farticle%2Ftrump-b'>AP</a>
+        """,
+        'https://www.reuters.com/': "<a href='/article/trump-a'>Trump announces first policy update</a><a href='/article/trump-b'>Second Trump campaign story</a>",
+        'https://apnews.com/': "<a href='/article/local-a'>Unrelated local economy story</a><a href='/article/local-b'>Another unrelated item</a>",
+    }
+    def fake_fetch(url, **kwargs):
+        return pages.get(url, "<html><head><meta name='description' content='Article summary evidence about Trump.'></head></html>")
+    def fake_summary(rows):
+        assert [row['title'] for row in rows] == ['Trump announces first policy update', 'Second Trump campaign story']
+        return 'Общее резюме: Reuters сообщает о двух связанных с Trump материалах.'
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(cli, 'summarize_rows_with_llm', fake_summary)
+    output = tmp_path / 'trump.md'
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Trump', '--source-discovery', 'search', '--max-sites', '2', '--top-per-site', '2', '--total-top', '2', '--summary-mode', 'llm', '--browser', 'off']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Общее резюме: Reuters сообщает' in text
+    assert 'Summary unavailable' not in text
+    assert 'Unrelated local economy story' not in text
+
+
+def test_topic_filter_matches_russian_putin_query_to_english_news():
+    import news_site_scraper.cli as cli
+    rows = [
+        {'title': 'Putin comments on peace talks', 'url': 'https://example.test/putin-talks', 'summary': '', 'source': 'example.test'},
+        {'title': 'Unrelated economy update', 'url': 'https://example.test/economy', 'summary': '', 'source': 'example.test'},
+    ]
+    assert [row['title'] for row in cli._filter_rows_by_topic(rows, 'Путин')] == ['Putin comments on peace talks']
+
+
+def test_popular_topic_mode_falls_back_to_search_article_rows_when_homepages_miss_topic(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    search_html = """
+    <a href='/l/?uddg=https%3A%2F%2Fwww.reuters.com%2Fworld%2Feurope%2Fputin-peace-talks-2026-07-30%2F'>Putin comments on peace talks</a>
+    <a href='/l/?uddg=https%3A%2F%2Fwww.bbc.com%2Fnews%2Fworld-europe-putin-security'>Putin security meeting in Moscow</a>
+    """
+    def fake_fetch(url, **kwargs):
+        if url.startswith('https://duckduckgo.com/html/'):
+            return search_html
+        if url in {'https://www.reuters.com/', 'https://www.bbc.com/'}:
+            return "<a href='/news/world'>World news</a><a href='/politics'>Politics</a>"
+        return "<html><head><meta name='description' content='Article evidence about Putin and diplomatic talks.'></head></html>"
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(cli, 'discover_news_sources_with_llm', lambda topic, **kwargs: ['https://www.reuters.com/', 'https://www.bbc.com/'])
+    monkeypatch.setattr(cli, 'summarize_rows_with_llm', lambda rows: 'Общее резюме: материалы описывают заявления Путина и переговоры по безопасности.')
+    output = tmp_path / 'putin.md'
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Путин', '--source-discovery', 'search', '--top-per-site', '2', '--total-top', '2', '--summary-mode', 'llm', '--browser', 'off']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Общее резюме: материалы описывают заявления Путина' in text
+    assert 'Putin comments on peace talks' in text
+    assert '## Ссылки для проверки' in text
+
+
+def test_topic_article_discovery_uses_bing_rss_when_search_html_has_no_results():
+    from news_site_scraper.source_discovery import discover_news_article_rows
+    rss = '''<?xml version="1.0"?><rss><channel>
+    <item><title>Putin discusses security talks</title><link>https://www.reuters.com/world/europe/putin-security-talks-2026-07-30/</link><description>Search result evidence about Putin talks.</description></item>
+    </channel></rss>'''
+    calls = []
+    def fake_fetch(url, **kwargs):
+        calls.append(url)
+        return rss if 'format=rss' in url else '<html><body>search form only</body></html>'
+    rows = discover_news_article_rows('Путин', max_items=5, fetcher=fake_fetch)
+    assert rows[0]['title'] == 'Putin discusses security talks'
+    assert rows[0]['source'] == 'reuters.com'
+    assert any('Putin+news' in url for url in calls)
+
+
+def test_llm_source_discovery_validates_model_sources():
+    from news_site_scraper.source_discovery import discover_news_sources_with_llm
+    def fake_llm(messages):
+        assert 'Topic: Trump' in messages[1]['content']
+        return {'sources': [
+            {'name': 'W3C', 'url': 'http://www.w3.org/'},
+            {'name': 'Reuters', 'url': 'https://www.reuters.com/world/us/trump-story'},
+            {'name': 'AP', 'url': 'https://apnews.com/article/trump-story'},
+        ]}
+    assert discover_news_sources_with_llm('Trump', max_sites=10, caller=fake_llm) == [
+        'https://www.reuters.com/',
+        'https://apnews.com/',
+    ]
+
+
+def test_llm_source_discovery_recovers_urls_from_non_json_model_text(monkeypatch):
+    import news_site_scraper.source_discovery as discovery
+    class FakeResponse:
+        headers = {}
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self):
+            return b'{"choices":[{"message":{"content":"sources: https://www.reuters.com/world/us/trump-story, http://www.w3.org/TR/html4/ and https://apnews.com/article/trump-story"}}]}'
+    monkeypatch.setattr(discovery, 'urlopen', lambda request, timeout=30: FakeResponse())
+    assert discovery.discover_news_sources_with_llm('Trump') == ['https://www.reuters.com/', 'https://apnews.com/']
+
+
+def test_cli_uses_llm_source_discovery_when_search_html_has_no_sources(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    pages = {
+        'https://www.reuters.com/': "<a href='/article/trump-a'>Trump announces first policy update</a>",
+        'https://apnews.com/': "<a href='/article/trump-b'>Second Trump campaign story</a>",
+    }
+    def fake_fetch(url, **kwargs):
+        if url.startswith('https://duckduckgo.com/html/'):
+            return '<html><a href="http://www.w3.org/">spec noise</a></html>'
+        return pages.get(url, "<html><head><meta name='description' content='Article evidence about Trump.'></head></html>")
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(cli, 'discover_news_sources_with_llm', lambda topic, **kwargs: ['https://www.reuters.com/', 'https://apnews.com/'])
+    monkeypatch.setattr(cli, 'summarize_rows_with_llm', lambda rows: 'Общее резюме: найдены материалы Reuters и AP по теме Trump.')
+    output = tmp_path / 'trump.md'
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Trump', '--source-discovery', 'search', '--top-per-site', '1', '--total-top', '2', '--summary-mode', 'llm', '--browser', 'off']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Общее резюме: найдены материалы Reuters и AP' in text
+    assert 'Summary unavailable' not in text
+    assert 'Trump announces first policy update' in text
+    assert 'Second Trump campaign story' in text
+
+
+def test_popular_sites_search_mode_fails_when_sources_cannot_be_discovered(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url, **kwargs: '<html><body>only search noise</body></html>')
+    output = tmp_path / 'trump.md'
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Trump', '--source-discovery', 'search', '--source-llm-mode', 'off']) == 3
+    assert not output.exists()
+
+
+def test_popular_sites_mode_requires_markdown_output(tmp_path):
+    output = tmp_path / 'trump.csv'
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Trump']) == 6
+    assert not output.exists()
+
+
+def test_cli_writes_csv_from_fixture_without_network(tmp_path):
+    output = tmp_path / 'news.csv'
+    assert main(['tests/fixtures/news_page.html', str(output), '--base-url', 'https://ixbt.com/']) == 0
+    rows = list(csv.DictReader(output.open(encoding='utf-8')))
+    assert rows[0]['title'] == 'Тестовая fixture-новость 01 для проверки парсера ixbt-профиля'
+    assert rows[0]['source'] == 'ixbt.com'
+
+
+def test_cli_collects_multiple_sites_then_dedupes_and_writes_one_summary(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    ixbt = """
+    <a href='/news/2026/07/28/a.html'>Первая новость ixbt про процессоры</a>
+    <a href='/news/2026/07/28/b.html'>Вторая новость ixbt про видеокарты</a>
+    """
+    d3 = """
+    <a href='/1145827'>Первая новость 3dnews про ИИ</a>
+    <a href='/1145814'>Вторая новость 3dnews про спутники</a>
+    <a href='https://ixbt.com/news/2026/07/28/a.html'>Первая новость ixbt про процессоры</a>
+    """
+    article = "<html><head><meta name='description' content='Подробное описание статьи для единого суммари по нескольким источникам.'></head></html>"
+    def fake_fetch(url):
+        if url == 'https://ixbt.com/':
+            return ixbt
+        if url == 'https://3dnews.ru/':
+            return d3
+        return article
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'combined.md'
+    assert main(['https://ixbt.com/', str(output), '--also-input', 'https://3dnews.ru/', '--top', '2']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert '## Общее резюме' in text
+    assert '## Ссылки для проверки' in text
+    assert 'ixbt.com' in text and '3dnews.ru' in text
+    assert text.count('https://ixbt.com/news/2026/07/28/a.html') == 1
+
+
+def test_cli_limits_total_top_and_max_sites(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    pages = {
+        'https://ixbt.com/': "<a href='/news/a.html'>Новость ixbt один</a><a href='/news/b.html'>Новость ixbt два</a>",
+        'https://3dnews.ru/': "<a href='/1145001'>Новость 3dnews один</a><a href='/1145002'>Новость 3dnews два</a>",
+        'https://habr.com/': "<a href='/ru/news/1/'>Новость habr не должна попасть в отчет</a>",
+    }
+    def fake_fetch(url, **kwargs):
+        return pages.get(url, "<html><head><meta name='description' content='Описание статьи для проверки лимитов.'></head></html>")
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'limited.md'
+    assert main([
+        'https://ixbt.com/', str(output), '--also-input', 'https://3dnews.ru/', '--also-input', 'https://habr.com/',
+        '--top-per-site', '2', '--total-top', '3', '--max-sites', '2', '--browser', 'off'
+    ]) == 0
+    text = output.read_text(encoding='utf-8')
+    assert text.count('](') == 3
+    assert 'ixbt.com' in text and '3dnews.ru' in text
+    assert 'habr' not in text.lower()
+
+
+def test_cli_strict_fail_policy_stops_on_failed_site(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    def fake_fetch(url, **kwargs):
+        if url == 'https://3dnews.ru/':
+            raise RuntimeError('site unavailable')
+        return "<a href='/news/a.html'>Новость ixbt один</a><a href='/news/b.html'>Новость ixbt два</a>"
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'strict.md'
+    assert main(['https://ixbt.com/', str(output), '--also-input', 'https://3dnews.ru/', '--top-per-site', '2', '--fail-policy', 'strict', '--browser', 'off']) == 2
+
+
+def test_merge_rows_supports_canonical_url_dedupe():
+    import news_site_scraper.cli as cli
+    rows = cli._merge_rows(
+        [{'title': 'Одна новость', 'url': 'https://example.test/news/a?utm=1'}],
+        [{'title': 'Одна новость', 'url': 'https://example.test/news/a#comments'}],
+        mode='canonical_url',
+    )
+    assert len(rows) == 1
+
+
+def test_cli_uses_llm_summary_after_rows_are_collected(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    page = "<a href='/news/a.html'>Новость ixbt про процессоры</a><a href='/news/b.html'>Новость ixbt про видеокарты</a>"
+    def fake_fetch(url, **kwargs):
+        return page if url == 'https://ixbt.com/' else "<html><head><meta name='description' content='Описание статьи для проверки.'></head></html>"
+    def fake_summary(rows):
+        assert len(rows) == 2
+        return 'Общее резюме: ixbt.com сообщает о процессорах и видеокартах на основе двух найденных ссылок.'
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(cli, 'summarize_rows_with_llm', fake_summary)
+    output = tmp_path / 'llm_summary.md'
+    assert main(['https://ixbt.com/', str(output), '--top-per-site', '2', '--summary-mode', 'llm', '--browser', 'off']) == 0
+    assert 'Общее резюме: ixbt.com сообщает' in output.read_text(encoding='utf-8')
+
+
+def test_cli_writes_news_run_report(tmp_path, monkeypatch):
+    import json
+    import news_site_scraper.cli as cli
+    page = "<a href='/news/a.html'>Новость ixbt про процессоры</a><a href='/news/b.html'>Новость ixbt про видеокарты</a>"
+    def fake_fetch(url, **kwargs):
+        return page if url == 'https://ixbt.com/' else "<html><head><meta name='description' content='Описание статьи для проверки.'></head></html>"
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'news.md'
+    run_report = tmp_path / 'run_report.json'
+    assert main(['https://ixbt.com/', str(output), '--top-per-site', '2', '--run-report', str(run_report), '--browser', 'off']) == 0
+    payload = json.loads(run_report.read_text(encoding='utf-8'))
+    assert payload['artifact_type'] == 'NewsRunReport'
+    assert payload['plan']['artifact_type'] == 'NewsCollectionPlan'
+    assert payload['events'][0]['rows_found'] == 2
+    assert payload['total_items'] == 2
+
+
+def test_profile_proposal_is_candidate_not_auto_applied():
+    from news_site_scraper.profile_proposal import build_profile_proposal
+    html = """
+    <a href='/tech/2026/a.html'>Первая технологическая новость</a>
+    <a href='/tech/2026/b.html'>Вторая технологическая новость</a>
+    """
+    def fake_llm(messages):
+        return {
+            'source': 'example.test',
+            'link_markers': ['/tech/'],
+            'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$'],
+            'reason': 'same-host tech article paths are present',
+        }
+    proposal = build_profile_proposal(url='https://example.test/', html=html, requested_top=2, caller=fake_llm)
+    assert proposal['artifact_type'] == 'SiteProfileProposal'
+    assert proposal['status'] == 'candidate'
+    assert proposal['invariants']['candidate_not_applied_automatically'] is True
+    assert proposal['candidate_profile']['link_markers'] == ['/tech/']
+
+
+def test_cli_writes_profile_proposal_on_strict_failure(tmp_path, monkeypatch):
+    import json
+    import news_site_scraper.cli as cli
+    import news_site_scraper.profile_proposal as proposal_module
+    html = "<a href='/tech/2026/a.html'>Первая технологическая новость</a>"
+    def fake_fetch(url, **kwargs):
+        return html
+    def fake_llm(messages):
+        return {'source': 'example.test', 'link_markers': ['/tech/'], 'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$'], 'reason': 'same-host paths'}
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(proposal_module, '_call_openai_compatible', fake_llm)
+    output = tmp_path / 'blocked.md'
+    candidate = tmp_path / 'candidate.json'
+    assert main(['https://example.test/', str(output), '--top-per-site', '2', '--fail-policy', 'strict', '--profile-proposal', str(candidate), '--browser', 'off']) == 4
+    payload = json.loads(candidate.read_text(encoding='utf-8'))
+    assert payload['artifact_type'] == 'SiteProfileProposal'
+    assert payload['status'] == 'candidate'
+    assert payload['invariants']['code_changes_required'] is False
+
+
+def test_profile_promotion_gate_promotes_valid_candidate_with_evidence(tmp_path):
+    from news_site_scraper.profile_promotion import evaluate_profile_promotion
+    proposal = {
+        'artifact_type': 'SiteProfileProposal',
+        'status': 'candidate',
+        'url': 'https://example.test/',
+        'candidate_profile': {
+            'source': 'example.test',
+            'link_markers': ['/tech/'],
+            'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$'],
+        },
+    }
+    html = tmp_path / 'page.html'
+    html.write_text("<a href='/tech/2026/a.html'>Первая технологическая новость</a><a href='/tech/2026/b.html'>Вторая технологическая новость</a>", encoding='utf-8')
+    decision = evaluate_profile_promotion(proposal, html_path=str(html), requested_top=2)
+    assert decision['artifact_type'] == 'ProfilePromotionDecision'
+    assert decision['decision'] == 'promote'
+    assert decision['invariants']['profile_not_written_to_kb'] is True
+
+
+def test_profile_promotion_gate_rejects_blocked_proposal():
+    from news_site_scraper.profile_promotion import evaluate_profile_promotion
+    decision = evaluate_profile_promotion({'artifact_type': 'SiteProfileProposal', 'status': 'blocked'}, requested_top=2)
+    assert decision['decision'] == 'reject'
+
+
+def test_cli_runs_profile_promotion_gate(tmp_path):
+    import json
+    proposal = tmp_path / 'proposal.json'
+    html = tmp_path / 'page.html'
+    decision = tmp_path / 'decision.json'
+    proposal.write_text(json.dumps({
+        'artifact_type': 'SiteProfileProposal',
+        'status': 'candidate',
+        'url': 'https://example.test/',
+        'candidate_profile': {'source': 'example.test', 'link_markers': ['/tech/'], 'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$']},
+    }), encoding='utf-8')
+    html.write_text("<a href='/tech/2026/a.html'>Первая технологическая новость</a><a href='/tech/2026/b.html'>Вторая технологическая новость</a>", encoding='utf-8')
+    assert main([str(proposal), str(decision), '--promote-profile-proposal', '--proposal-html', str(html), '--top', '2']) == 0
+    payload = json.loads(decision.read_text(encoding='utf-8'))
+    assert payload['decision'] == 'promote'
+
+
+def test_kb_patch_proposal_requires_human_approval():
+    from news_site_scraper.profile_promotion import build_kb_patch_proposal
+    decision = {
+        'artifact_type': 'ProfilePromotionDecision',
+        'decision': 'promote',
+        'proposal_url': 'https://example.test/',
+        'rows_found': 2,
+        'sample_rows': [{'title': 'Первая технологическая новость', 'url': 'https://example.test/tech/2026/a.html'}],
+        'candidate_profile': {'host_contains': 'example.test', 'source': 'example.test', 'link_markers': ['/tech/'], 'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$']},
+    }
+    patch = build_kb_patch_proposal(decision)
+    assert patch['artifact_type'] == 'KBPatchProposal'
+    assert patch['status'] == 'awaiting_human_approval'
+    assert patch['approval']['approved'] is False
+    assert patch['invariants']['not_applied_automatically'] is True
+
+
+def test_apply_profile_patch_rejects_without_approval(tmp_path):
+    from news_site_scraper.profile_promotion import apply_profile_patch
+    profiles = tmp_path / 'profiles.json'
+    profiles.write_text('{"profiles": []}', encoding='utf-8')
+    patch = {'artifact_type': 'KBPatchProposal', 'operation': 'append_profile', 'approval': {'approved': False}, 'profile': {'host_contains': 'example.test', 'source': 'example.test', 'link_markers': ['/tech/'], 'article_path_patterns': ['/tech/']}}
+    result = apply_profile_patch(patch, profiles_path=str(profiles))
+    assert result['status'] == 'rejected'
+    assert json.loads(profiles.read_text(encoding='utf-8'))['profiles'] == []
+
+
+def test_cli_applies_only_approved_profile_patch(tmp_path):
+    import json
+    profiles = tmp_path / 'profiles.json'
+    patch = tmp_path / 'patch.json'
+    result = tmp_path / 'apply_result.json'
+    profiles.write_text('{"profiles": []}', encoding='utf-8')
+    patch.write_text(json.dumps({
+        'artifact_type': 'KBPatchProposal',
+        'operation': 'append_profile',
+        'approval': {'approved': True, 'approved_by': 'human'},
+        'profile': {'host_contains': 'example.test', 'source': 'example.test', 'link_markers': ['/tech/'], 'article_path_patterns': ['/tech/20\\d{2}/[^/]+\\.html$']},
+    }), encoding='utf-8')
+    assert main([str(patch), str(result), '--apply-approved-profile', '--profiles-json', str(profiles)]) == 0
+    assert json.loads(result.read_text(encoding='utf-8'))['status'] == 'applied'
+    assert json.loads(profiles.read_text(encoding='utf-8'))['profiles'][0]['host_contains'] == 'example.test'
+
+
+def test_cli_workers_process_multiple_sites(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    pages = {
+        'https://ixbt.com/': "<a href='/news/a.html'>Новость ixbt про процессоры</a><a href='/news/b.html'>Новость ixbt про видеокарты</a>",
+        'https://3dnews.ru/': "<a href='/1145001'>Новость 3dnews про ИИ</a><a href='/1145002'>Новость 3dnews про спутники</a>",
+    }
+    def fake_fetch(url, **kwargs):
+        return pages.get(url, "<html><head><meta name='description' content='Описание статьи для проверки.'></head></html>")
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'workers.md'
+    assert main(['https://ixbt.com/', str(output), '--also-input', 'https://3dnews.ru/', '--top-per-site', '2', '--workers', '2', '--browser', 'off']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'ixbt.com' in text and '3dnews.ru' in text
+
+
+def test_cli_writes_markdown_and_limits_top_from_fixture_without_network(tmp_path):
+    output = tmp_path / 'news.md'
+    assert main(['tests/fixtures/news_page.html', str(output), '--base-url', 'https://ixbt.com/', '--top', '1']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert text.startswith('# Сводка новостей')
+    assert 'Fixture parser smoke output, not live site news.' in text
+    assert text.count('](https://ixbt.com/news/fixture/') == 1
+    assert 'Тестовая fixture-новость 02' not in text
+
+
+def test_cli_writes_ten_current_news_with_summaries_from_fixture(tmp_path):
+    output = tmp_path / 'news.md'
+    assert main(['tests/fixtures/news_page.html', str(output), '--base-url', 'https://ixbt.com/', '--top', '10']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Fixture parser smoke output, not live site news.' in text
+    assert '## Общее резюме' in text
+    assert '## Ссылки для проверки' in text
+    assert text.count('](https://ixbt.com/news/fixture/') == 10
+    assert text.count('2000-01-01') == 10
+    assert 'Производитель раскрыл характеристики новой беззеркальной камеры. В новости перечислены режимы съемки' in text
+    assert 'Summary unavailable' not in text
+
+
+def test_cli_enriches_live_summaries_and_requires_requested_top(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    front = """
+    <a href='/news/2026/a.html'>Первая реальная новость без summary на главной</a>
+    <a href='/news/2026/b.html'>Вторая реальная новость без summary на главной</a>
+    """
+    article = "<html><head><meta name='description' content='Это достаточно подробное описание статьи, извлеченное со страницы новости, а не придуманное из заголовка.'></head></html>"
+    def fake_fetch(url):
+        return front if url == 'https://ixbt.com/' else article
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'news.md'
+    assert main(['https://ixbt.com/', str(output), '--top', '2']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert text.count('https://ixbt.com/news/2026/') == 2
+    assert 'извлеченное со страницы новости' in text
+
+
+def test_cli_uses_feed_fallback_when_front_page_has_no_news(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    feed = '''<?xml version="1.0"?><rss><channel>
+    <item><title>Первая статья из RSS</title><link>https://habr.com/ru/articles/1/</link><description>Описание первой статьи из RSS.</description></item>
+    <item><title>Вторая статья из RSS</title><link>https://habr.com/ru/articles/2/</link><description>Описание второй статьи из RSS.</description></item>
+    </channel></rss>'''
+    def fake_fetch(url):
+        return '<html><body>front page shell</body></html>' if url == 'https://habr.com/' else feed
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'news.md'
+    assert main(['https://habr.com/', str(output), '--top', '2']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Первая статья из RSS' in text
+    assert 'Вторая статья из RSS' in text
+
+
+def test_feed_fallback_uses_short_timeout_budget(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    feed = '''<?xml version="1.0"?><rss><channel>
+    <item><title>Первая статья из RSS</title><link>https://habr.com/ru/articles/1/</link><description>Описание первой статьи из RSS.</description></item>
+    <item><title>Вторая статья из RSS</title><link>https://habr.com/ru/articles/2/</link><description>Описание второй статьи из RSS.</description></item>
+    </channel></rss>'''
+    timeouts = []
+    def fake_fetch(url, timeout=15.0):
+        timeouts.append(timeout)
+        return '<html><body>front page shell</body></html>' if url == 'https://habr.com/' else feed
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    output = tmp_path / 'news.md'
+    assert main(['https://habr.com/', str(output), '--top', '2']) == 0
+    assert 3.0 in timeouts
+
+
+def test_cli_uses_llm_fallback_after_html_and_feed_fail(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', lambda html, profile, requested_top: {
+        'strategy_candidate': {'strategy_type': 'direct_evidence_items', 'items': []}
+    })
+    monkeypatch.setattr(cli, 'execute_strategy_candidate', lambda strategy, profile, requested_top, fetcher: [
+        {'title': 'LLM нашла новость из evidence', 'url': 'https://example.test/news/2026/a.html', 'date': '', 'summary': 'Краткое описание.', 'source': 'example.test'},
+        {'title': 'Вторая новость из evidence', 'url': 'https://example.test/news/2026/b.html', 'date': '', 'summary': 'Краткое описание.', 'source': 'example.test'},
+    ])
+    output = tmp_path / 'news.md'
+    assert main(['https://example.test/', str(output), '--top', '2']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'LLM нашла новость из evidence' in text
+    assert 'Вторая новость из evidence' in text
+
+
+def test_cli_uses_browser_fallback_when_l45_diagnoses_browser_required(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', lambda html, profile, requested_top: {
+        'diagnosis': 'site requires rendered browser DOM',
+        'strategy_candidate': {'strategy_type': 'browser_required', 'reason': 'HTML shell has no article anchors', 'requires_browser': True},
+        'risks': ['browser backend may be unavailable'],
+    })
+    monkeypatch.setattr(cli, 'execute_strategy_candidate', lambda strategy, profile, requested_top, fetcher: [])
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url, timeout_ms=10000: """
+    <a href='/news/2026/a.html'>Первая новость из отрендеренной страницы</a>
+    <a href='/news/2026/b.html'>Вторая новость из отрендеренной страницы</a>
+    """)
+    output = tmp_path / 'news.md'
+    assert main(['https://example.test/', str(output), '--top', '2']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Первая новость из отрендеренной страницы' in text
+    assert 'Вторая новость из отрендеренной страницы' in text
+
+
+def test_cli_supports_explicit_browser_always_mode_before_llm(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('LLM fallback should not be needed when browser always succeeds')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', fail_if_called)
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url, timeout_ms=10000: """
+    <a href='/news/2026/a.html'>Первая browser-only новость</a>
+    <a href='/news/2026/b.html'>Вторая browser-only новость</a>
+    """)
+    output = tmp_path / 'news.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'always']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Первая browser-only новость' in text
+    assert 'Вторая browser-only новость' in text
+
+
+def test_cli_detects_browser_required_shell_before_model(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    html = '<html><noscript><meta http-equiv="refresh" content="0; url=/challenge"></noscript></html>'
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: html)
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('LLM should not be needed to recognize a browser challenge shell')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', fail_if_called)
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url, timeout_ms=10000: """
+    <a href='/news/2026/a.html'>Первая новость после browser challenge</a>
+    <a href='/news/2026/b.html'>Вторая новость после browser challenge</a>
+    """)
+    output = tmp_path / 'news.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'auto']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'Первая новость после browser challenge' in text
+    assert 'Вторая новость после browser challenge' in text
+
+
+def test_cli_skips_feed_probe_for_browser_challenge_shell(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    html = '<html><noscript><meta http-equiv="refresh" content="0; url=/challenge"></noscript></html>'
+    def fake_fetch(url):
+        if url == 'https://example.test/':
+            return html
+        raise AssertionError('feed probing should be skipped for browser challenge shell')
+    monkeypatch.setattr(cli, 'fetch_html', fake_fetch)
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url, timeout_ms=10000: '<html><body>still no news</body></html>')
+    output = tmp_path / 'blocked.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'auto', '--no-llm-fallback']) == 3
+
+
+def test_cli_does_not_call_browser_twice_when_always_then_l45_browser_required(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    calls = []
+    def fake_browser(url, timeout_ms=10000):
+        calls.append(url)
+        return '<html><body>still no news</body></html>'
+    monkeypatch.setattr(cli, 'fetch_rendered_html', fake_browser)
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', lambda html, profile, requested_top: {
+        'diagnosis': 'site requires rendered browser DOM',
+        'strategy_candidate': {'strategy_type': 'browser_required', 'reason': 'HTML shell has no article anchors', 'requires_browser': True},
+    })
+    monkeypatch.setattr(cli, 'execute_strategy_candidate', lambda strategy, profile, requested_top, fetcher: [])
+    output = tmp_path / 'blocked.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'always']) == 3
+    assert calls == ['https://example.test/']
+    assert '# News extraction blocked' in output.read_text(encoding='utf-8')
+
+
+def test_cli_writes_failure_report_for_browser_only_failure(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url, timeout_ms=10000: '<html><body>still no news</body></html>')
+    output = tmp_path / 'blocked.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'always', '--no-llm-fallback']) == 3
+    text = output.read_text(encoding='utf-8')
+    assert '# News extraction blocked' in text
+    assert 'explicit browser mode did not produce validated news items' in text
+
+
+def test_cli_respects_browser_off_when_l45_diagnoses_browser_required(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', lambda html, profile, requested_top: {
+        'diagnosis': 'site requires rendered browser DOM',
+        'strategy_candidate': {'strategy_type': 'browser_required', 'reason': 'HTML shell has no article anchors', 'requires_browser': True},
+        'risks': ['browser disabled by operator'],
+    })
+    monkeypatch.setattr(cli, 'execute_strategy_candidate', lambda strategy, profile, requested_top, fetcher: [])
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError('browser backend must not be called when --browser off')
+    monkeypatch.setattr(cli, 'fetch_rendered_html', fail_if_called)
+    output = tmp_path / 'blocked.md'
+    assert main(['https://example.test/', str(output), '--top', '2', '--browser', 'off']) == 3
+    assert 'Strategy: browser_required' in output.read_text(encoding='utf-8')
+
+
+def test_cli_writes_failure_report_when_l45_strategy_cannot_be_executed(tmp_path, monkeypatch):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>front page shell</body></html>')
+    monkeypatch.setattr(cli, 'diagnose_extraction_failure', lambda html, profile, requested_top: {
+        'diagnosis': 'site requires rendered browser DOM',
+        'strategy_candidate': {'strategy_type': 'browser_required', 'reason': 'HTML shell has no article anchors', 'requires_browser': True},
+        'risks': ['browser backend may be unavailable'],
+    })
+    monkeypatch.setattr(cli, 'execute_strategy_candidate', lambda strategy, profile, requested_top, fetcher: [])
+    monkeypatch.setattr(cli, 'fetch_rendered_html', lambda url: (_ for _ in ()).throw(RuntimeError('playwright missing')))
+    output = tmp_path / 'blocked.md'
+    assert main(['https://example.test/', str(output), '--top', '2']) == 3
+    text = output.read_text(encoding='utf-8')
+    assert '# News extraction blocked' in text
+    assert 'Strategy: browser_required' in text
+    assert 'enable optional browser backend' in text
+
+
+def test_cli_returns_controlled_error_when_live_page_has_too_few_news(tmp_path, monkeypatch, capsys):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: "<a href='/news/2026/a.html'>Только одна новость на странице</a>")
+    output = tmp_path / 'news.md'
+    assert main(['https://ixbt.com/', str(output), '--top', '2', '--no-llm-fallback']) == 4
+    assert 'parsed only 1 news items' in capsys.readouterr().err
+    assert not output.exists()
+
+
+def test_cli_returns_controlled_error_when_live_page_has_no_news(tmp_path, monkeypatch, capsys):
+    import news_site_scraper.cli as cli
+    monkeypatch.setattr(cli, 'fetch_html', lambda url: '<html><body>no matching news</body></html>')
+    output = tmp_path / 'news.md'
+    assert main(['https://ixbt.com/', str(output), '--top', '10', '--no-llm-fallback']) == 3
+    assert 'no news items parsed from live URL' in capsys.readouterr().err
+    assert not output.exists()
+
+
+def test_cli_returns_controlled_error_for_missing_input(tmp_path, capsys):
+    output = tmp_path / 'news.md'
+    assert main(['missing.html', str(output), '--base-url', 'https://ixbt.com/']) == 2
+    assert 'failed to read input' in capsys.readouterr().err

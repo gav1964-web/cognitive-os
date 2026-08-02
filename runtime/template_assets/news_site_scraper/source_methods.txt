@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+import html as html_lib
+import json
+import sys
+import time
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+
+from news_site_scraper.browser_fetcher import fetch_rendered_html
+from news_site_scraper.feed import discover_feed_urls, parse_feed_items
+from news_site_scraper.fetcher import fetch_html
+from news_site_scraper.llm_extractor import diagnose_extraction_failure
+from news_site_scraper.parser import parse_news_items
+from news_site_scraper.sitemap import discover_sitemap_urls, rows_from_sitemap
+from news_site_scraper.site_profile import profile_for
+
+def _merge_rows(*groups: list[dict[str, str]], mode: str = 'title_url') -> list[dict[str, str]]:
+    seen: set[str] = set()
+    merged: list[dict[str, str]] = []
+    for group in groups:
+        for row in group:
+            key = row.get('url', '').strip() if mode == 'canonical_url' else f"{row.get('title', '').strip()}|{row.get('url', '').strip()}"
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged.append(row)
+    return merged
+
+def _fetch_front_page(url: str, timeout: float) -> str:
+    try:
+        return fetch_html(url, timeout=timeout)
+    except TypeError:
+        return fetch_html(url)
+
+def _feed_rows(html: str, profile, requested_top: int, fetcher, *, total_timeout: float = 8.0) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    started = time.monotonic()
+    for feed_url in discover_feed_urls(html, profile):
+        if time.monotonic() - started > total_timeout:
+            break
+        try:
+            rows.extend(parse_feed_items(_fetch_feed(fetcher, feed_url), profile))
+        except Exception:
+            continue
+        if len(rows) >= requested_top:
+            break
+    return rows
+
+def _fetch_feed(fetcher, url: str) -> str:
+    try:
+        return fetcher(url, timeout=3.0)
+    except TypeError:
+        return fetcher(url)
+
+def _browser_rows(url: str, profile, requested_top: int, timeout_ms: int) -> list[dict[str, str]]:
+    try:
+        rendered = fetch_rendered_html(url, timeout_ms=timeout_ms)
+    except Exception as exc:
+        print(f'browser backend unavailable: {exc}', file=sys.stderr)
+        return []
+    rows = parse_news_items(rendered, profile)[:requested_top]
+    if len(rows) < requested_top:
+        rows = _merge_rows(rows, _feed_rows(rendered, profile, requested_top, fetch_html))[:requested_top]
+    return rows
+
+def _sitemap_rows(html: str, profile, requested_top: int, fetcher) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for sitemap_url in discover_sitemap_urls(html, profile):
+        try:
+            rows.extend(rows_from_sitemap(_fetch_feed(fetcher, sitemap_url), profile))
+        except Exception:
+            continue
+        if len(rows) >= requested_top:
+            break
+    return rows[:requested_top]
+
+def _looks_browser_required(html: str) -> bool:
+    lower = html.lower()
+    markers = ['<noscript><meta http-equiv="refresh"', 'enable javascript', 'checking your browser', 'access forbidden', 'bot detection', 'cf-browser-verification']
+    return any(marker in lower for marker in markers)
+
+def _local_browser_required_diagnosis(url: str, diagnosis: str = 'deterministic browser-required markers found in fetched HTML') -> dict[str, object]:
+    return {
+        'artifact_type': 'SiteDiagnosis',
+        'status': 'blocked',
+        'source': url,
+        'diagnosis': diagnosis,
+        'strategy_candidate': {
+            'artifact_type': 'StrategyCandidate',
+            'strategy_type': 'browser_required',
+            'reason': 'HTML appears to be JavaScript, anti-bot or browser challenge shell',
+            'items': [],
+            'requires_browser': True,
+        },
+        'risks': ['browser-rendered extraction may still be blocked by anti-bot policy'],
+        'invariants': {'model_output_executed': False, 'same_host_validation': True, 'items_validated_by_code': True},
+    }

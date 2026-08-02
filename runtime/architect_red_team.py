@@ -176,17 +176,32 @@ def _brief_is_bounded(brief: dict[str, Any]) -> bool:
 
 
 def _brief_sources_have_context(brief: dict[str, Any], source_context: dict[str, Any]) -> bool:
-    sources = [str(item) for item in list(brief.get("files_or_symbols", [])) if _looks_like_source(item)]
+    contract_sources = [
+        _normalize_source_ref(str(row.get("source")))
+        for row in list(brief.get("contract_targets", []))
+        if isinstance(row, dict)
+        and _looks_like_source(row.get("source"))
+        and not _looks_like_contract_type_ref(str(row.get("source")))
+        and _contract_target_has_derived_context(row)
+    ]
+    supporting_sources = [
+        _normalize_source_ref(str(item))
+        for item in list(brief.get("files_or_symbols", []))
+        if _looks_like_source(item) and not _looks_like_contract_type_ref(str(item))
+    ]
+    sources = list(dict.fromkeys(contract_sources or supporting_sources))
     if not sources:
         return False
     checked = sources[:8]
     present = 0
+    normalized_context = {_normalize_source_ref(str(key)) for key in source_context}
     for source in checked:
-        normalized = _normalize_source_ref(source)
-        if normalized.startswith("ProjectMapReport."):
+        if source.startswith("ProjectMapReport."):
             present += 1
-        elif normalized in source_context:
+        elif source in source_context or source in normalized_context:
             present += 1
+    if contract_sources:
+        return present == len(checked)
     return present >= max(1, min(3, len(checked)))
 
 
@@ -253,3 +268,15 @@ def _looks_like_source(value: object) -> bool:
 
 def _normalize_source_ref(source: str) -> str:
     return source.split("(", 1)[0].strip() if source.lower().rstrip().endswith("loc)") else source.strip()
+
+
+def _looks_like_contract_type_ref(source: str) -> bool:
+    symbol = _normalize_source_ref(source).rsplit(":", 1)[-1]
+    if not symbol:
+        return False
+    return symbol.endswith(("Error", "Exception", "Failure", "Packet", "Request", "Response", "Result")) or symbol[:1].isupper()
+
+
+def _contract_target_has_derived_context(row: dict[str, Any]) -> bool:
+    text = f"{row.get('input_hint', '')} {row.get('output_hint', '')}".lower()
+    return "derive from source" not in text

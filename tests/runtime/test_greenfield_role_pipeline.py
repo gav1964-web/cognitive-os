@@ -97,6 +97,79 @@ def test_greenfield_product_spec_has_unique_requirement_ids() -> None:
     assert len(ids) == len(set(ids))
 
 
+def test_web_research_architecture_and_spec_capture_product_edges() -> None:
+    from runtime.greenfield_architecture_builder import build_product_architecture_record
+    from runtime.greenfield_artifact_quality import evaluate_greenfield_artifact_quality
+    from runtime.greenfield_spec_builder import build_product_technical_spec
+
+    prompt = "создай проект поиска в интернете по фразе, топ-15, одно суммари по найденным статьям"
+    architecture = build_product_architecture_record(prompt)
+    spec = build_product_technical_spec(architecture)
+    quality = evaluate_greenfield_artifact_quality(architecture=architecture, technical_spec=spec)
+
+    assert architecture["pattern_id"] == "web_research_summarizer_cli"
+    assert "one final summary" in str(architecture["product_output_contract"]).lower()
+    assert {row["id"] for row in architecture["real_world_edge_cases"]} >= {
+        "live_research_plain_query",
+        "cyrillic_url_research",
+        "noisy_news_aggregator",
+    }
+    assert "single combined summary and compact source-link tests" in [
+        row["criterion"] for row in spec["acceptance_criteria"]
+    ]
+    assert "Cyrillic URL normalization tests" in spec["verification_strategy"]["negative_tests"]
+    assert quality["status"] == "ok"
+
+
+def test_web_research_quality_rejects_generic_product_understanding() -> None:
+    from runtime.greenfield_artifact_quality import evaluate_greenfield_artifact_quality
+
+    architecture = {
+        "artifact_type": "ProductArchitectureRecord",
+        "role": "architect",
+        "status": "ok",
+        "prompt": "создай проект поиска в интернете по фразе",
+        "pattern_id": "web_research_summarizer_cli",
+        "product_summary": "Search CLI.",
+        "architecture_style": "CLI -> core -> output",
+        "components": [
+            {"id": "cli", "purpose": "input", "inputs": ["argv"], "outputs": ["result"]},
+            {"id": "search", "purpose": "search", "inputs": ["query"], "outputs": ["results"]},
+            {"id": "report", "purpose": "report", "inputs": ["results"], "outputs": ["file"]},
+        ],
+        "main_scenarios": [],
+        "interfaces": [{"name": "cli", "input": "argv", "output": "file"}],
+        "data_model": [{"name": "Input"}, {"name": "Output"}],
+        "data_lifecycle": [{"stage": "input"}, {"stage": "search"}, {"stage": "process"}, {"stage": "output"}],
+        "external_boundaries": [],
+        "research_hints": [
+            {"topic": "search", "use_for": "provider", "evidence_policy": "check", "authority": "candidate_evidence"},
+            {"topic": "summary", "use_for": "summarizer", "evidence_policy": "check", "authority": "candidate_evidence"},
+        ],
+        "architecture_options": [
+            {"id": "a", "status": "chosen"},
+            {"id": "b", "status": "rejected"},
+        ],
+        "risks": [
+            {"risk": "network", "mitigation": "timeout"},
+            {"risk": "bad_output", "mitigation": "test"},
+        ],
+        "open_questions": ["provider?", "format?"],
+        "product_output_contract": {},
+        "real_world_edge_cases": [],
+        "spec_writer_brief": {"primary_contract": {"name": "SearchRequest -> Report"}},
+        "forbidden_actions_observed": [],
+    }
+
+    quality = evaluate_greenfield_artifact_quality(architecture=architecture, technical_spec=None)
+    failed = {row["name"] for row in quality["checks"] if not row["passed"]}
+
+    assert quality["status"] == "needs_review"
+    assert "product_output_contract_present" in failed
+    assert "real_world_edge_cases_present" in failed
+    assert "web_research_architecture_defines_single_summary_output" in failed
+
+
 def test_greenfield_patterns_are_loaded_from_config() -> None:
     payload = load_greenfield_architecture_patterns()
     selected = select_greenfield_pattern("создай FastAPI сервис который принимает CSV и возвращает JSON")

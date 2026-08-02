@@ -108,6 +108,62 @@ def test_architect_red_team_normalizes_loc_suffix_in_brief_sources():
     assert "brief_sources_without_context" not in {row["code"] for row in report["warnings"]}
 
 
+def test_architect_red_team_does_not_require_source_context_for_contract_type_refs():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "project": "demo",
+        "chosen_option": {"id": "minimal_safe_extraction", "reason": "bounded runtime detection"},
+        "architecture_options": [
+            {"id": "minimal_safe_extraction", "tradeoffs": ["small blast radius"]},
+            {"id": "contract_hardening_first", "tradeoffs": ["slower but safer"]},
+        ],
+        "rejected_options": [
+            {
+                "id": "contract_hardening_first",
+                "reason_rejected": "first slice already has source-backed executable target",
+                "tradeoffs": ["slower but safer"],
+                "deferred_until": "after first slice",
+                "score_delta": 1,
+            }
+        ],
+        "first_slice_contract": {
+            "name": "async_context_detection_slice",
+            "goal": "Detect active async runtime context.",
+            "targets": ["runtime.py:current_async_library"],
+            "steps": ["Define RuntimeContext.", "Define AsyncContextDetectionFailure."],
+            "selection_policy": "smallest source-backed slice",
+            "handoff_expectation": "SpecWriter may use contract type refs as supporting types",
+        },
+        "spec_writer_brief": {
+            "files_or_symbols": [
+                "runtime.py:current_async_library",
+                "runtime.py:AsyncLibraryNotFoundError",
+                "runtime.py:current_async_library(71 loc)",
+            ],
+            "acceptance_targets": ["runtime.py:current_async_library has contract tests."],
+            "constraints": ["no source rewrite in architecture phase"],
+            "contract_targets": [{"source": "runtime.py:current_async_library"}],
+        },
+        "source_context": {"runtime.py:current_async_library": {"signature": {"args": [], "returns": "str"}}},
+        "traceability": [{"source": "runtime.py:current_async_library", "target": "runtime.py:current_async_library"}],
+        "risks": [
+            {
+                "severity": "medium",
+                "description": "Runtime detection can fail outside async context.",
+                "impact": "Caller gets ambiguous runtime behavior.",
+                "mitigation": "Add negative tests for sync context.",
+                "evidence_source": "runtime.py:current_async_library",
+            }
+        ],
+        "open_questions": [],
+        "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
+    }
+
+    report = red_team_architecture_decision(adr, {"project": "demo"})
+
+    assert "brief_sources_without_context" not in {row["code"] for row in report["warnings"]}
+
+
 def test_architect_red_team_blocks_unbounded_adr():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

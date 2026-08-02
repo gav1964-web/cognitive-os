@@ -164,6 +164,68 @@ def test_programmer_executor_synthesizes_required_input_guard_in_sandbox(tmp_pat
     assert test_result["executable_acceptance_result"]["status"] == "passed"
 
 
+def test_programmer_executor_synthesizes_guard_for_async_function(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "main.py").write_text("async def fetch(host: str):\n    return host\n", encoding="utf-8")
+    plan = {
+        "implementation_target": {"candidate": "main.py:fetch"},
+        "patch_intent": {"target_symbol": "main.py:fetch"},
+        "writable_scope": ["main.py:fetch"],
+        "expected_files": ["main.py"],
+        "verification_commands": ["python -m compileall ."],
+    }
+    test_plan = {
+        "executable_acceptance": {
+            "obligations": [
+                {
+                    "id": "OBL-001",
+                    "acceptance_id": "AC-001",
+                    "target": "main.py:fetch",
+                    "kind": "positive_contract_case",
+                    "given": {"host": "example.com"},
+                    "expect": {"result": "string"},
+                    "oracle": "output_schema_and_acceptance_criterion",
+                },
+                {
+                    "id": "OBL-002",
+                    "acceptance_id": "contract_negative_missing_input",
+                    "target": "main.py:fetch",
+                    "kind": "malformed_input_case",
+                    "given": {},
+                    "expect": {"error": "controlled_validation_error"},
+                    "oracle": "missing_required_input_rejected",
+                },
+                {
+                    "id": "OBL-003",
+                    "acceptance_id": "side_effect_boundary",
+                    "target": "main.py:fetch",
+                    "kind": "side_effect_scope_case",
+                    "given": {},
+                    "expect": {"no_writes_outside_declared_scope": True},
+                    "oracle": "changed_file_list_is_subset_of_writable_scope",
+                },
+            ]
+        }
+    }
+
+    result = run_programmer_executor(
+        root=tmp_path,
+        project_dir=project,
+        technical_spec={"artifact_type": "TechnicalSpec"},
+        implementation_plan=plan,
+        test_plan=test_plan,
+        run_verification=True,
+    )
+
+    patch = json.loads(Path(result["patch_package_path"]).read_text(encoding="utf-8"))
+    sandbox_main = Path(patch["patch_synthesis"]["sandbox_project"]) / "main.py"
+    assert result["status"] == "ok"
+    assert patch["patch_synthesis"]["status"] == "prepared"
+    assert "if host is None:" in sandbox_main.read_text(encoding="utf-8")
+    assert (project / "main.py").read_text(encoding="utf-8") == "async def fetch(host: str):\n    return host\n"
+
+
 def test_programmer_executor_blocks_source_apply_in_mvp(tmp_path: Path):
     result = run_programmer_executor(
         root=tmp_path,
@@ -176,6 +238,38 @@ def test_programmer_executor_blocks_source_apply_in_mvp(tmp_path: Path):
 
     assert result["status"] == "blocked"
     assert result["reason"] == "source_edit_apply_not_enabled_in_mvp"
+    assert Path(result["no_patch_package_path"]).is_file()
+    assert Path(result["blocked_execution_report_path"]).is_file()
+
+
+def test_programmer_executor_writes_formal_blocked_handoff_artifacts(tmp_path: Path):
+    test_plan = {
+        "artifact_type": "TestPlan",
+        "role": "tester",
+        "status": "blocked_no_safe_candidate",
+        "contract_test_matrix": [{"id": "CONTRACT-BLOCK-001", "target": "blocked_no_safe_candidate", "direction": "blocked_handoff"}],
+    }
+    result = run_programmer_executor(
+        root=tmp_path,
+        project_dir=tmp_path,
+        technical_spec={"artifact_type": "TechnicalSpec", "role": "spec_writer"},
+        implementation_plan={
+            "artifact_type": "ImplementationPlan",
+            "role": "implementer",
+            "implementation_target": {"status": "blocked_no_safe_candidate", "candidate": None},
+            "patch_intent": {"artifact_type": "PatchIntent", "status": "blocked_no_safe_candidate"},
+        },
+        test_plan=test_plan,
+    )
+    no_patch = json.loads(Path(result["no_patch_package_path"]).read_text(encoding="utf-8"))
+    blocked_report = json.loads(Path(result["blocked_execution_report_path"]).read_text(encoding="utf-8"))
+
+    assert result["status"] == "blocked"
+    assert no_patch["artifact_type"] == "NoPatchPackage"
+    assert no_patch["patches"] == []
+    assert no_patch["policy"]["patch_generation_allowed"] is False
+    assert blocked_report["artifact_type"] == "BlockedExecutionReport"
+    assert blocked_report["blocked_contract_rows"][0]["id"] == "CONTRACT-BLOCK-001"
 
 
 def test_executable_acceptance_runner_fails_empty_obligations(tmp_path: Path):

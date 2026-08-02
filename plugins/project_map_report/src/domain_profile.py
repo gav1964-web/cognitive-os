@@ -36,6 +36,7 @@ def infer_domain_profile(
             " ".join(read_files),
             " ".join(routes_seen),
             docs_text(files),
+            source_sample_text(files),
             " ".join(str(item) for item in imports),
         ]
     ).lower()
@@ -150,9 +151,6 @@ def _infer_kb_profile(searchable: str, summary: dict[str, Any]) -> dict[str, Any
     for rule in knowledge.get("records", []):
         if not isinstance(rule, dict):
             continue
-        profile_fields_present = any(rule.get(field) for field in ("purpose_summary", "scenario_summary", "input_summary", "output_summary"))
-        if not profile_fields_present:
-            continue
         score, evidence = _score_kb_rule(rule, searchable, summary)
         if score <= 0:
             continue
@@ -188,11 +186,20 @@ def _score_kb_rule(rule: dict[str, Any], searchable: str, summary: dict[str, Any
     required = [item.lower() for item in _strings(match.get("required_contains_any"))]
     if required and not any(item in searchable for item in required):
         return 0, []
+    required_all = [item.lower() for item in _strings(match.get("required_contains_all"))]
+    if required_all and not all(item in searchable for item in required_all):
+        return 0, []
     score = 0
     evidence: list[str] = []
+    root = str(summary.get("root") or "").replace("\\", "/").rstrip("/").lower()
+    project_name = root.rsplit("/", 1)[-1] if root else ""
+    project_name_hits = [item for item in _strings(match.get("project_name_contains_any")) if item.lower() in project_name]
+    if project_name_hits:
+        score += 60 + len(project_name_hits) * 10
+        evidence.append("matched project name: " + ", ".join(project_name_hits[:5]))
     text_hits = [item for item in _strings(match.get("text_contains_any")) if item.lower() in searchable]
     if text_hits:
-        score += len(text_hits)
+        score += 30 + len(text_hits) * 3
         evidence.append("matched text markers: " + ", ".join(text_hits[:5]))
     framework_hits = [
         item
@@ -200,8 +207,12 @@ def _score_kb_rule(rule: dict[str, Any], searchable: str, summary: dict[str, Any
         if item.lower() in {str(framework).lower() for framework in summary.get("frameworks", [])}
     ]
     if framework_hits:
-        score += len(framework_hits)
+        score += 40 + len(framework_hits) * 5
         evidence.append("matched frameworks: " + ", ".join(framework_hits[:5]))
+    routes_min = match.get("routes_min")
+    if routes_min is not None and int(summary.get("routes") or 0) >= int(routes_min):
+        score += 25
+        evidence.append(f"matched routes >= {routes_min}")
     return score, evidence
 
 
@@ -221,6 +232,37 @@ def _transport(summary: dict[str, Any]) -> str:
     if summary.get("entrypoints"):
         return "CLI/script"
     return "unknown"
+
+
+def source_sample_text(files: dict[str, Any]) -> str:
+    texts: list[str] = []
+    for item in files.get("files", []):
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "").lower().replace("\\", "/")
+        if not _is_matchable_source_sample(path):
+            continue
+        text = str(item.get("text") or "")
+        if text.strip():
+            texts.append(f"{path}\n{text[:1200]}")
+    return "\n".join(texts[:20])
+
+
+def _is_matchable_source_sample(path: str) -> bool:
+    if any(part.startswith(".") for part in path.split("/")[:-1]):
+        return False
+    return path.endswith(
+        (
+            ".py",
+            ".toml",
+            ".yaml",
+            ".yml",
+            ".json",
+            ".csv",
+            ".ini",
+            ".cfg",
+        )
+    )
 
 
 def _strings(value: object) -> list[str]:

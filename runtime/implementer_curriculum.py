@@ -80,7 +80,7 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
         "candidate": target.get("candidate"),
         "binding_candidate": binding.get("candidate"),
         "binding_status": binding.get("binding_status"),
-        "has_input_contract": bool(binding.get("input_contract")),
+        "has_input_contract": isinstance(binding.get("input_contract"), dict),
         "has_output_contract": bool(binding.get("output_contract")),
         "patch_scope": _strings(plan.get("patch_scope", [])),
         "evidence_scope": _strings(plan.get("evidence_scope", [])),
@@ -126,7 +126,7 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, A
         "bound_to_extraction_contract": actual.get("binding_status") == "bound_to_extraction_contract",
         "has_input_contract": actual.get("has_input_contract") is True,
         "has_output_contract": actual.get("has_output_contract") is True,
-        "required_patch_scope_covered": _expected_covered(expected.get("patch_scope", []), actual.get("patch_scope", [])),
+        "patch_scope_is_bounded_to_candidate_file": _patch_scope_is_bounded(actual),
         "required_evidence_scope_covered": _expected_covered(
             expected.get("evidence_scope", expected.get("patch_scope", [])),
             actual.get("evidence_scope", []),
@@ -166,14 +166,22 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, A
 def _report(cases: list[dict[str, Any]], *, curriculum_dir: Path) -> dict[str, Any]:
     passed = sum(1 for case in cases if case["status"] == "ok")
     milestone = "Implementer Curriculum External-3 v0.1" if "external" in curriculum_dir.name else "Implementer Curriculum Local-3 v0.1"
+    scores = [float(case["score"]["score"]) for case in cases]
+    avg_score = _ratio(sum(scores), len(scores))
+    worst_case_score = round(min(scores), 4) if scores else 0.0
+    ready_threshold = 0.92
     return {
-        "status": "ok" if passed == len(cases) else "needs_improvement",
+        "status": "ok" if passed == len(cases) and worst_case_score >= ready_threshold else "needs_improvement",
         "milestone": milestone,
         "generated_at": _now(),
         "project_count": len(cases),
         "passed": passed,
         "summary": {
-            "score": _ratio(sum(case["score"]["score"] for case in cases), len(cases)),
+            "score": avg_score,
+            "avg_score": avg_score,
+            "worst_case_score": worst_case_score,
+            "ready_threshold": ready_threshold,
+            "ready_by_worst_case": worst_case_score >= ready_threshold,
             "backlog_items": sum(len(case["improvement_backlog"]) for case in cases),
         },
         "invariants": {
@@ -192,6 +200,21 @@ def _report(cases: list[dict[str, Any]], *, curriculum_dir: Path) -> dict[str, A
 
 def _improvement_backlog(score: dict[str, Any]) -> list[dict[str, str]]:
     return [{"type": "IMPLEMENTER_GAP", "check": warning} for warning in score["warnings"]]
+
+
+def _patch_scope_is_bounded(actual: dict[str, Any]) -> bool:
+    candidate = str(actual.get("candidate") or "")
+    patch_scope = _strings(actual.get("patch_scope", []))
+    writable_scope = _strings(actual.get("writable_scope", []))
+    if not candidate or not patch_scope:
+        return False
+    candidate_file = candidate.split(":", 1)[0]
+    return (
+        patch_scope[0] == candidate
+        and writable_scope == [candidate]
+        and len(patch_scope) <= 4
+        and all(str(item).split(":", 1)[0] == candidate_file for item in patch_scope)
+    )
 
 
 def _teacher_review(value: Any, backlog: list[dict[str, str]]) -> dict[str, Any]:

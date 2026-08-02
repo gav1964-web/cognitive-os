@@ -66,13 +66,13 @@ def _score_project_analyzer(runs: dict[str, Any], *, target_score: float) -> dic
     github_quality = float(github_summary.get("avg_quality_score") or 0.0)
     coverage = _coverage_score(github_summary, github.get("project_count"))
     backlog = _backlog_pressure(local_summary, external_summary)
-    component_floor = min(
+    factual_floor = min(
         _curriculum_project_analyzer_floor(local),
         _curriculum_project_analyzer_floor(external),
         _github_project_analyzer_floor(github),
         coverage,
     )
-    score = _ten_point(component_floor)
+    score = _ten_point(factual_floor)
     improvement = []
     if fact_precision < 0.95:
         improvement.append("raise teacher-reference fact precision without hiding useful extra evidence")
@@ -90,7 +90,8 @@ def _score_project_analyzer(runs: dict[str, Any], *, target_score: float) -> dic
             "fact_precision": fact_precision,
             "github_quality": github_quality,
             "github_coverage": coverage,
-            "worst_case_floor": component_floor,
+            "worst_case_floor": factual_floor,
+            "backlog_is_score_blocking": False,
             "teacher_backlog_pressure": backlog,
         },
         improvement=improvement,

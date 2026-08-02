@@ -70,6 +70,12 @@ def red_team_technical_spec(spec: dict[str, Any], architecture_decision: dict[st
     )
     _require(
         findings,
+        _candidate_matches_first_slice_targets(str(contract.get("candidate") or ""), architecture_decision),
+        "candidate_outside_first_slice_targets",
+        "Selected extraction candidate must match ArchitectureDecisionRecord.first_slice_contract.targets.",
+    )
+    _require(
+        findings,
         _traceability_covers_first_slice(spec, architecture_decision),
         "first_slice_traceability_gap",
         "First-slice obligations must be visible in requirements or traceability.",
@@ -102,11 +108,12 @@ def _require(
 
 
 def _blocked_no_safe_candidate(contract: dict[str, Any], work_plan: dict[str, Any]) -> bool:
-    return (
-        contract.get("status") == "blocked_no_safe_candidate"
-        and "no_safe_source_specific_candidate" in list(contract.get("blocked_by", []) or [])
-        and work_plan.get("status") == "blocked_no_first_slice"
-    )
+    if contract.get("status") != "blocked_no_safe_candidate":
+        return False
+    blocked_by = list(contract.get("blocked_by", []) or [])
+    if "no_safe_source_specific_candidate" not in blocked_by:
+        return False
+    return True
 
 
 def _contract_contains_weak_any(contract: dict[str, Any]) -> bool:
@@ -176,6 +183,24 @@ def _traceability_covers_first_slice(spec: dict[str, Any], architecture_decision
     return name in haystack
 
 
+def _candidate_matches_first_slice_targets(candidate: str, architecture_decision: dict[str, Any]) -> bool:
+    if not candidate:
+        return False
+    first_slice = dict(architecture_decision.get("first_slice_contract", {}) or {})
+    targets = [str(item) for item in list(first_slice.get("targets") or []) if item]
+    if not targets:
+        return True
+    normalized_candidate = _normalize_source_ref(candidate)
+    return any(normalized_candidate == _normalize_source_ref(target) for target in targets)
+
+
 def _looks_like_source(value: object) -> bool:
     text = str(value or "")
     return bool(text and (":" in text or "/" in text or "\\" in text or text.endswith(".py")))
+
+
+def _normalize_source_ref(value: object) -> str:
+    text = str(value or "").strip().replace("\\", "/")
+    if "(" in text and text.endswith(")"):
+        text = text.rsplit("(", 1)[0].strip()
+    return text

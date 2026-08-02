@@ -1,0 +1,52 @@
+{
+  "schema_version": "project_evolution_policy.v1",
+  "status_threshold": 0.8,
+  "principles": [
+    "field_evidence_before_score_increase",
+    "kb_or_config_before_code_branch",
+    "no_source_project_mutation_in_field_trials",
+    "bounded_complexity_before_new_capability",
+    "regression_suite_before_readiness_claim"
+  ],
+  "evolution_change_types": {
+    "field_validated_capability": {
+      "required_evidence": ["field_report", "regression_tests", "no_source_changes"],
+      "score": 3
+    },
+    "kb_crystallization": {
+      "required_evidence": ["config_or_kb_change", "config_doctor", "regression_tests"],
+      "score": 2
+    },
+    "policy_extraction": {
+      "required_evidence": ["code_to_policy_move", "config_doctor", "line_limit_check"],
+      "score": 2
+    },
+    "independent_holdout_validation": {
+      "required_evidence": ["independent_holdout", "field_report", "regression_tests", "no_source_changes"],
+      "score": 2
+    },
+    "cosmetic_tuning": {
+      "required_evidence": ["regression_tests"],
+      "score": 0
+    }
+  },
+  "promotion_gates": {
+    "role_score_9_5": {
+      "minimum_recent_evolution_score": 5,
+      "minimum_field_callable_delta": 2,
+      "required_evidence": ["field_report", "regression_tests", "config_doctor", "line_limit_check"]
+    },
+    "role_score_9_7": {
+      "minimum_recent_evolution_score": 8,
+      "minimum_field_callable_delta": 4,
+      "required_evidence": ["independent_holdout", "field_report", "regression_tests", "config_doctor", "line_limit_check"]
+    }
+  },
+  "anti_patterns": [
+    "score_increase_without_field_delta",
+    "project_specific_branch_without_kb_record",
+    "broad_dependency_stub_without_field_win",
+    "new_runtime_code_when_policy_config_would_work",
+    "acceptance_fixture_that_masks_real_side_effects"
+  ]
+}

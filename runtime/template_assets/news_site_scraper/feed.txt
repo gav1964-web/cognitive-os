@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+import html as html_lib
+import re
+import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
+
+from news_site_scraper.site_profile import SiteProfile
+
+
+class _FeedLinkParser(HTMLParser):
+    def __init__(self, profile: SiteProfile) -> None:
+        super().__init__()
+        self.profile = profile
+        self.urls: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != 'link':
+            return
+        data = {key.lower(): value or '' for key, value in attrs}
+        rel = data.get('rel', '').lower()
+        feed_type = data.get('type', '').lower()
+        href = data.get('href', '')
+        if href and 'alternate' in rel and ('rss' in feed_type or 'atom' in feed_type or 'xml' in feed_type):
+            self.urls.append(urljoin(self.profile.base_url, href))
+
+
+def discover_feed_urls(html: str, profile: SiteProfile) -> list[str]:
+    parser = _FeedLinkParser(profile)
+    parser.feed(html)
+    candidates = parser.urls + [
+        urljoin(profile.base_url, path)
+        for path in ('/rss/', '/rss.xml', '/feed/', '/feed.xml', '/atom.xml', '/RSS/news.xml', '/rss/news.xml', '/RSS/main.xml', '/ru/rss/articles/', '/en/rss/articles/')
+    ]
+    unique: list[str] = []
+    seen: set[str] = set()
+    for url in candidates:
+        key = url.rstrip('/')
+        if key not in seen and _same_host(url, profile.base_url):
+            seen.add(key)
+            unique.append(url)
+    return unique
+
+
+def parse_feed_items(xml_text: str, profile: SiteProfile) -> list[dict[str, str]]:
+    try:
+        root = ET.fromstring(xml_text.strip().lstrip('\ufeff'))
+    except ET.ParseError:
+        return []
+    rows = _parse_rss(root, profile) or _parse_atom(root, profile)
+    seen: set[str] = set()
+    unique: list[dict[str, str]] = []
+    for row in rows:
+        key = row.get('url', '').strip().lower() or row.get('title', '').strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(row)
+    return unique
+
+
+def _parse_rss(root: ET.Element, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for item in root.findall('.//item'):
+        title = _text(item, 'title')
+        url = _text(item, 'link') or _text(item, 'guid')
+        if not title or not url:
+            continue
+        rows.append({
+            'title': title,
+            'url': urljoin(profile.base_url, url.strip()),
+            'date': _text(item, 'pubDate') or _namespaced_text(item, 'date'),
+            'summary': _clean_html(_text(item, 'description')),
+            'source': profile.source,
+        })
+    return rows
+
+
+def _parse_atom(root: ET.Element, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for entry in root.findall('.//{*}entry'):
+        title = _namespaced_text(entry, 'title')
+        url = ''
+        for link in entry.findall('{*}link'):
+            rel = (link.attrib.get('rel') or 'alternate').lower()
+            if rel == 'alternate' and link.attrib.get('href'):
+                url = link.attrib['href']
+                break
+        if not title or not url:
+            continue
+        rows.append({
+            'title': title,
+            'url': urljoin(profile.base_url, url.strip()),
+            'date': _namespaced_text(entry, 'updated') or _namespaced_text(entry, 'published'),
+            'summary': _clean_html(_namespaced_text(entry, 'summary') or _namespaced_text(entry, 'content')),
+            'source': profile.source,
+        })
+    return rows
+
+
+def _text(element: ET.Element, name: str) -> str:
+    child = element.find(name)
+    return _squash(child.text or '') if child is not None else ''
+
+
+def _namespaced_text(element: ET.Element, local_name: str) -> str:
+    for child in list(element):
+        if child.tag.rsplit('}', 1)[-1] == local_name:
+            return _squash(child.text or '')
+    return ''
+
+
+def _clean_html(value: str) -> str:
+    text = _squash(html_lib.unescape(re.sub(r'<[^>]+>', ' ', value)))
+    text = re.sub(r'\b(?:Читать далее|Read more)\b\.?$', '', text, flags=re.I).strip()
+    return _squash(text)
+
+
+def _same_host(url: str, base_url: str) -> bool:
+    left = urlparse(url).netloc.lower().removeprefix('www.')
+    right = urlparse(base_url).netloc.lower().removeprefix('www.')
+    return not left or not right or left == right
+
+
+def _squash(value: str) -> str:
+    return ' '.join(value.split())

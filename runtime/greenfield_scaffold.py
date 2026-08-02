@@ -42,6 +42,7 @@ def create_greenfield_scaffold(
         ],
     }
     manifest["verification"] = run_project_verification(project_dir)
+    _clean_runtime_artifacts(project_dir)
     manifest["acceptance_covered"] = acceptance_covered(case_name, manifest["verification"])
     (project_dir / "scaffold_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -67,7 +68,7 @@ def _clean_generated_scaffold(project_dir: Path) -> None:
         target = (project_dir / relative).resolve()
         if _is_inside(project_dir, target) and target.exists():
             shutil.rmtree(target)
-    for pattern in ("*.pyc", "__pycache__", "pyproject.toml", "README.md", "scaffold_manifest.json", "image_table_to_excel.py"):
+    for pattern in ("*.pyc", "__pycache__", "pyproject.toml", "README.md", "Dockerfile", "*.bat", "scaffold_manifest.json", "image_table_to_excel.py"):
         for target in project_dir.glob(pattern):
             resolved = target.resolve()
             if not _is_inside(project_dir, resolved) or not target.exists():
@@ -117,6 +118,18 @@ def run_project_verification(project_dir: Path) -> dict[str, Any]:
         "project_scoped": True,
         "commands": results,
     }
+
+
+def _clean_runtime_artifacts(project_dir: Path) -> None:
+    for path in project_dir.rglob("__pycache__"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob(".pytest_cache"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob("*.py[co]"):
+        if path.is_file():
+            path.unlink()
 
 
 def _ensure_pycache_dirs(project_dir: Path) -> None:

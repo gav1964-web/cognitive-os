@@ -17,6 +17,7 @@ def run_greenfield_prompt_benchmark(*, root: Path, benchmark_path: Path | None =
     cases = [_run_case(root=root, case=dict(row), write=write) for row in corpus["cases"]]
     passed = sum(1 for row in cases if row["status"] == "passed")
     quality_scores = [float(row["quality"]["score"]) for row in cases]
+    case_scores = [float(row["score"]) for row in cases]
     report = {
         "artifact_type": "GreenfieldPromptBenchmarkReport",
         "status": "ok" if passed == len(cases) else "failed",
@@ -26,8 +27,10 @@ def run_greenfield_prompt_benchmark(*, root: Path, benchmark_path: Path | None =
             "cases": len(cases),
             "passed": passed,
             "failed": len(cases) - passed,
-            "avg_score": round(sum(float(row["score"]) for row in cases) / len(cases), 3) if cases else 0.0,
+            "avg_score": round(sum(case_scores) / len(case_scores), 3) if case_scores else 0.0,
+            "min_score": round(min(case_scores), 3) if case_scores else 0.0,
             "avg_quality_score": round(sum(quality_scores) / len(quality_scores), 3) if quality_scores else 0.0,
+            "min_quality_score": round(min(quality_scores), 3) if quality_scores else 0.0,
             "quality_needs_review": sum(1 for row in cases if row["quality"]["status"] != "ok"),
         },
         "cases": cases,

@@ -1,0 +1,59 @@
+from pathlib import Path
+
+from image_table_excel import cli
+
+
+def test_cli_writes_workbook(monkeypatch, tmp_path, capsys):
+    def fake_convert(image_path, output_path=None, ocr_text_file=None, output_format='xlsx'):
+        target = Path(output_path) if output_path else Path(image_path).with_suffix('.xlsx')
+        target.write_text('xlsx fixture', encoding='utf-8')
+        return {'input_path': image_path, 'output_path': str(target), 'rows': 1}
+
+    image = tmp_path / 'table.webp'
+    image.write_text('fixture', encoding='utf-8')
+    monkeypatch.setattr(cli, 'image_table_to_excel', fake_convert)
+    assert cli.main([str(image)]) == 0
+    assert str(image.with_suffix('.xlsx')) in capsys.readouterr().out
+
+
+def test_cli_reports_controlled_error(monkeypatch, capsys):
+    def fail(image_path, output_path=None, ocr_text_file=None, output_format='xlsx'):
+        raise RuntimeError('OCR backend unavailable')
+
+    monkeypatch.setattr(cli, 'image_table_to_excel', fail)
+    assert cli.main(['tests/fixtures/sample.webp']) == 2
+    assert 'OCR backend unavailable' in capsys.readouterr().err
+
+
+def test_cli_forwards_ocr_text_file(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_convert(image_path, output_path=None, ocr_text_file=None, output_format='xlsx'):
+        captured['ocr_text_file'] = ocr_text_file
+        target = Path(image_path).with_suffix('.xlsx')
+        target.write_text('xlsx fixture', encoding='utf-8')
+        return {'input_path': image_path, 'output_path': str(target), 'rows': 1}
+
+    image = tmp_path / 'table.webp'
+    text = tmp_path / 'recognized.txt'
+    image.write_text('fixture', encoding='utf-8')
+    text.write_text('row', encoding='utf-8')
+    monkeypatch.setattr(cli, 'image_table_to_excel', fake_convert)
+    assert cli.main([str(image), '--ocr-text-file', str(text)]) == 0
+    assert captured['ocr_text_file'] == str(text)
+
+
+def test_cli_forwards_output_format(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_convert(image_path, output_path=None, ocr_text_file=None, output_format='xlsx'):
+        captured['output_format'] = output_format
+        target = Path(image_path).with_suffix('.doc')
+        target.write_text('doc fixture', encoding='utf-8')
+        return {'input_path': image_path, 'output_path': str(target), 'rows': 1}
+
+    image = tmp_path / 'table.webp'
+    image.write_text('fixture', encoding='utf-8')
+    monkeypatch.setattr(cli, 'image_table_to_excel', fake_convert)
+    assert cli.main([str(image), '--format', 'doc']) == 0
+    assert captured['output_format'] == 'doc'

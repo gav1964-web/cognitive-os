@@ -14,7 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from runtime.architect_curriculum import run_architect_curriculum
 from runtime.implementer_curriculum import run_implementer_curriculum
 from runtime.role_pipeline_benchmark import run_role_pipeline_benchmark
+from runtime.reviewer_curriculum import run_reviewer_curriculum
 from runtime.spec_writer_curriculum import run_spec_writer_curriculum
+from runtime.tester_curriculum import run_tester_curriculum
 from tools.github_architect_probe import run_probe as run_github_architect
 from tools.github_implementer_probe import run_probe as run_github_implementer
 from tools.github_reviewer_probe import run_probe as run_github_reviewer
@@ -78,7 +80,11 @@ def _run_trials(root: Path, github_dir: Path) -> dict[str, Any]:
         "impl_local": run_implementer_curriculum(root=root, curriculum_dir=root / "curricula" / "implementer_local_3"),
         "impl_external": run_implementer_curriculum(root=root, curriculum_dir=root / "curricula" / "implementer_external_local_3"),
         "impl_github": run_github_implementer(root=root, projects_dir=github_dir, label="role_readiness_implementer"),
+        "tester_local": run_tester_curriculum(root=root, curriculum_dir=root / "curricula" / "tester_local_3"),
+        "tester_external": run_tester_curriculum(root=root, curriculum_dir=root / "curricula" / "tester_external_local_3"),
         "tester_github": run_github_tester(root=root, projects_dir=github_dir, label="role_readiness_tester"),
+        "reviewer_local": run_reviewer_curriculum(root=root, curriculum_dir=root / "curricula" / "reviewer_local_3"),
+        "reviewer_external": run_reviewer_curriculum(root=root, curriculum_dir=root / "curricula" / "reviewer_external_local_3"),
         "reviewer_github": run_github_reviewer(root=root, projects_dir=github_dir, label="role_readiness_reviewer"),
         "pipeline": run_role_pipeline_benchmark(root, benchmarks_dir=root / "benchmarks" / "project_analyzer"),
     }
@@ -177,30 +183,51 @@ def _programmer_executor_readiness(runs: dict[str, Any], root: Path) -> dict[str
 
 
 def _tester_readiness(runs: dict[str, Any]) -> dict[str, Any]:
+    local = runs["tester_local"]
+    external = runs["tester_external"]
     github = runs["tester_github"]
     pipeline = runs["pipeline"]
     gh = dict(github.get("summary", {}))
     pipe = dict(pipeline.get("summary", {}))
+    local_summary = dict(local.get("summary", {}))
+    external_summary = dict(external.get("summary", {}))
     blocked = int(gh.get("blocked_no_safe_candidate") or 0)
     runnable = int(github.get("project_count") or 0) - blocked
     checks = {
+        "local_curriculum_ok": local.get("status") == "ok" and local_summary.get("ready_by_worst_case") is True,
+        "external_curriculum_ok": external.get("status") == "ok" and external_summary.get("ready_by_worst_case") is True,
         "github_probe_ok": github.get("status") == "ok",
         "pipeline_qa_ok": pipe.get("qa_score") == 1.0,
         "target_matches_implementation": gh.get("target_matches_implementation") == runnable,
         "writable_scope_guarded": gh.get("writable_scope_targets_candidate") == runnable,
         "no_source_changes": gh.get("source_code_changes") == 0,
     }
-    return _role("tester", checks, [_metric("github_quality", gh.get("avg_quality_score")), _metric("pipeline_qa", pipe.get("qa_score"))])
+    return _role(
+        "tester",
+        checks,
+        [
+            _metric("local_worst_case", local_summary.get("worst_case_score")),
+            _metric("external_worst_case", external_summary.get("worst_case_score")),
+            _metric("github_quality", gh.get("avg_quality_score")),
+            _metric("pipeline_qa", pipe.get("qa_score")),
+        ],
+    )
 
 
 def _reviewer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
+    local = runs["reviewer_local"]
+    external = runs["reviewer_external"]
     github = runs["reviewer_github"]
     pipeline = runs["pipeline"]
     gh = dict(github.get("summary", {}))
     pipe = dict(pipeline.get("summary", {}))
+    local_summary = dict(local.get("summary", {}))
+    external_summary = dict(external.get("summary", {}))
     blocked = int(gh.get("blocked_no_safe_candidate") or 0)
     runnable = int(github.get("project_count") or 0) - blocked
     checks = {
+        "local_curriculum_ok": local.get("status") == "ok" and local_summary.get("ready_by_worst_case") is True,
+        "external_curriculum_ok": external.get("status") == "ok" and external_summary.get("ready_by_worst_case") is True,
         "github_probe_ok": github.get("status") == "ok",
         "pipeline_qa_ok": pipe.get("qa_score") == 1.0,
         "scope_preserved": gh.get("scope_preserved") == github.get("project_count"),
@@ -208,7 +235,16 @@ def _reviewer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
         "no_architecture_drift": gh.get("architecture_drift") == 0,
         "review_target_matches_runnable": gh.get("review_target_matches_implementation") == runnable,
     }
-    return _role("reviewer", checks, [_metric("github_quality", gh.get("avg_quality_score")), _metric("pipeline_qa", pipe.get("qa_score"))])
+    return _role(
+        "reviewer",
+        checks,
+        [
+            _metric("local_worst_case", local_summary.get("worst_case_score")),
+            _metric("external_worst_case", external_summary.get("worst_case_score")),
+            _metric("github_quality", gh.get("avg_quality_score")),
+            _metric("pipeline_qa", pipe.get("qa_score")),
+        ],
+    )
 
 
 def _role(name: str, checks: dict[str, bool], metrics: list[dict[str, Any]]) -> dict[str, Any]:

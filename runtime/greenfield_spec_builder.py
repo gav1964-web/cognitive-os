@@ -26,6 +26,8 @@ def build_product_technical_spec(architecture: dict[str, Any], *, role_id: str =
         "component_contracts": _component_contracts(components),
         "primary_contract": primary,
         "interfaces": list(architecture.get("interfaces", [])),
+        "product_output_contract": dict(brief.get("product_output_contract") or architecture.get("product_output_contract") or {}),
+        "real_world_edge_cases": list(brief.get("real_world_edge_cases") or architecture.get("real_world_edge_cases") or []),
         "data_model": list(architecture.get("data_model", [])),
         "data_lifecycle": list(architecture.get("data_lifecycle", [])),
         "research_hints": list(architecture.get("research_hints", [])),
@@ -117,7 +119,7 @@ def _error_model(architecture: dict[str, Any]) -> list[dict[str, str]]:
 def _acceptance(architecture: dict[str, Any]) -> list[dict[str, str]]:
     focus = list(dict(architecture.get("spec_writer_brief", {})).get("acceptance_focus", []))
     rows = [
-        {"id": f"AC-{index + 1:03d}", "criterion": str(item), "verification": "pytest or explicit review checklist"}
+        {"id": f"AC-{index + 1:03d}", "criterion": str(item), "verification": _acceptance_verification(str(item))}
         for index, item in enumerate(focus)
     ]
     rows.append(
@@ -130,10 +132,47 @@ def _acceptance(architecture: dict[str, Any]) -> list[dict[str, str]]:
     return rows
 
 
+def _acceptance_verification(criterion: str) -> str:
+    lowered = criterion.lower()
+    if any(marker in lowered for marker in ("contract", "schema", "request", "response", "output", "summary", "source")):
+        return "contract test checks the stated input/output shape and source traceability"
+    if any(marker in lowered for marker in ("negative", "invalid", "failure", "timeout", "malformed", "empty", "cyrillic", "rotated")):
+        return "negative pytest fixture covers the named failure or edge condition"
+    if any(marker in lowered for marker in ("fixture", "without network", "no live", "fake", "mock")):
+        return "fixture-only pytest run proves behavior without live external services"
+    if any(marker in lowered for marker in ("dependency", "backend", "adapter")):
+        return "dependency/backend policy review plus adapter-boundary test"
+    if any(marker in lowered for marker in ("readme", "run", "documentation")):
+        return "documentation review verifies exact local run and test commands"
+    return "pytest or explicit review checklist tied to this criterion"
+
+
 def _verification_strategy(architecture: dict[str, Any]) -> dict[str, Any]:
+    focus = [str(item) for item in list(dict(architecture.get("spec_writer_brief", {})).get("acceptance_focus", []))]
+    edges = [str(row.get("id") or row.get("description")) for row in architecture.get("real_world_edge_cases", []) if isinstance(row, dict)]
+    contract_tests = ["validate request schemas", "verify primary contract output shape"]
+    negative_tests = ["invalid input", "adapter failure", "secret redaction"]
+    for item in focus:
+        lowered = item.lower()
+        if any(marker in lowered for marker in ("output", "summary", "source", "contract", "top-15", "plain query")):
+            contract_tests.append(item)
+        if any(marker in lowered for marker in ("cyrillic", "empty", "malformed", "noisy", "timeout", "failure")):
+            negative_tests.append(item)
     return {
-        "contract_tests": ["validate request schemas", "verify primary contract output shape"],
-        "negative_tests": ["invalid input", "adapter failure", "secret redaction"],
+        "contract_tests": _dedupe(contract_tests),
+        "negative_tests": _dedupe(negative_tests),
         "integration_tests": ["run with fake adapters only", "no live external service required for default tests"],
+        "real_world_scenarios": edges,
         "manual_review": list(architecture.get("open_questions", [])),
     }
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    result = []
+    seen = set()
+    for value in values:
+        key = value.strip().lower()
+        if key and key not in seen:
+            result.append(value)
+            seen.add(key)
+    return result

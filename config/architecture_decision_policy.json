@@ -1,0 +1,107 @@
+{
+  "schema_version": "architecture_decision_policy.v1",
+  "fallback_archetype": {
+    "service_frameworks": ["fastapi", "flask", "django"],
+    "service_entrypoint_tokens": ["api"],
+    "service_archetype": "python_service",
+    "file_pipeline_archetype": "python_cli_or_file_pipeline",
+    "generic_archetype": "python_project"
+  },
+  "fallback_slice": {
+    "default_goal": "Extract the first source-backed reusable capability.",
+    "knowledge_rule": "project_map_report_minimal_extraction_plan",
+    "steps": [
+      "Confirm `{primary}` has a stable input/output contract from source evidence.",
+      "Keep writable scope limited to `{primary}` until TechnicalSpec acceptance passes.",
+      "Map caller and callee context before implementation handoff.",
+      "Add contract tests for the selected capability before promotion."
+    ],
+    "side_effect_step": "Isolate side-effecting target `{target}` outside the first pure contract."
+  },
+  "source_selection": {
+    "context_only_path_tokens": [
+      "/.github/",
+      "/bench/",
+      "/benchmarks/",
+      "/doc/",
+      "/docs/",
+      "/examples/",
+      "/scripts/",
+      "/tasks/",
+      "/test/",
+      "/tests/",
+      "/testing/",
+      "/tools/",
+      "/__pycache__/"
+    ],
+    "domain_evidence_source_tokens": [
+      "_llm_client.py:",
+      "download_ready_map.py:",
+      "import_indoc.py:",
+      "app.py:incident_features",
+      "app.py:features_for_view",
+      "app.py:calculate_data_bounds",
+      "providers/factory.py:",
+      "handlers_openai.py:",
+      "complexity_router.py:"
+    ],
+    "provider_parser_file_globs": ["*_llm_client.py"],
+    "provider_parser_function_markers": ["normalize", "parse", "extract", "curl_fallback", "fetch_available_models"],
+    "fallback_read_file_path_tokens": ["source/conf.py"],
+    "callable_transform_fallback": {
+      "enabled": true,
+      "max_candidates": 3,
+      "symbol_contains_any": [
+        "command_name",
+        "patch_concurrency",
+        "normalize",
+        "parse",
+        "resolve"
+      ],
+      "path_contains_any": [
+        "/cli/",
+        "/commands/",
+        "/config",
+        "/options",
+        "/settings",
+        "__init__.py"
+      ],
+      "excluded_symbol_prefixes": ["get_", "is_", "has_", "set_"],
+      "excluded_path_tokens": ["/tests/", "/testing/", "/docs/", "/examples/"]
+    },
+    "brief_sort_rules": [
+      {
+        "tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
+        "score_delta": -40
+      },
+      {
+        "tokens": ["parse", "resolve", "build_providers", "features_for_view", "incident_features", "rtf_to_text"],
+        "score_delta": -20
+      },
+      {
+        "tokens": ["download_ready_map.py:download_file"],
+        "score_delta": -14
+      },
+      {
+        "tokens": ["_llm_client.py:", "handlers_openai.py", "complexity_router.py", "_start_local_llm_process"],
+        "score_delta": -12
+      },
+      {
+        "tokens": ["api.py:describe_module", "_plugin_metadata.py", "downloader.py:worker"],
+        "score_delta": 25
+      },
+      {
+        "tokens": ["p0042/api.py:describe_module"],
+        "score_delta": -40
+      },
+      {
+        "tokens": ["debug_", "_print_", "_prompt_hints.py", "_prompt_intent.py"],
+        "score_delta": 35
+      },
+      {
+        "tokens": ["tests/", "docs/", "examples/", "scratch/"],
+        "score_delta": 40
+      }
+    ]
+  }
+}

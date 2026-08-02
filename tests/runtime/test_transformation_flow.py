@@ -283,6 +283,15 @@ def _copy_workspace(tmp_path: Path) -> Path:
         src = ROOT / name
         dst = workspace / name
         if src.is_dir():
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+            ignore = shutil.ignore_patterns("__pycache__", ".pytest_cache")
+            if name == "benchmarks":
+                ignore = shutil.ignore_patterns(
+                    "__pycache__",
+                    ".pytest_cache",
+                    "github_*",
+                    "nasty_local_projects",
+                    "project_change_trials",
+                )
+            shutil.copytree(src, dst, ignore=ignore)
     (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
     return workspace

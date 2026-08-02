@@ -6,6 +6,7 @@ from typing import Any
 
 from .answers import build_answers, inline_value
 from .core_paths import is_core_path
+from .source_health import source_health as build_source_health
 
 
 RISKY_IMPORTS = {"subprocess", "os", "threading"}
@@ -17,7 +18,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     files = dict(payload["files"])  # type: ignore[index]
     python_structure = dict(payload["python_structure"])  # type: ignore[index]
     runtime_commands = dict(payload["runtime_commands"])  # type: ignore[index]
-    source_health = _source_health(tree, stack, files, python_structure, runtime_commands)
+    source_health = build_source_health(tree, stack, files, python_structure, runtime_commands)
     security_health = _security_health(files)
     summary = {
         "root": tree.get("root"),
@@ -35,9 +36,13 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     answers = build_answers(summary, risks, stack, files, python_structure, runtime_commands)
     answers["0_source_health"] = source_health
     answers["0_security_health"] = security_health
-    markdown = _markdown(summary, risks, stack, python_structure, runtime_commands, answers, source_health, security_health)
+    human_summary = _human_summary(summary, answers, source_health, security_health)
+    evidence_summary = _evidence_summary(summary, answers, source_health, security_health, python_structure)
+    markdown = _markdown(summary, risks, stack, python_structure, runtime_commands, answers, source_health, security_health, human_summary, evidence_summary)
     return {
         "summary": summary,
+        "human_summary": human_summary,
+        "evidence_summary": evidence_summary,
         "source_health": source_health,
         "security_health": security_health,
         "risks": risks,
@@ -172,6 +177,75 @@ def _security_health(files: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _human_summary(
+    summary: dict[str, Any],
+    answers: dict[str, Any],
+    source_health: dict[str, Any],
+    security_health: dict[str, Any],
+) -> dict[str, Any]:
+    scope = dict(answers.get("1_scope", {}))
+    execution = dict(answers.get("2_execution", {}))
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    plan = dict(readiness.get("minimal_extraction_plan", {}))
+    scenarios = list(scope.get("supported_scenarios", []) or [])
+    if not scenarios:
+        path = list(execution.get("primary_execution_path", []) or [])
+        if path:
+            scenarios = [f"Execute primary flow: {' -> '.join(str(item) for item in path[:4])}"]
+        elif summary.get("entrypoints"):
+            scenarios = [f"Run detected entrypoint `{summary['entrypoints'][0]}` and inspect produced outputs."]
+    next_step = "write ArchitectureDecisionRecord for the safest source-backed capability"
+    if plan.get("blocked_by"):
+        next_step = "stop implementation handoff until Project Analyzer has a safe Python candidate"
+    return {
+        "purpose": scope.get("main_task") or f"Analyze project at {summary.get('root')} and identify its runtime boundaries.",
+        "main_scenarios": scenarios[:5],
+        "inputs": list(scope.get("inputs", []) or [])[:8],
+        "outputs": list(scope.get("outputs", []) or [])[:8],
+        "recommended_next_step": next_step,
+        "source_health": source_health.get("status"),
+        "security_health": security_health.get("status"),
+    }
+
+
+def _evidence_summary(
+    summary: dict[str, Any],
+    answers: dict[str, Any],
+    source_health: dict[str, Any],
+    security_health: dict[str, Any],
+    python_structure: dict[str, Any],
+) -> dict[str, Any]:
+    execution = dict(answers.get("2_execution", {}))
+    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    refs = [
+        "ProjectMapReport.summary",
+        "ProjectMapReport.answers.1_scope",
+        "ProjectMapReport.answers.2_execution",
+        "ProjectMapReport.answers.6_runtime_extraction_readiness",
+    ]
+    refs.extend(str(item) for item in list(execution.get("entrypoints", []))[:4] if item)
+    refs.extend(
+        f"{row.get('path')}:{row.get('name')}"
+        for row in list(readiness.get("hidden_orchestrators", []))[:4]
+        if isinstance(row, dict) and row.get("path") and row.get("name")
+    )
+    confidence = 0.9
+    if source_health.get("status") != "clean":
+        confidence -= 0.15
+    if security_health.get("status") != "clean":
+        confidence -= 0.1
+    if not python_structure.get("files"):
+        confidence -= 0.2
+    return {
+        "source_refs": sorted(dict.fromkeys(refs)),
+        "confidence": round(max(0.2, confidence), 2),
+        "limits": [
+            "static analysis cannot prove dynamically imported entrypoints",
+            "absence of evidence is not evidence of absence for generated/runtime code",
+        ],
+    }
+
+
 def _markdown(
     summary: dict[str, Any],
     risks: list[dict[str, str]],
@@ -181,6 +255,8 @@ def _markdown(
     answers: dict[str, Any],
     source_health: dict[str, Any],
     security_health: dict[str, Any],
+    human_summary: dict[str, Any],
+    evidence_summary: dict[str, Any],
 ) -> str:
     lines = [
         "# Project Map Report",
@@ -190,6 +266,16 @@ def _markdown(
         f"Project shape: `{source_health['project_shape']}`, source health: `{source_health['status']}`",
         f"Frameworks: {', '.join(summary['frameworks']) or 'none detected'}",
         f"Entrypoints: {', '.join(summary['entrypoints']) or 'none detected'}",
+        "",
+        "## Human Summary",
+        f"- Purpose: {human_summary.get('purpose')}",
+        f"- Main scenarios: {inline_value(human_summary.get('main_scenarios'))}",
+        f"- Recommended next step: {human_summary.get('recommended_next_step')}",
+        "",
+        "## Evidence Summary",
+        f"- Confidence: `{evidence_summary.get('confidence')}`",
+        f"- Source refs: {inline_value(evidence_summary.get('source_refs'))}",
+        f"- Limits: {inline_value(evidence_summary.get('limits'))}",
         "",
         "## Source Health",
         f"- Status: `{source_health['status']}`",
@@ -249,179 +335,3 @@ def _active_runtime_commands(runtime_commands: dict[str, Any]) -> list[dict[str,
         for command in runtime_commands.get("commands", [])
         if isinstance(command, dict) and is_core_path(str(command.get("path", "")))
     ]
-
-
-def _source_health(
-    tree: dict[str, Any],
-    stack: dict[str, Any],
-    files: dict[str, Any],
-    python_structure: dict[str, Any],
-    runtime_commands: dict[str, Any],
-) -> dict[str, Any]:
-    tree_skipped = dict(tree.get("skipped", {}))
-    py_skipped = [row for row in python_structure.get("skipped", []) if isinstance(row, dict)]
-    file_skipped = [row for row in files.get("skipped", []) if isinstance(row, dict)]
-    runtime_skipped = [row for row in runtime_commands.get("skipped", []) if isinstance(row, dict)]
-    syntax_errors = [row for row in py_skipped if str(row.get("reason")) == "SyntaxError"]
-    inaccessible = [
-        row
-        for row in [*py_skipped, *file_skipped, *runtime_skipped]
-        if str(row.get("reason")) not in {"SyntaxError", "too_large", "max_files_exceeded", "non_text_extension"}
-    ]
-    inaccessible_count = (
-        int(tree_skipped.get("inaccessible_files") or 0)
-        + int(tree_skipped.get("inaccessible_directories") or 0)
-        + len(inaccessible)
-    )
-    entrypoints = [str(item) for item in stack.get("entrypoints", []) if item]
-    dependency_files = [str(item.get("path", "")) for item in stack.get("dependency_files", []) if isinstance(item, dict)]
-    generated_signals = _generated_run_signals(tree, stack, python_structure)
-    packaged_copy_signals = _packaged_copy_signals(tree, stack, python_structure)
-    artifact_noise_signals = _artifact_noise_signals(tree)
-    env_file_signals = _env_file_signals(tree, files)
-    project_shape = _project_shape(tree, entrypoints, dependency_files, generated_signals, packaged_copy_signals)
-    status = "clean"
-    if syntax_errors or inaccessible_count:
-        status = "damaged"
-    elif project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
-        status = "noisy"
-    blockers = []
-    if syntax_errors:
-        blockers.append("repair or quarantine files that fail Python AST parsing")
-    if inaccessible_count:
-        blockers.append("skip or isolate inaccessible filesystem entries")
-    if project_shape == "dirty_portfolio":
-        blockers.append("choose a concrete project root before architecture extraction")
-    if packaged_copy_signals:
-        blockers.append("exclude nested packaged/snapshot copies from active source selection")
-    if artifact_noise_signals:
-        blockers.append("exclude logs, archives, caches, and generated artifacts before scoring architecture quality")
-    if env_file_signals:
-        blockers.append("treat .env files as configuration/security evidence, not active source")
-    recommendation = "source tree is ready for normal project analysis"
-    if blockers:
-        recommendation = "; ".join(blockers)
-    return {
-        "status": status,
-        "project_shape": project_shape,
-        "syntax_error_count": len(syntax_errors),
-        "syntax_error_samples": syntax_errors[:12],
-        "inaccessible_count": inaccessible_count,
-        "inaccessible_samples": inaccessible[:12],
-        "generated_run_signal_count": len(generated_signals),
-        "generated_run_samples": generated_signals[:12],
-        "packaged_copy_signal_count": len(packaged_copy_signals),
-        "packaged_copy_samples": packaged_copy_signals[:12],
-        "artifact_noise_signal_count": len(artifact_noise_signals),
-        "artifact_noise_samples": artifact_noise_signals[:12],
-        "env_file_signal_count": len(env_file_signals),
-        "env_file_samples": env_file_signals[:12],
-        "entrypoint_count": len(entrypoints),
-        "dependency_file_count": len(dependency_files),
-        "tree_truncated": bool(dict(tree.get("counts", {})).get("truncated")),
-        "recommendation": recommendation,
-    }
-
-
-def _project_shape(
-    tree: dict[str, Any],
-    entrypoints: list[str],
-    dependency_files: list[str],
-    generated_signals: list[str],
-    packaged_copy_signals: list[str],
-) -> str:
-    counts = dict(tree.get("counts", {}))
-    directories = int(counts.get("directories") or 0)
-    files = int(counts.get("files") or 0)
-    if packaged_copy_signals:
-        return "dirty_portfolio"
-    if directories >= 500 or len(entrypoints) >= 20 or len(dependency_files) >= 20 or len(generated_signals) >= 20:
-        return "dirty_portfolio"
-    if directories >= 80 or len(entrypoints) >= 8 or len(dependency_files) >= 8 or len(generated_signals) >= 8:
-        return "multi_project_workspace"
-    if files == 0:
-        return "empty_or_unreadable"
-    return "single_project"
-
-
-def _generated_run_signals(
-    tree: dict[str, Any],
-    stack: dict[str, Any],
-    python_structure: dict[str, Any],
-) -> list[str]:
-    paths: list[str] = []
-    for row in tree.get("files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    for row in stack.get("dependency_files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    for row in python_structure.get("files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    signals = []
-    for path in paths:
-        lowered = path.replace("\\", "/").lower()
-        if any(token in lowered for token in ("/runs/", "/generated/", "/scratch/", "/build/", "/dist/", "test_workspace/", "source_project/")):
-            signals.append(path)
-    return sorted(dict.fromkeys(signals))
-
-
-def _packaged_copy_signals(
-    tree: dict[str, Any],
-    stack: dict[str, Any],
-    python_structure: dict[str, Any],
-) -> list[str]:
-    paths: list[str] = []
-    for row in tree.get("files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    for row in tree.get("directories", []):
-        paths.append(str(row))
-    for row in stack.get("dependency_files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    for row in python_structure.get("files", []):
-        if isinstance(row, dict):
-            paths.append(str(row.get("path") or ""))
-    signals = []
-    for path in paths:
-        lowered = path.replace("\\", "/").lower()
-        parts = [part for part in lowered.split("/") if part]
-        if len(parts) >= 2 and _looks_like_snapshot_dir(parts[0]):
-            signals.append(path)
-        if any(part.endswith(("_install_package", "_package")) for part in parts[:-1]):
-            signals.append(path)
-    return sorted(dict.fromkeys(signals))
-
-
-def _artifact_noise_signals(tree: dict[str, Any]) -> list[str]:
-    signals = []
-    for row in tree.get("files", []):
-        if not isinstance(row, dict):
-            continue
-        path = str(row.get("path") or "")
-        lowered = path.replace("\\", "/").lower()
-        if lowered.endswith((".zip", ".tar", ".tar.gz", ".tgz", ".log", ".jsonl", ".sqlite", ".db", ".pkl", ".pickle", ".bin", ".pt", ".pth", ".ipynb")):
-            signals.append(path)
-        elif "/.ipynb_checkpoints/" in f"/{lowered}":
-            signals.append(path)
-    return sorted(dict.fromkeys(signals))
-
-
-def _env_file_signals(tree: dict[str, Any], files: dict[str, Any]) -> list[str]:
-    signals = []
-    for source in (tree.get("files", []), files.get("files", [])):
-        for row in source:
-            if not isinstance(row, dict):
-                continue
-            path = str(row.get("path") or "")
-            if path.replace("\\", "/").lower().endswith(".env"):
-                signals.append(path)
-    return sorted(dict.fromkeys(signals))
-
-
-def _looks_like_snapshot_dir(part: str) -> bool:
-    lowered = part.lower()
-    chunks = lowered.replace("-", "_").split("_")
-    return any(len(chunk) == 8 and chunk.isdigit() and chunk.startswith(("20", "19")) for chunk in chunks)

@@ -150,18 +150,22 @@ def _role_quality(
     coverage = dict(review.get("coverage_assessment", {}))
     review_target = dict(review.get("review_target", {}))
     selected = str(extraction_contract.get("candidate") or "")
-    target = str(implementation_target.get("candidate") or "")
-    tested = str(test_target.get("candidate") or "")
+    implementation_blocked = contract_binding.get("binding_status") == "blocked_no_safe_candidate"
+    test_blocked = test_plan.get("status") == "blocked_no_safe_candidate"
+    target = str(implementation_target.get("candidate") or ("blocked_no_safe_candidate" if implementation_blocked else ""))
+    tested = str(test_target.get("candidate") or ("blocked_no_safe_candidate" if test_blocked else ""))
     reviewed = str(review_target.get("candidate") or "")
     return {
         "selected_extraction_candidate": selected,
         "implementation_target": target,
         "implementation_targets_extraction_candidate": bool(selected and selected == target),
         "implementation_binding_status": contract_binding.get("binding_status"),
-        "implementation_has_input_contract": bool(contract_binding.get("input_contract")),
+        "implementation_blocked_no_safe_candidate": implementation_blocked,
+        "implementation_has_input_contract": isinstance(contract_binding.get("input_contract"), dict),
         "implementation_has_output_contract": bool(contract_binding.get("output_contract")),
         "test_target": tested,
         "test_targets_implementation_target": bool(target and tested == target),
+        "test_blocked_no_safe_candidate": test_blocked,
         "test_has_contract_matrix": bool(test_plan.get("contract_test_matrix")),
         "test_has_negative_tests_for_target": _rows_cover_target(test_plan.get("negative_tests", []), target),
         "review_target": reviewed,
@@ -286,6 +290,8 @@ def _maybe_run_executor(
         "status": result.get("status"),
         "execution_dir": result.get("execution_dir"),
         "patch_package_path": result.get("patch_package_path"),
+        "no_patch_package_path": result.get("no_patch_package_path"),
+        "blocked_execution_report_path": result.get("blocked_execution_report_path"),
         "test_result_path": test_result_path,
         "test_result": test_result,
         "source_code_changes": result.get("source_code_changes", False),

@@ -27,6 +27,9 @@ def build_source_context(
         row.update(central.get(source, {}))
         if ":" in source:
             path_text, symbol = source.split(":", 1)
+            module_context = _module_context(root / path_text)
+            if module_context:
+                context.setdefault(path_text, {"source": path_text}).update(module_context)
             snippet = _symbol_snippet(root / path_text, symbol)
             if snippet:
                 row["snippet"] = snippet
@@ -35,11 +38,73 @@ def build_source_context(
                 snippet_effects = list(snippet.get("side_effects", []))
                 if snippet_effects:
                     row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + snippet_effects))
+        elif source.endswith(".py"):
+            module_context = _module_context(root / source)
+            if module_context:
+                row.update(module_context)
+                row["kind"] = "module_script"
+                row["snippet"] = module_context.get("module_snippet", "")
+                row["side_effects"] = module_context.get("module_side_effects", [])
         elif source == "ProjectMapReport.risks":
             row["facts"] = project_report.get("risks", [])[:5]
         if len(row) > 1:
             context[source] = row
     return context
+
+
+def _module_context(path: Path) -> dict[str, Any] | None:
+    if not path.exists() or path.suffix != ".py":
+        return None
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(text)
+    except SyntaxError:
+        return None
+    imports: set[str] = set()
+    functions: list[dict[str, Any]] = []
+    classes: list[dict[str, Any]] = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            imports.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                imports.add(node.module.split(".", 1)[0])
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            functions.append(
+                {
+                    "name": node.name,
+                    "line": int(getattr(node, "lineno", 0) or 0),
+                    "signature": _ast_signature(node),
+                }
+            )
+        elif isinstance(node, ast.ClassDef):
+            classes.append({"name": node.name, "line": int(getattr(node, "lineno", 0) or 0)})
+    doc = ast.get_docstring(tree) or ""
+    result: dict[str, Any] = {
+        "path": path.name,
+        "module_imports": sorted(imports)[:16],
+        "module_functions": functions[:12],
+        "module_classes": classes[:12],
+        "module_snippet": text[:1200],
+        "module_side_effects": _module_side_effects(tree),
+    }
+    if doc:
+        result["module_docstring"] = doc[:600]
+    return {key: value for key, value in result.items() if value not in ("", [], None)}
+
+
+def _module_side_effects(tree: ast.AST) -> list[str]:
+    effects = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        call = _call_name(node.func)
+        lowered = call.lower()
+        if lowered in {"open", "path.open"} or "imread" in lowered or "imwrite" in lowered:
+            effects.add("filesystem")
+        if any(token in lowered for token in ("request", "urlopen", "subprocess", "popen")):
+            effects.add("process_boundary")
+    return sorted(effects)
 
 
 def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
@@ -226,12 +291,13 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
         tree = ast.parse("\n".join(lines))
     except SyntaxError:
         return None
+    matches = _symbol_matches(tree, symbol)
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == symbol:
             start = max(1, int(getattr(node, "lineno", 1)))
             end = min(len(lines), int(getattr(node, "end_lineno", start)))
             node_text = "\n".join(lines[start - 1 : end])
-            return {
+            result = {
                 "path": path.name,
                 "symbol": symbol,
                 "start_line": start,
@@ -240,7 +306,33 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "signature": _ast_signature(node),
                 "side_effects": _ast_side_effect_hints(node, node_text),
             }
+            if len(matches) > 1:
+                result["symbol_occurrences"] = matches[:8]
+                if all(item.get("kind") == "method" for item in matches):
+                    result["target_binding"] = "ambiguous_method_symbol"
+            elif matches and matches[0].get("kind") == "method":
+                result["target_binding"] = "method_symbol"
+                result["owner_class"] = matches[0].get("class_name")
+            return result
     return None
+
+
+def _symbol_matches(tree: ast.AST, symbol: str) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for parent in ast.walk(tree):
+        body = getattr(parent, "body", None)
+        if not isinstance(body, list):
+            continue
+        for node in body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) or node.name != symbol:
+                continue
+            row = {"kind": "function", "line": int(getattr(node, "lineno", 0) or 0)}
+            if isinstance(parent, ast.ClassDef):
+                row.update({"kind": "method", "class_name": parent.name})
+            elif isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                row.update({"kind": "nested_function", "parent_name": parent.name})
+            matches.append(row)
+    return matches
 
 
 def _ast_signature(node: ast.AST) -> dict[str, Any]:

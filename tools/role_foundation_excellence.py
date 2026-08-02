@@ -17,13 +17,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--github-projects-dir", default="benchmarks/github_architect_10")
+    parser.add_argument("--target-score", type=float, default=9.5)
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     github_dir = Path(args.github_projects_dir)
     if not github_dir.is_absolute():
         github_dir = root / github_dir
-    report = run_role_foundation_excellence(root=root, github_dir=github_dir.resolve())
+    report = run_role_foundation_excellence(root=root, github_dir=github_dir.resolve(), target_score=args.target_score)
     if args.write:
         report["report_path"] = _write_report(root, report).as_posix()
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))

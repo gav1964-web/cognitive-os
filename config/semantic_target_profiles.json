@@ -1,0 +1,2133 @@
+{
+  "schema_version": "semantic_target_profiles.v1",
+  "profiles": [
+    {
+      "id": "telemetry_export_boundary",
+      "symbols": ["_export", "export", "force_flush", "shutdown"],
+      "symbol_contains_any": ["export"],
+      "path_contains_any": ["opentelemetry", "exporter", "otlp"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "telemetry exporter call is a bounded adapter contract",
+      "ranking_reason": "telemetry export boundary is representative integration behavior",
+      "contract_family": "telemetry_export_boundary",
+      "input_contract": {
+        "batch": "TelemetryBatch(spans|metrics|logs, resource?, instrumentation_scope?)",
+        "export_context": "ExportContext(endpoint?, timeout?, credentials?, retry_policy?)"
+      },
+      "output_contract": {
+        "export_result": "ExportResult(status, retryable?, dropped_count?, response_metadata?)",
+        "failure_packet": "TelemetryExportFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "fake by default in contract tests; live exporter calls require explicit integration profile"
+      },
+      "validation_gates": [
+        "successful export, retryable failure, and permanent failure are covered by fake transport tests",
+        "timeout and credentials failures return typed failure evidence",
+        "batch mutation and drop policy are explicit"
+      ],
+      "failure_modes": ["transport_error", "timeout", "authentication_failure", "partial_success", "non_retryable_rejection"]
+    },
+    {
+      "id": "dataframe_conversion_boundary",
+      "symbol_contains_all": ["pandas", "df"],
+      "symbol_contains_any": ["convert", "to_pandas", "dataframe"],
+      "path_contains_any": ["dataframe", "dataframe_util", "pandas"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "dataframe conversion is a bounded tabular adapter contract",
+      "contract_family": "dataframe_conversion_boundary",
+      "input_contract": {
+        "input_value": "TabularLikeInput(DataFrame|Series|pyarrow|numpy|list|dict)",
+        "conversion_options": "DataFrameConversionOptions(copy?, dtype_policy?, index_policy?)"
+      },
+      "output_contract": {
+        "dataframe": "PandasDataFrameResult(columns, dtypes, index_policy, row_count)",
+        "failure_packet": "DataFrameConversionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "conversion must document copy/no-copy behavior"
+      },
+      "validation_gates": [
+        "common tabular inputs and malformed inputs are covered by contract tests",
+        "dtype/index preservation is explicit",
+        "large input handling is bounded by fixture size"
+      ],
+      "failure_modes": ["unsupported_input_type", "dtype_conversion_error", "shape_mismatch", "resource_limit"]
+    },
+    {
+      "id": "workflow_task_run_lifecycle_boundary",
+      "symbol_contains_all": ["task", "run"],
+      "path_contains_any": ["prefect", "task_engine", "flows", "tasks"],
+      "score_bonus": 24,
+      "ranking_bonus": 40,
+      "benign_runtime_boundary": true,
+      "reason": "workflow task-run lifecycle is a bounded orchestration contract",
+      "ranking_reason": "task-run lifecycle boundary is representative workflow-engine behavior",
+      "contract_family": "workflow_task_run_lifecycle_boundary",
+      "input_contract": {
+        "task_run": "TaskRun(id, task_key, parameters, state?, context?)",
+        "execution_context": "TaskRunContext(flow_run?, retries?, cache_policy?, timeout?)"
+      },
+      "output_contract": {
+        "state": "TaskRunState(status, result_ref?, exception_ref?, retry_decision?)",
+        "failure_packet": "TaskRunFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state_policy": "state transitions and external result persistence must be explicit and replay-aware"
+      },
+      "validation_gates": [
+        "successful, failed, retry, cached, and cancelled task-run paths are contract-tested with fakes",
+        "state transition idempotency is documented",
+        "external storage/API calls are isolated behind adapters"
+      ],
+      "failure_modes": ["task_exception", "timeout", "cancelled", "cache_miss", "state_persistence_failure"]
+    },
+    {
+      "id": "asgi_app_wrapper_boundary",
+      "symbols": ["_run_app", "run_app", "run_asgi_app"],
+      "path_contains_any": ["asgi", "sentry_sdk", "middleware", "integrations"],
+      "score_bonus": 24,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "ASGI app wrapper is a bounded middleware/integration contract",
+      "contract_family": "asgi_app_wrapper_boundary",
+      "input_contract": {
+        "app": "ASGIApp(scope, receive, send)",
+        "request_context": "ASGIContext(scope, middleware_state?, tracing_context?)"
+      },
+      "output_contract": {
+        "completion": "ASGIWrapperResult(completed, captured_errors?, emitted_events?)",
+        "failure_packet": "ASGIWrapperFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "Sentry/network emission is faked by default in contract tests"
+      },
+      "validation_gates": [
+        "normal app completion and app exception paths are covered with fake ASGI app",
+        "scope/receive/send lifecycle is fixture-backed",
+        "captured errors and emitted telemetry are asserted without live network"
+      ],
+      "failure_modes": ["app_exception", "invalid_scope", "send_failure", "telemetry_capture_failure"]
+    },
+    {
+      "id": "job_message_handler_boundary",
+      "symbol_contains_any": ["job", "task", "event", "message", "payload", "command"],
+      "path_contains_any": ["worker", "queue", "consumer", "handler", "jobs", "tasks"],
+      "score_bonus": 20,
+      "ranking_bonus": 32,
+      "benign_runtime_boundary": true,
+      "reason": "job/message handler is a bounded queue or event-processing contract",
+      "ranking_reason": "job/message handler is representative workflow behavior",
+      "contract_family": "job_message_handler_boundary",
+      "input_contract": {
+        "message": "JobOrMessagePayload(id?, type?, payload, metadata?, retry_count?)",
+        "runtime_context": "HandlerContext(queue?, dependencies?, cancellation?, deadline?)"
+      },
+      "output_contract": {
+        "handler_result": "HandlerResult(status, produced_artifacts?, emitted_events?, retry_policy?)",
+        "failure_packet": "HandlerFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "idempotency_policy": "retries must declare which side effects are safe to replay"
+      },
+      "validation_gates": [
+        "valid and malformed messages are covered by contract tests",
+        "retry/idempotency behavior is explicit before implementer handoff",
+        "external side effects are isolated or represented as typed adapter calls"
+      ],
+      "failure_modes": ["invalid_message", "dependency_failure", "timeout", "non_idempotent_retry"]
+    },
+    {
+      "id": "business_value_transform_boundary",
+      "symbol_contains_any": ["price", "total", "amount", "cost", "sum", "score", "rating"],
+      "path_contains_any": [],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "reason": "business value calculation is a bounded deterministic contract",
+      "ranking_reason": "business value calculation is a compact first-slice transform",
+      "contract_family": "business_value_transform_boundary",
+      "input_contract": {
+        "domain_input": "BusinessInput(named fields, numeric values, validation policy)",
+        "calculation_options": "CalculationOptions(rounding?, currency?, bounds?)"
+      },
+      "output_contract": {
+        "computed_value": "BusinessValueResult(value, units?, explanation?, validation_warnings?)",
+        "failure_packet": "BusinessValueFailure(kind, field?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "calculation must not mutate caller-visible input"
+      },
+      "validation_gates": [
+        "valid numeric/domain inputs are covered by examples",
+        "missing, negative, malformed, or out-of-range inputs are covered by negative tests",
+        "rounding and units are explicit in acceptance criteria"
+      ],
+      "failure_modes": ["missing_required_field", "invalid_numeric_value", "rounding_policy_mismatch"]
+    },
+    {
+      "id": "fastapi_route_decorator_registration_boundary",
+      "symbols": ["get", "post", "put", "delete", "patch", "options", "head", "trace"],
+      "path_contains_any": ["fastapi/applications.py", "fastapi/routing.py"],
+      "score_bonus": 20,
+      "ranking_bonus": 20,
+      "benign_runtime_boundary": true,
+      "reason": "FastAPI route decorator registration is a bounded framework API contract",
+      "ranking_reason": "route decorator registration is representative web-framework behavior",
+      "contract_family": "framework_route_registration_boundary",
+      "input_contract": {
+        "route_declaration": "RouteDeclaration(path, method, endpoint?, response_model?, dependencies?, tags?)",
+        "application_context": "ApplicationRegistrationContext(router, default_response_class?, dependency_overrides?)"
+      },
+      "output_contract": {
+        "registered_route": "RegisteredRoute(path, methods, endpoint_ref, dependency_graph_ref?)",
+        "failure_packet": "RouteRegistrationFailure(kind, field?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "router mutation must be asserted through route table fixtures"
+      },
+      "validation_gates": [
+        "valid route decorator registers a route with expected method and path",
+        "invalid path/method/dependency input returns controlled validation evidence",
+        "route table mutation is isolated to a fixture application"
+      ],
+      "failure_modes": ["invalid_path", "duplicate_route", "invalid_dependency", "response_model_error"]
+    },
+    {
+      "id": "coverage_analysis_report_boundary",
+      "symbols": ["command_line", "_raw_parse", "analysis_from_file_reporter", "report", "xml_file"],
+      "path_contains_any": ["coverage/"],
+      "score_bonus": 20,
+      "ranking_bonus": 24,
+      "reason": "coverage analysis/reporting is a bounded measurement contract",
+      "ranking_reason": "coverage analysis/reporting target is representative coverage-tool behavior",
+      "contract_family": "coverage_analysis_report_boundary",
+      "input_contract": {
+        "coverage_input": "CoverageInput(source_file, measured_data_ref?, report_options?)",
+        "analysis_context": "CoverageAnalysisContext(parser_policy, excluded_lines?, branch_policy?)"
+      },
+      "output_contract": {
+        "coverage_findings": "CoverageFindings(statements, missing, excluded?, branches?)",
+        "failure_packet": "CoverageAnalysisFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "fixture source and measured-data files only in contract tests"
+      },
+      "validation_gates": [
+        "normal source file and missing measured data are covered",
+        "excluded lines and branch data are explicit",
+        "report output shape is fixture-backed"
+      ],
+      "failure_modes": ["parse_error", "missing_data", "invalid_report_option", "write_failure"]
+    },
+    {
+      "id": "code_quality_option_or_plugin_boundary",
+      "symbol_contains_any": ["register", "parse_plugin", "parse_config", "parse_files", "file_contents", "make_decision"],
+      "path_contains_any": ["flake8", "isort", "bandit"],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "reason": "code-quality option/plugin parsing is a bounded analyzer contract",
+      "ranking_reason": "option/plugin parse boundary is representative code-quality-tool behavior",
+      "contract_family": "code_quality_option_plugin_boundary",
+      "input_contract": {
+        "tool_config": "ToolConfig(cli_options?, config_file?, plugin_options?)",
+        "source_context": "SourceAnalysisContext(file_paths?, plugin_registry?)"
+      },
+      "output_contract": {
+        "normalized_options": "NormalizedToolOptions(values, plugin_bindings?, diagnostics?)",
+        "failure_packet": "CodeQualityConfigFailure(kind, option?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "config/source fixtures only; no source rewrites in default tests"
+      },
+      "validation_gates": [
+        "default options and explicit config are covered",
+        "invalid option/plugin configuration returns typed diagnostics",
+        "plugin registry binding is source-linked"
+      ],
+      "failure_modes": ["invalid_option", "plugin_load_error", "config_parse_error", "source_parse_error"]
+    },
+    {
+      "id": "property_strategy_generation_boundary",
+      "symbols": ["data_frames", "arrays", "given", "run_engine", "make_strategies_namespace"],
+      "path_contains_any": ["hypothesis/"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "property-based strategy generation is a bounded data-generation contract",
+      "ranking_reason": "strategy generation boundary is representative property-testing behavior",
+      "contract_family": "property_strategy_generation_boundary",
+      "input_contract": {
+        "strategy_spec": "StrategySpec(schema?, element_strategy?, size_policy?, settings?)",
+        "generation_context": "GenerationContext(seed?, database_ref?, assumptions?)"
+      },
+      "output_contract": {
+        "generated_example": "GeneratedExample(value, seed_ref?, shrink_trace?)",
+        "failure_packet": "StrategyGenerationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state_policy": "random seed and example database use must be explicit"
+      },
+      "validation_gates": [
+        "valid strategy generation is deterministic under fixture settings",
+        "invalid strategy input and unsatisfied assumptions are covered",
+        "shrinking/replay metadata is preserved"
+      ],
+      "failure_modes": ["invalid_strategy", "generation_exhausted", "assumption_unsatisfied", "replay_mismatch"]
+    },
+    {
+      "id": "graph_algorithm_boundary",
+      "symbol_contains_any": ["cycles", "matching", "shortest", "weisfeiler", "subgraph", "sparse_array"],
+      "path_contains_any": ["networkx/algorithms", "networkx/convert"],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "reason": "graph algorithm execution is a bounded in-process algorithm contract",
+      "ranking_reason": "graph algorithm boundary is representative graph-library behavior",
+      "contract_family": "graph_algorithm_boundary",
+      "input_contract": {
+        "graph_input": "GraphInput(nodes, edges, directed?, multigraph?, attributes?)",
+        "algorithm_options": "GraphAlgorithmOptions(source?, target?, weight?, backend?)"
+      },
+      "output_contract": {
+        "algorithm_result": "GraphAlgorithmResult(paths?|cycles?|matches?|matrix?, metadata?)",
+        "failure_packet": "GraphAlgorithmFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "algorithm must document whether input graph is mutated"
+      },
+      "validation_gates": [
+        "small directed/undirected graph fixtures are covered",
+        "empty/invalid graph behavior is explicit",
+        "optional numeric backend boundaries are faked or skipped with evidence"
+      ],
+      "failure_modes": ["invalid_graph", "unsupported_graph_type", "no_path", "backend_missing", "resource_limit"]
+    },
+    {
+      "id": "plot_semantic_mapping_boundary",
+      "symbol_contains_any": ["mapping", "scale", "plot", "render", "figure"],
+      "path_contains_any": ["seaborn/", "bokeh/", "matplotlib"],
+      "score_bonus": 20,
+      "ranking_bonus": 24,
+      "reason": "plot semantic mapping/render preparation is a bounded visualization contract",
+      "ranking_reason": "plot semantic mapping target is representative visualization behavior",
+      "contract_family": "plot_semantic_mapping_boundary",
+      "input_contract": {
+        "plot_data": "PlotDataFrameOrMapping(columns, values, semantic_roles?)",
+        "plot_options": "PlotOptions(scales?, palette?, order?, backend?)"
+      },
+      "output_contract": {
+        "plot_mapping": "PlotSemanticMapping(channels, scale_state?, warnings?)",
+        "failure_packet": "PlotMappingFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "rendering": "default tests assert mapping/artifact manifest before large binary render output"
+      },
+      "validation_gates": [
+        "numeric/categorical inputs are covered",
+        "missing column and invalid palette/scale are negative cases",
+        "render backend is separated from semantic mapping"
+      ],
+      "failure_modes": ["missing_column", "invalid_scale", "palette_error", "backend_error"]
+    },
+    {
+      "id": "git_hook_execution_boundary",
+      "symbols": ["_run_single_hook", "_run_hooks"],
+      "path_contains_any": ["pre_commit/commands/run.py"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "pre-commit hook execution is a bounded repository automation contract",
+      "ranking_reason": "hook execution outranks hook installation as first implementation slice",
+      "contract_family": "git_hook_execution_boundary",
+      "input_contract": {
+        "hook_request": "HookRunRequest(repo, hook_id, selected_files, config_ref)",
+        "execution_context": "HookExecutionContext(language_env, git_state, timeout?)"
+      },
+      "output_contract": {
+        "hook_result": "HookRunResult(status, changed_files?, captured_output?, duration?)",
+        "failure_packet": "HookRunFailure(kind, retryable?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "subprocess": "fake hook subprocess by default; live hook runs require explicit integration profile"
+      },
+      "validation_gates": [
+        "passing/failing/skipped hook cases are covered with fixture repository state",
+        "subprocess timeout and missing environment are controlled failures",
+        "file mutation reporting is explicit"
+      ],
+      "failure_modes": ["hook_failed", "environment_missing", "timeout", "git_state_error", "file_mutation"]
+    },
+    {
+      "id": "git_hook_installation_boundary",
+      "symbol_contains_any": ["install_hook", "install"],
+      "path_contains_any": ["pre_commit/commands/install_uninstall.py"],
+      "score_penalty": 18,
+      "ranking_penalty": 36,
+      "penalty_reason": "hook installation is a side-effecting support path; prefer hook execution when available"
+    },
+    {
+      "id": "database_migration_compare_boundary",
+      "symbol_contains_any": ["compare", "revision", "upgrade", "downgrade", "generate_revision"],
+      "path_contains_any": ["alembic/autogenerate", "alembic/script"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "migration comparison/revision parsing is a bounded database-migration contract",
+      "ranking_reason": "migration diff/revision target is representative database-migration behavior",
+      "contract_family": "database_migration_compare_boundary",
+      "input_contract": {
+        "migration_input": "MigrationCompareInput(database_metadata, model_metadata, naming_convention?, revision_context?)",
+        "revision_context": "RevisionContext(current_rev?, target_rev?, branch_labels?)"
+      },
+      "output_contract": {
+        "migration_findings": "SchemaDiffFinding[](operation, object_ref, change_kind, details)",
+        "failure_packet": "MigrationCompareFailure(kind, object_ref?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "database": "fake metadata/connection by default; no live database in first contract tests"
+      },
+      "validation_gates": [
+        "empty diff, added/removed object, and changed constraint/index cases are covered",
+        "invalid revision target returns typed failure evidence",
+        "script/file generation is separated from comparison"
+      ],
+      "failure_modes": ["metadata_unavailable", "invalid_revision_target", "naming_convention_drift", "script_write_failure"]
+    },
+    {
+      "id": "distributed_pytest_scheduler_boundary",
+      "symbol_contains_any": ["scheduler", "sessionstart", "worker"],
+      "path_contains_any": ["xdist/dsession.py", "xdist/scheduler", "xdist/workermanage.py"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "distributed pytest scheduler/worker lifecycle is a bounded test-runner contract",
+      "ranking_reason": "distributed test scheduler target is representative pytest-xdist behavior",
+      "contract_family": "distributed_pytest_scheduler_boundary",
+      "input_contract": {
+        "distributed_session": "DistributedTestSession(config, collected_tests?, worker_count, scheduler_name?)",
+        "worker_event": "WorkerEvent(worker_id, event_type, payload?, timestamp?)"
+      },
+      "output_contract": {
+        "scheduler_result": "SchedulerPolicyOrResult(policy, assigned_tests?, aggregate_status?)",
+        "failure_packet": "DistributedTestFailure(kind, worker_id?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "subprocess": "fake workers by default; live worker process tests require explicit integration profile"
+      },
+      "validation_gates": [
+        "scheduler selection and normal worker-finish cases are covered",
+        "worker crash, timeout, and collection mismatch are controlled failures",
+        "pytest config and worker events are fixture-backed"
+      ],
+      "failure_modes": ["worker_crash", "collection_mismatch", "scheduler_unavailable", "timeout", "no_workers"]
+    },
+    {
+      "id": "wheel_tag_artifact_boundary",
+      "symbols": ["tags", "pack", "convert", "info", "calculate_macosx_platform_tag"],
+      "path_contains_any": ["wheel/_commands", "wheel/macosx_libfile.py", "wheel/wheelfile.py", "wheel/_bdist_wheel.py"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "wheel tag/artifact handling is a bounded packaging contract",
+      "ranking_reason": "wheel tag/artifact target is representative packaging behavior",
+      "contract_family": "wheel_tag_artifact_boundary",
+      "input_contract": {
+        "wheel_input": "WheelArtifactInput(path, metadata?, requested_tags?, output_dir?)",
+        "tag_context": "CompatibilityTagContext(python_tag?, abi_tag?, platform_tag?, platform_info?)"
+      },
+      "output_contract": {
+        "wheel_manifest": "WheelArtifactManifest(filename, tags, dist_info?, output_path?, warnings?)",
+        "failure_packet": "WheelArtifactFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "fixture wheel archives and temp output directories only in default tests"
+      },
+      "validation_gates": [
+        "valid tag rewrite/info extraction and malformed wheel cases are covered",
+        "platform tag calculation has deterministic fixtures",
+        "archive writes are isolated from metadata/tag normalization"
+      ],
+      "failure_modes": ["malformed_wheel", "unsupported_tag", "missing_metadata", "output_conflict", "platform_probe_error"]
+    },
+    {
+      "id": "plugin_hook_invocation_boundary",
+      "symbols": ["_multicall", "run_old_style_hookwrapper", "add_hookspecs", "register"],
+      "symbol_contains_any": ["hookwrapper", "hookspec"],
+      "path_contains_any": ["pluggy/_callers.py", "pluggy/_manager.py", "pluggy"],
+      "score_bonus": 24,
+      "ranking_bonus": 44,
+      "benign_runtime_boundary": true,
+      "reason": "plugin hook dispatch is a bounded extension-runtime contract",
+      "ranking_reason": "hook invocation/registration is representative plugin-runtime behavior",
+      "contract_family": "plugin_hook_invocation_boundary",
+      "input_contract": {
+        "hook_request": "HookCallRequest(hook_name, args, kwargs, firstresult?, historic?)",
+        "hook_context": "HookDispatchContext(implementations, wrappers?, ordering_policy?, exception_policy?)"
+      },
+      "output_contract": {
+        "hook_result": "HookCallResult(results, first_result?, wrapper_outcomes?, duration?)",
+        "failure_packet": "HookDispatchFailure(kind, implementation_ref?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "plugin manager registration state changes must be explicit",
+        "external_calls": "plugin functions are fake fixtures by default"
+      },
+      "validation_gates": [
+        "normal hook call, firstresult and no-plugin cases are covered",
+        "old-style wrapper success/failure and exception propagation are covered",
+        "plugin registration/spec mismatch returns typed failure evidence"
+      ],
+      "failure_modes": ["plugin_exception", "wrapper_failure", "spec_mismatch", "ordering_conflict", "no_plugin_registered"]
+    },
+    {
+      "id": "package_project_initialization_boundary",
+      "symbols": ["_init_pyproject", "init_pyproject"],
+      "symbol_contains_any": ["pyproject"],
+      "path_contains_any": ["poetry/console/commands/init.py", "poetry/core", "pyproject"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "project metadata initialization is a bounded packaging contract",
+      "ranking_reason": "pyproject initialization is representative package-metadata behavior",
+      "contract_family": "package_project_initialization_boundary",
+      "input_contract": {
+        "project_request": "ProjectInitializationRequest(path, name?, package_mode?, dependencies?, readme_format?)",
+        "metadata_context": "ProjectMetadataContext(layout_policy?, interactive_defaults?, python_constraint?)"
+      },
+      "output_contract": {
+        "metadata_result": "ProjectMetadataInitializationResult(pyproject_path, fields_written, warnings?)",
+        "failure_packet": "ProjectMetadataInitializationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "pyproject writes use temporary project fixtures by default"
+      },
+      "validation_gates": [
+        "new project, existing pyproject and invalid metadata cases are covered",
+        "interactive defaults are isolated from metadata serialization",
+        "filesystem write conflicts return typed failure evidence"
+      ],
+      "failure_modes": ["invalid_metadata", "existing_file_conflict", "layout_error", "filesystem_write_failure"]
+    },
+    {
+      "id": "datetime_string_parser_boundary",
+      "symbols": ["_parse", "parse", "isoparse", "_parse_rfc"],
+      "symbol_contains_any": ["parse"],
+      "path_contains_any": ["dateutil/parser", "dateutil/rrule.py", "datetime", "date_parser"],
+      "score_bonus": 20,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "date/time string parsing is a bounded parser contract",
+      "ranking_reason": "datetime parser is representative library behavior",
+      "contract_family": "datetime_string_parser_boundary",
+      "input_contract": {
+        "date_text": "DateTimeParseInput(text, locale?, timezone_policy?, fuzzy?, dayfirst?, yearfirst?)",
+        "parse_context": "DateTimeParseContext(default_datetime?, parser_info?, strictness?)"
+      },
+      "output_contract": {
+        "parsed_datetime": "ParsedDateTime(value, tokens?, timezone_info?, warnings?)",
+        "failure_packet": "DateTimeParseFailure(kind, location?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "parser state/cache behavior must be explicit when present"
+      },
+      "validation_gates": [
+        "valid date, ambiguous date, invalid token and timezone cases are covered",
+        "dayfirst/yearfirst/fuzzy options are fixture-backed",
+        "parser errors expose typed failure evidence"
+      ],
+      "failure_modes": ["invalid_date", "ambiguous_date", "timezone_unknown", "overflow", "unsupported_format"]
+    },
+    {
+      "id": "sdk_resource_definition_factory_boundary",
+      "symbols": ["load_from_definition", "resource"],
+      "symbol_contains_any": ["definition", "resource"],
+      "path_contains_any": ["boto3/resources/factory.py", "resources/factory.py", "sdk", "resource"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "SDK resource definition factory is a bounded client/resource contract",
+      "ranking_reason": "resource definition loading is representative SDK behavior",
+      "contract_family": "sdk_resource_definition_factory_boundary",
+      "input_contract": {
+        "resource_definition": "ResourceDefinition(name, service, actions?, identifiers?, shape_refs?)",
+        "factory_context": "SDKFactoryContext(service_model, event_hooks?, loader?, retry_policy?)"
+      },
+      "output_contract": {
+        "resource_model": "SDKResourceModel(name, identifiers, actions, subresources?, metadata?)",
+        "failure_packet": "SDKResourceFactoryFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "service model and loader responses are fixture-backed by default"
+      },
+      "validation_gates": [
+        "valid resource definition, missing shape and invalid action cases are covered",
+        "event hook behavior is explicit and fixture-backed",
+        "no live cloud call is required for contract tests"
+      ],
+      "failure_modes": ["missing_shape", "invalid_definition", "loader_error", "event_hook_error"]
+    },
+    {
+      "id": "websocket_callback_backend_boundary",
+      "symbols": ["serve_websocket_callback"],
+      "symbol_contains_any": ["websocket_callback"],
+      "path_contains_any": ["backends/_quart.py", "websocket", "quart", "dash"],
+      "score_bonus": 24,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "websocket callback backend is a bounded async UI transport contract",
+      "ranking_reason": "websocket callback serving is representative reactive UI backend behavior",
+      "contract_family": "websocket_callback_backend_boundary",
+      "input_contract": {
+        "callback_request": "WebSocketCallbackRequest(session_id?, component_id?, payload, headers?)",
+        "backend_context": "CallbackBackendContext(app, connection_state, auth_context?, serialization_policy?)"
+      },
+      "output_contract": {
+        "callback_response": "WebSocketCallbackResponse(messages, state_updates?, close_policy?)",
+        "failure_packet": "WebSocketCallbackFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "websocket transport and app callbacks are fake by default"
+      },
+      "validation_gates": [
+        "valid callback, serialization error and disconnected client cases are covered",
+        "transport writes and callback execution are separated",
+        "auth/session context is explicit"
+      ],
+      "failure_modes": ["callback_exception", "serialization_error", "client_disconnected", "invalid_payload"]
+    },
+    {
+      "id": "dataset_module_factory_boundary",
+      "symbols": ["dataset_module_factory", "_split_generators"],
+      "symbol_contains_any": ["dataset_module", "split_generators"],
+      "path_contains_any": ["datasets/load.py", "datasets/packaged_modules", "dataset"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "dataset module factory is a bounded data-loading contract",
+      "ranking_reason": "dataset module creation is representative dataset-library behavior",
+      "contract_family": "dataset_module_factory_boundary",
+      "input_contract": {
+        "dataset_request": "DatasetLoadRequest(path, data_files?, data_dir?, revision?, cache_dir?)",
+        "download_context": "DatasetDownloadContext(download_mode?, download_config?, offline_policy?)"
+      },
+      "output_contract": {
+        "dataset_module": "DatasetModuleSpec(builder_cls, config?, splits?, cache_refs?)",
+        "failure_packet": "DatasetModuleFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "cache/download paths are temp fixtures by default",
+        "network": "remote dataset access is mocked unless integration profile is explicit"
+      },
+      "validation_gates": [
+        "local dataset, packaged dataset and missing dataset cases are covered",
+        "cache/download behavior is explicit",
+        "split generation uses fixture files"
+      ],
+      "failure_modes": ["dataset_not_found", "download_error", "invalid_data_files", "cache_conflict"]
+    },
+    {
+      "id": "framework_template_generation_boundary",
+      "symbols": ["handle"],
+      "symbol_contains_any": ["template"],
+      "path_contains_any": ["core/management/templates.py", "management/templates", "template"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "framework template generation is a bounded project-scaffold contract",
+      "ranking_reason": "template generation command is representative framework tooling behavior",
+      "contract_family": "framework_template_generation_boundary",
+      "input_contract": {
+        "template_request": "FrameworkTemplateRequest(kind, name, target_dir, template_ref?, options?)",
+        "render_context": "TemplateRenderContext(project_settings?, app_label?, overwrite_policy?)"
+      },
+      "output_contract": {
+        "generated_files": "GeneratedTemplateFiles(paths, skipped?, rendered_context?)",
+        "failure_packet": "TemplateGenerationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "generation runs in temporary output directories by default"
+      },
+      "validation_gates": [
+        "project/app template, existing target and invalid template cases are covered",
+        "render context is separated from filesystem writes",
+        "generated file manifest is explicit"
+      ],
+      "failure_modes": ["template_not_found", "render_error", "target_exists", "filesystem_write_failure"]
+    },
+    {
+      "id": "ml_app_launch_boundary",
+      "symbols": ["launch"],
+      "symbol_contains_any": ["launch"],
+      "path_contains_any": ["blocks.py", "server.py", "gradio", "streamlit"],
+      "score_bonus": 24,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "ML/UI app launch is a bounded runtime adapter contract",
+      "ranking_reason": "app launch boundary is representative but must isolate network/browser side effects",
+      "contract_family": "ml_app_launch_boundary",
+      "input_contract": {
+        "launch_request": "AppLaunchRequest(server_name?, port?, share?, auth?, debug?, browser_policy?)",
+        "app_context": "AppRuntimeContext(routes, components?, queue_policy?, dependency_refs?)"
+      },
+      "output_contract": {
+        "launch_result": "AppLaunchResult(app_ref, local_url?, public_url?, server_handle?)",
+        "failure_packet": "AppLaunchFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "network": "server bind/share tunnel are fake by default",
+        "browser": "browser open is disabled unless integration profile is explicit"
+      },
+      "validation_gates": [
+        "local launch, port conflict, auth config and disabled browser cases are covered",
+        "server binding is separated from component declaration",
+        "share/public URL behavior is an adapter result"
+      ],
+      "failure_modes": ["port_conflict", "auth_config_error", "server_start_failure", "share_tunnel_failure"]
+    },
+    {
+      "id": "data_expectation_metric_boundary",
+      "symbols": ["_pandas", "_spark", "_sqlalchemy"],
+      "symbol_contains_any": ["pandas", "spark", "sqlalchemy"],
+      "path_contains_any": ["expectations", "great_expectations", "metric", "dataprofiler"],
+      "score_bonus": 24,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "data expectation metric computation is a bounded validation contract",
+      "ranking_reason": "expectation metric backend is representative data-quality behavior",
+      "contract_family": "data_expectation_metric_boundary",
+      "input_contract": {
+        "metric_request": "ExpectationMetricRequest(domain_kwargs, value_kwargs, metrics, runtime_config?)",
+        "execution_engine": "ExecutionEngineRef(kind, dataframe_ref?, sql_context?, spark_context?)"
+      },
+      "output_contract": {
+        "metric_result": "ExpectationMetricResult(success?, observed_value?, details?, warnings?)",
+        "failure_packet": "ExpectationMetricFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "execution engine inputs are fixture-backed by default"
+      },
+      "validation_gates": [
+        "passing, failing, missing column and bad threshold cases are covered",
+        "backend-specific dataframe/SQL/Spark adapters are explicit",
+        "unexpected metric errors return typed failure evidence"
+      ],
+      "failure_modes": ["missing_column", "invalid_threshold", "backend_error", "metric_dependency_missing"]
+    },
+    {
+      "id": "workflow_work_pool_submission_boundary",
+      "symbols": ["submit_to_work_pool"],
+      "symbol_contains_any": ["work_pool", "submit"],
+      "path_contains_any": ["prefect/flows.py", "flow", "work_pool"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "workflow work-pool submission is a bounded orchestration contract",
+      "ranking_reason": "work-pool submission is representative workflow-runtime behavior",
+      "contract_family": "workflow_work_pool_submission_boundary",
+      "input_contract": {
+        "flow_submission": "FlowSubmission(flow_ref, parameters?, work_pool, deployment_options?)",
+        "runtime_context": "WorkflowRuntimeContext(client?, concurrency_policy?, retries?, schedule_ref?)"
+      },
+      "output_contract": {
+        "flow_run_future": "FlowRunSubmissionResult(run_id, state?, future_ref?, warnings?)",
+        "failure_packet": "FlowSubmissionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "workflow API/client calls are fake by default"
+      },
+      "validation_gates": [
+        "valid submission, missing work pool and client failure cases are covered",
+        "flow parameters and deployment options are validated",
+        "retry/concurrency policy is explicit"
+      ],
+      "failure_modes": ["work_pool_missing", "client_error", "invalid_parameters", "submission_timeout"]
+    },
+    {
+      "id": "sql_select_translation_boundary",
+      "symbols": ["translate_select_structure", "_columns_select"],
+      "symbol_contains_any": ["select"],
+      "path_contains_any": ["sqlalchemy/dialects", "dialects/oracle", "dialects/mssql", "compiler"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "SQL select translation is a bounded dialect compiler contract",
+      "ranking_reason": "SQL select translation is representative ORM/dialect behavior",
+      "contract_family": "sql_select_translation_boundary",
+      "input_contract": {
+        "select_statement": "SelectStructure(columns, froms, joins?, where?, order_by?, limit?)",
+        "dialect_context": "DialectTranslationContext(dialect, version?, feature_flags?)"
+      },
+      "output_contract": {
+        "translated_select": "TranslatedSelectStructure(statement, warnings?, dialect_features?)",
+        "failure_packet": "SQLTranslationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "translation must not mutate caller statement unless explicitly documented"
+      },
+      "validation_gates": [
+        "simple select, nested select, dialect-specific limit/offset and unsupported feature cases are covered",
+        "input statement mutation policy is asserted",
+        "dialect version behavior is fixture-backed"
+      ],
+      "failure_modes": ["unsupported_construct", "dialect_feature_missing", "mutation_drift", "compile_error"]
+    },
+    {
+      "id": "tokenizer_native_conversion_boundary",
+      "symbols": ["convert_to_native_format", "convert_and_load_state_dict_in_model"],
+      "symbol_contains_any": ["native_format", "convert"],
+      "path_contains_any": ["transformers/tokenization", "tokenization_utils", "core_model_loading"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "tokenizer/model native conversion is a bounded model-format adapter contract",
+      "ranking_reason": "native conversion is representative model/tokenizer interoperability behavior",
+      "contract_family": "tokenizer_native_conversion_boundary",
+      "input_contract": {
+        "conversion_request": "ModelFormatConversionRequest(source_format, target_format, trust_remote_code?, files?)",
+        "conversion_context": "ConversionContext(config?, tokenizer_ref?, device_policy?, safety_policy?)"
+      },
+      "output_contract": {
+        "converted_artifact": "ConvertedModelArtifact(format, files?, tokenizer?, warnings?)",
+        "failure_packet": "ModelFormatConversionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "model/tokenizer files use fixture directories by default",
+        "security": "trust_remote_code must be explicit"
+      },
+      "validation_gates": [
+        "valid conversion, unsupported format and trust_remote_code cases are covered",
+        "file reads/writes are fixture-backed",
+        "conversion warnings are preserved"
+      ],
+      "failure_modes": ["unsupported_format", "unsafe_remote_code", "missing_file", "conversion_error"]
+    },
+    {
+      "id": "legacy_batch_orchestrator_too_broad",
+      "symbols": ["legacy_process_all", "process_all", "run_all", "do_everything"],
+      "symbol_contains_all": ["all"],
+      "path_contains_any": ["legacy", "dump", "script"],
+      "score_penalty": 26,
+      "ranking_penalty": 34,
+      "penalty_reason": "legacy batch orchestrator is too broad for direct implementer handoff"
+    },
+    {
+      "id": "numeric_array_statistical_transform",
+      "symbols": ["_quantile", "quantile", "percentile", "gradient", "histogram"],
+      "path_contains_any": ["numpy/", "numpy/lib/_function_base", "numpy/lib/_histograms"],
+      "score_bonus": 20,
+      "reason": "numeric array/statistical transform is a bounded scientific contract",
+      "contract_family": "numeric_array_statistical_transform",
+      "input_contract": {
+        "array_like_input": "ArrayLike(ndim>=1, numeric dtype, finite_policy, axis?)",
+        "quantile_or_parameters": "NumericTransformParameters(q/axis/method/keepdims as applicable)"
+      },
+      "output_contract": {
+        "computed_array": "ArrayLikeResult(shape, dtype, axis_semantics, nan_policy)",
+        "failure_packet": "NumericTransformFailure(kind, invalid_axis?, invalid_dtype?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "input arrays are not modified unless the upstream API explicitly documents in-place semantics"
+      },
+      "validation_gates": [
+        "reject non-numeric or unsupported object dtypes before computation",
+        "validate axis/q/method parameters against the selected source function",
+        "cover empty arrays, NaN handling, and shape-preservation cases with contract tests"
+      ],
+      "failure_modes": ["invalid_dtype", "invalid_axis", "empty_input", "nan_policy_mismatch", "shape_mismatch"]
+    },
+    {
+      "id": "tabular_array_construction_transform",
+      "symbols": ["array", "factorize", "safe_sort", "isin"],
+      "path_contains_any": ["pandas/core/construction.py", "pandas/core/algorithms.py"],
+      "score_bonus": 20,
+      "reason": "dataframe/array construction is a bounded tabular-data contract",
+      "contract_family": "tabular_array_construction_transform",
+      "input_contract": {
+        "data_input": "TabularInput(scalar|sequence|ExtensionArray|Series, dtype?, copy_policy)",
+        "construction_options": "ArrayConstructionOptions(dtype, copy, missing_value_policy)"
+      },
+      "output_contract": {
+        "array_result": "ArrayConstructionResult(array_like, dtype, length, missing_value_semantics)",
+        "failure_packet": "ArrayConstructionFailure(kind, dtype?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "copy_policy": "caller-visible mutation must be explicit in the contract"
+      },
+      "validation_gates": [
+        "contract tests cover scalar, sequence, extension-array, and missing-value inputs",
+        "dtype coercion is asserted instead of inferred from incidental implementation behavior",
+        "copy/no-copy behavior is documented before implementer handoff"
+      ],
+      "failure_modes": ["unsupported_dtype", "length_mismatch", "ambiguous_scalar_input", "copy_policy_violation"]
+    },
+    {
+      "id": "image_mode_conversion_transform",
+      "symbols": ["convert", "resize", "thumbnail", "transpose"],
+      "path_contains_any": ["src/pil/image.py", "pil/image.py", "pillow"],
+      "score_bonus": 20,
+      "reason": "image mode conversion is a bounded media transform contract",
+      "contract_family": "image_mode_conversion_transform",
+      "input_contract": {
+        "image_input": "ImageInput(mode, size, bands, palette?, metadata_ref?)",
+        "conversion_options": "ImageConversionOptions(target_mode, matrix?, dither?, palette?, colors?)"
+      },
+      "output_contract": {
+        "converted_image": "ImageOutput(mode, size, bands, palette?, metadata_policy)",
+        "failure_packet": "ImageConversionFailure(kind, unsupported_mode?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "resource_policy": "large image cases are tested with bounded fixture images"
+      },
+      "validation_gates": [
+        "mode conversion matrix/palette options are validated before execution",
+        "size and metadata preservation rules are covered by fixtures",
+        "unsupported mode combinations return explicit failures in wrapper contracts"
+      ],
+      "failure_modes": ["unsupported_mode", "invalid_palette", "matrix_shape_mismatch", "large_image_resource_limit"]
+    },
+    {
+      "id": "ml_metric_calibration_transform",
+      "symbols": ["calibration_curve", "_sigmoid_calibration", "precision_recall_curve", "roc_curve"],
+      "path_contains_any": ["sklearn/calibration.py", "sklearn/metrics"],
+      "score_bonus": 20,
+      "reason": "ML metric/calibration helper is a bounded model-evaluation contract",
+      "contract_family": "ml_metric_calibration_transform",
+      "input_contract": {
+        "labels": "BinaryLabelsOrTargets(length=n, allowed_values, pos_label?)",
+        "scores": "PredictionScores(length=n, numeric, finite_policy)",
+        "metric_options": "MetricOptions(n_bins?, strategy?, sample_weight?)"
+      },
+      "output_contract": {
+        "metric_result": "MetricResult(curve_points, bin_edges_or_thresholds?, metadata)",
+        "failure_packet": "MetricComputationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "randomness_policy": "metric helpers must be deterministic for fixed inputs"
+      },
+      "validation_gates": [
+        "labels and scores must have matching lengths",
+        "non-finite scores and unsupported labels are tested as negative cases",
+        "binning/strategy parameters are asserted against documented behavior"
+      ],
+      "failure_modes": ["length_mismatch", "unsupported_label", "non_finite_score", "invalid_bin_count"]
+    },
+    {
+      "id": "nested_json_cli_value_interpretation",
+      "symbols": ["interpret", "parse_item", "load_json_preserve_order"],
+      "path_contains_any": ["nested_json", "httpie", "json"],
+      "score_bonus": 20,
+      "reason": "nested JSON value interpretation is a bounded CLI parsing contract",
+      "contract_family": "nested_json_cli_value_interpretation",
+      "input_contract": {
+        "context": "JsonPathContext(path, parent_type?, cli_option_source)",
+        "key": "JsonKey(non_empty_string)",
+        "value": "InferredValue",
+        "raw_value": "RawCliValue(text|number|boolean|null|object_fragment)"
+      },
+      "output_contract": {
+        "result": "ParsedStructure"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "parser returns a new value and does not mutate caller context"
+      },
+      "validation_gates": [
+        "quoted strings, numbers, booleans, null, and nested fragments are covered by contract tests",
+        "invalid fragments return JsonInterpretationFailure or a documented fallback value",
+        "context-sensitive interpretation is explicit in test fixtures"
+      ],
+      "failure_modes": ["invalid_json_fragment", "ambiguous_scalar", "unsupported_context", "encoding_error"]
+    },
+    {
+      "id": "repair_loop_module_contract_validation",
+      "symbols": ["check_single_module_output", "clean_module_output", "goal_to_spec"],
+      "path_contains_any": ["module_contract_checker.py", "goal_to_spec.py"],
+      "score_bonus": 20,
+      "reason": "repair-loop contract checker is a bounded validation contract",
+      "contract_family": "repair_loop_module_contract_validation",
+      "input_contract": {
+        "module_output": "ModuleOutput(module_name, raw_payload, files?, stdout?, stderr?)",
+        "expected_contract": "ModuleContract(required_files, required_symbols, schema_refs)"
+      },
+      "output_contract": {
+        "validation_result": "ModuleValidationResult(valid, violations, normalized_output?, evidence_ref)",
+        "failure_packet": "ModuleContractFailure(kind, module_name, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "write_policy": "checker validates artifacts and must not rewrite generated modules directly"
+      },
+      "validation_gates": [
+        "valid module output and each required violation type are covered by contract tests",
+        "normalization is deterministic and records the raw evidence reference",
+        "checker output drives bounded repair attempts instead of direct source mutation"
+      ],
+      "failure_modes": ["missing_required_file", "missing_symbol", "invalid_payload_shape", "normalization_failure"]
+    },
+    {
+      "id": "ml_inference_submission_boundary",
+      "symbols": ["generate_response", "postprocess", "build_submission_row", "write_submission", "generate", "predict"],
+      "path_contains_any": ["inference", "submission", "predict", "x31.py"],
+      "score_bonus": 18,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "ML generation boundary is a valid architectural contract target",
+      "ranking_reason": "ML inference/submission boundary is representative for competition workflow",
+      "contract_family": "ml_generation_boundary",
+      "input_contract": {
+        "prompt_text": "PromptText(non_empty_string, source_row_id?)",
+        "generation_config": "GenerationConfig(max_new_tokens, temperature, top_p, device_policy)",
+        "model_adapter": "ModelAdapter(tokenize, generate, decode; fakeable in tests)"
+      },
+      "output_contract": {
+        "generated_answer": "GeneratedAnswer(text, raw_text_ref?, token_count?, model_id, row_id?)",
+        "failure_packet": "ModelInferenceFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_process_boundary": true,
+        "model_policy": "large model/tokenizer loading is injected or fixture-backed in contract tests",
+        "secret_policy": "provider/model tokens are environment references, never source literals"
+      },
+      "validation_gates": [
+        "prompt text is non-empty and tied to a row id when available",
+        "model adapter can be replaced by a fake fixture for tests",
+        "generation failure returns ModelInferenceFailure instead of crashing row processing",
+        "hardcoded access tokens are removed before implementation promotion",
+        "submission schema is verified without live HuggingFace/GPU dependency"
+      ],
+      "failure_modes": [
+        "missing_model_dependency",
+        "missing_or_invalid_token",
+        "gpu_or_memory_unavailable",
+        "empty_generation",
+        "decode_failure"
+      ]
+    },
+    {
+      "id": "ml_model_generation_call_boundary",
+      "symbols": ["generate_response", "generate", "predict"],
+      "path_contains_any": ["inference", "submission", "predict", "x31.py"],
+      "score_bonus": 10,
+      "ranking_bonus": 24,
+      "benign_runtime_boundary": true,
+      "reason": "model generation call is the primary ML inference boundary",
+      "ranking_reason": "model generation call should outrank downstream postprocessing within an ML first slice",
+      "contract_family": "ml_generation_boundary",
+      "input_contract": {
+        "prompt_text": "PromptText(non_empty_string, source_row_id?)",
+        "model_adapter": "ModelAdapter(tokenize, generate, decode; fakeable in tests)"
+      },
+      "output_contract": {
+        "generated_answer": "GeneratedAnswer(text, raw_text_ref?, token_count?, model_id?)",
+        "failure_packet": "ModelInferenceFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_process_boundary": true,
+        "model_policy": "model invocation is injected or fixture-backed in tests"
+      },
+      "validation_gates": [
+        "fake model adapter covers success and generation failure",
+        "empty prompt and decode failure produce typed failure evidence",
+        "provider/model secrets remain environment references"
+      ],
+      "failure_modes": ["empty_prompt", "model_generation_failure", "decode_error"]
+    },
+    {
+      "id": "agent_consensus_orchestration_boundary",
+      "symbols": ["run_consensus"],
+      "path_contains_any": ["core/consensus/engine.py", "consensus", "agent"],
+      "score_bonus": 24,
+      "ranking_bonus": 40,
+      "benign_runtime_boundary": true,
+      "reason": "agent consensus orchestration is a bounded multi-agent contract",
+      "ranking_reason": "agent consensus orchestration boundary is representative multi-agent behavior",
+      "contract_family": "agent_consensus_orchestration_boundary",
+      "input_contract": {
+        "consensus_input": "ConsensusInput(task_envelope, participant_agents, quorum_policy, timeout_seconds, run_id)",
+        "agent_responses": "list[AgentResponse(status, payload?, error?, latency_ms, agent_id)]"
+      },
+      "output_contract": {
+        "consensus_result": "ConsensusResult(status, selected_payload?, scores, failures, quorum_met, run_id)",
+        "failure_packet": "AgentFailurePacket(kind, agent_id?, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_process_boundary": true,
+        "network_policy": "agent calls must pass through timeout/retry/quarantine adapters",
+        "replay_policy": "run_id and task ids are persisted before dispatch"
+      },
+      "validation_gates": [
+        "consensus input validates participant list and quorum policy before dispatch",
+        "each agent response is normalized before aggregation",
+        "timeouts and malformed responses become AgentFailurePacket records",
+        "quorum failure is explicit and does not masquerade as successful consensus",
+        "resume uses persisted run_id/task ids instead of repeating completed agent calls blindly"
+      ],
+      "failure_modes": [
+        "agent_timeout",
+        "malformed_a2a_response",
+        "quorum_not_met",
+        "conflicting_agent_outputs",
+        "partial_resume_requires_replay_guard"
+      ]
+    },
+    {
+      "id": "llm_repair_hypothesis_boundary",
+      "symbols": ["send_to_model"],
+      "path_contains_any": ["auto_dev_agent.py"],
+      "score_bonus": 18,
+      "ranking_bonus": 44,
+      "benign_runtime_boundary": true,
+      "reason": "LLM repair hypothesis boundary is a valid architectural contract target",
+      "ranking_reason": "LLM hypothesis boundary is central to repair-attempt contract",
+      "contract_family": "llm_repair_hypothesis_boundary",
+      "input_contract": {
+        "failure_evidence": "FailureEvidence(error_text, build_log?, run_log?, attempt_id, code_version)",
+        "workspace_snapshot": "WorkspaceSnapshot(read_only_files, allowed_relative_paths, template_root)",
+        "repair_policy": "RepairPolicy(max_attempts, allowed_files, provider_config_ref, timeout_seconds)"
+      },
+      "output_contract": {
+        "model_patch_proposal": "ModelPatchProposal(files: list[PatchFile], rationale, confidence?, raw_response_ref)",
+        "validation_result": "PatchValidationResult(valid, violations, diff_preview_ref, normalized_payload_ref)",
+        "attempt_outcome": "AttemptOutcome(status in accepted|rejected|needs_review, next_action)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "writes_allowed_after": "PatchValidationResult.valid == true and diff preview is recorded",
+        "network_policy": "LLM call is allowed only through configured provider adapter with captured request id"
+      },
+      "validation_gates": [
+        "raw LLM response is persisted as evidence before parsing",
+        "JSON payload validates against ModelPatchProposal schema",
+        "every patch file is inside allowed relative paths",
+        "no file write occurs before validation_result.valid is true",
+        "Docker build/run verification records stdout, stderr, exit code, timeout, and attempt id"
+      ],
+      "failure_modes": [
+        "invalid_model_json",
+        "path_traversal_or_forbidden_file",
+        "missing_required_patch_file",
+        "provider_timeout_or_rate_limit",
+        "docker_build_failed",
+        "docker_run_failed"
+      ]
+    },
+    {
+      "id": "protocol_event_state_machine_boundary",
+      "symbols": ["next_event", "send", "receive_data", "process_input"],
+      "path_contains_any": ["connection", "protocol", "state", "events"],
+      "score_bonus": 16,
+      "ranking_bonus": 32,
+      "reason": "protocol event/state-machine target",
+      "ranking_reason": "protocol event/state-machine boundary is representative"
+    },
+    {
+      "id": "connection_lifecycle_boundary",
+      "symbols": ["create_connection", "connect_tcp", "connect_unix_socket", "start_tls"],
+      "symbol_prefixes": ["_init_", "init_"],
+      "symbol_contains_all": ["connection"],
+      "path_contains_any": ["connection", "proxy", "transport", "network", "socket"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "connection/proxy lifecycle target",
+      "ranking_reason": "connection/proxy lifecycle boundary is representative",
+      "contract_family": "connection_lifecycle_boundary",
+      "input_contract": {
+        "connection_request": "ConnectionRequest(host?|path?, port?, tls?, local_address?, timeout?)",
+        "connection_context": "ConnectionContext(network_backend?, proxy?, socket_options?, cancellation_scope?)"
+      },
+      "output_contract": {
+        "connection_result": "ConnectionResult(stream_or_socket, peer_info?, negotiated_protocol?)",
+        "failure_packet": "ConnectionFailure(kind, retryable?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "network/socket operations are fake by default in contract tests"
+      },
+      "validation_gates": [
+        "TCP, Unix socket or TLS happy path is covered by fake backend tests",
+        "DNS/connect timeout and refused connection return typed failure evidence",
+        "cancellation and resource cleanup are explicit"
+      ],
+      "failure_modes": ["dns_failure", "connection_refused", "timeout", "tls_failure", "cancelled"]
+    },
+    {
+      "id": "markup_escape_sanitization_boundary",
+      "symbols": ["escape", "escape_silent", "striptags", "_escape_inner"],
+      "path_contains_any": ["markupsafe", "markup", "escape"],
+      "score_bonus": 20,
+      "ranking_bonus": 48,
+      "reason": "markup escaping/sanitization target",
+      "ranking_reason": "markup escaping/sanitization boundary is project-core behavior"
+    },
+    {
+      "id": "provider_capability_listing_boundary",
+      "symbols": ["list_provider_capabilities", "provider_capabilities", "describe_provider_capabilities"],
+      "path_contains_any": [],
+      "score_bonus": 18,
+      "reason": "provider capability listing is a bounded integration contract"
+    },
+    {
+      "id": "pytest_mock_assertion_wrapper_boundary",
+      "symbols": ["assert_has_calls_wrapper", "assert_wrapper", "wrap_assert_methods", "unwrap_assert_methods"],
+      "path_contains_any": ["pytest_mock"],
+      "score_bonus": 18,
+      "reason": "mock assertion wrapper is a bounded testing-plugin contract"
+    },
+    {
+      "id": "exception_formatting_boundary",
+      "symbol_contains_all": ["exception"],
+      "path_contains_any": ["traceback", "_code", "exception"],
+      "score_bonus": 8,
+      "reason": "exception formatting/reporting target"
+    },
+    {
+      "id": "signed_token_boundary",
+      "symbols": ["sign", "unsign", "verify_signature", "derive_key"],
+      "path_contains_any": ["itsdangerous", "signer", "serializer", "token", "security"],
+      "score_bonus": 8,
+      "reason": "signed-token verification boundary"
+    },
+    {
+      "id": "web_framework_response_factory",
+      "symbols": ["make_response", "response_class", "create_response"],
+      "path_contains_any": ["src/flask/", "flask/app.py", "starlette/responses.py", "fastapi/responses.py"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "framework-owned response factory is a project-core contract",
+      "ranking_reason": "response factory boundary is project-core web-framework behavior",
+      "contract_family": "web_framework_response_factory",
+      "input_contract": {
+        "return_value": "ViewReturnValue(response|string|dict|tuple|generator|WSGIResponse)",
+        "status_headers": "ResponseOptions(status?, headers?, mimetype?, content_type?)"
+      },
+      "output_contract": {
+        "response": "HttpResponse(status_code, headers, body_iterable, content_type)",
+        "failure_packet": "ResponseFactoryFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "request_context_policy": "context-dependent behavior must be fixture-backed in contract tests"
+      },
+      "validation_gates": [
+        "string, dict, tuple, response-object, and generator return values are covered by contract tests",
+        "status/header coercion is explicit and does not depend on incidental Flask globals",
+        "invalid return values produce ResponseFactoryFailure or documented framework exception behavior"
+      ],
+      "failure_modes": ["invalid_return_type", "invalid_status", "header_coercion_error", "missing_request_context"]
+    },
+    {
+      "id": "package_dependency_command_boundary",
+      "symbols": ["inject_dep", "install_package", "install_packages", "upgrade_package", "upgrade_all", "parse_specifier", "_parse_specifier"],
+      "path_contains_any": ["pipx", "commands", "package"],
+      "score_bonus": 18,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "package dependency command is a bounded CLI workflow contract",
+      "ranking_reason": "package dependency command is representative CLI workflow behavior"
+    },
+    {
+      "id": "terminal_render_traversal_boundary",
+      "symbols": ["traverse", "_traverse", "_render", "__rich_console__"],
+      "path_contains_any": ["rich", "pretty.py", "panel.py", "table.py", "syntax.py"],
+      "exclude_if_profile_ids": ["internal_terminal_render_closure_helper"],
+      "score_bonus": 18,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "render traversal is a bounded presentation pipeline contract",
+      "ranking_reason": "render traversal boundary is representative presentation behavior"
+    },
+    {
+      "id": "internal_terminal_render_closure_helper",
+      "symbols": ["_traverse"],
+      "path_contains_any": ["rich/pretty.py"],
+      "score_penalty": 16,
+      "ranking_penalty": 42,
+      "penalty_reason": "internal render traversal helper depends on enclosing closure state",
+      "ranking_reason": "internal closure helper is weaker than public render traversal boundary"
+    },
+    {
+      "id": "permission_gate_boundary",
+      "symbols": ["requires", "require", "permission_required", "auth_required"],
+      "path_contains_any": ["authentication", "auth", "permissions"],
+      "score_bonus": 18,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "permission gate/decorator is a bounded auth contract",
+      "ranking_reason": "permission gate boundary is representative auth behavior"
+    },
+    {
+      "id": "websocket_connection_setup_boundary",
+      "symbols": ["_ws_connect", "ws_connect", "websocket_connect"],
+      "path_contains_any": ["aiohttp", "client", "websocket"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "websocket connection setup is a bounded async-client contract",
+      "ranking_reason": "websocket connection setup is representative async-client behavior",
+      "contract_family": "websocket_connection_setup_boundary",
+      "input_contract": {
+        "websocket_request": "WebSocketConnectRequest(url, headers?, protocols?, timeout?, proxy?)",
+        "client_context": "AsyncClientContext(session_state, connector, cookie_jar?, trace_config?)"
+      },
+      "output_contract": {
+        "websocket_connection": "WebSocketConnection(protocol, response_metadata, close_policy?)",
+        "failure_packet": "WebSocketConnectFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "network handshake is fake by default in contract tests"
+      },
+      "validation_gates": [
+        "successful handshake and protocol negotiation are covered",
+        "bad status, timeout and malformed URL cases return typed failure evidence",
+        "session/cookie/proxy state mutation is explicit"
+      ],
+      "failure_modes": ["invalid_url", "handshake_failed", "timeout", "proxy_failure", "protocol_rejected"]
+    },
+    {
+      "id": "cli_program_pipeline_boundary",
+      "symbols": ["program", "raw_main"],
+      "path_contains_any": ["httpie", "core.py", "cli"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "CLI program pipeline is a bounded command contract",
+      "ranking_reason": "CLI program pipeline is representative command behavior",
+      "contract_family": "cli_program_pipeline_boundary",
+      "input_contract": {
+        "command_input": "CommandInput(argv, stdin?, env?, config?)",
+        "runtime_context": "CommandRuntimeContext(cwd, terminal?, filesystem?, network_policy?)"
+      },
+      "output_contract": {
+        "command_result": "CommandResult(exit_code, stdout?, stderr?, artifacts?)",
+        "failure_packet": "CommandFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "process_boundary": "CLI execution and network/filesystem side effects are adapter-owned"
+      },
+      "validation_gates": [
+        "valid argv, invalid option and empty input cases are covered",
+        "stdout/stderr/exit-code contract is explicit",
+        "network/filesystem side effects are fakeable or fixture-backed"
+      ],
+      "failure_modes": ["invalid_arguments", "io_failure", "network_failure", "nonzero_exit", "configuration_error"]
+    },
+    {
+      "id": "model_construction_schema_boundary",
+      "symbols": ["__new__", "create_model", "collect_model_fields"],
+      "path_contains_any": ["pydantic", "model_construction", "fields.py"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "model construction hook is a bounded schema contract",
+      "ranking_reason": "model construction hook is representative schema behavior",
+      "contract_family": "model_construction_schema_boundary",
+      "input_contract": {
+        "model_definition": "ModelDefinition(fields, validators?, config?, bases?)",
+        "construction_context": "ModelConstructionContext(namespace?, annotations?, plugin_hooks?)"
+      },
+      "output_contract": {
+        "model_schema": "ConstructedModelSchema(fields, validators, config, metadata?)",
+        "failure_packet": "ModelConstructionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "class/global caches and plugin hooks must be explicit"
+      },
+      "validation_gates": [
+        "valid model, missing annotation and validator error cases are covered",
+        "field order and config inheritance are asserted",
+        "plugin/cache side effects are documented"
+      ],
+      "failure_modes": ["invalid_field", "validator_error", "config_conflict", "namespace_resolution_failure"]
+    },
+    {
+      "id": "test_environment_queue_execution_boundary",
+      "symbols": ["_do_queue_and_wait", "execute", "run_sequential"],
+      "path_contains_any": ["tox", "session/cmd/run", "env_select"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "test-environment queue execution is a bounded orchestration contract",
+      "ranking_reason": "test-environment queue execution is representative orchestration behavior",
+      "contract_family": "test_environment_queue_execution_boundary",
+      "input_contract": {
+        "run_queue": "EnvironmentRunQueue(items, dependencies?, selected_envs?)",
+        "execution_policy": "EnvironmentExecutionPolicy(parallelism, fail_fast?, recreate?, labels?)"
+      },
+      "output_contract": {
+        "queue_result": "EnvironmentQueueResult(completed, failed, skipped, reports?)",
+        "failure_packet": "EnvironmentQueueFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "process_boundary": "environment execution is subprocess/fixture-backed by default"
+      },
+      "validation_gates": [
+        "single env, dependency ordering and failed env cases are covered",
+        "queue retry/skip behavior is explicit",
+        "subprocess and filesystem mutations are isolated"
+      ],
+      "failure_modes": ["dependency_failed", "environment_creation_failed", "subprocess_failure", "timeout", "queue_deadlock"]
+    },
+    {
+      "id": "async_scheduler_runtime_boundary",
+      "symbols": ["unrolled_run", "start_guest_run", "run_process", "_run_process"],
+      "path_contains_any": ["trio", "_core/_run.py", "_subprocess.py"],
+      "score_bonus": 28,
+      "ranking_bonus": 44,
+      "benign_runtime_boundary": true,
+      "reason": "async scheduler loop is a project-core runtime contract",
+      "ranking_reason": "async scheduler loop is representative runtime behavior"
+    },
+    {
+      "id": "scheduled_task_configuration_boundary",
+      "symbols": ["configure_task", "add_schedule", "add_task", "get_task"],
+      "path_contains_any": ["scheduler", "schedulers", "schedule", "tasks"],
+      "score_bonus": 20,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "scheduled task configuration is a bounded workflow contract",
+      "ranking_reason": "scheduled task configuration is representative workflow behavior",
+      "contract_family": "scheduled_task_configuration_boundary",
+      "input_contract": {
+        "task_reference": "TaskReference(id|callable|existing task)",
+        "execution_options": "TaskExecutionOptions(executor?, concurrency?, misfire_policy?, metadata?)"
+      },
+      "output_contract": {
+        "task_definition": "TaskDefinition(id, callable_ref?, executor, concurrency, metadata)",
+        "failure_packet": "TaskConfigurationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "persistence_policy": "datastore writes or memory updates must be explicit and idempotency-aware"
+      },
+      "validation_gates": [
+        "callable, string id, and existing task inputs are covered by contract tests",
+        "default inheritance and explicit overrides are asserted",
+        "invalid task references return a typed failure or documented exception"
+      ],
+      "failure_modes": ["invalid_task_reference", "missing_callable", "executor_not_found", "metadata_validation_error"]
+    },
+    {
+      "id": "async_context_detection_boundary",
+      "symbols": ["current_async_library", "current_async_library_cvar"],
+      "symbol_contains_all": ["async", "library"],
+      "path_contains_any": ["async", "context", "runtime", "sniff"],
+      "score_bonus": 20,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "async context detection is a bounded runtime capability contract",
+      "ranking_reason": "async context detection is representative runtime behavior",
+      "contract_family": "async_context_detection_boundary",
+      "input_contract": {
+        "runtime_context": "AsyncRuntimeContext(thread_local?, contextvars?, loaded_modules?)"
+      },
+      "output_contract": {
+        "library_name": "AsyncLibraryName(asyncio|trio|curio|other-supported-name)",
+        "failure_packet": "AsyncContextDetectionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "detection must not mutate runtime context"
+      },
+      "validation_gates": [
+        "known async runtime contexts are fixture-backed",
+        "synchronous/no-context calls produce a typed failure or documented exception",
+        "contextvar and thread-local precedence is explicit"
+      ],
+      "failure_modes": ["no_async_context", "unsupported_runtime", "ambiguous_context", "dependency_probe_failure"]
+    },
+    {
+      "id": "compute_graph_blockwise_construction_boundary",
+      "symbols": ["blockwise", "_make_blockwise_graph"],
+      "path_contains_any": ["dask", "blockwise", "array"],
+      "score_bonus": 24,
+      "ranking_bonus": 44,
+      "benign_runtime_boundary": true,
+      "reason": "blockwise compute-graph construction is a bounded dataflow contract",
+      "ranking_reason": "blockwise graph construction is project-core dataflow behavior",
+      "contract_family": "compute_graph_blockwise_construction_boundary",
+      "input_contract": {
+        "operation": "BlockwiseOperation(func, output_indices, input_indices, dependencies?)",
+        "graph_options": "GraphConstructionOptions(adjust_chunks?, new_axes?, concatenate?, meta?)"
+      },
+      "output_contract": {
+        "graph": "NormalizedTaskGraph(keys, dependencies, layer_metadata, chunk_shape?)",
+        "failure_packet": "ComputeGraphConstructionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "graph construction must be deterministic and separated from scheduler execution"
+      },
+      "validation_gates": [
+        "same operation and chunk metadata produce stable graph keys",
+        "invalid indices, mismatched chunk shapes, and unsupported axes are negative-tested",
+        "scheduler execution is not invoked by the contract test"
+      ],
+      "failure_modes": ["invalid_indices", "chunk_shape_mismatch", "unsupported_axis", "nondeterministic_graph"]
+    },
+    {
+      "id": "module_import_graph_resolution_boundary",
+      "symbols": ["_find_head_package", "_safe_import_hook", "_load_module", "_safe_import_module"],
+      "path_contains_any": ["modulegraph", "pyinstaller", "import"],
+      "score_bonus": 24,
+      "ranking_bonus": 44,
+      "benign_runtime_boundary": true,
+      "reason": "module import-graph resolution is a bounded packaging analysis contract",
+      "ranking_reason": "module import-graph resolution is project-core packaging behavior",
+      "contract_family": "module_import_graph_resolution_boundary",
+      "input_contract": {
+        "import_request": "ImportResolutionRequest(module_name, package_context?, level?, search_path?)",
+        "analysis_context": "ModuleGraphContext(import_hooks?, package_map?, excludes?, platform?)"
+      },
+      "output_contract": {
+        "resolved_module": "ResolvedModuleNode(name, path?, package?, graph_edges, missing?)",
+        "failure_packet": "ImportGraphResolutionFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "fixture packages only in contract tests; bundle emission is out of scope"
+      },
+      "validation_gates": [
+        "relative and absolute imports are covered by fixture packages",
+        "missing module and hook failure return typed evidence",
+        "graph mutation is asserted through explicit node/edge deltas"
+      ],
+      "failure_modes": ["missing_module", "hook_failure", "relative_import_error", "graph_cycle"]
+    },
+    {
+      "id": "crawler_settings_application_boundary",
+      "symbols": ["_apply_settings", "apply_settings", "update_settings"],
+      "path_contains_any": ["scrapy", "crawler", "settings"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "crawler settings application is a bounded runtime-configuration contract",
+      "ranking_reason": "crawler settings application is representative crawler lifecycle behavior",
+      "contract_family": "crawler_settings_application_boundary",
+      "input_contract": {
+        "crawler_config": "CrawlerConfig(spider?, settings, extensions?, signals?)",
+        "runtime_context": "CrawlerRuntimeContext(stats?, logging?, reactor?, add-ons?)"
+      },
+      "output_contract": {
+        "configured_crawler": "ConfiguredCrawler(settings_snapshot, enabled_extensions, warnings?)",
+        "failure_packet": "CrawlerSettingsFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "settings mutation must be captured as before/after config snapshot"
+      },
+      "validation_gates": [
+        "default, project, and spider-level settings precedence is covered",
+        "invalid extension/add-on settings produce typed failure evidence",
+        "global logging/reactor side effects are isolated or faked"
+      ],
+      "failure_modes": ["invalid_setting", "extension_load_failure", "reactor_configuration_error", "precedence_drift"]
+    },
+    {
+      "id": "workflow_dag_trigger_boundary",
+      "symbols": ["_trigger_dag", "trigger_dag", "trigger_dag_run"],
+      "path_contains_any": ["airflow", "dag", "trigger"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "workflow DAG trigger is a bounded orchestration request contract",
+      "ranking_reason": "workflow DAG trigger is project-core scheduler/orchestration behavior",
+      "contract_family": "workflow_dag_trigger_boundary",
+      "input_contract": {
+        "trigger_request": "DagTriggerRequest(dag_id, run_id?, logical_date?, conf?, replace_microseconds?)",
+        "scheduler_context": "DagTriggerContext(dag_bag, session?, auth_context?, idempotency_key?)"
+      },
+      "output_contract": {
+        "dag_run": "DagRunResult(dag_id, run_id, state, logical_date, created?)",
+        "failure_packet": "DagTriggerFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "idempotency_required": true,
+        "database": "DB/session writes are faked by default and require explicit integration profile"
+      },
+      "validation_gates": [
+        "missing DAG, duplicate run, invalid conf, and paused DAG cases are negative-tested",
+        "idempotency behavior is explicit for retry/replay",
+        "database/session side effects are isolated behind fixtures"
+      ],
+      "failure_modes": ["dag_not_found", "duplicate_run", "invalid_conf", "database_failure", "permission_denied"]
+    },
+    {
+      "id": "chat_template_rendering_boundary",
+      "symbols": ["apply_chat_template"],
+      "path_contains_any": ["transformers", "processing_utils", "tokenization"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "chat template rendering is a bounded prompt-formatting contract",
+      "ranking_reason": "chat template rendering is representative model-input preparation behavior",
+      "contract_family": "chat_template_rendering_boundary",
+      "input_contract": {
+        "conversation": "ChatConversation(messages, tools?, documents?, assistant_mask_request?)",
+        "render_options": "ChatTemplateOptions(template?, tokenize?, add_generation_prompt?, tensor_type?)"
+      },
+      "output_contract": {
+        "rendered_prompt": "RenderedChatPrompt(text|tokens, assistant_mask?, metadata?)",
+        "failure_packet": "ChatTemplateFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "rendering must not mutate source conversation messages"
+      },
+      "validation_gates": [
+        "single-turn, multi-turn, tool, document, and final-assistant continuation cases are covered",
+        "invalid role/message shape and missing template produce typed failure evidence",
+        "tokenized and non-tokenized outputs are asserted separately"
+      ],
+      "failure_modes": ["invalid_message_shape", "missing_template", "unsupported_tool_schema", "tokenization_failure"]
+    },
+    {
+      "id": "url_query_parameter_mutation_boundary",
+      "symbols": ["add_query_param", "remove_query_param", "replace_query_param"],
+      "path_contains_any": ["rest_framework", "templatetags", "url", "query"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "URL query-parameter mutation is a bounded request-link contract",
+      "ranking_reason": "URL query-parameter mutation is representative web request-link behavior",
+      "contract_family": "url_query_parameter_mutation_boundary",
+      "input_contract": {
+        "request_url": "RequestUrl(path, query_params, encoding?)",
+        "mutation": "QueryParamMutation(key, value?, multi_value_policy?)"
+      },
+      "output_contract": {
+        "url": "MutatedUrl(path, encoded_query, fragment?)",
+        "failure_packet": "QueryParamMutationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "function returns a URL string and must not mutate request object"
+      },
+      "validation_gates": [
+        "existing, missing, repeated, empty, and encoded query values are covered",
+        "unicode and reserved-character encoding policy is explicit",
+        "request object mutation is forbidden or explicitly documented"
+      ],
+      "failure_modes": ["invalid_key", "encoding_error", "multi_value_policy_mismatch"]
+    },
+    {
+      "id": "cli_options_processing_boundary",
+      "symbols": ["process_options", "parse_args", "_build_arg_parser", "parse_known_args"],
+      "symbol_contains_any": ["options", "args", "arg_parser"],
+      "path_contains_any": ["main.py", "cli", "options", "argparser"],
+      "score_bonus": 22,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "CLI/options processing is a bounded command-intake contract",
+      "ranking_reason": "CLI/options processing is representative command configuration behavior",
+      "contract_family": "cli_options_processing_boundary",
+      "input_contract": {
+        "argv": "CommandLineInput(args, env?, config_files?)",
+        "runtime_context": "CliRuntimeContext(stdout?, stderr?, filesystem?, defaults?)"
+      },
+      "output_contract": {
+        "options": "ParsedOptions(options, targets?, warnings?)",
+        "failure_packet": "CliOptionsFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_boundaries": "filesystem/env/stdout are faked by default in contract tests"
+      },
+      "validation_gates": [
+        "valid, missing, conflicting, and unknown options are covered",
+        "stdout/stderr and config-file side effects are isolated",
+        "parsed target/default semantics are explicit"
+      ],
+      "failure_modes": ["unknown_option", "conflicting_options", "missing_required_target", "config_load_failure"]
+    },
+    {
+      "id": "command_entrypoint_invocation_boundary",
+      "symbols": ["invoke", "run", "main"],
+      "symbol_contains_any": ["invoke"],
+      "path_contains_any": ["command", "commands", "subcommands", "cli"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "command entrypoint invocation is a bounded CLI workflow contract",
+      "ranking_reason": "command entrypoint invocation is representative CLI workflow behavior",
+      "contract_family": "command_entrypoint_invocation_boundary",
+      "input_contract": {
+        "command_request": "CommandInvocation(args, options, env?, project_root?)",
+        "command_context": "CommandRuntimeContext(filesystem?, network?, stdout?, stderr?)"
+      },
+      "output_contract": {
+        "command_result": "CommandResult(exit_status?, artifacts?, warnings?, output_refs?)",
+        "failure_packet": "CommandInvocationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "requires_process_boundary": true,
+        "external_boundaries": "filesystem/network/stdout are fakeable by default"
+      },
+      "validation_gates": [
+        "valid command, invalid args, missing project/input and dependency failure cases are covered",
+        "stdout/stderr/artifact writes are explicit",
+        "external boundaries are faked unless integration profile is explicit"
+      ],
+      "failure_modes": ["invalid_arguments", "missing_input", "dependency_failure", "artifact_write_failure", "network_failure"]
+    },
+    {
+      "id": "source_file_parser_boundary",
+      "symbols": ["parse_file", "_parse_file"],
+      "symbol_contains_any": ["parse_file"],
+      "path_contains_any": ["parser", "pgen", "driver", "core", "manager"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "source-file parsing is a bounded parser contract",
+      "ranking_reason": "source-file parser is representative parse/analyze behavior",
+      "contract_family": "source_file_parser_boundary",
+      "input_contract": {
+        "source_file": "SourceFileInput(path, bytes|text, encoding?, parser_options?)",
+        "parse_context": "ParserContext(grammar?, diagnostics?, debug?)"
+      },
+      "output_contract": {
+        "parsed_tree": "ParsedSourceTree(tree, diagnostics, metadata?)",
+        "failure_packet": "SourceParseFailure(kind, location?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "file reads are fixture-backed by default"
+      },
+      "validation_gates": [
+        "valid file, malformed syntax, missing file, and encoding cases are covered",
+        "diagnostic location and error class are asserted",
+        "filesystem reads are isolated behind fixtures"
+      ],
+      "failure_modes": ["file_not_found", "encoding_error", "syntax_error", "grammar_mismatch"]
+    },
+    {
+      "id": "framework_dependency_parameter_analysis_boundary",
+      "symbols": ["analyze_param", "analyze_params"],
+      "path_contains_any": ["fastapi", "dependencies", "utils"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "framework dependency parameter analysis is a bounded request-contract inference boundary",
+      "ranking_reason": "dependency parameter analysis is representative framework request-binding behavior",
+      "contract_family": "framework_dependency_parameter_analysis_boundary",
+      "input_contract": {
+        "parameter": "DependencyParameter(annotation, default?, source?, field_info?)",
+        "analysis_context": "DependencyAnalysisContext(path?, security?, dependency_overrides?)"
+      },
+      "output_contract": {
+        "parameter_model": "AnalyzedParameter(name, location, required, validators, dependency?)",
+        "failure_packet": "DependencyParameterFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "analysis must not mutate function signature metadata"
+      },
+      "validation_gates": [
+        "path/query/body/dependency/security parameter cases are covered",
+        "invalid annotations and conflicting defaults produce typed failure evidence",
+        "generated validation metadata is explicit"
+      ],
+      "failure_modes": ["invalid_annotation", "conflicting_default", "unsupported_dependency", "security_scope_mismatch"]
+    },
+    {
+      "id": "ssh_client_connection_boundary",
+      "symbols": ["connect"],
+      "path_contains_any": ["paramiko", "client", "transport", "ssh"],
+      "score_bonus": 24,
+      "ranking_bonus": 40,
+      "benign_runtime_boundary": true,
+      "reason": "SSH client connection setup is a bounded network adapter contract",
+      "ranking_reason": "SSH connection setup is representative secure transport behavior",
+      "contract_family": "ssh_client_connection_boundary",
+      "input_contract": {
+        "connection_request": "SshConnectionRequest(hostname, port?, username?, auth?, timeouts?, algorithms?)",
+        "transport_context": "SshTransportContext(sock?, host_keys?, policy?, proxy?)"
+      },
+      "output_contract": {
+        "connection_result": "SshConnectionResult(session_state, negotiated_algorithms?, server_key?)",
+        "failure_packet": "SshConnectionFailure(kind, retryable, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "requires_process_boundary": true,
+        "external_calls": "network/SSH handshake is faked by default in contract tests"
+      },
+      "validation_gates": [
+        "password, key, agent, and disabled-algorithm cases are covered",
+        "timeout/auth/banner/host-key failures produce typed failure evidence",
+        "network calls are fixture-backed unless an integration profile is explicit"
+      ],
+      "failure_modes": ["authentication_failure", "host_key_failure", "timeout", "algorithm_mismatch", "transport_error"]
+    },
+    {
+      "id": "template_project_generation_boundary",
+      "symbols": ["cookiecutter", "generate_files", "generate_context"],
+      "symbol_contains_any": ["cookiecutter", "template"],
+      "path_contains_any": ["cookiecutter", "template", "generate", "main.py"],
+      "score_bonus": 24,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "template project generation is a bounded scaffold contract",
+      "ranking_reason": "template generation is representative project-scaffold behavior",
+      "contract_family": "template_project_generation_boundary",
+      "input_contract": {
+        "template_request": "TemplateGenerationRequest(template, context?, output_dir, replay?, hooks_policy?)",
+        "execution_context": "TemplateExecutionContext(filesystem, prompts?, vcs?, hooks?)"
+      },
+      "output_contract": {
+        "generated_project": "GeneratedProject(path, files, replay_state?, warnings?)",
+        "failure_packet": "TemplateGenerationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "idempotency_required": true,
+        "filesystem": "writes are sandboxed/fixture-backed by default"
+      },
+      "validation_gates": [
+        "no-input, replay, overwrite, hook-disabled and invalid-template cases are covered",
+        "filesystem output scope and rollback policy are explicit",
+        "prompt/default behavior is deterministic under fixtures"
+      ],
+      "failure_modes": ["template_not_found", "context_render_error", "output_exists", "hook_failure", "filesystem_write_failure"]
+    },
+    {
+      "id": "runtime_message_dispatch_boundary",
+      "symbols": ["handle_message", "dispatch_message", "on_message"],
+      "symbol_contains_any": ["message"],
+      "path_contains_any": ["runner", "runners", "worker", "dispatcher"],
+      "score_bonus": 22,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "runtime message dispatch is a bounded coordination contract",
+      "ranking_reason": "message dispatch is representative runtime coordination behavior",
+      "contract_family": "runtime_message_dispatch_boundary",
+      "input_contract": {
+        "message": "RuntimeMessage(type, payload, sender?, correlation_id?)",
+        "dispatch_context": "DispatchContext(registry?, state?, client_id?, clock?)"
+      },
+      "output_contract": {
+        "dispatch_result": "DispatchResult(status, emitted_events?, state_delta?, warnings?)",
+        "failure_packet": "MessageDispatchFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "state changes must be captured as explicit state_delta"
+      },
+      "validation_gates": [
+        "known, unknown, malformed and duplicate messages are covered",
+        "state mutation and emitted events are explicit",
+        "client/session routing is deterministic under fixtures"
+      ],
+      "failure_modes": ["unknown_message_type", "malformed_payload", "handler_failure", "state_conflict"]
+    },
+    {
+      "id": "static_site_build_boundary",
+      "symbols": ["build", "_build_template"],
+      "symbol_contains_any": ["build"],
+      "path_contains_any": ["mkdocs", "commands", "build", "template"],
+      "score_bonus": 24,
+      "ranking_bonus": 40,
+      "benign_runtime_boundary": true,
+      "reason": "static-site build is a bounded documentation artifact pipeline contract",
+      "ranking_reason": "static-site build is representative documentation pipeline behavior",
+      "contract_family": "static_site_build_boundary",
+      "input_contract": {
+        "build_request": "StaticSiteBuildRequest(config, source_dir?, site_dir?, dirty?, strict?)",
+        "build_context": "StaticSiteBuildContext(theme?, plugins?, filesystem?, env?)"
+      },
+      "output_contract": {
+        "site_artifact": "StaticSiteArtifact(site_dir, pages, assets, warnings?)",
+        "failure_packet": "StaticSiteBuildFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "build writes are sandboxed/fixture-backed by default"
+      },
+      "validation_gates": [
+        "valid config, missing page, theme error and strict-warning cases are covered",
+        "output directory mutation and cleanup policy are explicit",
+        "plugin/theme boundaries are fakeable"
+      ],
+      "failure_modes": ["invalid_config", "template_error", "plugin_failure", "filesystem_write_failure", "strict_warning"]
+    },
+    {
+      "id": "web_raw_data_form_rendering_boundary",
+      "symbols": ["get_raw_data_form"],
+      "symbol_contains_any": ["raw_data_form"],
+      "path_contains_any": ["rest_framework", "renderers", "forms"],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "benign_runtime_boundary": true,
+      "reason": "web raw-data form rendering is a bounded browsable-API UI contract",
+      "ranking_reason": "raw-data form rendering is acceptable web-framework form behavior",
+      "contract_family": "web_raw_data_form_rendering_boundary",
+      "input_contract": {
+        "request_context": "BrowsableApiRequestContext(method, media_types, renderer_context, data?)",
+        "form_options": "RawDataFormOptions(parser_classes?, content_type?, charset?)"
+      },
+      "output_contract": {
+        "form_rendering": "RawDataFormRendering(html, media_type_options, warnings?)",
+        "failure_packet": "RawDataFormFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "rendering must not mutate request data"
+      },
+      "validation_gates": [
+        "empty body, unsupported content type and parser mismatch cases are covered",
+        "rendered HTML/control names are asserted with fixtures",
+        "request data mutation is forbidden or documented"
+      ],
+      "failure_modes": ["unsupported_media_type", "parser_unavailable", "html_escape_error"]
+    },
+    {
+      "id": "pipeline_registry_composition_boundary",
+      "symbols": ["register_pipelines", "pipeline_registry"],
+      "symbol_contains_all": ["pipeline"],
+      "symbol_contains_any": ["register", "registry"],
+      "path_contains_any": ["pipeline_registry", "pipelines", "kedro", "cookiecutter", "templates/project"],
+      "score_bonus": 20,
+      "ranking_bonus": 36,
+      "reason": "pipeline registry composition is a bounded workflow assembly contract",
+      "ranking_reason": "pipeline registry composition is representative workflow-project wiring",
+      "contract_family": "pipeline_registry_composition_boundary",
+      "input_contract": {
+        "project_context": "PipelineProjectContext(settings?, package_name?, environment?)",
+        "pipeline_factories": "PipelineFactorySet(named_pipelines, default_pipeline?)"
+      },
+      "output_contract": {
+        "pipeline_registry": "PipelineRegistry(names, default_name?, validation_warnings?)",
+        "failure_packet": "PipelineRegistryFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "registry assembly must not execute pipeline nodes"
+      },
+      "validation_gates": [
+        "default, named, missing and duplicate pipeline cases are covered",
+        "registry construction is separated from pipeline execution",
+        "template placeholders are handled as fixture inputs when present"
+      ],
+      "failure_modes": ["missing_pipeline", "duplicate_pipeline_name", "template_placeholder_error", "import_failure"]
+    },
+    {
+      "id": "isolated_build_environment_lifecycle_boundary",
+      "symbols": ["create", "__enter__", "install_dependencies"],
+      "symbol_contains_any": ["env", "environment"],
+      "path_contains_any": ["build/env.py", "build/env", "isolated", "environment"],
+      "score_bonus": 20,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "isolated build environment lifecycle is a bounded packaging adapter contract",
+      "ranking_reason": "isolated build environment setup is representative package-build behavior",
+      "contract_family": "isolated_build_environment_lifecycle_boundary",
+      "input_contract": {
+        "environment_request": "BuildEnvironmentRequest(isolation, source_dir?, env_dir?, dependencies?)",
+        "build_context": "BuildEnvironmentContext(installer?, runner?, constraints?, cache_policy?)"
+      },
+      "output_contract": {
+        "environment_handle": "BuildEnvironmentHandle(path, python_executable?, scripts_dir?, cleanup_policy?)",
+        "failure_packet": "BuildEnvironmentFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "environment creation and cleanup are sandboxed by default",
+        "process_boundary": "dependency installation and subprocess calls require fake runner tests"
+      },
+      "validation_gates": [
+        "create, reuse and cleanup lifecycle cases are covered",
+        "dependency install failure and constraint conflict return typed evidence",
+        "temporary directory ownership and cleanup policy are explicit"
+      ],
+      "failure_modes": ["filesystem_failure", "dependency_install_failure", "constraint_conflict", "subprocess_failure", "cleanup_failure"]
+    },
+    {
+      "id": "websocket_protocol_send_boundary",
+      "symbols": ["send", "send_frame", "send_event"],
+      "symbol_contains_any": ["send"],
+      "path_contains_any": ["websocket", "websockets", "sansio", "protocol"],
+      "score_bonus": 20,
+      "ranking_bonus": 36,
+      "benign_runtime_boundary": true,
+      "reason": "websocket protocol send is a bounded protocol state transition contract",
+      "ranking_reason": "websocket send boundary is representative protocol behavior",
+      "contract_family": "websocket_protocol_send_boundary",
+      "input_contract": {
+        "connection_state": "WebSocketConnectionState(open?, closing?, negotiated_extensions?)",
+        "outbound_event": "WebSocketOutboundEvent(text?|bytes?|close?|ping?|pong?)"
+      },
+      "output_contract": {
+        "send_result": "ProtocolSendResult(bytes_sent?, state_transition?, queued_event?)",
+        "failure_packet": "WebSocketSendFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "transport writes are fake by default in contract tests"
+      },
+      "validation_gates": [
+        "text, binary, close and invalid-state sends are covered",
+        "protocol state transitions are explicit",
+        "transport failure returns typed failure evidence"
+      ],
+      "failure_modes": ["invalid_state", "serialization_error", "transport_failure", "backpressure_timeout"]
+    },
+    {
+      "id": "package_resource_accessor_boundary",
+      "symbols": ["contents", "where", "files"],
+      "path_contains_any": ["certifi", "resources", "importlib"],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "reason": "package resource accessor is a bounded library API contract",
+      "ranking_reason": "resource accessor boundary is representative package API behavior",
+      "contract_family": "package_resource_accessor_boundary",
+      "input_contract": {},
+      "output_contract": {
+        "resource_value": "ResourcePathOrText(value, encoding?, package_ref?)",
+        "failure_packet": "ResourceAccessFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "filesystem": "package resource reads are fixture-backed by default"
+      },
+      "validation_gates": [
+        "normal package resource access is covered",
+        "missing resource and invalid encoding are controlled failures",
+        "zero-argument public API is preserved when source signature has no inputs"
+      ],
+      "failure_modes": ["missing_resource", "encoding_error", "package_metadata_error"]
+    },
+    {
+      "id": "debug_console_display_boundary",
+      "symbols": ["displayhook"],
+      "path_contains_any": ["debug", "console", "werkzeug"],
+      "score_bonus": 20,
+      "ranking_bonus": 26,
+      "benign_runtime_boundary": true,
+      "reason": "debug console display hook is a bounded interactive rendering contract",
+      "ranking_reason": "display hook boundary is representative debug-console behavior",
+      "contract_family": "debug_console_display_boundary",
+      "input_contract": {
+        "display_value": "ConsoleDisplayValue(value, repr_policy?, frame_ref?)"
+      },
+      "output_contract": {
+        "display_result": "ConsoleDisplayResult(rendered_text?, stored_value?, warnings?)",
+        "failure_packet": "ConsoleDisplayFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state_policy": "interactive console state mutation is fixture-isolated"
+      },
+      "validation_gates": [
+        "normal display and None display are covered",
+        "repr failure is represented as controlled output",
+        "console state mutation is explicit"
+      ],
+      "failure_modes": ["repr_error", "state_update_error", "unsupported_display_value"]
+    },
+    {
+      "id": "protocol_state_property_boundary",
+      "symbols": ["our_state", "their_state", "state", "states"],
+      "path_contains_any": ["h11", "connection", "protocol"],
+      "score_bonus": 20,
+      "ranking_bonus": 28,
+      "reason": "protocol state property is a bounded state-machine contract",
+      "ranking_reason": "protocol state property is representative protocol behavior",
+      "contract_family": "protocol_state_property_boundary",
+      "input_contract": {
+        "connection_state": "ProtocolConnectionState(role, event_history?, transition_table?)"
+      },
+      "output_contract": {
+        "state": "ProtocolState(role, phase, terminal?)",
+        "failure_packet": "ProtocolStateFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state_policy": "state reads and transition side effects are separated in tests"
+      },
+      "validation_gates": [
+        "initial, active and terminal protocol states are covered",
+        "invalid transition history returns controlled evidence",
+        "state read does not mutate connection state"
+      ],
+      "failure_modes": ["invalid_transition", "unknown_role", "corrupt_state"]
+    },
+    {
+      "id": "url_parse_boundary",
+      "symbols": ["urlparse", "parse_url"],
+      "symbol_contains_any": ["urlparse", "parse_url"],
+      "path_contains_any": ["url", "urls", "httpx", "urllib3"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "URL parsing is a bounded protocol/data normalization contract",
+      "ranking_reason": "URL parser boundary is representative HTTP client behavior",
+      "contract_family": "url_parse_boundary",
+      "input_contract": {
+        "url": "URLInput(raw_url, scheme_policy?, authority_policy?, encoding?)"
+      },
+      "output_contract": {
+        "parsed_url": "ParsedURL(scheme, authority?, path, query?, fragment?, normalized?)",
+        "failure_packet": "URLParseFailure(kind, field?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "parser must not mutate caller-owned input"
+      },
+      "validation_gates": [
+        "absolute, relative, encoded and empty URL cases are covered",
+        "malformed authority/path/query inputs return controlled failures",
+        "normalization and percent-encoding behavior is explicit"
+      ],
+      "failure_modes": ["invalid_scheme", "malformed_authority", "encoding_error", "empty_url"]
+    },
+    {
+      "id": "generic_web_response_facade",
+      "exclude_if_profile_ids": ["web_framework_response_factory"],
+      "symbols": ["make_response", "response_class", "create_response"],
+      "path_contains_any": ["flask", "starlette", "fastapi", "responses", "app.py"],
+      "score_bonus": 0,
+      "score_penalty": 18,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "response factory is a bounded web-framework contract",
+      "ranking_reason": "response factory boundary is project-core web-framework behavior",
+      "penalty_reason": "web response factory remains a framework facade until a core contract is selected"
+    }
+  ]
+}

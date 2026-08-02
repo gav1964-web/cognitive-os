@@ -58,6 +58,14 @@ def render_product_architecture_document(architecture: dict[str, Any]) -> str:
             "",
             *_table(["ID", "Сценарий", "Успех"], [[r.get("id"), r.get("description"), r.get("success")] for r in architecture.get("main_scenarios", [])]),
             "",
+            "## Пользовательский результат",
+            "",
+            *_table(["Поле", "Значение"], [[key, value] for key, value in dict(architecture.get("product_output_contract") or {}).items()]),
+            "",
+            "## Реальные краевые случаи",
+            "",
+            *_table(["ID", "Сценарий", "Успех"], [[r.get("id"), r.get("description"), r.get("success")] for r in architecture.get("real_world_edge_cases", [])]),
+            "",
             "## Компоненты",
             "",
             *_table(["Компонент", "Назначение", "Вход", "Выход"], [[r.get("id"), r.get("purpose"), r.get("inputs"), r.get("outputs")] for r in architecture.get("components", [])]),
@@ -131,6 +139,14 @@ def render_product_technical_spec_document(spec: dict[str, Any]) -> str:
             f"- Вход: {_value(primary.get('input'))}",
             f"- Выход: {_value(primary.get('output'))}",
             f"- Side effects: {_value(primary.get('side_effect_policy'))}",
+            "",
+            "## Пользовательский результат",
+            "",
+            *_table(["Поле", "Значение"], [[key, value] for key, value in dict(spec.get("product_output_contract") or {}).items()]),
+            "",
+            "## Реальные краевые случаи",
+            "",
+            *_table(["ID", "Сценарий", "Успех"], [[r.get("id"), r.get("description"), r.get("success")] for r in spec.get("real_world_edge_cases", [])]),
             "",
             "## Компонентные контракты",
             "",
@@ -235,7 +251,7 @@ def _spec_decision_text(spec: dict[str, Any]) -> str:
 def _verification_lines(spec: dict[str, Any]) -> list[str]:
     strategy = dict(spec.get("verification_strategy") or {})
     lines = []
-    for key in ("contract_tests", "negative_tests", "integration_tests", "manual_review"):
+    for key in ("contract_tests", "negative_tests", "integration_tests", "real_world_scenarios", "manual_review"):
         values = strategy.get(key)
         if values:
             lines.append(f"{key}: {_value(values)}")

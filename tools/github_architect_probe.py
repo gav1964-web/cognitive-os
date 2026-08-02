@@ -211,6 +211,7 @@ def _project_report_quality(project_report: dict[str, Any]) -> dict[str, Any]:
     execution = dict(answers.get("2_execution", {}))
     capabilities = dict(answers.get("3_capabilities", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
+    plan = dict(readiness.get("minimal_extraction_plan", {}))
     issues: list[str] = []
     score = 1.0
 
@@ -232,7 +233,11 @@ def _project_report_quality(project_report: dict[str, Any]) -> dict[str, Any]:
         score -= 0.16
         issues.append("weak_execution_path")
 
-    capability_count = len(capabilities.get("atomic_reusable_capabilities", []) or []) + len(capabilities.get("pure_transforms", []) or [])
+    capability_count = (
+        len(capabilities.get("atomic_reusable_capabilities", []) or [])
+        + len(capabilities.get("pure_transforms", []) or [])
+        + len(plan.get("capabilities_to_extract", []) or [])
+    )
     if capability_count < 3:
         score -= 0.12
         issues.append("thin_capability_model")

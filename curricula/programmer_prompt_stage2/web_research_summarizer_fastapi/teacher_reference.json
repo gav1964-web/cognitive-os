@@ -1,0 +1,36 @@
+{
+  "artifact_type": "TeacherReference",
+  "case": "web_research_summarizer_fastapi",
+  "teacher_reference_not_ground_truth": true,
+  "prompt": "Напиши FastAPI приложение, которое принимает обычную поисковую фразу пользователя, получает топ-20 найденных страниц через default web search adapter или optional JSON search endpoint, извлекает основной текст страниц и возвращает одно итоговое суммари через OpenAI-compatible LLM gateway с дефолтами http://127.0.0.1:8000/v1 и GigaChat. Тесты fixture-only без live network и без real LLM calls.",
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/web_research_service/__init__.py",
+    "src/web_research_service/app.py",
+    "src/web_research_service/contracts.py",
+    "src/web_research_service/search.py",
+    "src/web_research_service/fetcher.py",
+    "src/web_research_service/extractor.py",
+    "src/web_research_service/llm_client.py",
+    "src/web_research_service/service.py",
+    "tests/fixtures/search_results.json",
+    "tests/fixtures/article_one.html",
+    "tests/fixtures/article_two.html",
+    "tests/test_search.py",
+    "tests/test_service.py",
+    "tests/test_llm_client.py",
+    "tests/test_api.py"
+  ],
+  "acceptance_criteria": [
+    "FastAPI app exposes health and research endpoints",
+    "API accepts a plain search phrase and top-N limit",
+    "top-20 result limit is enforced before article fetching",
+    "article fetching, extraction and LLM summarization are separated by adapters",
+    "LLM gateway defaults to http://127.0.0.1:8000/v1 and model GigaChat",
+    "search, fetch and LLM failures are returned as controlled API errors or warnings",
+    "default tests use fixtures and mocks without live network or real LLM calls",
+    "README documents run command, environment variables and live-network policy",
+    "all tests run from generated project root"
+  ]
+}

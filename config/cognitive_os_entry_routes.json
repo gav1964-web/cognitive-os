@@ -1,0 +1,39 @@
+{
+  "schema_version": "cognitive_os_entry_routes.v1",
+  "status": "active",
+  "default_route": "prompt_to_product",
+  "routes": [
+    {
+      "route_id": "project_foundation_analysis",
+      "pipeline": "project_foundation_analysis",
+      "priority": 10,
+      "requires_project_dir": true,
+      "intent_markers": ["анализ", "проанализ", "разбор", "architecture", "architect", "улучш", "project"]
+    },
+    {
+      "route_id": "prompt_to_product",
+      "pipeline": "prompt_to_product",
+      "priority": 20,
+      "requires_stage2_template": true
+    },
+    {
+      "route_id": "greenfield_architect_spec",
+      "pipeline": "greenfield_architect_spec",
+      "priority": 30,
+      "mode_markers": ["planning", "architecture", "spec"],
+      "intent_markers": ["создай", "напиши", "спроектируй", "сделай", "server", "service", "cli", "fastapi"]
+    },
+    {
+      "route_id": "clarification",
+      "pipeline": "clarification",
+      "priority": 90,
+      "prompt_statuses": ["needs_clarification", "unsupported", "too_broad"]
+    }
+  ],
+  "pipeline_contracts": {
+    "project_foundation_analysis": "ProjectMapReport -> ArchitectureDecisionRecord -> TechnicalSpec",
+    "prompt_to_product": "PromptAdequacyGate -> Stage2TemplateRoute -> VerifiedSystemPackage",
+    "greenfield_architect_spec": "UserPrompt -> ProductArchitectureRecord -> ProductTechnicalSpec",
+    "clarification": "PromptAdequacyGate -> ClarificationPacket"
+  }
+}

@@ -18,6 +18,10 @@ def test_config_doctor_passes_current_catalogs():
     assert report["status"] == "ok"
     assert report["summary"]["failed"] == 0
     assert any(check["code"] == "operation_recipe_references" for check in report["checks"])
+    assert any(check["code"] == "foundation_semantic_quality_policy_integrity" for check in report["checks"])
+    assert any(check["code"] == "executable_acceptance_policy_integrity" for check in report["checks"])
+    assert any(check["code"] == "patch_synthesis_policy_integrity" for check in report["checks"])
+    assert any(check["code"] == "project_evolution_policy_integrity" for check in report["checks"])
 
 
 def test_config_coverage_reports_uncovered_entities_without_failing():
@@ -44,6 +48,25 @@ def test_config_mutation_sandbox_validates_without_modifying_target(tmp_path: Pa
     report = validate_config_mutation(root=ROOT, proposal_path=proposal_path)
 
     assert report["artifact_type"] == "ConfigMutationSandboxReport"
+    assert report["status"] == "passed"
+    assert report["target_modified"] is False
+    assert target.read_text(encoding="utf-8") == before
+
+
+def test_config_mutation_sandbox_validates_executable_acceptance_policy(tmp_path: Path):
+    target = ROOT / "config" / "executable_acceptance_policy.json"
+    before = target.read_text(encoding="utf-8")
+    proposal = {
+        "artifact_type": "ConfigMutationProposal",
+        "target": "config/executable_acceptance_policy.json",
+        "operation": "replace_file",
+        "content": json.loads(before),
+    }
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+
+    report = validate_config_mutation(root=ROOT, proposal_path=proposal_path)
+
     assert report["status"] == "passed"
     assert report["target_modified"] is False
     assert target.read_text(encoding="utf-8") == before

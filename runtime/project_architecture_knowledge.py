@@ -243,8 +243,20 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
         return 0, []
 
     required = _strings(match.get("required_contains_any"))
-    if required and not any(needle.lower() in project_text for needle in required):
-        return 0, []
+    if required:
+        found = [needle for needle in required if needle.lower() in project_text]
+        if not found:
+            return 0, []
+        score += 40 + len(found) * 5
+        reasons.append("required text contains " + ", ".join(found[:3]))
+
+    required_all = _strings(match.get("required_contains_all"))
+    if required_all:
+        missing = [needle for needle in required_all if needle.lower() not in project_text]
+        if missing:
+            return 0, []
+        score += 20 + len(required_all) * 5
+        reasons.append("required text contains all " + ", ".join(required_all[:3]))
 
     project_names = _strings(match.get("project_name_contains_any"))
     project_name_matched = False

@@ -111,6 +111,22 @@ def test_goal_intake_accepts_project_change_prompt_with_target():
     assert "spreadsheet" in spec.outputs
 
 
+def test_goal_intake_does_not_treat_docker_as_doc_output():
+    spec = build_goal_spec(
+        "создай приложение CLI, которое будет запускаться в docker и собирать новости про Трампа "
+        "с 10 наиболее популярных новостных сайтов и давать агрегированное суммари по всем новостям "
+        "в целом и выводить результат в .md"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "markdown" in spec.outputs
+    assert "report" in spec.outputs
+    assert "file" in spec.outputs
+    assert "spreadsheet" not in spec.outputs
+    assert "stdout" not in spec.outputs
+
+
 def test_goal_spec_contract_rejects_extra_fields():
     spec = build_goal_spec("Normalize input text and hash it").to_dict()
     spec["extra"] = True

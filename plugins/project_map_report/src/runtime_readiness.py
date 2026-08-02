@@ -8,6 +8,7 @@ from .core_paths import classify_source_path, is_core_path
 from .extraction_plan_filters import suppress_whole_workflow_wrappers
 from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
 from .first_slice import preferred_first_slice_candidates
+from .runtime_resume_plan import resume_reuse_plan
 from .runtime_readiness_helpers import (
     all_functions,
     boundary_function_candidates,
@@ -43,6 +44,24 @@ def data_lifecycle(
             {"stage": "input", "shape": "CLI/script arguments and local files", "evidence": f"{len(commands)} runtime command groups"},
             {"stage": "processing", "shape": "Python function arguments / intermediate artifacts", "evidence": "entrypoint workflow"},
             {"stage": "output", "shape": "filesystem artifacts, stdout/stderr, or reports", "evidence": "script side effects"},
+        ]
+    active_functions = [
+        fn
+        for fn in all_functions(python_structure)
+        if is_core_path(str(fn.get("path", "")))
+    ]
+    public_refs = [
+        f"{fn.get('path')}:{fn.get('name')}"
+        for fn in active_functions
+        if not str(fn.get("name") or "").startswith("_")
+    ][:5]
+    if active_functions:
+        evidence = ", ".join(public_refs) if public_refs else f"{len(active_functions)} core Python functions"
+        return [
+            {"stage": "caller_input", "shape": "public package API arguments or imported Python objects", "evidence": evidence},
+            {"stage": "validation_or_coercion", "shape": schema_hint, "evidence": "signatures, schema-like classes, and weak contract zones"},
+            {"stage": "core_behavior", "shape": "domain objects, transforms, adapters, or runtime boundary calls", "evidence": "central nodes and extraction candidates"},
+            {"stage": "caller_output", "shape": "return values, raised exceptions, or documented side effects", "evidence": project_type},
         ]
     return [{"stage": "unknown", "shape": "not enough evidence", "evidence": "no routes or runtime commands detected"}]
 
@@ -293,36 +312,6 @@ def contract_test_strategy(python_structure: dict[str, Any]) -> dict[str, Any]:
         "schema_seeded_tests": data_structures(python_structure)[:8],
         "hand_written_negative_tests": sorted(set(weak + error_functions))[:12],
     }
-
-
-def resume_reuse_plan(routes: list[dict[str, Any]], commands: list[dict[str, Any]], imports: set[str]) -> list[dict[str, str]]:
-    if routes:
-        return [
-            {"step": "request_capture", "reuse": "yes", "reason": "raw request can be replayed"},
-            {"step": "validation", "reuse": "yes_if_schema_version_same", "reason": "validated payload can be checkpointed"},
-            {"step": "external_provider_call", "reuse": "cache_if_pure_response", "reason": "avoid duplicate network/API side effects"},
-            {"step": "response_formatting", "reuse": "recompute", "reason": "cheap deterministic formatting"},
-        ]
-    if commands:
-        return [
-            {"step": "input_discovery", "reuse": "yes", "reason": "file list/config snapshot can be checkpointed"},
-            {"step": "parsed_intermediate", "reuse": "yes_if_input_hash_same", "reason": "parsed artifacts can be cached"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "side effects may duplicate"},
-        ]
-    if imports & {"requests", "httpx", "openai", "gigachat"}:
-        return [
-            {"step": "external_api_response", "reuse": "cache_if_request_hash_same", "reason": "protect retry/replay from duplicate cost and drift"},
-            {"step": "input_discovery", "reuse": "yes", "reason": "filesystem/config inputs can be snapshotted"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "filesystem/process side effects may duplicate"},
-        ]
-    if imports & {"pathlib", "os", "json", "csv", "subprocess", "asyncio", "queue", "threading"}:
-        return [
-            {"step": "input_discovery", "reuse": "yes", "reason": "filesystem/config inputs can be snapshotted"},
-            {"step": "parsed_intermediate", "reuse": "yes_if_input_hash_same", "reason": "parsed artifacts can be cached"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "filesystem/process side effects may duplicate"},
-            {"step": "manual", "reuse": "unknown", "reason": "no explicit runtime command or route was detected"},
-        ]
-    return [{"step": "manual", "reuse": "unknown", "reason": "not enough execution evidence"}]
 
 
 def minimal_extraction_plan(

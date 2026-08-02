@@ -1,0 +1,176 @@
+{
+  "schema_version": "executable_acceptance_policy.v1",
+  "dependency_policy": {
+    "controlled_stubs": {
+      "enabled": true,
+      "max_missing_modules": 3,
+      "stub_external_missing_modules": true,
+      "stub_object_features": [
+        "bool_false",
+        "callable",
+        "context_manager",
+        "getitem",
+        "iter_empty",
+        "mro_entries"
+      ]
+    },
+    "metadata_profiles": {
+      "enabled": true,
+      "default_version": "0.0.0",
+        "packages": [
+          "cookiecutter",
+          "invoke",
+          "isort",
+          "paramiko",
+          "pre_commit"
+        ]
+      },
+      "generated_module_profiles": {
+        "enabled": true,
+        "modules": {
+          "borg._version": {"attrs": {"version": "1.2.3"}},
+          "filelock.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
+          "tox.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
+          "virtualenv.version": {"attrs": {"__version__": "0.0.0"}},
+          "urllib3._version": {"attrs": {"__version__": "0.0.0"}}
+        }
+      },
+    "external_call_tokens": [
+      "api",
+      "browser",
+      "external_boundary_failure",
+      "http",
+      "llm",
+      "network",
+      "provider",
+      "subprocess"
+    ]
+  },
+  "method_fixture_policy": {
+    "enabled": true,
+    "safe_uninitialized_instance": true,
+    "default_constructor_first": true,
+    "instance_attribute_profiles": {
+      "WsgiToAsgiInstance.build_environ": {
+        "scope": {
+          "type": "http",
+          "method": "GET",
+          "path": "/",
+          "query_string": {"__fixture__": "bytes_empty"},
+          "http_version": "1.1",
+          "headers": [],
+          "server": ["testserver", 80],
+          "client": ["127.0.0.1", 12345],
+          "scheme": "http",
+          "root_path": ""
+        },
+        "duplicate_header_limit": 0
+      }
+    },
+    "recipes": {
+      "method_target_needs_instance_fixture": "add explicit class fixture or constructor defaults for the unique method target",
+      "ambiguous_nested_callable_target": "bind the target to ClassName.method or provide a source-specific callable path"
+    }
+  },
+  "skipped_recovery": {
+    "ambiguous_nested_callable_target": "disambiguate the nested callable with class or enclosing function context",
+    "import_failed_missing_module": "install the optional dependency or add a controlled dependency profile when it is external",
+    "import_failed_runtime_error": "isolate import-time side effects or move the acceptance target behind a lightweight import boundary",
+    "method_target_needs_instance_fixture": "provide an instance fixture recipe for the owning class",
+    "positive_sample_execution_failed": "extend sample_values or fixture recipes for the failing signature and domain shape",
+    "positive_signature_mismatch": "add argument mapping rules or tighten the TechnicalSpec contract binding",
+    "target_not_callable": "choose a concrete function or method target instead of a module constant or generated symbol",
+    "unsupported_target_format": "use a file.py:symbol target inside the project"
+  },
+  "sample_values": {
+    "field_values": {
+      "annotation": "sample",
+      "date_parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "dayfirst": false,
+      "display_value": "sample",
+      "fuzzy": false,
+      "cfg": {"__fixture__": "configparser_flake8_empty"},
+      "cfg_dir": ".",
+      "idx": 0,
+      "index": 0,
+      "index_errors": false,
+      "info": {"__fixture__": "dateutil_parserinfo_minimal"},
+      "is_path_param": false,
+      "flag": false,
+      "many": false,
+      "markup_mode": "rich",
+      "name": "value",
+      "obj": "sample",
+      "partial": false,
+      "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "parse_context": {},
+      "parse_float": {"__fixture__": "callable_float"},
+      "param_name": "value",
+      "pos": 0,
+      "response": "sample",
+      "res": {"__fixture__": "dateutil_result"},
+      "return_value": "sample",
+      "rv": "sample",
+      "scope": {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "query_string": {"__fixture__": "bytes_empty"},
+        "http_version": "1.1",
+        "headers": [],
+        "server": ["testserver", 80],
+        "client": ["127.0.0.1", 12345],
+        "scheme": "http",
+        "root_path": ""
+      },
+      "status_headers": {},
+      "tokens": ["2026", "-", "01", "-", "02"],
+      "unknown": false,
+      "body": {"__fixture__": "bytes_io_empty"},
+      "src": "\"sample\"",
+      "value": "sample",
+      "yearfirst": false,
+      "ymd": {"__fixture__": "dateutil_ymd"},
+      "nest_lvl": 0
+    },
+    "nullable_fields": ["enable_extensions", "require_plugins"],
+    "optional_nullable_fields": ["astnode", "frame"],
+    "fixture_fields": {
+      "applicable_validators": "callable_items",
+      "id_of": "callable_id_of"
+    },
+    "fixture_type_contains": {
+      "applicablevalidators": "callable_items",
+      "id_of": "callable_id_of",
+      "source": "pytest_source_minimal"
+    },
+    "type_contains": {
+      "array": [],
+      "bool": true,
+      "dict": {},
+      "mapping": {},
+      "object": {},
+      "int": 1,
+      "iterable": [],
+      "list": [],
+      "number": 1,
+      "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "sequence": [],
+      "tuple": [],
+      "callable": {"__fixture__": "callable_identity"}
+    },
+    "signature_type_contains": {
+      "bool": false,
+      "dict": {},
+      "int": 0,
+      "list": [],
+      "mapping": {},
+      "sequence": [],
+      "tuple": []
+    },
+    "field_prefix_values": {
+      "is_": false
+    },
+    "default": "sample"
+  }
+}

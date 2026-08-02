@@ -50,7 +50,12 @@ def test_spec_writer_red_team_accepts_domain_contract_with_gates():
             "side_effects": {"declared": ["filesystem"], "requires_validation_gate": True},
         },
     }
-    adr = {"first_slice_contract": {"name": "repair_attempt_contract_slice"}}
+    adr = {
+        "first_slice_contract": {
+            "name": "repair_attempt_contract_slice",
+            "targets": ["AutoFix/auto_dev_agent.py:send_to_model(80 loc)"],
+        }
+    }
 
     report = red_team_technical_spec(spec, adr)
 
@@ -107,3 +112,67 @@ def test_spec_writer_red_team_accepts_explicit_no_safe_candidate_block():
     assert report["status"] == "pass"
     assert report["handoff_verdict"] == "blocked_no_safe_candidate"
     assert report["score"] == 1.0
+
+
+def test_spec_writer_red_team_blocks_candidate_outside_architect_first_slice():
+    spec = {
+        "artifact_type": "TechnicalSpec",
+        "requirements": [
+            {
+                "statement": "First-slice parser contract must stay bound to the architect-selected parser target.",
+                "source": "ProjectArchitectureSynthesis.recommended_first_slice",
+            }
+        ],
+        "acceptance_criteria": [
+            {
+                "criterion": "pkg/helpers.py:easy_helper rejects malformed input with evidence.",
+                "source": "pkg/helpers.py:easy_helper",
+            }
+        ],
+        "traceability_table": [
+            {
+                "source": "ProjectArchitectureSynthesis.recommended_first_slice",
+                "requirement": "parser_slice",
+                "acceptance_id": "AC-001",
+            }
+        ],
+        "work_plan_contract": {
+            "name": "parser_slice",
+            "obligations": [
+                {
+                    "id": "WPC-001",
+                    "step": "Define the parser contract.",
+                    "target": "pkg/helpers.py:easy_helper",
+                }
+            ],
+        },
+        "interface_contracts": [
+            {
+                "source": "pkg/helpers.py:easy_helper",
+                "input_contract": {"raw": "RawInput"},
+                "output_contract": {"parsed": "ParsedOutput"},
+            }
+        ],
+        "extraction_contract": {
+            "candidate": "pkg/helpers.py:easy_helper",
+            "contract_family": "parser_boundary",
+            "input_contract": {"raw": "RawInput"},
+            "output_contract": {"parsed": "ParsedOutput"},
+            "side_effects": {"declared": []},
+        },
+    }
+    adr = {
+        "first_slice_contract": {
+            "name": "parser_slice",
+            "targets": ["pkg/parser.py:parse_document(120 loc)"],
+        },
+        "spec_writer_brief": {
+            "files_or_symbols": ["pkg/parser.py:parse_document", "pkg/helpers.py:easy_helper"],
+        },
+    }
+
+    report = red_team_technical_spec(spec, adr)
+
+    assert report["status"] == "fail"
+    assert report["handoff_verdict"] == "return_to_spec_writer"
+    assert "candidate_outside_first_slice_targets" in {row["code"] for row in report["blocking_findings"]}

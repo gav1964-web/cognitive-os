@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .executable_acceptance_policy import external_call_tokens, sample_value
 from .role_skill_common import now_iso
 
 
@@ -26,7 +27,7 @@ def build_test_plan(
     return {
         "artifact_type": "TestPlan",
         "role": role_id,
-        "status": "ok",
+        "status": _plan_status(implementation_target),
         "created_at": now_iso(),
         "source_artifacts": [
             {"type": technical_spec.get("artifact_type"), "role": technical_spec.get("role")},
@@ -61,6 +62,12 @@ def _target_name(implementation_target: dict[str, Any], patch_scope: list[str]) 
     return str(implementation_target.get("candidate") or (patch_scope[0] if patch_scope else "planned capability"))
 
 
+def _plan_status(implementation_target: dict[str, Any]) -> str:
+    if implementation_target.get("status") == "blocked_no_safe_candidate":
+        return "blocked_no_safe_candidate"
+    return "ok"
+
+
 def _test_target(
     implementation_target: dict[str, Any],
     contract_binding: dict[str, Any],
@@ -76,6 +83,25 @@ def _test_target(
 
 
 def _contract_test_matrix(contract_binding: dict[str, Any], target: str) -> list[dict[str, Any]]:
+    if contract_binding.get("binding_status") == "blocked_no_safe_candidate":
+        return [
+            {
+                "id": "CONTRACT-BLOCK-001",
+                "target": target,
+                "direction": "blocked_handoff",
+                "field": "safe_source_specific_candidate",
+                "type": "required",
+                "expectation": "implementation remains blocked until TechnicalSpec provides a source-backed candidate",
+            },
+            {
+                "id": "CONTRACT-BLOCK-002",
+                "target": target,
+                "direction": "blocked_handoff",
+                "field": "input_output_contract",
+                "type": "required",
+                "expectation": "no patch is planned until input and output contracts are bound to source evidence",
+            },
+        ]
     input_contract = dict(contract_binding.get("input_contract", {}))
     output_contract = dict(contract_binding.get("output_contract", {}))
     rows = []
@@ -137,19 +163,7 @@ def _dependency_policy(
             str(implementation_plan.get("evidence_scope", "")),
         ]
     ).lower()
-    external = any(
-        token in text
-        for token in (
-            "api",
-            "browser",
-            "external_boundary_failure",
-            "http",
-            "llm",
-            "network",
-            "provider",
-            "subprocess",
-        )
-    )
+    external = any(token in text for token in external_call_tokens())
     if not external:
         return {"external_calls": "none_detected", "default_mode": "in_process_contract_tests"}
     return {
@@ -180,6 +194,23 @@ def _executable_acceptance(
     contract_binding: dict[str, Any],
     target: str,
 ) -> dict[str, Any]:
+    if contract_binding.get("binding_status") == "blocked_no_safe_candidate":
+        return {
+            "status": "blocked_no_safe_candidate",
+            "format": "executable_acceptance_obligations_v0.1",
+            "can_generate_scaffold": False,
+            "obligations": [
+                {
+                    "id": "OBL-BLOCK-001",
+                    "acceptance_id": "blocked_handoff_preserved",
+                    "target": target,
+                    "kind": "blocked_handoff_case",
+                    "given": {"implementation_target_status": "blocked_no_safe_candidate"},
+                    "expect": {"patch_generation_allowed": False},
+                    "oracle": "executor_handoff_stays_blocked_until_source_candidate_exists",
+                }
+            ],
+        }
     input_contract = dict(contract_binding.get("input_contract", {}))
     output_contract = dict(contract_binding.get("output_contract", {}))
     obligations = []
@@ -246,20 +277,11 @@ def _negative_tests(target: str, contract_binding: dict[str, Any]) -> list[dict[
 
 
 def _sample_payload(contract: dict[str, Any]) -> dict[str, Any]:
-    return {str(name): _sample_value(str(type_name)) for name, type_name in contract.items()}
+    return {str(name): _sample_value(str(type_name), str(name)) for name, type_name in contract.items()}
 
 
-def _sample_value(type_name: str) -> Any:
-    lowered = type_name.lower()
-    if "int" in lowered or "number" in lowered:
-        return 1
-    if "bool" in lowered:
-        return True
-    if "list" in lowered or "array" in lowered:
-        return []
-    if "dict" in lowered or "object" in lowered:
-        return {}
-    return "sample"
+def _sample_value(type_name: str, field_name: str = "") -> Any:
+    return sample_value(type_name, field_name)
 
 
 def _expected_shape(contract: dict[str, Any]) -> dict[str, Any]:

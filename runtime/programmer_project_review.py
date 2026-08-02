@@ -110,9 +110,10 @@ def _checks(
         "has_source_package": bool(source_files),
         "has_cli_entrypoint": _is_api_project(source_text) or any(item.endswith("/cli.py") for item in source_files),
         "cli_uses_argparse": _is_api_project(source_text) or ("import argparse" in source_text and "parse_args" in source_text),
-        "cli_accepts_input_output": _is_api_project(source_text) or ("add_argument('input'" in source_text and "add_argument('output'" in source_text),
+        "cli_accepts_input_output": _is_api_project(source_text) or _cli_accepts_input_output(source_text),
         "has_fastapi_app": not _is_api_project(source_text) or ("FastAPI(" in source_text and "@app." in source_text),
-        "has_api_tests": not _is_api_project(source_text) or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text)),
+        "has_api_tests": not _is_api_project(source_text)
+        or ("TestClient" in test_text and ("/aggregate" in test_text or "/items" in test_text or "/research" in test_text)),
         "has_controlled_api_error": not _is_api_project(source_text) or ("HTTPException" in source_text and "status_code=" in source_text),
         "has_tests": bool(test_files),
         "has_core_test": any(
@@ -123,10 +124,12 @@ def _checks(
                     "test_store.py",
                     "test_parser.py",
                     "test_csv_writer.py",
+                    "test_report_writer.py",
                     "test_converter.py",
                     "test_finder.py",
                     "test_merger.py",
                     "test_indexer.py",
+                    "test_service.py",
                 )
             )
             for item in test_files
@@ -160,7 +163,13 @@ def _findings(checks: dict[str, bool], files: list[str]) -> list[dict[str, str]]
 
 def _risks(scaffold: dict[str, Any], checks: dict[str, bool]) -> list[dict[str, str]]:
     risks = []
-    if scaffold.get("case") in {"ixbt_news_scraper", "news_site_scraper_cli", "url_status_checker_cli"}:
+    if scaffold.get("case") in {
+        "ixbt_news_scraper",
+        "news_site_scraper_cli",
+        "url_status_checker_cli",
+        "web_research_summarizer_cli",
+        "web_research_summarizer_fastapi",
+    }:
         risks.append(
             {
                 "target": "network",
@@ -233,6 +242,12 @@ def _has_negative_or_edge_test(test_text: str, file_texts: dict[str, str]) -> bo
 
 def _is_api_project(source_text: str) -> bool:
     return "FastAPI(" in source_text
+
+
+def _cli_accepts_input_output(source_text: str) -> bool:
+    has_input = any(marker in source_text for marker in ("add_argument('input'", 'add_argument("input"', "add_argument('query'", 'add_argument("query"', "add_argument('source'", 'add_argument("source"'))
+    has_output = any(marker in source_text for marker in ("add_argument('output'", 'add_argument("output"', "add_argument('destination'", 'add_argument("destination"'))
+    return has_input and has_output
 
 
 def _has_dependency_policy(source_text: str, pyproject: str) -> bool:

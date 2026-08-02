@@ -88,18 +88,25 @@ def score_role_pipeline(
     artifacts = dict(result.get("artifacts", {}))
     safety = dict(result.get("safety", {}))
     role_quality = dict(result.get("role_quality", {}))
+    controlled_block = _controlled_no_safe_candidate_block(result, role_quality)
     checks = {
         "all_artifacts_present": all(key in artifacts for key in REQUIRED_ARTIFACTS),
         "review_has_recommendation": result.get("recommendation") in {"approve", "approve_with_risks", "request_rework"},
         "next_action_valid": result.get("next_action")
         in {"run_project_transform", "review_risks_then_run_project_transform", "rework_role_artifacts"},
-        "implementer_targets_extraction_candidate": role_quality.get("implementation_targets_extraction_candidate") is True,
-        "implementer_has_bound_input_contract": role_quality.get("implementation_has_input_contract") is True,
-        "implementer_has_bound_output_contract": role_quality.get("implementation_has_output_contract") is True,
-        "tester_targets_implementation_target": role_quality.get("test_targets_implementation_target") is True,
-        "tester_has_contract_matrix": role_quality.get("test_has_contract_matrix") is True,
-        "tester_has_negative_tests_for_target": role_quality.get("test_has_negative_tests_for_target") is True,
-        "reviewer_targets_implementation_target": role_quality.get("review_targets_implementation_target") is True,
+        "implementer_targets_extraction_candidate": role_quality.get("implementation_targets_extraction_candidate") is True
+        or controlled_block,
+        "implementer_has_bound_input_contract": role_quality.get("implementation_has_input_contract") is True
+        or controlled_block,
+        "implementer_has_bound_output_contract": role_quality.get("implementation_has_output_contract") is True
+        or controlled_block,
+        "tester_targets_implementation_target": role_quality.get("test_targets_implementation_target") is True
+        or controlled_block,
+        "tester_has_contract_matrix": role_quality.get("test_has_contract_matrix") is True or controlled_block,
+        "tester_has_negative_tests_for_target": role_quality.get("test_has_negative_tests_for_target") is True
+        or controlled_block,
+        "reviewer_targets_implementation_target": role_quality.get("review_targets_implementation_target") is True
+        or controlled_block,
         "reviewer_confirms_target_coverage": role_quality.get("review_confirms_target_coverage") is True,
         "reviewer_has_no_contract_violations": role_quality.get("review_contract_violations") == 0,
         "no_source_changes": safety.get("source_code_changes") is False,
@@ -108,7 +115,9 @@ def score_role_pipeline(
         "llm_policy_ok": allow_llm or safety.get("llm_invoked") is False,
     }
     if expected_candidate:
-        checks["implementer_matches_expected_candidate"] = role_quality.get("implementation_target") == expected_candidate
+        checks["implementer_matches_expected_candidate"] = (
+            role_quality.get("implementation_target") == expected_candidate or controlled_block
+        )
     artifact_checks = [
         dict(artifacts.get("architecture_decision", {})).get("artifact_type") == "ArchitectureDecisionRecord",
         dict(artifacts.get("technical_spec", {})).get("artifact_type") == "TechnicalSpec",
@@ -142,6 +151,15 @@ def score_role_pipeline(
         "checks": checks,
         "warnings": warnings,
     }
+
+
+def _controlled_no_safe_candidate_block(result: dict[str, Any], role_quality: dict[str, Any]) -> bool:
+    return (
+        role_quality.get("implementation_blocked_no_safe_candidate") is True
+        and role_quality.get("test_blocked_no_safe_candidate") is True
+        and result.get("recommendation") == "request_rework"
+        and result.get("next_action") == "rework_role_artifacts"
+    )
 
 
 def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:

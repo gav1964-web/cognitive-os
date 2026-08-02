@@ -61,7 +61,7 @@ def build_answers(
     return {
         "1_scope": {
             "main_task": _main_task(project_type, summary, docs, domain_profile),
-            "supported_scenarios": _scenarios(summary, routes, commands, domain_profile),
+            "supported_scenarios": _scenarios(summary, routes, commands, imports, domain_profile),
             "inputs": _inputs(routes, commands, imports, domain_profile),
             "outputs": _outputs(routes, commands, imports, stack, domain_profile),
             "code_areas": _code_areas(python_structure),
@@ -188,9 +188,11 @@ def _scenarios(
     summary: dict[str, Any],
     routes: list[dict[str, Any]],
     commands: list[dict[str, Any]],
+    imports: set[str] | None = None,
     domain_profile: dict[str, Any] | None = None,
 ) -> list[str]:
     profile = dict(domain_profile or {})
+    imports = imports or set()
     if profile.get("scenario_summary"):
         return [str(item) for item in profile.get("scenario_summary", []) if item][:5]
     scenarios = []
@@ -228,6 +230,9 @@ def _scenarios(
         scenarios.append("Install project dependencies from runtime scripts.")
     if any(command.get("purpose") == "run_application" for command in commands):
         scenarios.append("Start the application from a local runtime script.")
+    if summary.get("entrypoints") and imports & {"json", "csv", "openpyxl", "zipfile"}:
+        scenarios.append("Process user-provided files or structured documents through the detected entrypoint.")
+        scenarios.append("Write serialized output artifacts or filesystem results for downstream inspection.")
     if any(command.get("purpose") == "rebuild_data" for command in commands):
         scenarios.append("Rebuild derived data artifacts from scripts.")
     if "/v1/chat/completions" in route_names or "/chat" in route_names:

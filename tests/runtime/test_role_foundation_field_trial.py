@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from runtime.role_foundation_field_trial import _report, discover_python_projects
+from runtime.role_foundation_field_trial import _primary_language_scope, _report, discover_python_projects
 
 
 def test_field_trial_report_uses_project_and_role_minimums():
@@ -56,3 +56,29 @@ def test_discover_python_projects_keeps_manifest_root_as_one_project(tmp_path: P
     found = discover_python_projects([project])
 
     assert found == [project.resolve()]
+
+
+def test_primary_language_scope_marks_rust_workspace_with_python_assets_out_of_scope(tmp_path: Path):
+    project = tmp_path / "mixed"
+    (project / "crates" / "dbt-core" / "src").mkdir(parents=True)
+    (project / "crates" / "templates").mkdir(parents=True)
+    (project / "Cargo.toml").write_text("[workspace]\nmembers=[]\n", encoding="utf-8")
+    for index in range(24):
+        (project / "crates" / "dbt-core" / "src" / f"lib{index}.rs").write_text("fn main() {}\n", encoding="utf-8")
+    (project / "crates" / "templates" / "helper.py").write_text("print('template')\n", encoding="utf-8")
+    (project / "crates" / "templates" / "test_helper.py").write_text("def test_helper(): pass\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
+
+
+def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):
+    project = tmp_path / "pkg"
+    (project / "pkg").mkdir(parents=True)
+    (project / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    (project / "pkg" / "core.py").write_text("def normalize(value): return value\n", encoding="utf-8")
+    (project / "pyproject.toml").write_text("[project]\nname='pkg'\n", encoding="utf-8")
+
+    assert _primary_language_scope(project)["status"] == "in_scope"

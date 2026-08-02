@@ -1,0 +1,27 @@
+from web_research_summarizer import cli
+from web_research_summarizer.cli import main
+from web_research_summarizer.contracts import SearchResult
+
+
+def test_cli_builds_fixture_report_without_network(tmp_path):
+    output = tmp_path / 'summary.md'
+    assert main(['python packaging', str(output), '--fixture-search', 'tests/fixtures/search_results.json', '--fixture-dir', 'tests/fixtures']) == 0
+    text = output.read_text(encoding='utf-8')
+    assert '# Web Research Summary: python packaging' in text
+    assert '## Summary' in text
+    assert '1. Python packaging overview - https://example.test/article_one.html' in text
+
+
+def test_cli_default_search_path_accepts_plain_query(monkeypatch, tmp_path):
+    output = tmp_path / 'summary.md'
+    monkeypatch.setattr(cli, 'search_web', lambda query, limit=15: [SearchResult('A', 'https://example.test/article_one.html')])
+    monkeypatch.setattr(cli, 'fetch_article_html', lambda url: '<html><body><p>Python packaging helps teams publish tools.</p></body></html>')
+    assert main(['python packaging', str(output)]) == 0
+    assert '1. A - https://example.test/article_one.html' in output.read_text(encoding='utf-8')
+
+
+def test_cli_continues_when_one_article_fixture_is_missing(tmp_path):
+    output = tmp_path / 'summary.md'
+    assert main(['python packaging', str(output), '--fixture-search', 'tests/fixtures/search_results.json', '--fixture-dir', str(tmp_path)]) == 0
+    text = output.read_text(encoding='utf-8')
+    assert 'fetch_failed:https://example.test/article_one.html:FileNotFoundError' in text

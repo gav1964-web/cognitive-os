@@ -26,10 +26,25 @@ def test_stage2_template_routes_select_cases_from_config():
     assert select_stage2_case("Напиши CLI сортировку CSV", routes=routes) == "csv_sort_cli"
     assert select_stage2_case("напиши конвертер .md в .rtf", routes=routes) == "generic_file_converter_cli"
     assert select_stage2_case("CLI перечислит содержимое картинки", routes=routes) == "image_contents_cli"
-    assert select_stage2_case("создай скрапер новостей с первой страницы ixbt.com и выведи их в .csv файл", routes=routes) == "ixbt_news_scraper"
+    assert select_stage2_case("создай скрапер новостей с первой страницы ixbt.com и выведи их в .csv файл", routes=routes) == "news_site_scraper_cli"
+    assert select_stage2_case("сделай скрапер топ 10 новостей с ixbt.com и выведи в .md", routes=routes) == "news_site_scraper_cli"
     assert select_stage2_case("создай скрапер новостей с первой страницы https://3dnews.ru/ и выведи их в .csv файл", routes=routes) == "news_site_scraper_cli"
     assert select_stage2_case("создай скрапер новостей с сайта https://www.cnews.ru/ и выведи их в .csv файл", routes=routes) == "news_site_scraper_cli"
-    assert select_stage2_case("создай скрапер новостей с сайта https://zindi.africa/ и выведи их в .csv файл", routes=routes) is None
+    assert (
+        select_stage2_case(
+            "Создай CLI-проект поиска в интернете по фразе: программа принимает поисковую фразу, получает топ-15 найденных страниц/статей, извлекает из них основной текст и выдает краткое суммари по найденным статьям с ссылками на источники.",
+            routes=routes,
+        )
+        == "web_research_summarizer_cli"
+    )
+    assert (
+        select_stage2_case(
+            "Напиши приложение с интерфейсом FastAPI, которое принимает фразу для поиска в интернете, берет топ 20 страниц и выдает суммари через LLM GigaChat.",
+            routes=routes,
+        )
+        == "web_research_summarizer_fastapi"
+    )
+    assert select_stage2_case("создай скрапер новостей с сайта https://zindi.africa/ и выведи их в .csv файл", routes=routes) == "news_site_scraper_cli"
 
 
 def test_stage2_template_routes_handle_format_continuation_from_config():

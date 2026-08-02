@@ -1,0 +1,269 @@
+from __future__ import annotations
+
+import json
+import os
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+from runtime.architecture_analysis_document import write_architecture_analysis_document
+from runtime.architect_red_team import red_team_architecture_decision
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
+from runtime.contract_registry import load_artifact_contracts
+from runtime.foundation_semantic_quality import evaluate_foundation_semantic_quality
+from runtime.human_document_quality import evaluate_human_role_documents
+from runtime.local_inference import LocalInferenceConfig
+from runtime.project_benchmark import analyze_project
+from runtime.project_interpreter import interpret_project_report
+from runtime.role_artifact_quality import evaluate_role_artifacts
+from runtime.role_skill_common import load_skill_registry, write_role_artifact
+from runtime.scope_selection_document import write_scope_selection_document
+from runtime.spec_writer_red_team import red_team_technical_spec
+from runtime.technical_spec_document import write_technical_spec_document
+
+def _scope_candidate_priority(rel_path: str) -> int:
+    lowered = rel_path.replace("\\", "/").lower().strip("/")
+    first = lowered.split("/", 1)[0]
+    priority = 0
+    if first in {"src", "lib"}:
+        priority += 40
+    if any(token in first for token in ("core", "runtime", "engine", "sdk")):
+        priority += 25
+    if first.endswith("-ctl") or first.endswith("_ctl") or first in {"cli", "client", "dev"}:
+        priority -= 15
+    if _disfavored_scope_root(rel_path):
+        priority -= 80
+    return priority
+
+def _clear_named_package_candidate(project_dir: Path, rel_path: str, best_score: int, second_score: int) -> bool:
+    normalized_project = project_dir.name.lower().replace("-", "_")
+    normalized_candidate = rel_path.replace("\\", "/").strip("/").split("/", 1)[0].lower().replace("-", "_")
+    return bool(
+        normalized_project
+        and normalized_candidate == normalized_project
+        and best_score >= 35
+        and best_score - second_score >= 12
+    )
+
+def _scope_path_score(rel_path: str, *, root_name: str, parent_name: str) -> int:
+    lowered = rel_path.replace("\\", "/").lower().strip("/")
+    first = lowered.split("/", 1)[0]
+    normalized_root = root_name.lower().replace("-", "_")
+    normalized_parent = parent_name.lower().replace("-", "_")
+    normalized_first = first.replace("-", "_")
+    score = 0
+    if first in {"src", "lib", "package", "packages"}:
+        score += 35
+    if normalized_first == normalized_root:
+        score += 35
+    if normalized_parent and normalized_first == normalized_parent:
+        score += 45
+    elif normalized_first.startswith(f"{normalized_root}_") or normalized_first.startswith(f"{normalized_root}-"):
+        score += 25
+    elif normalized_root and normalized_root in normalized_first and any(token in normalized_first for token in ("core", "sdk")):
+        score += 22
+    if first in {"tests", "test", "examples", "example", "docs", "doc", "scripts", "script", "bench", "benches", "benchmark", "benchmarks", ".github", "ci"}:
+        score -= 50
+    elif first in {"galleries", "gallery", "dev", "devel", "devel-common", "tools", "utils"}:
+        score -= 25
+    return score
+
+def _disfavored_scope_root(path: str) -> bool:
+    first = path.replace("\\", "/").lower().strip("/").split("/", 1)[0]
+    return first in {"tests", "test", "examples", "example", "docs", "doc", "scripts", "script", "bench", "benches", "benchmark", "benchmarks", ".github", "ci"}
+
+def _candidate_noise_path(path: str) -> bool:
+    lowered = path.replace("\\", "/").lower()
+    parts = [part for part in lowered.split("/") if part]
+    if any(part in {"test_workspace", "source_project", "archives", "runs", "generated", "scratch", "tmp"} for part in parts):
+        return True
+    return lowered.endswith((".zip", ".log", ".jsonl", ".sqlite", ".db", ".pkl", ".pickle", ".bin"))
+
+def _scope_candidate_kind(py_count: int, js_ts_count: int, manifest_hits: list[str]) -> str:
+    has_package = any(path.endswith("package.json") for path in manifest_hits)
+    has_python = py_count > 0
+    if has_python and has_package:
+        return "mixed_python_frontend_candidate"
+    if has_python:
+        return "python_project_candidate"
+    if js_ts_count or has_package:
+        return "frontend_or_extension_candidate"
+    return "artifact_or_unknown_candidate"
+
+def _blocked_scope_score(project_artifact: dict[str, Any], scope_artifact: dict[str, Any]) -> dict[str, Any]:
+    project = dict(project_artifact.get("content", {}))
+    scope = dict(scope_artifact.get("content", {}))
+    source_health = dict(scope.get("source_health") or project.get("source_health") or {})
+    damaged_without_candidate = (
+        source_health.get("status") == "damaged"
+        and int(source_health.get("syntax_error_count") or 0) > 0
+        and not scope.get("candidate_roots")
+    )
+    checks = {
+        "project_map_report_present": project_artifact.get("artifact_type") == "ProjectMapReport",
+        "scope_selection_report_present": scope_artifact.get("artifact_type") == "ScopeSelectionReport",
+        "scope_selection_blocks_downstream": scope.get("status") == "blocked_until_scope_selected",
+        "scope_selection_has_candidates_or_damaged_stop": bool(scope.get("candidate_roots")) or damaged_without_candidate,
+        "adr_not_built": True,
+        "technical_spec_not_built": True,
+    }
+    warnings = [name for name, ok in checks.items() if not ok]
+    return {
+        "passed": False,
+        "blocked": True,
+        "blocker": "scope_selection_required",
+        "artifact_score": _ratio(sum(1 for ok in checks.values() if ok), len(checks)),
+        "checks": checks,
+        "warnings": warnings,
+        "project_shape": dict(project.get("source_health") or {}).get("project_shape"),
+    }
+
+def _write_artifacts(root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, str]:
+    paths = {}
+    contracts = load_artifact_contracts()
+    for key, artifact in artifacts.items():
+        artifact_type = str(artifact.get("artifact_type") or "")
+        role = str(dict(contracts.get(artifact_type, {})).get("producer") or artifact.get("role") or "unknown")
+        path = write_role_artifact(root, role, artifact)
+        artifact["artifact_path"] = path.as_posix()
+        paths[key] = path.as_posix()
+    return paths
+
+def _write_human_documents(root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, str]:
+    architecture_path = write_architecture_analysis_document(
+        root=root,
+        project_report=artifacts["project_map_report"],
+        architecture_decision=artifacts["architecture_decision"],
+        technical_spec=artifacts["technical_spec"],
+        output_group="foundations",
+    )
+    spec_path = write_technical_spec_document(
+        root=root,
+        project_report=artifacts["project_map_report"],
+        architecture_decision=artifacts["architecture_decision"],
+        technical_spec=artifacts["technical_spec"],
+        output_group="foundations",
+    )
+    return {"architecture_analysis": architecture_path.as_posix(), "technical_spec": spec_path.as_posix()}
+
+def _write_scope_human_documents(root: Path, scope_report: dict[str, Any]) -> dict[str, str]:
+    path = write_scope_selection_document(root=root, scope_report=scope_report, output_group="foundations")
+    return {"scope_selection": path.as_posix()}
+
+def _artifact_summary(artifacts: dict[str, dict[str, Any]], paths: dict[str, str]) -> dict[str, dict[str, Any]]:
+    return {
+        key: {
+            "artifact_type": artifact.get("artifact_type"),
+            "role": artifact.get("role"),
+            "status": artifact.get("status"),
+            "path": paths.get(key),
+        }
+        for key, artifact in artifacts.items()
+    }
+
+def _selected_projects(projects_dir: Path, project: str | None) -> list[Path]:
+    if project:
+        path = projects_dir / project
+        if not path.is_dir():
+            raise FileNotFoundError(f"benchmark project not found: {path}")
+        return [path]
+    return sorted(path for path in projects_dir.iterdir() if path.is_dir())
+
+def _benchmark_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    passed = sum(1 for case in cases if case["status"] == "ok")
+    return {
+        "status": "ok" if passed == len(cases) else "failed",
+        "milestone": "Role Foundation Field Trial v0.1",
+        "generated_at": _now(),
+        "project_count": len(cases),
+        "passed": passed,
+        "summary": {
+            "artifact_score": _ratio(sum(case["score"]["artifact_score"] for case in cases), len(cases)),
+            "candidate_match_score": _ratio(
+                sum(
+                    1
+                    for case in cases
+                    if case["score"]["checks"].get("spec_contract_matches_expected_candidate") is True
+                ),
+                sum(1 for case in cases if case.get("expected_best_extraction_candidate")),
+            ),
+            "warnings": sum(len(case["score"]["warnings"]) for case in cases),
+            "llm_invoked": sum(1 for case in cases if case["safety"].get("llm_invoked") is True),
+        },
+        "cases": cases,
+    }
+
+def _ratio(numerator: float, denominator: float) -> float:
+    return 1.0 if denominator == 0 else round(numerator / denominator, 4)
+
+def _acceptance_is_source_linked(spec: dict[str, Any]) -> bool:
+    criteria = spec.get("acceptance_criteria", [])
+    return any(
+        isinstance(row, dict)
+        and row.get("source")
+        and ":" in str(row.get("source"))
+        and str(row.get("source")) in str(row.get("criterion"))
+        for row in criteria
+    )
+
+def _contract_candidate_ranked_first(spec: dict[str, Any]) -> bool:
+    contract = dict(spec.get("extraction_contract", {}))
+    candidate = str(contract.get("candidate") or "")
+    ranked = contract.get("ranked_candidates", [])
+    return bool(candidate and isinstance(ranked, list) and ranked and dict(ranked[0]).get("source") == candidate)
+
+def _contract_has_selection_reason(spec: dict[str, Any]) -> bool:
+    contract = dict(spec.get("extraction_contract", {}))
+    return bool(str(contract.get("selection_reason") or "").strip())
+
+def _selected_extraction_candidate(spec: dict[str, Any]) -> str | None:
+    candidate = dict(spec.get("extraction_contract", {})).get("candidate")
+    return str(candidate) if candidate else None
+
+def _expected_best_extraction_candidate(project_dir: Path) -> str | None:
+    path = project_dir / "expected_analysis.json"
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected = payload.get("expected_best_extraction_candidate")
+    return str(expected) if expected else None
+
+def _score_expected_candidate(score: dict[str, Any], selected: object, expected: str | None) -> dict[str, Any]:
+    if not expected:
+        return score
+    checks = dict(score.get("checks", {}))
+    checks["spec_contract_matches_expected_candidate"] = str(selected or "") == expected
+    warnings = [name for name, ok in checks.items() if not ok]
+    return {
+        **score,
+        "passed": not warnings,
+        "artifact_score": _ratio(sum(1 for ok in checks.values() if ok), len(checks)),
+        "checks": checks,
+        "warnings": warnings,
+    }
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def _analysis_cwd(root: Path, project_dir: Path) -> Path:
+    root = root.resolve()
+    project_dir = project_dir.resolve()
+    if _is_relative_to(project_dir, root) or _is_relative_to(project_dir, root.parent):
+        return root
+    return project_dir.parent
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+@contextmanager
+def _pushd(path: Path):
+    previous = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(previous)

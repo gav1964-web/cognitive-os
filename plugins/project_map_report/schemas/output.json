@@ -17,6 +17,12 @@
     "security_health": {
       "type": "object"
     },
+    "human_summary": {
+      "type": "object"
+    },
+    "evidence_summary": {
+      "type": "object"
+    },
     "markdown": {
       "type": "string"
     },

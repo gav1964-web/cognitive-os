@@ -64,7 +64,14 @@
         "domain_profile_kind": [
           "ml_competition_inference_script"
         ],
-        "min_score": 80
+        "required_contains_any": [
+          "transformers",
+          "model.generate",
+          "local_submission.csv",
+          "prompts.csv",
+          "faiss"
+        ],
+        "min_score": 45
       },
       "diagnosis": {
         "primary_sources": [
@@ -114,7 +121,26 @@
         "Do not treat notebook checkpoints, generated JSONL, FAISS indexes, pickle files, or submission outputs as active source.",
         "Do not auto-install dependencies inside the core inference script without a sandboxed dependency policy."
       ],
-      "verification_extra": "Use tiny CSV fixtures and fake tokenizer/model objects to verify row processing and submission output without live HuggingFace/GPU calls."
+      "verification_extra": "Use tiny CSV fixtures and fake tokenizer/model objects to verify row processing and submission output without live HuggingFace/GPU calls.",
+      "scenario_summary": [
+        "Use the ML competition inference script public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "prompt/input CSV rows",
+        "model/provider configuration",
+        "retrieval/index artifacts when present",
+        "runtime secret references"
+      ],
+      "output_summary": [
+        "submission CSV rows",
+        "generated answers",
+        "postprocessed answers",
+        "row-level errors or skipped rows",
+        "logs or inference reports"
+      ]
     },
     {
       "rule_id": "llm_auto_repair_loop",
@@ -195,7 +221,790 @@
         "Do not tune prompts before the repair attempt contract and evidence package are stable.",
         "Do not store provider secrets in source-controlled config."
       ],
-      "verification_extra": "Use fake LLM responses and fake Docker runner fixtures to verify patch validation, retry stop, and promotion decisions without live provider calls."
+      "verification_extra": "Use fake LLM responses and fake Docker runner fixtures to verify patch validation, retry stop, and promotion decisions without live provider calls.",
+      "scenario_summary": [
+        "Use the LLM-assisted auto-repair loop public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
+    },
+    {
+      "rule_id": "coverage_measurement_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 104,
+      "archetype": "coverage_measurement_tool",
+      "label": "coverage measurement/reporting tool",
+      "match": {
+        "project_name_contains_any": [
+          "coveragepy",
+          "coverage"
+        ],
+        "text_contains_any": [
+          "coverage",
+          "tracer",
+          "analysis_from_file_reporter",
+          "coverage report",
+          "branch coverage"
+        ],
+        "required_contains_any": [
+          "coverage",
+          "tracer",
+          "analysis_from_file_reporter"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "analysis_from_file_reporter",
+          "_raw_parse",
+          "report",
+          "cmdline.py:command_line"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is coverage-data collection and report generation around {target}, where tracing, parsed source, measured data, and output reports need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Execution tracing and measured data persistence are separated from report rendering.",
+        "Source parsing and excluded-line analysis produce typed intermediate artifacts.",
+        "CLI command dispatch remains a facade over analysis/reporting services.",
+        "HTML/XML/text report generation is fixture-backed and reproducible."
+      ],
+      "first_slice": {
+        "name": "coverage_analysis_report_slice",
+        "goal": "Stabilize one measured-file analysis path from source/coverage data to report-ready findings.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "analysis_from_file_reporter",
+          "_raw_parse",
+          "report",
+          "cmdline.py:command_line"
+        ],
+        "steps": [
+          "Define CoverageFileInput, ParsedSourceCoverage, and CoverageReportFinding contracts.",
+          "Separate CLI command dispatch from measured-data analysis and report rendering.",
+          "Represent parser errors, missing measured data, and excluded lines explicitly.",
+          "Verify normal file, missing data, excluded lines, branch data, and report output shape."
+        ]
+      },
+      "defer": [
+        "Do not treat this as a workflow scheduler because docs mention tasks.",
+        "Do not mutate measured-data storage before analysis/report contracts are characterized."
+      ],
+      "verification_extra": "Use fixture measured data and source files; do not run a live traced test suite for the first slice.",
+      "scenario_summary": [
+        "Collect measured execution data from Python runs.",
+        "Parse source files and combine them with measured line/branch data.",
+        "Generate text, XML, HTML, or JSON coverage reports.",
+        "Expose CLI/API commands for analysis, erase/combine, and report generation."
+      ],
+      "input_summary": [
+        "source files",
+        "coverage data files",
+        "report options",
+        "CLI arguments"
+      ],
+      "output_summary": [
+        "coverage findings",
+        "report artifacts",
+        "parser/measurement errors",
+        "CLI status"
+      ]
+    },
+    {
+      "rule_id": "property_based_testing_library",
+      "record_type": "project_archetype_rule",
+      "priority": 104,
+      "archetype": "property_based_testing_library",
+      "label": "property-based testing/data generation library",
+      "match": {
+        "project_name_contains_any": [
+          "hypothesis"
+        ],
+        "text_contains_any": [
+          "hypothesis",
+          "strategy",
+          "strategies",
+          "given",
+          "conjecture",
+          "data_frames",
+          "example database"
+        ],
+        "required_contains_any": [
+          "hypothesis",
+          "strategy",
+          "conjecture"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "data_frames",
+          "arrays",
+          "given",
+          "run_engine",
+          "conjecture"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is strategy construction and example execution around {target}, where generated values, shrinking, validation, and reproducibility need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Strategies produce typed generated-value streams independent from test execution.",
+        "Decorator/test execution state is separated from value generation and shrinking.",
+        "Example database and randomness are explicit replay inputs.",
+        "Invalid strategy input and unsatisfied assumptions produce typed failure evidence."
+      ],
+      "first_slice": {
+        "name": "strategy_generation_contract_slice",
+        "goal": "Stabilize one strategy builder from user schema/options to generated example contract.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "data_frames",
+          "arrays",
+          "make_strategies_namespace",
+          "given",
+          "run_engine"
+        ],
+        "steps": [
+          "Define StrategySpec, GeneratedExample, and ShrinkTrace contracts.",
+          "Separate strategy construction from execution and example database side effects.",
+          "Record seed, settings, assumptions, and failure reproduction metadata.",
+          "Verify valid generation, invalid strategy input, shrinking, and replay cases."
+        ]
+      },
+      "defer": [
+        "Do not model the project as a workflow scheduler because tests mention tasks.",
+        "Do not change random/shrinking internals before strategy contracts are stable."
+      ],
+      "verification_extra": "Use deterministic settings/seeds and small generated examples for contract tests.",
+      "scenario_summary": [
+        "Define strategies that generate structured test data.",
+        "Run user tests with generated examples and shrinking.",
+        "Persist or replay failing examples through settings/database state.",
+        "Report falsifying examples and invalid strategy inputs."
+      ],
+      "input_summary": [
+        "strategy declarations",
+        "test function/decorator input",
+        "settings and seeds",
+        "example database state"
+      ],
+      "output_summary": [
+        "generated examples",
+        "test execution outcomes",
+        "shrink traces",
+        "reproducible failure reports"
+      ]
+    },
+    {
+      "rule_id": "graph_algorithm_library",
+      "record_type": "project_archetype_rule",
+      "priority": 104,
+      "archetype": "graph_algorithm_library",
+      "label": "graph algorithm/data-structure library",
+      "match": {
+        "project_name_contains_any": [
+          "networkx"
+        ],
+        "text_contains_any": [
+          "networkx",
+          "graph",
+          "node",
+          "edge",
+          "cycles",
+          "shortest_path",
+          "matching"
+        ],
+        "required_contains_any": [
+          "networkx",
+          "graph",
+          "node",
+          "edge"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "chordless_cycles",
+          "max_weight_matching",
+          "shortest_path",
+          "weisfeiler",
+          "to_scipy_sparse_array"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is algorithm execution around {target}, where graph input shape, traversal state, result semantics, and complexity limits need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Graph algorithms accept explicit graph/value contracts before traversal.",
+        "Traversal or optimization state is separated from result serialization.",
+        "Optional numeric/scipy adapters are boundary dependencies, not core algorithm assumptions.",
+        "Directed, undirected, multigraph, empty graph, and invalid graph cases are contract-tested."
+      ],
+      "first_slice": {
+        "name": "graph_algorithm_result_slice",
+        "goal": "Stabilize one graph algorithm path from graph input to typed result stream/list.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "chordless_cycles",
+          "max_weight_matching",
+          "shortest_path",
+          "weisfeiler",
+          "to_scipy_sparse_array"
+        ],
+        "steps": [
+          "Define GraphAlgorithmInput and GraphAlgorithmResult contracts.",
+          "Separate graph validation from traversal/optimization state.",
+          "Represent unsupported graph types and empty inputs as controlled failures or empty results.",
+          "Verify directed, undirected, multigraph, empty graph, and representative result cases."
+        ]
+      },
+      "defer": [
+        "Do not classify this as GIS just because docs mention maps.",
+        "Do not introduce distributed-compute scheduler assumptions for in-process algorithms."
+      ],
+      "verification_extra": "Use tiny graph fixtures with known expected algorithm outputs.",
+      "scenario_summary": [
+        "Construct or accept graph objects with nodes, edges, and attributes.",
+        "Run traversal, matching, path, cycle, hashing, or conversion algorithms.",
+        "Return graph-derived structures or converted matrix/tabular representations.",
+        "Raise controlled errors for unsupported graph classes or invalid inputs."
+      ],
+      "input_summary": [
+        "graph objects",
+        "algorithm parameters",
+        "node/edge attributes",
+        "optional backend/conversion options"
+      ],
+      "output_summary": [
+        "paths/cycles/matches",
+        "graph metrics",
+        "converted arrays/matrices",
+        "algorithm errors"
+      ]
+    },
+    {
+      "rule_id": "git_hook_automation_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 104,
+      "archetype": "git_hook_automation_tool",
+      "label": "Git hook automation runner",
+      "match": {
+        "project_name_contains_any": [
+          "pre-commit",
+          "pre_commit"
+        ],
+        "text_contains_any": [
+          "pre_commit",
+          "pre-commit",
+          "hook",
+          "run_single_hook",
+          "install_uninstall",
+          "staged files"
+        ],
+        "required_contains_any": [
+          "pre_commit",
+          "pre-commit",
+          "hook"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "_run_single_hook",
+          "_run_hooks",
+          "hook_impl",
+          "_install_hook_script"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is hook execution around {target}, where repository state, hook environment, file selection, and exit reporting need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Hook installation is separated from hook execution.",
+        "Repository/file selection and hook environment setup are explicit inputs.",
+        "Hook execution produces typed pass/fail/skip reports with captured output.",
+        "Filesystem and subprocess side effects are isolated behind adapters."
+      ],
+      "first_slice": {
+        "name": "git_hook_execution_slice",
+        "goal": "Stabilize one hook execution path from selected files/environment to hook result.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "_run_single_hook",
+          "_run_hooks",
+          "hook_impl",
+          "_install_hook_script"
+        ],
+        "steps": [
+          "Define HookRunRequest, HookEnvironment, and HookRunResult contracts.",
+          "Separate hook installation/update from hook execution.",
+          "Wrap subprocess, git, and filesystem side effects behind adapters.",
+          "Verify pass, fail, skipped files, missing environment, and hook timeout cases."
+        ]
+      },
+      "defer": [
+        "Do not choose install/uninstall helpers as the first implementation target when hook execution is available.",
+        "Do not mutate a real Git repository in default contract tests."
+      ],
+      "verification_extra": "Use fixture repositories and fake hook subprocesses for the first slice.",
+      "scenario_summary": [
+        "Install or manage Git hooks for a repository.",
+        "Select changed/staged files and configured hooks.",
+        "Run hooks in isolated language environments.",
+        "Return pass/fail/skip reports and update hook caches."
+      ],
+      "input_summary": [
+        "repository path",
+        "hook configuration",
+        "selected files",
+        "language environment/cache state"
+      ],
+      "output_summary": [
+        "hook run reports",
+        "exit status",
+        "captured output",
+        "environment/cache changes"
+      ]
+    },
+    {
+      "rule_id": "database_migration_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 105,
+      "archetype": "database_migration_tool",
+      "label": "database migration/autogeneration tool",
+      "match": {
+        "project_name_contains_any": [
+          "alembic"
+        ],
+        "text_contains_any": [
+          "alembic",
+          "migration",
+          "revision",
+          "autogenerate",
+          "compare_tables",
+          "compare_indexes",
+          "upgrade",
+          "downgrade"
+        ],
+        "required_contains_any": [
+          "alembic",
+          "migration",
+          "revision",
+          "autogenerate"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "_compare_indexes_and_uniques",
+          "_compare_tables",
+          "generate_revision",
+          "_parse_upgrade_target",
+          "_parse_downgrade_target"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is migration diff/revision generation around {target}, where database metadata, script revisions, upgrade/downgrade targets, and generated operations need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Database metadata comparison produces typed schema-diff findings before script generation.",
+        "Revision graph parsing is separated from filesystem/script mutation.",
+        "Upgrade/downgrade targets are parsed into explicit revision range contracts.",
+        "Database connection and filesystem writes are adapter boundaries with fake-first tests."
+      ],
+      "first_slice": {
+        "name": "migration_autogenerate_diff_slice",
+        "goal": "Stabilize one autogenerate comparison path from metadata/database state to migration operation findings.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "_compare_indexes_and_uniques",
+          "_compare_tables",
+          "_compare_foreign_keys",
+          "generate_revision",
+          "_parse_upgrade_target",
+          "_parse_downgrade_target"
+        ],
+        "steps": [
+          "Define MigrationCompareInput, SchemaDiffFinding, and RevisionTarget contracts.",
+          "Separate database metadata comparison from revision-file generation.",
+          "Represent missing table/index, naming convention drift, and invalid revision target as controlled findings.",
+          "Verify empty diff, added/removed table, index/unique drift, invalid target, and generated operation shape."
+        ]
+      },
+      "defer": [
+        "Do not treat migration autogeneration as generic automation/playbook execution.",
+        "Do not write migration files in default contract tests."
+      ],
+      "verification_extra": "Use fake metadata/database state and fixture revision graphs before live database tests.",
+      "scenario_summary": [
+        "Compare database/schema metadata with model metadata.",
+        "Generate migration operation findings and revision scripts.",
+        "Parse upgrade/downgrade revision target ranges.",
+        "Run migration commands through CLI/API adapters."
+      ],
+      "input_summary": [
+        "database metadata",
+        "model metadata",
+        "revision graph",
+        "migration command options"
+      ],
+      "output_summary": [
+        "schema diff findings",
+        "migration operations",
+        "revision scripts",
+        "migration errors"
+      ]
+    },
+    {
+      "rule_id": "distributed_pytest_runner",
+      "record_type": "project_archetype_rule",
+      "priority": 105,
+      "archetype": "distributed_pytest_runner",
+      "label": "distributed pytest runner/plugin",
+      "match": {
+        "project_name_contains_any": [
+          "pytest-xdist",
+          "xdist"
+        ],
+        "text_contains_any": [
+          "xdist",
+          "pytest_xdist_make_scheduler",
+          "dsession",
+          "worker",
+          "scheduler",
+          "pytest_sessionstart"
+        ],
+        "required_contains_any": [
+          "xdist",
+          "pytest_xdist_make_scheduler",
+          "worker",
+          "scheduler"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "process_boundary",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "pytest_xdist_make_scheduler",
+          "pytest_sessionstart",
+          "worker_workerfinished",
+          "pytest_configure"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is distributed test scheduling around {target}, where collected tests, worker lifecycle, scheduler policy, and result aggregation need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Pytest collection and scheduler creation are separated from worker process execution.",
+        "Worker lifecycle events produce typed scheduling/result packets.",
+        "Scheduler policy is explicit and testable with fake workers.",
+        "Process/subprocess boundaries are isolated from collection and reporting contracts."
+      ],
+      "first_slice": {
+        "name": "distributed_test_scheduler_slice",
+        "goal": "Stabilize scheduler creation and worker-result flow for one distributed pytest session.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "process_boundary",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "pytest_xdist_make_scheduler",
+          "pytest_sessionstart",
+          "worker_workerfinished",
+          "pytest_configure"
+        ],
+        "steps": [
+          "Define DistributedTestSession, SchedulerPolicy, WorkerEvent, and AggregatedTestResult contracts.",
+          "Separate scheduler selection from worker process launch.",
+          "Represent worker crash, collection mismatch, and timeout as typed failure packets.",
+          "Verify scheduler selection, normal worker finish, crash, collection mismatch, and no-worker cases."
+        ]
+      },
+      "defer": [
+        "Do not collapse xdist into generic pytest fixture collection.",
+        "Do not use real worker subprocesses for the first contract tests."
+      ],
+      "verification_extra": "Use fake pytest config and fake worker events for scheduler tests.",
+      "scenario_summary": [
+        "Collect pytest tests and distribute them across workers.",
+        "Create scheduler policy from pytest configuration.",
+        "Manage worker lifecycle and aggregate reports.",
+        "Handle worker crashes, collection mismatch, and scheduling errors."
+      ],
+      "input_summary": [
+        "pytest config",
+        "collected tests",
+        "worker availability",
+        "scheduler options"
+      ],
+      "output_summary": [
+        "scheduler object/policy",
+        "worker commands",
+        "aggregated test reports",
+        "distributed-run failure packets"
+      ]
+    },
+    {
+      "rule_id": "python_packaging_interop_library",
+      "record_type": "project_archetype_rule",
+      "priority": 108,
+      "archetype": "python_packaging_interop_library",
+      "label": "Python packaging interoperability library",
+      "purpose_summary": "Provide reusable packaging primitives for versions, specifiers, markers, tags, requirements, and metadata interoperability.",
+      "match": {
+        "project_name_contains_any": [
+          "packaging"
+        ],
+        "text_contains_any": [
+          "version",
+          "specifier",
+          "marker",
+          "requirement",
+          "metadata",
+          "tags",
+          "packaging.python.org",
+          "interoperability specifications"
+        ],
+        "required_contains_any": [
+          "specifier",
+          "marker",
+          "requirement",
+          "interoperability specifications"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "version",
+          "specifier",
+          "marker",
+          "requirement",
+          "metadata",
+          "tags"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is packaging-spec parsing and normalization around {target}, where textual requirements, versions, markers, tags, and metadata need stable contracts."
+      },
+      "target_architecture_shape": [
+        "Requirement/specifier/marker parsing is separated from normalization and comparison behavior.",
+        "Version, tag, and metadata models expose typed contracts instead of raw strings.",
+        "Invalid packaging syntax returns controlled errors with source context.",
+        "Compatibility decisions are covered by fixture-based interoperability examples."
+      ],
+      "first_slice": {
+        "name": "packaging_spec_parse_normalize_slice",
+        "goal": "Stabilize one packaging spec parse/normalize boundary with invalid-syntax coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "requirements",
+          "specifiers",
+          "markers",
+          "version",
+          "tags",
+          "metadata"
+        ],
+        "steps": [
+          "Define PackagingText, ParsedRequirement/Specifier/Marker, NormalizedPackagingValue, and PackagingParseError contracts.",
+          "Separate text parsing from comparison/evaluation behavior.",
+          "Preserve invalid syntax and unsupported feature errors explicitly.",
+          "Verify valid requirement, invalid specifier, marker evaluation, version comparison, and tag normalization cases."
+        ]
+      },
+      "defer": [
+        "Do not treat packaging interoperability primitives as build-backend artifact generation.",
+        "Do not mix parser normalization with installer/resolver behavior in the first slice."
+      ],
+      "verification_extra": "Use fixture requirements, specifiers, markers, versions, and tags from packaging interoperability examples.",
+      "scenario_summary": [
+        "Parse packaging requirement, specifier, marker, version, tag, or metadata strings.",
+        "Normalize parsed packaging values for comparison and interoperability checks.",
+        "Evaluate markers/specifiers against caller-provided environment data.",
+        "Return controlled parse errors for invalid packaging syntax."
+      ],
+      "input_summary": [
+        "requirement/specifier/marker/version text",
+        "environment marker context",
+        "metadata fields",
+        "tag/platform inputs"
+      ],
+      "output_summary": [
+        "parsed packaging objects",
+        "normalized versions/specifiers/markers",
+        "compatibility/evaluation results",
+        "typed parse errors"
+      ]
+    },
+    {
+      "rule_id": "wheel_package_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 105,
+      "archetype": "wheel_package_tool",
+      "label": "Python wheel packaging tool",
+      "match": {
+        "project_name_contains_any": [
+          "wheel"
+        ],
+        "text_contains_any": [
+          "wheel",
+          "bdist_wheel",
+          "wheelfile",
+          "tags",
+          "pack",
+          "convert",
+          "dist-info"
+        ],
+        "required_contains_any": [
+          "wheel",
+          "bdist_wheel",
+          "wheelfile"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "tags.py:tags",
+          "calculate_macosx_platform_tag",
+          "pack.py:pack",
+          "convert.py:convert",
+          "wheelfile.py"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is wheel metadata/tag/artifact handling around {target}, where compatibility tags, archive contents, metadata, and filesystem output need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Wheel metadata and compatibility tags are normalized before archive mutation.",
+        "Pack/convert/info commands share typed artifact-manifest contracts.",
+        "Platform tag calculation is isolated from filesystem archive writes.",
+        "Archive operations use fixture wheels and explicit side-effect manifests."
+      ],
+      "first_slice": {
+        "name": "wheel_tag_artifact_slice",
+        "goal": "Stabilize one wheel tag or artifact command from input wheel metadata to output artifact manifest.",
+        "target_sources": [
+          "central",
+          "broad",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "tags.py:tags",
+          "calculate_macosx_platform_tag",
+          "convert.py:convert",
+          "pack.py:pack",
+          "info.py:info"
+        ],
+        "steps": [
+          "Define WheelArtifactInput, CompatibilityTagSet, and WheelArtifactManifest contracts.",
+          "Separate tag/metadata normalization from archive read/write side effects.",
+          "Represent malformed wheel, unsupported tag, missing metadata, and output conflict explicitly.",
+          "Verify tag rewrite, info extraction, convert/pack fixture, malformed wheel, and platform-tag cases."
+        ]
+      },
+      "defer": [
+        "Do not classify Python wheel tooling as a generic backup/archive system.",
+        "Do not write real distribution artifacts outside a fixture directory."
+      ],
+      "verification_extra": "Use tiny fixture wheels and temporary output directories for artifact tests.",
+      "scenario_summary": [
+        "Read wheel archives and metadata.",
+        "Calculate or rewrite compatibility tags.",
+        "Pack, convert, inspect, or validate wheel artifacts.",
+        "Emit artifact manifests or controlled packaging errors."
+      ],
+      "input_summary": [
+        "wheel files",
+        "project metadata",
+        "compatibility tag options",
+        "output directory"
+      ],
+      "output_summary": [
+        "wheel artifact manifests",
+        "compatibility tag sets",
+        "converted/packed wheel files",
+        "packaging errors"
+      ]
     },
     {
       "rule_id": "web_gis_data_application",
@@ -211,7 +1020,20 @@
           "bbox",
           "incident",
           "map"
-        ]
+        ],
+        "required_contains_any": [
+          "flask",
+          "bbox",
+          "geojson",
+          "leaflet",
+          "folium",
+          "incident_features",
+          "parse_bbox"
+        ],
+        "required_contains_all": [
+          "flask"
+        ],
+        "min_score": 120
       },
       "diagnosis": {
         "primary_sources": [
@@ -256,7 +1078,25 @@
         "Do not change map data formats, MBTiles/GeoJSON layout, or import scripts until the read/query slice is stable.",
         "Do not add more download/geocoding behavior before existing side effects are wrapped."
       ],
-      "verification_extra": "Use fixture map/incident data to verify bbox filtering and serialized response shape."
+      "verification_extra": "Use fixture map/incident data to verify bbox filtering and serialized response shape.",
+      "scenario_summary": [
+        "Use the Flask-like map/data application public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "prompt_lab_evaluation_runtime",
@@ -370,7 +1210,7 @@
       "rule_id": "llm_gateway_service",
       "record_type": "project_archetype_rule",
       "priority": 90,
-      "archetype": "llm_gateway_service",
+      "archetype": "llm_provider_gateway",
       "label": "FastAPI LLM gateway/proxy",
       "match": {
         "text_contains_any": [
@@ -440,7 +1280,25 @@
         "Do not add more providers until provider selection and transport failure contracts are stable.",
         "Do not tune rate limiting before request identity and replay semantics are explicit."
       ],
-      "verification_extra": "Use fake upstream transport to verify timeout/error normalization without a real provider call."
+      "verification_extra": "Use fake upstream transport to verify timeout/error normalization without a real provider call.",
+      "scenario_summary": [
+        "Accept OpenAI-compatible chat/completion requests.",
+        "Select an LLM provider and model route from gateway configuration.",
+        "Forward requests to upstream LLM providers through controlled transport adapters.",
+        "Normalize provider responses, errors, retries, and rate limits into gateway API responses."
+      ],
+      "input_summary": [
+        "OpenAI-compatible chat/completion request",
+        "provider/model routing configuration",
+        "LLM provider credentials from environment or secret storage",
+        "upstream provider response or failure"
+      ],
+      "output_summary": [
+        "OpenAI-compatible chat/completion response",
+        "normalized provider error response",
+        "retry/rate-limit failure packet",
+        "request/provider trace metadata"
+      ]
     },
     {
       "rule_id": "prompt_to_code_compiler_pipeline",
@@ -576,7 +1434,21 @@
         "domain_profile_kind": [
           "multi_agent_orchestration_runtime"
         ],
-        "min_score": 80
+        "min_score": 80,
+        "required_contains_any": [
+          "a2a",
+          "agentcard",
+          "agent-to-agent",
+          "consensus",
+          "group_manager"
+        ],
+        "negative_contains_any": [
+          "sentry_sdk",
+          "opentelemetry",
+          "telemetry",
+          "tracing",
+          "instrumentation"
+        ]
       },
       "diagnosis": {
         "primary_sources": [
@@ -629,7 +1501,25 @@
         "Do not treat generated logs, .env files, packaged snapshots, or archive copies as active source.",
         "Do not collapse A2A protocol, consensus policy, and API status formatting into one capability."
       ],
-      "verification_extra": "Use fake A2A clients and captured task envelopes to test consensus/orchestration without live LLM providers."
+      "verification_extra": "Use fake A2A clients and captured task envelopes to test consensus/orchestration without live LLM providers.",
+      "scenario_summary": [
+        "Use the multi-agent orchestration runtime public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "agent_advisory_runtime",
@@ -690,7 +1580,25 @@
         "Do not add new roles or tools until one advisory loop is replayable.",
         "Do not merge memory mutation with control decisions."
       ],
-      "verification_extra": "Use a stored advisory request to replay stop/continue and fallback decisions."
+      "verification_extra": "Use a stored advisory request to replay stop/continue and fallback decisions.",
+      "scenario_summary": [
+        "Use the agent/advisory runtime public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "http_cli_client",
@@ -751,7 +1659,25 @@
         "Do not add new protocol features until one CLI request path is contract-tested.",
         "Do not tune output themes before request construction and transport boundaries are explicit."
       ],
-      "verification_extra": "Use captured HTTP responses and fake transport to test success, timeout, and malformed input."
+      "verification_extra": "Use captured HTTP responses and fake transport to test success, timeout, and malformed input.",
+      "scenario_summary": [
+        "Use the HTTP CLI client public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "http_client_library",
@@ -818,7 +1744,527 @@
         "Do not alter public request APIs before the session/adapter slice is characterized.",
         "Do not rely on live HTTP services for the first verification pass."
       ],
-      "verification_extra": "Use fake adapters to verify redirect, auth, timeout, and response-shape contracts."
+      "verification_extra": "Use fake adapters to verify redirect, auth, timeout, and response-shape contracts.",
+      "scenario_summary": [
+        "Use the HTTP client library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
+    },
+    {
+      "rule_id": "async_context_detection_library",
+      "record_type": "project_archetype_rule",
+      "priority": 96,
+      "archetype": "async_context_detection_library",
+      "label": "async context detection utility library",
+      "match": {
+        "project_name_contains_any": [
+          "sniffio"
+        ],
+        "text_contains_any": [
+          "current_async_library",
+          "AsyncLibraryNotFoundError",
+          "current_async_library_cvar",
+          "thread_local",
+          "contextvars",
+          "trio",
+          "curio",
+          "asyncio"
+        ],
+        "required_contains_any": [
+          "current_async_library",
+          "AsyncLibraryNotFoundError",
+          "current_async_library_cvar"
+        ],
+        "negative_contains_any": [
+          "dag",
+          "scheduler",
+          "broker",
+          "worker queue"
+        ],
+        "min_score": 80
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "domain_anchors",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "current_async_library",
+          "_impl.py",
+          "AsyncLibraryNotFoundError",
+          "current_async_library_cvar"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is async-context detection around {target}, where backend probes, context variables, thread-local fallbacks, and controlled not-found errors need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "The public API remains a small detection facade with stable return values and errors.",
+        "Backend-specific probes are isolated behind ordered detection branches with explicit failure semantics.",
+        "ContextVar and thread-local state are treated as runtime context inputs, not hidden global truth.",
+        "Tests cover asyncio, Trio, Curio, sync/no-library, and override/context reset cases."
+      ],
+      "first_slice": {
+        "name": "async_context_detection_slice",
+        "goal": "Stabilize one async backend detection path from runtime context to library name or controlled not-found error.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "sniffio/_impl.py:current_async_library",
+          "current_async_library",
+          "AsyncLibraryNotFoundError",
+          "current_async_library_cvar"
+        ],
+        "steps": [
+          "Define AsyncContextProbe and AsyncLibraryDetectionResult contracts.",
+          "Separate explicit context override, asyncio task lookup, Trio/Curio probes, and final not-found handling.",
+          "Represent sync-context and unknown-backend failures as controlled errors.",
+          "Verify asyncio, Trio, Curio, context override, reset, and synchronous no-library cases."
+        ]
+      },
+      "defer": [
+        "Do not model this library as a workflow scheduler or worker runtime.",
+        "Do not broaden the first slice beyond the public detection function and its probe/error policy."
+      ],
+      "verification_extra": "Use backend fixtures or monkeypatch probes to verify each detection branch without requiring real scheduler/workflow execution.",
+      "scenario_summary": [
+        "Caller asks which async library is active in the current runtime context.",
+        "The library checks explicit context override, task-local state, and supported backend probes.",
+        "The public API returns a stable backend name such as asyncio, trio, or curio.",
+        "Synchronous or unsupported contexts raise a controlled AsyncLibraryNotFoundError."
+      ],
+      "input_summary": [
+        "current Python async runtime context",
+        "ContextVar override value",
+        "thread-local/task-local backend markers",
+        "backend probe availability"
+      ],
+      "output_summary": [
+        "detected async library name",
+        "AsyncLibraryNotFoundError",
+        "branch-specific detection evidence for tests",
+        "stable public API behavior"
+      ]
+    },
+    {
+      "rule_id": "structured_data_converter_library",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "structured_data_converter_library",
+      "label": "structured data conversion/validation library",
+      "purpose_summary": "Convert between unstructured input data and structured Python objects while preserving validation, error, and customization contracts.",
+      "match": {
+        "project_name_contains_any": [
+          "cattrs",
+          "attrs",
+          "pydantic",
+          "marshmallow"
+        ],
+        "text_contains_any": [
+          "unstructured",
+          "structured",
+          "converter",
+          "serializer",
+          "deserializer",
+          "validation",
+          "attrs",
+          "classes"
+        ],
+        "required_contains_any": [
+          "converter",
+          "unstructured",
+          "structured",
+          "validation"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "structure",
+          "unstructure",
+          "converter",
+          "dispatch",
+          "validation"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is data-shape conversion around {target}, where input objects, target types, validation errors, hooks, and customization policy need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Structure and unstructure flows have explicit source/target type contracts.",
+        "Converter customization and dispatch rules are separated from concrete data transforms.",
+        "Validation failures and unsupported type handling are typed and reproducible.",
+        "Round-trip behavior and edge cases are verified with fixture data."
+      ],
+      "first_slice": {
+        "name": "structured_conversion_dispatch_slice",
+        "goal": "Stabilize one structure/unstructure dispatch path with invalid-input coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "structure",
+          "unstructure",
+          "converter",
+          "dispatch",
+          "validation"
+        ],
+        "steps": [
+          "Define ConversionRequest, TargetType, ConvertedValue, and ConversionError contracts.",
+          "Separate dispatch/hook selection from concrete value transformation.",
+          "Make validation and unsupported type errors explicit.",
+          "Verify simple object, nested object, missing field, invalid type, and custom hook cases."
+        ]
+      },
+      "defer": [
+        "Do not rewrite all supported type families in one slice.",
+        "Do not hide validation failures behind generic exceptions."
+      ],
+      "verification_extra": "Use small dataclass/attrs fixtures and malformed dictionaries for contract tests.",
+      "scenario_summary": [
+        "Convert unstructured dictionaries or primitive data into structured Python objects.",
+        "Convert structured objects back into unstructured serializable data.",
+        "Apply converter hooks and customization rules for caller-selected types.",
+        "Return controlled validation or unsupported-type errors."
+      ],
+      "input_summary": [
+        "unstructured dictionaries or primitive values",
+        "target Python type/class",
+        "converter configuration and hooks",
+        "validation policy"
+      ],
+      "output_summary": [
+        "structured Python objects",
+        "unstructured serializable data",
+        "conversion errors",
+        "validation diagnostics"
+      ]
+    },
+    {
+      "rule_id": "configuration_file_parser_library",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "configuration_file_parser_library",
+      "label": "configuration file parser library",
+      "purpose_summary": "Parse configuration files into typed lookup objects while preserving section/key semantics, parse errors, and caller-facing access contracts.",
+      "match": {
+        "project_name_contains_any": [
+          "iniconfig",
+          "configparser"
+        ],
+        "text_contains_any": [
+          "ini",
+          "config",
+          "configuration",
+          "parser",
+          "section",
+          "key",
+          "parse",
+          "line"
+        ],
+        "required_contains_any": [
+          "ini",
+          "parser",
+          "section",
+          "configuration"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "parse",
+          "section",
+          "line",
+          "config",
+          "ini"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is config parsing around {target}, where raw text, section/key records, comments, errors, and lookup semantics need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Raw text parsing is separated from section/key lookup behavior.",
+        "Parser output uses explicit section, key, value, and source-location contracts.",
+        "Malformed lines, duplicate keys, missing sections, and encoding edge cases are typed errors.",
+        "Round-trip and lookup behavior are verified with small fixture config files."
+      ],
+      "first_slice": {
+        "name": "configuration_parse_lookup_slice",
+        "goal": "Stabilize one config text to section/key lookup boundary with malformed-input coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "parse",
+          "section",
+          "line",
+          "config",
+          "ini"
+        ],
+        "steps": [
+          "Define ConfigText, ParsedSection, ConfigLookup, and ConfigParseError contracts.",
+          "Separate raw line parsing from lookup/access behavior.",
+          "Preserve source locations for error reporting.",
+          "Verify valid file, malformed line, duplicate key, missing section, and empty file cases."
+        ]
+      },
+      "defer": [
+        "Do not add new config formats before INI parsing contracts are stable.",
+        "Do not mix filesystem loading with parser semantics in the first slice."
+      ],
+      "verification_extra": "Use tiny INI text fixtures and malformed-line negative cases.",
+      "scenario_summary": [
+        "Parse caller-provided INI/config text or files.",
+        "Expose section/key lookup behavior to application code.",
+        "Preserve source locations and comments where the public API requires them.",
+        "Return controlled parse errors for malformed configuration input."
+      ],
+      "input_summary": [
+        "INI/config text",
+        "file path or text stream",
+        "encoding and parser options",
+        "section/key lookup requests"
+      ],
+      "output_summary": [
+        "parsed section/key records",
+        "lookup results",
+        "source-location metadata",
+        "typed parse errors"
+      ]
+    },
+    {
+      "rule_id": "http_protocol_state_machine_library",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "http_protocol_state_machine_library",
+      "label": "HTTP protocol state-machine library",
+      "purpose_summary": "Provide a pure-Python HTTP protocol parsing, serialization, and connection state-machine library for caller-owned transports.",
+      "match": {
+        "project_name_contains_any": [
+          "h11",
+          "h2",
+          "hpack",
+          "hyperframe"
+        ],
+        "text_contains_any": [
+          "http/1.1",
+          "http/2",
+          "headers",
+          "frame",
+          "event",
+          "connection",
+          "state machine",
+          "reader",
+          "writer"
+        ],
+        "required_contains_any": [
+          "http",
+          "headers",
+          "frame",
+          "connection"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "bottlenecks",
+          "extraction"
+        ],
+        "primary_target_prefer": [
+          "headers",
+          "frame",
+          "event",
+          "reader",
+          "writer",
+          "connection"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is protocol state transition around {target}, where wire bytes, headers/frames, event objects, and connection state need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Wire parsing/serialization is separated from connection state transitions.",
+        "Header/frame/event objects have explicit input and output contracts.",
+        "Malformed input and protocol-state violations return controlled typed errors.",
+        "Compatibility behavior is covered by fixture-based protocol examples before live network use."
+      ],
+      "first_slice": {
+        "name": "http_protocol_parse_transition_slice",
+        "goal": "Stabilize one protocol parse or state-transition boundary with malformed-input coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "bottlenecks",
+          "extraction"
+        ],
+        "targets_prefer": [
+          "headers",
+          "frame",
+          "event",
+          "reader",
+          "writer",
+          "connection"
+        ],
+        "steps": [
+          "Define raw protocol input, parsed event/frame/header output, and protocol error contracts.",
+          "Separate byte/string normalization from state-machine decisions.",
+          "Preserve public API compatibility and exact error classes.",
+          "Verify valid message, malformed input, boundary limits, and invalid state transition cases."
+        ]
+      },
+      "defer": [
+        "Do not introduce live sockets or integration servers for first contract tests.",
+        "Do not rewrite all protocol versions in one slice."
+      ],
+      "verification_extra": "Use recorded wire/header/frame fixtures and malformed protocol examples.",
+      "scenario_summary": [
+        "Parse caller-provided HTTP bytes, headers, frames, or events.",
+        "Advance a connection/protocol state machine according to protocol rules.",
+        "Serialize response events, headers, or frames back to caller-owned transports.",
+        "Return controlled protocol errors for malformed input or invalid state transitions."
+      ],
+      "input_summary": [
+        "wire bytes or header fields",
+        "protocol event/frame objects",
+        "current connection state",
+        "configuration limits"
+      ],
+      "output_summary": [
+        "parsed protocol events or frames",
+        "serialized protocol bytes",
+        "updated connection state",
+        "typed protocol errors"
+      ]
+    },
+    {
+      "rule_id": "async_database_access_library",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "async_database_access_library",
+      "label": "async database access abstraction library",
+      "purpose_summary": "Provide an async database access abstraction over SQL/query compilation, backend connections, transactions, and driver result handling.",
+      "match": {
+        "project_name_contains_any": [
+          "databases"
+        ],
+        "text_contains_any": [
+          "asyncio",
+          "database",
+          "connection",
+          "transaction",
+          "query",
+          "sqlalchemy",
+          "postgres",
+          "sqlite",
+          "mysql"
+        ],
+        "required_contains_any": [
+          "database",
+          "transaction",
+          "connection",
+          "query"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "connection",
+          "transaction",
+          "query",
+          "compile",
+          "backend"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is async database operation handling around {target}, where query compilation, connection lifecycle, transactions, backend adapters, and driver errors need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Public query/transaction API is separated from backend driver adapters.",
+        "Connection lifecycle and transaction state are explicit contracts.",
+        "SQL compilation and parameter binding can be tested without a live database.",
+        "Backend failures, rollbacks, timeouts, and cancellation are represented as controlled errors."
+      ],
+      "first_slice": {
+        "name": "async_database_operation_slice",
+        "goal": "Stabilize one async query/transaction boundary without requiring a live external database.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "process_boundary",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "connection",
+          "transaction",
+          "query",
+          "compile",
+          "backend"
+        ],
+        "steps": [
+          "Define DatabaseOperationRequest, CompiledQuery, TransactionState, and DatabaseOperationResult contracts.",
+          "Separate SQL compilation and parameter binding from live backend execution.",
+          "Make backend driver calls adapter-owned and fixture-replaceable.",
+          "Verify success, bad query, connection failure, rollback, timeout, and cancellation cases."
+        ]
+      },
+      "defer": [
+        "Do not require live PostgreSQL/MySQL services for first contract tests.",
+        "Do not change all backend adapters before the shared operation contract is stable."
+      ],
+      "verification_extra": "Use fake backend adapters and in-memory SQLite-style fixtures before live database integration.",
+      "scenario_summary": [
+        "Accept async database API calls from application code.",
+        "Compile SQLAlchemy/query objects and bind parameters for a backend driver.",
+        "Manage connection and transaction state across awaitable operations.",
+        "Return rows/results or controlled database errors to the caller."
+      ],
+      "input_summary": [
+        "query objects or SQL text",
+        "query parameters",
+        "connection/transaction context",
+        "backend configuration"
+      ],
+      "output_summary": [
+        "compiled query and bound parameters",
+        "fetched rows or execution status",
+        "transaction state transitions",
+        "typed backend errors"
+      ]
     },
     {
       "rule_id": "workflow_orchestrator",
@@ -839,7 +2285,14 @@
           "orchestration",
           "worker",
           "trigger"
-        ]
+        ],
+        "required_contains_any": [
+          "scheduler",
+          "orchestration",
+          "worker",
+          "dag"
+        ],
+        "min_score": 70
       },
       "diagnosis": {
         "primary_sources": [
@@ -891,7 +2344,27 @@
         "Do not rewrite the scheduler and worker runtime in one slice.",
         "Do not change public DAG/flow APIs before state-transition contracts are characterized."
       ],
-      "verification_extra": "Use fake scheduler/storage/worker fixtures to verify workflow state transitions."
+      "verification_extra": "Use fake scheduler/storage/worker fixtures to verify workflow state transitions.",
+      "scenario_summary": [
+        "Define DAGs, flows, tasks, schedules, and runtime triggers.",
+        "Execute task graphs with retries, state transitions, workers, and dependency ordering.",
+        "Expose orchestration state through APIs, CLI commands, logs, or UI adapters.",
+        "Persist run/task metadata for replay, resume, and operational inspection."
+      ],
+      "input_summary": [
+        "DAG/flow definitions",
+        "task parameters",
+        "schedule or trigger events",
+        "runtime configuration",
+        "external system responses"
+      ],
+      "output_summary": [
+        "task/run state records",
+        "scheduler decisions",
+        "worker side effects",
+        "API/CLI status responses",
+        "logs and metadata"
+      ]
     },
     {
       "rule_id": "automation_engine",
@@ -911,7 +2384,13 @@
           "yaml",
           "templating",
           "connection"
-        ]
+        ],
+        "required_contains_any": [
+          "playbook",
+          "inventory",
+          "templating"
+        ],
+        "min_score": 70
       },
       "diagnosis": {
         "primary_sources": [
@@ -962,7 +2441,25 @@
         "Do not mix parser, variable resolution, and remote execution changes in one slice.",
         "Do not execute live remote actions in first verification."
       ],
-      "verification_extra": "Use fake inventory and connection fixtures to verify task result contracts."
+      "verification_extra": "Use fake inventory and connection fixtures to verify task result contracts.",
+      "scenario_summary": [
+        "Use the automation/playbook execution engine public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "backup_archive_tool",
@@ -982,7 +2479,18 @@
           "chunk",
           "dedup",
           "manifest"
-        ]
+        ],
+        "required_contains_any": [
+          "backup",
+          "restore",
+          "chunk",
+          "dedup"
+        ],
+        "negative_contains_any": [
+          "poetry",
+          "pyproject.toml"
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -1032,7 +2540,25 @@
         "Do not alter repository format or encryption behavior before adapter contracts exist.",
         "Do not combine backup and restore refactors in one slice."
       ],
-      "verification_extra": "Use fixture repositories and fake chunk stores for mutation and resume tests."
+      "verification_extra": "Use fixture repositories and fake chunk stores for mutation and resume tests.",
+      "scenario_summary": [
+        "Use the backup/archive tool public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "packaging_freezer",
@@ -1056,10 +2582,9 @@
         "required_contains_any": [
           "pyinstaller",
           "bootloader",
-          "freeze",
           "bundle"
         ],
-        "min_score": 2
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -1110,7 +2635,25 @@
         "Do not change bootloader build behavior before bundle graph contracts are stable.",
         "Do not rely on host-specific filesystem state in first verification."
       ],
-      "verification_extra": "Use tiny fixture packages and fake hook/platform adapters."
+      "verification_extra": "Use tiny fixture packages and fake hook/platform adapters.",
+      "scenario_summary": [
+        "Use the application packaging/freezer public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "proxy_security_tool",
@@ -1131,7 +2674,22 @@
           "websocket",
           "intercept"
         ],
+        "required_contains_any": [
+          "mitmproxy",
+          "intercept"
+        ],
+        "required_contains_all": [
+          "proxy"
+        ],
+        "min_score": 80,
         "negative_contains_any": [
+          "jinja",
+          "markupsafe",
+          "isort",
+          "typer",
+          "werkzeug is a comprehensive",
+          "command line interface",
+          "templating engine",
           "/v1/chat/completions",
           "/chat/completions",
           "chat_completions",
@@ -1191,7 +2749,25 @@
         "Do not change live transport behavior before normalized flow contracts are tested.",
         "Do not mix UI and proxy transport changes in one slice."
       ],
-      "verification_extra": "Use recorded/fake proxy events; do not require live network traffic."
+      "verification_extra": "Use recorded/fake proxy events; do not require live network traffic.",
+      "scenario_summary": [
+        "Use the proxy/security inspection tool public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "desktop_gui_ide",
@@ -1211,6 +2787,12 @@
           "lsp",
           "workspace",
           "preferences"
+        ],
+        "required_contains_any": [
+          "spyder",
+          "qt",
+          "widget",
+          "lsp"
         ]
       },
       "diagnosis": {
@@ -1261,7 +2843,25 @@
         "Do not rewrite UI layout and plugin lifecycle together.",
         "Do not require a live display server for first contract verification."
       ],
-      "verification_extra": "Use headless command/event tests with fake widget and LSP adapters."
+      "verification_extra": "Use headless command/event tests with fake widget and LSP adapters.",
+      "scenario_summary": [
+        "Use the desktop GUI/IDE application public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "ml_app_framework",
@@ -1282,7 +2882,19 @@
           "queue",
           "frontend",
           "fastapi"
-        ]
+        ],
+        "required_contains_any": [
+          "gradio",
+          "streamlit",
+          "frontend",
+          "component"
+        ],
+        "negative_contains_any": [
+          "pluggy",
+          "hookspec",
+          "hookimpl"
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -1333,7 +2945,27 @@
         "Do not change frontend protocol and callback runtime in one slice.",
         "Do not require live model inference in first verification."
       ],
-      "verification_extra": "Use fake callbacks and fixture component schemas for backend/frontend contract tests."
+      "verification_extra": "Use fake callbacks and fixture component schemas for backend/frontend contract tests.",
+      "scenario_summary": [
+        "Define UI/API components that bind user inputs to Python prediction or processing functions.",
+        "Queue, validate, and execute model/app calls behind web or local runtime adapters.",
+        "Serialize component state, tabular/image/media payloads, and frontend events.",
+        "Return rendered UI updates, API responses, logs, or downloadable artifacts."
+      ],
+      "input_summary": [
+        "user component values",
+        "HTTP/API requests",
+        "queued prediction jobs",
+        "model/function outputs",
+        "static/frontend assets"
+      ],
+      "output_summary": [
+        "UI state updates",
+        "API responses",
+        "serialized media/data artifacts",
+        "queue status",
+        "runtime logs"
+      ]
     },
     {
       "rule_id": "distributed_compute_graph",
@@ -1352,6 +2984,10 @@
           "array",
           "dataframe",
           "partition",
+          "blockwise"
+        ],
+        "required_contains_any": [
+          "dask",
           "blockwise"
         ]
       },
@@ -1404,7 +3040,25 @@
         "Do not alter distributed execution while graph construction contracts are unstable.",
         "Do not mix array/dataframe and scheduler refactors in one slice."
       ],
-      "verification_extra": "Use small fixture arrays/dataframes and fake scheduler adapters."
+      "verification_extra": "Use small fixture arrays/dataframes and fake scheduler adapters.",
+      "scenario_summary": [
+        "Use the distributed/dataflow compute graph public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "web_framework_library",
@@ -1435,6 +3089,14 @@
           "middleware",
           "sansio",
           "sessions.py"
+        ],
+        "required_contains_any": [
+          "blueprint",
+          "middleware",
+          "sansio",
+          "sessions.py",
+          "werkzeug",
+          "starlette"
         ],
         "negative_contains_any": [
           "/v1/chat/completions",
@@ -1493,14 +3155,35 @@
         "Do not refactor request dispatch and CLI helpers in the same slice.",
         "Do not change public extension hooks until registration contracts are locked."
       ],
-      "verification_extra": "Use minimal app fixtures to test blueprint registration, route listing, and session behavior."
+      "verification_extra": "Use minimal app fixtures to test blueprint registration, route listing, and session behavior.",
+      "scenario_summary": [
+        "Register routes, middleware, blueprints/apps, request handlers, and response factories.",
+        "Convert incoming HTTP scope/request data into handler calls and context objects.",
+        "Build HTTP responses, sessions, template contexts, or error responses.",
+        "Provide extension hooks for applications without owning application business logic."
+      ],
+      "input_summary": [
+        "HTTP request/scope data",
+        "route declarations",
+        "handler return values",
+        "middleware context",
+        "configuration objects"
+      ],
+      "output_summary": [
+        "HTTP responses",
+        "routing tables",
+        "context/session state",
+        "framework exceptions",
+        "adapter side effects"
+      ]
     },
     {
       "rule_id": "cli_framework_library",
       "record_type": "project_archetype_rule",
-      "priority": 76,
+      "priority": 96,
       "archetype": "cli_framework_library",
       "label": "CLI framework library",
+      "purpose_summary": "Provide a Python framework for declaring command-line interfaces, parsing parameters, invoking callbacks, and rendering terminal-facing errors/output.",
       "match": {
         "text_contains_any": [
           "click",
@@ -1557,7 +3240,25 @@
         "Do not redesign terminal UI and declaration parsing in one slice.",
         "Do not use docs examples as core capability targets unless source package targets are available."
       ],
-      "verification_extra": "Use isolated CLI runner fixtures for parsing, callback, and error-rendering contracts."
+      "verification_extra": "Use isolated CLI runner fixtures for parsing, callback, and error-rendering contracts.",
+      "scenario_summary": [
+        "Use the CLI framework library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "terminal_rendering_library",
@@ -1619,7 +3320,26 @@
         "Do not change every output format before one render path is characterized.",
         "Do not mix terminal capability detection with object traversal refactoring."
       ],
-      "verification_extra": "Use golden render fixtures for plain, styled, and exported outputs."
+      "verification_extra": "Use golden render fixtures for plain, styled, and exported outputs.",
+      "scenario_summary": [
+        "Accept renderable Python objects, style options, console dimensions, and output targets.",
+        "Build render trees, segments, tables, panels, syntax blocks, or progress displays.",
+        "Apply wrapping, styling, measurement, and terminal capability rules.",
+        "Emit terminal text, markup, SVG/HTML exports, or render errors."
+      ],
+      "input_summary": [
+        "renderable objects",
+        "style/theme options",
+        "console dimensions",
+        "terminal capabilities",
+        "export options"
+      ],
+      "output_summary": [
+        "terminal segments/text",
+        "formatted tables/panels",
+        "SVG/HTML exports",
+        "render warnings/errors"
+      ]
     },
     {
       "rule_id": "logging_library",
@@ -1683,7 +3403,25 @@
         "Do not change sink lifecycle and exception rendering in the same first slice.",
         "Do not treat documentation examples as core logging flow."
       ],
-      "verification_extra": "Use fake sinks and captured exceptions to test formatting, dispatch, and sink failure."
+      "verification_extra": "Use fake sinks and captured exceptions to test formatting, dispatch, and sink failure.",
+      "scenario_summary": [
+        "Use the logging library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "embedded_database_library",
@@ -1763,7 +3501,25 @@
         "Do not redesign all query operators before one query/search slice is contract-tested.",
         "Do not change storage formats or mutation semantics before the query contract is explicit."
       ],
-      "verification_extra": "Use memory and temporary-file storage fixtures to test query matching, no-match behavior, mutation side effects, and persistence failures separately."
+      "verification_extra": "Use memory and temporary-file storage fixtures to test query matching, no-match behavior, mutation side effects, and persistence failures separately.",
+      "scenario_summary": [
+        "Use the embedded document database library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "scheduler_library",
@@ -1823,7 +3579,25 @@
         "Do not change public fluent API before the scheduling calculation contract is stable.",
         "Do not mix timezone parsing with execution policy in the first slice."
       ],
-      "verification_extra": "Use fake clock fixtures for next-run, due-job, and missed-run tests."
+      "verification_extra": "Use fake clock fixtures for next-run, due-job, and missed-run tests.",
+      "scenario_summary": [
+        "Use the in-process scheduler library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "env_config_library",
@@ -1886,7 +3660,25 @@
         "Do not change CLI behavior before parse/rewrite contracts are explicit.",
         "Do not mutate process environment in tests that can use captured mutation plans."
       ],
-      "verification_extra": "Use temporary .env fixtures to test parse, lookup, rewrite, and missing-file behavior."
+      "verification_extra": "Use temporary .env fixtures to test parse, lookup, rewrite, and missing-file behavior.",
+      "scenario_summary": [
+        "Use the environment configuration library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "orm_database_library",
@@ -1977,7 +3769,25 @@
         "Do not change public model APIs before one query/session contract is characterized.",
         "Do not mix migration metadata changes with runtime transaction refactoring."
       ],
-      "verification_extra": "Use fake or in-memory database fixtures for query, transaction, rollback, and driver-error paths."
+      "verification_extra": "Use fake or in-memory database fixtures for query, transaction, rollback, and driver-error paths.",
+      "scenario_summary": [
+        "Use the ORM/database library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "async_worker_queue",
@@ -2051,7 +3861,25 @@
         "Do not introduce new worker pools before acknowledgement and retry semantics are explicit.",
         "Do not combine broker reconnection and task business logic in the first slice."
       ],
-      "verification_extra": "Use fake broker/queue fixtures for ack, retry, poison-message, and resume behavior."
+      "verification_extra": "Use fake broker/queue fixtures for ack, retry, poison-message, and resume behavior.",
+      "scenario_summary": [
+        "Use the async worker/queue system public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "web_scraper_crawler",
@@ -2123,7 +3951,25 @@
         "Do not tune crawling breadth before one fetch/parse path is fixture-tested.",
         "Do not rely on live websites for default verification."
       ],
-      "verification_extra": "Use captured HTML and fake HTTP responses for parser, retry, rate-limit, and cache behavior."
+      "verification_extra": "Use captured HTML and fake HTTP responses for parser, retry, rate-limit, and cache behavior.",
+      "scenario_summary": [
+        "Use the web scraper/crawler public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "dataframe_pipeline",
@@ -2192,7 +4038,119 @@
         "Do not optimize performance before schema and checkpoint contracts are explicit.",
         "Do not mix report formatting with data normalization in the first slice."
       ],
-      "verification_extra": "Use small fixture datasets to test parse, schema validation, normalization, and checkpoint reuse."
+      "verification_extra": "Use small fixture datasets to test parse, schema validation, normalization, and checkpoint reuse.",
+      "scenario_summary": [
+        "Load tabular inputs from files, APIs, databases, or in-memory structures.",
+        "Normalize schemas, column names, dtypes, missing values, and row-level constraints.",
+        "Transform, aggregate, join, validate, or export tabular data.",
+        "Persist cleaned data, reports, cache artifacts, or validation failures."
+      ],
+      "input_summary": [
+        "CSV/Parquet/Excel files",
+        "DataFrame-like objects",
+        "database/API rows",
+        "schema configuration"
+      ],
+      "output_summary": [
+        "normalized DataFrames",
+        "serialized tables",
+        "reports",
+        "validation errors",
+        "cache artifacts"
+      ]
+    },
+    {
+      "rule_id": "plugin_hook_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 96,
+      "archetype": "plugin_hook_runtime",
+      "label": "Plugin hook runtime",
+      "match": {
+        "project_name_contains_any": [
+          "pluggy"
+        ],
+        "text_contains_any": [
+          "hookspec",
+          "hookimpl",
+          "hookwrapper",
+          "pluginmanager",
+          "_multicall",
+          "run_old_style_hookwrapper",
+          "add_hookspecs"
+        ],
+        "required_contains_any": [
+          "hookspec",
+          "hookimpl",
+          "_multicall",
+          "run_old_style_hookwrapper"
+        ],
+        "min_score": 60
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "orchestrators",
+          "broad",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "_multicall",
+          "run_old_style_hookwrapper",
+          "add_hookspecs",
+          "register"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is hook dispatch around {target}, where hook specification registration, plugin invocation ordering, wrapper execution, exception propagation, and result collection need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Hook specifications, plugin registration, hook call planning, wrapper execution, and result aggregation are separate boundaries.",
+        "Hook dispatch order and exception propagation are explicit contract fields.",
+        "Old-style and new-style hook wrappers are compatibility adapters with fixture tests.",
+        "Plugin registration mutates manager state only through validated hook specification contracts."
+      ],
+      "first_slice": {
+        "name": "plugin_hook_dispatch_slice",
+        "goal": "Stabilize one hook dispatch path from hook call request to ordered plugin results.",
+        "target_sources": [
+          "central",
+          "orchestrators",
+          "broad"
+        ],
+        "targets_prefer": [
+          "_multicall",
+          "run_old_style_hookwrapper",
+          "add_hookspecs",
+          "register"
+        ],
+        "steps": [
+          "Define HookCallRequest, HookImplementation, HookWrapperContext, and HookCallResult contracts.",
+          "Separate hook specification registration from plugin invocation and result aggregation.",
+          "Represent wrapper failure, plugin exception, ordering conflict, and firstresult behavior explicitly.",
+          "Verify normal hook call, wrapper call, exception propagation, and no-plugin cases."
+        ]
+      },
+      "defer": [
+        "Do not combine plugin discovery and hook dispatch changes in one first slice.",
+        "Do not treat test fixtures or example plugins as first-slice targets when core callers exist."
+      ],
+      "verification_extra": "Use miniature hook specifications and fake plugins to verify ordering, wrappers, exceptions, and result aggregation.",
+      "scenario_summary": [
+        "Register hook specifications and plugin implementations.",
+        "Dispatch hook calls to ordered plugin implementations and wrappers.",
+        "Aggregate results, exceptions, and compatibility behavior.",
+        "Expose plugin-manager state and controlled errors to callers."
+      ],
+      "input_summary": [
+        "hook call request",
+        "registered hook specifications",
+        "plugin implementation list",
+        "dispatch options such as firstresult or historic"
+      ],
+      "output_summary": [
+        "ordered hook results",
+        "hook wrapper outcomes",
+        "plugin exceptions or failure packets",
+        "updated plugin manager state"
+      ]
     },
     {
       "rule_id": "test_framework_library",
@@ -2266,7 +4224,25 @@
         "Do not alter assertion rewriting and fixture resolution in one first slice.",
         "Do not treat framework self-tests as first-slice targets when core source targets exist."
       ],
-      "verification_extra": "Use miniature test packages to verify collection, fixture resolution, plugin hooks, and failure reports."
+      "verification_extra": "Use miniature test packages to verify collection, fixture resolution, plugin hooks, and failure reports.",
+      "scenario_summary": [
+        "Use the test framework library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "packaging_build_backend",
@@ -2341,7 +4317,124 @@
         "Do not add resolver behavior before metadata/artifact contracts are stable.",
         "Do not execute unbounded build subprocesses without timeout and captured logs."
       ],
-      "verification_extra": "Use fixture pyproject trees to verify metadata parsing, artifact manifest, build failure, and validation behavior."
+      "verification_extra": "Use fixture pyproject trees to verify metadata parsing, artifact manifest, build failure, and validation behavior.",
+      "scenario_summary": [
+        "Use the packaging/build backend public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
+    },
+    {
+      "rule_id": "import_sorting_tool",
+      "record_type": "project_archetype_rule",
+      "priority": 98,
+      "archetype": "import_sorting_tool",
+      "label": "Python import sorting tool",
+      "purpose_summary": "Parse Python source files, classify import sections, reorder imports according to configuration, and report or write deterministic source changes.",
+      "match": {
+        "project_name_contains_any": [
+          "isort"
+        ],
+        "text_contains_any": [
+          "isort",
+          "sort imports",
+          "import sorting",
+          "sections",
+          "known_first_party",
+          "profile",
+          "pyproject"
+        ],
+        "required_contains_any": [
+          "isort",
+          "sort imports",
+          "import sorting"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "parse",
+          "sort",
+          "place",
+          "sections",
+          "main"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is source import normalization around {target}, where file discovery, config profiles, import classification, formatting, and write/report behavior need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Source discovery and config loading are separated from import parsing.",
+        "Import classification and section ordering are explicit contracts.",
+        "Formatting/reporting is separated from filesystem mutation.",
+        "Invalid syntax, skipped files, and changed/unchanged outputs are reproducible."
+      ],
+      "first_slice": {
+        "name": "import_sort_parse_rewrite_slice",
+        "goal": "Stabilize one Python source file from import parsing to sorted output.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "broad",
+          "extraction",
+          "tasks",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "parse",
+          "sort",
+          "place",
+          "sections",
+          "main"
+        ],
+        "steps": [
+          "Define SourceFileInput, ImportBlock, SortConfig, and SortedSourceResult contracts.",
+          "Separate import parsing from section classification and formatting.",
+          "Wrap filesystem writes behind dry-run/report contracts.",
+          "Verify sorted file, unchanged file, syntax error, skipped file, and profile-specific ordering."
+        ]
+      },
+      "defer": [
+        "Do not mix config discovery and source rewrite behavior in one unbounded change.",
+        "Do not mutate files in contract tests when dry-run output is enough."
+      ],
+      "verification_extra": "Use small Python source fixtures with stdlib, third-party, first-party, comments, and syntax errors.",
+      "scenario_summary": [
+        "Read Python source files and import-sorting configuration.",
+        "Parse import statements and classify them into configured sections.",
+        "Produce sorted source text or a report of required changes.",
+        "Handle syntax errors, skipped files, and filesystem write boundaries explicitly."
+      ],
+      "input_summary": [
+        "Python source text or file paths",
+        "sorting/profile configuration",
+        "known first-party/third-party settings",
+        "write or check-only mode"
+      ],
+      "output_summary": [
+        "sorted Python source text",
+        "change report",
+        "write result",
+        "syntax/skip diagnostics"
+      ]
     },
     {
       "rule_id": "code_quality_tool",
@@ -2352,6 +4445,7 @@
       "match": {
         "project_name_contains_any": [
           "black",
+          "isort",
           "flake8",
           "mypy",
           "ruff",
@@ -2359,6 +4453,7 @@
         ],
         "text_contains_any": [
           "black",
+          "isort",
           "mypy",
           "ruff",
           "flake8",
@@ -2418,7 +4513,25 @@
         "Do not tune style or diagnostic rules before source parse/result contracts are stable.",
         "Do not mutate files in default tests when dry-run output can be asserted."
       ],
-      "verification_extra": "Use fixture source files to test parse errors, unchanged output, rewritten output, and diagnostics."
+      "verification_extra": "Use fixture source files to test parse errors, unchanged output, rewritten output, and diagnostics.",
+      "scenario_summary": [
+        "Use the code formatter/static analysis tool public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "asgi_wsgi_server_runtime",
@@ -2486,14 +4599,232 @@
         "Do not tune worker scaling before lifecycle and timeout contracts are stable.",
         "Do not depend on real network sockets for first-slice verification."
       ],
-      "verification_extra": "Use fake ASGI/WSGI event streams to verify lifecycle, timeout, and response behavior."
+      "verification_extra": "Use fake ASGI/WSGI event streams to verify lifecycle, timeout, and response behavior.",
+      "scenario_summary": [
+        "Use the ASGI/WSGI server runtime public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
+    },
+    {
+      "rule_id": "markup_escaping_library",
+      "record_type": "project_archetype_rule",
+      "priority": 96,
+      "archetype": "markup_escaping_library",
+      "label": "markup escaping/safe string library",
+      "purpose_summary": "Represent trusted markup strings and escape unsafe text for HTML/XML output boundaries.",
+      "match": {
+        "project_name_contains_any": [
+          "markupsafe"
+        ],
+        "text_contains_any": [
+          "markupsafe",
+          "escape",
+          "markup",
+          "html",
+          "xml",
+          "safe string",
+          "__html__"
+        ],
+        "required_contains_any": [
+          "markupsafe",
+          "__html__",
+          "safe to use in html"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "escape",
+          "markup",
+          "__html__",
+          "soft_str"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is trust-preserving text conversion around {target}, where raw text, safe markup, escaping policy, and HTML protocol hooks need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Raw text, safe markup, and protocol-provided HTML are distinct contract shapes.",
+        "Escaping and concatenation preserve trust semantics without hidden global state.",
+        "Invalid or unusual inputs produce deterministic string/markup outputs.",
+        "HTML/XML boundary behavior is fixture-tested with unsafe characters and custom objects."
+      ],
+      "first_slice": {
+        "name": "markup_escape_trust_slice",
+        "goal": "Stabilize one raw-text to safe-markup boundary with unsafe-character coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "escape",
+          "markup",
+          "__html__",
+          "soft_str"
+        ],
+        "steps": [
+          "Define RawText, SafeMarkup, HtmlProvider, and EscapeResult contracts.",
+          "Separate trust detection from character escaping.",
+          "Preserve safe-string semantics through concatenation and formatting.",
+          "Verify unsafe characters, already-safe markup, custom __html__, None, and non-string inputs."
+        ]
+      },
+      "defer": [
+        "Do not treat markup escaping as a full template rendering engine.",
+        "Do not change public string subclass semantics before contract tests exist."
+      ],
+      "verification_extra": "Use tiny unsafe text and custom __html__ fixtures.",
+      "scenario_summary": [
+        "Escape unsafe text for HTML/XML output.",
+        "Represent already-safe markup values.",
+        "Honor custom HTML protocol providers such as __html__.",
+        "Preserve safe/unsafe semantics through string operations."
+      ],
+      "input_summary": [
+        "raw text or arbitrary Python value",
+        "safe markup value",
+        "custom HTML provider object",
+        "escaping/trust policy"
+      ],
+      "output_summary": [
+        "escaped safe markup",
+        "preserved safe markup",
+        "plain string conversion result",
+        "deterministic escaping diagnostics"
+      ]
+    },
+    {
+      "rule_id": "wsgi_web_utility_library",
+      "record_type": "project_archetype_rule",
+      "priority": 98,
+      "archetype": "wsgi_web_utility_library",
+      "label": "WSGI/web application utility library",
+      "purpose_summary": "Provide WSGI/web application primitives for requests, responses, routing, serving helpers, middleware utilities, and HTTP exceptions.",
+      "match": {
+        "project_name_contains_any": [
+          "werkzeug"
+        ],
+        "text_contains_any": [
+          "werkzeug",
+          "wsgi",
+          "request",
+          "response",
+          "routing",
+          "http exceptions",
+          "middleware",
+          "serving"
+        ],
+        "required_contains_any": [
+          "werkzeug",
+          "wsgi"
+        ],
+        "min_score": 70
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "domain_anchors",
+          "central",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "parse_options_header",
+          "_parse_rule",
+          "dump_cookie",
+          "http.py",
+          "wrappers/request",
+          "wrappers/response",
+          "routing",
+          "serving",
+          "exceptions"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is WSGI request/response utility behavior around {target}, where environ parsing, routing, response construction, middleware, and HTTP errors need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "WSGI environ parsing is separated from request wrapper behavior.",
+        "Routing/map matching and response construction have explicit contracts.",
+        "Middleware and serving helpers are adapter boundaries, not core parsing logic.",
+        "HTTP exceptions and malformed environ cases are negative-tested."
+      ],
+      "first_slice": {
+        "name": "wsgi_request_response_slice",
+        "goal": "Stabilize one WSGI environ to request/response boundary with malformed-input coverage.",
+        "target_sources": [
+          "domain_anchors",
+          "central",
+          "broad",
+          "orchestrators",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "parse_options_header",
+          "_parse_rule",
+          "dump_cookie",
+          "http.py",
+          "wrappers/request",
+          "wrappers/response",
+          "routing",
+          "exceptions",
+          "serving"
+        ],
+        "steps": [
+          "Define WsgiEnviron, RequestView, ResponseSpec, and HttpException contracts.",
+          "Separate environ parsing from routing and response construction.",
+          "Keep serving/middleware side effects behind adapters.",
+          "Verify valid request, malformed environ, routing miss, redirect, and HTTP exception cases."
+        ]
+      },
+      "defer": [
+        "Do not treat Werkzeug as only a template-rendering dependency.",
+        "Do not require a live server for first request/response contract tests."
+      ],
+      "verification_extra": "Use WSGI environ fixtures and fake app callables.",
+      "scenario_summary": [
+        "Parse WSGI environ data into request objects.",
+        "Match routes and construct response objects or HTTP exceptions.",
+        "Provide middleware and serving helpers around caller-owned applications.",
+        "Return controlled errors for malformed request/environ inputs."
+      ],
+      "input_summary": [
+        "WSGI environ dictionary",
+        "route map and request path",
+        "response payload/status/header data",
+        "middleware or serving configuration"
+      ],
+      "output_summary": [
+        "request wrapper object",
+        "route match or redirect result",
+        "response object",
+        "HTTP exception or malformed-input diagnostic"
+      ]
     },
     {
       "rule_id": "template_rendering_engine",
       "record_type": "project_archetype_rule",
-      "priority": 74,
+      "priority": 96,
       "archetype": "template_rendering_engine",
       "label": "template rendering engine",
+      "purpose_summary": "Render templates from source text/loaders and caller-provided context while preserving escaping, environment, and error contracts.",
       "match": {
         "text_contains_any": [
           "jinja",
@@ -2503,6 +4834,10 @@
           "render_template",
           "environment.py",
           "nodes.py"
+        ],
+        "negative_contains_any": [
+          "werkzeug is a comprehensive",
+          "wsgi"
         ]
       },
       "diagnosis": {
@@ -2553,7 +4888,25 @@
         "Do not optimize template cache before source identity and context contracts are stable.",
         "Do not change public syntax before parser/render behavior is characterized."
       ],
-      "verification_extra": "Use fixture templates to test missing variables, escaping, loader failure, and deterministic output."
+      "verification_extra": "Use fixture templates to test missing variables, escaping, loader failure, and deterministic output.",
+      "scenario_summary": [
+        "Use the template rendering engine public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "auth_security_library",
@@ -2621,12 +4974,30 @@
         "Do not add providers before one token/session contract is stable.",
         "Do not record raw secrets in checkpoint or replay artifacts."
       ],
-      "verification_extra": "Use fake keys/tokens to verify expiry, malformed input, denied permission, and redaction."
+      "verification_extra": "Use fake keys/tokens to verify expiry, malformed input, denied permission, and redaction.",
+      "scenario_summary": [
+        "Use the auth/security library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "observability_metrics_tracing",
       "record_type": "project_archetype_rule",
-      "priority": 72,
+      "priority": 88,
       "archetype": "observability_metrics_tracing",
       "label": "observability/metrics/tracing system",
       "match": {
@@ -2637,7 +5008,16 @@
           "trace",
           "span",
           "telemetry",
-          "exporter"
+          "exporter",
+          "sentry_sdk",
+          "instrumentation",
+          "tracing integration",
+          "error monitoring"
+        ],
+        "project_name_contains_any": [
+          "sentry",
+          "sentry-python",
+          "opentelemetry"
         ]
       },
       "diagnosis": {
@@ -2688,7 +5068,26 @@
         "Do not add new sinks before one event/export contract is stable.",
         "Do not allow telemetry export failure to fail the primary workflow."
       ],
-      "verification_extra": "Use fake exporters to verify dropped events, retry bounds, redaction, and successful export."
+      "verification_extra": "Use fake exporters to verify dropped events, retry bounds, redaction, and successful export.",
+      "scenario_summary": [
+        "Collect spans, metrics, logs, events, and resource metadata from instrumented code.",
+        "Batch, transform, sample, and enrich telemetry before export.",
+        "Send telemetry to configured exporters or local processors with retry/error policy.",
+        "Expose diagnostic state for shutdown, flush, and failure handling."
+      ],
+      "input_summary": [
+        "spans/metrics/log records",
+        "resource metadata",
+        "exporter configuration",
+        "runtime context"
+      ],
+      "output_summary": [
+        "telemetry batches",
+        "export results",
+        "dropped/retry state",
+        "diagnostic logs",
+        "failure packets"
+      ]
     },
     {
       "rule_id": "scientific_compute_library",
@@ -2760,7 +5159,27 @@
         "Do not optimize backend dispatch before shape/dtype contracts are stable.",
         "Do not compare floating outputs without explicit tolerance."
       ],
-      "verification_extra": "Use small deterministic arrays to verify shape errors, tolerance, NaN policy, and reproducibility."
+      "verification_extra": "Use small deterministic arrays to verify shape errors, tolerance, NaN policy, and reproducibility.",
+      "scenario_summary": [
+        "Accept arrays, tensors, tabular structures, estimators, or numeric parameters through public APIs.",
+        "Validate shape, dtype, axis, missing-value, and algorithm options.",
+        "Run deterministic numeric, statistical, fitting, or transformation kernels.",
+        "Return computed arrays/models/metrics or explicit validation errors."
+      ],
+      "input_summary": [
+        "array-like values",
+        "numeric parameters",
+        "model/estimator configuration",
+        "dataset partitions",
+        "random/state options"
+      ],
+      "output_summary": [
+        "computed arrays",
+        "models or fitted state",
+        "metrics/results",
+        "validation errors",
+        "warnings"
+      ]
     },
     {
       "rule_id": "protocol_api_client",
@@ -2827,7 +5246,25 @@
         "Do not add more provider endpoints before one request/response contract is stable.",
         "Do not call live APIs in first-slice verification."
       ],
-      "verification_extra": "Use fake transports to verify timeout, retry, rate-limit, malformed response, and sanitized artifacts."
+      "verification_extra": "Use fake transports to verify timeout, retry, rate-limit, malformed response, and sanitized artifacts.",
+      "scenario_summary": [
+        "Use the protocol/API client library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "schema_validation_library",
@@ -2908,7 +5345,25 @@
         "Do not redesign public schema syntax before one validation result contract is characterized.",
         "Do not collapse validation errors into free-form strings."
       ],
-      "verification_extra": "Use fixture payloads to verify error paths, coercion/defaults, and serialization stability."
+      "verification_extra": "Use fixture payloads to verify error paths, coercion/defaults, and serialization stability.",
+      "scenario_summary": [
+        "Use the schema/validation library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "cloud_api_sdk",
@@ -2986,7 +5441,27 @@
         "Do not add service-specific behavior before the generic operation contract is stable.",
         "Do not call live cloud APIs in first-slice verification."
       ],
-      "verification_extra": "Use fake service models and fake transport to verify auth/error/retry paths."
+      "verification_extra": "Use fake service models and fake transport to verify auth/error/retry paths.",
+      "scenario_summary": [
+        "Construct service clients/resources from credentials, endpoint metadata, and configuration.",
+        "Serialize typed Python calls into provider API requests.",
+        "Normalize provider responses and errors back into SDK objects or exceptions.",
+        "Handle retry, pagination, authentication, and endpoint selection boundaries."
+      ],
+      "input_summary": [
+        "client configuration",
+        "credentials/profile data",
+        "service operation parameters",
+        "endpoint metadata",
+        "HTTP responses"
+      ],
+      "output_summary": [
+        "SDK response objects",
+        "typed exceptions",
+        "HTTP/API side effects",
+        "pagination streams",
+        "client/resource instances"
+      ]
     },
     {
       "rule_id": "async_protocol_runtime",
@@ -3076,7 +5551,25 @@
         "Do not tune performance before protocol state and cancellation contracts are stable.",
         "Do not rely on real sockets for the first verification slice."
       ],
-      "verification_extra": "Use fake async event streams to verify handshake, timeout, cancellation, and close behavior."
+      "verification_extra": "Use fake async event streams to verify handshake, timeout, cancellation, and close behavior.",
+      "scenario_summary": [
+        "Use the async protocol runtime public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "docs_site_generator",
@@ -3145,7 +5638,25 @@
         "Do not rewrite the plugin system before one page-render contract is stable.",
         "Do not mutate output directories without an artifact manifest."
       ],
-      "verification_extra": "Use fixture docs trees to verify config errors, page rendering, plugin failure, and output manifest."
+      "verification_extra": "Use fixture docs trees to verify config errors, page rendering, plugin failure, and output manifest.",
+      "scenario_summary": [
+        "Use the documentation/static site generator public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "visualization_plotting_library",
@@ -3220,7 +5731,25 @@
         "Do not change every backend before one render artifact contract is stable.",
         "Do not use large binary outputs as primary human-readable evidence."
       ],
-      "verification_extra": "Use small deterministic plots and artifact manifests for backend and layout verification."
+      "verification_extra": "Use small deterministic plots and artifact manifests for backend and layout verification.",
+      "scenario_summary": [
+        "Use the visualization/plotting library public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "media_processing_library",
@@ -3300,7 +5829,27 @@
         "Do not optimize codec/backend performance before output contracts are stable.",
         "Do not load large binary artifacts into human reports."
       ],
-      "verification_extra": "Use tiny fixture media/images to verify decode errors, transforms, encoding, and manifest hashes."
+      "verification_extra": "Use tiny fixture media/images to verify decode errors, transforms, encoding, and manifest hashes.",
+      "scenario_summary": [
+        "Open, decode, transform, or encode image/video/media payloads.",
+        "Validate mode, dimensions, codec, metadata, and resource limits.",
+        "Apply bounded transforms such as resize, conversion, filtering, extraction, or composition.",
+        "Return media objects/files, metadata, or explicit decode/encode errors."
+      ],
+      "input_summary": [
+        "image/video files",
+        "binary streams",
+        "mode/size/codec options",
+        "metadata",
+        "transform parameters"
+      ],
+      "output_summary": [
+        "media objects",
+        "encoded files/streams",
+        "metadata records",
+        "decode/encode errors",
+        "resource warnings"
+      ]
     },
     {
       "rule_id": "signing_token_utility",
@@ -3382,7 +5931,25 @@
         "Do not add new algorithms or token formats before one sign/verify contract is stable.",
         "Do not persist raw secrets or unredacted signed payloads in reports or replay artifacts."
       ],
-      "verification_extra": "Use fake keys and deterministic clocks to verify signing, expiry, tamper detection, malformed input, and redaction."
+      "verification_extra": "Use fake keys and deterministic clocks to verify signing, expiry, tamper detection, malformed input, and redaction.",
+      "scenario_summary": [
+        "Use the signing/token utility public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "code_generation_toolkit",
@@ -3439,7 +6006,25 @@
         "Do not refactor all renderers at once; prove the generator contract on one representative renderer first.",
         "Do not change public package shape until generated artifact compatibility is checked."
       ],
-      "verification_extra": "Use golden generated output plus schema validation for generated artifact metadata."
+      "verification_extra": "Use golden generated output plus schema validation for generated artifact metadata.",
+      "scenario_summary": [
+        "Use the code generation/plugin factory public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "api_service",
@@ -3449,7 +6034,25 @@
       "label": "API service",
       "match": {
         "routes_min": 1
-      }
+      },
+      "scenario_summary": [
+        "Accept HTTP requests through declared routes and handlers.",
+        "Validate request parameters, body payloads, and dependency context.",
+        "Call service/domain functions or external adapters.",
+        "Return JSON/HTML/file responses or structured errors."
+      ],
+      "input_summary": [
+        "HTTP requests",
+        "path/query/body parameters",
+        "service configuration",
+        "dependency context"
+      ],
+      "output_summary": [
+        "HTTP responses",
+        "JSON/HTML/file payloads",
+        "structured errors",
+        "logs and side effects"
+      ]
     },
     {
       "rule_id": "script_or_cli_tool",
@@ -3462,7 +6065,25 @@
           "CLI",
           "script"
         ]
-      }
+      },
+      "scenario_summary": [
+        "Use the script/CLI project public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     },
     {
       "rule_id": "python_project",
@@ -3470,7 +6091,25 @@
       "priority": 0,
       "archetype": "python_project",
       "label": "Python project",
-      "match": {}
+      "match": {},
+      "scenario_summary": [
+        "Use the Python project public API or runtime entrypoint with caller-provided inputs.",
+        "Validate or normalize incoming values, configuration, and boundary context.",
+        "Execute the core domain behavior behind a bounded capability or adapter.",
+        "Return domain results, persisted artifacts, side effects, or explicit errors."
+      ],
+      "input_summary": [
+        "public API arguments",
+        "configuration",
+        "local files or runtime context",
+        "external dependency responses when present"
+      ],
+      "output_summary": [
+        "domain return values",
+        "structured errors",
+        "filesystem/API side effects when present",
+        "logs or reports"
+      ]
     }
   ]
 }

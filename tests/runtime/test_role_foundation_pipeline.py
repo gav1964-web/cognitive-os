@@ -204,6 +204,63 @@ def test_role_foundation_active_root_runs_downstream_on_selected_slice(tmp_path)
     assert result["artifacts"]["technical_spec"]["artifact_type"] == "TechnicalSpec"
 
 
+def test_role_foundation_auto_selects_clear_named_package_root(tmp_path):
+    project = tmp_path / "sample_tool"
+    package = project / "sample_tool"
+    tests = project / "tests"
+    package.mkdir(parents=True)
+    tests.mkdir()
+    (project / "pyproject.toml").write_text("[project]\nname='sample-tool'\n", encoding="utf-8")
+    for index in range(18):
+        (package / f"mod_{index}.py").write_text(
+            f"def normalize_{index}(value: str) -> str:\n"
+            "    return value.strip().lower()\n",
+            encoding="utf-8",
+        )
+    for index in range(4):
+        (tests / f"test_{index}.py").write_text("def test_placeholder():\n    assert True\n", encoding="utf-8")
+    (tests / "broken_fixture.py").write_text("def invalid(:\n    pass\n", encoding="utf-8")
+
+    result = run_role_foundation_pipeline(
+        root=ROOT,
+        project_dir=project,
+        goal="Analyze obvious package root",
+        write=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["active_root_decision"]["source"] == "auto_safe_scope_selector"
+    assert result["active_root_decision"]["selected_relative_path"] == "sample_tool"
+
+
+def test_role_foundation_active_root_tolerates_newer_python_syntax(tmp_path):
+    project = tmp_path / "modernpkg"
+    package = project / "modernpkg"
+    package.mkdir(parents=True)
+    (project / "pyproject.toml").write_text("[project]\nname='modernpkg'\n", encoding="utf-8")
+    (package / "core.py").write_text(
+        "type Alias = str\n\n"
+        "def parse_value[T](value: T) -> T:\n"
+        "    return value\n",
+        encoding="utf-8",
+    )
+    (package / "fallback.py").write_text(
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip().lower()\n",
+        encoding="utf-8",
+    )
+
+    result = run_role_foundation_pipeline(
+        root=ROOT,
+        project_dir=project,
+        goal="Analyze modern Python package",
+        write=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["active_root_decision"]["selected_relative_path"] == "modernpkg"
+
+
 def test_role_foundation_cli_single_project():
     result = subprocess.run(
         [

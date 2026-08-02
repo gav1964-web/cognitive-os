@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class NewsCollectionPlan:
+    artifact_type: str
+    inputs: tuple[str, ...]
+    top_per_site: int
+    total_top: int | None
+    max_sites: int
+    site_timeout: float
+    total_timeout: float
+    fail_policy: str
+    dedupe: str
+    workers: int
+    summary_mode: str
+
+
+def build_collection_plan(
+    inputs: list[str],
+    *,
+    top_per_site: int,
+    total_top: int | None,
+    max_sites: int,
+    site_timeout: float,
+    total_timeout: float,
+    fail_policy: str,
+    dedupe: str,
+    workers: int,
+    summary_mode: str,
+) -> NewsCollectionPlan:
+    normalized_inputs = tuple(item for item in inputs[: max(1, max_sites)] if item)
+    if not normalized_inputs:
+        raise ValueError('at least one input is required')
+    if fail_policy not in {'partial', 'strict'}:
+        raise ValueError('unsupported fail_policy')
+    if dedupe not in {'title_url', 'canonical_url', 'semantic'}:
+        raise ValueError('unsupported dedupe mode')
+    if summary_mode not in {'heuristic', 'llm', 'off'}:
+        raise ValueError('unsupported summary mode')
+    return NewsCollectionPlan(
+        artifact_type='NewsCollectionPlan',
+        inputs=normalized_inputs,
+        top_per_site=max(0, min(top_per_site, 10)),
+        total_top=None if total_top is None else max(0, total_top),
+        max_sites=max(1, max_sites),
+        site_timeout=max(1.0, site_timeout),
+        total_timeout=max(1.0, total_timeout),
+        fail_policy=fail_policy,
+        dedupe=dedupe,
+        workers=max(1, min(workers, 8)),
+        summary_mode=summary_mode,
+    )

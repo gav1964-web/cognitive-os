@@ -7,8 +7,10 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
+from .executable_acceptance_policy import load_executable_acceptance_policy
 from .l4_decision_table import load_l4_decision_rules
 from .operation_recipe_rules import load_operation_recipe_rules
+from .patch_synthesis_policy import load_patch_synthesis_policy
 from .prompt_intake_rules import load_prompt_intake_rules
 from .role_directory import load_role_directory
 from .runtime_interpreter_policy import load_runtime_interpreter_policy
@@ -19,8 +21,10 @@ from .stage2_template_routes import load_stage2_template_routes
 
 
 VALIDATORS: dict[str, Callable[[str], Any]] = {
+    "config/executable_acceptance_policy.json": load_executable_acceptance_policy,
     "config/l4_decision_rules.json": load_l4_decision_rules,
     "config/operation_recipe_rules.json": load_operation_recipe_rules,
+    "config/patch_synthesis_policy.json": load_patch_synthesis_policy,
     "config/prompt_intake_rules.json": load_prompt_intake_rules,
     "config/role_directory.json": load_role_directory,
     "config/runtime_interpreter_policy.json": load_runtime_interpreter_policy,

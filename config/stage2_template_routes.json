@@ -15,10 +15,24 @@
     "batch_renamer_cli",
     "json_config_merger",
     "static_site_indexer",
-    "ixbt_news_scraper",
-    "news_site_scraper_cli"
+    "news_site_scraper_cli",
+    "web_research_summarizer_cli",
+    "web_research_summarizer_fastapi"
   ],
   "routes": [
+    {
+      "case": "web_research_summarizer_fastapi",
+      "all": ["fastapi"],
+      "any_groups": [
+        ["интернет", "internet", "web", "поиск", "search"],
+        ["фраз", "phrase", "query", "запрос"],
+        ["summary", "summar", "суммари", "резюме", "выжимк"]
+      ],
+      "any_groups_optional": [
+        ["top-20", "топ-20", "top 20", "20", "страниц", "page"],
+        ["llm", "gigachat", "127.0.0.1:8000"]
+      ]
+    },
     {
       "case": "fastapi_kv_store",
       "all": ["fastapi"],
@@ -28,6 +42,18 @@
       "case": "fastapi_csv_aggregator",
       "all": ["fastapi", "csv"],
       "any": ["агрег", "aggreg"]
+    },
+    {
+      "case": "web_research_summarizer_cli",
+      "any_groups": [
+        ["интернет", "internet", "web", "поиск", "search"],
+        ["фраз", "phrase", "query", "запрос"],
+        ["summary", "summar", "суммари", "резюме", "выжимк"]
+      ],
+      "any_groups_optional": [
+        ["top-15", "топ-15", "top 15", "15"],
+        ["стат", "article", "articles", "страниц", "page"]
+      ]
     },
     {
       "case": "text_stats_cli",
@@ -95,8 +121,10 @@
       ]
     },
     {
-      "case": "ixbt_news_scraper",
-      "all": ["csv"],
+      "case": "news_site_scraper_cli",
+      "any_groups_optional": [
+        ["csv", ".csv", "md", ".md", "markdown", "json", ".json", "вывед", "output", "суммари", "summary", "report", "отчет"]
+      ],
       "any_groups": [
         ["ixbt", "ixbt.com"],
         ["скрапер", "scraper", "scrape", "news", "новост"]
@@ -104,8 +132,9 @@
     },
     {
       "case": "news_site_scraper_cli",
-      "predicate": "known_news_site_profile_prompt",
-      "all": ["csv"],
+      "any_groups_optional": [
+        ["csv", ".csv", "md", ".md", "markdown", "json", ".json", "вывед", "output", "суммари", "summary", "report", "отчет"]
+      ],
       "any_groups": [
         ["скрапер", "scraper", "scrape", "news", "новост"],
         ["http://", "https://", ".ru", ".com", "site", "сайт"]

@@ -195,6 +195,38 @@ def test_semantic_target_quality_accepts_calculate_provider_and_mock_contracts()
     assert mock_wrapper["status"] == "strong"
 
 
+def test_semantic_target_quality_accepts_job_handlers_and_business_value_transforms():
+    handler = semantic_target_quality_report(
+        "worker.py:handle_job",
+        ranked_candidates=["worker.py:handle_job"],
+        source_evidence=["worker.py:handle_job"],
+        selection_reason="central flow node with subsystem-level evidence",
+    )
+    business = semantic_target_quality_report(
+        "main.py:price_item",
+        ranked_candidates=["main.py:price_item"],
+        source_evidence=["main.py:price_item"],
+        selection_reason="pure transform candidate",
+    )
+
+    assert handler["status"] == "strong"
+    assert handler["score"] >= 92
+    assert business["status"] == "strong"
+    assert business["score"] >= 92
+
+
+def test_semantic_target_quality_demotes_legacy_batch_orchestrator():
+    report = semantic_target_quality_report(
+        "legacy.py:legacy_process_all",
+        ranked_candidates=["legacy.py:legacy_process_all"],
+        source_evidence=["legacy.py:legacy_process_all"],
+        selection_reason="broad function can anchor a meaningful first slice",
+    )
+
+    assert report["status"] in {"suspicious", "poor"}
+    assert "too broad" in " ".join(report["reasons"])
+
+
 def test_semantic_target_quality_demotes_health_probe():
     report = semantic_target_quality_report(
         "api.py:health",
@@ -203,3 +235,88 @@ def test_semantic_target_quality_demotes_health_probe():
     )
 
     assert report["status"] in {"suspicious", "poor"}
+
+
+def test_semantic_target_quality_accepts_holdout_domain_contracts():
+    cases = [
+        ("src/pipx/commands/inject.py:inject_dep", "first-slice target"),
+        ("rich/pretty.py:traverse", "first-slice target"),
+        ("starlette/authentication.py:requires", "first-slice target"),
+    ]
+    for target, reason in cases:
+        report = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+            selection_reason=reason,
+        )
+        assert report["status"] == "strong", target
+        assert report["score"] >= 92, target
+
+    framework_response = semantic_target_quality_report(
+        "src/flask/app.py:make_response",
+        ranked_candidates=["src/flask/app.py:make_response"],
+        source_evidence=["src/flask/app.py:make_response"],
+        selection_reason="pure transform candidate",
+    )
+    assert framework_response["status"] == "strong"
+    assert framework_response["score"] >= 92
+
+    response = semantic_target_quality_report(
+        "app.py:make_response",
+        ranked_candidates=["app.py:make_response"],
+        source_evidence=["app.py:make_response"],
+        selection_reason="pure transform candidate",
+    )
+    assert response["status"] == "acceptable"
+    assert response["score"] < 85
+
+
+def test_semantic_target_quality_accepts_second_holdout_domain_contracts():
+    cases = [
+        ("aiohttp/client.py:_ws_connect", "first-slice target"),
+        ("httpie/core.py:program", "first-slice target"),
+        ("pydantic/_internal/_model_construction.py:__new__", "first-slice target"),
+        ("src/tox/session/cmd/run/common.py:_do_queue_and_wait", "first-slice target"),
+        ("src/trio/_core/_run.py:unrolled_run", "first-slice target"),
+    ]
+    for target, reason in cases:
+        report = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+            selection_reason=reason,
+        )
+        assert report["status"] == "strong", target
+        assert report["score"] >= 92, target
+
+
+def test_semantic_target_quality_accepts_scientific_and_media_contracts():
+    cases = [
+        "numpy/lib/_function_base_impl.py:_quantile",
+        "pandas/core/construction.py:array",
+        "src/PIL/Image.py:convert",
+        "sklearn/calibration.py:calibration_curve",
+    ]
+    for target in cases:
+        report = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+            selection_reason="ProjectArchitectureSynthesis first-slice target takes precedence over convenience-only pure transforms",
+        )
+        assert report["status"] == "strong", target
+        assert report["score"] >= 92, target
+
+
+def test_semantic_target_quality_accepts_profiled_asgi_runtime_wrapper():
+    report = semantic_target_quality_report(
+        "sentry_sdk/integrations/asgi.py:_run_app",
+        ranked_candidates=["sentry_sdk/integrations/asgi.py:_run_app"],
+        source_evidence=["sentry_sdk/integrations/asgi.py:_run_app"],
+        selection_reason="ProjectArchitectureSynthesis first-slice target takes precedence over convenience-only pure transforms",
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 92
+    assert "ASGI app wrapper" in " ".join(report["reasons"])

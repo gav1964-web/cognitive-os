@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+import json
+from dataclasses import asdict
+from pathlib import Path
+
+from web_research_summarizer.contracts import ResearchReport
+
+
+def write_report(report: ResearchReport, output_path: str) -> None:
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.suffix.lower() == '.json':
+        target.write_text(json.dumps(asdict(report), ensure_ascii=False, indent=2), encoding='utf-8')
+        return
+    lines = [f'# Web Research Summary: {report.query}', '']
+    lines.extend(['## Summary', '', _combined_summary(report), ''])
+    if report.items:
+        lines.extend(['## Sources', ''])
+        for index, item in enumerate(report.items, start=1):
+            lines.append(f'{index}. {item.title} - {item.url}')
+        lines.append('')
+    if report.warnings:
+        lines.extend(['## Warnings', '', *[f'- {warning}' for warning in report.warnings], ''])
+    target.write_text('\n'.join(lines), encoding='utf-8')
+
+
+def _combined_summary(report: ResearchReport) -> str:
+    if not report.items:
+        return 'No articles were summarized.'
+    parts = []
+    seen = set()
+    for item in report.items:
+        text = ' '.join(item.summary.split())
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        parts.append(text)
+    combined = ' '.join(parts)
+    return combined[:1400].rstrip() + ('...' if len(combined) > 1400 else '')

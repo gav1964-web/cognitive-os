@@ -23,6 +23,7 @@ def add_extraction_candidate(
     row = {
         "capability": capability,
         "why": why,
+        "reason": why,
         "candidate_level": level,
         "candidate_score": score,
         "first_contract": first_contract,

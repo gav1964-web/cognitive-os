@@ -28,9 +28,16 @@ def run_programmer_executor(
 ) -> dict[str, Any]:
     target = dict(implementation_plan.get("implementation_target", {}))
     if target.get("status") == "blocked_no_safe_candidate":
-        return _blocked_result(root, project_dir, implementation_plan, "blocked_no_safe_candidate")
+        return _blocked_result(
+            root,
+            project_dir,
+            technical_spec,
+            implementation_plan,
+            test_plan,
+            "blocked_no_safe_candidate",
+        )
     if apply_source:
-        return _blocked_result(root, project_dir, implementation_plan, "source_edit_apply_not_enabled_in_mvp")
+        return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, "source_edit_apply_not_enabled_in_mvp")
 
     execution_dir = _execution_dir(root)
     execution_dir.mkdir(parents=True, exist_ok=True)
@@ -78,9 +85,20 @@ def run_programmer_executor(
     return result
 
 
-def _blocked_result(root: Path, project_dir: Path, implementation_plan: dict[str, Any], reason: str) -> dict[str, Any]:
+def _blocked_result(
+    root: Path,
+    project_dir: Path,
+    technical_spec: dict[str, Any],
+    implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
     execution_dir = _execution_dir(root)
     execution_dir.mkdir(parents=True, exist_ok=True)
+    no_patch = _no_patch_package(project_dir, technical_spec, implementation_plan, test_plan, reason)
+    blocked_report = _blocked_execution_report(project_dir, implementation_plan, test_plan, reason)
+    no_patch_path = _write_json(execution_dir / "no_patch_package.json", no_patch)
+    blocked_report_path = _write_json(execution_dir / "blocked_execution_report.json", blocked_report)
     result = {
         "status": "blocked",
         "kind": "programmer_executor_result",
@@ -89,12 +107,71 @@ def _blocked_result(root: Path, project_dir: Path, implementation_plan: dict[str
         "execution_dir": execution_dir.as_posix(),
         "reason": reason,
         "implementation_target": implementation_plan.get("implementation_target", {}),
+        "no_patch_package_path": no_patch_path.as_posix(),
+        "blocked_execution_report_path": blocked_report_path.as_posix(),
         "source_code_changes": False,
         "registry_changes": False,
-        "reviewer_handoff": {"next_role": "reviewer", "test_result": None},
+        "reviewer_handoff": {
+            "next_role": "reviewer",
+            "test_result": None,
+            "no_patch_package": no_patch_path.as_posix(),
+            "blocked_execution_report": blocked_report_path.as_posix(),
+            "reason": "Reviewer can verify that no patch was produced and the blocked handoff was preserved.",
+        },
     }
     result["result_path"] = _write_json(execution_dir / "result.json", result).as_posix()
     return result
+
+
+def _no_patch_package(
+    project_dir: Path,
+    technical_spec: dict[str, Any],
+    implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "artifact_type": "NoPatchPackage",
+        "status": "blocked",
+        "created_at": _now(),
+        "project": project_dir.as_posix(),
+        "reason": reason,
+        "source_code_changes": False,
+        "registry_changes": False,
+        "source_artifacts": [
+            {"type": technical_spec.get("artifact_type"), "role": technical_spec.get("role")},
+            {"type": implementation_plan.get("artifact_type"), "role": implementation_plan.get("role")},
+            {"type": test_plan.get("artifact_type"), "role": test_plan.get("role")},
+        ],
+        "implementation_target": implementation_plan.get("implementation_target", {}),
+        "patch_intent": implementation_plan.get("patch_intent", {}),
+        "patches": [],
+        "policy": {"patch_generation_allowed": False, "apply_source_enabled": False},
+    }
+
+
+def _blocked_execution_report(
+    project_dir: Path,
+    implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "artifact_type": "BlockedExecutionReport",
+        "role": "programmer_executor",
+        "status": "blocked",
+        "created_at": _now(),
+        "project": project_dir.as_posix(),
+        "reason": reason,
+        "implementation_target": implementation_plan.get("implementation_target", {}),
+        "test_plan_status": test_plan.get("status"),
+        "blocked_contract_rows": [
+            row for row in list(test_plan.get("contract_test_matrix", [])) if dict(row).get("direction") == "blocked_handoff"
+        ],
+        "source_code_changes": False,
+        "registry_changes": False,
+        "next_role": "reviewer",
+    }
 
 
 def _snapshot_writable_files(execution_dir: Path, project_dir: Path, implementation_plan: dict[str, Any]) -> list[dict[str, Any]]:

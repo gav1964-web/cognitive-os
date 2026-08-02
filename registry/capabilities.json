@@ -346,12 +346,12 @@
       "output_schema_ref": "plugins/project_map_report/schemas/output.json",
       "determinism_grade": "A",
       "side_effects": {
-        "filesystem": "none",
+        "filesystem": "read_only",
         "network": "none",
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:7c01bb30894fbaae978a94a298de8d94c39b1f9c232f1b764433de342a62aff9",
+      "version_hash": "sha256:b57574d4607456e02e916558741053152db9dc91e77711c7d9cb4d5fb919ce7d",
       "fallback_for": []
     },
     {

@@ -60,3 +60,31 @@ def test_project_report_quality_penalizes_generic_scope_and_weak_execution():
     assert quality["score"] < 0.5
     assert "generic_main_task" in quality["issues"]
     assert "weak_execution_path" in quality["issues"]
+
+
+def test_project_report_quality_counts_minimal_extraction_plan_capabilities():
+    report = {
+        "answers": {
+            "1_scope": {
+                "main_task": "Provide package resource access for Python library consumers.",
+                "supported_scenarios": ["import API", "read resource"],
+            },
+            "2_execution": {"primary_execution_path": ["import package", "call public function", "return resource"]},
+            "3_capabilities": {"atomic_reusable_capabilities": []},
+            "6_runtime_extraction_readiness": {
+                "data_lifecycle": [{"stage": "call"}],
+                "minimal_extraction_plan": {
+                    "capabilities_to_extract": [
+                        {"capability": "pkg/core.py:where"},
+                        {"capability": "pkg/core.py:contents"},
+                        {"capability": "pkg/core.py:exit_ctx"},
+                    ]
+                },
+            },
+        }
+    }
+
+    quality = _project_report_quality(report)
+
+    assert quality["score"] == 1.0
+    assert "thin_capability_model" not in quality["issues"]

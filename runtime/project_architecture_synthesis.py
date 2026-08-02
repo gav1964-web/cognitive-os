@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from .architecture_synthesis_policy import load_architecture_synthesis_policy
 from .knowledge_usage_telemetry import record_knowledge_usage
 from .role_knowledge import role_knowledge_distribution
 from .project_facts import facts_from_project_report, llm_fact_digest
@@ -21,6 +22,9 @@ from .project_architecture_knowledge import (
     match_project_lessons,
     match_risk_patterns,
 )
+
+
+ARCHITECTURE_SYNTHESIS_POLICY = load_architecture_synthesis_policy()
 
 
 def synthesize_project_architecture(
@@ -103,9 +107,12 @@ def synthesize_project_architecture(
 
 
 def _profile(facts: dict[str, Any], rule: dict[str, Any], match: dict[str, Any]) -> dict[str, Any]:
+    domain_profile = dict(facts.get("domain_profile") or {})
     return {
         "archetype": rule.get("archetype"),
         "label": rule.get("label"),
+        "domain_profile": domain_profile,
+        "domain_profile_kind": domain_profile.get("kind"),
         "purpose_summary": rule.get("purpose_summary"),
         "scenario_summary": _strings(rule.get("scenario_summary"))[:6],
         "input_summary": _strings(rule.get("input_summary"))[:8],
@@ -153,27 +160,37 @@ def _target_shape(rule: dict[str, Any], facts: dict[str, Any]) -> list[str]:
     if rows:
         return rows
     capabilities = ", ".join(facts.get("capabilities", [])[:3]) or "candidate capabilities"
-    return [
-        "Keep entrypoints thin and move decisions into named application services.",
-        f"Extract first reusable capabilities around {capabilities}.",
-        "Wrap side-effecting dependencies behind adapters with timeout and failure contracts.",
-    ]
+    return [str(item).format(capabilities=capabilities) for item in _strings(ARCHITECTURE_SYNTHESIS_POLICY.get("fallback_target_shape"))]
 
 
 def _bottlenecks(facts: dict[str, Any], analysis_tasks: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     runtime = dict(facts.get("runtime_extraction", {}))
-    for item in runtime.get("process_boundary", [])[:3]:
-        rows.append(_bottleneck("process_boundary", _target(item), "network/subprocess/filesystem work needs isolation", "high"))
-    for target in runtime.get("orchestrators", [])[:3]:
-        rows.append(_bottleneck("hidden_orchestration", target, "control flow is implicit and hard to replay", "high"))
-    for target in facts.get("broad", [])[:3]:
-        rows.append(_bottleneck("broad_function", target, "too many responsibilities behind one callable", "high"))
-    for item in runtime.get("idempotency", [])[:3]:
-        rows.append(_bottleneck("replay_safety", _target(item), "retry or replay can duplicate side effects", "medium"))
-    for task in _tasks(analysis_tasks)[:8]:
-        if task.get("type") in {"DRAFT_PIPELINE_CAPABILITY", "EXTRACT_CAPABILITY"}:
-            rows.append(_bottleneck("extraction_candidate", str(task.get("target") or ""), "candidate can become a first bounded pipeline step", "medium"))
+    for rule in _bottleneck_rules():
+        source = str(rule.get("source") or "")
+        limit = int(rule.get("limit") or 0)
+        items: list[Any] = []
+        if source == "runtime_extraction.process_boundary":
+            items = list(runtime.get("process_boundary", []))
+        elif source == "runtime_extraction.orchestrators":
+            items = list(runtime.get("orchestrators", []))
+        elif source == "runtime_extraction.idempotency":
+            items = list(runtime.get("idempotency", []))
+        elif source == "facts.broad":
+            items = list(facts.get("broad", []))
+        elif source == "analysis_tasks":
+            task_types = {str(item) for item in list(rule.get("task_types") or [])}
+            items = [task for task in _tasks(analysis_tasks) if str(task.get("type") or "") in task_types]
+        for item in items[:limit]:
+            target = str(item.get("target") or "") if isinstance(item, dict) and source == "analysis_tasks" else _target(item)
+            rows.append(
+                _bottleneck(
+                    str(rule.get("kind") or source),
+                    target,
+                    str(rule.get("reason") or "architecture policy matched this target"),
+                    str(rule.get("severity") or "medium"),
+                )
+            )
     return _dedupe_bottlenecks(rows)
 
 
@@ -190,30 +207,24 @@ def _first_slice(rule: dict[str, Any], facts: dict[str, Any], analysis_tasks: di
             "knowledge_rule": rule.get("rule_id"),
         }
     return {
-        "name": "first_bounded_capability_slice",
-        "goal": "Extract one useful capability with explicit input/output and tests.",
-        "targets": _targets_by_type(analysis_tasks, {"DRAFT_PIPELINE_CAPABILITY", "EXTRACT_CAPABILITY"})[:3],
-        "steps": [
-            "Select one central callable with low external coupling.",
-            "Define input/output schema from signature and tests.",
-            "Move side effects behind a named adapter.",
-            "Add contract and negative tests.",
-        ],
+        "name": str(_default_first_slice_policy().get("name") or "first_bounded_capability_slice"),
+        "goal": str(_default_first_slice_policy().get("goal") or "Extract one useful capability with explicit input/output and tests."),
+        "targets": _targets_by_type(analysis_tasks, {str(item) for item in list(_default_first_slice_policy().get("target_task_types") or [])})[:3],
+        "steps": _strings(_default_first_slice_policy().get("steps")),
         "knowledge_rule": rule.get("rule_id"),
     }
 
 
 def _defer(rule: dict[str, Any]) -> list[str]:
-    return ["Do not rewrite the whole project before one slice has passing contract tests."] + _strings(rule.get("defer"))
+    return _strings(dict(ARCHITECTURE_SYNTHESIS_POLICY.get("defer") or {}).get("default_items")) + _strings(rule.get("defer"))
 
 
 def _verification(rule: dict[str, Any], facts: dict[str, Any], first_slice: dict[str, Any]) -> list[str]:
     tests = facts.get("tests", {})
     existing = tests.get("test_files_seen", tests.get("test_files", 0)) if isinstance(tests, dict) else 0
     plan = [
-        f"Create or extend focused tests for slice `{first_slice['name']}`; current detected test files: {existing}.",
-        "Add one happy-path contract test and one malformed-input or failed-dependency test.",
-        "Record before/after ProjectMapReport to confirm fewer mixed responsibilities or clearer capability boundary.",
+        str(item).format(slice_name=first_slice["name"], existing_tests=existing)
+        for item in _strings(dict(ARCHITECTURE_SYNTHESIS_POLICY.get("verification") or {}).get("default_steps"))
     ]
     extra = str(rule.get("verification_extra") or "").strip()
     if extra:
@@ -222,23 +233,19 @@ def _verification(rule: dict[str, Any], facts: dict[str, Any], first_slice: dict
 
 
 def _task_focus(analysis_tasks: dict[str, Any]) -> list[dict[str, Any]]:
-    preferred = {
-        "DRAFT_PIPELINE_CAPABILITY": 0,
-        "MAKE_ORCHESTRATION_EXPLICIT": 1,
-        "ISOLATE_PROCESS_BOUNDARY": 2,
-        "SPLIT_MIXED_RESPONSIBILITY": 3,
-        "HARDEN_CONTRACT": 4,
-        "ADD_IDEMPOTENCY_GUARD": 5,
-        "DEFINE_CHECKPOINT_POLICY": 6,
-    }
-    rows = sorted(_tasks(analysis_tasks), key=lambda row: (preferred.get(str(row.get("type")), 20), str(row.get("target"))))
-    return [{"type": row.get("type"), "target": row.get("target"), "why": row.get("acceptance")} for row in rows[:6]]
+    focus = dict(ARCHITECTURE_SYNTHESIS_POLICY.get("task_focus") or {})
+    preferred = {str(key): int(value) for key, value in dict(focus.get("preferred_order") or {}).items()}
+    default_rank = int(focus.get("default_rank") or 20)
+    limit = int(focus.get("limit") or 6)
+    rows = sorted(_tasks(analysis_tasks), key=lambda row: (preferred.get(str(row.get("type")), default_rank), str(row.get("target"))))
+    return [{"type": row.get("type"), "target": row.get("target"), "why": row.get("acceptance")} for row in rows[:limit]]
 
 
 def _primary_target(rule: dict[str, Any], facts: dict[str, Any], bottlenecks: list[dict[str, Any]]) -> str:
     diagnosis = dict(rule.get("diagnosis") or {})
     rows = _source_targets(diagnosis.get("primary_sources"), facts, {}, bottlenecks=bottlenecks)
-    return (_prefer_targets(rows, _strings(diagnosis.get("primary_target_prefer")), load_architecture_knowledge()) or ["no dominant hotspot"])[0]
+    fallback = str(dict(ARCHITECTURE_SYNTHESIS_POLICY.get("primary_target") or {}).get("fallback") or "no dominant hotspot")
+    return (_prefer_targets(rows, _strings(diagnosis.get("primary_target_prefer")), load_architecture_knowledge()) or [fallback])[0]
 
 
 def _source_targets(sources: Any, facts: dict[str, Any], analysis_tasks: dict[str, Any], *, bottlenecks: list[dict[str, Any]] | None = None) -> list[str]:
@@ -279,9 +286,18 @@ def _prefer_targets(rows: list[str], needles: list[str], knowledge: dict[str, An
 
 
 def _confidence(facts: dict[str, Any], bottlenecks: list[dict[str, Any]], match: dict[str, Any]) -> str:
-    if facts.get("entrypoints") and facts.get("capabilities") and bottlenecks and int(match.get("score") or 0) > 1:
+    policy = dict(ARCHITECTURE_SYNTHESIS_POLICY.get("confidence") or {})
+    high_ok = True
+    if policy.get("high_requires_entrypoints", True):
+        high_ok = high_ok and bool(facts.get("entrypoints"))
+    if policy.get("high_requires_capabilities", True):
+        high_ok = high_ok and bool(facts.get("capabilities"))
+    if policy.get("high_requires_bottlenecks", True):
+        high_ok = high_ok and bool(bottlenecks)
+    high_ok = high_ok and int(match.get("score") or 0) > int(policy.get("high_min_match_score_exclusive") or 1)
+    if high_ok:
         return "high"
-    if facts.get("entrypoints") or facts.get("capabilities"):
+    if any(facts.get(str(field)) for field in list(policy.get("medium_requires_any") or ["entrypoints", "capabilities"])):
         return "medium"
     return "low"
 
@@ -302,14 +318,9 @@ def _bottleneck(kind: str, target: str, reason: str, severity: str) -> dict[str,
 def _dedupe_bottlenecks(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result = []
     seen = set()
-    severity_order = {"high": 0, "medium": 1, "low": 2}
-    kind_order = {
-        "hidden_orchestration": 0,
-        "broad_function": 1,
-        "process_boundary": 2,
-        "replay_safety": 3,
-        "extraction_candidate": 4,
-    }
+    policy = dict(ARCHITECTURE_SYNTHESIS_POLICY.get("bottlenecks") or {})
+    severity_order = {str(key): int(value) for key, value in dict(policy.get("severity_order") or {}).items()}
+    kind_order = {str(key): int(value) for key, value in dict(policy.get("kind_order") or {}).items()}
     for row in rows:
         target = str(row.get("target") or "")
         if not target or target in seen:
@@ -378,3 +389,11 @@ def _target_path(target: str) -> str:
 def _synthesis_id(facts: dict[str, Any], first_slice: dict[str, Any]) -> str:
     seed = f"{facts.get('root')}:{first_slice.get('name')}:{','.join(first_slice.get('targets', [])[:4])}"
     return "archsyn_" + hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:12]
+
+
+def _default_first_slice_policy() -> dict[str, Any]:
+    return dict(ARCHITECTURE_SYNTHESIS_POLICY.get("default_first_slice") or {})
+
+
+def _bottleneck_rules() -> list[dict[str, Any]]:
+    return [dict(row) for row in list(dict(ARCHITECTURE_SYNTHESIS_POLICY.get("bottlenecks") or {}).get("rules") or []) if isinstance(row, dict)]

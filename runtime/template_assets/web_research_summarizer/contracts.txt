@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class SearchResult:
+    title: str
+    url: str
+    snippet: str = ''
+
+
+@dataclass(frozen=True)
+class Article:
+    title: str
+    url: str
+    text: str
+    snippet: str = ''
+
+
+@dataclass(frozen=True)
+class SummaryItem:
+    title: str
+    url: str
+    summary: str
+
+
+@dataclass(frozen=True)
+class ResearchReport:
+    query: str
+    items: list[SummaryItem]
+    warnings: list[str]

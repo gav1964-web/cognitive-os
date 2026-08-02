@@ -4,6 +4,73 @@ from __future__ import annotations
 
 from typing import Any
 
+from .semantic_target_profiles import semantic_ranking_adjustments
+from .target_quality_policy import nested_policy_tokens, policy_tokens, target_quality_section
+
+
+SPEC_WRITER_POLICY = target_quality_section("spec_writer_ranking")
+DETERMINISTIC_SHAPE_TOKENS = policy_tokens(SPEC_WRITER_POLICY, "deterministic_shape_tokens")
+FRAMEWORK_BOUNDARY_TOKENS = policy_tokens(SPEC_WRITER_POLICY, "framework_boundary_tokens")
+HANDLER_BOUNDARY_TOKENS = policy_tokens(SPEC_WRITER_POLICY, "handler_boundary_tokens")
+REPAIR_CONTROL_SURFACE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "control_surface_path_tokens")
+REPAIR_LLM_HYPOTHESIS_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "llm_hypothesis_symbols"))
+REPAIR_MODULE_VALIDATION_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "module_validation_symbols"))
+REPAIR_GOAL_TO_SPEC_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "goal_to_spec_symbols"))
+REPAIR_ORCHESTRATION_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "orchestration_symbols"))
+REPAIR_GENERATED_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "repair_loop", "generated_path_tokens")
+OPERATIONAL_API_PATH_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "api_path_suffixes")
+OPERATIONAL_API_RUNTIME_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "api_runtime_symbols"))
+OPERATIONAL_DISPATCHER_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "dispatcher_symbols"))
+OPERATIONAL_CONTROL_SYMBOL_CONTAINS_ANY = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "operational_boundary", "control_symbol_contains_any"
+)
+OPERATIONAL_LIFECYCLE_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "lifecycle_symbols"))
+OPERATIONAL_LIFECYCLE_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "lifecycle_suffixes")
+OPERATIONAL_ENVIRONMENT_COUPLING_TOKENS = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "operational_boundary", "environment_coupling_tokens"
+)
+OPERATIONAL_DATA_SHAPE_SYMBOL_TOKENS = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "operational_boundary", "data_shape_symbol_tokens"
+)
+DOMAIN_QUERY_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "query_symbols"))
+DOMAIN_QUERY_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "query_path_tokens")
+DOMAIN_QUERY_SYMBOL_CONTAINS_ANY = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "query_symbol_contains_any")
+DOMAIN_QUERY_MODULE_PATH_TOKEN = str(
+    dict(SPEC_WRITER_POLICY.get("domain_contract") or {}).get("query_module_path_token") or ""
+).lower()
+DOMAIN_QUERY_MODULE_EXCLUDED_SYMBOLS = set(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "query_module_excluded_symbols")
+)
+DOMAIN_WEAK_ACCESSOR_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "weak_accessor_symbols"))
+DOMAIN_STORAGE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "storage_path_tokens")
+DOMAIN_MIDDLEWARE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "middleware_path_tokens")
+REPRESENTATIVE_FLOW_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "flow_tokens")
+REPRESENTATIVE_UTILITY_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "utility_tokens")
+REPRESENTATIVE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "representative_path_tokens")
+REPRESENTATIVE_UTILITY_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "utility_path_tokens")
+AD_HOC_EVALUATOR_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "ad_hoc_evaluator_symbols"))
+AD_HOC_EVALUATOR_PATH_TOKENS = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "representative_slice", "ad_hoc_evaluator_path_tokens"
+)
+EXEC_READY_SYMBOL_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "executable_readiness", "first_slice_symbol_tokens")
+EXEC_READY_SIMPLE_ANNOTATIONS = nested_policy_tokens(SPEC_WRITER_POLICY, "executable_readiness", "simple_input_annotations")
+EXEC_READY_HARD_SYMBOL_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "executable_readiness", "hard_runtime_symbol_tokens")
+EXEC_READY_HARD_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "executable_readiness", "hard_runtime_path_tokens")
+TRIVIAL_HELPER_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "trivial_helper", "symbols"))
+TRIVIAL_HELPER_SYMBOL_CONTAINS_ANY = nested_policy_tokens(SPEC_WRITER_POLICY, "trivial_helper", "symbol_contains_any")
+TRIVIAL_HELPER_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "trivial_helper", "suffixes")
+TRIVIAL_HELPER_SUFFIX_ALLOWED_CONTAINS_ANY = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "trivial_helper", "suffix_allowed_contains_any"
+)
+TRIVIAL_HELPER_PREFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "trivial_helper", "prefixes")
+LIVENESS_PROBE_SYMBOLS = set(policy_tokens(SPEC_WRITER_POLICY, "liveness_probe_symbols"))
+BOOTSTRAP_SUPPORT_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "bootstrap_support", "symbols"))
+BOOTSTRAP_SUPPORT_ARG_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "bootstrap_support", "arg_path_tokens")
+LOW_VALUE_PATH_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "low_value_first_slice", "path_suffixes")
+LOW_VALUE_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "low_value_first_slice", "symbols"))
+MUTATION_LIKE_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "mutation_like_first_slice", "symbols"))
+MUTATION_LIKE_PREFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "mutation_like_first_slice", "prefixes")
+
 
 def name_and_contract_score(source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
     lowered = source.lower()
@@ -11,7 +78,7 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     text = " ".join([lowered, *args]).lower()
     score = 0
     reasons: list[str] = []
-    if any(token in lowered for token in ("parse_", "normalize", "validate", "resolve", "build_", "make_", "create_")):
+    if any(token in lowered for token in DETERMINISTIC_SHAPE_TOKENS):
         score += 16
         reasons.append("deterministic parser/normalizer/validator shape")
     domain_score, domain_reasons = _domain_contract_score(lowered)
@@ -23,6 +90,9 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     representative_score, representative_reasons = _representative_slice_score(lowered)
     score += representative_score
     reasons.extend(representative_reasons)
+    readiness_score, readiness_reasons = _executable_readiness_score(lowered, signature, side_effects)
+    score += readiness_score
+    reasons.extend(readiness_reasons)
     if _is_trivial_helper_source(lowered):
         score -= 30
         reasons.append("small helper is less representative than a flow-level capability")
@@ -41,12 +111,39 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     if "memory_state" in side_effects:
         score -= 35
         reasons.append("explicit memory/global state mutation")
-    if any(token in text for token in ("request", "response", "middleware", "http", "fastapi", "flask")):
+    if any(token in text for token in FRAMEWORK_BOUNDARY_TOKENS):
         score -= 35
         reasons.append("framework request/response boundary, not first reusable core contract")
-    if any(token in lowered for token in ("handler", "middleware", "endpoint")):
+    if any(token in lowered for token in HANDLER_BOUNDARY_TOKENS):
         score -= 20
         reasons.append("handler/middleware boundary is less reusable than a core helper")
+    return score, reasons
+
+
+def _executable_readiness_score(lowered_source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
+    symbol = lowered_source.rsplit(":", 1)[-1]
+    path = lowered_source.split(":", 1)[0]
+    if side_effects:
+        return 0, []
+    if any(token in lowered_source for token in REPRESENTATIVE_FLOW_TOKENS) or any(
+        token in path for token in REPAIR_CONTROL_SURFACE_PATH_TOKENS
+    ):
+        return 0, []
+    args = [arg for arg in list(signature.get("args", []) or []) if isinstance(arg, dict)]
+    annotations = " ".join(str(arg.get("annotation") or "") for arg in args).lower()
+    score = 0
+    reasons: list[str] = []
+    if any(token in symbol for token in EXEC_READY_SYMBOL_TOKENS):
+        score += 10
+        reasons.append("first executable slice has parser/normalizer/builder shape")
+    if args and all(any(token in str(arg.get("annotation") or "").lower() for token in EXEC_READY_SIMPLE_ANNOTATIONS) for arg in args):
+        score += 4
+        reasons.append("inputs look materializable by executable acceptance fixtures")
+    if any(token in symbol or token in annotations for token in EXEC_READY_HARD_SYMBOL_TOKENS) or any(
+        token in path for token in EXEC_READY_HARD_PATH_TOKENS
+    ):
+        score -= 28
+        reasons.append("runtime object boundary is weaker as first executable contract")
     return score, reasons
 
 
@@ -56,22 +153,22 @@ def _repair_loop_contract_score(lowered_source: str) -> tuple[int, list[str]]:
     text = f"{path}:{symbol}"
     score = 0
     reasons: list[str] = []
-    if any(token in text for token in ("auto_dev_agent.py", "module_contract_checker.py", "goal_to_spec.py", "run_all_autofix.py")):
+    if any(token in text for token in REPAIR_CONTROL_SURFACE_PATH_TOKENS):
         score += 18
         reasons.append("source belongs to LLM auto-repair control surface")
-    if symbol in {"send_to_model", "extract_json_from_model_response"}:
+    if symbol in REPAIR_LLM_HYPOTHESIS_SYMBOLS:
         score += 44
         reasons.append("LLM hypothesis boundary is central to repair-attempt contract")
-    if symbol in {"check_single_module_output", "clean_module_output"}:
+    if symbol in REPAIR_MODULE_VALIDATION_SYMBOLS:
         score += 38
         reasons.append("module contract checker is a strong validation boundary")
-    if symbol == "goal_to_spec":
+    if symbol in REPAIR_GOAL_TO_SPEC_SYMBOLS:
         score += 30
         reasons.append("goal-to-spec transform is a useful planning contract boundary")
-    if symbol in {"fix_module_until_success", "regenerate_module"}:
+    if symbol in REPAIR_ORCHESTRATION_SYMBOLS:
         score += 22
         reasons.append("repair orchestration loop is representative but needs bounded subcontracts")
-    if "generated_v" in path or "/generated" in path:
+    if any(token in path for token in REPAIR_GENERATED_PATH_TOKENS):
         score -= 70
         reasons.append("generated project output is evidence, not first source transformation target")
     return score, reasons
@@ -95,22 +192,22 @@ def operational_boundary_score(source: str, signature: dict[str, Any], claims: l
     text = " ".join([lowered, symbol, args, *claims]).lower()
     score = 0
     reasons: list[str] = []
-    if path.endswith(("_api.py", "/api.py")) or symbol in {"request", "send", "serve", "run", "main"}:
+    if path.endswith(OPERATIONAL_API_PATH_SUFFIXES) or symbol in OPERATIONAL_API_RUNTIME_SYMBOLS:
         score -= 25
         reasons.append("API/runtime boundary should not outrank core capability candidates")
-    if symbol in {"handle_request", "handle_async_request"}:
+    if symbol in OPERATIONAL_DISPATCHER_SYMBOLS:
         score -= 40
         reasons.append("request dispatcher boundary is evidence, not first reusable core contract")
-    if any(token in symbol for token in ("reload", "watch", "listen", "dispatch", "route", "emit")):
+    if any(token in symbol for token in OPERATIONAL_CONTROL_SYMBOL_CONTAINS_ANY):
         score -= 25
         reasons.append("operational control function is less reusable as first extraction")
-    if symbol in {"run", "setup", "install", "cancel", "decorator"} or symbol.endswith(("_ctx", "_context")):
+    if symbol in OPERATIONAL_LIFECYCLE_SYMBOLS or symbol.endswith(OPERATIONAL_LIFECYCLE_SUFFIXES):
         score -= 30
         reasons.append("operational lifecycle/mutation wrapper needs a narrower contract target")
-    if any(token in text for token in ("socket", "subprocess", "server", "event loop", "thread", "process")):
+    if any(token in text for token in OPERATIONAL_ENVIRONMENT_COUPLING_TOKENS):
         score -= 15
         reasons.append("runtime environment coupling needs later isolation review")
-    if any(token in symbol for token in ("format", "serialize", "deserialize", "encode", "decode", "canonical")):
+    if any(token in symbol for token in OPERATIONAL_DATA_SHAPE_SYMBOL_TOKENS):
         score += 10
         reasons.append("bounded data-shaping helper is a better extraction target")
     return score, reasons
@@ -121,21 +218,24 @@ def _domain_contract_score(lowered_source: str) -> tuple[int, list[str]]:
     path = lowered_source.split(":", 1)[0]
     score = 0
     reasons: list[str] = []
-    query_symbols = {"search", "where", "filter", "matches", "compile_query", "parse_query"}
-    query_path = any(token in path for token in ("query", "queries.py", "table.py", "database", "db/"))
-    if symbol in query_symbols or (query_path and symbol == "evaluate") or any(token in symbol for token in ("query", "condition", "predicate")):
+    query_path = any(token in path for token in DOMAIN_QUERY_PATH_TOKENS)
+    if (
+        symbol in DOMAIN_QUERY_SYMBOLS
+        or (query_path and symbol == "evaluate")
+        or any(token in symbol for token in DOMAIN_QUERY_SYMBOL_CONTAINS_ANY)
+    ):
         score += 28
         reasons.append("query/condition contract is a strong database first-slice target")
-    if "queries.py" in path and symbol not in {"all", "any", "match"}:
+    if DOMAIN_QUERY_MODULE_PATH_TOKEN in path and symbol not in DOMAIN_QUERY_MODULE_EXCLUDED_SYMBOLS:
         score += 18
         reasons.append("database query module is closer to reusable contract boundary")
-    if symbol == "get":
+    if symbol in DOMAIN_WEAK_ACCESSOR_SYMBOLS:
         score -= 18
         reasons.append("generic accessor is weaker than query/condition contract")
-    if "storages.py" in path or "/storage" in path:
+    if any(token in path for token in DOMAIN_STORAGE_PATH_TOKENS):
         score -= 18
         reasons.append("storage adapter is persistence evidence, not first domain contract")
-    if "middlewares.py" in path:
+    if any(token in path for token in DOMAIN_MIDDLEWARE_PATH_TOKENS):
         score -= 12
         reasons.append("middleware adapter is operational evidence, not first domain contract")
     return score, reasons
@@ -147,166 +247,67 @@ def _representative_slice_score(lowered_source: str) -> tuple[int, list[str]]:
     text = f"{path}:{symbol}"
     score = 0
     reasons: list[str] = []
-    flow_tokens = (
-        "create_window",
-        "setup_page",
-        "plugin_state",
-        "task_engine",
-        "task_run",
-        "trigger_dag",
-        "process_api",
-        "set_event_trigger",
-        "run_consensus",
-        "orchestrator",
-        "group_manager",
-        "a2a_protocol",
-        "agent",
-        "blockwise",
-        "modulegraph",
-        "import_hook",
-        "rebuild_archives",
-        "crawler",
-        "template",
-    )
-    utility_tokens = (
-        "pixmap",
-        "svg",
-        "paint",
-        "layout",
-        "documentation",
-        "json_schema",
-        "python_type",
-        "version",
-        "exists",
-        "helper",
-    )
-    if any(token in text for token in flow_tokens):
+    if any(token in text for token in REPRESENTATIVE_FLOW_TOKENS):
         score += 28
         reasons.append("representative domain flow/lifecycle slice")
-    if any(token in text for token in utility_tokens):
+    if any(token in text for token in REPRESENTATIVE_UTILITY_TOKENS):
         score -= 24
         reasons.append("domain utility/helper is less representative than lifecycle flow")
-    if any(token in path for token in ("/plugins/", "/plugin_registration/", "/task_engine", "/blocks.py", "/modulegraph", "/archive.py")):
+    if any(token in path for token in REPRESENTATIVE_PATH_TOKENS):
         score += 12
         reasons.append("source path belongs to representative domain subsystem")
-    if any(token in path for token in ("/utils/", "/widgets/mixins.py", "/documentation.py")):
+    if any(token in path for token in REPRESENTATIVE_UTILITY_PATH_TOKENS):
         score -= 12
         reasons.append("source path looks like utility/support surface")
-    if _is_ml_inference_source(path, symbol):
-        score += 36
-        reasons.append("ML inference/submission boundary is representative for competition workflow")
-    if _is_protocol_event_boundary(path, symbol):
-        score += 32
-        reasons.append("protocol event/state-machine boundary is representative")
-    if _is_connection_lifecycle_boundary(path, symbol):
-        score += 30
-        reasons.append("connection/proxy lifecycle boundary is representative")
-    if _is_markup_escape_boundary(path, symbol):
-        score += 48
-        reasons.append("markup escaping/sanitization boundary is project-core behavior")
-    if symbol == "evaluate" and any(token in path for token in ("x31.py", "notebook", "competition")):
+    profile_adjustments = semantic_ranking_adjustments(f"{path}:{symbol}")
+    score += int(profile_adjustments["score_delta"])
+    reasons.extend(profile_adjustments["reasons"])
+    if symbol in AD_HOC_EVALUATOR_SYMBOLS and any(token in path for token in AD_HOC_EVALUATOR_PATH_TOKENS):
         score -= 30
         reasons.append("ad-hoc evaluator is less stable than generation/postprocessing contract")
     return score, reasons
 
 
-def _is_ml_inference_source(path: str, symbol: str) -> bool:
-    if symbol in {"generate_response", "postprocess", "build_submission_row", "write_submission"}:
-        return True
-    return any(token in path for token in ("inference", "submission", "predict")) and symbol in {"generate", "predict", "postprocess"}
-
-
 def _is_trivial_helper_source(lowered_source: str) -> bool:
     symbol = lowered_source.rsplit(":", 1)[-1]
-    if symbol in {
-        "capitalize",
-        "casefold",
-        "center",
-        "count",
-        "endswith",
-        "find",
-        "flush",
-        "format",
-        "get",
-        "index",
-        "join",
-        "lower",
-        "lstrip",
-        "match",
-        "removeprefix",
-        "removesuffix",
-        "replace",
-        "rstrip",
-        "split",
-        "startswith",
-        "storage",
-        "strip",
-        "title",
-        "upper",
-        "no_color",
-        "capabilities",
-        "all",
-        "any",
-    }:
+    if symbol in TRIVIAL_HELPER_SYMBOLS:
         return True
-    if any(token in symbol for token in ("cache_key", "build_key", "memcache_key", "get_path_for_link")):
+    if any(token in symbol for token in TRIVIAL_HELPER_SYMBOL_CONTAINS_ANY):
         return True
-    if symbol.endswith(("_path", "_url", "_name", "_version")) and not any(
-        token in symbol for token in ("parse", "build", "resolve", "normalize", "validate")
+    if symbol.endswith(TRIVIAL_HELPER_SUFFIXES) and not any(
+        token in symbol for token in TRIVIAL_HELPER_SUFFIX_ALLOWED_CONTAINS_ANY
     ):
         return True
-    if symbol.startswith(("is_", "has_", "to_", "from_", "get_")):
+    if symbol.startswith(TRIVIAL_HELPER_PREFIXES):
         return True
     return False
 
 
 def _is_liveness_probe_source(lowered_source: str) -> bool:
     symbol = lowered_source.rsplit(":", 1)[-1]
-    return symbol in {"health", "healthcheck", "status", "ping", "ready", "readiness", "live", "liveness"}
+    return symbol in LIVENESS_PROBE_SYMBOLS
 
 
 def _is_bootstrap_support_source(lowered_source: str) -> bool:
     symbol = lowered_source.rsplit(":", 1)[-1]
     path = lowered_source.split(":", 1)[0]
-    if symbol in {"parse_args", "main", "is_ignored", "should_ignore", "ignored", "setup", "configure"}:
+    if symbol in BOOTSTRAP_SUPPORT_SYMBOLS:
         return True
-    if symbol.endswith("_args") and any(token in path for token in ("cli", "main.py", "prompt_lab.py", "map.py")):
+    if symbol.endswith("_args") and any(token in path for token in BOOTSTRAP_SUPPORT_ARG_PATH_TOKENS):
         return True
-    return False
-
-
-def _is_protocol_event_boundary(path: str, symbol: str) -> bool:
-    if symbol in {"next_event", "send", "receive_data", "process_input"}:
-        return any(token in path for token in ("connection", "protocol", "state", "events"))
-    return False
-
-
-def _is_connection_lifecycle_boundary(path: str, symbol: str) -> bool:
-    if symbol.startswith(("_init_", "init_")) and "connection" in symbol:
-        return any(token in path for token in ("connection", "proxy", "transport", "network"))
-    if symbol in {"create_connection", "connect_tcp", "connect_unix_socket", "start_tls"}:
-        return True
-    return False
-
-
-def _is_markup_escape_boundary(path: str, symbol: str) -> bool:
-    if symbol in {"escape", "escape_silent", "striptags", "_escape_inner"}:
-        return any(token in path for token in ("markupsafe", "markup", "escape"))
     return False
 
 
 def _is_low_value_first_slice_source(lowered_source: str) -> bool:
     symbol = lowered_source.rsplit(":", 1)[-1]
     path = lowered_source.split(":", 1)[0]
-    if symbol == "__init__" or path.endswith("/__init__.py"):
+    if symbol in LOW_VALUE_SYMBOLS or path.endswith(LOW_VALUE_PATH_SUFFIXES):
         return True
-    if symbol in {"configure_logging", "setup_logging", "basic_config", "set_loglevel"}:
-        return True
-    return symbol in {"config", "configure", "settings", "setup", "decorator"}
+    return False
 
 
 def _is_mutation_like_first_slice_source(lowered_source: str) -> bool:
     symbol = lowered_source.rsplit(":", 1)[-1]
-    if symbol in {"write", "save", "delete", "remove", "drop", "insert", "update", "commit", "flush", "install", "cancel"}:
+    if symbol in MUTATION_LIKE_SYMBOLS:
         return True
-    return symbol.startswith(("write_", "save_", "delete_", "remove_", "drop_", "insert_", "update_", "install_", "cancel_"))
+    return symbol.startswith(MUTATION_LIKE_PREFIXES)
