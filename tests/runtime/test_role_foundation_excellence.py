@@ -133,6 +133,36 @@ def test_target_quality_recognizes_foundation_holdout_contract_families():
         assert quality["score"] >= 92
 
 
+def test_target_quality_scores_parser_combinator_helper_as_reviewable_contract():
+    target = "pyparsing/helpers.py:one_of"
+
+    quality = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="pure transform candidate",
+    )
+
+    assert quality["status"] == "acceptable"
+    assert quality["score"] >= 95
+    assert "parser_combinator_helper_boundary" in quality["semantic_profile_ids"]
+
+
+def test_target_quality_profiles_sql_lint_fix_parsed_tree_contract():
+    target = "src/sqlfluff/core/linter/linter.py:lint_fix_parsed"
+
+    quality = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="pure transform candidate",
+    )
+
+    assert quality["status"] == "strong"
+    assert quality["score"] >= 98
+    assert "sql_lint_fix_parsed_tree_boundary" in quality["semantic_profile_ids"]
+
+
 def test_target_quality_keeps_response_boundary_acceptable_not_strong():
     target = "app.py:make_response"
 

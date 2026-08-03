@@ -61,6 +61,7 @@ def semantic_target_quality_report(
     profile_adjustments = semantic_score_adjustments(target)
     score += int(profile_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
+    profile_ids = list(profile_adjustments.get("profile_ids") or [])
     profiled_contract_family = bool(profile_adjustments.get("profiled_contract_family"))
     if "pure transform" in reason_text or "deterministic parser" in reason_text:
         score += 8
@@ -120,7 +121,14 @@ def semantic_target_quality_report(
         status = "suspicious"
     else:
         status = "poor"
-    return {"status": status, "target": target, "score": score, "reasons": reasons}
+    return {
+        "status": status,
+        "target": target,
+        "score": score,
+        "reasons": reasons,
+        "semantic_profile_ids": profile_ids,
+        "profiled_contract_family": profiled_contract_family,
+    }
 
 
 def target_quality_report(role_quality: dict[str, Any]) -> dict[str, Any]:

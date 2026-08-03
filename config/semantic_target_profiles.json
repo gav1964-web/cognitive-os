@@ -2325,6 +2325,64 @@
       "failure_modes": ["playwright_missing", "chromium_missing", "render_timeout", "browser_launch_error", "pdf_generation_error"]
     },
     {
+      "id": "parser_combinator_helper_boundary",
+      "symbols": ["one_of", "oneOf", "infix_notation", "located_expr"],
+      "symbol_contains_any": ["one_of", "infix", "notation"],
+      "path_contains_any": ["pyparsing", "parser", "helpers"],
+      "score_bonus": 34,
+      "ranking_bonus": 34,
+      "reason": "parser combinator helper is a bounded grammar-construction contract",
+      "ranking_reason": "parser combinator helper is representative parsing behavior",
+      "contract_family": "parser_combinator_helper_boundary",
+      "input_contract": {
+        "grammar_terms": "GrammarTerms(strings|ParserElements, separator_policy?, case_policy?)",
+        "parse_context": "ParserConstructionContext(whitespace?, results_name?, parse_action_policy?)"
+      },
+      "output_contract": {
+        "parser_element": "ParserElementSpec(expression, match_policy, diagnostics?)",
+        "failure_packet": "ParserCombinatorFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "parser construction must document parse-action and global whitespace side effects when present"
+      },
+      "validation_gates": [
+        "literal alternatives, parser element alternatives and empty alternatives are covered",
+        "case sensitivity and longest-match behavior are asserted",
+        "invalid grammar terms return typed diagnostics or documented exceptions"
+      ],
+      "failure_modes": ["empty_terms", "invalid_term_type", "ambiguous_ordering", "parse_action_error"]
+    },
+    {
+      "id": "sql_lint_fix_parsed_tree_boundary",
+      "symbols": ["lint_fix_parsed"],
+      "symbol_contains_any": ["lint_fix", "fix_parsed"],
+      "path_contains_any": ["sqlfluff", "linter", "parser"],
+      "score_bonus": 8,
+      "ranking_bonus": 28,
+      "reason": "SQL parsed-tree lint/fix pass is a bounded rule-engine contract",
+      "ranking_reason": "SQL lint/fix loop is representative parser-linter behavior",
+      "contract_family": "sql_lint_fix_parsed_tree_boundary",
+      "input_contract": {
+        "parsed_tree": "SqlParsedTree(root_segment, source_fixes?, templated_file?)",
+        "lint_context": "SqlLintContext(config, rule_pack, fix_policy, filename?, formatter?)"
+      },
+      "output_contract": {
+        "lint_result": "SqlLintFixResult(tree, lint_errors, ignore_mask?, rule_timings)",
+        "failure_packet": "SqlLintFixFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "tree mutation/fix loops must be asserted through before/after parse-tree snapshots"
+      },
+      "validation_gates": [
+        "lint-only and fix-enabled passes are covered on parsed SQL fixtures",
+        "runaway loop, ignore mask and rule timing behavior are asserted",
+        "rules that add new violations do not corrupt initial lint error reporting"
+      ],
+      "failure_modes": ["runaway_fix_loop", "invalid_rule_pack", "templating_mismatch", "formatter_error"]
+    },
+    {
       "id": "generic_web_response_facade",
       "exclude_if_profile_ids": ["web_framework_response_factory"],
       "symbols": ["make_response", "response_class", "create_response"],

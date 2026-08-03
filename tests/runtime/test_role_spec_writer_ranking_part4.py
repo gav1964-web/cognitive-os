@@ -320,7 +320,7 @@ def test_spec_writer_keeps_executable_ready_target_over_lower_scored_method():
     assert spec["extraction_contract"]["candidate"] == "src/click/_textwrap.py:_wrap_chunks"
 
 
-def test_spec_writer_semantic_review_allows_domain_central_helper_with_constraints():
+def test_spec_writer_profiles_domain_central_parser_helper_contract():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",
         "role": "architect",
@@ -354,5 +354,6 @@ def test_spec_writer_semantic_review_allows_domain_central_helper_with_constrain
     contract = spec["extraction_contract"]
 
     assert contract["candidate"] == "pyparsing/helpers.py:one_of"
-    assert contract["semantic_quality"]["status"] == "suspicious"
-    assert contract["semantic_review"]["status"] == "approved_with_constraints"
+    assert contract["semantic_quality"]["status"] == "acceptable"
+    assert contract["contract_family"] == "parser_combinator_helper_boundary"
+    assert "semantic_review" not in contract
