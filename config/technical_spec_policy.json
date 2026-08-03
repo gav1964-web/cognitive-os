@@ -80,6 +80,22 @@
     "enforce_candidate_within_targets": true,
     "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
   },
+  "semantic_review_override": {
+    "enabled": true,
+    "min_candidate_score": 60,
+    "allowed_statuses": ["suspicious"],
+    "required_reason_tokens": [
+      "domain utility/helper",
+      "inputs look materializable by executable acceptance fixtures"
+    ],
+    "required_candidate_in_first_slice": true,
+    "required_checks": [
+      "source_evidence_bound",
+      "io_contract_bound",
+      "no_side_effects"
+    ],
+    "verdict": "approved_with_constraints"
+  },
   "architecture_shape_score": {
     "positive_source_tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
     "positive_source_bonus": 35,

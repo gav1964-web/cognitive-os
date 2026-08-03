@@ -228,6 +228,10 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
     weak_semantic_status = str(quality.get("status") or "") in {"poor", "suspicious"}
     runtime_boundary_needs_review = "runtime/api boundary target needs semantic review" in quality_reasons
     if not contract.get("contract_family") and (weak_semantic_status or runtime_boundary_needs_review):
+        review = _semantic_review_override(contract, quality, preferred_targets or [])
+        if review.get("status") == "approved_with_constraints":
+            contract["semantic_review"] = review
+            return contract
         return {
             "status": "blocked_no_safe_candidate",
             "candidate": None,
@@ -248,6 +252,37 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
             ],
         }
     return contract
+
+def _semantic_review_override(contract: dict[str, Any], quality: dict[str, Any], preferred_targets: list[Any]) -> dict[str, Any]:
+    policy = dict(TECHNICAL_SPEC_POLICY.get("semantic_review_override") or {})
+    if not policy.get("enabled"):
+        return {"status": "not_applicable"}
+    checks = _semantic_review_checks(contract, quality, preferred_targets, policy)
+    verdict = str(policy.get("verdict") or "approved_with_constraints")
+    return {
+        "status": verdict if all(checks.values()) else "needs_human_review",
+        "checks": checks,
+        "policy": "technical_spec_policy.semantic_review_override",
+        "principle": "suspicious helper targets may proceed only when first-slice evidence proves a bounded executable contract",
+    }
+
+
+def _semantic_review_checks(
+    contract: dict[str, Any], quality: dict[str, Any], preferred_targets: list[Any], policy: dict[str, Any]
+) -> dict[str, bool]:
+    candidate = str(contract.get("candidate") or "")
+    reason_text = " ".join([str(contract.get("selection_reason") or ""), *[str(r) for r in quality.get("reasons", [])]]).lower()
+    preferred = {_normalize_source_ref(str(item)) for item in preferred_targets if item}
+    required = [str(item).lower() for item in list(policy.get("required_reason_tokens") or []) if item]
+    return {
+        "status_allowed": str(quality.get("status") or "") in set(policy.get("allowed_statuses") or []),
+        "candidate_score_high_enough": int(contract.get("candidate_score") or 0) >= int(policy.get("min_candidate_score") or 0),
+        "candidate_in_first_slice": not policy.get("required_candidate_in_first_slice", True) or candidate in preferred,
+        "source_evidence_bound": bool(contract.get("evidence_source") == candidate),
+        "io_contract_bound": bool(contract.get("input_contract") and contract.get("output_contract")),
+        "no_side_effects": not bool(dict(contract.get("side_effects") or {}).get("declared")),
+        "required_reason_tokens_present": all(token in reason_text for token in required),
+    }
 
 def _domain_extraction_contract(source: str) -> dict[str, Any]:
     profile_contract = contract_for_target(source)

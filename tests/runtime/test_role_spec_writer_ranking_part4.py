@@ -318,3 +318,41 @@ def test_spec_writer_keeps_executable_ready_target_over_lower_scored_method():
     spec = _run_spec_writer(adr)
 
     assert spec["extraction_contract"]["candidate"] == "src/click/_textwrap.py:_wrap_chunks"
+
+
+def test_spec_writer_semantic_review_allows_domain_central_helper_with_constraints():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Allow a pyparsing-style helper only with explicit semantic review evidence.",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable parser-helper capability extraction spec."],
+            "files_or_symbols": ["pyparsing/helpers.py:one_of"],
+            "first_slice": {
+                "name": "first_slice_one_of",
+                "targets": ["pyparsing/helpers.py:one_of"],
+                "steps": ["Confirm bounded parser helper contract."],
+            },
+        },
+        "traceability": [
+            {"source": "pyparsing/helpers.py:one_of", "requirement": "Capability candidate requires TechnicalSpec."}
+        ],
+        "source_context": {
+            "pyparsing/helpers.py:one_of": {
+                "kind": "broad_function",
+                "signature": {
+                    "args": [{"name": "strs", "annotation": "list[str]"}, {"name": "caseless", "annotation": "bool"}],
+                    "returns": "ParserElement",
+                },
+                "snippet": {"text": "def one_of(strs, caseless=False): return ParserElement()"},
+            }
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+    contract = spec["extraction_contract"]
+
+    assert contract["candidate"] == "pyparsing/helpers.py:one_of"
+    assert contract["semantic_quality"]["status"] == "suspicious"
+    assert contract["semantic_review"]["status"] == "approved_with_constraints"

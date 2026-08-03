@@ -93,6 +93,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
         patch_synthesis = dict(patch.get("patch_synthesis") or {})
         after = _git_porcelain(project_dir)
         ok = result.get("status") == "ok" and executable.get("status") == "passed" and before == after
+        boundary_track = _boundary_track(acceptance)
         return {
             "project": project_dir.name,
             "project_dir": project_dir.as_posix(),
@@ -104,6 +105,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
             "acceptance_signal": acceptance.get("signal_strength"),
             "acceptance_skipped_reasons": acceptance.get("skipped_reason_counts"),
             "acceptance_skipped_targets": acceptance.get("skipped_targets"),
+            "boundary_track": boundary_track,
             "patch_synthesis": patch_synthesis.get("status"),
             "patch_reason": patch_synthesis.get("reason"),
             "target": str(dict(plan.get("implementation_target", {})).get("candidate") or ""),
@@ -133,8 +135,36 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "patch_skipped": sum(case.get("patch_synthesis") == "skipped" for case in cases),
         "acceptance_callable": sum(case.get("acceptance_signal") == "executable_callable" for case in cases),
         "acceptance_meta_only": sum(case.get("acceptance_signal") == "meta_only" for case in cases),
+        "boundary_tracks": _counts(str(case.get("boundary_track") or "unknown") for case in cases),
         "source_code_changes": sum(bool(case.get("source_code_changes")) for case in cases),
     }
+
+
+def _boundary_track(acceptance: dict[str, Any]) -> str:
+    if acceptance.get("signal_strength") == "executable_callable":
+        return "pure_python_callable"
+    reasons = dict(acceptance.get("skipped_reason_counts") or {})
+    details = " ".join(
+        str(item.get("detail") or item.get("target") or "")
+        for item in list(acceptance.get("skipped_targets") or [])
+        if isinstance(item, dict)
+    ).lower()
+    if any(token in details for token in ("_rust", "_imaging", "crypto.low_level", "zmq.backend")):
+        return "native_extension_boundary"
+    if reasons.get("import_failed_missing_module") or reasons.get("import_failed_import_error"):
+        return "optional_dependency_boundary"
+    if reasons.get("positive_sample_execution_failed") or reasons.get("method_target_needs_instance_fixture"):
+        return "fixture_or_runtime_shape_boundary"
+    return "meta_only_boundary" if acceptance.get("signal_strength") == "meta_only" else "unknown"
+
+
+def _counts(values: Any) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for value in values:
+        if not value:
+            continue
+        result[value] = result.get(value, 0) + 1
+    return dict(sorted(result.items()))
 
 
 def _read_json(path: object) -> dict[str, Any]:

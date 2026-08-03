@@ -1,4 +1,4 @@
-from tools.github_executor_probe import _summary
+from tools.github_executor_probe import _boundary_track, _summary
 from tools.github_implementer_probe import _quality_score
 
 
@@ -9,6 +9,7 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
             "executor_status": "ok",
             "executable_acceptance": "passed",
             "acceptance_signal": "executable_callable",
+            "boundary_track": "pure_python_callable",
             "patch_synthesis": "prepared",
             "source_code_changes": False,
         },
@@ -17,6 +18,7 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
             "executor_status": "needs_review",
             "executable_acceptance": "failed",
             "acceptance_signal": "meta_only",
+            "boundary_track": "optional_dependency_boundary",
             "patch_synthesis": "skipped",
             "source_code_changes": True,
         },
@@ -33,8 +35,25 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
         "patch_skipped": 1,
         "acceptance_callable": 1,
         "acceptance_meta_only": 1,
+        "boundary_tracks": {"optional_dependency_boundary": 1, "pure_python_callable": 1, "unknown": 1},
         "source_code_changes": 1,
     }
+
+
+def test_boundary_track_classifies_native_optional_and_fixture_boundaries() -> None:
+    assert _boundary_track({"signal_strength": "executable_callable"}) == "pure_python_callable"
+    assert (
+        _boundary_track(
+            {
+                "signal_strength": "meta_only",
+                "skipped_reason_counts": {"import_failed_import_error": 1},
+                "skipped_targets": [{"detail": "cryptography.hazmat.bindings._rust"}],
+            }
+        )
+        == "native_extension_boundary"
+    )
+    assert _boundary_track({"signal_strength": "meta_only", "skipped_reason_counts": {"import_failed_missing_module": 1}}) == "optional_dependency_boundary"
+    assert _boundary_track({"signal_strength": "meta_only", "skipped_reason_counts": {"positive_sample_execution_failed": 1}}) == "fixture_or_runtime_shape_boundary"
 
 
 def test_implementer_probe_accepts_zero_arg_input_contract() -> None:

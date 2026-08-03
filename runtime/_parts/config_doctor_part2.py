@@ -177,6 +177,10 @@ def _check_technical_spec_policy(catalogs: dict[str, Any]) -> _Check:
     for field_name in ("scan_limit", "strong_semantic_delta", "generic_semantic_delta"):
         if field_name not in rerank:
             check.errors.append(f"technical_spec_policy_missing:semantic_rerank.{field_name}")
+    review = dict(policy.get("semantic_review_override") or {})
+    for field_name in ("enabled", "min_candidate_score", "allowed_statuses", "required_reason_tokens", "required_checks"):
+        if field_name not in review:
+            check.errors.append(f"technical_spec_policy_missing:semantic_review_override.{field_name}")
     shape = dict(policy.get("architecture_shape_score") or {})
     if not shape.get("positive_source_tokens") or not shape.get("negative_source_tokens"):
         check.errors.append("technical_spec_policy_missing:architecture_shape_score.tokens")
