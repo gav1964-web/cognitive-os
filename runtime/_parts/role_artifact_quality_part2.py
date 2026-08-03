@@ -282,7 +282,9 @@ def _flatten_quality_text(value: object, *, key_path: tuple[str, ...] = ()) -> s
 
 def _source_text_key_path(key_path: tuple[str, ...]) -> bool:
     lowered = tuple(item.lower() for item in key_path)
-    if "source_context" in lowered or "source_evidence" in lowered:
+    if "source_context" in lowered:
+        return True
+    if "source_evidence" in lowered:
         return any(item in {"snippet", "text"} for item in lowered)
     return False
 

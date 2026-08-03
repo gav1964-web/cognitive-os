@@ -45,6 +45,189 @@
   },
   "records": [
     {
+      "rule_id": "native_extension_bridge",
+      "record_type": "project_archetype_rule",
+      "priority": 110,
+      "archetype": "native_extension_bridge",
+      "label": "Python native-extension bridge",
+      "match": {
+        "project_name_contains_any": [
+          "maturin",
+          "setuptools-rust",
+          "pydantic-core",
+          "orjson"
+        ],
+        "text_contains_any": [
+          "cargo.toml",
+          "pyo3",
+          "rust",
+          "extension module",
+          "interpreter metadata",
+          "bootstrap"
+        ],
+        "required_contains_any": [
+          "rust",
+          "cargo.toml"
+        ],
+        "min_score": 60
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "extraction",
+          "process_boundary"
+        ],
+        "primary_target_prefer": [
+          "bootstrap",
+          "get_interpreter_metadata",
+          "__main__",
+          "setup.py",
+          "build"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is the Python-facing build/import boundary around {target}, where interpreter metadata, backend configuration, native artifacts, and compiler failures need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Python package entrypoints and build/bootstrap code are separated from native backend execution.",
+        "Interpreter tags, platform metadata, and native artifact manifests are explicit contracts.",
+        "Compiler/Cargo execution is isolated behind fakeable process adapters for default tests.",
+        "Native-only implementations are blocked for Python foundation unless a Python-facing wrapper or bootstrap target exists."
+      ],
+      "first_slice": {
+        "name": "native_extension_bootstrap_slice",
+        "goal": "Stabilize one Python-facing native-extension bootstrap path without compiling native code in default tests.",
+        "target_sources": [
+          "central",
+          "broad",
+          "extraction",
+          "process_boundary"
+        ],
+        "targets_prefer": [
+          "bootstrap",
+          "get_interpreter_metadata",
+          "__main__",
+          "setup.py",
+          "build"
+        ],
+        "steps": [
+          "Define NativeBuildRequest, InterpreterMetadata, NativeArtifactManifest, and NativeBootstrapFailure contracts.",
+          "Separate Python wrapper/bootstrap behavior from Cargo/C compiler execution.",
+          "Represent missing interpreter, invalid backend config, and compiler failure as typed evidence.",
+          "Verify metadata extraction, missing backend config, fake compiler failure, and artifact manifest shape."
+        ]
+      },
+      "defer": [
+        "Do not require compiling Rust/C code for the first Python foundation handoff.",
+        "Do not infer native ABI behavior from Python tests when no Python-facing implementation exists."
+      ],
+      "verification_extra": "Use fake compiler/backend fixtures and tiny metadata examples; live native builds require an explicit integration profile.",
+      "scenario_summary": [
+        "Expose a Python package or build entrypoint for a native extension.",
+        "Collect interpreter, platform, and backend metadata.",
+        "Delegate native compilation/import to an isolated adapter.",
+        "Return artifact metadata or typed bootstrap failures."
+      ],
+      "input_summary": [
+        "project root",
+        "Python interpreter",
+        "Cargo/C build configuration",
+        "platform and environment metadata"
+      ],
+      "output_summary": [
+        "native artifact manifest",
+        "interpreter metadata",
+        "build diagnostics",
+        "typed bootstrap failures"
+      ]
+    },
+    {
+      "rule_id": "plugin_configurable_workflow_platform",
+      "record_type": "project_archetype_rule",
+      "priority": 108,
+      "archetype": "plugin_configurable_workflow_platform",
+      "label": "plugin-configurable workflow platform",
+      "match": {
+        "text_contains_any": [
+          "plugin",
+          "local_settings",
+          "providers_manager",
+          "policy",
+          "settings"
+        ],
+        "required_contains_any": [
+          "plugin",
+          "settings"
+        ],
+        "min_score": 60
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "broad",
+          "extraction",
+          "bottlenecks"
+        ],
+        "primary_target_prefer": [
+          "make_plugin_from_local_settings",
+          "providers_manager",
+          "get_custom_secret_backend",
+          "create_default_config_parser"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is extension/config loading around {target}, where settings modules, plugin manager mutation, hook binding, and configuration failures need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Configuration discovery, settings import, plugin registration, and hook binding are separate steps.",
+        "Plugin manager mutation is represented as before/after registry state.",
+        "Import/configuration failures return typed evidence before scheduler/runtime behavior is touched.",
+        "Workflow execution remains downstream of extension-loading contracts."
+      ],
+      "first_slice": {
+        "name": "plugin_settings_registration_slice",
+        "goal": "Stabilize one settings-module to plugin-registration boundary before changing workflow runtime behavior.",
+        "target_sources": [
+          "central",
+          "broad",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "make_plugin_from_local_settings",
+          "providers_manager",
+          "get_custom_secret_backend",
+          "create_default_config_parser"
+        ],
+        "steps": [
+          "Define SettingsModule, PluginManagerState, PluginRegistrationResult, and PluginSettingsFailure contracts.",
+          "Separate settings import/name discovery from plugin registration mutation.",
+          "Record duplicate, missing, and invalid hook outcomes as structured evidence.",
+          "Verify valid settings, missing plugin, duplicate registration, and import failure cases."
+        ]
+      },
+      "defer": [
+        "Do not change scheduler/task execution before extension-loading contracts are stable.",
+        "Do not treat plugin cleanup or ORM configuration as the first reusable slice when settings registration exists."
+      ],
+      "verification_extra": "Use fake settings modules and fake plugin manager state; do not start scheduler or database services for first-slice tests.",
+      "scenario_summary": [
+        "Load configuration or settings modules.",
+        "Register plugins or providers into an extension manager.",
+        "Bind hooks, policies, or provider capabilities.",
+        "Return registry state or structured extension-loading errors."
+      ],
+      "input_summary": [
+        "settings module",
+        "plugin manager",
+        "provider configuration",
+        "hook policy"
+      ],
+      "output_summary": [
+        "plugin registration result",
+        "extension registry state",
+        "configuration diagnostics",
+        "typed plugin-loading failures"
+      ]
+    },
+    {
       "rule_id": "ml_competition_inference_script",
       "record_type": "project_archetype_rule",
       "priority": 93,

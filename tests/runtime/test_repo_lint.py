@@ -26,3 +26,14 @@ def test_repo_lint_ignores_machine_artifacts(tmp_path: Path):
     artifact.write_text("\n".join(["x = 1"] * 999), encoding="utf-8")
 
     assert lint_repository(tmp_path) == []
+
+
+def test_repo_lint_does_not_recurse_into_artifact_subtrees(tmp_path: Path):
+    artifact = tmp_path / "artifacts" / "github" / "src" / "repo" / "pkg"
+    artifact.mkdir(parents=True)
+    (artifact / "large.py").write_text("\n".join(["x = 1"] * 999), encoding="utf-8")
+    source = tmp_path / "runtime" / "small.py"
+    source.parent.mkdir()
+    source.write_text("x = 1\n", encoding="utf-8")
+
+    assert lint_repository(tmp_path) == []

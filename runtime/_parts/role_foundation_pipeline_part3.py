@@ -48,8 +48,90 @@ def _clear_named_package_candidate(project_dir: Path, rel_path: str, best_score:
         normalized_project
         and normalized_candidate in project_aliases
         and best_score >= 35
-        and best_score - second_score >= 6
     )
+
+def _project_aliases(project_dir: Path) -> set[str]:
+    normalized = project_dir.name.lower().replace("-", "_")
+    aliases = {normalized}
+    if "__" in normalized:
+        owner, repo = normalized.rsplit("__", 1)
+        aliases.add(owner)
+        aliases.add(repo)
+    aliases.update(alias.replace("_", "") for alias in list(aliases))
+    return aliases
+
+def _frontend_python_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not any(str(row.get("path") or "").split("/", 1)[0].lower() == "packages" for row in candidates):
+        return None
+    aliases = _project_aliases(project_dir)
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        first = path.split("/", 1)[0].lower().replace("-", "_")
+        if first in aliases and int(row.get("python_files") or 0) >= 8 and int(row.get("score") or 0) >= 70:
+            if (project_dir / path).is_dir():
+                return dict(row)
+    return None
+
+def _application_python_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    aliases = _project_aliases(project_dir)
+    tooling = {"pylint", "script", "scripts", "tools", "tests", "test", "docs", "dev"}
+    has_tooling = any(str(row.get("path") or "").split("/", 1)[0].lower() in tooling for row in candidates)
+    if not has_tooling:
+        return None
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        first = path.split("/", 1)[0].lower().replace("-", "_")
+        if first in aliases and int(row.get("python_files") or 0) >= 40 and int(row.get("score") or 0) >= 45:
+            if (project_dir / path).is_dir():
+                return dict(row)
+    return None
+
+def _monorepo_python_modules_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        if path.lower() not in {"python", "python_modules", "py"}:
+            continue
+        if int(row.get("score") or 0) >= 80 and int(row.get("python_files") or 0) >= 40:
+            if (project_dir / path).is_dir():
+                return dict(row)
+    return None
+
+def _aliased_core_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if len(candidates) < 2:
+        return None
+    best = candidates[0]
+    second = candidates[1]
+    path = str(best.get("path") or "").replace("\\", "/").strip("/")
+    first = path.split("/", 1)[0].lower().replace("-", "_")
+    aliases = _project_aliases(project_dir)
+    has_alias = any(first == f"{alias}_core" or first == f"{alias}_sdk" for alias in aliases)
+    if not has_alias:
+        return None
+    if int(best.get("score") or 0) < 35 or int(best.get("python_files") or 0) < 40:
+        return None
+    if int(best.get("score") or 0) - int(second.get("score") or 0) < 10:
+        return None
+    if _disfavored_scope_root(path) or not (project_dir / path).is_dir():
+        return None
+    return dict(best)
+
+def _library_module_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if len(candidates) < 2:
+        return None
+    best = candidates[0]
+    second = candidates[1]
+    path = str(best.get("path") or "").replace("\\", "/").strip("/")
+    if str(best.get("kind") or "") != "python_project_candidate":
+        return None
+    if int(best.get("score") or 0) < 80 or int(best.get("python_files") or 0) < 20:
+        return None
+    if int(best.get("score") or 0) - int(second.get("score") or 0) < 8:
+        return None
+    if _disfavored_scope_root(path) or not (project_dir / path).is_dir():
+        return None
+    if any(int(row.get("js_ts_files") or 0) > 0 for row in candidates[:4]):
+        return None
+    return dict(best)
 
 def _scope_path_score(rel_path: str, *, root_name: str, parent_name: str) -> int:
     lowered = rel_path.replace("\\", "/").lower().strip("/")

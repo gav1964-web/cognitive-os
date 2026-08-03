@@ -320,3 +320,32 @@ def test_semantic_target_quality_accepts_profiled_asgi_runtime_wrapper():
     assert report["status"] == "strong"
     assert report["score"] >= 92
     assert "ASGI app wrapper" in " ".join(report["reasons"])
+
+
+def test_semantic_target_quality_caps_unprofiled_generic_library_contracts():
+    target = "project/core/parser.py:parse_unknown_record"
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="deterministic parser/normalizer/validator shape",
+    )
+
+    assert report["status"] == "acceptable"
+    assert report["score"] == 84
+    assert "unprofiled generic library contract" in " ".join(report["reasons"])
+
+
+def test_semantic_target_quality_caps_unprofiled_shape_only_strong_scores():
+    target = "src/worker/runtime.py:build_unknown_tracer"
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="deterministic parser/normalizer/validator shape",
+    )
+
+    assert report["status"] == "acceptable"
+    assert report["score"] == 84
+    assert "shape alone" in " ".join(report["reasons"])
+

@@ -80,6 +80,83 @@ def test_auto_scope_selects_repo_named_package_with_high_confidence(tmp_path):
     assert decision["source"] == "auto_safe_scope_selector"
 
 
+def test_auto_scope_selects_high_score_repo_named_package_on_tie(tmp_path):
+    project = tmp_path / "plotly__dash"
+    (project / "dash").mkdir(parents=True)
+    (project / "components").mkdir()
+    scope_report = {
+        "candidate_roots": [
+            {"path": "dash", "score": 110, "kind": "mixed_python_frontend_candidate"},
+            {"path": "components", "score": 110, "kind": "mixed_python_frontend_candidate"},
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope_report)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_relative_path"] == "dash"
+    assert decision["score_gap_to_next"] == 0
+
+
+def test_auto_scope_selects_native_python_package_over_examples(tmp_path):
+    project = tmp_path / "PyO3__setuptools-rust"
+    package = project / "setuptools_rust"
+    examples = project / "examples"
+    package.mkdir(parents=True)
+    examples.mkdir()
+    (project / "pyproject.toml").write_text("[project]\nname='setuptools-rust'\n", encoding="utf-8")
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    scope_report = {
+        "candidate_roots": [
+            {"path": "examples", "score": 80, "kind": "python_project_candidate"},
+            {"path": "setuptools_rust", "score": 20, "kind": "python_project_candidate"},
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope_report)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_relative_path"] == "setuptools_rust"
+
+
+def test_auto_scope_selects_python_facing_package_in_frontend_monorepo(tmp_path):
+    project = tmp_path / "jupyterlab__jupyterlab"
+    (project / "packages").mkdir(parents=True)
+    (project / "jupyterlab").mkdir()
+    scope_report = {
+        "candidate_roots": [
+            {"path": "packages", "score": 112, "kind": "mixed_python_frontend_candidate", "python_files": 6},
+            {"path": "jupyterlab", "score": 104, "kind": "mixed_python_frontend_candidate", "python_files": 44},
+            {"path": "galata", "score": 80, "kind": "frontend_or_extension_candidate", "python_files": 0},
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope_report)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_relative_path"] == "jupyterlab"
+    assert decision["source"] == "auto_python_facing_scope_selector"
+
+
+def test_auto_scope_selects_application_package_over_tooling_package(tmp_path):
+    project = tmp_path / "home-assistant__core"
+    (project / "pylint").mkdir(parents=True)
+    (project / "homeassistant").mkdir()
+    scope_report = {
+        "candidate_roots": [
+            {"path": "pylint", "score": 60, "kind": "python_project_candidate", "python_files": 66},
+            {"path": "homeassistant", "score": 50, "kind": "python_project_candidate", "python_files": 9849},
+            {"path": "tests", "score": 21, "kind": "python_project_candidate", "python_files": 8067},
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope_report)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_relative_path"] == "homeassistant"
+    assert decision["source"] == "auto_application_package_scope_selector"
+
+
 def test_role_foundation_artifact_paths_do_not_collide():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
 

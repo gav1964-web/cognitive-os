@@ -142,6 +142,146 @@ def test_semantic_target_profiles_cover_github20_foundation_gap_contracts():
         assert contract["failure_modes"]
 
 
+def test_semantic_target_profiles_cover_unseen_spec_writer_contract_gaps():
+    cases = {
+        "frozenlist/__init__.py:__init__": "mutable_container_initialization_boundary",
+        "multidict/_multidict_py.py:__setitem__": "mutable_mapping_assignment_boundary",
+        "contrib/scrape-ec2-sizes.py:parse": "scraped_table_parser_boundary",
+        "lib/yaml/parser.py:parse_flow_mapping_empty_value": "parser_state_transition_boundary",
+        "gunicorn/workers/base.py:init_process": "process_worker_lifecycle_boundary",
+        "falcon/asgi/app.py:__call__": "asgi_application_call_boundary",
+        "src/quart/blueprints.py:register": "web_route_registration_boundary",
+        "sanic/app.py:url_for": "web_url_generation_boundary",
+        "packages/cfnresponse/cfnresponse.py:send": "cloudformation_response_send_boundary",
+        "litestar/cli/_utils.py:_generate_self_signed_cert": "self_signed_certificate_generation_boundary",
+        "src/hpack/hpack.py:_decode_literal": "hpack_literal_decode_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+
+
+def test_semantic_target_profiles_cover_native_frontend_ml_stress_gaps():
+    cases = {
+        "setuptools_ext.py:add_rust_extension": "native_extension_bootstrap_boundary",
+        "__init__.py:_get_sys_executable": "native_extension_bootstrap_boundary",
+        "python/feast/api/registry/rest/data_sources.py:get_data_source_router": "web_router_factory_boundary",
+        "assistant/providers/claude_code.py:astream": "async_provider_stream_boundary",
+        "psycopg/psycopg/connection.py:connect": "database_connection_open_boundary",
+        "src/airflow/policies.py:make_plugin_from_local_settings": "plugin_settings_registration_boundary",
+        "src/lxml/html/soupparser.py:_init_node_converters": "converter_registry_initialization_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert adjustments["profiled_contract_family"] is True
+
+
+def test_semantic_target_profiles_cover_blind_redteam_domain_gaps():
+    cases = {
+        "ansible/_internal/_ansiballz/_wrapper.py:_ansiballz_main": "self_extracting_runtime_wrapper_boundary",
+        "conan/api/subapi/workspace.py:_parse_module": "workspace_module_parser_boundary",
+        "src/cryptography/hazmat/asn1/asn1.py:_normalize_field_type": "asn1_schema_field_normalization_boundary",
+        "pyvista/core/utilities/fileio.py:_read_grdecl": "scientific_mesh_file_reader_boundary",
+        "rpm/build.py:srcfilter": "packaging_source_filter_boundary",
+        "sympy/core/mul.py:_eval_subs": "symbolic_algebra_substitution_boundary",
+        "domains/cpp/__init__.py:_resolve_xref_inner": "documentation_xref_resolution_boundary",
+        "upgrade_extension.py:update_extension": "extension_upgrade_workflow_boundary",
+        "celery/app/trace.py:build_tracer": "task_trace_builder_boundary",
+        "src/click/core.py:_parse_decls": "cli_declaration_parser_boundary",
+        "src/requests/sessions.py:resolve_redirects": "http_redirect_resolution_boundary",
+        "src/_pytest/_py/path.py:make_numbered_dir": "numbered_temp_dir_allocation_boundary",
+        "src/marshmallow/schema.py:_deserialize": "schema_deserialization_boundary",
+        "typer/rich_utils.py:rich_format_help": "terminal_help_formatting_boundary",
+        "dev/clint/src/clint/linter.py:lint_file": "lint_file_analysis_boundary",
+        "src/werkzeug/serving.py:run_wsgi": "wsgi_serving_lifecycle_boundary",
+        "bootstrap.py:_async_resolve_domains_and_preload": "domain_preload_bootstrap_boundary",
+        "yarl/_url.py:build": "url_builder_normalization_boundary",
+        "channels/auth.py:login": "session_auth_login_boundary",
+        "uvloop/__init__.py:__getattr__": "native_module_api_facade_boundary",
+        "numba/core/analysis.py:dead_branch_prune": "compiler_cfg_pruning_boundary",
+        "bandit/formatters/custom.py:report": "security_scan_report_formatting_boundary",
+        "tornado/template.py:_parse": "template_parser_boundary",
+        "_src/jaxpr_util.py:jaxpr_to_html": "jaxpr_html_export_boundary",
+        "zstandard/backend_cffi.py:train_dictionary": "compression_dictionary_training_boundary",
+        "rustworkx/visualization/matplotlib.py:draw_edge_labels": "graph_edge_label_rendering_boundary",
+        "client/commands/analyze.py:create_analyze_arguments": "cli_analysis_argument_schema_boundary",
+        "pyright-internal/src/typeServer/protocol/generate_json.py:_parse_enums": "typescript_protocol_enum_parser_boundary",
+        "src/msgspec/_utils.py:get_class_annotations": "python_type_annotation_extraction_boundary",
+        "src/apscheduler/datastores/mongodb.py:acquire_jobs": "scheduled_job_acquisition_boundary",
+        "limits/aio/storage/memcached/emcache.py:incr": "rate_limit_counter_increment_boundary",
+        "arrow/arrow.py:dehumanize": "humanized_datetime_parse_boundary",
+        "bottle.py:add": "web_route_mount_registration_boundary",
+        "authlib/jose/rfc7516/jwe.py:serialize_json": "jose_json_serialization_boundary",
+        "boltons/debugutils.py:wrap_trace": "debug_trace_wrapper_boundary",
+        "src/webargs/pyramidparser.py:use_args": "request_args_binding_boundary",
+        "src/engineio/async_client.py:_connect_websocket": "engineio_websocket_connection_boundary",
+        "src/socketio/async_client.py:connect": "engineio_websocket_connection_boundary",
+        "src/flask_principal.py:init_app": "flask_extension_initialization_boundary",
+        "pyramid/config/routes.py:add_route": "web_route_registration_boundary",
+        "graphene/types/schema.py:create_fields_for_type": "graphql_type_field_factory_boundary",
+        "jwt/api_jwt.py:_validate_claims": "jwt_claim_validation_boundary",
+        "src/cattrs/gen/typeddicts.py:make_dict_structure_fn": "typed_dict_structure_function_factory_boundary",
+        "annotation.py:_resolve_evaled_type": "graphql_annotation_resolution_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+
+
+def test_semantic_target_profiles_cover_blind_redteam_20f_gaps():
+    cases = {
+        "__init__.py:AsyncHttpClient": "async_http_client_facade_boundary",
+        "fsspec/implementations/http.py:_ls_real": "http_filesystem_listing_boundary",
+        "services/kernels/connection/channels.py:nudge": "kernel_channel_nudge_boundary",
+        "core/langchain_core/_api/deprecation.py:deprecated": "deprecation_decorator_boundary",
+        "openai/_legacy_response.py:_parse": "legacy_response_parse_boundary",
+        "optuna/samplers/_cmaes.py:sample_relative": "optimizer_relative_sampler_boundary",
+        "src/_skimage2/feature/_daisy.py:daisy": "image_feature_descriptor_boundary",
+        "qdrant_client/local/local_collection.py:search": "vector_collection_search_boundary",
+        "src/installer/utils.py:parse_entrypoints": "python_entrypoint_parse_boundary",
+        "poetry/core/packages/dependency.py:create_from_pep_508": "pep508_dependency_parse_boundary",
+        "localstack/config.py:parse": "environment_config_parse_boundary",
+        "_mmio.py:_write": "scientific_matrix_market_write_boundary",
+        "automation/automation/dagster_docs/docstring_rules/section_header_rule.py:validate_section_headers": "docstring_section_validation_boundary",
+        "src/structlog/_native.py:_make_filtering_bound_logger": "logging_filtering_bound_logger_factory_boundary",
+        "contrib/capitalone_dataprofiler_expectations/capitalone_dataprofiler_expectations/rule_based_profiler/domain_builder/data_profiler_column_domain_builder.py:_get_domains": "data_profiler_column_domain_builder_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+
+
 def test_profiled_contract_family_neutralizes_generic_trivial_penalty():
     from runtime.target_quality import semantic_target_quality_report
 

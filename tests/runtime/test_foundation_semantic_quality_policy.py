@@ -202,3 +202,161 @@ def test_foundation_semantic_quality_allows_profiled_zero_arg_contract() -> None
     )
 
     assert "spec_writer.io_contract_shapes_specific" not in quality["warnings"]
+
+
+def test_foundation_semantic_quality_normalizes_adr_location_suffix_for_spec_candidate() -> None:
+    quality = evaluate_foundation_semantic_quality(
+        {
+            "artifacts": {
+                "project_map_report": {
+                    "summary": {"root": "demo", "frameworks": [], "entrypoints": ["pkg.py"]},
+                    "answers": {
+                        "1_scope": {
+                            "main_task": "Provide package response sender behavior for integration consumers.",
+                            "supported_scenarios": ["send response", "handle failure"],
+                            "inputs": ["event"],
+                            "outputs": ["delivery result"],
+                            "domain_profile": {"kind": "integration_sender", "confidence": 0.7, "evidence": ["pkg.py:send"]},
+                        },
+                        "2_execution": {"primary_execution_path": ["pkg.py:send"]},
+                        "3_capabilities": {"atomic_reusable_capabilities": ["pkg.py:send"]},
+                        "4_contracts_data": {"main_data_structures": ["Event"], "weak_contract_zones": []},
+                        "5_errors_state_repro": {
+                            "likely_error_types": ["transport error"],
+                            "state_to_preserve": ["request id"],
+                            "minimal_cognitive_loop": ["build", "send", "report"],
+                        },
+                        "6_runtime_extraction_readiness": {
+                            "data_lifecycle": [{"stage": "input"}, {"stage": "send"}, {"stage": "output"}],
+                            "minimal_extraction_plan": {"capabilities_to_extract": [{"capability": "pkg.py:send", "reason": "bounded sender"}]},
+                            "evidence_claims": [{"source": "pkg.py:send"}, {"source": "pkg.py:build"}, {"source": "pkg.py:error"}],
+                        },
+                    },
+                },
+                "architecture_decision": {
+                    "decision_summary": "Select the response sender as the first bounded integration slice.",
+                    "architecture_synthesis": {"project_profile": {"archetype": "integration_sender", "domain_profile_kind": "integration_sender"}},
+                    "first_slice_contract": {"targets": ["pkg.py:send(40 loc)"]},
+                    "architecture_options": [{"id": "extract_sender"}, {"id": "full_rewrite"}],
+                    "rejected_options": [{"id": "full_rewrite"}],
+                    "spec_writer_brief": {
+                        "files_or_symbols": ["pkg.py:send(40 loc)"],
+                        "contract_targets": ["pkg.py:send(40 loc)"],
+                        "acceptance_targets": ["transport failure is typed"],
+                    },
+                    "risks": [{"risk": "Transport failures can be hidden.", "mitigation": "Contract tests cover typed failure packets."}],
+                    "fact_judgment_ledger": {
+                        "facts": [{"claim": "pkg.py:send exists"}],
+                        "judgments": [{"judgment": "sender is bounded", "validation_gate": "fake transport tests"}],
+                    },
+                    "source_context": {"pkg.py:send": {}, "pkg.py:build": {}, "pkg.py:error": {}},
+                    "open_questions": [],
+                    "non_goals": ["Do not call live transport in unit tests."],
+                },
+                "technical_spec": {
+                    "extraction_contract": {
+                        "candidate": "pkg.py:send",
+                        "ranked_candidates": [{"source": "pkg.py:send"}],
+                        "contract_family": "integration_send_boundary",
+                        "input_contract": {"event": "IntegrationEvent"},
+                        "output_contract": {"result": "DeliveryResult"},
+                        "side_effects": {"declared": [], "external_calls": "fake transport"},
+                    },
+                    "requirements": [
+                        {"statement": "Build the response body from event fields."},
+                        {"statement": "Send through a fakeable transport boundary."},
+                        {"statement": "Return typed delivery failures for transport errors."},
+                    ],
+                    "acceptance_criteria": [
+                        {"criterion": "Successful response send returns delivery result.", "verification": "Run fake transport contract test."},
+                        {"criterion": "Transport error returns typed failure.", "verification": "Run negative fake transport test."},
+                        {"criterion": "Malformed event is rejected.", "verification": "Run malformed event fixture."},
+                    ],
+                    "traceability_table": [
+                        {"source": "pkg.py:send", "acceptance_id": "AC-001"},
+                        {"source": "pkg.py:send", "acceptance_id": "AC-002"},
+                        {"source": "pkg.py:send", "acceptance_id": "AC-003"},
+                    ],
+                    "work_plan_contract": {"obligations": ["preserve response sender contract"]},
+                    "implementation_handoff": {"patch_scope": ["pkg.py:send"]},
+                    "human_review": {"decision_points": ["response sender"], "release_note": "sender contract", "open_questions": []},
+                    "non_goals": ["No live transport in unit tests."],
+                },
+            }
+        }
+    )
+
+    assert "spec_writer.candidate_backed_by_adr" not in quality["warnings"]
+
+
+def test_foundation_semantic_quality_allows_generic_slice_with_profiled_target() -> None:
+    quality = evaluate_foundation_semantic_quality(
+        {
+            "artifacts": {
+                "project_map_report": {
+                    "summary": {"root": "airflow", "frameworks": ["pluggy"], "entrypoints": ["src/airflow/__main__.py:main"]},
+                    "answers": {
+                        "1_scope": {
+                            "main_task": "Load workflow platform settings and register plugins through policy hooks.",
+                            "supported_scenarios": ["load local settings", "register plugin hooks"],
+                            "inputs": ["settings module", "plugin manager"],
+                            "outputs": ["plugin registration state"],
+                            "domain_profile": {"kind": "workflow_orchestrator", "confidence": 0.8, "evidence": ["plugin", "settings"]},
+                        },
+                        "2_execution": {"primary_execution_path": ["src/airflow/policies.py:make_plugin_from_local_settings"]},
+                        "3_capabilities": {"atomic_reusable_capabilities": ["src/airflow/policies.py:make_plugin_from_local_settings"]},
+                        "4_contracts_data": {"main_data_structures": ["PluginManager"], "weak_contract_zones": []},
+                        "5_errors_state_repro": {
+                            "likely_error_types": ["settings import error"],
+                            "state_to_preserve": ["plugin registry state"],
+                            "minimal_cognitive_loop": ["load", "register", "report"],
+                        },
+                        "6_runtime_extraction_readiness": {
+                            "data_lifecycle": [{"stage": "settings"}, {"stage": "registration"}, {"stage": "result"}],
+                            "minimal_extraction_plan": {
+                                "capabilities_to_extract": [
+                                    {
+                                        "capability": "src/airflow/policies.py:make_plugin_from_local_settings",
+                                        "reason": "plugin settings registration is bounded",
+                                    }
+                                ]
+                            },
+                            "evidence_claims": [{"source": "src/airflow/policies.py:make_plugin_from_local_settings"}] * 3,
+                        },
+                    },
+                },
+                "architecture_decision": {
+                    "decision_summary": "Select plugin settings registration as the first source-backed contract.",
+                    "architecture_synthesis": {
+                        "project_profile": {"archetype": "workflow_orchestrator", "domain_profile_kind": "workflow_orchestrator"}
+                    },
+                    "first_slice_contract": {
+                        "name": "workflow_state_transition_slice",
+                        "targets": ["src/airflow/policies.py:make_plugin_from_local_settings"],
+                    },
+                    "architecture_options": [{"id": "plugin_settings"}, {"id": "scheduler_rewrite"}],
+                    "rejected_options": [{"id": "scheduler_rewrite"}],
+                    "spec_writer_brief": {
+                        "files_or_symbols": ["src/airflow/policies.py:make_plugin_from_local_settings"],
+                        "contract_targets": ["src/airflow/policies.py:make_plugin_from_local_settings"],
+                        "acceptance_targets": ["duplicate plugin registration is typed"],
+                    },
+                    "risks": [{"risk": "Plugin registry mutation can drift.", "mitigation": "Snapshot before/after state."}],
+                    "fact_judgment_ledger": {
+                        "facts": [{"claim": "plugin settings target exists"}],
+                        "judgments": [{"judgment": "target is profiled semantic contract", "validation_gate": "contract tests"}],
+                    },
+                    "source_context": {
+                        "src/airflow/policies.py:make_plugin_from_local_settings": {},
+                        "src/airflow/providers_manager.py": {},
+                        "src/airflow/settings.py": {},
+                    },
+                    "open_questions": [],
+                    "non_goals": ["Do not alter scheduler execution."],
+                },
+                "technical_spec": {},
+            }
+        }
+    )
+
+    assert "architect.first_slice_not_generic_when_domain_cues_exist" not in quality["warnings"]

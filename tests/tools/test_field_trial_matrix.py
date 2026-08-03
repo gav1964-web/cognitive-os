@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from tools.field_trial_matrix import build_matrix
+from tools.field_trial_matrix import build_matrix, summary_view
 
 
 def test_field_trial_matrix_counts_patch_reasons_and_failed_checks(tmp_path):
@@ -56,3 +56,76 @@ def test_field_trial_matrix_counts_patch_reasons_and_failed_checks(tmp_path):
     assert matrix["summary"]["acceptance_skipped_details"] == {"missing_lib: No module named 'missing_lib'": 1}
     assert matrix["summary"]["patch_reasons"]["no_supported_patch_pattern"] == 1
     assert matrix["summary"]["failed_checks"] == {"tester_covers_contract": 1}
+
+
+def test_field_trial_matrix_summarizes_foundation_role_reports(tmp_path):
+    report = {
+        "artifact_type": "RoleFoundationFieldTrialReport",
+        "target_score": 9.5,
+        "cases": [
+            {
+                "project": "profiled",
+                "status": "ok",
+                "project_min_score": 9.8,
+                "role_scores": {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 9.8},
+                "selected_extraction_candidate": "pkg/jobs.py:acquire_jobs",
+                "selected_candidate_quality": {
+                    "score": 98,
+                    "status": "strong",
+                    "profiled_contract_family": True,
+                    "semantic_profile_ids": ["scheduled_job_acquisition_boundary"],
+                },
+                "warnings": [],
+            },
+            {
+                "project": "gap",
+                "status": "ok",
+                "project_min_score": 7.6,
+                "role_scores": {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 7.6},
+                "selected_extraction_candidate": "pkg/core.py:shape_only",
+                "selected_candidate_quality": {"score": 76, "status": "acceptable", "profiled_contract_family": False},
+                "warnings": [],
+            },
+            {
+                "project": "shape_high",
+                "status": "ok",
+                "project_min_score": 10.0,
+                "role_scores": {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 10.0},
+                "selected_extraction_candidate": "pkg/schema.py:create_fields",
+                "selected_candidate_quality": {"score": 100, "status": "strong", "profiled_contract_family": False},
+                "warnings": [],
+            },
+            {
+                "project": "native",
+                "status": "out_of_scope",
+                "blocker": "unsupported_primary_language_for_python_foundation",
+                "role_scores": {"project_analyzer": None, "architect": None, "spec_writer": None},
+                "selected_candidate_quality": {},
+                "warnings": ["unsupported_primary_language_for_python_foundation"],
+            },
+        ],
+    }
+    path = tmp_path / "foundation.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+
+    matrix = build_matrix(path)
+
+    assert matrix["artifact_type"] == "FoundationFieldTrialMatrix"
+    assert matrix["summary"]["status_counts"] == {"ok": 3, "out_of_scope": 1}
+    assert matrix["summary"]["below_target_count"] == 1
+    assert matrix["summary"]["role_min_scores"]["spec_writer"] == 7.6
+    assert matrix["summary"]["out_of_scope_reasons"] == {"unsupported_primary_language_for_python_foundation": 1}
+    assert matrix["summary"]["selected_profile_ids"] == {"scheduled_job_acquisition_boundary": 1}
+    assert matrix["summary"]["contract_gap_targets"][0]["project"] == "gap"
+    assert matrix["summary"]["high_unprofiled_targets"][0]["project"] == "shape_high"
+
+
+def test_field_trial_matrix_summary_view_omits_rows(tmp_path):
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps({"cases": [{"project": "a", "status": "ok"}]}), encoding="utf-8")
+
+    summary = summary_view(build_matrix(path))
+
+    assert summary["project_count"] == 1
+    assert "summary" in summary
+    assert "rows" not in summary

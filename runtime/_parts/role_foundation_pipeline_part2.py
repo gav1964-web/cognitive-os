@@ -93,10 +93,62 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     best_score = int(best.get("score") or 0)
     second_score = int(second.get("score") or 0)
     path = str(best.get("path") or "")
+    native_package = _native_python_package_scope(project_dir)
+    if native_package:
+        return _active_root_decision(project_dir, native_package)
+    frontend_python_package = _frontend_python_package_scope(project_dir, candidates)
+    if frontend_python_package:
+        decision = _active_root_decision(project_dir, frontend_python_package["path"])
+        decision.update(
+            {
+                "source": "auto_python_facing_scope_selector",
+                "selection_confidence": "high",
+                "selected_candidate_score": int(frontend_python_package.get("score") or 0),
+                "evidence": {
+                    "candidate": frontend_python_package,
+                    "runner": "role_foundation_pipeline.auto_active_root",
+                },
+            }
+        )
+        return decision
+    application_package = _application_python_package_scope(project_dir, candidates)
+    if application_package:
+        decision = _active_root_decision(project_dir, application_package["path"])
+        decision.update(
+            {
+                "source": "auto_application_package_scope_selector",
+                "selection_confidence": "high",
+                "selected_candidate_score": int(application_package.get("score") or 0),
+                "evidence": {
+                    "candidate": application_package,
+                    "runner": "role_foundation_pipeline.auto_active_root",
+                },
+            }
+        )
+        return decision
+    for scoped, source in (
+        (_monorepo_python_modules_scope(project_dir, candidates), "auto_monorepo_python_modules_scope_selector"),
+        (_aliased_core_package_scope(project_dir, candidates), "auto_aliased_core_scope_selector"),
+        (_library_module_scope(project_dir, candidates), "auto_library_module_scope_selector"),
+    ):
+        if scoped:
+            decision = _active_root_decision(project_dir, scoped["path"])
+            decision.update(
+                {
+                    "source": source,
+                    "selection_confidence": "high",
+                    "selected_candidate_score": int(scoped.get("score") or 0),
+                    "evidence": {
+                        "candidate": scoped,
+                        "runner": "role_foundation_pipeline.auto_active_root",
+                    },
+                }
+            )
+            return decision
     if project_dir.name.lower().replace("-", "_") == project_dir.parent.name.lower().replace("-", "_"):
         return _active_root_decision(project_dir, None)
     clear_named_package = _clear_named_package_candidate(project_dir, path, best_score, second_score)
-    required_gap = 6 if clear_named_package and best_score >= 70 else 12
+    required_gap = 0 if clear_named_package and best_score >= 90 else 6 if clear_named_package and best_score >= 70 else 12
     confidence = (
         "high"
         if (
@@ -122,6 +174,19 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
         }
     )
     return decision
+
+def _native_python_package_scope(project_dir: Path) -> str | None:
+    native_named = any(token in project_dir.name.lower() for token in ("rust", "pyo3", "native", "extension"))
+    if not ((project_dir / "Cargo.toml").exists() or ((project_dir / "pyproject.toml").exists() and native_named)):
+        return None
+    aliases = _project_aliases(project_dir)
+    for child in sorted(project_dir.iterdir(), key=lambda item: item.name.lower()):
+        if not child.is_dir() or not (child / "__init__.py").exists():
+            continue
+        normalized = child.name.lower().replace("-", "_")
+        if normalized in aliases:
+            return child.name
+    return None
 
 def _scope_selection_artifact(project_dir: Path, goal: str, scope_report: dict[str, Any]) -> dict[str, Any]:
     return {

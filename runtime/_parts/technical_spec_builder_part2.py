@@ -4,6 +4,7 @@ import ast
 import builtins
 import re
 from typing import Any
+from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.role_spec_writer_ranking import (
     candidate_level_bonus as _candidate_level_bonus,
     name_and_contract_score as _name_and_contract_score,
@@ -288,7 +289,7 @@ def _domain_extraction_contract(source: str) -> dict[str, Any]:
     profile_contract = contract_for_target(source)
     if profile_contract:
         return profile_contract
-    return {}
+    return contract_archetype_for_target(source)
 
 def _reconciled_input_contract(signature_contract: dict[str, str], domain_contract: dict[str, Any]) -> dict[str, str]:
     if not signature_contract:

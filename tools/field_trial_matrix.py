@@ -10,20 +10,31 @@ from typing import Any
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("report")
+    parser.add_argument("--summary-only", action="store_true")
+    parser.add_argument("report", nargs="+")
     args = parser.parse_args()
-    matrix = build_matrix(Path(args.report))
-    print(json.dumps(matrix, ensure_ascii=False, indent=2, sort_keys=True))
+    paths = [Path(item) for item in args.report]
+    matrix = build_matrix(paths[0] if len(paths) == 1 else paths)
+    output = summary_view(matrix) if args.summary_only else matrix
+    print(json.dumps(output, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if matrix["status"] == "ok" else 1
 
 
-def build_matrix(path: Path) -> dict[str, Any]:
-    report = json.loads(path.read_text(encoding="utf-8"))
+def summary_view(matrix: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in matrix.items() if key != "rows"}
+
+
+def build_matrix(path: Path | list[Path]) -> dict[str, Any]:
+    paths = path if isinstance(path, list) else [path]
+    reports = [_load_report(item) for item in paths]
+    if any(report.get("artifact_type") == "RoleFoundationFieldTrialReport" for _, report in reports):
+        return _foundation_matrix(reports)
+    report_path, report = reports[0]
     rows = [_case_row(case) for case in report.get("cases", [])]
     return {
         "artifact_type": "FieldTrialMatrix",
         "status": "ok",
-        "report": path.as_posix(),
+        "report": report_path.as_posix(),
         "project_count": len(rows),
         "summary": {
             "status_counts": _counts(row["status"] for row in rows),
@@ -36,6 +47,126 @@ def build_matrix(path: Path) -> dict[str, Any]:
         },
         "rows": rows,
     }
+
+
+def _foundation_matrix(reports: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
+    reports = [
+        (path, report)
+        for path, report in reports
+        if report.get("artifact_type") == "RoleFoundationFieldTrialReport"
+    ]
+    rows = [
+        _foundation_case_row(path, case, target_score=float(report.get("target_score") or 9.5))
+        for path, report in reports
+        for case in report.get("cases", [])
+    ]
+    scored = [row for row in rows if row["status"] != "out_of_scope"]
+    return {
+        "artifact_type": "FoundationFieldTrialMatrix",
+        "status": "ok",
+        "reports": [path.as_posix() for path, _ in reports],
+        "report_count": len(reports),
+        "project_count": len(rows),
+        "summary": {
+            "status_counts": _counts(row["status"] for row in rows),
+            "role_min_scores": _role_min_scores(scored),
+            "readiness_min_score": _min_value(row["readiness_score"] for row in scored),
+            "readiness_avg_score": _avg_value(row["readiness_score"] for row in scored),
+            "below_target_count": sum(1 for row in scored if row["below_target"]),
+            "out_of_scope_reasons": _counts(row["blocker"] for row in rows if row["status"] == "out_of_scope"),
+            "selected_profile_ids": _counts(profile for row in scored for profile in row["semantic_profile_ids"]),
+            "high_unprofiled_targets": _targets(
+                row for row in scored if row["candidate_score"] >= 95 and not row["profiled_contract_family"]
+            ),
+            "contract_gap_targets": _targets(
+                row for row in scored if row["candidate_score"] < 95 and not row["profiled_contract_family"]
+            ),
+            "weakest_targets": _weakest_targets(scored),
+        },
+        "rows": rows,
+    }
+
+
+def _foundation_case_row(report_path: Path, case: dict[str, Any], *, target_score: float) -> dict[str, Any]:
+    quality = dict(case.get("selected_candidate_quality") or {})
+    role_scores = dict(case.get("role_scores") or {})
+    readiness = _case_readiness(case)
+    return {
+        "report": report_path.as_posix(),
+        "project": case.get("project"),
+        "status": case.get("status"),
+        "pipeline_status": case.get("pipeline_status"),
+        "blocker": case.get("blocker"),
+        "project_min_score": float(case.get("project_min_score") or 0.0),
+        "readiness_score": readiness,
+        "below_target": readiness < target_score if case.get("status") != "out_of_scope" else False,
+        "role_scores": role_scores,
+        "selected_target": case.get("selected_extraction_candidate") or quality.get("target"),
+        "candidate_score": int(quality.get("score") or 0),
+        "candidate_status": quality.get("status"),
+        "profiled_contract_family": bool(quality.get("profiled_contract_family")),
+        "semantic_profile_ids": list(quality.get("semantic_profile_ids") or []),
+        "warnings": list(case.get("warnings") or []),
+    }
+
+
+def _load_report(path: Path) -> tuple[Path, dict[str, Any]]:
+    return path, json.loads(path.read_text(encoding="utf-8"))
+
+
+def _case_readiness(case: dict[str, Any]) -> float:
+    if case.get("status") == "ok":
+        return round(float(case.get("project_min_score") or 0.0), 2)
+    if case.get("status") == "blocked_ok":
+        return 7.0
+    if case.get("status") == "out_of_scope":
+        return 0.0
+    return round(min(5.0, float(case.get("project_min_score") or 0.0)), 2)
+
+
+def _role_min_scores(rows: list[dict[str, Any]]) -> dict[str, float]:
+    return {
+        role: _min_value(dict(row.get("role_scores") or {}).get(role) for row in rows)
+        for role in ("project_analyzer", "architect", "spec_writer")
+    }
+
+
+def _min_value(values: Any) -> float:
+    numbers = [float(value) for value in values if value is not None]
+    return round(min(numbers), 2) if numbers else 0.0
+
+
+def _avg_value(values: Any) -> float:
+    numbers = [float(value) for value in values if value is not None]
+    return round(sum(numbers) / len(numbers), 2) if numbers else 0.0
+
+
+def _targets(rows: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "project": row["project"],
+            "target": row["selected_target"],
+            "candidate_score": row["candidate_score"],
+            "candidate_status": row["candidate_status"],
+        }
+        for row in rows
+    ]
+
+
+def _weakest_targets(rows: list[dict[str, Any]], *, limit: int = 12) -> list[dict[str, Any]]:
+    ordered = sorted(rows, key=lambda row: (float(row["readiness_score"]), float(row["project_min_score"]), str(row["project"])))
+    return [
+        {
+            "project": row["project"],
+            "readiness_score": row["readiness_score"],
+            "project_min_score": row["project_min_score"],
+            "target": row["selected_target"],
+            "candidate_score": row["candidate_score"],
+            "profiled_contract_family": row["profiled_contract_family"],
+            "semantic_profile_ids": row["semantic_profile_ids"],
+        }
+        for row in ordered[:limit]
+    ]
 
 
 def _case_row(case: dict[str, Any]) -> dict[str, Any]:

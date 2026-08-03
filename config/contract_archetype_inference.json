@@ -1,0 +1,225 @@
+{
+  "schema_version": "contract_archetype_inference.v1",
+  "archetypes": [
+    {
+      "id": "class_synthesis_factory",
+      "symbols": ["_create_slots_class", "create_class", "make_class"],
+      "symbol_contains_any": ["create_class", "slots_class"],
+      "path_contains_any": ["attr", "attrs", "_make.py", "models", "schema"],
+      "score_bonus": 22,
+      "ranking_bonus": 30,
+      "reason": "class synthesis factory is a bounded type-construction contract",
+      "contract_family": "class_synthesis_factory",
+      "input_contract": {
+        "class_definition": "ClassDefinition(name, fields, bases?, slots?, validators?)",
+        "synthesis_options": "ClassSynthesisOptions(frozen?, slots?, hash_policy?, init_policy?)"
+      },
+      "output_contract": {
+        "generated_class": "GeneratedClass(type, fields, methods, invariants)",
+        "failure_packet": "ClassSynthesisFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "generated attributes and method injection must be asserted through class-shape snapshots"
+      },
+      "validation_gates": [
+        "basic field class, slots class and validator failure cases are covered",
+        "generated method set and attribute layout are explicit",
+        "invalid field definitions return typed failures or documented exceptions"
+      ],
+      "failure_modes": ["invalid_field_definition", "method_generation_error", "layout_conflict", "validator_error"]
+    },
+    {
+      "id": "protocol_request_transaction",
+      "symbols": ["urlopen", "request", "send", "handle_request"],
+      "symbol_contains_any": ["urlopen", "request"],
+      "path_contains_any": ["connectionpool", "client", "transport", "http", "urllib", "requests"],
+      "score_bonus": 22,
+      "ranking_bonus": 32,
+      "benign_runtime_boundary": true,
+      "reason": "protocol request transaction is a bounded transport contract",
+      "contract_family": "protocol_request_transaction",
+      "input_contract": {
+        "request": "ProtocolRequest(method, url, headers?, body?, timeout?, retry_policy?)",
+        "connection_state": "ConnectionState(pool_key, proxy?, tls?, retries?)"
+      },
+      "output_contract": {
+        "response": "ProtocolResponse(status, headers, body_stream?, connection_reuse?)",
+        "failure_packet": "ProtocolTransactionFailure(kind, retryable?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "transport is faked by default; live network requires explicit integration profile"
+      },
+      "validation_gates": [
+        "successful response, redirect/retry and transport failure cases are covered",
+        "timeout, TLS/proxy and connection reuse behavior are explicit",
+        "body streaming and cleanup policy are asserted"
+      ],
+      "failure_modes": ["timeout", "connection_error", "tls_error", "proxy_error", "invalid_response"]
+    },
+    {
+      "id": "combinatorial_iterator_generation",
+      "symbol_contains_any": ["permutation", "combination", "product", "windowed", "chunked"],
+      "path_contains_any": ["itertools", "iter", "more.py", "collections"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "combinatorial iterator generation is a bounded sequence contract",
+      "contract_family": "combinatorial_iterator_generation",
+      "input_contract": {
+        "items": "IterableItems(values, ordering?, duplicate_policy?)",
+        "generation_options": "IteratorGenerationOptions(length?, uniqueness?, exhaustion_policy?)"
+      },
+      "output_contract": {
+        "iterator": "GeneratedIterator(items, order_policy, laziness_policy)",
+        "failure_packet": "IteratorGenerationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "input consumption and laziness must be documented"
+      },
+      "validation_gates": [
+        "empty, duplicate and multi-item iterables are covered",
+        "ordering, laziness and exhaustion behavior are explicit",
+        "invalid length or non-reiterable inputs return documented failures"
+      ],
+      "failure_modes": ["invalid_length", "non_iterable_input", "duplicate_policy_error", "resource_limit"]
+    },
+    {
+      "id": "payload_serializer_loader",
+      "symbol_contains_any": ["load_payload", "loads", "load"],
+      "path_contains_any": ["serializer", "url_safe", "dangerous", "json", "payload"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "payload serializer/loader is a bounded decode-and-validate contract",
+      "contract_family": "payload_serializer_loader",
+      "input_contract": {
+        "payload": "SerializedPayload(bytes|str, encoding?, signer_metadata?)",
+        "loader_options": "PayloadLoaderOptions(max_age?, salt?, serializer?, fallback_policy?)"
+      },
+      "output_contract": {
+        "decoded_payload": "DecodedPayload(value, metadata?, trust_state)",
+        "failure_packet": "PayloadLoadFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "loader must not mutate serializer configuration during decode"
+      },
+      "validation_gates": [
+        "valid, malformed and tampered payloads are covered",
+        "encoding and signer metadata behavior are explicit",
+        "expired or unsupported payloads return typed failures"
+      ],
+      "failure_modes": ["malformed_payload", "signature_failure", "expired_payload", "unsupported_encoding"]
+    },
+    {
+      "id": "compiler_ast_visitor",
+      "symbol_prefixes": ["visit_"],
+      "path_contains_any": ["compiler", "visitor", "jinja", "ast"],
+      "score_bonus": 20,
+      "ranking_bonus": 32,
+      "reason": "compiler visitor is a bounded AST-to-output transition contract",
+      "contract_family": "compiler_ast_visitor",
+      "input_contract": {
+        "node": "AstNode(type, fields, source_location?)",
+        "compiler_state": "CompilerState(scope, frame, options, diagnostics?)"
+      },
+      "output_contract": {
+        "compiled_fragment": "CompiledFragment(code, new_state, diagnostics?)",
+        "failure_packet": "CompilerVisitorFailure(kind, location?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "compiler state changes must be asserted with before/after state snapshots"
+      },
+      "validation_gates": [
+        "valid node, empty branch and malformed node cases are covered",
+        "scope/frame mutation and emitted code are explicit",
+        "diagnostics preserve source location evidence"
+      ],
+      "failure_modes": ["unsupported_node", "scope_error", "emit_error", "invalid_ast_shape"]
+    },
+    {
+      "id": "configuration_line_parser",
+      "symbol_contains_any": ["parseline", "parse_line", "_parse"],
+      "path_contains_any": ["config", "ini", "_parse.py", "parser"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "configuration line parser is a bounded text-to-token contract",
+      "contract_family": "configuration_line_parser",
+      "input_contract": {
+        "line": "ConfigLine(text, line_number?, source_name?)",
+        "parser_options": "ConfigParseOptions(comment_policy?, interpolation_policy?)"
+      },
+      "output_contract": {
+        "parsed_line": "ParsedConfigLine(kind, key?, value?, section?, location?)",
+        "failure_packet": "ConfigLineParseFailure(kind, location?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "line parsing must not mutate global parser state"
+      },
+      "validation_gates": [
+        "section, key/value, comment and empty line cases are covered",
+        "malformed line location and diagnostics are explicit",
+        "escaping/interpolation policy is asserted"
+      ],
+      "failure_modes": ["malformed_line", "invalid_section", "invalid_key", "interpolation_error"]
+    },
+    {
+      "id": "validator_factory",
+      "symbols": ["create", "validator_for", "make_validator"],
+      "symbol_contains_any": ["validator", "validate"],
+      "path_contains_any": ["jsonschema", "validators", "schema"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "validator factory is a bounded schema-to-validator contract",
+      "contract_family": "validator_factory",
+      "input_contract": {
+        "schema": "SchemaDocument(type, vocabulary?, validators?)",
+        "factory_options": "ValidatorFactoryOptions(format_checker?, type_checker?, resolver?)"
+      },
+      "output_contract": {
+        "validator": "ValidatorInstance(schema, rules, error_model)",
+        "failure_packet": "ValidatorFactoryFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "registered validators and resolver state must be explicit"
+      },
+      "validation_gates": [
+        "valid schema, unknown keyword and invalid schema cases are covered",
+        "custom validator and format checker behavior are asserted",
+        "error reporting preserves schema path evidence"
+      ],
+      "failure_modes": ["invalid_schema", "unknown_vocabulary", "resolver_error", "validator_registration_error"]
+    },
+    {
+      "id": "permission_gate_decorator",
+      "symbols": ["requires", "require", "permission_required", "auth_required"],
+      "path_contains_any": ["auth", "authentication", "permission", "security"],
+      "score_bonus": 20,
+      "ranking_bonus": 30,
+      "reason": "permission gate/decorator is a bounded authorization contract",
+      "contract_family": "permission_gate_decorator",
+      "input_contract": {
+        "principal": "Principal(identity?, scopes?, permissions?)",
+        "required_permissions": "PermissionRequirement(scopes, status_code?, redirect_policy?)"
+      },
+      "output_contract": {
+        "gate_result": "PermissionGateResult(allowed, denial_response?, wrapped_callable?)",
+        "failure_packet": "PermissionGateFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "decorator wrapping must preserve callable metadata and denial policy"
+      },
+      "validation_gates": [
+        "allowed, denied and unauthenticated cases are covered",
+        "decorator wrapping and metadata preservation are explicit",
+        "custom denial status or redirect behavior is asserted"
+      ],
+      "failure_modes": ["missing_principal", "permission_denied", "invalid_permission", "wrapper_error"]
+    }
+  ]
+}

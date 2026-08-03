@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .contract_archetype_inference import archetype_ranking_adjustments
 from .semantic_target_profiles import semantic_ranking_adjustments
 from .target_quality_policy import nested_policy_tokens, policy_tokens, target_quality_section
 
@@ -260,8 +261,11 @@ def _representative_slice_score(lowered_source: str) -> tuple[int, list[str]]:
         score -= 12
         reasons.append("source path looks like utility/support surface")
     profile_adjustments = semantic_ranking_adjustments(f"{path}:{symbol}")
+    archetype_adjustments = archetype_ranking_adjustments(f"{path}:{symbol}")
     score += int(profile_adjustments["score_delta"])
+    score += int(archetype_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
+    reasons.extend(archetype_adjustments["reasons"])
     if symbol in AD_HOC_EVALUATOR_SYMBOLS and any(token in path for token in AD_HOC_EVALUATOR_PATH_TOKENS):
         score -= 30
         reasons.append("ad-hoc evaluator is less stable than generation/postprocessing contract")

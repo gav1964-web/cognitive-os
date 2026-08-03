@@ -9,6 +9,7 @@ from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+from ._parts.role_foundation_field_trial_scope import _child_python_projects, _has_project_manifest, _is_python_project, _primary_language_scope
 from .role_foundation_pipeline import run_role_foundation_pipeline
 
 
@@ -287,109 +288,17 @@ def _min_optional(*values: float | None) -> float | None:
     available = [float(value) for value in values if value is not None]
     return round(min(available), 2) if available else None
 
-
 def _ten_point(value: object) -> float | None:
     if value is None:
         return None
     return round(max(0.0, min(10.0, float(value) * 10.0)), 2)
 
-
 def _min_available(values: list[float | None]) -> float:
     available = [float(value) for value in values if value is not None]
     return round(min(available), 2) if available else 0.0
 
-
 def _ratio(numerator: float, denominator: float) -> float:
     return round(numerator / denominator, 3) if denominator else 0.0
-
-
-def _primary_language_scope(path: Path) -> dict[str, Any]:
-    top_files = {child.name.lower() for child in path.iterdir() if child.is_file()}
-    top_dirs = {child.name.lower() for child in path.iterdir() if child.is_dir()}
-    py_files = list(path.rglob("*.py"))
-    rust_files = list(path.rglob("*.rs"))
-    python_source_files = [file for file in py_files if _python_role_source_file(file.relative_to(path))]
-    root_package = _root_python_package(path)
-    has_root_python_source = bool(root_package or (path / "src").is_dir() or (path / "app").is_dir())
-    rust_workspace = "cargo.toml" in top_files and ("crates" in top_dirs or len(rust_files) >= max(20, len(py_files) * 2))
-    rust_dominates = len(rust_files) >= max(50, len(py_files) * 5)
-    python_is_embedded = not has_root_python_source and (
-        len(python_source_files) < max(8, len(py_files) // 2)
-        or rust_dominates
-    )
-    if rust_workspace and python_is_embedded:
-        return {
-            "status": "out_of_scope",
-            "reason_code": "unsupported_primary_language_for_python_foundation",
-            "primary_language": "Rust",
-            "python_files": len(py_files),
-            "python_source_files": len(python_source_files),
-            "rust_files": len(rust_files),
-            "evidence": {
-                "top_level_cargo": "cargo.toml" in top_files,
-                "crates_dir": "crates" in top_dirs,
-                "root_python_package": root_package,
-            },
-        }
-    return {
-        "status": "in_scope",
-        "primary_language": "Python",
-        "python_files": len(py_files),
-        "python_source_files": len(python_source_files),
-        "rust_files": len(rust_files),
-        "evidence": {"root_python_package": root_package},
-    }
-
-
-def _python_role_source_file(path: Path) -> bool:
-    normalized = path.as_posix().lower()
-    parts = normalized.split("/")
-    if any(part in {"tests", "test", "docs", "examples", "example", "scripts", ".github", "ci", "templates"} for part in parts):
-        return False
-    if "test" in path.name.lower() or path.name.lower().endswith("_template.py"):
-        return False
-    return True
-
-
-def _root_python_package(path: Path) -> str | None:
-    for child in sorted(path.iterdir(), key=lambda item: item.name.lower()):
-        if not child.is_dir() or child.name.startswith(".") or child.name.lower() in {"tests", "docs", "examples", "scripts", "crates"}:
-            continue
-        if (child / "__init__.py").exists():
-            return child.name
-    return None
-
-
-def _is_python_project(path: Path) -> bool:
-    if not path.is_dir():
-        return False
-    if _has_project_manifest(path):
-        return True
-    if any(path.glob("*.py")):
-        return True
-    children = [child for child in path.iterdir() if child.is_dir()]
-    if any(child.name in {"src", "app", "tests"} and any(child.rglob("*.py")) for child in children):
-        return True
-    py_files = list(path.rglob("*.py"))
-    if len(py_files) >= 20 and any(_python_source_like(rel.relative_to(path)) for rel in py_files[:200]):
-        return True
-    return False
-
-
-def _child_python_projects(path: Path) -> list[Path]:
-    return [child.resolve() for child in sorted(path.iterdir()) if child.is_dir() and _is_python_project(child)]
-
-
-def _has_project_manifest(path: Path) -> bool:
-    return any((path / marker).exists() for marker in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"))
-
-
-def _python_source_like(path: Path) -> bool:
-    normalized = path.as_posix().lower()
-    if any(token in normalized for token in ("/.git/", "/docs/", "/assets/", "/ci/", "/scripts/")):
-        return False
-    return "__init__.py" in normalized or "/src/" in normalized or normalized.count("/") >= 1
-
 
 def _write_report(root: Path, report: dict[str, Any]) -> Path:
     out_dir = root / "artifacts" / "field_trials"

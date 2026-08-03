@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+from .semantic_target_profiles import matching_profiles
 
 
 def evaluate_foundation_semantic_quality(result: dict[str, Any], *, policy: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -106,7 +107,7 @@ def _spec_writer_checks(adr: dict[str, Any], spec: dict[str, Any], *, policy: di
     negative_tokens = [str(token).lower() for token in spec_policy.get("negative_case_tokens", [])]
     return [
         _check("candidate_ranked_first", bool(candidate and ranked) and str(dict(ranked[0]).get("source") or "") == candidate),
-        _check("candidate_backed_by_adr", bool(candidate) and candidate in _adr_targets(adr)),
+        _check("candidate_backed_by_adr", _target_in_refs(candidate, _adr_targets(adr))),
         _check("io_contract_shapes_specific", _contract_shapes_specific(contract, policy=policy)),
         _check("side_effect_policy_or_no_side_effects", _side_effects_have_policy(contract, policy=policy)),
         _check("requirements_and_acceptance_are_implementable", _requirements_usable(spec.get("requirements"), policy=policy) and _acceptance_usable(spec.get("acceptance_criteria"), policy=policy)),
@@ -299,6 +300,9 @@ def _first_slice_not_generic_when_domain_cues_exist(first_slice: dict[str, Any],
     generic_names = {str(item).lower() for item in architect_policy.get("generic_first_slice_names", [])}
     if name not in generic_names:
         return True
+    targets = [str(item) for item in list(first_slice.get("targets", []) or []) if item]
+    if any(_target_has_semantic_contract(target) for target in targets):
+        return True
     content = dict(project.get("content") or project)
     answers = dict(content.get("answers") or {})
     scope = dict(answers.get("1_scope") or {})
@@ -316,6 +320,11 @@ def _first_slice_not_generic_when_domain_cues_exist(first_slice: dict[str, Any],
     hits = {marker for marker in markers if marker in text}
     minimum = int(architect_policy.get("domain_slice_marker_min_hits") or 1)
     return len(hits) < minimum
+
+
+def _target_has_semantic_contract(target: str) -> bool:
+    normalized = _normalize_source_ref(target)
+    return any(profile.get("contract_family") for profile in matching_profiles(normalized))
 
 
 def _check(code: str, passed: bool) -> dict[str, Any]:

@@ -134,6 +134,62 @@ def test_primary_language_scope_marks_rust_workspace_with_python_assets_out_of_s
     assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
 
 
+def test_primary_language_scope_marks_native_core_without_python_impl_out_of_scope(tmp_path: Path):
+    project = tmp_path / "ijl__orjson"
+    (project / "pysrc" / "orjson").mkdir(parents=True)
+    (project / "bench").mkdir()
+    (project / "test").mkdir()
+    (project / "src").mkdir()
+    (project / "Cargo.toml").write_text("[package]\nname='orjson'\n", encoding="utf-8")
+    (project / "pyproject.toml").write_text("[project]\nname='orjson'\n", encoding="utf-8")
+    (project / "pysrc" / "orjson" / "__init__.py").write_text("from .orjson import dumps\n", encoding="utf-8")
+    (project / "bench" / "__init__.py").write_text("", encoding="utf-8")
+    (project / "bench" / "benchmark.py").write_text("def helper(): pass\n", encoding="utf-8")
+    (project / "test" / "test_api.py").write_text("def test_api(): pass\n", encoding="utf-8")
+    for index in range(24):
+        (project / "src" / f"lib{index}.rs").write_text("fn dumps() {}\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["python_source_files"] == 1
+    assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
+
+
+def test_primary_language_scope_marks_c_runtime_core_out_of_scope(tmp_path: Path):
+    project = tmp_path / "cpython_like"
+    for dirname in ("Include", "Modules", "Objects", "Python", "Lib"):
+        (project / dirname).mkdir(parents=True)
+    (project / "pyproject.toml").write_text("[project]\nname='cpython-like'\n", encoding="utf-8")
+    for index in range(40):
+        (project / "Lib" / f"module{index}.py").write_text("def helper(): pass\n", encoding="utf-8")
+    for index in range(60):
+        (project / "Modules" / f"module{index}.c").write_text("int main(void) { return 0; }\n", encoding="utf-8")
+        (project / "Include" / f"header{index}.h").write_text("#pragma once\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["primary_language"] == "C"
+    assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
+
+
+def test_primary_language_scope_marks_cpp_runtime_core_out_of_scope(tmp_path: Path):
+    project = tmp_path / "greenlet_like"
+    (project / "src" / "greenlet").mkdir(parents=True)
+    (project / "pyproject.toml").write_text("[project]\nname='greenlet-like'\n", encoding="utf-8")
+    (project / "src" / "greenlet" / "__init__.py").write_text("from ._greenlet import greenlet\n", encoding="utf-8")
+    for index in range(12):
+        (project / "src" / f"core{index}.cpp").write_text("int main(void) { return 0; }\n", encoding="utf-8")
+        (project / "src" / f"core{index}.hpp").write_text("#pragma once\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["primary_language"] == "C++"
+    assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
+
+
 def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):
     project = tmp_path / "pkg"
     (project / "pkg").mkdir(parents=True)

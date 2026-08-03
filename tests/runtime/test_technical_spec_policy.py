@@ -129,3 +129,38 @@ def test_technical_spec_reconciles_semantic_profile_with_signature_contract():
 
     assert contract["input_contract"] == {"rv": "ft.ResponseReturnValue"}
     assert contract["semantic_contract"]["input_contract"]["return_value"].startswith("ViewReturnValue")
+
+
+def test_technical_spec_uses_generalized_contract_archetype_without_exact_profile():
+    spec = build_technical_spec(
+        architecture_decision={
+            "artifact_type": "ArchitectureDecisionRecord",
+            "role": "architect",
+            "goal": "Prepare attrs class synthesis contract",
+            "chosen_option": {"id": "minimal_safe_extraction"},
+            "spec_writer_brief": {
+                "scope": ["Prepare generated class contract."],
+                "files_or_symbols": ["src/attr/_make.py:_create_slots_class"],
+                "first_slice": {"targets": ["src/attr/_make.py:_create_slots_class"]},
+            },
+            "source_context": {
+                "src/attr/_make.py:_create_slots_class": {
+                    "kind": "method",
+                    "signature": {
+                        "args": [
+                            {"name": "cls"},
+                            {"name": "attrs", "annotation": "list"},
+                        ],
+                        "returns": "type",
+                    },
+                    "snippet": {"text": "def _create_slots_class(cls, attrs):\n    return type(cls.__name__, (), {})"},
+                },
+            },
+        }
+    )
+
+    contract = spec["extraction_contract"]
+
+    assert contract["contract_family"] == "class_synthesis_factory"
+    assert contract["semantic_contract"]["output_contract"]["generated_class"].startswith("GeneratedClass")
+    assert contract["validation_gates"]

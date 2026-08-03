@@ -176,6 +176,41 @@
     "suspicious_path_parts": [
       "icons",
       "icon"
+    ],
+    "generic_unprofiled_symbols": [
+      "_eval_subs",
+      "_normalize_field_type",
+      "_parse_module",
+      "_read_grdecl",
+      "_resolve_xref_inner",
+      "srcfilter"
+    ],
+    "generic_unprofiled_symbol_contains_any": [
+      "parse",
+      "normalize",
+      "resolve"
+    ],
+    "generic_unprofiled_path_tokens": [
+      "/core/",
+      "/domains/",
+      "/hazmat/",
+      "/utilities/",
+      "/subapi/",
+      "/rpm/"
+    ],
+    "generic_unprofiled_score_cap": [
+      "84"
+    ],
+    "unprofiled_strong_score_cap": [
+      "84"
+    ],
+    "unprofiled_strong_path_tokens": [
+      "/app/",
+      "/core.py",
+      "/sessions.py",
+      "/_py/path.py",
+      "/runtime.py",
+      "/template.py"
     ]
   },
   "spec_writer_ranking": {

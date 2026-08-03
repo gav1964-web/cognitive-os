@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 
@@ -47,9 +48,7 @@ class RepoLintViolation:
 def lint_repository(root: Path, *, max_python_lines: int = MAX_PYTHON_LINES) -> list[RepoLintViolation]:
     root = root.resolve()
     violations: list[RepoLintViolation] = []
-    for path in sorted(root.rglob("*.py")):
-        if _is_excluded(root, path):
-            continue
+    for path in _python_source_paths(root):
         line_count = _line_count(path)
         if line_count > max_python_lines:
             violations.append(
@@ -61,6 +60,23 @@ def lint_repository(root: Path, *, max_python_lines: int = MAX_PYTHON_LINES) -> 
                 )
             )
     return violations
+
+
+def _python_source_paths(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for current, dirnames, filenames in os.walk(root):
+        current_path = Path(current)
+        dirnames[:] = [
+            name
+            for name in dirnames
+            if not _is_excluded(root, current_path / name)
+        ]
+        for filename in filenames:
+            if filename.endswith(".py"):
+                path = current_path / filename
+                if not _is_excluded(root, path):
+                    paths.append(path)
+    return sorted(paths)
 
 
 def assert_repository_lint(root: Path, *, max_python_lines: int = MAX_PYTHON_LINES) -> None:
