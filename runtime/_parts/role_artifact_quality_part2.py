@@ -228,6 +228,10 @@ def _selected_candidate_quality_is_usable(contract: dict[str, Any]) -> bool:
     status = str(quality.get("status") or "")
     if status in {"strong", "acceptable"}:
         return True
+    review = dict(contract.get("semantic_review") or {})
+    checks = dict(review.get("checks") or {})
+    if review.get("status") == "approved_with_constraints" and checks and all(checks.values()):
+        return True
     return bool(contract.get("contract_family") and status != "poor")
 
 def _selected_candidate_is_source_backed(contract: dict[str, Any], evidence: object) -> bool:

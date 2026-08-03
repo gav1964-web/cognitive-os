@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from runtime.role_foundation_pipeline import run_role_foundation_benchmark, run_role_foundation_pipeline
+from runtime.role_foundation_pipeline import _auto_active_root_decision, run_role_foundation_benchmark, run_role_foundation_pipeline
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,6 +60,24 @@ def test_role_foundation_pipeline_writes_three_artifacts():
     assert "main.py:normalize_text" in spec_doc_text
     for summary in result["artifacts"].values():
         assert Path(summary["path"]).exists()
+
+
+def test_auto_scope_selects_repo_named_package_with_high_confidence(tmp_path):
+    project = tmp_path / "owner__engine"
+    (project / "engine").mkdir(parents=True)
+    (project / "web").mkdir()
+    scope_report = {
+        "candidate_roots": [
+            {"path": "engine", "score": 77, "kind": "python_project_candidate"},
+            {"path": "web", "score": 70, "kind": "mixed_python_frontend_candidate"},
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope_report)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_relative_path"] == "engine"
+    assert decision["source"] == "auto_safe_scope_selector"
 
 
 def test_role_foundation_artifact_paths_do_not_collide():

@@ -38,11 +38,17 @@ def _scope_candidate_priority(rel_path: str) -> int:
 def _clear_named_package_candidate(project_dir: Path, rel_path: str, best_score: int, second_score: int) -> bool:
     normalized_project = project_dir.name.lower().replace("-", "_")
     normalized_candidate = rel_path.replace("\\", "/").strip("/").split("/", 1)[0].lower().replace("-", "_")
+    project_aliases = {normalized_project}
+    if "__" in normalized_project:
+        owner, repo = normalized_project.rsplit("__", 1)
+        project_aliases.add(repo)
+        if owner == repo:
+            project_aliases.add(owner)
     return bool(
         normalized_project
-        and normalized_candidate == normalized_project
+        and normalized_candidate in project_aliases
         and best_score >= 35
-        and best_score - second_score >= 12
+        and best_score - second_score >= 6
     )
 
 def _scope_path_score(rel_path: str, *, root_name: str, parent_name: str) -> int:

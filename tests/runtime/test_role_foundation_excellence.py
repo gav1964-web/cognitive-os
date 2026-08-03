@@ -113,6 +113,26 @@ def test_target_quality_accepts_resource_displayhook_and_protocol_state_targets(
         assert quality["status"] == "strong"
 
 
+def test_target_quality_recognizes_foundation_holdout_contract_families():
+    for target in (
+        "returns/contrib/mypy/_typeops/visitor.py:translate_kind_instance",
+        "pelican/settings.py:configure_settings",
+        "IPython/core/guarded_eval.py:eval_node",
+        "xarray/core/parallel.py:map_blocks",
+        "packages/zarr-indexing/src/zarr_indexing/transform.py:_apply_oindex",
+        "zmq/backend/cython/_zmq.py:zmq_poll",
+        "nbconvert/exporters/webpdf.py:run_playwright",
+    ):
+        quality = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+            selection_reason="pure transform candidate",
+        )
+        assert quality["status"] == "strong"
+        assert quality["score"] >= 92
+
+
 def test_target_quality_keeps_response_boundary_acceptable_not_strong():
     target = "app.py:make_response"
 

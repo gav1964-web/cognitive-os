@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
@@ -257,9 +258,14 @@ def _human_review_material_present(spec: dict[str, Any]) -> bool:
 
 def _purpose_avoids_marketing_blurb(value: object, *, policy: dict[str, Any]) -> bool:
     project_policy = dict(policy.get("project_analyzer") or {})
-    text = str(value or "").lower()
+    text = _without_machine_refs(str(value or "")).lower()
     markers = [str(item).lower() for item in project_policy.get("marketing_purpose_markers", [])]
     return bool(text.strip()) and not any(marker in text for marker in markers)
+
+
+def _without_machine_refs(text: str) -> str:
+    text = re.sub(r"https?://\S+", " ", text)
+    return re.sub(r"\S+badge\S*", " ", text, flags=re.IGNORECASE)
 
 
 def _generic_profile_not_masking_library_domain(profile: dict[str, Any], content: dict[str, Any], *, policy: dict[str, Any]) -> bool:

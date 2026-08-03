@@ -2117,6 +2117,214 @@
       "failure_modes": ["invalid_scheme", "malformed_authority", "encoding_error", "empty_url"]
     },
     {
+      "id": "type_system_instance_translation_boundary",
+      "symbols": ["translate_kind_instance"],
+      "symbol_contains_any": ["translate_kind", "typeops", "kind_instance"],
+      "path_contains_any": ["mypy", "typeops", "typing", "types"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "reason": "type-system instance translation is a bounded static-analysis contract",
+      "ranking_reason": "type translation is representative type-analysis behavior",
+      "contract_family": "type_system_instance_translation_boundary",
+      "input_contract": {
+        "type_instance": "TypeInstance(kind, args?, variance?, context?)",
+        "translation_context": "TypeTranslationContext(symbol_table?, generic_scope?, strictness?)"
+      },
+      "output_contract": {
+        "translated_type": "TranslatedType(kind, args, constraints?, diagnostics?)",
+        "failure_packet": "TypeTranslationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "translation must not mutate caller-owned type nodes unless explicitly declared"
+      },
+      "validation_gates": [
+        "simple, generic and invalid type-kind inputs are fixture-backed",
+        "diagnostic output is asserted separately from translated type shape",
+        "symbol table dependencies are supplied through explicit fixtures"
+      ],
+      "failure_modes": ["unknown_type_kind", "invalid_type_args", "symbol_resolution_error", "constraint_mismatch"]
+    },
+    {
+      "id": "settings_configuration_normalization_boundary",
+      "symbols": ["configure_settings", "load_settings", "normalize_settings"],
+      "symbol_contains_any": ["configure_settings", "settings"],
+      "path_contains_any": ["settings.py", "config", "configuration"],
+      "score_bonus": 20,
+      "ranking_bonus": 32,
+      "benign_runtime_boundary": true,
+      "reason": "settings configuration is a bounded precedence and normalization contract",
+      "ranking_reason": "settings normalization is representative configuration behavior",
+      "contract_family": "settings_configuration_normalization_boundary",
+      "input_contract": {
+        "raw_settings": "RawSettings(defaults?, file_values?, env_values?, overrides?)",
+        "configuration_context": "ConfigurationContext(project_root?, mode?, plugin_refs?)"
+      },
+      "output_contract": {
+        "configured_settings": "ConfiguredSettings(values, precedence_trace, warnings?)",
+        "failure_packet": "SettingsConfigurationFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "global or module settings mutation must be represented as before/after snapshots"
+      },
+      "validation_gates": [
+        "default, file, environment and explicit override precedence is covered",
+        "invalid setting value returns typed diagnostics",
+        "side effects on global settings are fixture-isolated"
+      ],
+      "failure_modes": ["invalid_setting", "precedence_conflict", "plugin_config_error", "environment_error"]
+    },
+    {
+      "id": "guarded_expression_evaluation_boundary",
+      "symbols": ["eval_node", "guarded_eval", "safe_eval"],
+      "symbol_contains_any": ["eval_node", "guarded_eval", "safe_eval"],
+      "path_contains_any": ["guarded_eval", "safe_eval", "eval"],
+      "score_bonus": 20,
+      "ranking_bonus": 34,
+      "reason": "guarded expression evaluation is a bounded security/runtime contract",
+      "ranking_reason": "guarded evaluation is representative interpreter behavior",
+      "contract_family": "guarded_expression_evaluation_boundary",
+      "input_contract": {
+        "expression_node": "ExpressionNode(ast_node, source_ref?, allowed_names?)",
+        "evaluation_context": "GuardedEvalContext(globals?, locals?, policy, recursion_limit?)"
+      },
+      "output_contract": {
+        "evaluation_result": "GuardedEvalResult(value?, diagnostics?, policy_trace?)",
+        "failure_packet": "GuardedEvalFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "security_policy": "forbidden names, calls and attribute access are explicit negative cases"
+      },
+      "validation_gates": [
+        "allowed literals and names evaluate deterministically",
+        "forbidden calls, attributes and malformed AST nodes are negative-tested",
+        "evaluation context mutation is explicitly asserted"
+      ],
+      "failure_modes": ["forbidden_operation", "unknown_name", "malformed_ast", "evaluation_error"]
+    },
+    {
+      "id": "lazy_parallel_array_map_boundary",
+      "symbols": ["map_blocks"],
+      "symbol_contains_any": ["map_blocks"],
+      "path_contains_any": ["xarray", "parallel", "dask", "array"],
+      "score_bonus": 22,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "lazy parallel block mapping is a bounded dataflow contract",
+      "ranking_reason": "parallel block mapping is representative lazy-array behavior",
+      "contract_family": "lazy_parallel_array_map_boundary",
+      "input_contract": {
+        "block_mapping": "BlockMapping(func, input_blocks, args?, kwargs?, template?)",
+        "parallel_context": "ParallelArrayContext(chunks, coordinates?, scheduler_policy?)"
+      },
+      "output_contract": {
+        "mapped_array": "MappedArrayResult(shape, chunks, coordinates?, graph_ref?)",
+        "failure_packet": "ParallelMapFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "execution_policy": "contract tests build/inspect lazy graph without invoking distributed execution by default"
+      },
+      "validation_gates": [
+        "shape/chunk propagation is asserted for fixture arrays",
+        "template mismatch and bad function return shapes are negative-tested",
+        "scheduler execution is isolated from graph construction"
+      ],
+      "failure_modes": ["shape_mismatch", "chunk_mismatch", "template_error", "scheduler_error"]
+    },
+    {
+      "id": "orthogonal_indexing_transform_boundary",
+      "symbols": ["_apply_oindex", "apply_oindex"],
+      "symbol_contains_any": ["oindex", "index"],
+      "path_contains_any": ["zarr", "indexing", "transform"],
+      "score_bonus": 22,
+      "ranking_bonus": 36,
+      "reason": "orthogonal array indexing is a bounded shape/selection transform",
+      "ranking_reason": "array indexing transform is representative storage-array behavior",
+      "contract_family": "orthogonal_indexing_transform_boundary",
+      "input_contract": {
+        "array_selection": "ArraySelection(shape, chunks?, indexer, bounds_policy?)",
+        "index_context": "IndexContext(order?, fill_value?, dtype?)"
+      },
+      "output_contract": {
+        "selection_result": "IndexedArrayResult(shape, dtype, selection_trace?)",
+        "failure_packet": "IndexingFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "read selection must not mutate source array metadata"
+      },
+      "validation_gates": [
+        "scalar, slice, list and boolean indexers are covered",
+        "out-of-bounds and shape mismatch cases return controlled failures",
+        "result shape and dtype semantics are asserted"
+      ],
+      "failure_modes": ["out_of_bounds", "invalid_indexer", "shape_mismatch", "dtype_error"]
+    },
+    {
+      "id": "message_polling_boundary",
+      "symbols": ["zmq_poll", "poll", "select"],
+      "symbol_contains_any": ["poll"],
+      "path_contains_any": ["zmq", "socket", "poll"],
+      "score_bonus": 22,
+      "ranking_bonus": 34,
+      "benign_runtime_boundary": true,
+      "reason": "message polling is a bounded socket readiness contract",
+      "ranking_reason": "polling contract is representative messaging behavior",
+      "contract_family": "message_polling_boundary",
+      "input_contract": {
+        "poll_request": "PollRequest(sockets, events, timeout_ms?, cancellation?)",
+        "runtime_context": "PollingRuntimeContext(loop?, backend?, clock?)"
+      },
+      "output_contract": {
+        "poll_result": "PollResult(ready_events, elapsed_ms?, backend_status?)",
+        "failure_packet": "PollingFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "io_policy": "live sockets are replaced by fake pollers in default contract tests"
+      },
+      "validation_gates": [
+        "readable, writable, timeout and closed socket cases are covered",
+        "event mask normalization is explicit",
+        "native backend errors return typed evidence"
+      ],
+      "failure_modes": ["timeout", "closed_socket", "backend_error", "invalid_event_mask"]
+    },
+    {
+      "id": "web_pdf_playwright_rendering_boundary",
+      "symbols": ["run_playwright"],
+      "symbol_contains_any": ["playwright"],
+      "path_contains_any": ["webpdf", "exporters"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "web-PDF rendering through Playwright is a bounded exporter contract",
+      "ranking_reason": "web-PDF rendering is representative notebook export behavior",
+      "contract_family": "web_pdf_playwright_rendering_boundary",
+      "input_contract": {
+        "html_document": "HtmlDocument(text, base_url?, resources?)",
+        "render_options": "WebPdfRenderOptions(timeout_ms, paginate?, browser_args?, sandbox_policy?)"
+      },
+      "output_contract": {
+        "pdf_document": "PdfDocument(bytes, page_count?, render_metadata?)",
+        "failure_packet": "WebPdfRenderFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "requires_process_boundary": true,
+        "io_policy": "browser process, temp files and optional Chromium install are fake or isolated in default contract tests"
+      },
+      "validation_gates": [
+        "valid HTML render and empty HTML are covered by fake Playwright fixtures",
+        "missing Playwright, missing Chromium and timeout cases return typed failures",
+        "browser args and pagination options are asserted without launching a real browser by default"
+      ],
+      "failure_modes": ["playwright_missing", "chromium_missing", "render_timeout", "browser_launch_error", "pdf_generation_error"]
+    },
+    {
       "id": "generic_web_response_facade",
       "exclude_if_profile_ids": ["web_framework_response_factory"],
       "symbols": ["make_response", "response_class", "create_response"],

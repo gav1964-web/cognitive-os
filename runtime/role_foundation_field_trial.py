@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
+from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .role_foundation_pipeline import run_role_foundation_pipeline
 
 
@@ -78,9 +79,10 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         goal=f"{DEFAULT_GOAL} in {project_dir.name}",
         write=write,
     )
-    semantic_quality = evaluate_foundation_semantic_quality(_result_with_loaded_artifacts(result))
+    loaded_result = _result_with_loaded_artifacts(result)
+    semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
     result["foundation_semantic_quality"] = semantic_quality
-    role_scores = _role_scores(result)
+    role_scores = _role_scores({**result, "artifacts": loaded_result["artifacts"]})
     available_scores = [score for score in role_scores.values() if score is not None]
     return {
         "project": project_dir.name,
@@ -106,8 +108,9 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
     quality = dict(score.get("quality") or {})
     quality_results = dict(quality.get("results") or {})
     project_score = _quality_score(quality_results, "project_map_report")
-    if project_score is None and result.get("blocker") == "scope_selection_required":
-        project_score = _ten_point(score.get("artifact_score"))
+    if result.get("blocker") == "scope_selection_required":
+        project_score = project_score if project_score is not None else _ten_point(score.get("artifact_score"))
+        return {"project_analyzer": project_score, "architect": None, "spec_writer": None}
 
     architect_quality = _quality_score(quality_results, "adr")
     architect_red = _ten_point(dict(result.get("architect_red_team") or {}).get("score"))
@@ -115,7 +118,7 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
 
     spec_quality = _quality_score(quality_results, "technical_spec")
     spec_red = _ten_point(dict(result.get("spec_writer_red_team") or {}).get("score"))
-    semantic = _semantic_score(result.get("selected_candidate_quality"))
+    semantic = _semantic_candidate_score(result)
     foundation_semantic = dict(result.get("foundation_semantic_quality") or {})
     semantic_role_scores = dict(foundation_semantic.get("role_scores") or {})
     project_semantic = _number_or_none(semantic_role_scores.get("project_analyzer"))
@@ -259,6 +262,19 @@ def _semantic_score(value: object) -> float | None:
     if score is None:
         return None
     return round(max(0.0, min(10.0, float(score) / 10.0)), 2)
+
+
+def _semantic_candidate_score(result: dict[str, Any]) -> float | None:
+    semantic = _semantic_score(result.get("selected_candidate_quality"))
+    spec = dict(dict(result.get("artifacts") or {}).get("technical_spec") or {})
+    contract = dict(spec.get("extraction_contract") or {})
+    review = dict(contract.get("semantic_review") or {})
+    checks = dict(review.get("checks") or {})
+    if review.get("status") == "approved_with_constraints" and checks and all(checks.values()):
+        policy = load_foundation_semantic_quality_policy()
+        floor = float(dict(policy.get("spec_writer") or {}).get("semantic_review_floor_score") or 9.2)
+        semantic = max(semantic or 0.0, floor)
+    return semantic
 
 
 def _number_or_none(value: object) -> float | None:

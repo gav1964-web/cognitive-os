@@ -96,11 +96,12 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     if project_dir.name.lower().replace("-", "_") == project_dir.parent.name.lower().replace("-", "_"):
         return _active_root_decision(project_dir, None)
     clear_named_package = _clear_named_package_candidate(project_dir, path, best_score, second_score)
+    required_gap = 6 if clear_named_package and best_score >= 70 else 12
     confidence = (
         "high"
         if (
             (best_score >= 75 or clear_named_package)
-            and best_score - second_score >= 12
+            and best_score - second_score >= required_gap
             and not _disfavored_scope_root(path)
         )
         else "low"

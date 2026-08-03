@@ -68,6 +68,53 @@ def test_foundation_semantic_quality_uses_configured_specific_text_policy() -> N
     assert "project_analyzer.purpose_is_specific" not in quality["warnings"]
 
 
+def test_foundation_semantic_quality_ignores_badge_urls_as_marketing_noise() -> None:
+    policy = load_foundation_semantic_quality_policy(str(ROOT / "config" / "foundation_semantic_quality_policy.json"))
+    policy = {**policy, "specific_text": {**policy["specific_text"], "min_length": 16}}
+    report = {
+        "artifacts": {
+            "project_map_report": {
+                "summary": {"frameworks": [], "entrypoints": []},
+                "answers": {
+                    "1_scope": {
+                        "main_task": (
+                            "Inferred from docs: https://example.test/actions/workflows/test.yml/badge.svg?branch=main "
+                            "as a graph algorithm library for node and edge transforms."
+                        ),
+                        "supported_scenarios": ["run graph algorithm", "return graph result"],
+                        "inputs": ["graph"],
+                        "outputs": ["cycles"],
+                        "domain_profile": {"kind": "graph_algorithm_library", "confidence": 0.7, "evidence": ["networkx"]},
+                    },
+                    "2_execution": {"primary_execution_path": ["networkx/algorithms/cycles.py:chordless_cycles"]},
+                    "3_capabilities": {"atomic_reusable_capabilities": ["networkx/algorithms/cycles.py:chordless_cycles"]},
+                    "4_contracts_data": {"main_data_structures": ["Graph"], "weak_contract_zones": []},
+                    "5_errors_state_repro": {
+                        "likely_error_types": ["invalid graph"],
+                        "state_to_preserve": ["graph shape"],
+                        "minimal_cognitive_loop": ["input", "traverse", "return"],
+                    },
+                    "6_runtime_extraction_readiness": {
+                        "data_lifecycle": [{"stage": "input"}, {"stage": "traverse"}, {"stage": "return"}],
+                        "minimal_extraction_plan": {
+                            "capabilities_to_extract": [
+                                {"capability": "networkx/algorithms/cycles.py:chordless_cycles", "reason": "bounded graph algorithm"}
+                            ]
+                        },
+                        "evidence_claims": [{"source": "a.py:1"}, {"source": "b.py:2"}, {"source": "c.py:3"}],
+                    },
+                },
+            },
+            "architecture_decision": {},
+            "technical_spec": {},
+        }
+    }
+
+    quality = evaluate_foundation_semantic_quality(report, policy=policy)
+
+    assert "project_analyzer.purpose_avoids_marketing_blurb" not in quality["warnings"]
+
+
 def test_foundation_semantic_quality_allows_profiled_zero_arg_contract() -> None:
     quality = evaluate_foundation_semantic_quality(
         {

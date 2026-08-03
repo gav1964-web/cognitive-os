@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from runtime.role_foundation_field_trial import _primary_language_scope, _report, discover_python_projects
+from runtime.role_artifact_quality import evaluate_technical_spec
+from runtime.role_foundation_field_trial import _primary_language_scope, _report, _role_scores, discover_python_projects
 
 
 def test_field_trial_report_uses_project_and_role_minimums():
@@ -45,6 +46,65 @@ def test_discover_python_projects_uses_projects_child_when_present(tmp_path: Pat
     found = discover_python_projects([corpus])
 
     assert found == [(projects / "a").resolve()]
+
+
+def test_role_scores_use_semantic_review_floor_for_constrained_spec_handoff():
+    scores = _role_scores(
+        {
+            "score": {"quality": {"results": {"technical_spec": {"score": 98}}}},
+            "selected_candidate_quality": {"score": 61, "status": "suspicious"},
+            "spec_writer_red_team": {"score": 99},
+            "artifacts": {
+                "technical_spec": {
+                    "extraction_contract": {
+                        "semantic_review": {
+                            "status": "approved_with_constraints",
+                            "checks": {"source_evidence_bound": True, "io_contract_bound": True},
+                        }
+                    }
+                }
+            },
+            "foundation_semantic_quality": {"role_scores": {"spec_writer": 9.8}},
+        }
+    )
+
+    assert scores["spec_writer"] == 9.2
+
+
+def test_role_scores_do_not_score_downstream_roles_for_scope_selection_block():
+    scores = _role_scores({"blocker": "scope_selection_required", "score": {"artifact_score": 1.0}})
+
+    assert scores == {"project_analyzer": 10.0, "architect": None, "spec_writer": None}
+
+
+def test_technical_spec_quality_accepts_constrained_semantic_review_handoff():
+    quality = evaluate_technical_spec(
+        {
+            "requirements": [{"statement": "Extract pyparsing/helpers.py:one_of as a bounded parser-helper contract.", "priority": "must"}],
+            "acceptance_criteria": [{"criterion": "Parser helper returns a parser element.", "verification": "Run pytest contract case."}],
+            "interface_contracts": [{"source": "pyparsing/helpers.py:one_of", "input_contract": {"strs": "list[str]"}, "output_contract": {"parser": "ParserElement"}}],
+            "work_plan_contract": {"obligations": [{"step": "preserve parser-helper behavior"}]},
+            "data_lifecycle": [{"stage": "parse"}],
+            "error_model": [{"handling": "invalid alternatives return controlled parser error"}],
+            "extraction_contract": {
+                "candidate": "pyparsing/helpers.py:one_of",
+                "ranked_candidates": [{"source": "pyparsing/helpers.py:one_of", "reasons": ["first-slice source evidence"]}],
+                "input_contract": {"strs": "list[str]"},
+                "output_contract": {"parser": "ParserElement"},
+                "semantic_quality": {"status": "suspicious", "score": 61},
+                "semantic_review": {"status": "approved_with_constraints", "checks": {"source_evidence_bound": True}},
+                "side_effects": {"declared": []},
+            },
+            "source_evidence": [{"source": "pyparsing/helpers.py:one_of"}, {"source": "pyparsing/helpers.py:ParserElement"}],
+            "traceability_table": [{"source": "pyparsing/helpers.py:one_of", "acceptance_id": "AC-1"}],
+            "implementation_handoff": {"patch_scope": ["pyparsing/helpers.py:one_of"]},
+            "engineering_quality_gate": {"verification_commands": ["python -m pytest tests"]},
+            "human_review": {"open_questions": [], "non_goals": ["No parser rewrite."]},
+            "non_goals": ["No parser rewrite."],
+        }
+    )
+
+    assert "selected_candidate_quality_is_usable" not in quality["warnings"]
 
 
 def test_discover_python_projects_keeps_manifest_root_as_one_project(tmp_path: Path):
