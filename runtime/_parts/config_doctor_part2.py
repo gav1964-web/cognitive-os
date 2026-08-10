@@ -109,6 +109,22 @@ def _check_executable_acceptance_policy(catalogs: dict[str, Any]) -> _Check:
 def _check_patch_synthesis_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("patch_synthesis_policy_integrity")
     policy = dict(catalogs["patch_synthesis_policy"])
+    literal = dict(dict(policy.get("recipes") or {}).get("return_literal_stub") or {})
+    for field_name in ("reason", "operation_kind", "positive_case_kind", "expect_keys", "max_literal_repr_chars"):
+        if not literal.get(field_name):
+            check.errors.append(f"patch_synthesis_policy_missing:return_literal_stub.{field_name}")
+    notimplemented = dict(dict(policy.get("recipes") or {}).get("return_literal_notimplemented") or {})
+    for field_name in ("reason", "operation_kind", "positive_case_kind", "expect_keys", "max_literal_repr_chars"):
+        if not notimplemented.get(field_name):
+            check.errors.append(f"patch_synthesis_policy_missing:return_literal_notimplemented.{field_name}")
+    transform = dict(dict(policy.get("recipes") or {}).get("contract_transform_identity_return") or {})
+    for field_name in ("reason", "operation_kind", "positive_case_kind", "expect_keys", "allowed_transforms"):
+        if not transform.get(field_name):
+            check.errors.append(f"patch_synthesis_policy_missing:contract_transform_identity_return.{field_name}")
+    operator_ids = {str(row.get("id") or "") for row in list(dict(catalogs.get("contract_transform_operators") or {}).get("operators") or [])}
+    for operator_id in list(transform.get("allowed_transforms") or []):
+        if str(operator_id) not in operator_ids:
+            check.errors.append(f"patch_synthesis_policy_unknown_transform:{operator_id}")
     recipe = dict(dict(policy.get("recipes") or {}).get("required_input_guard") or {})
     if not recipe:
         check.errors.append("patch_synthesis_policy_missing:recipes.required_input_guard")
@@ -132,12 +148,136 @@ def _check_patch_synthesis_policy(catalogs: dict[str, Any]) -> _Check:
         check.errors.append("patch_synthesis_policy_invalid:required_input_guard.max_required_inputs")
     return check
 
+
+def _check_contract_transform_operators(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("contract_transform_operators_integrity")
+    catalog = dict(catalogs["contract_transform_operators"])
+    admission = dict(catalog.get("admission_policy") or {})
+    if admission.get("automatic_source_mutation_allowed") is not False:
+        check.errors.append("contract_transform_operators_invalid:automatic_source_mutation_allowed")
+    seen = set()
+    for row in [dict(item) for item in list(catalog.get("operators") or [])]:
+        operator_id = str(row.get("id") or "")
+        if not operator_id:
+            check.errors.append("contract_transform_operators_missing:id")
+        if operator_id in seen:
+            check.errors.append(f"contract_transform_operators_duplicate:{operator_id}")
+        seen.add(operator_id)
+        for field_name in ("input_kind", "output_kind", "expression_template"):
+            if not row.get(field_name):
+                check.errors.append(f"contract_transform_operators_missing:{field_name}:{operator_id}")
+        if "{arg}" not in str(row.get("expression_template") or ""):
+            check.errors.append(f"contract_transform_operators_invalid_template:{operator_id}")
+    return check
+
+
+def _check_contract_transform_contract_profiles(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("contract_transform_contract_profiles_integrity")
+    catalog = dict(catalogs["contract_transform_contract_profiles"])
+    admission = dict(catalog.get("admission_policy") or {})
+    if admission.get("automatic_acceptance_mutation_allowed") is not False:
+        check.errors.append("contract_transform_profiles_invalid:automatic_acceptance_mutation_allowed")
+    operator_ids = {str(row.get("id") or "") for row in list(dict(catalogs["contract_transform_operators"]).get("operators") or [])}
+    seen = set()
+    for row in [dict(item) for item in list(catalog.get("profiles") or [])]:
+        profile_id = str(row.get("id") or "")
+        if not profile_id:
+            check.errors.append("contract_transform_profiles_missing:id")
+        if profile_id in seen:
+            check.errors.append(f"contract_transform_profiles_duplicate:{profile_id}")
+        seen.add(profile_id)
+        if str(row.get("operator_id") or "") not in operator_ids:
+            check.errors.append(f"contract_transform_profiles_unknown_operator:{profile_id}")
+        for field_name in ("name_tokens", "input_field_candidates", "input_types", "output_types", "expect_key"):
+            if not row.get(field_name):
+                check.errors.append(f"contract_transform_profiles_missing:{field_name}:{profile_id}")
+        if "sample_input" not in row or "expected_output" not in row:
+            check.errors.append(f"contract_transform_profiles_missing:sample_or_expected:{profile_id}")
+    return check
+
+
+def _check_programmer_executor_playbooks(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("programmer_executor_playbooks_integrity")
+    policy = dict(catalogs["programmer_executor_playbooks"])
+    admission = dict(policy.get("admission_policy") or {})
+    if admission.get("automatic_source_mutation_allowed") is not False:
+        check.errors.append("executor_playbooks_invalid:automatic_source_mutation_allowed")
+    playbooks = [dict(row) for row in list(policy.get("playbooks") or [])]
+    if not playbooks:
+        check.errors.append("executor_playbooks_missing:playbooks")
+    seen = set()
+    for row in playbooks:
+        playbook_id = str(row.get("id") or "")
+        if not playbook_id:
+            check.errors.append("executor_playbooks_missing:id")
+        if playbook_id in seen:
+            check.errors.append(f"executor_playbooks_duplicate:{playbook_id}")
+        seen.add(playbook_id)
+        if not dict(row.get("match") or {}):
+            check.errors.append(f"executor_playbooks_missing:match:{playbook_id}")
+        if not row.get("action") or not row.get("safe_next_step"):
+            check.errors.append(f"executor_playbooks_missing:action_or_next_step:{playbook_id}")
+        if not row.get("required_gates"):
+            check.errors.append(f"executor_playbooks_missing:required_gates:{playbook_id}")
+    return check
+
+
+def _check_executor_solution_patterns(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("executor_solution_patterns_integrity")
+    catalog = dict(catalogs["executor_solution_patterns"])
+    admission = dict(catalog.get("admission_policy") or {})
+    if admission.get("automatic_source_mutation_allowed") is not False:
+        check.errors.append("executor_solution_patterns_invalid:automatic_source_mutation_allowed")
+    patterns = [dict(row) for row in list(catalog.get("patterns") or [])]
+    if not patterns:
+        check.errors.append("executor_solution_patterns_missing:patterns")
+    seen = set()
+    for row in patterns:
+        pattern_id = str(row.get("id") or "")
+        if pattern_id in seen:
+            check.errors.append(f"executor_solution_patterns_duplicate:{pattern_id}")
+        seen.add(pattern_id)
+        for field_name in ("match", "action", "safe_next_step", "required_evidence", "risk"):
+            if not row.get(field_name):
+                check.errors.append(f"executor_solution_patterns_missing:{field_name}:{pattern_id}")
+    return check
+
+
 def _check_project_evolution_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("project_evolution_policy_integrity")
     policy = dict(catalogs["project_evolution_policy"])
-    for field_name in ("principles", "evolution_rules", "evolution_change_types", "promotion_gates", "anti_patterns"):
+    for field_name in (
+        "principles",
+        "chosen_path",
+        "development_lanes",
+        "decision_rules",
+        "stop_signals",
+        "evidence_milestones",
+        "evolution_rules",
+        "evolution_change_types",
+        "promotion_gates",
+        "anti_patterns",
+    ):
         if not policy.get(field_name):
             check.errors.append(f"project_evolution_policy_missing:{field_name}")
+    chosen = dict(policy.get("chosen_path") or {})
+    for field_name in ("north_star", "architecture_bet", "field_trial_role", "promotion_rule", "implementation_rule"):
+        if not chosen.get(field_name):
+            check.errors.append(f"project_evolution_policy_missing:chosen_path.{field_name}")
+    lanes = dict(policy.get("development_lanes") or {})
+    for lane_name in ("evidence_calibration", "role_contract_depth", "kb_generalization", "negative_controls"):
+        lane = dict(lanes.get(lane_name) or {})
+        if not lane.get("goal") or not lane.get("primary_artifacts"):
+            check.errors.append(f"project_evolution_policy_missing:development_lanes.{lane_name}")
+    decisions = dict(policy.get("decision_rules") or {})
+    for rule_name in ("add_kb_when", "change_role_logic_when", "split_or_promote_role_when", "declare_separate_track_when"):
+        if not decisions.get(rule_name):
+            check.errors.append(f"project_evolution_policy_missing:decision_rules.{rule_name}")
+    milestones = dict(policy.get("evidence_milestones") or {})
+    for milestone_name, minimum in (("calibrated_9_5", 160), ("calibrated_9_7", 320)):
+        milestone = dict(milestones.get(milestone_name) or {})
+        if int(milestone.get("minimum_scored_projects") or 0) < minimum:
+            check.errors.append(f"project_evolution_policy_invalid:evidence_milestones.{milestone_name}")
     gates = dict(policy.get("promotion_gates") or {})
     for gate_name in ("role_score_9_5", "role_score_9_7"):
         gate = dict(gates.get(gate_name) or {})
@@ -161,54 +301,70 @@ def _check_project_evolution_policy(catalogs: dict[str, Any]) -> _Check:
             check.errors.append(f"project_evolution_policy_missing:evolution_rules.{rule_name}.blocker")
     return check
 
-def _check_technical_spec_policy(catalogs: dict[str, Any]) -> _Check:
-    check = _Check("technical_spec_policy_integrity")
-    policy = dict(catalogs["technical_spec_policy"])
-    if not policy.get("context_only_source_path_tokens"):
-        check.errors.append("technical_spec_policy_missing:context_only_source_path_tokens")
-    snippet = dict(policy.get("snippet_analysis") or {})
-    if not snippet.get("allowed_external_names"):
-        check.errors.append("technical_spec_policy_missing:snippet_analysis.allowed_external_names")
-    contract = dict(policy.get("contract_type_inference") or {})
-    for field_name in ("argument_rules", "payload_rules", "result_rules"):
-        if not contract.get(field_name):
-            check.errors.append(f"technical_spec_policy_missing:contract_type_inference.{field_name}")
-    rerank = dict(policy.get("semantic_rerank") or {})
-    for field_name in ("scan_limit", "strong_semantic_delta", "generic_semantic_delta"):
-        if field_name not in rerank:
-            check.errors.append(f"technical_spec_policy_missing:semantic_rerank.{field_name}")
-    review = dict(policy.get("semantic_review_override") or {})
-    for field_name in ("enabled", "min_candidate_score", "allowed_statuses", "required_reason_tokens", "required_checks"):
-        if field_name not in review:
-            check.errors.append(f"technical_spec_policy_missing:semantic_review_override.{field_name}")
-    shape = dict(policy.get("architecture_shape_score") or {})
-    if not shape.get("positive_source_tokens") or not shape.get("negative_source_tokens"):
-        check.errors.append("technical_spec_policy_missing:architecture_shape_score.tokens")
+def _check_role_promotion_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("role_promotion_policy_integrity")
+    policy = dict(catalogs["role_promotion_policy"])
+    bands = dict(policy.get("score_bands") or {})
+    roles = dict(policy.get("first_four_roles") or {})
+    band_97 = dict(bands.get("9_7") or {})
+    for item in ("independent_holdout", "unseen_project_types", "line_limit_check", "no_source_changes"):
+        if item not in set(band_97.get("required_evidence") or []):
+            check.errors.append(f"role_promotion_policy_missing:9_7.required_evidence.{item}")
+    for role_id in ("project_analyzer", "architect", "spec_writer", "implementer"):
+        role = dict(roles.get(role_id) or {})
+        if float(role.get("target_score") or 0.0) < 9.7:
+            check.errors.append(f"role_promotion_policy_invalid:{role_id}.target_score")
+        for field_name in ("required_checks", "required_semantic_checks", "growth_focus"):
+            if not role.get(field_name):
+                check.errors.append(f"role_promotion_policy_missing:{role_id}.{field_name}")
     return check
 
-def _check_architecture_decision_policy(catalogs: dict[str, Any]) -> _Check:
-    check = _Check("architecture_decision_policy_integrity")
-    policy = dict(catalogs["architecture_decision_policy"])
-    fallback_archetype = dict(policy.get("fallback_archetype") or {})
-    fallback_slice = dict(policy.get("fallback_slice") or {})
-    source_selection = dict(policy.get("source_selection") or {})
-    if not fallback_archetype.get("service_frameworks"):
-        check.errors.append("architecture_decision_policy_missing:fallback_archetype.service_frameworks")
-    if not fallback_slice.get("steps") or not fallback_slice.get("knowledge_rule"):
-        check.errors.append("architecture_decision_policy_missing:fallback_slice.steps")
+def _check_llm_profiles(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("llm_profiles_integrity")
+    profiles = dict(dict(catalogs["llm_profiles"]).get("profiles") or {})
+    for profile_id in ("local_l35", "external_l45_intent_resolver"):
+        profile = dict(profiles.get(profile_id) or {})
+        if not profile:
+            check.errors.append(f"llm_profile_missing:{profile_id}")
+            continue
+        for field_name in ("base_url", "model", "provider_label", "timeout_seconds", "response_format"):
+            if field_name not in profile:
+                check.errors.append(f"llm_profile_missing:{profile_id}.{field_name}")
+        if not str(profile.get("base_url") or "").rstrip("/").endswith("/v1"):
+            check.warnings.append(f"llm_profile_base_url_not_openai_v1:{profile_id}")
+        if float(profile.get("timeout_seconds") or 0) <= 0:
+            check.errors.append(f"llm_profile_invalid_timeout:{profile_id}")
+        if not isinstance(profile.get("response_format"), bool):
+            check.errors.append(f"llm_profile_invalid_response_format:{profile_id}")
+    return check
+
+def _check_role_source_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("role_source_policy_integrity")
+    policy = dict(catalogs["role_source_policy"])
+    section = dict(policy.get("implementation_target_policy") or {})
+    for field_name in ("context_only_path_tokens", "context_only_file_tokens", "blocked_by"):
+        if not section.get(field_name):
+            check.errors.append(f"role_source_policy_missing:{field_name}")
+    required_path_tokens = {"/tests/", "/integration_tests/", "/docs/", "/examples/", "/tools/"}
+    actual_path_tokens = {str(item) for item in list(section.get("context_only_path_tokens") or [])}
+    for token in sorted(required_path_tokens - actual_path_tokens):
+        check.errors.append(f"role_source_policy_missing_context_token:{token}")
+    if "context_only_implementation_target" not in section.get("blocked_by", []):
+        check.errors.append("role_source_policy_missing_blocker:context_only_implementation_target")
+    scope = dict(policy.get("scope_selection_policy") or {})
     for field_name in (
-        "context_only_path_tokens",
-        "domain_evidence_source_tokens",
-        "provider_parser_file_globs",
-        "provider_parser_function_markers",
-        "fallback_read_file_path_tokens",
-        "callable_transform_fallback",
-        "brief_sort_rules",
+        "candidate_excluded_dirs",
+        "candidate_noise_parts",
+        "candidate_noise_suffixes",
+        "disfavored_roots",
+        "manifest_names",
+        "preferred_roots",
+        "syntax_fixture_roots",
     ):
-        if not source_selection.get(field_name):
-            check.errors.append(f"architecture_decision_policy_missing:source_selection.{field_name}")
-    callable_fallback = dict(source_selection.get("callable_transform_fallback") or {})
-    for field_name in ("symbol_contains_any", "path_contains_any", "excluded_symbol_prefixes", "excluded_path_tokens"):
-        if not callable_fallback.get(field_name):
-            check.errors.append(f"architecture_decision_policy_missing:source_selection.callable_transform_fallback.{field_name}")
+        if not scope.get(field_name):
+            check.errors.append(f"role_source_policy_missing_scope_field:{field_name}")
+    required_scope_roots = {"src", "lib"}
+    actual_scope_roots = {str(item) for item in list(scope.get("preferred_roots") or [])}
+    for token in sorted(required_scope_roots - actual_scope_roots):
+        check.errors.append(f"role_source_policy_missing_preferred_scope_root:{token}")
     return check

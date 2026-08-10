@@ -129,3 +129,131 @@ def test_architecture_decision_policy_promotes_callable_transform_fallback(tmp_p
     assert "pkg/runtime.py:execute_runtime" in [
         row["source"] for row in adr["capability_model"] if row.get("source")
     ]
+
+
+def test_architecture_decision_policy_promotes_profiled_transform_without_path_match(tmp_path):
+    project = tmp_path / "profiled_project"
+    project.mkdir()
+    (project / "pkg").mkdir()
+    (project / "pkg" / "helpers.py").write_text(
+        "def normalize_name(name: str) -> str:\n    return name.strip().lower()\n",
+        encoding="utf-8",
+    )
+    (project / "pkg" / "runtime.py").write_text("def execute_runtime(app):\n    return app.run()\n", encoding="utf-8")
+
+    adr = build_architecture_decision(
+        goal="Extract safe transform",
+        project_report={
+            "summary": {
+                "root": project.as_posix(),
+                "file_count": 2,
+                "entrypoints": ["pkg/runtime.py"],
+                "languages": ["Python"],
+            },
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "generic"}},
+                "3_capabilities": {
+                    "pure_transforms": [
+                        {
+                            "path": "pkg/helpers.py",
+                            "name": "normalize_name",
+                            "args": [{"name": "name", "annotation": "str"}],
+                            "returns": "str",
+                        },
+                    ],
+                },
+                "6_runtime_extraction_readiness": {
+                    "minimal_extraction_plan": {
+                        "goal": "Extract runtime flow.",
+                        "capabilities_to_extract": [
+                            {"capability": "pkg/runtime.py:execute_runtime", "why": "central flow"},
+                        ],
+                    },
+                    "dataflows": [{"entrypoint": "pkg/runtime.py"}],
+                },
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["pkg/helpers.py:normalize_name"]
+
+
+def test_architecture_decision_backfills_empty_first_slice_from_source_tasks(tmp_path):
+    project = tmp_path / "zope.testing"
+    project.mkdir()
+
+    adr = build_architecture_decision(
+        goal="Extract doctest execution",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 1, "entrypoints": [], "languages": ["Python"]},
+            "architecture_synthesis": {
+                "artifact_type": "ProjectArchitectureSynthesis",
+                "recommended_first_slice": {
+                    "name": "configuration_parse_lookup_slice",
+                    "goal": "Prepare a bounded target.",
+                    "targets": [],
+                    "steps": ["Define the selected source contract."],
+                },
+            },
+            "analysis_tasks": {
+                "tasks": [
+                    {
+                        "type": "HARDEN_CONTRACT",
+                        "target": "src/zope/testing/doctestcase.py:_run_test",
+                        "title": "Harden doctest run contract",
+                    }
+                ]
+            },
+            "answers": {"1_scope": {"domain_profile": {"kind": "generic"}}},
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["src/zope/testing/doctestcase.py:_run_test"]
+    assert adr["capability_model"][0]["source"] == "src/zope/testing/doctestcase.py:_run_test"
+
+
+def test_architecture_decision_policy_keeps_pathless_sort_profile_out_of_fallback(tmp_path):
+    project = tmp_path / "profiled_project"
+    project.mkdir()
+    (project / "pkg").mkdir()
+    (project / "pkg" / "helpers.py").write_text(
+        "def sort_emails_by_timestamp(emails: list) -> list:\n    return sorted(emails)\n",
+        encoding="utf-8",
+    )
+    (project / "pkg" / "runtime.py").write_text("def execute_runtime(app):\n    return app.run()\n", encoding="utf-8")
+
+    adr = build_architecture_decision(
+        goal="Extract safe transform",
+        project_report={
+            "summary": {
+                "root": project.as_posix(),
+                "file_count": 2,
+                "entrypoints": ["pkg/runtime.py"],
+                "languages": ["Python"],
+            },
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "generic"}},
+                "3_capabilities": {
+                    "pure_transforms": [
+                        {
+                            "path": "pkg/helpers.py",
+                            "name": "sort_emails_by_timestamp",
+                            "args": [{"name": "emails", "annotation": "list"}],
+                            "returns": "list",
+                        },
+                    ],
+                },
+                "6_runtime_extraction_readiness": {
+                    "minimal_extraction_plan": {
+                        "goal": "Extract runtime flow.",
+                        "capabilities_to_extract": [
+                            {"capability": "pkg/runtime.py:execute_runtime", "why": "central flow"},
+                        ],
+                    },
+                    "dataflows": [{"entrypoint": "pkg/runtime.py"}],
+                },
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["pkg/runtime.py:execute_runtime"]

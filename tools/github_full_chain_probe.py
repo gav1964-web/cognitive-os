@@ -16,7 +16,7 @@ from runtime.configured_role_pipeline import artifact_by_type, producer_for_arti
 from runtime.programmer_executor import run_programmer_executor
 from runtime.project_benchmark import analyze_project
 from runtime.role_foundation_field_trial import _primary_language_scope
-from tools.github_reviewer_probe import FORBIDDEN_SOURCE_TOKENS
+from runtime.source_target_policy import is_context_only_implementation_target
 
 
 READY_THRESHOLD = 0.92
@@ -361,8 +361,7 @@ def _blocked_reason(project_report: dict[str, Any]) -> str:
 
 
 def _is_forbidden_source(value: str) -> bool:
-    normalized = "/" + value.replace("\\", "/").lower()
-    return any(token in normalized for token in FORBIDDEN_SOURCE_TOKENS)
+    return is_context_only_implementation_target(value)
 
 
 def _git_porcelain(project_dir: Path) -> str:

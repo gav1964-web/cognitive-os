@@ -16,7 +16,6 @@ from runtime.technical_spec_policy import load_technical_spec_policy, policy_lis
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
-CONTEXT_ONLY_SOURCE_PATH_TOKENS = policy_list(TECHNICAL_SPEC_POLICY, "context_only_source_path_tokens")
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
 CONTRACT_TYPE_POLICY = dict(TECHNICAL_SPEC_POLICY["contract_type_inference"])
 SEMANTIC_RERANK_POLICY = dict(TECHNICAL_SPEC_POLICY["semantic_rerank"])
@@ -116,6 +115,7 @@ def _output_contract_from_signature(signature: dict[str, Any], fallback: object)
     return {"result": _hint_text(fallback, "InferredOutput")}
 
 def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
+    source = str(candidate.get("source") or "")
     signature = dict(candidate.get("signature", {}) or {})
     args = _contract_args(signature)
     if args:
@@ -124,7 +124,7 @@ def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
             for arg in args
             if isinstance(arg, dict)
         }
-    return {}
+    return {"call_context": _inferred_payload_type(source)}
 
 def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [
@@ -173,11 +173,13 @@ def _matches_text_rule(text: str, rule: dict[str, Any], *, exact_field: str, con
     return any(str(token).lower() in text for token in list(rule.get(contains_field) or []))
 
 def _matches_source_snippet_rule(source: str, snippet: str, rule: dict[str, Any]) -> bool:
-    if any(str(token).lower() in source for token in list(rule.get("source_contains_any") or [])):
-        return True
-    if any(source.endswith(str(token).lower()) for token in list(rule.get("source_suffixes") or [])):
-        return True
-    if any(str(token).lower() in snippet for token in list(rule.get("snippet_contains_any") or [])):
+    source_tokens = [str(token).lower() for token in list(rule.get("source_contains_any") or [])]
+    suffixes = [str(token).lower() for token in list(rule.get("source_suffixes") or [])]
+    snippet_tokens = [str(token).lower() for token in list(rule.get("snippet_contains_any") or [])]
+    source_match = not source_tokens or any(token in source for token in source_tokens)
+    suffix_match = not suffixes or any(source.endswith(token) for token in suffixes)
+    snippet_match = not snippet_tokens or any(token in snippet for token in snippet_tokens)
+    if (source_tokens or suffixes or snippet_tokens) and source_match and suffix_match and snippet_match:
         return True
     return False
 

@@ -18,7 +18,7 @@ def test_semantic_target_profiles_match_scientific_contract_from_config():
     assert [profile["id"] for profile in profiles] == ["numeric_array_statistical_transform"]
     assert contract["contract_family"] == "numeric_array_statistical_transform"
     assert contract["input_contract"]["array_like_input"].startswith("ArrayLike")
-    assert adjustments["score_delta"] == 20
+    assert adjustments["score_delta"] == 24
 
 
 def test_semantic_target_profiles_distinguish_framework_response_from_app_facade():
@@ -55,7 +55,7 @@ def test_semantic_target_profiles_accept_async_context_detection_boundary():
     contract = contract_for_target(target)
 
     assert contract["contract_family"] == "async_context_detection_boundary"
-    assert semantic_score_adjustments(target)["score_delta"] == 20
+    assert semantic_score_adjustments(target)["score_delta"] == 22
     assert semantic_ranking_adjustments(target)["score_delta"] == 38
 
 
@@ -268,6 +268,48 @@ def test_semantic_target_profiles_cover_blind_redteam_20f_gaps():
         "automation/automation/dagster_docs/docstring_rules/section_header_rule.py:validate_section_headers": "docstring_section_validation_boundary",
         "src/structlog/_native.py:_make_filtering_bound_logger": "logging_filtering_bound_logger_factory_boundary",
         "contrib/capitalone_dataprofiler_expectations/capitalone_dataprofiler_expectations/rule_based_profiler/domain_builder/data_profiler_column_domain_builder.py:_get_domains": "data_profiler_column_domain_builder_boundary",
+        "src/webob/compat.py:read_multi": "multipart_form_read_boundary",
+        "src/textual/_xterm_parser.py:parse": "xterm_terminal_sequence_parser_boundary",
+        "rich/pretty.py:traverse": "terminal_render_traversal_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+
+
+def test_semantic_target_profiles_cover_blind_redteam_40c_gaps():
+    cases = {
+        "src/blinker/base.py:connect": "signal_subscription_boundary",
+        "src/cachelib/dynamodb.py:_set": "cache_operation_boundary",
+        "src/flask_caching/__init__.py:memoize": "cache_operation_boundary",
+        "dogpile/cache/region.py:cache_multi_on_arguments": "cache_operation_boundary",
+        "jsonschema_specifications/_core.py:_schemas": "schema_resource_registry_boundary",
+        "src/twisted/application/_client_service.py:makeMachine": "state_machine_factory_boundary",
+        "src/pytest_benchmark/fixture.py:_raw": "benchmark_fixture_measurement_boundary",
+        "src/OpenSSL/crypto.py:__setattr__": "crypto_attribute_bridge_boundary",
+        "src/protego/_protego.py:_extract_directive": "robots_directive_parser_boundary",
+        "mako/codegen.py:write_namespaces": "template_codegen_namespace_boundary",
+        "itemloaders/__init__.py:_get_jmesvalues": "item_value_extraction_boundary",
+        "itemadapter/_json_schema.py:_json_schema_from_dataclass": "python_type_annotation_extraction_boundary",
+        "src/pytest_rerunfailures.py:evaluate_condition": "plugin_condition_evaluation_boundary",
+        "pytest_timeout.py:pytest_timeout_set_timer": "plugin_condition_evaluation_boundary",
+        "src/pytest_html/basereport.py:pytest_runtest_logreport": "plugin_condition_evaluation_boundary",
+        "queuelib/queue.py:push": "queue_push_boundary",
+        "async_generator/_impl.py:yield_from_": "async_generator_delegation_boundary",
+        "src/chardet/__init__.py:detect_all": "encoding_detection_boundary",
+        "glom/core.py:register_op": "object_path_operation_registry_boundary",
+        "src/zope/interface/verify.py:_verify_element": "interface_verification_boundary",
+        "autoflake.py:multiline_statement": "source_statement_boundary_detection",
+        "src/zope/event/classhandler.py:dispatch": "event_dispatch_routing_boundary",
+        "pytest_django/plugin.py:_fail_for_invalid_template_variable": "template_variable_validation_boundary",
     }
 
     for target, family in cases.items():
@@ -308,3 +350,50 @@ def test_semantic_target_profiles_demote_internal_rich_traverse_helper():
     assert contract_for_target(internal_target) == {}
     assert semantic_ranking_adjustments(public_target)["score_delta"] > 0
     assert semantic_ranking_adjustments(internal_target)["score_delta"] < 0
+
+
+def test_semantic_target_profiles_cover_blind_redteam_40k_gaps():
+    cases = {
+        "src/awkward/_slicing.py:_normalise_item_bool_to_int": "array_slice_normalization_boundary",
+        "src/cffi/backend_ctypes.py:complete_struct_or_union": "ffi_struct_completion_boundary",
+        "src/hist/plot.py:plot_ratio_array": "plot_ratio_array_boundary",
+        "src/nacl/bindings/crypto_secretstream.py:crypto_secretstream_xchacha20poly1305_pull": "crypto_secretstream_pull_boundary",
+        "src/OpenSSL/crypto.py:__setattr__": "crypto_attribute_bridge_boundary",
+        "src/protego/_protego.py:_extract_directive": "robots_directive_parser_boundary",
+        "src/uproot/behaviors/RNTuple.py:arrays": "scientific_tree_array_read_boundary",
+        "src/vector/_compute/lorentz/add.py:dispatch": "vector_compute_dispatch_boundary",
+        "numpy/lib/_function_base_impl.py:_quantile": "numeric_array_statistical_transform",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+        assert adjustments["score_delta"] >= 24
+
+
+def test_semantic_target_profiles_cover_blind_redteam_40l_gaps():
+    cases = {
+        "Lib/fontTools/designspaceLib/split.py:_extractSubSpace": "font_designspace_subspace_extraction_boundary",
+        "src/PIL/Image.py:convert": "image_mode_conversion_transform",
+        "shapely/_ragged_array.py:_get_arrays_multilinestring": "geometry_ragged_array_extraction_boundary",
+        "vine/promises.py:throw": "promise_error_propagation_boundary",
+    }
+
+    for target, family in cases.items():
+        contract = contract_for_target(target)
+        adjustments = semantic_score_adjustments(target)
+
+        assert contract["contract_family"] == family
+        assert contract["input_contract"]
+        assert contract["output_contract"]
+        assert contract["validation_gates"]
+        assert contract["failure_modes"]
+        assert adjustments["profiled_contract_family"] is True
+        assert adjustments["score_delta"] >= 24

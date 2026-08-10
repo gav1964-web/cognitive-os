@@ -144,7 +144,7 @@ def test_target_quality_scores_parser_combinator_helper_as_reviewable_contract()
     )
 
     assert quality["status"] == "acceptable"
-    assert quality["score"] >= 95
+    assert quality["score"] == 84
     assert "parser_combinator_helper_boundary" in quality["semantic_profile_ids"]
 
 

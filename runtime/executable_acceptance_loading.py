@@ -11,7 +11,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from .executable_acceptance_isolation import load_source_isolated_function
+from .executable_acceptance_isolation import load_source_isolated_callable, load_source_isolated_function
+from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy
 
 
@@ -20,9 +21,14 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
     if module_name:
         try:
             with fresh_import(module_name):
+                before_modules = set(sys.modules)
                 loaded = _import_module_with_optional_stubs(project_dir, module_name)
                 module = loaded["module"]
                 func = getattr(module, symbol, None)
+                if _is_stub_object(func) and len(Path(path_text).parts) > 1:
+                    if isolated := _isolated_with_loaded(path, symbol, loaded):
+                        return isolated
+                    func = None
                 if func is not None or len(Path(path_text).parts) > 1:
                     return {
                         "callable": func,
@@ -34,10 +40,11 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
                         "dependency_module_profiles": loaded.get("dependency_module_profiles", []),
                     }
         except Exception as exc:
+            _remove_new_modules(locals().get("before_modules", set()))
             if len(Path(path_text).parts) > 1:
                 loaded = _load_callable_from_file(path, symbol, project_dir)
-                if loaded.get("reason"):
-                    isolated = load_source_isolated_function(path, symbol)
+                if loaded.get("reason") and loaded.get("reason") != "target_not_callable":
+                    isolated = load_source_isolated_callable(path, symbol)
                     if not isolated.get("reason"):
                         failure = import_failure(exc)
                         isolated["fallback_reason"] = failure["reason"]
@@ -90,6 +97,8 @@ def import_path(project_dir: Path):
     entries = [str(project_dir)]
     if (project_dir / "src").is_dir():
         entries.insert(0, str(project_dir / "src"))
+    if (project_dir / "src" / "python").is_dir():
+        entries.insert(0, str(project_dir / "src" / "python"))
     for entry in reversed(entries):
         sys.path.insert(0, entry)
     try:
@@ -126,7 +135,7 @@ def _import_module_with_optional_stubs(project_dir: Path, module_name: str) -> d
         return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
 
 
-def _load_callable_from_file(path: Path, symbol: str, project_dir: Path) -> dict[str, Any]:
+def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprofiled: list[str] | None = None) -> dict[str, Any]:
     try:
         spec = importlib.util.spec_from_file_location("acceptance_probe_target", path)
         if not spec or not spec.loader:
@@ -134,7 +143,7 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path) -> dict
         module = importlib.util.module_from_spec(spec)
         stubbed: list[str] = []
         created_modules: list[str] = []
-        profile_modules: list[str] = []
+        profile_modules: list[str] = list(preprofiled or [])
         policy = dependency_stub_policy()
         attempts = max(1, int(policy.get("max_missing_modules") or 0) + 1)
         with _dependency_metadata_context(policy) as metadata_used:
@@ -163,6 +172,11 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path) -> dict
             "dependency_module_profiles": profile_modules,
         }
     except Exception as exc:
+        missing = str(getattr(exc, "name", "") or "")
+        policy = dependency_stub_policy()
+        if _can_profile_module(missing, policy, list(preprofiled or [])):
+            _install_profile_module(missing, policy)
+            return _load_callable_from_file(path, symbol, project_dir, [*(preprofiled or []), missing])
         failure = import_failure(exc)
         return {"callable": None, "reason": failure["reason"], "detail": failure["detail"]}
 
@@ -180,8 +194,7 @@ def _can_profile_module(missing: str, policy: dict[str, Any], profiled: list[str
     if not policy.get("generated_module_profiles_enabled") or not missing or missing in profiled:
         return False
     profiles = dict(policy.get("generated_module_profiles") or {})
-    parent = missing.rsplit(".", 1)[0] if "." in missing else ""
-    return missing in profiles and (not parent or parent in sys.modules)
+    return missing in profiles
 
 
 def _preinstall_profile_modules(project_dir: Path, module_name: str, policy: dict[str, Any], profiled: list[str]) -> list[str]:
@@ -207,6 +220,17 @@ def _profile_module_file_exists(project_dir: Path, name: str) -> bool:
 
 
 def _install_profile_module(name: str, policy: dict[str, Any]) -> list[str]:
+    created: list[str] = []
+    parts = name.split(".")
+    for index in range(1, len(parts)):
+        parent_name = ".".join(parts[:index])
+        if parent_name not in sys.modules:
+            parent = types.ModuleType(parent_name)
+            parent.__path__ = []
+            sys.modules[parent_name] = parent
+            created.append(parent_name)
+        if index > 1:
+            setattr(sys.modules[".".join(parts[: index - 1])], parts[index - 1], sys.modules[parent_name])
     module = types.ModuleType(name)
     attrs = dict(dict(policy.get("generated_module_profiles") or {}).get(name, {}).get("attrs") or {})
     for key, value in attrs.items():
@@ -216,13 +240,27 @@ def _install_profile_module(name: str, policy: dict[str, Any]) -> list[str]:
     parent = sys.modules.get(parent_name)
     if parent is not None:
         setattr(parent, child_name, module)
-    return [name]
+    return [*created, name]
 
 
 def _profile_attr_value(value: Any) -> Any:
     if isinstance(value, dict) and value.get("__fixture__") == "callable_empty_string":
         return lambda *args, **kwargs: ""
-    return value
+    return materialize(value)
+
+
+def _is_stub_object(value: Any) -> bool:
+    return value.__class__.__name__ == "_StubObject" and hasattr(value, "_name")
+
+
+def _isolated_with_loaded(path: Path, symbol: str, loaded: dict[str, Any]) -> dict[str, Any] | None:
+    isolated = load_source_isolated_callable(path, symbol)
+    if isolated.get("reason"): return None
+    isolated.update({key: loaded.get(key, []) for key in ("dependency_stubs", "dependency_stub_modules_created", "dependency_metadata_profiles", "dependency_module_profiles")})
+    isolated["source_isolated"] = True; return isolated
+def _remove_new_modules(before: set[str]) -> None:
+    for name in [name for name in list(sys.modules) if name not in before]:
+        sys.modules.pop(name, None)
 
 
 def _loaded_module(
@@ -296,6 +334,11 @@ def cleanup_dependency_stubs(loaded: dict[str, Any]) -> None:
         sys.modules.pop(str(name), None)
 
 
+def install_dependency_profile_modules(names: list[str]) -> list[str]:
+    policy = dependency_stub_policy()
+    return [created for name in names for created in _install_profile_module(str(name), policy)]
+
+
 def _install_stub_module(name: str) -> list[str]:
     created: list[str] = []
     parts = name.split(".")
@@ -321,31 +364,14 @@ class _StubModule(types.ModuleType):
 class _StubObject:
     def __init__(self, name: str):
         self._name = name
-
-    def __call__(self, *args: Any, **kwargs: Any) -> "_StubObject":
-        return self
-
-    def __getitem__(self, key: Any) -> "_StubObject":
-        return _StubObject(f"{self._name}[{key!r}]")
-
-    def __enter__(self) -> "_StubObject":
-        return self
-
-    def __exit__(self, *args: Any) -> bool:
-        return False
-
-    def __iter__(self):
-        return iter(())
-
-    def __bool__(self) -> bool:
-        return False
-
-    def __mro_entries__(self, bases: tuple[object, ...]) -> tuple[()]:
-        return ()
-
-    def __getattr__(self, name: str) -> "_StubObject":
-        return _StubObject(f"{self._name}.{name}")
-
+    def __call__(self, *args: Any, **kwargs: Any) -> "_StubObject": return self
+    def __getitem__(self, key: Any) -> "_StubObject": return _StubObject(f"{self._name}[{key!r}]")
+    def __enter__(self) -> "_StubObject": return self
+    def __exit__(self, *args: Any) -> bool: return False
+    def __iter__(self): return iter(())
+    def __bool__(self) -> bool: return False
+    def __mro_entries__(self, bases: tuple[object, ...]) -> tuple[()]: return ()
+    def __getattr__(self, name: str) -> "_StubObject": return _StubObject(f"{self._name}.{name}")
 
 def _exception_detail(exc: Exception) -> str:
     name = getattr(exc, "name", "") or ""

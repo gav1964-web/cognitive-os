@@ -51,7 +51,7 @@ def _project_analyzer_checks(project: dict[str, Any], *, policy: dict[str, Any])
     profile = dict(scope.get("domain_profile") or {})
     project_policy = dict(policy.get("project_analyzer") or {})
     return [
-        _check("purpose_is_specific", _specific(scope.get("main_task"), policy=policy)),
+        _check("purpose_is_specific", _purpose_is_specific(scope, content, policy=policy)),
         _check("purpose_avoids_marketing_blurb", _purpose_avoids_marketing_blurb(scope.get("main_task"), policy=policy)),
         _check("domain_profile_is_specific_or_evidently_generic", _domain_profile_is_usable(profile, summary, policy=policy)),
         _check("generic_profile_not_masking_library_domain", _generic_profile_not_masking_library_domain(profile, content, policy=policy)),
@@ -264,9 +264,23 @@ def _purpose_avoids_marketing_blurb(value: object, *, policy: dict[str, Any]) ->
     return bool(text.strip()) and not any(marker in text for marker in markers)
 
 
+def _purpose_is_specific(scope: dict[str, Any], content: dict[str, Any], *, policy: dict[str, Any]) -> bool:
+    purpose = scope.get("main_task")
+    if _specific(purpose, policy=policy):
+        return True
+    text = _flatten({"purpose": purpose, "profile": scope.get("domain_profile"), "evidence": content.get("evidence_summary")}).lower()
+    project_policy = dict(policy.get("project_analyzer") or {})
+    markers = {str(item).lower() for item in project_policy.get("purpose_domain_markers", [])}
+    hits = {marker for marker in markers if marker in text}
+    minimum = int(project_policy.get("purpose_domain_marker_min_hits") or 2)
+    return len(str(purpose or "").strip()) >= 32 and len(hits) >= minimum and _evidence_summary_is_source_backed(content, {}, policy=policy)
+
+
 def _without_machine_refs(text: str) -> str:
+    text = re.sub(r"\[!\[[^\]]*\]\([^)]+\)\]\([^)]+\)", " ", text)
+    text = re.sub(r"!\[[^\]]*\]\([^)]+\)", " ", text)
     text = re.sub(r"https?://\S+", " ", text)
-    return re.sub(r"\S+badge\S*", " ", text, flags=re.IGNORECASE)
+    return re.sub(r"\bbadge\w*\b", " ", text, flags=re.IGNORECASE)
 
 
 def _generic_profile_not_masking_library_domain(profile: dict[str, Any], content: dict[str, Any], *, policy: dict[str, Any]) -> bool:
@@ -301,8 +315,11 @@ def _first_slice_not_generic_when_domain_cues_exist(first_slice: dict[str, Any],
     if name not in generic_names:
         return True
     targets = [str(item) for item in list(first_slice.get("targets", []) or []) if item]
+    markers = [str(item).lower() for item in architect_policy.get("domain_slice_markers", [])]
+    minimum = int(architect_policy.get("domain_slice_marker_min_hits") or 1)
+    slice_text = _flatten({"name": name, "summary": first_slice.get("summary"), "rationale": first_slice.get("rationale")}).lower()
     if any(_target_has_semantic_contract(target) for target in targets):
-        return True
+        return len({marker for marker in markers if marker in slice_text}) >= min(1, minimum)
     content = dict(project.get("content") or project)
     answers = dict(content.get("answers") or {})
     scope = dict(answers.get("1_scope") or {})
@@ -316,9 +333,7 @@ def _first_slice_not_generic_when_domain_cues_exist(first_slice: dict[str, Any],
             "capabilities": capabilities.get("atomic_reusable_capabilities") or capabilities.get("pure_transforms"),
         }
     ).lower()
-    markers = [str(item).lower() for item in architect_policy.get("domain_slice_markers", [])]
     hits = {marker for marker in markers if marker in text}
-    minimum = int(architect_policy.get("domain_slice_marker_min_hits") or 1)
     return len(hits) < minimum
 
 

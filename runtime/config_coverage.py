@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .l4_decision_table import load_l4_decision_rules
+from .executor_solution_patterns import load_executor_solution_patterns
 from .operation_recipe_rules import load_operation_recipe_rules
 from .sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from .semantic_resolution_rules import load_semantic_resolution_rules
@@ -53,6 +54,11 @@ def build_config_coverage_report(root: Path | None = None) -> dict[str, Any]:
         _coverage_section(
             "l4_decision_rules",
             [str(row.get("rule_id") or "") for row in load_l4_decision_rules(str(base / "config" / "l4_decision_rules.json")).get("rules", [])],
+            haystack,
+        ),
+        _coverage_section(
+            "executor_solution_patterns",
+            [str(row.get("id") or "") for row in load_executor_solution_patterns(str(base / "config" / "executor_solution_patterns.json")).get("patterns", [])],
             haystack,
         ),
     ]

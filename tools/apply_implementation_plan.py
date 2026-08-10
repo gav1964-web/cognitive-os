@@ -24,22 +24,36 @@ def main() -> int:
     parser.add_argument("--run-verification", action="store_true")
     parser.add_argument("--max-commands", type=int, default=3)
     parser.add_argument("--apply-source", action="store_true")
+    parser.add_argument("--use-l45-llm", action="store_true")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
     project_dir = Path(args.project_dir)
     if not project_dir.is_absolute():
         project_dir = root / project_dir
-    result = run_programmer_executor(
-        root=root,
-        project_dir=project_dir.resolve(),
-        technical_spec=_load_json(root, args.spec),
-        implementation_plan=_load_json(root, args.plan),
-        test_plan=_load_json(root, args.test_plan),
-        run_verification=args.run_verification,
-        apply_source=args.apply_source,
-        max_commands=args.max_commands,
-    )
+    previous = None
+    if args.use_l45_llm:
+        import os
+
+        previous = os.environ.get("COGNITIVE_OS_EXECUTOR_USE_L45_LLM")
+        os.environ["COGNITIVE_OS_EXECUTOR_USE_L45_LLM"] = "1"
+    try:
+        result = run_programmer_executor(
+            root=root,
+            project_dir=project_dir.resolve(),
+            technical_spec=_load_json(root, args.spec),
+            implementation_plan=_load_json(root, args.plan),
+            test_plan=_load_json(root, args.test_plan),
+            run_verification=args.run_verification,
+            apply_source=args.apply_source,
+            max_commands=args.max_commands,
+        )
+    finally:
+        if args.use_l45_llm:
+            if previous is None:
+                os.environ.pop("COGNITIVE_OS_EXECUTOR_USE_L45_LLM", None)
+            else:
+                os.environ["COGNITIVE_OS_EXECUTOR_USE_L45_LLM"] = previous
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if result["status"] in {"ok", "blocked"} else 2
 

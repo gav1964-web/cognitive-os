@@ -1,0 +1,56 @@
+{
+  "schema_version": "programmer_executor_playbooks.v1",
+  "status": "active",
+  "admission_policy": {
+    "automatic_source_mutation_allowed": false,
+    "automatic_kb_promotion_allowed": false,
+    "required_evidence": ["field_trial_case", "regression_test", "config_doctor"]
+  },
+  "playbooks": [
+    {
+      "id": "executor_playbook_callable_acceptance_verify",
+      "label": "Callable acceptance can verify a bounded patch",
+      "match": {"acceptance_signal": "executable_callable"},
+      "action": "verify_patch",
+      "safe_next_step": "run verifier gates against sandbox patch package",
+      "required_gates": ["sandbox_only", "writable_scope_only", "executable_acceptance_passed"],
+      "confidence": 0.8
+    },
+    {
+      "id": "executor_playbook_fixture_profile_gap",
+      "label": "Positive sample failed because a domain fixture is missing",
+      "match": {"skipped_reason": "positive_sample_execution_failed"},
+      "action": "request_fixture_or_contract_refinement",
+      "safe_next_step": "add or select a controlled fixture/profile and re-run blind acceptance",
+      "required_gates": ["fixture_is_config_backed", "regression_test_added", "blind_trial_delta_positive"],
+      "confidence": 0.72
+    },
+    {
+      "id": "executor_playbook_dependency_boundary_profile",
+      "label": "Optional dependency boundary requires a controlled profile",
+      "match": {"skipped_reason": "import_failed_missing_module"},
+      "action": "request_dependency_boundary_profile",
+      "safe_next_step": "add a generated module or metadata profile only when import is external",
+      "required_gates": ["dependency_is_external", "profile_attrs_are_minimal", "source_project_unchanged"],
+      "confidence": 0.68
+    },
+    {
+      "id": "executor_playbook_contract_rebind",
+      "label": "Acceptance contract does not bind to callable signature",
+      "match": {"skipped_reason": "positive_signature_mismatch"},
+      "action": "request_implementation_plan_contract_rebind",
+      "safe_next_step": "send contract binding back to Implementer Planner or Spec Writer",
+      "required_gates": ["target_unchanged", "contract_binding_updated", "acceptance_rebuilt"],
+      "confidence": 0.74
+    },
+    {
+      "id": "executor_playbook_import_runtime_boundary",
+      "label": "Import-time runtime behavior is not a safe executor patch target",
+      "match": {"skipped_reason": "import_failed_runtime_error"},
+      "action": "block_for_review",
+      "safe_next_step": "isolate import-time side effects or choose a lighter target",
+      "required_gates": ["human_or_reviewer_boundary_decision", "no_source_mutation"],
+      "confidence": 0.66
+    }
+  ]
+}

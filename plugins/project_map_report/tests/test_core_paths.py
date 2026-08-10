@@ -14,6 +14,10 @@ def test_core_paths_treat_support_files_as_context_only():
         "src/integrations/prefect-aws/infra/worker/service_stack.py",
         "autofix_docker/generated_v2/pipeline.py",
         "autofix_docker/generated-run/pipeline.py",
+        "e2e-tests/server/app.py",
+        "integration-tests/server/app.py",
+        "project/testserver/server.py",
+        "pkg/fixtures/app.py",
     ]:
         result = classify_source_path(path)
 

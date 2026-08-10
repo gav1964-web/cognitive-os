@@ -16,7 +16,6 @@ from runtime.technical_spec_policy import load_technical_spec_policy, policy_lis
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
-CONTEXT_ONLY_SOURCE_PATH_TOKENS = policy_list(TECHNICAL_SPEC_POLICY, "context_only_source_path_tokens")
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
 CONTRACT_TYPE_POLICY = dict(TECHNICAL_SPEC_POLICY["contract_type_inference"])
 SEMANTIC_RERANK_POLICY = dict(TECHNICAL_SPEC_POLICY["semantic_rerank"])

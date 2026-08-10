@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from runtime.role_artifact_quality import evaluate_technical_spec
 from runtime.role_foundation_field_trial import _primary_language_scope, _report, _role_scores, discover_python_projects
@@ -33,6 +34,49 @@ def test_field_trial_report_uses_project_and_role_minimums():
     assert report["summary"]["project_min_score"] == 8.4
     assert report["summary"]["role_min_scores"]["architect"] == 8.4
     assert report["below_target"][0]["project"] == "weak"
+
+
+def test_field_trial_report_calibrates_single_clean_corpus_below_promotion_claim():
+    cases = [
+        {
+            "project": f"clean_{index}",
+            "status": "ok",
+            "project_min_score": 10.0,
+            "role_scores": {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 10.0},
+            "warnings": [],
+            "safety": {},
+        }
+        for index in range(39)
+    ]
+
+    report = _report(cases, target_score=9.7)
+
+    assert report["status"] == "ok"
+    assert report["promotion_status"] == "needs_more_evidence"
+    assert report["summary"]["readiness_min_score"] == 10.0
+    assert report["calibration"]["calibrated_readiness_min_score"] == 9.0
+    assert report["calibration"]["target_met"] is False
+
+
+def test_field_trial_report_allows_very_wide_clean_corpus_to_claim_promotion_target():
+    cases = [
+        {
+            "project": f"clean_{index}",
+            "status": "ok",
+            "project_min_score": 9.8,
+            "role_scores": {"project_analyzer": 9.8, "architect": 9.8, "spec_writer": 9.8},
+            "warnings": [],
+            "safety": {},
+        }
+        for index in range(320)
+    ]
+
+    report = _report(cases, target_score=9.7)
+
+    assert report["status"] == "ok"
+    assert report["promotion_status"] == "ready_for_9_7"
+    assert report["calibration"]["calibrated_readiness_min_score"] == 9.7
+    assert report["calibration"]["evidence_tier"] == "promotion_candidate"
 
 
 def test_discover_python_projects_uses_projects_child_when_present(tmp_path: Path):
@@ -190,6 +234,53 @@ def test_primary_language_scope_marks_cpp_runtime_core_out_of_scope(tmp_path: Pa
     assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
 
 
+def test_primary_language_scope_marks_type_stub_corpus_out_of_scope(tmp_path: Path):
+    project = tmp_path / "typeshed_like"
+    (project / "stdlib").mkdir(parents=True)
+    (project / "stubs" / "demo").mkdir(parents=True)
+    (project / "lib" / "tools").mkdir(parents=True)
+    for index in range(210):
+        target = project / ("stdlib" if index % 2 else "stubs/demo") / f"mod_{index}.pyi"
+        target.write_text("def value() -> str: ...\n", encoding="utf-8")
+    for index in range(5):
+        (project / "lib" / "tools" / f"tool_{index}.py").write_text("def run():\n    return None\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["reason_code"] == "unsupported_type_stub_corpus_for_python_foundation"
+
+
+def test_primary_language_scope_marks_native_extension_wrapper_out_of_scope(tmp_path: Path):
+    project = tmp_path / "bcrypt_like"
+    (project / "src" / "pkg").mkdir(parents=True)
+    (project / "src" / "_pkg" / "src").mkdir(parents=True)
+    (project / "src" / "pkg" / "__init__.py").write_text("from ._pkg import hashpw\n", encoding="utf-8")
+    (project / "src" / "_pkg" / "src" / "lib.rs").write_text("pub fn hashpw() {}\n", encoding="utf-8")
+    (project / "release.py").write_text("def release(version):\n    return None\n", encoding="utf-8")
+    (project / "pyproject.toml").write_text("[project]\nname='pkg'\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["primary_language"] == "Rust native extension"
+
+
+def test_primary_language_scope_marks_cpp_extension_wrapper_out_of_scope(tmp_path: Path):
+    project = tmp_path / "rapidjson_like"
+    project.mkdir()
+    (project / "setup.py").write_text("from setuptools import setup\n", encoding="utf-8")
+    (project / "rapidjson.cpp").write_text("int main(void) { return 0; }\n", encoding="utf-8")
+    (project / "release.py").write_text("version = '0.0.0'\n", encoding="utf-8")
+    (project / "tests").mkdir()
+    (project / "tests" / "test_api.py").write_text("def test_api(): pass\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["primary_language"] == "C++ native extension"
+
+
 def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):
     project = tmp_path / "pkg"
     (project / "pkg").mkdir(parents=True)
@@ -198,3 +289,25 @@ def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):
     (project / "pyproject.toml").write_text("[project]\nname='pkg'\n", encoding="utf-8")
 
     assert _primary_language_scope(project)["status"] == "in_scope"
+
+
+def test_primary_language_scope_tolerates_inaccessible_subtree(tmp_path: Path):
+    project = tmp_path / "pkg"
+    (project / "pkg").mkdir(parents=True)
+    (project / "broken").mkdir()
+    (project / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+    real_walk = __import__("os").walk
+
+    def noisy_walk(path, *args, **kwargs):
+        for current, dirs, files in real_walk(path, *args, **kwargs):
+            if Path(current).name == "broken":
+                onerror = kwargs.get("onerror")
+                if onerror:
+                    onerror(OSError("broken subtree"))
+                continue
+            yield current, dirs, files
+
+    with patch("runtime._parts.role_foundation_field_trial_scope.os.walk", side_effect=noisy_walk):
+        scope = _primary_language_scope(project)
+
+    assert scope["status"] == "in_scope"

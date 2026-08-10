@@ -24,6 +24,7 @@
     "minimum_evidence_claims": 3,
     "safe_blockers": ["no_safe_python_candidate"],
     "library_domain_marker_min_hits": 2,
+    "purpose_domain_marker_min_hits": 2,
     "marketing_purpose_markers": [
       "trusted by",
       "mars missions",
@@ -45,6 +46,23 @@
       "converter",
       "serializer"
     ],
+    "purpose_domain_markers": [
+      "ansible",
+      "lint",
+      "playbook",
+      "rule",
+      "syntax",
+      "yaml",
+      "parser",
+      "protocol",
+      "database",
+      "serializer",
+      "converter",
+      "scheduler",
+      "workflow",
+      "plugin",
+      "api"
+    ],
     "check_weights": {
       "purpose_avoids_marketing_blurb": 4,
       "generic_profile_not_masking_library_domain": 3,
@@ -59,9 +77,22 @@
     "generic_first_slice_names": [
       "automation_task_execution_slice",
       "workflow_state_transition_slice",
+      "configuration_parse_lookup_slice",
       "minimal_safe_extraction"
     ],
     "domain_slice_markers": [
+      "workflow",
+      "plugin",
+      "sdk",
+      "wheel",
+      "raster",
+      "geospatial",
+      "tile",
+      "netcdf",
+      "msgpack",
+      "model",
+      "metric",
+      "codec",
       "parser",
       "protocol",
       "frame",

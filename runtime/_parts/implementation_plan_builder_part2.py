@@ -7,6 +7,7 @@ from runtime.role_implementer_blueprint import (
     build_patch_intent,
 )
 from runtime.role_skill_common import now_iso
+from runtime.source_target_policy import implementation_target_violation
 from runtime.stage2_template_routes import select_stage2_case
 from runtime.greenfield_stage2_templates import expected_artifacts_for_case
 
@@ -176,6 +177,24 @@ def _expected_files(patch_scope: list[str]) -> list[str]:
             files.append(path)
     return files[:8]
 
+def _implementation_evidence_scope(technical_spec: dict[str, Any], handoff: dict[str, Any]) -> list[str]:
+    scope: list[str] = []
+    for item in list(handoff.get("patch_scope") or []):
+        _append_unique(scope, str(item))
+    for row in list(technical_spec.get("source_evidence") or []):
+        source = str(dict(row or {}).get("source") or "")
+        if ":" in source:
+            _append_unique(scope, source)
+    for row in list(technical_spec.get("traceability_table") or []):
+        source = str(dict(row or {}).get("source") or "")
+        if ":" in source:
+            _append_unique(scope, source)
+    return scope[:8]
+
+def _append_unique(rows: list[str], value: str) -> None:
+    if value and value not in rows:
+        rows.append(value)
+
 def _bounded_patch_scope(evidence_scope: list[str], target: dict[str, Any]) -> list[str]:
     candidate = str(target.get("candidate") or "").strip()
     return [candidate] if candidate else []
@@ -194,6 +213,18 @@ def _implementation_target(extraction_contract: dict[str, Any], patch_scope: lis
             "selection_reason": extraction_contract.get("selection_reason"),
         }
     candidate = str(extraction_contract.get("candidate") or (patch_scope[0] if patch_scope else ""))
+    violation = implementation_target_violation(candidate)
+    if violation.get("status") != "allowed":
+        return {
+            "candidate": None,
+            "status": violation.get("status"),
+            "source_contract": "TechnicalSpec.extraction_contract",
+            "candidate_score": 0,
+            "selection_reason": violation.get("selection_reason"),
+            "rejected_candidate": candidate,
+            "matched_policy_tokens": violation.get("matched_tokens", []),
+            "blocked_by": violation.get("blocked_by", []),
+        }
     return {
         "candidate": candidate,
         "source_contract": "TechnicalSpec.extraction_contract" if extraction_contract else "TechnicalSpec.patch_scope",
@@ -208,11 +239,12 @@ def _contract_binding(extraction_contract: dict[str, Any], target: dict[str, Any
         "output_contract": extraction_contract.get("output_contract", {"result": "Any"}),
         "side_effects": extraction_contract.get("side_effects", {}),
         "evidence_source": extraction_contract.get("evidence_source"),
-        "binding_status": _binding_status(extraction_contract),
+        "contract_profile": extraction_contract.get("contract_profile", {}),
+        "binding_status": _binding_status(extraction_contract, target),
     }
 
-def _binding_status(extraction_contract: dict[str, Any]) -> str:
-    if extraction_contract.get("status") == "blocked_no_safe_candidate":
+def _binding_status(extraction_contract: dict[str, Any], target: dict[str, Any]) -> str:
+    if target.get("status") == "blocked_no_safe_candidate" or extraction_contract.get("status") == "blocked_no_safe_candidate":
         return "blocked_no_safe_candidate"
     return "bound_to_extraction_contract" if extraction_contract.get("candidate") else "fallback_to_patch_scope"
 

@@ -87,7 +87,7 @@ def _write_direct_package(root: Path, task_id: str, prompt: str, kind: str, writ
         (project_dir / "src" / "direct_cli" / "cli.py").write_text(_cli(kind), encoding="utf-8")
         (project_dir / "tests" / "test_cli.py").write_text(_tests(kind), encoding="utf-8")
         compile_result = _run([sys.executable, "-m", "compileall", "-q", "."], cwd=project_dir)
-        test_result = _run([sys.executable, "-m", "pytest", "tests", "-q"], cwd=project_dir)
+        test_result = _run([sys.executable, "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"], cwd=project_dir)
     else:
         compile_result = {"status": "not_run"}
         test_result = {"status": "not_run"}

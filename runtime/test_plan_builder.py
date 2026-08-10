@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .contract_transform_contract_profiles import profile_positive_case
 from .executable_acceptance_policy import external_call_tokens, sample_value
 from .role_skill_common import now_iso
 
@@ -124,7 +125,7 @@ def _contract_test_matrix(contract_binding: dict[str, Any], target: str) -> list
                 "direction": "output",
                 "field": name,
                 "type": type_name,
-                "expectation": "result shape matches TechnicalSpec output contract",
+                "expectation": _output_expectation(str(type_name)),
             }
         )
     return rows
@@ -214,20 +215,32 @@ def _executable_acceptance(
     input_contract = dict(contract_binding.get("input_contract", {}))
     output_contract = dict(contract_binding.get("output_contract", {}))
     obligations = []
+    profile_case = profile_positive_case(target=target, input_contract=input_contract, output_contract=output_contract)
     for index, item in enumerate(acceptance[:10], start=1):
         acceptance_id = str(item.get("id") or f"AC-{index:03d}")
-        obligations.append(
-            {
-                "id": f"OBL-{index:03d}",
-                "acceptance_id": acceptance_id,
-                "target": target,
-                "kind": "positive_contract_case",
-                "given": _sample_payload(input_contract),
-                "expect": _expected_shape(output_contract),
-                "oracle": "output_schema_and_acceptance_criterion",
-                "source_criterion": item.get("criterion"),
-            }
-        )
+        obligation = {
+            "id": f"OBL-{index:03d}",
+            "acceptance_id": acceptance_id,
+            "target": target,
+            "kind": "positive_contract_case",
+            "given": _sample_payload(input_contract),
+            "expect": _expected_shape(output_contract),
+            "oracle": _positive_oracle(output_contract),
+            "source_criterion": item.get("criterion"),
+        }
+        if profile_case:
+            obligation.update(
+                {
+                    "given": dict(profile_case["given"]),
+                    "expect": dict(profile_case["expect"]),
+                    "oracle": str(profile_case["oracle"]),
+                    "contract_profile": {
+                        "id": str(profile_case["profile_id"]),
+                        "operator_id": str(profile_case["operator_id"]),
+                    },
+                }
+            )
+        obligations.append(obligation)
     if input_contract:
         obligations.append(
             {
@@ -285,11 +298,28 @@ def _sample_value(type_name: str, field_name: str = "") -> Any:
 
 
 def _expected_shape(contract: dict[str, Any]) -> dict[str, Any]:
+    if any(str(value).lower() == "voidsideeffect" for value in contract.values()):
+        return {"completed": True}
     return {str(name): str(type_name) for name, type_name in contract.items()} or {"result": "declared_output"}
 
 
+def _positive_oracle(contract: dict[str, Any]) -> str:
+    if any(str(value).lower() == "voidsideeffect" for value in contract.values()):
+        return "call_completes_and_side_effect_boundary_is_declared"
+    return "output_schema_and_acceptance_criterion"
+
+
+def _output_expectation(type_name: str) -> str:
+    if type_name.lower() == "voidsideeffect":
+        return "call completes without requiring a returned value; side-effect scope is checked separately"
+    return "result shape matches TechnicalSpec output contract"
+
+
 def _smoke_checklist(commands: list[str]) -> list[dict[str, Any]]:
-    return [{"id": f"SMOKE-{index:03d}", "command": command} for index, command in enumerate(commands, start=1)]
+    rows = [{"id": f"SMOKE-{index:03d}", "command": command} for index, command in enumerate(commands, start=1)]
+    if rows and len(rows) < 3:
+        rows.append({"id": f"SMOKE-{len(rows) + 1:03d}", "command": "python -m pytest tests -q --maxfail=1"})
+    return rows
 
 
 def _regression_risks(

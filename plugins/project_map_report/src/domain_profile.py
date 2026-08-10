@@ -138,6 +138,27 @@ def infer_domain_profile(
             "evidence": sorted(set(repair_evidence)),
             "transport": "CLI/subprocess",
         }
+    transform_names = [
+        name
+        for name in symbols
+        if any(token in name.lower() for token in ("normalize", "parse", "transform", "validate", "clean"))
+    ]
+    if not routes and len(set(transform_names)) >= 3:
+        return {
+            "kind": "python_transform_library",
+            "confidence": 0.78,
+            "evidence": [f"matched transform-like callables: {', '.join(sorted(set(transform_names))[:5])}"],
+            "transport": "library/API",
+            "label": "Python transform/helper library",
+            "purpose_summary": "Expose reusable Python callables that normalize, parse, validate, or transform caller-provided values.",
+            "scenario_summary": [
+                "Import library modules from user code.",
+                "Call transform-like functions with caller-provided Python values.",
+                "Return normalized, parsed, validated, or transformed results.",
+            ],
+            "input_summary": ["caller-provided Python values", "function arguments", "module-level configuration when present"],
+            "output_summary": ["normalized Python values", "parsed or validated results", "explicit exceptions for invalid inputs"],
+        }
     return {"kind": "generic", "confidence": 0.0, "evidence": []}
 
 

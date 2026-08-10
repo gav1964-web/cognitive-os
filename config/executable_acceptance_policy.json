@@ -3,7 +3,7 @@
   "dependency_policy": {
     "controlled_stubs": {
       "enabled": true,
-      "max_missing_modules": 3,
+      "max_missing_modules": 6,
       "stub_external_missing_modules": true,
       "stub_object_features": [
         "bool_false",
@@ -12,6 +12,9 @@
         "getitem",
         "iter_empty",
         "mro_entries"
+      ],
+      "pre_stub_modules": [
+        "stevedore"
       ]
     },
     "metadata_profiles": {
@@ -30,6 +33,23 @@
         "modules": {
           "borg._version": {"attrs": {"version": "1.2.3"}},
           "filelock.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
+          "gradio.block_function": {"attrs": {"BlockFunction": {"__fixture__": "gradio_block_function_class"}}},
+          "gradio.context": {"attrs": {"LocalContext": {"__fixture__": "gradio_local_context"}}},
+          "gradio.helpers": {"attrs": {"special_args": {"__fixture__": "callable_gradio_special_args"}}},
+          "gradio.utils": {"attrs": {"append_unique_suffix": {"__fixture__": "callable_append_unique_suffix"}, "check_function_inputs_match": {"__fixture__": "callable_noop"}}},
+          "great_expectations.experimental.rule_based_profiler.helpers.util": {"attrs": {"build_domains_from_column_names": {"__fixture__": "callable_empty_list"}, "get_parameter_value_and_validate_return_type": {"__fixture__": "callable_ge_parameter_value"}}},
+          "great_expectations.util": {"attrs": {"is_candidate_subset_of_target": {"__fixture__": "callable_true"}}},
+          "hatch.env.virtual": {"attrs": {"VirtualEnvironment": {"__fixture__": "hatch_virtual_environment_class"}}},
+          "gradio_client.data_classes": {"attrs": {"ParameterInfo": {"__fixture__": "stub_class"}}},
+          "gradio_client.exceptions": {"attrs": {"AppError": {"__fixture__": "stub_class"}, "AuthenticationError": {"__fixture__": "stub_class"}, "ValidationError": {"__fixture__": "stub_class"}}},
+          "jupyter_core.paths": {"attrs": {"ENV_CONFIG_PATH": [], "SYSTEM_CONFIG_PATH": [], "jupyter_config_dir": {"__fixture__": "callable_empty_string"}, "jupyter_config_path": {"__fixture__": "callable_empty_list"}, "jupyter_path": {"__fixture__": "callable_empty_list"}}},
+          "mcp_types": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
+          "mcp_types.jsonrpc": {"attrs": {"__all__": ["INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
+          "mcp_types.methods": {"attrs": {"__all__": [], "__getattr__": {"__fixture__": "module_getattr_stub"}}},
+          "mcp_types.version": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "LATEST_PROTOCOL_VERSION", "is_version_at_least"], "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "LATEST_PROTOCOL_VERSION": "2025-06-18", "is_version_at_least": {"__fixture__": "callable_true"}}},
+          "pants.engine.internals.native_engine": {"attrs": {"__getattr__": {"__fixture__": "module_getattr_stub"}, "EngineError": {"__fixture__": "stub_class"}, "ProcessExecutionEnvironment": {"__fixture__": "stub_class"}}},
+          "semantic_version": {"attrs": {"__all__": ["Version", "SimpleSpec"], "Version": {"__fixture__": "stub_class"}, "SimpleSpec": {"__fixture__": "stub_class"}}},
+          "traitlets.config.loader": {"attrs": {"Config": {"__fixture__": "stub_class"}, "ConfigFileNotFound": {"__fixture__": "stub_class"}}},
           "tox.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
           "virtualenv.version": {"attrs": {"__version__": "0.0.0"}},
           "urllib3._version": {"attrs": {"__version__": "0.0.0"}}
@@ -50,6 +70,8 @@
     "enabled": true,
     "safe_uninitialized_instance": true,
     "default_constructor_first": true,
+    "local_import_stub_functions": ["determine_local_workspace_environment"],
+    "local_import_stub_methods": ["BlocksConfig.set_event_trigger", "StreamableHTTPServerTransport._handle_post_request"],
     "instance_attribute_profiles": {
       "WsgiToAsgiInstance.build_environ": {
         "scope": {
@@ -65,6 +87,53 @@
           "root_path": ""
         },
         "duplicate_header_limit": 0
+      },
+      "Queue.task_done": {
+        "all_tasks_done": {"__fixture__": "noop_condition"},
+        "unfinished_tasks": 1
+      },
+      "AbstractArchiveFileSystem.ls": {
+        "_get_dirs": {"__fixture__": "callable_noop"},
+        "dir_cache": {"file.txt": {"name": "file.txt", "type": "file", "size": 1}},
+        "root_marker": "",
+        "protocol": "file"
+      },
+      "LocalCollection.search": {
+        "config": {"__fixture__": "qdrant_collection_config"},
+        "deleted": {"__fixture__": "qdrant_deleted_false"},
+        "deleted_per_vector": {"__fixture__": "qdrant_deleted_per_vector"},
+        "ids_inv": [1],
+        "multivectors": {},
+        "payload": [{}],
+        "sparse_vectors": {},
+        "vectors": {"__fixture__": "qdrant_dense_vectors"}
+      },
+      "AsyncCollection.search": {
+        "_client": {"__fixture__": "chroma_search_client"},
+        "_model": {"__fixture__": "chroma_collection_model"}
+      },
+      "ZMQChannelsWebsocketConnection.nudge": {
+        "kernel_manager": {"__fixture__": "jupyter_busy_kernel_manager"},
+        "kernel_id": "kernel-id",
+        "log": {"__fixture__": "logger_noop"}
+      },
+      "StreamableHTTPServerTransport._handle_post_request": {
+        "_read_stream_writer": {"__fixture__": "async_writer_noop"},
+        "is_json_response_enabled": false,
+        "mcp_session_id": null
+      },
+      "BlocksConfig.set_event_trigger": {
+        "fn_id": 0,
+        "fns": {},
+        "root_block": {"__fixture__": "gradio_root_block"}
+      },
+      "DataProfilerColumnDomainBuilder._get_domains": {
+        "domain_type": "column",
+        "get_batch_ids": {"__fixture__": "callable_batch_ids"},
+        "get_filtered_column_names": {"__fixture__": "callable_column_names"},
+        "get_table_column_names": {"__fixture__": "callable_column_names"},
+        "get_validator": {"__fixture__": "callable_ge_validator"},
+        "semantic_type_filter": {"__fixture__": "ge_semantic_filter"}
       }
     },
     "recipes": {
@@ -85,16 +154,27 @@
   "sample_values": {
     "field_values": {
       "annotation": "sample",
+      "all_environment_targets": {"__fixture__": "pants_all_environment_targets"},
+      "api_description": null,
+      "api_visibility": "public",
+      "cancels": [],
+      "component_prop_inputs": [],
+      "connection": "sse",
       "date_parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "database": "data",
+      "datasette": {"__fixture__": "datasette_minimal"},
       "dayfirst": false,
       "digest_size": 8,
       "display_value": "sample",
       "edge_attr": "label",
+      "environment": {"__fixture__": "hatch_environment_minimal"},
       "fuzzy": false,
+      "fn": {"__fixture__": "callable_noop"},
       "g": {"__fixture__": "networkx_graph_path"},
       "graph": {"__fixture__": "networkx_graph_path"},
       "cfg": {"__fixture__": "configparser_flake8_empty"},
       "cfg_dir": ".",
+      "ctx": {"__fixture__": "click_context_noop"},
       "idx": 0,
       "index": 0,
       "index_errors": false,
@@ -102,19 +182,29 @@
       "include_initial_labels": false,
       "iterations": 1,
       "is_path_param": false,
+      "image": [[1.0, 2.0], [3.0, 4.0]],
+      "inputs": [],
       "flag": false,
+      "js": null,
+      "key": null,
       "many": false,
       "markup_mode": "rich",
       "name": "value",
       "node_attr": "label",
       "obj": "sample",
       "partial": false,
+      "outputs": [],
       "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
       "parse_context": {},
       "parse_float": {"__fixture__": "callable_float"},
       "param_name": "value",
       "pos": 0,
+      "query_filter": null,
+      "query_vector": [1.0, 0.0],
       "response": "sample",
+      "request": {"__fixture__": "asgi_request_no_accept"},
+      "receive": {"__fixture__": "asgi_receive_empty"},
+      "renderable": null,
       "res": {"__fixture__": "dateutil_result"},
       "return_value": "sample",
       "rv": "sample",
@@ -130,11 +220,20 @@
         "scheme": "http",
         "root_path": ""
       },
+      "score_threshold": null,
+      "searches": [],
+      "send": {"__fixture__": "asgi_send_noop"},
+      "show_progress": "full",
       "status_headers": {},
+      "study": {"__fixture__": "optuna_study_empty"},
+      "targets": [],
+      "time_limit": null,
       "tokens": ["2026", "-", "01", "-", "02"],
+      "trigger_mode": "once",
       "unknown": false,
       "body": {"__fixture__": "bytes_io_empty"},
       "src": "\"sample\"",
+      "sql": "select 1",
       "value": "sample",
       "yearfirst": false,
       "ymd": {"__fixture__": "dateutil_ymd"},

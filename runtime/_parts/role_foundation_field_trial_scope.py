@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -7,10 +8,11 @@ from typing import Any
 def _primary_language_scope(path: Path) -> dict[str, Any]:
     top_files = {child.name.lower() for child in path.iterdir() if child.is_file()}
     top_dirs = {child.name.lower() for child in path.iterdir() if child.is_dir()}
-    py_files = list(path.rglob("*.py"))
-    rust_files = list(path.rglob("*.rs"))
-    c_files = [*path.rglob("*.c"), *path.rglob("*.h")]
-    cpp_files = [*path.rglob("*.cc"), *path.rglob("*.cpp"), *path.rglob("*.cxx"), *path.rglob("*.hpp")]
+    py_files = _files_with_suffixes(path, {".py"})
+    pyi_files = _files_with_suffixes(path, {".pyi"})
+    rust_files = _files_with_suffixes(path, {".rs"})
+    c_files = _files_with_suffixes(path, {".c", ".h"})
+    cpp_files = _files_with_suffixes(path, {".cc", ".cpp", ".cxx", ".hpp"})
     native_files = [*rust_files, *c_files, *cpp_files]
     python_source_files = [file for file in py_files if _python_role_source_file(file.relative_to(path))]
     root_package = _root_python_package(path)
@@ -29,17 +31,19 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         and len(python_source_files) <= 2
         and len(rust_files) >= max(20, len(python_source_files) * 8)
     )
+    native_extension_wrapper = _native_extension_wrapper_without_python_core(python_source_files, rust_files)
+    cpp_extension_wrapper = _cpp_extension_wrapper_without_python_core(top_files, root_package, python_source_files, cpp_files)
     rust_workspace = "cargo.toml" in top_files and ("crates" in top_dirs or len(rust_files) >= max(20, len(py_files) * 2))
     rust_dominates = len(rust_files) >= max(50, len(py_files) * 5)
     python_is_embedded = not has_root_python_source and (
         len(python_source_files) < max(8, len(py_files) // 2)
         or rust_dominates
     )
-    if (rust_workspace and python_is_embedded) or native_core_without_python_impl:
+    if (rust_workspace and python_is_embedded) or native_core_without_python_impl or native_extension_wrapper:
         return {
             "status": "out_of_scope",
             "reason_code": "unsupported_primary_language_for_python_foundation",
-            "primary_language": "Rust",
+            "primary_language": "Rust native extension",
             "python_files": len(py_files),
             "python_source_files": len(python_source_files),
             "rust_files": len(rust_files),
@@ -81,6 +85,38 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
                 "src_dir": "src" in top_dirs,
             },
         }
+    if cpp_extension_wrapper:
+        return {
+            "status": "out_of_scope",
+            "reason_code": "unsupported_primary_language_for_python_foundation",
+            "primary_language": "C++ native extension",
+            "python_files": len(py_files),
+            "python_source_files": len(python_source_files),
+            "rust_files": len(rust_files),
+            "c_files": len(c_files),
+            "cpp_files": len(cpp_files),
+            "evidence": {
+                "native_source_files": len(native_files),
+                "root_python_package": root_package,
+                "extension_manifest": sorted(top_files.intersection({"setup.py", "pyproject.toml"})),
+            },
+        }
+    if _type_stub_corpus(top_dirs, py_files, pyi_files):
+        return {
+            "status": "out_of_scope",
+            "reason_code": "unsupported_type_stub_corpus_for_python_foundation",
+            "primary_language": "Python type stubs",
+            "python_files": len(py_files),
+            "python_stub_files": len(pyi_files),
+            "python_source_files": len(python_source_files),
+            "rust_files": len(rust_files),
+            "c_files": len(c_files),
+            "cpp_files": len(cpp_files),
+            "evidence": {
+                "stub_dirs": sorted(top_dirs.intersection({"stdlib", "stubs"})),
+                "root_python_package": root_package,
+            },
+        }
     return {
         "status": "in_scope",
         "primary_language": "Python",
@@ -91,6 +127,32 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         "cpp_files": len(cpp_files),
         "evidence": {"root_python_package": root_package},
     }
+
+
+def _type_stub_corpus(top_dirs: set[str], py_files: list[Path], pyi_files: list[Path]) -> bool:
+    if not {"stdlib", "stubs"}.issubset(top_dirs):
+        return False
+    return len(pyi_files) >= max(200, len(py_files) * 10)
+
+
+def _native_extension_wrapper_without_python_core(python_source_files: list[Path], rust_files: list[Path]) -> bool:
+    active = [file for file in python_source_files if file.name.lower() not in {"release.py", "build.py", "noxfile.py"}]
+    if not rust_files or len(active) != 1:
+        return False
+    source = active[0].as_posix().lower()
+    return source.endswith("/__init__.py") or source == "__init__.py"
+
+
+def _cpp_extension_wrapper_without_python_core(
+    top_files: set[str],
+    root_package: str | None,
+    python_source_files: list[Path],
+    cpp_files: list[Path],
+) -> bool:
+    if not cpp_files or root_package or not top_files.intersection({"setup.py", "pyproject.toml"}):
+        return False
+    active = [file for file in python_source_files if file.name.lower() not in {"release.py", "build.py", "noxfile.py"}]
+    return len(active) <= 1 and len(cpp_files) >= len(active)
 
 
 def _child_python_projects(path: Path) -> list[Path]:
@@ -105,9 +167,9 @@ def _is_python_project(path: Path) -> bool:
     if any(path.glob("*.py")):
         return True
     children = [child for child in path.iterdir() if child.is_dir()]
-    if any(child.name in {"src", "app", "tests"} and any(child.rglob("*.py")) for child in children):
+    if any(child.name in {"src", "app", "tests"} and _files_with_suffixes(child, {".py"}) for child in children):
         return True
-    py_files = list(path.rglob("*.py"))
+    py_files = _files_with_suffixes(path, {".py"})
     if len(py_files) >= 20 and any(_python_source_like(rel.relative_to(path)) for rel in py_files[:200]):
         return True
     return False
@@ -143,3 +205,15 @@ def _python_source_like(path: Path) -> bool:
     if any(token in normalized for token in ("/.git/", "/docs/", "/assets/", "/ci/", "/scripts/")):
         return False
     return "__init__.py" in normalized or "/src/" in normalized or normalized.count("/") >= 1
+
+
+def _files_with_suffixes(path: Path, suffixes: set[str]) -> list[Path]:
+    rows: list[Path] = []
+    excluded = {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache"}
+    for current, dirs, files in os.walk(path, topdown=True, onerror=lambda _exc: None):
+        dirs[:] = [name for name in dirs if name not in excluded]
+        current_path = Path(current)
+        for name in files:
+            if Path(name).suffix.lower() in suffixes:
+                rows.append(current_path / name)
+    return rows

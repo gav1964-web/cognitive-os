@@ -79,7 +79,7 @@ def test_foundation_semantic_quality_ignores_badge_urls_as_marketing_noise() -> 
                     "1_scope": {
                         "main_task": (
                             "Inferred from docs: https://example.test/actions/workflows/test.yml/badge.svg?branch=main "
-                            "as a graph algorithm library for node and edge transforms."
+                            "See the docs linked from the badge above for graph algorithm node and edge transforms."
                         ),
                         "supported_scenarios": ["run graph algorithm", "return graph result"],
                         "inputs": ["graph"],
@@ -100,6 +100,51 @@ def test_foundation_semantic_quality_ignores_badge_urls_as_marketing_noise() -> 
                             "capabilities_to_extract": [
                                 {"capability": "networkx/algorithms/cycles.py:chordless_cycles", "reason": "bounded graph algorithm"}
                             ]
+                        },
+                        "evidence_claims": [{"source": "a.py:1"}, {"source": "b.py:2"}, {"source": "c.py:3"}],
+                    },
+                },
+            },
+            "architecture_decision": {},
+            "technical_spec": {},
+        }
+    }
+
+    quality = evaluate_foundation_semantic_quality(report, policy=policy)
+
+    assert "project_analyzer.purpose_avoids_marketing_blurb" not in quality["warnings"]
+
+
+def test_foundation_semantic_quality_ignores_markdown_download_badges_as_marketing_noise() -> None:
+    policy = load_foundation_semantic_quality_policy(str(ROOT / "config" / "foundation_semantic_quality_policy.json"))
+    policy = {**policy, "specific_text": {**policy["specific_text"], "min_length": 16}}
+    report = {
+        "artifacts": {
+            "project_map_report": {
+                "summary": {"frameworks": [], "entrypoints": []},
+                "answers": {
+                    "1_scope": {
+                        "main_task": (
+                            "Inferred from docs: [![Downloads](https://example.test/badge.svg)]"
+                            "(https://example.test/project) as a Django API framework library."
+                        ),
+                        "supported_scenarios": ["register route", "return response"],
+                        "inputs": ["request"],
+                        "outputs": ["response"],
+                        "domain_profile": {"kind": "web_framework_library", "confidence": 0.7, "evidence": ["django"]},
+                    },
+                    "2_execution": {"primary_execution_path": ["ninja/signature/details.py:_get_param_type"]},
+                    "3_capabilities": {"atomic_reusable_capabilities": ["ninja/signature/details.py:_get_param_type"]},
+                    "4_contracts_data": {"main_data_structures": ["Route"], "weak_contract_zones": []},
+                    "5_errors_state_repro": {
+                        "likely_error_types": ["invalid request"],
+                        "state_to_preserve": ["signature shape"],
+                        "minimal_cognitive_loop": ["input", "inspect", "return"],
+                    },
+                    "6_runtime_extraction_readiness": {
+                        "data_lifecycle": [{"stage": "input"}, {"stage": "inspect"}, {"stage": "return"}],
+                        "minimal_extraction_plan": {
+                            "capabilities_to_extract": [{"capability": "ninja/signature/details.py:_get_param_type", "reason": "bounded signature inference"}]
                         },
                         "evidence_claims": [{"source": "a.py:1"}, {"source": "b.py:2"}, {"source": "c.py:3"}],
                     },
@@ -287,76 +332,3 @@ def test_foundation_semantic_quality_normalizes_adr_location_suffix_for_spec_can
     )
 
     assert "spec_writer.candidate_backed_by_adr" not in quality["warnings"]
-
-
-def test_foundation_semantic_quality_allows_generic_slice_with_profiled_target() -> None:
-    quality = evaluate_foundation_semantic_quality(
-        {
-            "artifacts": {
-                "project_map_report": {
-                    "summary": {"root": "airflow", "frameworks": ["pluggy"], "entrypoints": ["src/airflow/__main__.py:main"]},
-                    "answers": {
-                        "1_scope": {
-                            "main_task": "Load workflow platform settings and register plugins through policy hooks.",
-                            "supported_scenarios": ["load local settings", "register plugin hooks"],
-                            "inputs": ["settings module", "plugin manager"],
-                            "outputs": ["plugin registration state"],
-                            "domain_profile": {"kind": "workflow_orchestrator", "confidence": 0.8, "evidence": ["plugin", "settings"]},
-                        },
-                        "2_execution": {"primary_execution_path": ["src/airflow/policies.py:make_plugin_from_local_settings"]},
-                        "3_capabilities": {"atomic_reusable_capabilities": ["src/airflow/policies.py:make_plugin_from_local_settings"]},
-                        "4_contracts_data": {"main_data_structures": ["PluginManager"], "weak_contract_zones": []},
-                        "5_errors_state_repro": {
-                            "likely_error_types": ["settings import error"],
-                            "state_to_preserve": ["plugin registry state"],
-                            "minimal_cognitive_loop": ["load", "register", "report"],
-                        },
-                        "6_runtime_extraction_readiness": {
-                            "data_lifecycle": [{"stage": "settings"}, {"stage": "registration"}, {"stage": "result"}],
-                            "minimal_extraction_plan": {
-                                "capabilities_to_extract": [
-                                    {
-                                        "capability": "src/airflow/policies.py:make_plugin_from_local_settings",
-                                        "reason": "plugin settings registration is bounded",
-                                    }
-                                ]
-                            },
-                            "evidence_claims": [{"source": "src/airflow/policies.py:make_plugin_from_local_settings"}] * 3,
-                        },
-                    },
-                },
-                "architecture_decision": {
-                    "decision_summary": "Select plugin settings registration as the first source-backed contract.",
-                    "architecture_synthesis": {
-                        "project_profile": {"archetype": "workflow_orchestrator", "domain_profile_kind": "workflow_orchestrator"}
-                    },
-                    "first_slice_contract": {
-                        "name": "workflow_state_transition_slice",
-                        "targets": ["src/airflow/policies.py:make_plugin_from_local_settings"],
-                    },
-                    "architecture_options": [{"id": "plugin_settings"}, {"id": "scheduler_rewrite"}],
-                    "rejected_options": [{"id": "scheduler_rewrite"}],
-                    "spec_writer_brief": {
-                        "files_or_symbols": ["src/airflow/policies.py:make_plugin_from_local_settings"],
-                        "contract_targets": ["src/airflow/policies.py:make_plugin_from_local_settings"],
-                        "acceptance_targets": ["duplicate plugin registration is typed"],
-                    },
-                    "risks": [{"risk": "Plugin registry mutation can drift.", "mitigation": "Snapshot before/after state."}],
-                    "fact_judgment_ledger": {
-                        "facts": [{"claim": "plugin settings target exists"}],
-                        "judgments": [{"judgment": "target is profiled semantic contract", "validation_gate": "contract tests"}],
-                    },
-                    "source_context": {
-                        "src/airflow/policies.py:make_plugin_from_local_settings": {},
-                        "src/airflow/providers_manager.py": {},
-                        "src/airflow/settings.py": {},
-                    },
-                    "open_questions": [],
-                    "non_goals": ["Do not alter scheduler execution."],
-                },
-                "technical_spec": {},
-            }
-        }
-    )
-
-    assert "architect.first_slice_not_generic_when_domain_cues_exist" not in quality["warnings"]

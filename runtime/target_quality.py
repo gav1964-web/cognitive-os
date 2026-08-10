@@ -40,12 +40,14 @@ def semantic_target_quality_report(
     *,
     ranked_candidates: list[str] | None = None,
     source_evidence: list[str] | None = None,
+    context_evidence: list[str] | None = None,
     selection_reason: str = "",
 ) -> dict[str, Any]:
     if not target:
         return {"status": "blocked", "target": "", "score": 0, "reasons": ["no selected extraction candidate"]}
     ranked_candidates = ranked_candidates or []
     source_evidence = source_evidence or []
+    context_evidence = context_evidence or []
     lowered = target.replace("\\", "/").lower()
     symbol = lowered.rsplit(":", 1)[-1]
     path = lowered.split(":", 1)[0]
@@ -66,7 +68,16 @@ def semantic_target_quality_report(
         score += 16
         reasons.append("representative domain target / lifecycle target")
     profile_adjustments = semantic_score_adjustments(target)
-    archetype_adjustments = archetype_score_adjustments(target)
+    if profile_adjustments.get("profiled_contract_family"):
+        archetype_adjustments = {
+            "score_delta": 0,
+            "reasons": [],
+            "profile_ids": [],
+            "benign_runtime_boundary": False,
+            "profiled_contract_family": False,
+        }
+    else:
+        archetype_adjustments = _contextual_archetype_adjustments(target, context_evidence)
     score += int(profile_adjustments["score_delta"])
     score += int(archetype_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
@@ -95,14 +106,15 @@ def semantic_target_quality_report(
         reasons.append("prompt-lab run/artifact boundary is a valid project-domain target")
 
     suspicious = _suspicious_hits(path, symbol)
+    suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family)
     meta = [token for token in META_INFRASTRUCTURE_TOKENS if token in lowered]
     boundary = _runtime_boundary_hits(lowered, symbol)
     trivial = _trivial_symbol(symbol)
     bootstrap = _bootstrap_support_symbol(path, symbol)
-    if suspicious:
+    if suspicious and not suspicious_allowed:
         score -= min(30, 10 + len(suspicious) * 5)
         reasons.append("support/utility target: " + ", ".join(suspicious[:4]))
-    if meta and not prompt_lab_boundary:
+    if meta and not (prompt_lab_boundary or profiled_contract_family):
         score -= min(45, 20 + len(meta) * 8)
         reasons.append("meta-infrastructure target, not project-domain slice: " + ", ".join(meta[:4]))
     benign_boundary = bool(profile_adjustments["benign_runtime_boundary"] or archetype_adjustments["benign_runtime_boundary"])
@@ -126,14 +138,19 @@ def semantic_target_quality_report(
     if score >= 95 and not profiled_contract_family and any(token in path for token in UNPROFILED_STRONG_PATH_TOKENS):
         score = min(score, UNPROFILED_STRONG_SCORE_CAP)
         reasons.append("unprofiled candidate cannot claim strong readiness from shape alone")
+    executable_parser_profile = "executable grammar" in reason_text
+    if "parser_combinator_helper_boundary" in profile_ids and score > 84 and not executable_parser_profile:
+        score = 84
+        reasons.append("parser combinator helper remains acceptable until executable grammar behavior is proven")
 
     score = max(0, min(100, score))
     disqualifying_boundary = boundary and not (repair_boundary or ml_generation_boundary or benign_boundary)
-    disqualifying_meta = meta and not prompt_lab_boundary
+    disqualifying_meta = meta and not (prompt_lab_boundary or profiled_contract_family)
     liveness_probe = _liveness_probe_symbol(symbol)
     disqualifying_trivial = trivial and not profiled_contract_family
     disqualifying_bootstrap = bootstrap and not profiled_contract_family
-    if score >= 85 and not (suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
+    effective_suspicious = [] if suspicious_allowed else suspicious
+    if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
         status = "strong"
     elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
         status = "acceptable"
@@ -187,6 +204,17 @@ def target_quality_report(role_quality: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) -> dict[str, Any]:
+    direct = archetype_score_adjustments(target)
+    if direct.get("profile_ids"):
+        return direct
+    for context in context_evidence:
+        contextual = archetype_score_adjustments(f"{context}/{target}")
+        if contextual.get("profile_ids"):
+            return contextual
+    return direct
+
+
 def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:
     hits = []
     for token in RUNTIME_BOUNDARY_TOKENS:
@@ -237,6 +265,20 @@ def _suspicious_hits(path: str, symbol: str) -> list[str]:
     if path_parts.intersection(SUSPICIOUS_PATH_PARTS) and "icon" not in hits:
         hits.append("icon")
     return hits
+
+
+def _profiled_suspicious_allowed(suspicious: list[str], symbol: str, profiled_contract_family: bool) -> bool:
+    if not profiled_contract_family:
+        return False
+    if suspicious == ["version"]:
+        return symbol != "version" and symbol.endswith("_version")
+    if suspicious == ["decorator"]:
+        return "decorator" in symbol
+    if suspicious == ["/helpers"]:
+        return symbol in {"one_of", "oneof", "infix_notation", "located_expr"}
+    if suspicious == ["/utils/"]:
+        return symbol == "parse_shorthand"
+    return False
 
 
 def _generic_unprofiled_candidate(path: str, symbol: str) -> bool:

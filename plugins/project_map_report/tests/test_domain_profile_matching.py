@@ -90,3 +90,175 @@ def test_domain_profile_keeps_poetry_in_packaging_not_backup_archive():
     )
 
     assert profile["kind"] == "packaging_build_backend"
+
+
+def test_domain_profile_does_not_confuse_asgi_server_with_cli_framework():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/uvicorn", "frameworks": [], "entrypoints": ["uvicorn/main.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.md",
+                    "text": "Uvicorn is an ASGI web server with lifespan, server socket and graceful shutdown support.",
+                },
+                {"path": "uvicorn/main.py", "text": "import click\n\ndef main(): pass\n"},
+            ]
+        },
+        {"files": [{"path": "uvicorn/server.py", "functions": [{"name": "serve", "calls": ["startup", "shutdown"]}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "asgi_wsgi_server_runtime"
+    assert "server startup" in profile["purpose_summary"]
+
+
+def test_domain_profile_does_not_confuse_chunked_arrays_with_template_engine():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/zarr-python", "frameworks": [], "entrypoints": ["src/zarr/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.md",
+                    "text": "Zarr implements compressed, chunked, N-dimensional arrays for parallel computing.",
+                },
+                {"path": "src/zarr/core.py", "text": "class Array: pass\n# metadata templates are examples only\n"},
+            ]
+        },
+        {"files": [{"path": "src/zarr/core.py", "functions": [{"name": "open_array", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "scientific_compute_library"
+
+
+def test_domain_profile_keeps_mako_template_engine_with_wsgi_mentions():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/mako", "frameworks": [], "entrypoints": ["mako/__init__.py"], "routes": 0},
+        {"files": [{"path": "README.rst", "text": "Mako is a template library written in Python with WSGI examples."}]},
+        {"files": [{"path": "mako/template.py", "functions": [{"name": "render", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "template_rendering_engine"
+
+
+def test_domain_profile_ignores_changelog_template_noise_for_small_libraries():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/multidict", "frameworks": [], "entrypoints": ["multidict/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.rst",
+                    "text": "Multidict is dict-like collection where a key might occur more than once.",
+                },
+                {
+                    "path": "CHANGES/.TEMPLATE.rst",
+                    "text": "Internal release template mentioning Jinja and Mako rendering examples.",
+                },
+            ]
+        },
+        {"files": [{"path": "multidict/__init__.py", "functions": [{"name": "MultiDict", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "multi_value_mapping_library"
+
+
+def test_domain_profile_ignores_doc_spelling_wordlist_template_noise():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/aiosignal", "frameworks": [], "entrypoints": ["aiosignal/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {"path": "README.rst", "text": "A project to manage callbacks in asyncio projects."},
+                {"path": "docs/spelling_wordlist.txt", "text": "Jinja\nMako\n"},
+            ]
+        },
+        {"files": [{"path": "aiosignal/__init__.py", "functions": [{"name": "Signal", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "async_callback_signal_library"
+
+
+def test_domain_profile_ignores_dev_tooling_noise_for_small_libraries():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/aiosignal", "frameworks": [], "entrypoints": ["aiosignal/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {"path": "README.rst", "text": "A project to manage callbacks in asyncio projects."},
+                {"path": "pyproject.toml", "text": "[tool.ruff]\n[tool.mypy]\n"},
+            ]
+        },
+        {"files": [{"path": "aiosignal/__init__.py", "functions": [{"name": "Signal", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "async_callback_signal_library"
+
+
+def test_domain_profile_keeps_pyyaml_out_of_http_client_noise():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/pyyaml", "frameworks": [], "entrypoints": ["lib/yaml/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.md",
+                    "text": "A full-featured YAML processing framework for Python with safe_load and LibYAML bindings.",
+                }
+            ]
+        },
+        {"files": [{"path": "lib/yaml/__init__.py", "functions": [{"name": "safe_load", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "yaml_processing_framework"
+
+
+def test_domain_profile_recognizes_django_framework_without_routes():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/django", "frameworks": [], "entrypoints": ["django/__init__.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.rst",
+                    "text": "Django is a high-level Python web framework with django.conf and management/commands.",
+                }
+            ]
+        },
+        {"files": [{"path": "django/conf/__init__.py", "functions": [{"name": "configure", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "django_web_framework"
+
+
+def test_domain_profile_recognizes_repeated_transform_library_callables():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/sample_tool", "frameworks": [], "entrypoints": ["mod_0.py"], "routes": 0},
+        {"files": []},
+        {
+            "files": [
+                {
+                    "path": "mod_0.py",
+                    "functions": [
+                        {"name": "normalize_name", "calls": []},
+                        {"name": "normalize_email", "calls": []},
+                        {"name": "validate_value", "calls": []},
+                    ],
+                }
+            ]
+        },
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "python_transform_library"
+    assert len(profile["scenario_summary"]) >= 3

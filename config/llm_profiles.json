@@ -1,0 +1,23 @@
+{
+  "profiles": {
+    "external_l45_intent_resolver": {
+      "api_key_env": "COGNITIVE_OS_L45_API_KEY",
+      "base_url": "http://127.0.0.1:8000/v1",
+      "model": "deepseek/deepseek-chat",
+      "model_tier": "Deepseek Chat",
+      "provider_label": "external_l45_intent_resolver",
+      "response_format": false,
+      "timeout_seconds": 60
+    },
+    "local_l35": {
+      "api_key_env": "COGNITIVE_OS_LLM_API_KEY",
+      "base_url": "http://127.0.0.1:8000/v1",
+      "model": "local",
+      "model_tier": "local",
+      "provider_label": "local",
+      "response_format": true,
+      "timeout_seconds": 20
+    }
+  },
+  "schema_version": "llm_profiles.v1"
+}

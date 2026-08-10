@@ -23,7 +23,7 @@ def _change_plan(
                 "id": "CHANGE-001",
                 "kind": "stop",
                 "target": "TechnicalSpec.extraction_contract",
-                "instruction": "Do not generate a patch until a source-backed candidate exists.",
+                "instruction": "Do not generate a patch until a writable runtime candidate exists.",
             }
         ]
     rows = [
@@ -135,8 +135,7 @@ def _debug_rework_policy() -> dict[str, Any]:
 def _verification_commands() -> list[str]:
     return [
         "python -m pytest -q",
-        "python -m compileall runtime tools plugins",
-        "python tools/mvp_acceptance.py --root . --skip-pytest",
+        "python -m compileall .",
     ]
 
 def _rollback_plan(expected_files: list[str]) -> dict[str, Any]:

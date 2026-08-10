@@ -27,3 +27,21 @@ def required_input_guard_recipe() -> dict[str, Any]:
     recipes = dict(_policy().get("recipes") or {})
     recipe = dict(recipes.get("required_input_guard") or {})
     return recipe if recipe.get("enabled", True) else {}
+
+
+def return_literal_stub_recipe() -> dict[str, Any]:
+    recipes = dict(_policy().get("recipes") or {})
+    recipe = dict(recipes.get("return_literal_stub") or {})
+    return recipe if recipe.get("enabled", True) else {}
+
+
+def return_literal_notimplemented_recipe() -> dict[str, Any]:
+    recipes = dict(_policy().get("recipes") or {})
+    recipe = dict(recipes.get("return_literal_notimplemented") or {})
+    return recipe if recipe.get("enabled", True) else {}
+
+
+def string_transform_identity_return_recipe() -> dict[str, Any]:
+    recipes = dict(_policy().get("recipes") or {})
+    recipe = dict(recipes.get("contract_transform_identity_return") or recipes.get("string_transform_identity_return") or {})
+    return recipe if recipe.get("enabled", True) else {}

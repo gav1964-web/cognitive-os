@@ -14,6 +14,7 @@ LATE_DIRS = {
     "doc",
     "docs",
     "docs_src",
+    "dummyserver",
     "examples",
     "extras",
     "generated",
@@ -21,6 +22,7 @@ LATE_DIRS = {
     "testing",
     "tests",
     "tools",
+    "wasm-preview",
 }
 EARLY_DIRS = {
     "airflow",
@@ -78,8 +80,10 @@ def is_test_path(path: str) -> bool:
 def traversal_key(path: Path) -> tuple[int, str]:
     name = path.name.lower()
     if path.is_dir():
-        if name in EARLY_DIRS:
+        if name == "src":
             return (0, name)
+        if name in EARLY_DIRS:
+            return (1, name)
         if name in LATE_DIRS or _is_generated_context_dir(name):
             return (9, name)
         return (3, name)
@@ -104,6 +108,7 @@ def path_priority(path: str) -> int:
             "doc",
             "docs",
             "docs_src",
+            "dummyserver",
             "downstream",
             "examples",
             "extras",
@@ -113,11 +118,12 @@ def path_priority(path: str) -> int:
             "tasks",
             "testing",
             "tools",
+            "wasm-preview",
         }
         for part in parts
     ) or any(_is_generated_context_dir(part) for part in parts):
         return 9
-    helper_names = {"benchmark.py", "bench.py", "noxfile.py", "conftest.py", "testclient.py", "testing.py"}
+    helper_names = {"benchmark.py", "bench.py", "noxfile.py", "conftest.py", "run_tests.py", "testclient.py", "testing.py"}
     if parts[:2] == ["packaging", "pep517_backend"] or name.endswith(("_benchmark.py", "_bench.py")) or name in helper_names:
         return 8
     if lowered.startswith("src/") or "/src/" in lowered:

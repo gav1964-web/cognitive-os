@@ -174,9 +174,18 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
         if _case_readiness_score(case) < target_score or case["status"] != "ok"
     ]
     readiness_min = round(min(readiness_scores), 2) if readiness_scores else 0.0
+    calibration = _readiness_calibration(
+        scored_cases=scored_cases,
+        role_mins=role_mins,
+        readiness_min=readiness_min,
+        target_score=target_score,
+    )
+    calibrated_min = float(calibration["calibrated_readiness_min_score"])
+    corpus_passed = not below_target and readiness_min >= target_score and all(score >= target_score for score in role_mins.values())
     return {
         "artifact_type": "RoleFoundationFieldTrialReport",
-        "status": "ok" if not below_target and readiness_min >= target_score and all(score >= target_score for score in role_mins.values()) else "needs_work",
+        "status": "ok" if corpus_passed else "needs_work",
+        "promotion_status": "ready_for_9_7" if corpus_passed and calibrated_min >= target_score else "needs_more_evidence",
         "milestone": "Project Analyzer -> Architect -> SpecWriter minimum field trial",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "target_score": target_score,
@@ -198,9 +207,10 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
             "llm_invoked": sum(1 for case in cases if dict(case.get("safety") or {}).get("llm_invoked") is True),
             "source_code_changes": sum(1 for case in cases if dict(case.get("safety") or {}).get("source_code_changes") is True),
         },
+        "calibration": calibration,
         "below_target": below_target,
         "invariants": {
-            "score_policy": "minimum per project and per role; controlled blocks are safe outcomes but not full readiness",
+            "score_policy": "raw minimums diagnose a corpus; calibrated readiness gates promotion claims",
             "controlled_block_readiness_score": 7.0,
             "out_of_scope_projects_are_reported_but_not_scored_for_python_roles": True,
             "blocked_scope_selection_is_valid_project_analyzer_output": True,
@@ -209,6 +219,62 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
         },
         "cases": cases,
     }
+
+
+def _readiness_calibration(
+    *,
+    scored_cases: list[dict[str, Any]],
+    role_mins: dict[str, float],
+    readiness_min: float,
+    target_score: float,
+) -> dict[str, Any]:
+    raw_floor = round(min([readiness_min, *role_mins.values()] or [0.0]), 2)
+    scored_count = len(scored_cases)
+    evidence_cap = _evidence_cap(scored_count)
+    issue_penalty = _calibration_issue_penalty(scored_cases)
+    calibrated = round(max(0.0, min(raw_floor, evidence_cap) - issue_penalty), 2)
+    return {
+        "artifact_type": "FieldTrialReadinessCalibration",
+        "raw_readiness_floor": raw_floor,
+        "evidence_cap": evidence_cap,
+        "issue_penalty": issue_penalty,
+        "calibrated_readiness_min_score": calibrated,
+        "target_met": calibrated >= target_score,
+        "evidence_tier": _evidence_tier(scored_count),
+        "rationale": "A single clean corpus is diagnostic evidence, not proof of stable 9.7+ readiness.",
+    }
+
+
+def _evidence_cap(scored_count: int) -> float:
+    if scored_count >= 320:
+        return 9.7
+    if scored_count >= 160:
+        return 9.5
+    if scored_count >= 80:
+        return 9.35
+    if scored_count >= 40:
+        return 9.2
+    return 9.0
+
+
+def _evidence_tier(scored_count: int) -> str:
+    if scored_count >= 320:
+        return "promotion_candidate"
+    if scored_count >= 160:
+        return "broad_regression"
+    if scored_count >= 80:
+        return "multi_corpus_probe"
+    if scored_count >= 40:
+        return "single_corpus_probe"
+    return "thin_probe"
+
+
+def _calibration_issue_penalty(scored_cases: list[dict[str, Any]]) -> float:
+    if not scored_cases:
+        return 0.0
+    non_ok = sum(1 for case in scored_cases if case.get("status") != "ok")
+    weak = sum(1 for case in scored_cases if float(case.get("project_min_score") or 0.0) < 9.7)
+    return round(min(1.2, non_ok * 0.25 + weak * 0.1), 2)
 
 
 def _case_readiness_score(case: dict[str, Any]) -> float:

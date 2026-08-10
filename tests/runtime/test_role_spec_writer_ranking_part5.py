@@ -1,0 +1,122 @@
+from __future__ import annotations
+
+from runtime.configured_role_pipeline import producer_for_artifact_type
+from runtime.role_skills import run_role_skill
+
+
+def _run_spec_writer(architecture_decision: dict):
+    return run_role_skill(producer_for_artifact_type("TechnicalSpec"), architecture_decision=architecture_decision)
+
+
+def test_spec_writer_demotes_test_suite_harness_when_product_event_target_exists():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer event dispatch contract over test harness assembly",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": ["src/zope/event/tests.py:test_suite", "src/zope/event/__init__.py:notify"],
+        },
+        "traceability": [
+            {"source": "src/zope/event/tests.py:test_suite", "requirement": "Capability candidate requires TechnicalSpec."},
+            {"source": "src/zope/event/__init__.py:notify", "requirement": "Capability candidate requires TechnicalSpec."},
+        ],
+        "source_context": {
+            "src/zope/event/tests.py:test_suite": {
+                "kind": "central_flow_node",
+                "signature": {"args": [], "returns": "TestSuite"},
+                "snippet": {"text": "def test_suite(): ..."},
+                "candidate_level": "core_flow",
+                "candidate_score": 90,
+            },
+            "src/zope/event/__init__.py:notify": {
+                "kind": "central_flow_node",
+                "signature": {"args": [{"name": "event", "annotation": "object"}], "returns": "None"},
+                "snippet": {"text": "def notify(event): ..."},
+                "candidate_level": "helper_transform",
+                "candidate_score": 70,
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == "src/zope/event/__init__.py:notify"
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "constructor/logging/config helper" in " ".join(ranked["src/zope/event/tests.py:test_suite"]["reasons"])
+
+
+def test_spec_writer_prefers_geospatial_array_contract_over_version_helper():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer geospatial data contract over version metadata helper",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": [
+                "shapely/_version.py:git_pieces_from_vcs",
+                "shapely/_ragged_array.py:_get_arrays_multilinestring",
+            ],
+        },
+        "traceability": [
+            {"source": "shapely/_version.py:git_pieces_from_vcs", "requirement": "Capability candidate requires TechnicalSpec."},
+            {"source": "shapely/_ragged_array.py:_get_arrays_multilinestring", "requirement": "Capability candidate requires TechnicalSpec."},
+        ],
+        "source_context": {
+            "shapely/_version.py:git_pieces_from_vcs": {
+                "kind": "broad_function",
+                "signature": {"args": [{"name": "root"}, {"name": "runner"}]},
+                "snippet": {"text": "def git_pieces_from_vcs(root, runner): ..."},
+                "callers": ["setup.py:get_versions"],
+            },
+            "shapely/_ragged_array.py:_get_arrays_multilinestring": {
+                "kind": "unknown",
+                "signature": {"args": [{"name": "arr", "annotation": "Geometry"}], "returns": "tuple"},
+                "snippet": {"text": "def _get_arrays_multilinestring(arr): ..."},
+                "callers": ["shapely/_ragged_array.py:to_ragged_array"],
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == "shapely/_ragged_array.py:_get_arrays_multilinestring"
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "generic introspection/debug helper" in " ".join(ranked["shapely/_version.py:git_pieces_from_vcs"]["reasons"])
+
+
+def test_spec_writer_prefers_promise_error_contract_over_subclasshook():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer promise behavior over ABC metadata hook",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": ["vine/abstract.py:__subclasshook__", "vine/promises.py:throw"],
+        },
+        "traceability": [
+            {"source": "vine/abstract.py:__subclasshook__", "requirement": "Capability candidate requires TechnicalSpec."},
+            {"source": "vine/promises.py:throw", "requirement": "Capability candidate requires TechnicalSpec."},
+        ],
+        "source_context": {
+            "vine/abstract.py:__subclasshook__": {
+                "kind": "unknown",
+                "signature": {"args": [{"name": "C"}]},
+                "snippet": {"text": "def __subclasshook__(cls, C): ..."},
+            },
+            "vine/promises.py:throw": {
+                "kind": "unknown",
+                "signature": {"args": [{"name": "exc"}, {"name": "tb"}, {"name": "propagate"}], "returns": "None"},
+                "snippet": {"text": "def throw(exc=None, tb=None, propagate=True): ..."},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == "vine/promises.py:throw"
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "generic introspection/debug helper" in " ".join(ranked["vine/abstract.py:__subclasshook__"]["reasons"])

@@ -351,6 +351,15 @@
       ],
       "middleware_path_tokens": [
         "middlewares.py"
+      ],
+      "core_text_tokens": [
+        "bcrypt",
+        "crypt",
+        "hash",
+        "password",
+        "salt",
+        "kdf",
+        "verify"
       ]
     },
     "representative_slice": {
@@ -533,6 +542,27 @@
         "map.py"
       ]
     },
+    "project_support_surface": {
+      "path_tokens": [
+        "/release.py",
+        "/build.py",
+        "/publish.py",
+        "/deploy.py",
+        "/noxfile.py"
+      ],
+      "symbols": [
+        "release",
+        "publish",
+        "deploy"
+      ],
+      "symbol_contains_any": [
+        "release",
+        "publish",
+        "deploy",
+        "build_wheel",
+        "upload"
+      ]
+    },
     "low_value_first_slice": {
       "path_suffixes": [
         "/__init__.py"
@@ -545,11 +575,12 @@
         "set_loglevel",
         "config",
         "configure",
-        "settings",
-        "setup",
-        "decorator",
-        "parse_iso",
-        "build_digest_header"
+          "settings",
+          "setup",
+          "test_suite",
+          "decorator",
+          "parse_iso",
+          "build_digest_header"
       ]
     },
     "mutation_like_first_slice": {

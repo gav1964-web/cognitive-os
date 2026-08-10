@@ -31,9 +31,12 @@ def _is_purpose_doc(path: str) -> bool:
     name = path.rsplit("/", 1)[-1]
     if not path.endswith((".md", ".rst", ".txt")):
         return False
-    if any(part.startswith(".") for part in path.split("/")[:-1]):
+    parts = path.split("/")
+    if name.startswith(".") or any(part.startswith(".") for part in parts[:-1]):
         return False
-    if name.startswith(("requirements", "constraints")) or name in {"license.txt", "notice.txt"}:
+    if any(part in {"changes", "changelog", "changelogs", "news", "towncrier"} for part in parts[:-1]):
+        return False
+    if name.startswith(("requirements", "constraints", "spelling_wordlist")) or name in {"license.txt", "notice.txt"}:
         return False
     return True
 
@@ -71,6 +74,9 @@ def purpose_sentence(docs: str) -> str:
             skip_next_underline = True
             continue
         if stripped.startswith("##") and seen_top_heading and not paragraph:
+            heading = stripped.strip("# ").strip().lower()
+            if heading in {"what is it?", "what is it", "overview", "about"}:
+                continue
             break
         if stripped.startswith("#"):
             seen_top_heading = True

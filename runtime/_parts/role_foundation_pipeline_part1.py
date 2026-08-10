@@ -19,6 +19,7 @@ from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
 from runtime.scope_selection_document import write_scope_selection_document
 from runtime.spec_writer_red_team import red_team_technical_spec
+from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_document import write_technical_spec_document
 
 def run_role_foundation_pipeline(
@@ -51,7 +52,9 @@ def run_role_foundation_pipeline(
     project_artifact = _project_map_artifact(analysis_project_dir, goal, project_map_report)
     active_root_selected = active_root_decision["status"] == "selected"
     scope_report = _scope_selection_report(analysis_project_dir, project_map_report, analyzer_outputs, active_root_selected=active_root_selected)
-    if (not active_root_selected or _active_root_is_auto) and _auto_scope_depth < 2 and _requires_scope_selection(project_map_report, active_root_selected=active_root_selected):
+    scope_required = _requires_scope_selection(project_map_report, active_root_selected=active_root_selected)
+    auto_scope_useful = scope_required or _syntax_damage_is_test_support_only(dict(project_map_report.get("source_health") or {}))
+    if (not active_root_selected or _active_root_is_auto) and _auto_scope_depth < 2 and auto_scope_useful:
         auto_decision = _auto_active_root_decision(analysis_project_dir, scope_report)
         if auto_decision["status"] == "selected":
             return run_role_foundation_pipeline(
@@ -64,7 +67,7 @@ def run_role_foundation_pipeline(
                 _auto_scope_depth=_auto_scope_depth + 1,
                 _active_root_is_auto=True,
             )
-    if _requires_scope_selection(project_map_report, active_root_selected=active_root_selected):
+    if scope_required:
         scope_artifact = _scope_selection_artifact(analysis_project_dir, goal, scope_report)
         artifacts = {
             "project_map_report": project_artifact,
@@ -117,7 +120,7 @@ def run_role_foundation_pipeline(
     architect_red_team = red_team_architecture_decision(adr, project_artifact)
     spec_red_team = red_team_technical_spec(spec, adr)
     selected_candidate = _selected_extraction_candidate(spec)
-    selected_candidate_quality = dict(dict(spec.get("extraction_contract", {})).get("semantic_quality", {}))
+    selected_candidate_quality = _selected_candidate_quality(spec, analysis_project_dir)
     result = {
         "status": "ok" if score["passed"] else "failed",
         "kind": "role_foundation_pipeline",
@@ -165,6 +168,7 @@ def _attach_interpretation(
         },
     }
     interpretation = interpret_project_report(goal_report, root=root.as_posix())
+    project_map_report = _enrich_weak_contract_readiness(project_map_report)
     return {
         **project_map_report,
         "level35_project_signals": interpretation.get("level35_project_signals", {}),
@@ -174,6 +178,61 @@ def _attach_interpretation(
         "knowledge_gap": interpretation.get("knowledge_gap"),
         "research_plan": interpretation.get("research_plan"),
     }
+
+def _enrich_weak_contract_readiness(project_map_report: dict[str, Any]) -> dict[str, Any]:
+    answers = dict(project_map_report.get("answers") or {})
+    readiness = dict(answers.get("6_runtime_extraction_readiness") or {})
+    plan = dict(readiness.get("minimal_extraction_plan") or {})
+    targets = _weak_contract_targets(answers, readiness)
+    if targets and not plan.get("capabilities_to_extract"):
+        plan["capabilities_to_extract"] = [
+            {"capability": target, "reason": "source-backed weak contract needs bounded TechnicalSpec"}
+            for target in targets[:6]
+        ]
+        plan.pop("blocked_by", None)
+    if targets and len(readiness.get("data_lifecycle") or []) < 3:
+        readiness["data_lifecycle"] = [
+            {"stage": "input_discovery", "shape": "source-backed test or weak-contract target", "evidence": targets[0]},
+            {"stage": "contract_execution", "shape": "selected callable boundary", "evidence": targets[0]},
+            {"stage": "result_or_failure", "shape": "return value, assertion, or typed failure", "evidence": targets[0]},
+        ]
+    readiness["minimal_extraction_plan"] = plan
+    answers["6_runtime_extraction_readiness"] = readiness
+    return {**project_map_report, "answers": answers}
+
+def _weak_contract_targets(answers: dict[str, Any], readiness: dict[str, Any]) -> list[str]:
+    contracts = dict(answers.get("4_contracts_data") or {})
+    strategy = dict(readiness.get("contract_test_strategy") or {})
+    values = [
+        *list(contracts.get("weak_contract_zones") or []),
+        *str(strategy.get("hand_written_negative_tests") or "").split(";"),
+    ]
+    return _dedupe_strings([str(value).strip() for value in values if ".py:" in str(value)])
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            result.append(value)
+    return result
+
+def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict[str, Any]:
+    contract = dict(spec.get("extraction_contract", {}) or {})
+    quality = dict(contract.get("semantic_quality", {}) or {})
+    target = str(contract.get("candidate") or quality.get("target") or "")
+    if not target:
+        return quality
+    ranked = [str(row.get("source")) for row in list(contract.get("ranked_candidates") or []) if isinstance(row, dict)]
+    evidence = [str(row.get("source")) for row in list(spec.get("source_evidence") or []) if isinstance(row, dict)]
+    return semantic_target_quality_report(
+        target,
+        ranked_candidates=ranked,
+        source_evidence=evidence,
+        context_evidence=[project_dir.name],
+        selection_reason=str(contract.get("selection_reason") or ""),
+    )
 
 def _attach_active_root_evidence(project_map_report: dict[str, Any], active_root_decision: dict[str, Any]) -> dict[str, Any]:
     source_health = dict(project_map_report.get("source_health") or {})

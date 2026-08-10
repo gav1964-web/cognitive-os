@@ -19,7 +19,18 @@ def load_project_evolution_policy(path: str | None = None) -> dict[str, Any]:
     payload = json.loads(Path(path or DEFAULT_PATH).read_text(encoding="utf-8"))
     if payload.get("schema_version") != "project_evolution_policy.v1":
         raise ProjectEvolutionPolicyError("project evolution policy must use schema_version project_evolution_policy.v1")
-    for field_name in ("principles", "evolution_rules", "evolution_change_types", "promotion_gates", "anti_patterns"):
+    for field_name in (
+        "principles",
+        "chosen_path",
+        "development_lanes",
+        "decision_rules",
+        "stop_signals",
+        "evidence_milestones",
+        "evolution_rules",
+        "evolution_change_types",
+        "promotion_gates",
+        "anti_patterns",
+    ):
         if not payload.get(field_name):
             raise ProjectEvolutionPolicyError(f"project evolution policy missing {field_name}")
     if not isinstance(payload.get("status_threshold"), (int, float)):

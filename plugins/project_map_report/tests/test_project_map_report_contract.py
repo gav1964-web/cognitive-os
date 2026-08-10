@@ -346,3 +346,33 @@ def test_project_map_report_infers_library_entrypoint_and_demotes_dev_context():
         "src/pkg/testclient.py",
     }
     assert readiness["minimal_extraction_plan"]["capabilities_to_extract"][0]["capability"] == "src/pkg/core.py:normalize"
+
+
+def test_project_map_report_combines_stack_and_package_entrypoints():
+    result = run(
+        {
+            "tree": {"root": "library", "counts": {"files": 3, "directories": 1, "truncated": False}},
+            "stack": {
+                "languages": [{"language": "Python"}],
+                "frameworks": [],
+                "entrypoints": ["app.py"],
+                "large_artifacts": [],
+                "dependency_files": [],
+            },
+            "files": {"files": [{"path": "README.md", "text": "# Demo\n\nReusable package."}]},
+            "python_structure": {
+                "imports": [],
+                "routes": [],
+                "files": [{"path": "pkg/__init__.py", "functions": []}],
+                "central_nodes": [],
+                "wide_functions": [],
+                "pure_transform_candidates": [],
+                "project_insights": {},
+                "contracts": {},
+                "external_dependencies": {},
+            },
+            "runtime_commands": {"commands": []},
+        }
+    )
+
+    assert result["summary"]["entrypoints"] == ["app.py", "pkg/__init__.py"]

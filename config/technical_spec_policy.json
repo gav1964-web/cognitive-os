@@ -1,20 +1,5 @@
 {
   "schema_version": "technical_spec_policy.v1",
-  "context_only_source_path_tokens": [
-    "/.github/",
-    "/bench/",
-    "/benchmarks/",
-    "/doc/",
-    "/docs/",
-    "/examples/",
-    "/scripts/",
-    "/tasks/",
-    "/test/",
-    "/tests/",
-    "/testing/",
-    "/tools/",
-    "/__pycache__/"
-  ],
   "snippet_analysis": {
     "allowed_external_names": [
       "Any",
@@ -54,6 +39,7 @@
       {"type": "PluginHookContext", "source_contains_any": ["hook", "plugin"]}
     ],
     "result_rules": [
+      {"type": "VoidSideEffect", "source_contains_any": [":add_", ":save_", ":update_", ":delete_", ":remove_", ":register_", ":execute_"]},
       {"type": "Iterable[ConsoleRenderable]", "source_contains_any": ["__rich_console__"]},
       {"type": "FormattedHelpRenderable", "source_contains_any": ["rich_format", "format_help"]},
       {"type": "FormattedText", "source_contains_any": ["format"]},
@@ -96,6 +82,13 @@
     ],
     "verdict": "approved_with_constraints"
   },
+  "process_boundary_review_override": {
+    "enabled": true,
+    "allowed_statuses": ["suspicious"],
+    "required_profile_ids": ["legacy_batch_orchestrator_too_broad"],
+    "required_side_effects_any": ["filesystem", "filesystem_read", "filesystem_write", "subprocess", "database"],
+    "verdict": "approved_with_constraints"
+  },
   "architecture_shape_score": {
     "positive_source_tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
     "positive_source_bonus": 35,
@@ -103,7 +96,7 @@
     "positive_symbol_tokens": ["resolve", "build_providers", "parse_file", "features_for_view", "incident_features"],
     "positive_symbol_bonus": 18,
     "positive_symbol_reason": "domain boundary function name",
-    "negative_source_tokens": ["api.py:describe_module", "_plugin_metadata.py", "debug_", "smoke"],
+    "negative_source_tokens": ["api.py:describe_module", "_plugin_metadata.py", "/_version.py", "/extern/", ":__subclasshook__", "debug_", "smoke"],
     "negative_source_penalty": 35,
     "negative_source_reason": "generic introspection/debug helper is lower priority",
     "background_worker_tokens": ["downloader.py:worker"],

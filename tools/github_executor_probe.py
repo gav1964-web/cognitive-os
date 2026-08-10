@@ -13,6 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.configured_role_pipeline import artifact_by_type, run_configured_role_prefix
+from runtime.executor_solution_patterns import select_solution_patterns
 from runtime.programmer_executor import run_programmer_executor
 from runtime.project_benchmark import analyze_project
 
@@ -50,7 +51,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str, run_verification: b
     summary = _summary(cases)
     return {
         "artifact_type": "GitHubExecutorProbe",
-        "status": "ok" if summary["ok"] == len(cases) else "needs_review",
+        "status": "ok" if summary["accepted"] == len(cases) else "needs_review",
         "milestone": label,
         "generated_at": _now(),
         "project_count": len(cases),
@@ -67,6 +68,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str, run_verification: b
 
 def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[str, Any]:
     try:
+        project_dir = project_dir.resolve()
         before = _git_porcelain(project_dir)
         project_report = analyze_project(project_dir)["project_map_report"]
         artifacts = run_configured_role_prefix(
@@ -77,6 +79,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
         spec = artifact_by_type(artifacts, "TechnicalSpec")
         plan = artifact_by_type(artifacts, "ImplementationPlan")
         test_plan = artifact_by_type(artifacts, "TestPlan")
+        profile = _contract_profile_fields(spec, plan, test_plan)
         result = run_programmer_executor(
             root=root,
             project_dir=project_dir,
@@ -86,11 +89,54 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
             run_verification=run_verification,
             apply_source=False,
         )
+        task_tree = _read_json(result.get("task_tree_path"))
+        tree = _task_tree_fields(task_tree)
+        if result.get("status") == "blocked":
+            after = _git_porcelain(project_dir)
+            reason = str(result.get("reason") or "")
+            no_patch = _read_json(result.get("no_patch_package_path"))
+            ok = reason in {"blocked_no_safe_candidate", "context_only_implementation_target"} and before == after
+            return {
+                "project": project_dir.name,
+                "project_dir": project_dir.as_posix(),
+                "status": "blocked_ok" if ok else "needs_review",
+                "executor_status": result.get("status"),
+                "blocked_reason": reason,
+                "no_patch_package": no_patch.get("artifact_type"),
+                "test_result_status": None,
+                "executable_acceptance": None,
+                "callable_harness_count": 0,
+                "acceptance_signal": "blocked",
+                "acceptance_skipped_reasons": {},
+                "acceptance_skipped_targets": [],
+                "boundary_track": "blocked_handoff",
+                **profile,
+                **tree,
+                "patch_synthesis": "blocked",
+                "patch_reason": reason,
+                "patch_quality_level": "blocked_handoff",
+                "patch_quality_review_required": False,
+                "solution_pattern_ids": _solution_pattern_ids(
+                    {
+                        "acceptance_signal": "blocked",
+                        "patch_synthesis": "blocked",
+                        "patch_reason": reason,
+                        "patch_quality_level": "blocked_handoff",
+                        "patch_quality_review_required": False,
+                    }
+                ),
+                "target": str(dict(plan.get("implementation_target", {})).get("candidate") or ""),
+                "source_code_changes": before != after,
+            }
         test_result = _read_json(result.get("test_result_path"))
         executable = dict(test_result.get("executable_acceptance_result") or {})
         acceptance = dict(executable.get("summary") or {})
         patch = _read_json(result.get("patch_package_path"))
         patch_synthesis = dict(patch.get("patch_synthesis") or {})
+        patch_quality = dict(dict(patch.get("patch_strategy") or {}).get("patch_quality") or {})
+        strategy = _strategy_fields(dict(test_result.get("executor_strategy") or patch.get("patch_strategy") or {}))
+        candidate_attempt = _candidate_attempt_fields(dict(test_result.get("sandbox_candidate_attempt") or {}))
+        repair_attempt = _repair_attempt_fields(dict(test_result.get("sandbox_candidate_repair_attempt") or {}))
         after = _git_porcelain(project_dir)
         ok = result.get("status") == "ok" and executable.get("status") == "passed" and before == after
         boundary_track = _boundary_track(acceptance)
@@ -106,8 +152,15 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
             "acceptance_skipped_reasons": acceptance.get("skipped_reason_counts"),
             "acceptance_skipped_targets": acceptance.get("skipped_targets"),
             "boundary_track": boundary_track,
+            **profile,
+            **tree,
             "patch_synthesis": patch_synthesis.get("status"),
             "patch_reason": patch_synthesis.get("reason"),
+            "patch_quality_level": str(patch_quality.get("level") or ""),
+            "patch_quality_review_required": bool(patch_quality.get("review_required")),
+            **strategy,
+            **candidate_attempt,
+            **repair_attempt,
             "target": str(dict(plan.get("implementation_target", {})).get("candidate") or ""),
             "source_code_changes": before != after,
         }
@@ -125,18 +178,115 @@ def write_report(root: Path, report: dict[str, Any], label: str) -> dict[str, st
 
 
 def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    ok = sum(case["status"] == "ok" for case in cases)
+    blocked = sum(case["status"] == "blocked_ok" for case in cases)
     return {
-        "ok": sum(case["status"] == "ok" for case in cases),
+        "ok": ok,
+        "blocked_no_safe_candidate": blocked,
+        "accepted": ok + blocked,
         "needs_review": sum(case["status"] == "needs_review" for case in cases),
         "failed": sum(case["status"] == "failed" for case in cases),
         "executor_ok": sum(case.get("executor_status") == "ok" for case in cases),
+        "executor_blocked": sum(case.get("executor_status") == "blocked" for case in cases),
         "executable_acceptance_passed": sum(case.get("executable_acceptance") == "passed" for case in cases),
         "patch_prepared": sum(case.get("patch_synthesis") == "prepared" for case in cases),
+        "patch_blocked": sum(case.get("patch_synthesis") == "blocked" for case in cases),
         "patch_skipped": sum(case.get("patch_synthesis") == "skipped" for case in cases),
+        "patch_quality_levels": _counts(_patch_quality_level(case) for case in cases),
+        "patch_quality_review_required": sum(bool(case.get("patch_quality_review_required")) for case in cases),
         "acceptance_callable": sum(case.get("acceptance_signal") == "executable_callable" for case in cases),
         "acceptance_meta_only": sum(case.get("acceptance_signal") == "meta_only" for case in cases),
         "boundary_tracks": _counts(str(case.get("boundary_track") or "unknown") for case in cases),
+        "contract_profiles": _counts(str(case.get("contract_profile_id") or "none") for case in cases),
+        "contract_profile_operators": _counts(str(case.get("contract_profile_operator_id") or "none") for case in cases),
+        "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
+        "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
+        "strategy_actions": _counts(str(case.get("strategy_action") or "unknown") for case in cases),
+        "executor_playbooks": _counts(playbook for case in cases for playbook in list(case.get("executor_playbook_ids") or [])),
+        "solution_patterns": _counts(pattern for case in cases for pattern in list(case.get("solution_pattern_ids") or [])),
+        "llm_strategy_statuses": _counts(str(case.get("llm_strategy_status") or "none") for case in cases),
+        "sandbox_candidate_statuses": _counts(str(case.get("sandbox_candidate_status") or "none") for case in cases),
+        "sandbox_candidate_attempt_statuses": _counts(
+            str(case.get("sandbox_candidate_attempt_status") or "none") for case in cases
+        ),
+        "sandbox_candidate_repair_statuses": _counts(
+            str(case.get("sandbox_candidate_repair_status") or "none") for case in cases
+        ),
         "source_code_changes": sum(bool(case.get("source_code_changes")) for case in cases),
+    }
+
+
+def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_plan: dict[str, Any]) -> dict[str, str]:
+    spec_profile = dict(dict(spec.get("extraction_contract") or {}).get("contract_profile") or {})
+    plan_profile = dict(dict(plan.get("contract_binding") or {}).get("contract_profile") or {})
+    test_profile = _first_test_plan_profile(test_plan)
+    profile = test_profile or plan_profile or spec_profile
+    return {
+        "contract_profile_id": str(profile.get("id") or ""),
+        "contract_profile_operator_id": str(profile.get("operator_id") or ""),
+        "contract_profile_source": str(profile.get("source") or ("test_plan" if test_profile else "")),
+    }
+
+
+def _first_test_plan_profile(test_plan: dict[str, Any]) -> dict[str, Any]:
+    for obligation in list(dict(test_plan.get("executable_acceptance") or {}).get("obligations") or []):
+        if not isinstance(obligation, dict):
+            continue
+        profile = dict(obligation.get("contract_profile") or {})
+        if profile:
+            return profile
+    return {}
+
+
+def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
+    deterministic = dict(strategy.get("deterministic_strategy") or {})
+    llm = dict(strategy.get("llm_strategy") or {})
+    candidate = dict(strategy.get("sandbox_patch_candidate") or {})
+    playbooks = [str(row.get("id") or "") for row in list(strategy.get("executor_playbooks") or []) if isinstance(row, dict)]
+    patterns = [str(row.get("id") or "") for row in list(strategy.get("solution_patterns") or []) if isinstance(row, dict)]
+    return {
+        "strategy_action": str(deterministic.get("action") or ""),
+        "strategy_reason": str(deterministic.get("reason") or ""),
+        "executor_playbook_ids": [item for item in playbooks if item],
+        "solution_pattern_ids": [item for item in patterns if item],
+        "llm_strategy_status": str(llm.get("status") or "none"),
+        "sandbox_candidate_status": str(candidate.get("status") or "none"),
+    }
+
+
+def _solution_pattern_ids(context: dict[str, Any]) -> list[str]:
+    return [str(row.get("id") or "") for row in select_solution_patterns(context) if row.get("id")]
+
+
+def _patch_quality_level(case: dict[str, Any]) -> str:
+    if case.get("patch_quality_level"):
+        return str(case.get("patch_quality_level"))
+    if case.get("patch_synthesis") == "blocked":
+        return "blocked_handoff"
+    if case.get("patch_synthesis") == "skipped":
+        return "verified_no_patch"
+    return "none"
+
+
+def _task_tree_fields(task_tree: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "task_tree_status": str(task_tree.get("status") or ""),
+        "task_tree_boundary": str(dict(task_tree.get("boundary") or {}).get("track") or ""),
+        "task_tree_node_count": int(dict(task_tree.get("summary") or {}).get("node_count") or 0),
+    }
+
+
+def _candidate_attempt_fields(candidate_attempt: dict[str, Any]) -> dict[str, str]:
+    return {
+        "sandbox_candidate_attempt_status": str(candidate_attempt.get("status") or ""),
+        "sandbox_candidate_attempt_reason": str(candidate_attempt.get("reason") or ""),
+    }
+
+
+def _repair_attempt_fields(repair_attempt: dict[str, Any]) -> dict[str, str]:
+    return {
+        "sandbox_candidate_repair_status": str(repair_attempt.get("status") or ""),
+        "sandbox_candidate_repair_reason": str(repair_attempt.get("reason") or ""),
     }
 
 

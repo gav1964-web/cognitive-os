@@ -15,30 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from runtime.project_benchmark import analyze_project
 from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from runtime.role_foundation_field_trial import _primary_language_scope
-
-
-FORBIDDEN_SOURCE_TOKENS = (
-    "/benchmarks/",
-    "/bench/",
-    "/ci_tools/",
-    "/docs/",
-    "/downstream/",
-    "/examples/",
-    "/failures-to-investigate/",
-    "/packaging/pep517_backend/",
-    "/scripts/",
-    "/tasks/",
-    "/test/",
-    "/tests/",
-    "/tools/",
-    "benchmark.py",
-    "bench.py",
-    "_bench.py",
-    "_benchmark.py",
-    "noxfile.py",
-    "testclient.py",
-    "testing.py",
-)
+from runtime.source_target_policy import is_context_only_implementation_target
 
 
 def main() -> int:
@@ -121,11 +98,11 @@ def _run_case(project_dir: Path) -> dict[str, Any]:
     writable_scope = [str(item) for item in strategy.get("writable_scope", []) if item]
     evidence_scope = [str(item) for item in strategy.get("evidence_scope", []) if item]
     read_only_context = [str(item) for item in strategy.get("read_only_context", []) if item]
-    forbidden = [value for value in [target, implementation_target, *writable_scope, *evidence_scope] if _is_forbidden_source(value)]
-    blocked_reason = _blocked_reason(project_report)
+    forbidden = [value for value in [target, implementation_target, *writable_scope] if _is_forbidden_source(value)]
+    blocked_reason = _blocked_reason(project_report, dict(plan.get("implementation_target", {})))
     quality = _quality_score(test_plan, target, implementation_target, binding_status, writable_scope, read_only_context, forbidden)
     status = "ok" if quality >= 0.9 and not forbidden else "needs_review"
-    if blocked_reason == "no_safe_python_candidate" and not implementation_target and not forbidden:
+    if blocked_reason in {"no_safe_python_candidate", "context_only_implementation_target"} and not implementation_target and not forbidden:
         status = "blocked_ok"
         quality = 1.0
     dirty_after = _git_porcelain(project_dir)
@@ -189,7 +166,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
 }
 
 
-def _blocked_reason(project_report: dict[str, Any]) -> str:
+def _blocked_reason(project_report: dict[str, Any], implementation_target: dict[str, Any]) -> str:
+    blocked = [str(item) for item in list(implementation_target.get("blocked_by") or [])]
+    if "context_only_implementation_target" in blocked:
+        return "context_only_implementation_target"
     answers = dict(project_report.get("answers", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
     plan = dict(readiness.get("minimal_extraction_plan", {}))
@@ -233,8 +213,7 @@ def _quality_score(
 
 
 def _is_forbidden_source(value: str) -> bool:
-    normalized = "/" + value.replace("\\", "/").lower()
-    return any(token in normalized for token in FORBIDDEN_SOURCE_TOKENS)
+    return is_context_only_implementation_target(value)
 
 
 def _git_porcelain(project_dir: Path) -> str:

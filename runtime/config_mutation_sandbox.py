@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .executable_acceptance_policy import load_executable_acceptance_policy
+from .executor_solution_patterns import load_executor_solution_patterns
 from .l4_decision_table import load_l4_decision_rules
 from .operation_recipe_rules import load_operation_recipe_rules
 from .patch_synthesis_policy import load_patch_synthesis_policy
@@ -22,6 +23,7 @@ from .stage2_template_routes import load_stage2_template_routes
 
 VALIDATORS: dict[str, Callable[[str], Any]] = {
     "config/executable_acceptance_policy.json": load_executable_acceptance_policy,
+    "config/executor_solution_patterns.json": load_executor_solution_patterns,
     "config/l4_decision_rules.json": load_l4_decision_rules,
     "config/operation_recipe_rules.json": load_operation_recipe_rules,
     "config/patch_synthesis_policy.json": load_patch_synthesis_policy,

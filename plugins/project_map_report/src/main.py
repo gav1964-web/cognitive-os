@@ -52,20 +52,42 @@ def run(payload: dict[str, object]) -> dict[str, object]:
 
 
 def _entrypoints(stack: dict[str, Any], python_structure: dict[str, Any]) -> list[str]:
-    stack_entrypoints = [str(item) for item in stack.get("entrypoints", []) if item]
+    stack_entrypoints = [str(item) for item in stack.get("entrypoints", []) if item and is_core_path(str(item))]
+    package_inits = _package_init_entrypoints(python_structure)
     if stack_entrypoints:
-        return sorted(dict.fromkeys(stack_entrypoints))
+        return sorted(dict.fromkeys([*stack_entrypoints, *package_inits]))[:40]
+    if package_inits:
+        return package_inits[:40]
+    return _top_level_module_entrypoints(python_structure)[:8]
+
+
+def _package_init_entrypoints(python_structure: dict[str, Any]) -> list[str]:
     package_inits = []
     for file_row in python_structure.get("files", []):
         path = str(file_row.get("path") or "")
         if not path.endswith("/__init__.py") or not is_core_path(path):
             continue
         parts = path.split("/")
-        if parts[0] == "src" and len(parts) >= 3:
+        if parts[0] in {"src", "lib"} and len(parts) >= 3:
             package_inits.append(path)
+        elif "src" in parts[:-2]:
+            src_index = parts.index("src")
+            if len(parts) - src_index >= 3:
+                package_inits.append(path)
         elif len(parts) == 2 and parts[0].replace("_", "").isalnum():
             package_inits.append(path)
-    return sorted(package_inits)[:5]
+    return sorted(package_inits)
+
+
+def _top_level_module_entrypoints(python_structure: dict[str, Any]) -> list[str]:
+    modules = []
+    for file_row in python_structure.get("files", []):
+        path = str(file_row.get("path") or "").replace("\\", "/")
+        if "/" in path or not path.endswith(".py") or path == "__init__.py":
+            continue
+        if is_core_path(path):
+            modules.append(path)
+    return sorted(dict.fromkeys(modules))
 
 
 def _risks(

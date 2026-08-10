@@ -12,12 +12,13 @@ from runtime.role_spec_writer_ranking import (
 )
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
+from runtime.source_target_policy import is_context_only_implementation_target
 from runtime.target_quality import semantic_target_quality_report
+from runtime.technical_spec_contract_enrichment import enrich_signature_contract
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
-CONTEXT_ONLY_SOURCE_PATH_TOKENS = policy_list(TECHNICAL_SPEC_POLICY, "context_only_source_path_tokens")
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
 CONTRACT_TYPE_POLICY = dict(TECHNICAL_SPEC_POLICY["contract_type_inference"])
 SEMANTIC_RERANK_POLICY = dict(TECHNICAL_SPEC_POLICY["semantic_rerank"])
@@ -141,8 +142,7 @@ def _implementation_source(source: str) -> bool:
     return False
 
 def _context_only_implementation_source(lowered: str) -> bool:
-    normalized = "/" + lowered.replace("\\", "/").lstrip("/")
-    return any(token in normalized for token in CONTEXT_ONLY_SOURCE_PATH_TOKENS)
+    return is_context_only_implementation_target(lowered)
 
 def _normalize_source_ref(source: str) -> str:
     return re.sub(r"\s*\(\d+\s+loc\)\s*$", "", str(source or "").strip(), flags=re.IGNORECASE)
@@ -158,13 +158,15 @@ def _dedupe(values: list[str]) -> list[str]:
     return rows
 
 def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None) -> dict[str, Any]:
-    ranked = _rank_extraction_candidates(evidence)
+    ranked = _rank_extraction_candidates(evidence); read_only_ranked_context = []
     if FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
-        ranked = _enforce_preferred_first_slice_scope(ranked, preferred_targets or [])
+        pre_scope_ranked = list(ranked); ranked = _enforce_preferred_first_slice_scope(ranked, preferred_targets or [])
+        read_only_ranked_context = pre_scope_ranked
     else:
         ranked = _semantic_rerank_candidates(ranked, evidence)
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [])
     ranked = _semantic_rerank_candidates(ranked, [dict(item.get("evidence", {})) for item in ranked])
+    ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
     if not ranked:
         return {
             "status": "blocked_no_safe_candidate",
@@ -185,6 +187,14 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
     domain_contract = _domain_extraction_contract(source)
     signature_input_contract = _input_contract_from_candidate(candidate)
     signature_output_contract = _output_contract_from_candidate(candidate)
+    enriched_contract = enrich_signature_contract(
+        target=source,
+        input_contract=signature_input_contract,
+        output_contract=signature_output_contract,
+        side_effects=list(candidate.get("side_effects", []) or []),
+    )
+    signature_input_contract = dict(enriched_contract.get("input_contract") or signature_input_contract)
+    signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)
     input_contract = _reconciled_input_contract(signature_input_contract, dict(domain_contract.get("input_contract") or {}))
     output_contract = dict(domain_contract.get("output_contract") or signature_output_contract)
     contract = {
@@ -218,6 +228,8 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         }
         contract["validation_gates"] = domain_contract.get("validation_gates", [])
         contract["failure_modes"] = domain_contract.get("failure_modes", [])
+    elif enriched_contract.get("contract_profile"):
+        contract["contract_profile"] = dict(enriched_contract.get("contract_profile") or {})
     contract["semantic_quality"] = semantic_target_quality_report(
         str(contract.get("candidate") or ""),
         ranked_candidates=[str(row.get("source")) for row in contract["ranked_candidates"] if isinstance(row, dict)],
@@ -300,6 +312,8 @@ def _reconciled_input_contract(signature_contract: dict[str, str], domain_contra
     domain_keys = list(domain_contract)
     if signature_keys == domain_keys:
         return {key: str(domain_contract.get(key) or signature_contract[key]) for key in signature_keys}
+    if signature_keys == ["call_context"] and "call_context" in domain_contract:
+        return {str(key): str(value) for key, value in domain_contract.items()}
     if len(signature_keys) == len(domain_keys):
         return {
             signature_key: str(domain_contract.get(domain_key) or signature_contract[signature_key])
@@ -309,7 +323,6 @@ def _reconciled_input_contract(signature_contract: dict[str, str], domain_contra
     if aggregate_keys & set(str(key) for key in domain_contract):
         return {str(key): str(value) for key, value in domain_contract.items()}
     return signature_contract
-
 def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferred_targets: list[Any]) -> list[dict[str, Any]]:
     preferred = [_normalize_source_ref(str(item)) for item in preferred_targets if item]
     if not ranked or not preferred:
@@ -328,8 +341,6 @@ def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferre
         ]
         selected["score"] = int(selected.get("score") or 0) + 80
         return [selected, *[item for item in ranked if item is not by_source[target]]]
-    return ranked
-
 def _enforce_preferred_first_slice_scope(ranked: list[dict[str, Any]], preferred_targets: list[Any]) -> list[dict[str, Any]]:
     if not ranked or not preferred_targets or not FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
         return ranked
@@ -344,7 +355,6 @@ def _enforce_preferred_first_slice_scope(ranked: list[dict[str, Any]], preferred
         row["reasons"] = [*list(row.get("reasons", [])), reason]
         enriched.append(row)
     return enriched
-
 def _first_slice_target_can_override(item: dict[str, Any], *, best_score: int) -> bool:
     source = str(item.get("source") or "").lower()
     if _domain_extraction_contract(str(item.get("source") or "")).get("contract_family"):

@@ -1,0 +1,33 @@
+{
+  "schema_version": "contract_transform_operators.v1",
+  "status": "active",
+  "admission_policy": {
+    "automatic_source_mutation_allowed": false,
+    "automatic_operator_promotion_allowed": false,
+    "required_evidence": ["regression_test", "acceptance_callable", "config_doctor"]
+  },
+  "operators": [
+    {"id": "strip", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip()"},
+    {"id": "lower", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.lower()"},
+    {"id": "upper", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.upper()"},
+    {"id": "strip_lower", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip().lower()"},
+    {"id": "strip_upper", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip().upper()"},
+    {
+      "id": "comma_split_strip_nonempty",
+      "input_kind": "string",
+      "output_kind": "list[string]",
+      "expression_template": "[part.strip() for part in {arg}.split(',') if part.strip()]"
+    },
+    {"id": "sum_numbers", "input_kind": "list[number]", "output_kind": "number", "expression_template": "sum({arg})"},
+    {"id": "len_sequence", "input_kind": "sequence", "output_kind": "integer", "expression_template": "len({arg})"},
+    {"id": "first_item", "input_kind": "sequence", "output_kind": "item", "expression_template": "{arg}[0]"},
+    {"id": "last_item", "input_kind": "sequence", "output_kind": "item", "expression_template": "{arg}[-1]"},
+    {"id": "sorted_list", "input_kind": "list[comparable]", "output_kind": "list", "expression_template": "sorted({arg})"},
+    {
+      "id": "unique_preserve_order",
+      "input_kind": "list[hashable]",
+      "output_kind": "list",
+      "expression_template": "list(dict.fromkeys({arg}))"
+    }
+  ]
+}

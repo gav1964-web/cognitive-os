@@ -37,6 +37,7 @@ def build_architecture_decision(
     tasks = _tasks(project_report)
     synthesis = _architecture_synthesis(project_report)
     first_slice = _first_slice_contract(synthesis)
+    first_slice = _first_slice_with_source_targets(first_slice, tasks)
     boundaries = _subsystem_boundaries(project_report, tasks)
     capabilities = _capability_model(plan, tasks, first_slice)
     risks = _risks(project_report, tasks)
@@ -113,6 +114,22 @@ def build_architecture_decision(
         "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
     }
     return apply_architect_advisory(artifact, config=advisory_config)
+
+def _first_slice_with_source_targets(first_slice: dict[str, Any], tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    if first_slice.get("targets"):
+        return first_slice
+    targets = _dedupe_strings(
+        [
+            str(task.get("target") or "")
+            for task in tasks
+            if ".py:" in str(task.get("target") or "") and str(task.get("type") or "") != "MAP_SUBSYSTEM_BOUNDARY"
+        ]
+    )
+    if not targets:
+        return first_slice
+    row = dict(first_slice)
+    row["targets"] = targets[:8]
+    return row
 
 def _architecture_options(
     capabilities: list[dict[str, Any]],

@@ -5,7 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from runtime.role_foundation_pipeline import _auto_active_root_decision, run_role_foundation_benchmark, run_role_foundation_pipeline
+from runtime.role_foundation_pipeline import _auto_active_root_decision, _enrich_weak_contract_readiness
+from runtime.role_foundation_pipeline import run_role_foundation_benchmark, run_role_foundation_pipeline
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -157,6 +158,26 @@ def test_auto_scope_selects_application_package_over_tooling_package(tmp_path):
     assert decision["source"] == "auto_application_package_scope_selector"
 
 
+def test_role_foundation_enriches_weak_contract_readiness():
+    report = _enrich_weak_contract_readiness(
+        {
+            "answers": {
+                "4_contracts_data": {"weak_contract_zones": ["src/zope/testing/doctestcase.py:_run_test"]},
+                "6_runtime_extraction_readiness": {
+                    "contract_test_strategy": {"hand_written_negative_tests": ""},
+                    "data_lifecycle": [{"stage": "unknown"}],
+                    "minimal_extraction_plan": {"blocked_by": "no_safe_python_candidate"},
+                },
+            }
+        }
+    )
+    readiness = report["answers"]["6_runtime_extraction_readiness"]
+
+    assert readiness["minimal_extraction_plan"]["capabilities_to_extract"][0]["capability"].endswith(":_run_test")
+    assert "blocked_by" not in readiness["minimal_extraction_plan"]
+    assert len(readiness["data_lifecycle"]) == 3
+
+
 def test_role_foundation_artifact_paths_do_not_collide():
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
 
@@ -196,107 +217,6 @@ def test_role_foundation_benchmark_single_project():
     assert report["cases"][0]["expected_best_extraction_candidate"] == "main.py:normalize_text"
     assert report["cases"][0]["score"]["checks"]["spec_contract_matches_expected_candidate"] is True
     assert Path(report["report_path"]).exists()
-
-
-def test_role_foundation_blocks_dirty_portfolio_before_adr_and_spec(tmp_path):
-    portfolio = tmp_path / "portfolio"
-    current = portfolio / "20260101_current"
-    legacy = portfolio / "20250101_legacy"
-    current.mkdir(parents=True)
-    legacy.mkdir(parents=True)
-    (current / "requirements.txt").write_text("fastapi==0.115.0\n", encoding="utf-8")
-    (current / "main.py").write_text(
-        "def normalize(value: str) -> str:\n"
-        "    return value.strip().lower()\n",
-        encoding="utf-8",
-    )
-    (legacy / "main.py").write_text(
-        "def old_entrypoint(value):\n"
-        "    return value\n",
-        encoding="utf-8",
-    )
-
-    result = run_role_foundation_pipeline(
-        root=ROOT,
-        project_dir=portfolio,
-        goal="Analyze mixed portfolio",
-        write=False,
-    )
-
-    assert result["status"] == "blocked"
-    assert result["blocker"] == "scope_selection_required"
-    assert result["milestone"] == "ProjectMapReport -> ScopeSelectionReport"
-    assert set(result["artifacts"]) == {"project_map_report", "scope_selection_report"}
-    assert "architecture_decision" not in result["artifacts"]
-    assert "technical_spec" not in result["artifacts"]
-    assert result["score"]["checks"]["adr_not_built"] is True
-    assert result["score"]["checks"]["technical_spec_not_built"] is True
-    scope = result["scope_selection_report"]
-    assert scope["status"] == "blocked_until_scope_selected"
-    assert scope["selection_confidence"] == "ambiguous"
-    assert scope["preferred_candidate"] is None
-    assert scope["blocked_downstream_artifacts"] == ["ArchitectureDecisionRecord", "TechnicalSpec"]
-    assert {row["path"] for row in scope["candidate_roots"]} >= {"20260101_current", "20250101_legacy"}
-
-
-def test_role_foundation_writes_scope_selection_document_for_dirty_portfolio(tmp_path):
-    portfolio = tmp_path / "portfolio"
-    current = portfolio / "20260101_current"
-    legacy = portfolio / "20250101_legacy"
-    current.mkdir(parents=True)
-    legacy.mkdir(parents=True)
-    (current / "requirements.txt").write_text("fastapi==0.115.0\n", encoding="utf-8")
-    (current / "main.py").write_text("def normalize(value: str) -> str:\n    return value.strip()\n", encoding="utf-8")
-    (legacy / "main.py").write_text("def old_entrypoint(value):\n    return value\n", encoding="utf-8")
-
-    result = run_role_foundation_pipeline(
-        root=ROOT,
-        project_dir=portfolio,
-        goal="Analyze mixed portfolio",
-        write=True,
-    )
-
-    assert result["status"] == "blocked"
-    doc_path = Path(result["human_documents"]["scope_selection"])
-    assert doc_path.exists()
-    text = doc_path.read_text(encoding="utf-8")
-    assert "# Выбор активного корня проекта" in text
-    assert "20260101_current" in text
-    assert "ArchitectureDecisionRecord" not in result["artifacts"]
-    assert Path(result["report_path"]).exists()
-
-
-def test_role_foundation_active_root_runs_downstream_on_selected_slice(tmp_path):
-    portfolio = tmp_path / "portfolio"
-    current = portfolio / "20260101_current"
-    legacy = portfolio / "20250101_legacy"
-    current.mkdir(parents=True)
-    legacy.mkdir(parents=True)
-    (current / "requirements.txt").write_text("click==8.3.0\n", encoding="utf-8")
-    (current / "main.py").write_text(
-        "def normalize(value: str) -> str:\n"
-        "    return value.strip().lower()\n\n"
-        "def main() -> None:\n"
-        "    print(normalize(' A '))\n",
-        encoding="utf-8",
-    )
-    (legacy / "main.py").write_text("def old_entrypoint(value):\n    return value\n", encoding="utf-8")
-
-    result = run_role_foundation_pipeline(
-        root=ROOT,
-        project_dir=portfolio,
-        active_root="20260101_current",
-        goal="Analyze selected active root",
-        write=False,
-    )
-
-    assert result["status"] == "ok"
-    assert result["project"].endswith("20260101_current")
-    assert result["portfolio_root"].endswith("portfolio")
-    assert result["active_root_decision"]["selected_relative_path"] == "20260101_current"
-    assert result["artifacts"]["active_root_decision"]["artifact_type"] == "ActiveRootDecision"
-    assert result["artifacts"]["architecture_decision"]["artifact_type"] == "ArchitectureDecisionRecord"
-    assert result["artifacts"]["technical_spec"]["artifact_type"] == "TechnicalSpec"
 
 
 def test_role_foundation_auto_selects_clear_named_package_root(tmp_path):

@@ -42,6 +42,20 @@ def build_matrix(path: Path | list[Path]) -> dict[str, Any]:
             "acceptance_skipped_reasons": _merge_counts(row["acceptance_skipped_reasons"] for row in rows),
             "acceptance_skipped_details": _counts(detail for row in rows for detail in row["acceptance_skipped_details"]),
             "patch_reasons": _counts(row["patch_reason"] for row in rows if row["patch_reason"]),
+            "task_tree_statuses": _counts(row["task_tree_status"] for row in rows if row["task_tree_status"]),
+            "task_tree_boundaries": _counts(row["task_tree_boundary"] for row in rows if row["task_tree_boundary"]),
+            "strategy_actions": _counts(row["strategy_action"] for row in rows if row["strategy_action"]),
+            "executor_playbooks": _counts(playbook for row in rows for playbook in row["executor_playbook_ids"]),
+            "llm_strategy_statuses": _counts(row["llm_strategy_status"] for row in rows if row["llm_strategy_status"]),
+            "sandbox_candidate_statuses": _counts(
+                row["sandbox_candidate_status"] for row in rows if row["sandbox_candidate_status"]
+            ),
+            "sandbox_candidate_attempt_statuses": _counts(
+                row["sandbox_candidate_attempt_status"] for row in rows if row["sandbox_candidate_attempt_status"]
+            ),
+            "sandbox_candidate_repair_statuses": _counts(
+                row["sandbox_candidate_repair_status"] for row in rows if row["sandbox_candidate_repair_status"]
+            ),
             "harness_counts": _counts(str(row["callable_harness_count"]) for row in rows),
             "failed_checks": _counts(code for row in rows for code in row["failed_checks"]),
         },
@@ -179,6 +193,22 @@ def _case_row(case: dict[str, Any]) -> dict[str, Any]:
         "target": target_chain.get("implementation_target") or case.get("target"),
         "patch_status": executor.get("patch_synthesis_status") or case.get("patch_synthesis"),
         "patch_reason": executor.get("patch_synthesis_reason") or case.get("patch_reason"),
+        "task_tree_status": executor.get("task_tree_status") or case.get("task_tree_status"),
+        "task_tree_boundary": executor.get("task_tree_boundary") or case.get("task_tree_boundary"),
+        "task_tree_node_count": executor.get("task_tree_node_count") or case.get("task_tree_node_count") or 0,
+        "strategy_action": executor.get("strategy_action") or case.get("strategy_action"),
+        "strategy_reason": executor.get("strategy_reason") or case.get("strategy_reason"),
+        "executor_playbook_ids": list(executor.get("executor_playbook_ids") or case.get("executor_playbook_ids") or []),
+        "llm_strategy_status": executor.get("llm_strategy_status") or case.get("llm_strategy_status"),
+        "sandbox_candidate_status": executor.get("sandbox_candidate_status") or case.get("sandbox_candidate_status"),
+        "sandbox_candidate_attempt_status": executor.get("sandbox_candidate_attempt_status")
+        or case.get("sandbox_candidate_attempt_status"),
+        "sandbox_candidate_attempt_reason": executor.get("sandbox_candidate_attempt_reason")
+        or case.get("sandbox_candidate_attempt_reason"),
+        "sandbox_candidate_repair_status": executor.get("sandbox_candidate_repair_status")
+        or case.get("sandbox_candidate_repair_status"),
+        "sandbox_candidate_repair_reason": executor.get("sandbox_candidate_repair_reason")
+        or case.get("sandbox_candidate_repair_reason"),
         "acceptance_signal": executor.get("acceptance_signal") or case.get("acceptance_signal"),
         "acceptance_skipped_reasons": dict(executor.get("acceptance_skipped_reasons") or case.get("acceptance_skipped_reasons") or {}),
         "acceptance_skipped_details": _skipped_details(executor, case),

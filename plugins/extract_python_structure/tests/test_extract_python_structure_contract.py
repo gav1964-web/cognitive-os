@@ -50,6 +50,42 @@ def test_extract_python_structure_detects_fastapi_method_routes(tmp_path, monkey
     ]
 
 
+def test_extract_python_structure_ignores_dummyserver_routes(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    (project / "dummyserver").mkdir(parents=True)
+    (project / "dummyserver" / "app.py").write_text(
+        "from flask import Flask\n"
+        "app = Flask(__name__)\n"
+        "@app.route('/fixture')\n"
+        "def fixture():\n"
+        "    return 'ok'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(project)
+
+    result = run({"root": "."})
+
+    assert result["routes"] == []
+
+
+def test_extract_python_structure_treats_wasm_preview_runner_as_context(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    (project / "pydantic-core" / "wasm-preview").mkdir(parents=True)
+    (project / "pydantic-core" / "wasm-preview" / "run_tests.py").write_text(
+        "from fastapi import FastAPI\n"
+        "app = FastAPI()\n"
+        "@app.get('/fixture')\n"
+        "def fixture():\n"
+        "    return {'ok': True}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(project)
+
+    result = run({"root": "."})
+
+    assert result["routes"] == []
+
+
 def test_extract_python_structure_prioritizes_app_code_over_tools(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project/app/api").mkdir(parents=True)
@@ -125,6 +161,25 @@ def test_extract_python_structure_prioritizes_domain_package_roots(tmp_path, mon
 
     assert result["files"][0]["path"] == "prefect/task_engine/runtime.py"
     assert result["domain_flow_anchors"][0]["name"] == "run_task_engine"
+
+
+def test_extract_python_structure_prioritizes_root_src_over_nested_packages(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project/packages/noisy/tests").mkdir(parents=True)
+    Path("project/src/zarr").mkdir(parents=True)
+    for index in range(20):
+        Path(f"project/packages/noisy/module_{index}.py").write_text(f"def helper_{index}():\n    pass\n", encoding="utf-8")
+        Path(f"project/packages/noisy/tests/test_{index}.py").write_text("def test_noise():\n    pass\n", encoding="utf-8")
+    Path("project/src/zarr/__init__.py").write_text(
+        "def open_array(store: str, path: str | None = None) -> dict:\n"
+        "    return {'store': store, 'path': path}\n",
+        encoding="utf-8",
+    )
+
+    result = run({"root": "project", "max_files": 2})
+
+    assert result["files"][0]["path"] == "src/zarr/__init__.py"
+    assert result["contracts"]["typed_functions"][0]["name"] == "open_array"
 
 
 def test_extract_python_structure_does_not_treat_json_dumps_as_file_io(tmp_path, monkeypatch):

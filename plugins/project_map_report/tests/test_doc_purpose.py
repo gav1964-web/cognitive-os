@@ -72,3 +72,18 @@ Put new RTF files into `indoc/`, then run:
 
     assert purpose_sentence(docs) == ""
     assert purpose_heading(docs) == "Offline Kursk Map Package"
+
+
+def test_purpose_sentence_reads_common_overview_section() -> None:
+    docs = """# Zarr
+
+## What is it?
+
+Zarr implements compressed, chunked, N-dimensional arrays for parallel computing.
+
+## Main Features
+
+- Create arrays.
+"""
+
+    assert purpose_sentence(docs) == "Zarr implements compressed, chunked, N-dimensional arrays for parallel computing."

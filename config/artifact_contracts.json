@@ -96,6 +96,30 @@
         "traceability_table"
       ]
     },
+    "SystemKnowledgeIR": {
+      "producer": "system_knowledge_compiler",
+      "consumers": [
+        "project_compiler",
+        "programmer_executor",
+        "tester",
+        "reviewer"
+      ],
+      "required_fields": [
+        "artifact_type",
+        "schema_version",
+        "origin",
+        "purpose",
+        "project_identity",
+        "public_interfaces",
+        "domain_model",
+        "behavior_contracts",
+        "architecture_slices",
+        "dependency_policy",
+        "acceptance_tests",
+        "source_traceability",
+        "quality_targets"
+      ]
+    },
     "ImplementationPlan": {
       "producer": "implementer",
       "consumers": [

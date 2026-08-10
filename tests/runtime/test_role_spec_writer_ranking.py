@@ -217,6 +217,56 @@ def test_spec_writer_promotes_stronger_domain_candidate_over_cli_support_helper(
     assert spec["extraction_contract"]["semantic_quality"]["status"] == "strong"
 
 
+def test_spec_writer_prefers_product_domain_core_over_release_support_surface():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer crypto product surface over release automation",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "first_slice_contract": {
+            "name": "crypto_hash_contract_slice",
+            "targets": ["release.py:release", "src/bcrypt/_bcrypt.py:hashpw"],
+            "steps": ["Define password bytes input.", "Verify salt/hash output."],
+        },
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": ["release.py:release", "src/bcrypt/_bcrypt.py:hashpw"],
+        },
+        "traceability": [
+            {"source": "release.py:release", "requirement": "Capability candidate requires TechnicalSpec."},
+            {"source": "src/bcrypt/_bcrypt.py:hashpw", "requirement": "Capability candidate requires TechnicalSpec."},
+        ],
+        "source_context": {
+            "release.py:release": {
+                "kind": "central_flow_node",
+                "signature": {"args": [{"name": "version", "annotation": "str"}], "returns": "None"},
+                "snippet": {"text": "def release(version): ..."},
+                "candidate_level": "core_flow",
+                "candidate_score": 90,
+            },
+            "src/bcrypt/_bcrypt.py:hashpw": {
+                "kind": "pure_transform",
+                "signature": {
+                    "args": [
+                        {"name": "password", "annotation": "bytes"},
+                        {"name": "salt", "annotation": "bytes"},
+                    ],
+                    "returns": "bytes",
+                },
+                "snippet": {"text": "def hashpw(password, salt): ..."},
+                "candidate_level": "helper_transform",
+                "candidate_score": 70,
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == "src/bcrypt/_bcrypt.py:hashpw"
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "release/build/publish support surface" in " ".join(ranked["release.py:release"]["reasons"])
+
+
 def test_spec_writer_does_not_promote_weak_first_slice_over_strong_core_contract():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

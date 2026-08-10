@@ -134,7 +134,10 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, A
         "writable_scope_targets_candidate": actual.get("writable_scope") == _strings(expected.get("writable_scope", [expected.get("candidate")])),
         "required_expected_files_covered": _expected_covered(expected.get("expected_files", []), actual.get("expected_files", [])),
         "rollback_files_cover_expected_files": _expected_covered(actual.get("expected_files", []), actual.get("rollback_files", [])),
-        "verification_commands_covered": _expected_covered(expected.get("verification_commands", []), actual.get("verification_commands", [])),
+        "verification_commands_covered": _verification_commands_acceptable(
+            expected.get("verification_commands", []),
+            actual.get("verification_commands", []),
+        ),
         "implementation_units_present": int(actual.get("implementation_unit_count") or 0) >= 1,
         "change_plan_present": int(actual.get("change_plan_count") or 0) >= 3,
         "quality_gates_present": int(actual.get("quality_gate_count") or 0) >= 3,
@@ -269,6 +272,16 @@ def _expected_covered(expected: Any, actual: Any) -> bool:
     expected_values = _strings(expected)
     actual_text = "\n".join(_strings(actual)).lower()
     return all(item.lower() in actual_text for item in expected_values)
+
+def _verification_commands_acceptable(expected: Any, actual: Any) -> bool:
+    actual_rows = [item.lower() for item in _strings(actual)]
+    if not actual_rows:
+        return False
+    if _expected_covered(expected, actual):
+        return True
+    forbidden = ("tools/mvp_acceptance", "compileall runtime", "compileall tools", "compileall plugins")
+    scoped = any("pytest" in row for row in actual_rows) and any("compileall" in row for row in actual_rows)
+    return scoped and not any(token in row for row in actual_rows for token in forbidden)
 
 
 def _ratio(numerator: float, denominator: float) -> float:

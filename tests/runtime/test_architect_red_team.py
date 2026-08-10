@@ -251,3 +251,66 @@ def test_architect_red_team_blocks_noisy_source_tree_without_scope_decision():
     assert report["status"] == "fail"
     codes = {row["code"] for row in report["blocking_findings"]}
     assert "source_tree_requires_scope_decision" in codes
+
+
+def test_architect_red_team_allows_fixture_only_syntax_damage():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "project": "demo",
+        "chosen_option": {"id": "minimal_safe_extraction", "reason": "bounded first transformation"},
+        "architecture_options": [
+            {"id": "minimal_safe_extraction", "tradeoffs": ["small blast radius"]},
+            {"id": "contract_hardening_first", "tradeoffs": ["slower but safer"]},
+        ],
+        "rejected_options": [
+            {
+                "id": "contract_hardening_first",
+                "reason_rejected": "first slice is ready",
+                "tradeoffs": ["slower but safer"],
+                "deferred_until": "after first slice",
+                "score_delta": 1,
+            }
+        ],
+        "first_slice_contract": {
+            "name": "diff_parser_slice",
+            "goal": "Parse unified diff input.",
+            "targets": ["pycodestyle.py:parse_udiff"],
+            "steps": ["Define UDiffInput.", "Define ParsedDiff."],
+            "selection_policy": "smallest source-backed slice",
+            "handoff_expectation": "SpecWriter may use invalid fixtures as tests",
+        },
+        "spec_writer_brief": {
+            "files_or_symbols": ["pycodestyle.py:parse_udiff"],
+            "acceptance_targets": ["diff parser has contract tests."],
+            "constraints": ["no source rewrite in architecture phase"],
+            "contract_targets": [{"source": "pycodestyle.py:parse_udiff"}],
+        },
+        "source_context": {"pycodestyle.py:parse_udiff": {"signature": {"args": [], "returns": "dict"}}},
+        "traceability": [{"source": "pycodestyle.py:parse_udiff", "target": "pycodestyle.py:parse_udiff"}],
+        "risks": [
+            {
+                "severity": "medium",
+                "description": "Malformed fixture input must stay isolated.",
+                "impact": "Parser evidence could be mistaken for damaged source.",
+                "mitigation": "Treat fixture syntax errors as test data.",
+                "evidence_source": "testing/data/E12.py",
+            }
+        ],
+        "open_questions": [],
+        "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
+    }
+
+    report = red_team_architecture_decision(
+        adr,
+        {
+            "content": {
+                "source_health": {
+                    "status": "damaged",
+                    "syntax_error_count": 1,
+                    "syntax_error_samples": [{"path": "docs/comment-example-code/example.py"}],
+                }
+            }
+        },
+    )
+
+    assert "source_tree_requires_scope_decision" not in {row["code"] for row in report["blocking_findings"]}

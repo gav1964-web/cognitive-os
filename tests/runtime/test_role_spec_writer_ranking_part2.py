@@ -212,7 +212,8 @@ def test_spec_writer_infers_contracts_for_any_and_none_returns():
     assert any_spec["extraction_contract"]["input_contract"]["value"] == "InferredValue"
     assert any_spec["extraction_contract"]["output_contract"] == {"result": "ParsedStructure"}
     assert none_spec["extraction_contract"]["candidate"] == "typer/rich_utils.py:rich_format_help"
-    assert none_spec["extraction_contract"]["output_contract"] == {"result": "FormattedHelpRenderable"}
+    assert none_spec["extraction_contract"]["output_contract"]["help_render"].startswith("HelpRenderResult")
+    assert none_spec["extraction_contract"]["output_contract"]["failure_packet"].startswith("HelpFormattingFailure")
 
 
 def test_spec_writer_prefers_database_search_over_generic_get_and_storage_adapter():

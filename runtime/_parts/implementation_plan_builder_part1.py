@@ -26,7 +26,7 @@ def build_implementation_plan(
     acceptance = list(technical_spec.get("acceptance_criteria", []))
     handoff = dict(technical_spec.get("implementation_handoff", {}))
     extraction_contract = dict(technical_spec.get("extraction_contract", {}))
-    evidence_scope = [str(item) for item in handoff.get("patch_scope", []) if item]
+    evidence_scope = _implementation_evidence_scope(technical_spec, handoff)
     target = _implementation_target(extraction_contract, evidence_scope)
     patch_scope = _bounded_patch_scope(evidence_scope, target)
     writable_scope = _writable_scope(target)

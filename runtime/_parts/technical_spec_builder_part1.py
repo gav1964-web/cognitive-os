@@ -16,7 +16,6 @@ from runtime.technical_spec_policy import load_technical_spec_policy, policy_lis
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
-CONTEXT_ONLY_SOURCE_PATH_TOKENS = policy_list(TECHNICAL_SPEC_POLICY, "context_only_source_path_tokens")
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
 CONTRACT_TYPE_POLICY = dict(TECHNICAL_SPEC_POLICY["contract_type_inference"])
 SEMANTIC_RERANK_POLICY = dict(TECHNICAL_SPEC_POLICY["semantic_rerank"])
@@ -49,6 +48,8 @@ def build_technical_spec(
     acceptance = _acceptance_criteria(brief, traceability)
     preferred_targets = [] if work_plan_contract.get("source") == "TechnicalSpec.fallback_from_spec_writer_brief" else list(work_plan_contract.get("targets", []))
     extraction_contract = _extraction_contract(evidence, preferred_targets=preferred_targets)
+    if work_plan_contract.get("status") == "blocked_no_first_slice" and extraction_contract.get("candidate"):
+        work_plan_contract = _fallback_work_plan_contract([str(extraction_contract["candidate"])])
     acceptance = _ensure_candidate_acceptance(acceptance, extraction_contract)
     interface_contracts = _interface_contracts(brief, evidence, extraction_contract)
     implementation_handoff = {

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from runtime.scope_selection_policy import syntax_error_fixture_path
+
 
 def red_team_architecture_decision(adr: dict[str, Any], project_report: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return an explicit verdict for ADR -> SpecWriter handoff."""
@@ -235,6 +237,8 @@ def _source_tree_scope_is_clean(project_report: dict[str, Any]) -> bool:
         return True
     status = str(source_health.get("status") or "clean")
     shape = str(source_health.get("project_shape") or "single_project")
+    if _syntax_damage_is_fixture_only(source_health):
+        return True
     if status == "damaged" or shape == "dirty_portfolio" or int(source_health.get("packaged_copy_signal_count") or 0) > 0:
         return bool(source_health.get("active_root_decision"))
     return True
@@ -259,6 +263,16 @@ def _source_tree_noise_is_acknowledged(project_report: dict[str, Any]) -> bool:
 def _source_health(project_report: dict[str, Any]) -> dict[str, Any]:
     content = dict(project_report.get("content", project_report))
     return dict(content.get("source_health") or dict(content.get("answers", {})).get("0_source_health") or {})
+
+
+def _syntax_damage_is_fixture_only(source_health: dict[str, Any]) -> bool:
+    if source_health.get("status") != "damaged" or int(source_health.get("inaccessible_count") or 0) > 0:
+        return False
+    count = int(source_health.get("syntax_error_count") or 0)
+    samples = [dict(row) for row in list(source_health.get("syntax_error_samples") or []) if isinstance(row, dict)]
+    if not count or count > len(samples):
+        return False
+    return all(syntax_error_fixture_path(str(row.get("path") or "")) for row in samples)
 
 
 def _looks_like_source(value: object) -> bool:

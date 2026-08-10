@@ -73,7 +73,12 @@ def test_programmer_executor_writes_patch_package_and_test_result(tmp_path: Path
     assert result["source_code_changes"] is False
     patch = json.loads(Path(result["patch_package_path"]).read_text(encoding="utf-8"))
     test_result = json.loads(Path(result["test_result_path"]).read_text(encoding="utf-8"))
+    task_tree = json.loads(Path(result["task_tree_path"]).read_text(encoding="utf-8"))
     assert patch["artifact_type"] == "PatchPackage"
+    assert task_tree["artifact_type"] == "ProgrammerTaskTree"
+    assert task_tree["role"] == "programmer_task_builder"
+    assert task_tree["programmer_handoff"]["next_role"] == "sandbox_programmer"
+    assert patch["programmer_task_tree"]["summary"]["node_count"] == 5
     assert patch["implementation_blueprint"]["artifact_type"] == "ImplementationBlueprint"
     assert patch["patch_intent"]["mode"] == "sandbox_first"
     assert patch["executor_handoff"]["recommended_tool"] == "tools/apply_implementation_plan.py"
@@ -81,7 +86,9 @@ def test_programmer_executor_writes_patch_package_and_test_result(tmp_path: Path
     assert patch["patch_synthesis"]["status"] == "prepared"
     assert patch["patches"][0]["kind"] == "insert_required_input_guard"
     assert test_result["artifact_type"] == "TestResult"
-    assert test_result["summary"]["passed"] == 2
+    assert test_result["programmer_task_tree"]["target"] == "main.py:normalize_text"
+    assert test_result["summary"]["passed"] == 1
+    assert test_result["commands"][1]["reason"] == "redundant_unscoped_compileall_replaced_by_project_scoped_check"
     assert test_result["commands"][0]["kind"] == "project_scoped_py_compile"
     assert test_result["commands"][0]["scope"] == ["main.py"]
     assert test_result["executable_acceptance_result"]["status"] == "passed"
@@ -157,6 +164,7 @@ def test_programmer_executor_synthesizes_required_input_guard_in_sandbox(tmp_pat
     assert (project / "main.py").read_text(encoding="utf-8") == "def loose(**kwargs):\n    return 'ok'\n"
     assert patch["patch_synthesis"]["status"] == "prepared"
     assert patch["patches"][0]["required_inputs"] == ["text"]
+    assert patch["patches"][0]["guard_evidence"]["source"] == "contract_missing_input_case"
     assert 'if "text" not in kwargs:' in sandbox_main.read_text(encoding="utf-8")
     assert test_result["execution_project"] == patch["patch_synthesis"]["sandbox_project"]
     assert test_result["commands"][0]["kind"] == "project_scoped_py_compile"
@@ -263,9 +271,12 @@ def test_programmer_executor_writes_formal_blocked_handoff_artifacts(tmp_path: P
     )
     no_patch = json.loads(Path(result["no_patch_package_path"]).read_text(encoding="utf-8"))
     blocked_report = json.loads(Path(result["blocked_execution_report_path"]).read_text(encoding="utf-8"))
+    task_tree = json.loads(Path(result["task_tree_path"]).read_text(encoding="utf-8"))
 
     assert result["status"] == "blocked"
+    assert task_tree["boundary"]["track"] == "blocked_handoff"
     assert no_patch["artifact_type"] == "NoPatchPackage"
+    assert no_patch["programmer_task_tree"]["role"] == "programmer_task_builder"
     assert no_patch["patches"] == []
     assert no_patch["policy"]["patch_generation_allowed"] is False
     assert blocked_report["artifact_type"] == "BlockedExecutionReport"

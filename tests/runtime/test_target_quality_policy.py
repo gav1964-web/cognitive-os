@@ -22,12 +22,12 @@ def test_target_quality_policy_drives_quality_and_ranking_rules():
         source_evidence=["pkg/utils/helper.py:version"],
     )
     strong = semantic_target_quality_report(
-        "pkg/core/parser.py:parse_payload",
-        ranked_candidates=["pkg/core/parser.py:parse_payload"],
-        source_evidence=["pkg/core/parser.py:parse_payload"],
+        "pkg/parser.py:parse_payload",
+        ranked_candidates=["pkg/parser.py:parse_payload"],
+        source_evidence=["pkg/parser.py:parse_payload"],
     )
     score, reasons = name_and_contract_score(
-        "pkg/core/parser.py:parse_payload",
+        "pkg/parser.py:parse_payload",
         {"args": [{"name": "payload", "annotation": "dict"}], "returns": "ParsedPayload"},
         [],
     )
@@ -36,3 +36,42 @@ def test_target_quality_policy_drives_quality_and_ranking_rules():
     assert strong["status"] == "strong"
     assert score > 0
     assert "deterministic parser" in " ".join(reasons)
+
+
+def test_profiled_version_operation_is_not_treated_as_support_version_helper():
+    report = semantic_target_quality_report(
+        "django_redis/client/default.py:incr_version",
+        ranked_candidates=["django_redis/client/default.py:incr_version"],
+        source_evidence=["django_redis/client/default.py:incr_version"],
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 95
+    assert not any("support/utility target: version" in reason for reason in report["reasons"])
+
+
+def test_command_entrypoint_profile_reaches_excellent_score():
+    report = semantic_target_quality_report(
+        "src/trustme/_cli.py:main",
+        ranked_candidates=["src/trustme/_cli.py:main"],
+        source_evidence=["src/trustme/_cli.py:main"],
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 98
+    assert report["semantic_profile_ids"] == ["command_entrypoint_invocation_boundary"]
+
+
+def test_profiled_pytest_decorator_is_not_treated_as_utility_noise():
+    target = "src/pytest_bdd/scenario.py:_get_scenario_decorator"
+
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 95
+    assert report["contract_archetype_ids"] == ["pytest_fixture_or_decorator_registration"]
+    assert not any("support/utility target: decorator" in reason for reason in report["reasons"])

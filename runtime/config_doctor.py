@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 
-_PART_NAMES = ['config_doctor_part1', 'config_doctor_part2']
+_PART_NAMES = ['config_doctor_part1', 'config_doctor_part2', 'config_doctor_part3']
 _PARTS = [importlib.import_module(f"runtime._parts.{part}") for part in _PART_NAMES]
 _MERGED = {}
 for _part in _PARTS:

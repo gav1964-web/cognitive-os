@@ -36,6 +36,7 @@ def dependency_stub_policy() -> dict[str, Any]:
     return {
         "enabled": bool(stubs.get("enabled")),
         "max_missing_modules": int(stubs.get("max_missing_modules") or 0),
+        "pre_stub_modules": tuple(str(item) for item in stubs.get("pre_stub_modules", []) if item),
         "stub_external_missing_modules": bool(stubs.get("stub_external_missing_modules")),
         "stub_object_features": tuple(str(item) for item in stubs.get("stub_object_features", []) if item),
         "metadata_profiles_enabled": bool(metadata.get("enabled")),
@@ -52,6 +53,8 @@ def method_fixture_policy() -> dict[str, Any]:
         "enabled": bool(policy.get("enabled")),
         "safe_uninitialized_instance": bool(policy.get("safe_uninitialized_instance")),
         "default_constructor_first": bool(policy.get("default_constructor_first")),
+        "local_import_stub_functions": tuple(str(item) for item in policy.get("local_import_stub_functions", []) if item),
+        "local_import_stub_methods": tuple(str(item) for item in policy.get("local_import_stub_methods", []) if item),
         "instance_attribute_profiles": dict(policy.get("instance_attribute_profiles") or {}),
         "recipes": dict(policy.get("recipes") or {}),
     }

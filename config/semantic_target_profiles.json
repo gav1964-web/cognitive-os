@@ -1,6 +1,321 @@
 {
   "profiles": [
     {
+      "contract_family": "numerical_brute_force_optimization_boundary",
+      "failure_modes": ["invalid_parameter_grid", "objective_failure", "nan_or_inf_score", "resource_limit"],
+      "id": "numerical_brute_force_optimization_boundary",
+      "input_contract": {
+        "objective": "ObjectiveFunction(parameters, data?, context?)",
+        "search_space": "BruteForceSearchSpace(parameter_ranges, grid_step?, constraints?)"
+      },
+      "output_contract": {
+        "result": "OptimizationResult(best_parameters, best_score, evaluations, warnings?)",
+        "failure_packet": "OptimizationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["lmfit", "minimizer.py"],
+      "ranking_bonus": 34,
+      "ranking_reason": "brute-force minimization is a bounded numerical optimization contract",
+      "reason": "brute-force minimization has explicit search-space/result/failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"resource_policy": "evaluation budget and objective failures must be bounded", "requires_validation_gate": true},
+      "symbols": ["brute"],
+      "validation_gates": [
+        "valid grid, invalid grid and objective failure are covered",
+        "best parameter and score selection are deterministic",
+        "NaN/Inf and resource-limit behavior return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "python_function_state_serialization_boundary",
+      "failure_modes": ["unsupported_callable", "closure_capture_error", "dynamic_global_missing", "version_incompatible_state"],
+      "id": "python_function_state_serialization_boundary",
+      "input_contract": {
+        "function": "PythonCallable(code, globals, defaults, closure?)",
+        "serialization_options": "FunctionStateOptions(protocol?, include_globals?, by_reference?)"
+      },
+      "output_contract": {
+        "state": "FunctionStatePacket(code_ref, globals_ref, defaults, closure_cells?)",
+        "failure_packet": "FunctionStateSerializationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["cloudpickle", "dill"],
+      "ranking_bonus": 34,
+      "ranking_reason": "callable state serialization is a bounded compatibility contract",
+      "reason": "Python callable state serialization has explicit input/state/failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "serialization must not execute the callable", "requires_validation_gate": true},
+      "symbol_contains_any": ["function_getstate", "save_function"],
+      "symbols": ["_function_getstate"],
+      "validation_gates": [
+        "plain function, closure function and unsupported callable are covered",
+        "globals/defaults/closure state are explicit in the output contract",
+        "version or dynamic reference failures return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "python_module_session_load_boundary",
+      "failure_modes": ["module_not_found", "state_restore_error", "unsafe_import_side_effect", "version_mismatch"],
+      "id": "python_module_session_load_boundary",
+      "input_contract": {
+        "module_ref": "ModuleReference(name, path?, package?)",
+        "session_state": "SerializedModuleState(bytes|mapping, protocol?, version?)"
+      },
+      "output_contract": {
+        "module": "LoadedModule(name, attrs_restored, warnings?)",
+        "failure_packet": "ModuleSessionLoadFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["dill/session.py"],
+      "ranking_bonus": 34,
+      "ranking_reason": "module session load is a bounded restore contract",
+      "reason": "module session loading is a bounded state-restore contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"import_policy": "imports and module globals mutation must be explicit", "requires_validation_gate": true},
+      "symbols": ["load_module"],
+      "validation_gates": [
+        "existing module, missing module and incompatible state are covered",
+        "restored attributes and import side effects are explicit",
+        "unsafe or partial restore returns typed evidence"
+      ]
+    },
+    {
+      "contract_family": "rsync_directory_manifest_receive_boundary",
+      "failure_modes": ["malformed_manifest", "path_traversal", "missing_file_metadata", "io_write_error"],
+      "id": "rsync_directory_manifest_receive_boundary",
+      "input_contract": {
+        "stream": "DirectoryManifestStream(entries, metadata, checksums?)",
+        "receive_options": "ReceiveDirectoryOptions(root, overwrite_policy?, permissions_policy?)"
+      },
+      "output_contract": {
+        "manifest": "ReceivedDirectoryManifest(files, directories, checksums?, warnings?)",
+        "failure_packet": "DirectoryManifestReceiveFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["rsync_remote.py"],
+      "ranking_bonus": 32,
+      "ranking_reason": "remote directory manifest receive is a bounded protocol/filesystem adapter",
+      "reason": "directory structure receive is a bounded protocol-to-filesystem contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"filesystem_writes": "writes require temp root and traversal guard", "requires_validation_gate": true},
+      "symbols": ["receive_directory_structure"],
+      "validation_gates": [
+        "valid manifest, traversal attempt and malformed entry are covered",
+        "filesystem writes are isolated to the declared receive root",
+        "checksum and metadata handling are explicit"
+      ]
+    },
+    {
+      "contract_family": "build_backend_shared_options_boundary",
+      "failure_modes": ["duplicate_option", "unsupported_platform_option", "conflicting_option", "metadata_shape_error"],
+      "id": "build_backend_shared_options_boundary",
+      "input_contract": {
+        "metadata": "BuildMetadata(name, backend, existing_options?)",
+        "shared_options": "SharedBuildOptions(tags?, isolation?, config_settings?)"
+      },
+      "output_contract": {
+        "options": "BuildOptionSet(options, conflicts?, warnings?)",
+        "failure_packet": "BuildOptionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["flit", "__init__.py"],
+      "ranking_bonus": 32,
+      "ranking_reason": "build backend option composition is a bounded packaging contract",
+      "reason": "shared build option composition is a bounded packaging contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "option mutation must be deterministic and idempotent", "requires_validation_gate": true},
+      "symbols": ["add_shared_build_options"],
+      "validation_gates": [
+        "empty, duplicate and conflicting options are covered",
+        "platform/config-settings behavior is explicit",
+        "option ordering is deterministic"
+      ]
+    },
+    {
+      "contract_family": "medical_pixel_frame_decode_boundary",
+      "failure_modes": ["unsupported_transfer_syntax", "decoder_unavailable", "corrupt_frame", "shape_or_dtype_mismatch"],
+      "id": "medical_pixel_frame_decode_boundary",
+      "input_contract": {
+        "frame": "DicomPixelFrame(bytes, transfer_syntax, rows, columns, samples_per_pixel?)",
+        "decode_options": "PixelDecodeOptions(color_space?, dtype_policy?, plugin?)"
+      },
+      "output_contract": {
+        "pixels": "DecodedPixelFrame(array, shape, dtype, color_space?)",
+        "failure_packet": "PixelFrameDecodeFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["pydicom", "pixels", "decoders"],
+      "ranking_bonus": 34,
+      "ranking_reason": "DICOM pixel frame decode is a bounded binary transform",
+      "reason": "medical pixel frame decoding is a bounded binary-data contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"native_dependency_policy": "native decoder availability is a fakeable boundary", "requires_validation_gate": true},
+      "symbol_contains_any": ["decode_frame"],
+      "validation_gates": [
+        "valid frame, corrupt frame and missing decoder are covered",
+        "shape/dtype/color-space are explicit in output",
+        "native decoder failures return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "canonical_datetime_json_parse_boundary",
+      "failure_modes": ["invalid_timestamp_shape", "timezone_normalization_error", "range_overflow", "unsupported_canonical_form"],
+      "id": "canonical_datetime_json_parse_boundary",
+      "input_contract": {
+        "payload": "CanonicalDateTimePayload($date|timestamp, timezone?)",
+        "parse_options": "DateTimeParseOptions(tz_policy?, strict?)"
+      },
+      "output_contract": {
+        "datetime": "ParsedDateTime(value, timezone, precision)",
+        "failure_packet": "CanonicalDateTimeParseFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["bson", "json_util.py"],
+      "ranking_bonus": 32,
+      "ranking_reason": "canonical datetime parse is a bounded BSON/JSON conversion contract",
+      "reason": "canonical datetime parsing is a bounded structured conversion contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "datetime parsing must not mutate caller payload", "requires_validation_gate": true},
+      "symbols": ["_parse_canonical_datetime"],
+      "validation_gates": [
+        "valid canonical value, invalid shape and overflow are covered",
+        "timezone and precision behavior are explicit",
+        "unsupported canonical forms return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "async_signal_dispatch_boundary",
+      "failure_modes": ["listener_failure", "closed_signal", "mutation_during_dispatch", "async_cancellation"],
+      "id": "async_signal_dispatch_boundary",
+      "input_contract": {
+        "signal": "Signal(listeners, frozen_state?)",
+        "payload": "SignalPayload(args, kwargs, context?)"
+      },
+      "output_contract": {
+        "dispatch_result": "SignalDispatchResult(listener_count, failures?, cancelled?)",
+        "failure_packet": "SignalDispatchFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["aiosignal"],
+      "ranking_bonus": 30,
+      "ranking_reason": "async signal dispatch is a bounded event fanout contract",
+      "reason": "async signal dispatch has explicit listener/failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"callback_policy": "listener side effects are outside the signal contract", "requires_validation_gate": true},
+      "symbols": ["send"],
+      "validation_gates": [
+        "zero, one and failing listener cases are covered",
+        "mutation during dispatch is controlled",
+        "cancellation behavior is explicit"
+      ]
+    },
+    {
+      "contract_family": "css_selector_parse_boundary",
+      "failure_modes": ["invalid_selector", "unsupported_pseudo_class", "namespace_error", "parser_state_leak"],
+      "id": "css_selector_parse_boundary",
+      "input_contract": {
+        "selector": "CssSelectorText(value, namespaces?)",
+        "parse_options": "SelectorParseOptions(custom_pseudos?, strict?)"
+      },
+      "output_contract": {
+        "selectors": "ParsedSelectorList(selectors, specificity?, warnings?)",
+        "failure_packet": "CssSelectorParseFailure(kind, position?, evidence_ref)"
+      },
+      "path_contains_any": ["soupsieve", "css_parser.py"],
+      "ranking_bonus": 32,
+      "ranking_reason": "CSS selector parsing is a bounded text parser contract",
+      "reason": "CSS selector parsing is a bounded parser contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "parser state must be reset or scoped per parse", "requires_validation_gate": true},
+      "symbol_contains_any": ["parse_selector"],
+      "validation_gates": [
+        "valid selector, malformed selector and namespace edge case are covered",
+        "specificity/output selector structure is explicit",
+        "parser state does not leak across calls"
+      ]
+    },
+    {
+      "contract_family": "html_markup_escape_boundary",
+      "failure_modes": ["unsafe_html_leak", "double_escape", "non_string_input", "trusted_markup_confusion"],
+      "id": "html_markup_escape_boundary",
+      "input_contract": {
+        "value": "MarkupInput(str|Markup|object)",
+        "escape_options": "EscapeOptions(trusted_types?, quote_policy?)"
+      },
+      "output_contract": {
+        "markup": "EscapedMarkup(value, trusted)",
+        "failure_packet": "MarkupEscapeFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["markupsafe"],
+      "ranking_bonus": 32,
+      "ranking_reason": "markup escaping is a bounded security transform",
+      "reason": "HTML markup escaping is a bounded security transform contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"security_policy": "trusted markup and escaping idempotency must be explicit", "requires_validation_gate": true},
+      "symbols": ["escape"],
+      "validation_gates": [
+        "unsafe HTML, already-trusted markup and non-string inputs are covered",
+        "escaping idempotency is explicit",
+        "trusted/untrusted result state is visible"
+      ]
+    },
+    {
+      "contract_family": "async_kernel_run_loop_boundary",
+      "failure_modes": ["task_crash", "cancellation_cascade", "run_loop_state_leak", "io_wait_deadlock"],
+      "id": "async_kernel_run_loop_boundary",
+      "input_contract": {
+        "runner_state": "AsyncRunState(tasks, deadlines, io_waiters)",
+        "run_options": "RunLoopOptions(clock?, instrumentation?, cancellation_policy?)"
+      },
+      "output_contract": {
+        "run_result": "RunLoopResult(completed_tasks, cancelled_tasks, failures?)",
+        "failure_packet": "RunLoopFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["trio", "_core", "_run.py"],
+      "ranking_bonus": 30,
+      "ranking_reason": "async kernel run loop is a bounded scheduler state-machine contract",
+      "reason": "async kernel loop execution is a bounded scheduler state-machine contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"scheduler_policy": "clock, cancellation and IO readiness are fakeable in contract tests", "requires_validation_gate": true},
+      "symbols": ["unrolled_run"],
+      "validation_gates": [
+        "completed task, cancelled task and failed task cases are covered",
+        "run-loop state transitions are explicit",
+        "deadlock/IO wait behavior returns typed evidence"
+      ]
+    },
+    {
+      "contract_family": "multipart_form_read_boundary",
+      "failure_modes": [
+        "malformed_content_type",
+        "invalid_field_encoding",
+        "stream_read_error",
+        "field_limit_exceeded"
+      ],
+      "id": "multipart_form_read_boundary",
+      "input_contract": {
+        "environ": "WSGIEnviron(method, content_type, input_stream, content_length?)",
+        "parse_options": "MultipartReadOptions(keep_blank_values?, strict_parsing?, field_limit?)"
+      },
+      "output_contract": {
+        "form_parts": "MultipartReadResult(fields, files?, errors?)",
+        "failure_packet": "MultipartReadFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "webob/compat.py",
+        "multipart",
+        "form"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "multipart form read is a bounded WSGI input parsing contract",
+      "reason": "multipart/form input reader is a bounded request-body parsing contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "input stream consumption and environ reads must be explicit",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "read_multi"
+      ],
+      "validation_gates": [
+        "simple fields, uploaded files and malformed multipart bodies are covered",
+        "stream consumption and content length behavior are explicit",
+        "invalid field names and encoding failures return typed evidence"
+      ]
+    },
+    {
       "benign_runtime_boundary": true,
       "contract_family": "telemetry_export_boundary",
       "failure_modes": [
@@ -27,7 +342,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "telemetry export boundary is representative integration behavior",
       "reason": "telemetry exporter call is a bounded adapter contract",
-      "score_bonus": 20,
+        "score_bonus": 22,
       "side_effect_policy": {
         "external_calls": "fake by default in contract tests; live exporter calls require explicit integration profile",
         "requires_validation_gate": true
@@ -49,6 +364,9 @@
     },
     {
       "contract_family": "dataframe_conversion_boundary",
+      "exclude_if_profile_ids": [
+        "geodataframe_plot_mapping_boundary"
+      ],
       "failure_modes": [
         "unsupported_input_type",
         "dtype_conversion_error",
@@ -71,7 +389,7 @@
       ],
       "ranking_bonus": 30,
       "reason": "dataframe conversion is a bounded tabular adapter contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "mutation_policy": "conversion must document copy/no-copy behavior",
         "requires_validation_gate": true
@@ -205,7 +523,7 @@
       "ranking_bonus": 32,
       "ranking_reason": "job/message handler is representative workflow behavior",
       "reason": "job/message handler is a bounded queue or event-processing contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "idempotency_policy": "retries must declare which side effects are safe to replay",
         "requires_validation_gate": true
@@ -226,6 +544,9 @@
     },
     {
       "contract_family": "business_value_transform_boundary",
+      "exclude_if_profile_ids": [
+        "model_explainability_plot_boundary"
+      ],
       "failure_modes": [
         "missing_required_field",
         "invalid_numeric_value",
@@ -244,7 +565,7 @@
       "ranking_bonus": 28,
       "ranking_reason": "business value calculation is a compact first-slice transform",
       "reason": "business value calculation is a bounded deterministic contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "mutation_policy": "calculation must not mutate caller-visible input",
         "requires_validation_gate": true
@@ -333,7 +654,7 @@
       "ranking_bonus": 24,
       "ranking_reason": "coverage analysis/reporting target is representative coverage-tool behavior",
       "reason": "coverage analysis/reporting is a bounded measurement contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "filesystem": "fixture source and measured-data files only in contract tests",
         "requires_validation_gate": true
@@ -461,7 +782,7 @@
       "ranking_bonus": 28,
       "ranking_reason": "graph algorithm boundary is representative graph-library behavior",
       "reason": "graph algorithm execution is a bounded in-process algorithm contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "algorithm must document whether input graph is mutated",
         "requires_validation_gate": true
@@ -505,7 +826,7 @@
       "ranking_bonus": 24,
       "ranking_reason": "plot semantic mapping target is representative visualization behavior",
       "reason": "plot semantic mapping/render preparation is a bounded visualization contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "rendering": "default tests assert mapping/artifact manifest before large binary render output",
         "requires_validation_gate": true
@@ -600,7 +921,7 @@
       "ranking_bonus": 30,
       "ranking_reason": "migration diff/revision target is representative database-migration behavior",
       "reason": "migration comparison/revision parsing is a bounded database-migration contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "database": "fake metadata/connection by default; no live database in first contract tests",
         "requires_validation_gate": true
@@ -688,7 +1009,7 @@
       "ranking_bonus": 30,
       "ranking_reason": "wheel tag/artifact target is representative packaging behavior",
       "reason": "wheel tag/artifact handling is a bounded packaging contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "filesystem": "fixture wheel archives and temp output directories only in default tests",
         "requires_validation_gate": true
@@ -1298,7 +1619,7 @@
         "numpy/lib/_histograms"
       ],
       "reason": "numeric array/statistical transform is a bounded scientific contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "mutation_policy": "input arrays are not modified unless the upstream API explicitly documents in-place semantics",
         "requires_validation_gate": true
@@ -1338,7 +1659,7 @@
         "pandas/core/algorithms.py"
       ],
       "reason": "dataframe/array construction is a bounded tabular-data contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "copy_policy": "caller-visible mutation must be explicit in the contract",
         "requires_validation_gate": true
@@ -1378,7 +1699,7 @@
         "pillow"
       ],
       "reason": "image mode conversion is a bounded media transform contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "requires_validation_gate": true,
         "resource_policy": "large image cases are tested with bounded fixture images"
@@ -1418,7 +1739,7 @@
         "sklearn/metrics"
       ],
       "reason": "ML metric/calibration helper is a bounded model-evaluation contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "randomness_policy": "metric helpers must be deterministic for fixed inputs",
         "requires_validation_gate": true
@@ -1732,17 +2053,18 @@
         "connection_result": "ConnectionResult(stream_or_socket, peer_info?, negotiated_protocol?)",
         "failure_packet": "ConnectionFailure(kind, retryable?, evidence_ref)"
       },
-      "path_contains_any": [
-        "connection",
-        "proxy",
-        "transport",
-        "network",
-        "socket"
-      ],
+  "path_contains_any": [
+    "connection",
+    "proxy",
+    "transport",
+    "network",
+    "socket",
+    "happyeyeballs"
+  ],
       "ranking_bonus": 30,
       "ranking_reason": "connection/proxy lifecycle boundary is representative",
       "reason": "connection/proxy lifecycle target",
-      "score_bonus": 20,
+  "score_bonus": 24,
       "side_effect_policy": {
         "external_calls": "network/socket operations are fake by default in contract tests",
         "requires_validation_gate": true
@@ -1756,9 +2078,10 @@
       ],
       "symbols": [
         "create_connection",
-        "connect_tcp",
-        "connect_unix_socket",
-        "start_tls"
+    "connect_tcp",
+    "connect_unix_socket",
+    "start_connection",
+    "start_tls"
       ],
       "validation_gates": [
         "TCP, Unix socket or TLS happy path is covered by fake backend tests",
@@ -1776,7 +2099,7 @@
       "ranking_bonus": 48,
       "ranking_reason": "markup escaping/sanitization boundary is project-core behavior",
       "reason": "markup escaping/sanitization target",
-      "score_bonus": 20,
+  "score_bonus": 24,
       "symbols": [
         "escape",
         "escape_silent",
@@ -1906,11 +2229,651 @@
       ]
     },
     {
+      "contract_family": "array_slice_normalization_boundary",
+      "failure_modes": ["invalid_slice_type", "boolean_index_shape_error", "integer_index_overflow", "unknown_index_protocol"],
+      "id": "array_slice_normalization_boundary",
+      "input_contract": {
+        "slice_item": "ArraySliceItem(bool|int|slice|array-like|unknown)",
+        "normalization_options": "SliceNormalizationOptions(dtype_policy?, shape_policy?, allow_unknown?)"
+      },
+      "output_contract": {
+        "failure_packet": "SliceNormalizationFailure(kind, evidence_ref)",
+        "normalized_item": "NormalizedSliceItem(value, dtype?, shape?, diagnostics?)"
+      },
+      "path_contains_any": ["awkward", "_slicing.py", "slicing"],
+      "ranking_bonus": 42,
+      "ranking_reason": "array slice normalization is representative scientific indexing behavior",
+      "reason": "array slice normalization is a bounded scientific indexing contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "normalization must preserve caller-visible index objects unless explicitly documented",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["normalise", "normalize", "slice", "item"],
+      "validation_gates": [
+        "boolean, integer and slice inputs are covered",
+        "shape and dtype conversion behavior is explicit",
+        "invalid index protocols return typed diagnostics"
+      ]
+    },
+    {
+      "contract_family": "ffi_struct_completion_boundary",
+      "failure_modes": ["unknown_field_type", "native_layout_error", "recursive_type_error", "backend_mismatch"],
+      "id": "ffi_struct_completion_boundary",
+      "input_contract": {
+        "ffi_type": "FFIStructOrUnion(name, fields?, layout?, backend?)",
+        "completion_context": "FFICompletionContext(ctypes_backend?, declarations?, ABI?)"
+      },
+      "output_contract": {
+        "completed_type": "CompletedFFIType(fields, offsets?, alignment?, diagnostics?)",
+        "failure_packet": "FFICompletionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["cffi", "backend_ctypes"],
+      "ranking_bonus": 42,
+      "ranking_reason": "FFI struct completion is representative native-wrapper behavior",
+      "reason": "FFI struct or union completion is a bounded native-wrapper contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "native_state": "ctypes/native layout interactions are fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["complete_struct", "complete"],
+      "validation_gates": [
+        "simple struct, union and recursive declarations are covered",
+        "field layout and alignment behavior is explicit",
+        "backend failures return typed diagnostics"
+      ]
+    },
+    {
+      "contract_family": "plot_ratio_array_boundary",
+      "failure_modes": ["shape_mismatch", "invalid_uncertainty", "backend_error", "zero_denominator_policy"],
+      "id": "plot_ratio_array_boundary",
+      "input_contract": {
+        "ratio_data": "RatioArrayInput(numerator, denominator?, uncertainty?, labels?)",
+        "plot_options": "RatioPlotOptions(axis?, error_policy?, backend?)"
+      },
+      "output_contract": {
+        "failure_packet": "PlotRatioFailure(kind, evidence_ref)",
+        "plot_artifact": "PlotRatioArtifact(points, error_bars?, axis_ref?, diagnostics?)"
+      },
+      "path_contains_any": ["hist/plot.py", "plot.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "plot ratio array generation is representative visualization behavior",
+      "reason": "plot ratio array generation is a bounded visualization contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "rendering": "plot backend is fake or fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbols": ["plot_ratio_array"],
+      "validation_gates": [
+        "matching and mismatched array shapes are covered",
+        "zero denominator and uncertainty policies are explicit",
+        "render backend failures preserve diagnostics"
+      ]
+    },
+    {
       "benign_runtime_boundary": true,
+      "contract_family": "crypto_secretstream_pull_boundary",
+      "failure_modes": ["invalid_header", "decrypt_failure", "unexpected_tag", "native_error", "state_exhausted"],
+      "id": "crypto_secretstream_pull_boundary",
+      "input_contract": {
+        "ciphertext_packet": "SecretstreamPacket(bytes, tag?, aad?)",
+        "stream_state": "SecretstreamState(handle, initialized, key_ref?)"
+      },
+      "output_contract": {
+        "failure_packet": "SecretstreamPullFailure(kind, evidence_ref)",
+        "plaintext_packet": "SecretstreamPlaintext(bytes, tag, state_ref?)"
+      },
+      "path_contains_any": ["nacl/bindings", "crypto_secretstream"],
+      "ranking_bonus": 42,
+      "ranking_reason": "secretstream pull is representative cryptographic adapter behavior",
+      "reason": "crypto secretstream pull is a bounded native cryptography adapter contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "native_state": "native crypto calls require fixtures or fakes; keys and plaintext are never live secrets",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["secretstream", "pull"],
+      "validation_gates": [
+        "valid packet, decrypt failure and unexpected tag cases are covered",
+        "state transitions are explicit",
+        "native errors return typed diagnostics without exposing secrets"
+      ]
+    },
+    {
+      "contract_family": "scientific_tree_array_read_boundary",
+      "failure_modes": ["missing_branch", "invalid_entry_range", "unsupported_interpretation", "backend_error"],
+      "id": "scientific_tree_array_read_boundary",
+      "input_contract": {
+        "tree_selection": "TreeArraySelection(branches?, entry_start?, entry_stop?, filters?)",
+        "read_options": "TreeReadOptions(library?, interpretation?, decompression?, executor?)"
+      },
+      "output_contract": {
+        "array_batch": "TreeArrayBatch(arrays, metadata?, diagnostics?)",
+        "failure_packet": "TreeArrayReadFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["uproot", "rntuple"],
+      "ranking_bonus": 42,
+      "ranking_reason": "scientific tree array read is representative data-access behavior",
+      "reason": "scientific tree array read is a bounded data-access contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "data files are small fixtures; decompression and executors are bounded",
+        "requires_validation_gate": true
+      },
+      "symbols": ["arrays"],
+      "validation_gates": [
+        "valid branch selection and missing branch cases are covered",
+        "entry ranges and output library selection are explicit",
+        "backend/decompression failures return typed diagnostics"
+      ]
+    },
+    {
+      "contract_family": "vector_compute_dispatch_boundary",
+      "failure_modes": ["unsupported_coordinate_type", "dimension_mismatch", "backend_missing", "invalid_operation"],
+      "id": "vector_compute_dispatch_boundary",
+      "input_contract": {
+        "operation_request": "VectorOperationRequest(operation, left, right?, coordinate_system?)",
+        "dispatch_context": "VectorDispatchContext(backends?, type_registry?, coercion_policy?)"
+      },
+      "output_contract": {
+        "dispatch_result": "VectorDispatchResult(value, backend_ref?, diagnostics?)",
+        "failure_packet": "VectorDispatchFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["vector/_compute", "lorentz"],
+      "ranking_bonus": 42,
+      "ranking_reason": "vector compute dispatch is representative scientific operation routing",
+      "reason": "vector compute dispatch is a bounded scientific operation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "dispatch must document coercion and mutation behavior for vector objects",
+        "requires_validation_gate": true
+      },
+      "symbols": ["dispatch"],
+      "validation_gates": [
+        "supported coordinate combinations are covered",
+        "dimension and type mismatches return typed diagnostics",
+        "backend selection and fallback behavior are explicit"
+      ]
+    },
+    {
+      "contract_family": "stcs_region_parser_boundary",
+      "failure_modes": ["malformed_region", "unknown_frame", "unit_parse_error", "coordinate_range_error"],
+      "id": "stcs_region_parser_boundary",
+      "input_contract": {
+        "region_text": "STCString(text, service?, frame_hint?)",
+        "parse_options": "STCParseOptions(strict?, unit_policy?, frame_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "STCParseFailure(kind, evidence_ref)",
+        "region": "SkyRegion(frame, coordinates, bounds?, diagnostics?)"
+      },
+      "path_contains_any": ["astroquery", "alma/core.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "STC-S region parsing is representative astronomy query behavior",
+      "reason": "STC-S region parsing is a bounded astronomy coordinate contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "parsing does not mutate service state", "requires_validation_gate": true},
+      "symbol_contains_any": ["parse_stcs", "stcs"],
+      "validation_gates": [
+        "valid circle/polygon and malformed region strings are covered",
+        "frame and unit normalization behavior is explicit",
+        "coordinate range errors return typed diagnostics"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "cli_alias_registration_boundary",
+      "failure_modes": ["duplicate_alias", "invalid_alias", "loader_error", "resolution_conflict"],
+      "id": "cli_alias_registration_boundary",
+      "input_contract": {
+        "alias_request": "AliasRegistrationRequest(name, target, source?, priority?)",
+        "cli_context": "CliAliasContext(registry, command_table?, loader?)"
+      },
+      "output_contract": {
+        "alias_result": "AliasRegistrationResult(registered, command_ref?, diagnostics?)",
+        "failure_packet": "AliasRegistrationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["awscli", "__init__.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "CLI alias registration is representative command-routing behavior",
+      "reason": "CLI alias registration is a bounded command-routing contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"state": "registry mutation is fixture-backed", "requires_validation_gate": true},
+      "symbol_contains_any": ["alias"],
+      "validation_gates": [
+        "valid alias, duplicate alias and invalid target cases are covered",
+        "command table mutation is asserted through fixture state",
+        "loader failures preserve source diagnostics"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "console_print_adapter_boundary",
+      "failure_modes": ["style_error", "stream_error", "encoding_error", "renderable_error"],
+      "id": "console_print_adapter_boundary",
+      "input_contract": {
+        "print_request": "ConsolePrintRequest(objects, style?, markup?, end?)",
+        "console_context": "ConsoleContext(stream, theme?, encoding?)"
+      },
+      "output_contract": {
+        "failure_packet": "ConsolePrintFailure(kind, evidence_ref)",
+        "print_result": "ConsolePrintResult(written, segments?, diagnostics?)"
+      },
+      "path_contains_any": ["enrich/console.py", "console.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "console print adapter is representative terminal output behavior",
+      "reason": "console print adapter is a bounded terminal output contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"io": "stream writes are fixture-backed", "requires_validation_gate": true},
+      "symbols": ["print"],
+      "validation_gates": [
+        "plain, styled and malformed renderable outputs are covered",
+        "stream and encoding failures return typed diagnostics",
+        "written segment counts are asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "github_branch_protection_update_boundary",
+      "failure_modes": ["validation_error", "permission_denied", "api_error", "partial_update"],
+      "id": "github_branch_protection_update_boundary",
+      "input_contract": {
+        "branch_ref": "GitHubBranchRef(repo, branch)",
+        "protection_update": "BranchProtectionUpdate(required_checks?, reviews?, restrictions?)"
+      },
+      "output_contract": {
+        "failure_packet": "BranchProtectionUpdateFailure(kind, evidence_ref)",
+        "protection_result": "BranchProtectionResult(applied, api_request?, diagnostics?)"
+      },
+      "path_contains_any": ["github/branch.py", "github"],
+      "ranking_bonus": 42,
+      "ranking_reason": "GitHub branch protection update is representative API client behavior",
+      "reason": "GitHub branch protection update is a bounded API-client mutation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"external_calls": "GitHub API calls are faked by default", "requires_validation_gate": true},
+      "symbol_contains_any": ["protection"],
+      "validation_gates": [
+        "valid update, validation error and permission denial are covered",
+        "HTTP/API request shape is asserted without live network",
+        "partial update diagnostics preserve requested fields"
+      ]
+    },
+    {
+      "contract_family": "commit_message_paragraph_parser_boundary",
+      "failure_modes": ["empty_message", "malformed_footer", "encoding_error", "section_split_error"],
+      "id": "commit_message_paragraph_parser_boundary",
+      "input_contract": {
+        "message_text": "CommitMessageText(subject, body?, footers?)",
+        "parse_options": "CommitParserOptions(conventional?, footer_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "CommitMessageParseFailure(kind, evidence_ref)",
+        "paragraphs": "CommitMessageParagraphs(subject, body_sections, footers?, diagnostics?)"
+      },
+      "path_contains_any": ["semantic_release/commit_parser", "commit_parser"],
+      "ranking_bonus": 42,
+      "ranking_reason": "commit message paragraph parsing is representative release semantics behavior",
+      "reason": "commit message paragraph parsing is a bounded release-semantics contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "parsing does not mutate repository state", "requires_validation_gate": true},
+      "symbol_contains_any": ["parse_paragraph"],
+      "validation_gates": [
+        "subject-only, multi-paragraph and footer messages are covered",
+        "malformed footers preserve source evidence",
+        "empty and encoded input behavior is explicit"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "redis_maintenance_notification_boundary",
+      "failure_modes": ["unknown_notification", "stale_node", "malformed_payload", "handler_error"],
+      "id": "redis_maintenance_notification_boundary",
+      "input_contract": {
+        "notification": "RedisMaintenanceNotification(type, node?, payload)",
+        "client_state": "RedisClientMaintenanceState(nodes, subscriptions?, policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "RedisNotificationFailure(kind, evidence_ref)",
+        "notification_result": "RedisNotificationResult(actions, state_delta?, diagnostics?)"
+      },
+      "path_contains_any": ["redis/maint_notifications.py", "maint_notifications"],
+      "ranking_bonus": 42,
+      "ranking_reason": "Redis maintenance notification handling is representative client event behavior",
+      "reason": "Redis maintenance notification handling is a bounded client event contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"state": "client state transitions are fixture-backed", "requires_validation_gate": true},
+      "symbol_contains_any": ["notification"],
+      "validation_gates": [
+        "known, unknown and malformed notification payloads are covered",
+        "node state changes are asserted",
+        "handler failures preserve diagnostics"
+      ]
+    },
+    {
+      "contract_family": "s3_local_file_inventory_boundary",
+      "failure_modes": ["missing_path", "permission_denied", "symlink_policy_error", "metadata_error"],
+      "id": "s3_local_file_inventory_boundary",
+      "input_contract": {
+        "inventory_root": "LocalInventoryRoot(path, include?, exclude?)",
+        "scan_options": "S3LocalListOptions(follow_symlinks?, metadata_policy?, recursion?)"
+      },
+      "output_contract": {
+        "failure_packet": "LocalInventoryFailure(kind, evidence_ref)",
+        "local_objects": "LocalObjectList(paths, sizes?, metadata?, diagnostics?)"
+      },
+      "path_contains_any": ["s3/filelists.py", "filelists.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "S3 local file inventory is representative sync planning behavior",
+      "reason": "S3 local file inventory is a bounded filesystem-to-sync contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"filesystem": "reads use temp fixture trees only", "requires_validation_gate": true},
+      "symbol_contains_any": ["fetch_local", "local_list"],
+      "validation_gates": [
+        "files, directories and excluded paths are covered",
+        "permission and symlink policies are explicit",
+        "metadata normalization is asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "s3_transfer_chunk_scheduler_boundary",
+      "failure_modes": ["invalid_range", "executor_rejected", "cancelled", "partial_download"],
+      "id": "s3_transfer_chunk_scheduler_boundary",
+      "input_contract": {
+        "download_state": "DownloadState(size, completed_ranges, subscribers?)",
+        "scheduler_context": "TransferSchedulerContext(executor, chunk_size, bandwidth_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "TransferChunkScheduleFailure(kind, evidence_ref)",
+        "scheduled_chunks": "ScheduledChunks(ranges, futures?, diagnostics?)"
+      },
+      "path_contains_any": ["s3transfer/download.py", "download.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "S3 download chunk scheduling is representative transfer orchestration behavior",
+      "reason": "S3 download chunk scheduling is a bounded transfer orchestration contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"external_calls": "network and executor calls are faked by default", "requires_validation_gate": true},
+      "symbol_contains_any": ["schedule", "chunk"],
+      "validation_gates": [
+        "normal, resumed and invalid range schedules are covered",
+        "executor rejection and cancellation return typed diagnostics",
+        "chunk ordering and coverage are asserted"
+      ]
+    },
+    {
+      "contract_family": "sql_token_reindent_boundary",
+      "failure_modes": ["malformed_token_tree", "indent_policy_error", "comment_preservation_error", "keyword_case_error"],
+      "id": "sql_token_reindent_boundary",
+      "input_contract": {
+        "token_stream": "SqlTokenStream(tokens, nesting?, comments?)",
+        "format_options": "SqlFormatOptions(indent_width, keyword_case?, wrap_after?)"
+      },
+      "output_contract": {
+        "failure_packet": "SqlReindentFailure(kind, evidence_ref)",
+        "formatted_tokens": "SqlFormattedTokenStream(tokens, whitespace_map, diagnostics?)"
+      },
+      "path_contains_any": ["sqlparse/filters/reindent.py", "reindent.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "SQL token reindent is representative formatter behavior",
+      "reason": "SQL token reindent is a bounded formatter contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "token mutation/copy behavior is explicit", "requires_validation_gate": true},
+      "symbol_contains_any": ["identifierlist", "reindent"],
+      "validation_gates": [
+        "flat and nested identifier lists are covered",
+        "comments and whitespace preservation are explicit",
+        "malformed token trees return typed diagnostics"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "retry_wrapper_call_boundary",
+      "failure_modes": ["retry_exhausted", "cancelled", "predicate_error", "wrapped_call_error"],
+      "id": "retry_wrapper_call_boundary",
+      "input_contract": {
+        "call_request": "RetryCallRequest(fn, args, kwargs)",
+        "retry_state": "RetryState(attempt, policy, sleep_strategy?)"
+      },
+      "output_contract": {
+        "failure_packet": "RetryCallFailure(kind, evidence_ref)",
+        "retry_result": "RetryCallResult(value?, attempts, final_exception?)"
+      },
+      "path_contains_any": ["tenacity", "tornadoweb.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "retry wrapper call is representative resilience behavior",
+      "reason": "retry wrapper call is a bounded resilience contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"runtime": "wrapped callable and sleep are fake by default", "requires_validation_gate": true},
+      "symbols": ["__call__"],
+      "validation_gates": [
+        "success, retry then success, and retry exhaustion are covered",
+        "predicate and cancellation behavior are explicit",
+        "attempt counts and final exception evidence are asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "progress_widget_initialization_boundary",
+      "failure_modes": ["invalid_total", "backend_unavailable", "style_error", "state_init_error"],
+      "id": "progress_widget_initialization_boundary",
+      "input_contract": {
+        "progress_options": "ProgressOptions(total?, desc?, unit?, style?)",
+        "widget_context": "ProgressWidgetContext(backend, stream?, refresh_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "ProgressWidgetFailure(kind, evidence_ref)",
+        "widget_state": "ProgressWidgetState(total, current, render_state?, diagnostics?)"
+      },
+      "path_contains_any": ["tqdm/tk.py", "tqdm/gui.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "progress widget initialization is representative UI state behavior",
+      "reason": "progress widget initialization is a bounded UI state contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"runtime": "GUI/backend state is fixture-backed", "requires_validation_gate": true},
+      "symbols": ["__init__"],
+      "validation_gates": [
+        "valid totals, unknown totals and invalid totals are covered",
+        "backend availability failures return typed diagnostics",
+        "initial render state is asserted"
+      ]
+    },
+    {
+      "contract_family": "typing_args_extraction_boundary",
+      "failure_modes": ["unsupported_type_form", "forward_ref_error", "evaluation_policy_error", "typing_version_mismatch"],
+      "id": "typing_args_extraction_boundary",
+      "input_contract": {
+        "type_object": "TypingObject(tp, origin?, args?, forward_refs?)",
+        "extraction_options": "TypingArgsOptions(evaluate?, version_policy?)"
+      },
+      "output_contract": {
+        "args_result": "TypingArgsResult(args, evaluated?, diagnostics?)",
+        "failure_packet": "TypingArgsFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["typing_inspect.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "typing argument extraction is representative type-introspection behavior",
+      "reason": "typing argument extraction is a bounded type-introspection contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "type objects are not mutated", "requires_validation_gate": true},
+      "symbols": ["get_args"],
+      "validation_gates": [
+        "generic, union and literal type forms are covered",
+        "forward-ref evaluation behavior is explicit",
+        "unsupported forms return stable empty or diagnostic output"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "solar_ephemeris_query_boundary",
+      "failure_modes": ["network_error", "invalid_observer", "time_range_error", "service_parse_error"],
+      "id": "solar_ephemeris_query_boundary",
+      "input_contract": {
+        "observer_request": "SolarEphemerisRequest(target, time, observer?, frame?)",
+        "query_context": "EphemerisQueryContext(service_client, cache_policy?, timeout?)"
+      },
+      "output_contract": {
+        "failure_packet": "SolarEphemerisFailure(kind, evidence_ref)",
+        "coordinate": "SolarCoordinate(frame, obstime, location, diagnostics?)"
+      },
+      "path_contains_any": ["sunpy/coordinates/ephemeris.py", "coordinates/ephemeris.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "solar ephemeris query is representative astronomy adapter behavior",
+      "reason": "solar ephemeris query is a bounded astronomy service-adapter contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"external_calls": "remote ephemeris calls are faked by default", "requires_validation_gate": true},
+      "symbol_contains_any": ["horizons", "coord"],
+      "validation_gates": [
+        "valid target/time and invalid observer cases are covered",
+        "service timeouts and malformed responses return typed diagnostics",
+        "coordinate frame and obstime preservation are asserted"
+      ]
+    },
+    {
+      "contract_family": "font_designspace_subspace_extraction_boundary",
+      "failure_modes": ["invalid_user_region", "missing_axis_mapping", "source_descriptor_mismatch", "rule_split_error"],
+      "id": "font_designspace_subspace_extraction_boundary",
+      "input_contract": {
+        "designspace_document": "DesignSpaceDocument(sources, axes, rules, instances)",
+        "subspace_request": "DesignspaceSubspaceRequest(user_region, axis_policy?, rule_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "DesignspaceSubspaceFailure(kind, evidence_ref)",
+        "subspace_document": "DesignSpaceDocumentSubset(sources, axes, rules, instances, diagnostics?)"
+      },
+      "path_contains_any": ["fonttools/designspacelib", "designspacelib/split.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "designspace subspace extraction is representative font transformation behavior",
+      "reason": "font designspace subspace extraction is a bounded font transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "document mutation/copy behavior must be explicit in contract tests",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["extractsubspace", "subspace"],
+      "validation_gates": [
+        "valid and invalid user regions are covered",
+        "axis and rule filtering behavior is explicit",
+        "source and instance descriptor preservation is asserted"
+      ]
+    },
+    {
+      "contract_family": "geometry_ragged_array_extraction_boundary",
+      "failure_modes": ["unsupported_geometry_type", "empty_geometry", "coordinate_dimension_mismatch", "native_geometry_error"],
+      "id": "geometry_ragged_array_extraction_boundary",
+      "input_contract": {
+        "geometry_input": "GeometryLikeCollection(linestring|multilinestring|polygon, dimension_policy?)",
+        "array_options": "RaggedArrayOptions(include_z?, index_policy?, missing_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "GeometryRaggedArrayFailure(kind, evidence_ref)",
+        "ragged_arrays": "GeometryRaggedArrays(coords, offsets, geometry_types?, diagnostics?)"
+      },
+      "path_contains_any": ["shapely/_ragged_array.py", "_ragged_array"],
+      "ranking_bonus": 42,
+      "ranking_reason": "geometry ragged array extraction is representative geospatial data behavior",
+      "reason": "geometry ragged array extraction is a bounded geospatial data contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "native_state": "GEOS/native geometry access is fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["get_arrays", "ragged"],
+      "validation_gates": [
+        "single and multi geometry fixtures are covered",
+        "empty geometry and unsupported type behavior is explicit",
+        "coordinate and offset array shapes are asserted"
+      ]
+    },
+    {
+      "contract_family": "promise_error_propagation_boundary",
+      "failure_modes": ["missing_exception", "callback_error", "propagation_disabled", "traceback_policy_mismatch"],
+      "id": "promise_error_propagation_boundary",
+      "input_contract": {
+        "error_event": "PromiseError(exc?, traceback?, propagate?)",
+        "promise_state": "PromiseState(callbacks, errbacks, cancelled?, weak_refs?)"
+      },
+      "output_contract": {
+        "failure_packet": "PromiseErrorFailure(kind, evidence_ref)",
+        "promise_result": "PromiseErrorResult(dispatched_errbacks, raised?, state_snapshot?)"
+      },
+      "path_contains_any": ["vine/promises.py", "promises.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "promise error propagation is representative async callback behavior",
+      "reason": "promise error propagation is a bounded async callback contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state": "callback list mutation and cancellation state are fixture-backed"
+      },
+      "symbols": ["throw", "throw1"],
+      "validation_gates": [
+        "propagating and non-propagating error paths are covered",
+        "missing exception and callback failure behavior is explicit",
+        "traceback preservation and state transitions are asserted"
+      ]
+    },
+    {
+      "contract_family": "xterm_terminal_sequence_parser_boundary",
+      "failure_modes": [
+        "unknown_escape_sequence",
+        "partial_sequence_timeout",
+        "invalid_mouse_event",
+        "malformed_bracketed_paste"
+      ],
+      "id": "xterm_terminal_sequence_parser_boundary",
+      "input_contract": {
+        "character_stream": "TerminalInputStream(characters, eof?, timeout_policy?)",
+        "terminal_state": "TerminalParserState(mouse_position?, bracketed_paste?, terminal_size?)"
+      },
+      "output_contract": {
+        "events": "TerminalEventStream(keys, mouse_events, paste_events, resize_events)",
+        "failure_packet": "TerminalParseFailure(kind, sequence?, evidence_ref)"
+      },
+      "path_contains_any": [
+        "_xterm_parser.py",
+        "xterm",
+        "terminal"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "xterm terminal parser is representative input protocol behavior",
+      "reason": "xterm terminal sequence parser is a bounded input protocol contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "parser state transitions must be asserted with before/after snapshots",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "parse"
+      ],
+      "validation_gates": [
+        "plain keys, escape sequences and mouse events are covered",
+        "partial/unknown sequences and EOF paths are explicit",
+        "bracketed paste and resize state transitions are asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "terminal_render_traversal_boundary",
       "exclude_if_profile_ids": [
         "internal_terminal_render_closure_helper"
       ],
+      "failure_modes": [
+        "recursive_renderable",
+        "unsupported_renderable",
+        "depth_limit",
+        "style_application_error"
+      ],
       "id": "terminal_render_traversal_boundary",
+      "input_contract": {
+        "renderable": "ConsoleRenderable(value, style?, children?)",
+        "traversal_options": "RenderTraversalOptions(max_depth?, pretty_policy?, overflow_policy?)"
+      },
+      "output_contract": {
+        "segments": "RenderTraversalResult(nodes, segments, styles, overflow?)",
+        "failure_packet": "RenderTraversalFailure(kind, evidence_ref)"
+      },
       "path_contains_any": [
         "rich",
         "pretty.py",
@@ -1921,12 +2884,21 @@
       "ranking_bonus": 34,
       "ranking_reason": "render traversal boundary is representative presentation behavior",
       "reason": "render traversal is a bounded presentation pipeline contract",
-      "score_bonus": 18,
+      "score_bonus": 22,
+      "side_effect_policy": {
+        "mutation_policy": "traversal must not mutate renderable inputs unless explicitly documented",
+        "requires_validation_gate": true
+      },
       "symbols": [
         "traverse",
         "_traverse",
         "_render",
         "__rich_console__"
+      ],
+      "validation_gates": [
+        "simple renderables, nested renderables and recursive structures are covered",
+        "style and overflow behavior are explicit",
+        "unsupported renderables return typed evidence or stable fallback output"
       ]
     },
     {
@@ -1988,7 +2960,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "websocket connection setup is representative async-client behavior",
       "reason": "websocket connection setup is a bounded async-client contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "external_calls": "network handshake is fake by default in contract tests",
         "requires_validation_gate": true
@@ -2031,7 +3003,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "CLI program pipeline is representative command behavior",
       "reason": "CLI program pipeline is a bounded command contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "process_boundary": "CLI execution and network/filesystem side effects are adapter-owned",
         "requires_validation_gate": true
@@ -2072,7 +3044,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "model construction hook is representative schema behavior",
       "reason": "model construction hook is a bounded schema contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "class/global caches and plugin hooks must be explicit",
         "requires_validation_gate": true
@@ -2115,7 +3087,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "test-environment queue execution is representative orchestration behavior",
       "reason": "test-environment queue execution is a bounded orchestration contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "process_boundary": "environment execution is subprocess/fixture-backed by default",
         "requires_validation_gate": true
@@ -2220,7 +3192,7 @@
       "ranking_bonus": 38,
       "ranking_reason": "async context detection is representative runtime behavior",
       "reason": "async context detection is a bounded runtime capability contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "detection must not mutate runtime context",
         "requires_validation_gate": true
@@ -2568,7 +3540,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "command entrypoint invocation is representative CLI workflow behavior",
       "reason": "command entrypoint invocation is a bounded CLI workflow contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "external_boundaries": "filesystem/network/stdout are fakeable by default",
         "requires_process_boundary": true,
@@ -3069,7 +4041,7 @@
       "ranking_bonus": 28,
       "ranking_reason": "resource accessor boundary is representative package API behavior",
       "reason": "package resource accessor is a bounded library API contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "filesystem": "package resource reads are fixture-backed by default",
         "requires_validation_gate": true
@@ -3323,7 +4295,7 @@
       "ranking_bonus": 34,
       "ranking_reason": "guarded evaluation is representative interpreter behavior",
       "reason": "guarded expression evaluation is a bounded security/runtime contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "requires_validation_gate": true,
         "security_policy": "forbidden names, calls and attribute access are explicit negative cases"
@@ -3544,8 +4516,8 @@
         "helpers"
       ],
       "ranking_bonus": 34,
-      "ranking_reason": "parser combinator helper is representative parsing behavior",
-      "reason": "parser combinator helper is a bounded grammar-construction contract",
+      "ranking_reason": "parser combinator helper has executable grammar behavior gates",
+      "reason": "parser combinator helper is a bounded grammar-construction contract with executable grammar behavior gates",
       "score_bonus": 34,
       "side_effect_policy": {
         "mutation_policy": "parser construction must document parse-action and global whitespace side effects when present",
@@ -3636,7 +4608,7 @@
       "ranking_bonus": 26,
       "ranking_reason": "container constructor defines reusable collection invariants",
       "reason": "container initialization is a bounded data-structure state contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "constructor state changes must be asserted through initial state snapshots",
         "requires_validation_gate": true
@@ -3677,7 +4649,7 @@
       "ranking_bonus": 30,
       "ranking_reason": "mapping mutation boundary defines reusable collection semantics",
       "reason": "mapping assignment is a bounded keyed mutation contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "in-place mutation must document key normalization and replacement/append behavior",
         "requires_validation_gate": true
@@ -5215,7 +6187,7 @@
       "ranking_bonus": 26,
       "ranking_reason": "Python facade is the safe boundary when native runtime internals are out of role scope",
       "reason": "native module API facade is a bounded Python-facing compatibility contract",
-      "score_bonus": 20,
+      "score_bonus": 24,
       "side_effect_policy": {
         "native_runtime": "native event-loop behavior is out of default contract tests; facade behavior is fixture-backed",
         "requires_validation_gate": true
@@ -6194,7 +7166,502 @@
     },
     {
       "benign_runtime_boundary": true,
+      "contract_family": "pep517_sdist_build_boundary",
+      "failure_modes": [
+        "missing_build_backend",
+        "manifest_error",
+        "metadata_generation_error",
+        "archive_write_failure"
+      ],
+      "id": "pep517_sdist_build_boundary",
+      "input_contract": {
+        "build_context": "Pep517BuildContext(project_root, backend_config?, isolated_env?)",
+        "sdist_request": "SdistBuildRequest(output_dir, metadata_policy?, manifest_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "SdistBuildFailure(kind, evidence_ref)",
+        "sdist_artifact": "SdistArtifact(path, metadata, manifest_entries, diagnostics?)"
+      },
+      "path_contains_any": [
+        "mesonpy/__init__.py",
+        "__init__.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "PEP 517 sdist build is representative Python build-backend behavior",
+      "reason": "PEP 517 sdist build is a bounded source-artifact generation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "source tree and output archive are fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "sdist",
+        "_manifest"
+      ],
+      "validation_gates": [
+        "valid sdist, missing metadata and manifest error cases are covered",
+        "archive contents and metadata are asserted",
+        "filesystem writes are isolated to temp output directories"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "raster_mosaic_transform_boundary",
+      "failure_modes": [
+        "crs_mismatch",
+        "resolution_mismatch",
+        "nodata_policy_error",
+        "window_bounds_error"
+      ],
+      "id": "raster_mosaic_transform_boundary",
+      "input_contract": {
+        "mosaic_request": "RasterMosaicRequest(sources, bounds?, resolution?, nodata_policy?)",
+        "raster_context": "RasterContext(crs, transform, dtype?, band_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "RasterMosaicFailure(kind, evidence_ref)",
+        "mosaic": "RasterMosaic(array, transform, crs, mask?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "rasterio/merge.py",
+        "rasterio/stack.py",
+        "rasterio/rio/warp.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "raster merge/warp is representative geospatial array behavior",
+      "reason": "raster merge/warp is a bounded geospatial array transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "raster datasets are fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "merge",
+        "stack",
+        "warp"
+      ],
+      "validation_gates": [
+        "aligned rasters, CRS mismatch and nodata behavior are covered",
+        "window bounds and output transform are asserted",
+        "file IO uses fixture datasets"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "geodataframe_plot_mapping_boundary",
+      "failure_modes": [
+        "missing_geometry",
+        "invalid_column",
+        "legend_mapping_error",
+        "crs_extent_error"
+      ],
+      "id": "geodataframe_plot_mapping_boundary",
+      "input_contract": {
+        "plot_context": "GeoPlotContext(crs?, axes?, style_policy?)",
+        "plot_request": "GeoDataFramePlotRequest(frame, column?, legend?, classification?)"
+      },
+      "output_contract": {
+        "failure_packet": "GeoPlotFailure(kind, evidence_ref)",
+        "plot_plan": "GeoPlotPlan(geometry_layers, color_mapping?, legend?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "geopandas/plotting.py"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "GeoDataFrame plotting is representative geospatial visualization behavior",
+      "reason": "GeoDataFrame plotting is a bounded geometry-to-render-plan contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "plot setup must not mutate source GeoDataFrame",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "plot_dataframe",
+        "plot_series"
+      ],
+      "validation_gates": [
+        "geometry, missing column and legend classification cases are covered",
+        "CRS and extent behavior are explicit",
+        "render assertions avoid GUI side effects"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "native_wheel_repair_boundary",
+      "failure_modes": [
+        "malformed_wheel",
+        "missing_shared_library",
+        "unsupported_platform_tag",
+        "repair_write_failure"
+      ],
+      "id": "native_wheel_repair_boundary",
+      "input_contract": {
+        "repair_context": "WheelRepairContext(platform_policy, lib_sdir?, dependency_policy?)",
+        "wheel_input": "NativeWheelInput(path, abi_tags?, external_libs?)"
+      },
+      "output_contract": {
+        "failure_packet": "WheelRepairFailure(kind, evidence_ref)",
+        "repaired_wheel": "RepairedWheelManifest(path, tags, vendored_libs, diagnostics?)"
+      },
+      "path_contains_any": [
+        "auditwheel/repair.py",
+        "auditwheel/wheel_abi.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "native wheel repair is representative packaging compatibility behavior",
+      "reason": "native wheel repair is a bounded ABI/artifact transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "wheel archives and repair output directories are fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "repair_wheel",
+        "get_wheel_elfdata"
+      ],
+      "validation_gates": [
+        "valid repair, missing library and unsupported tag cases are covered",
+        "archive writes are isolated to temporary fixtures",
+        "vendored library and tag changes are traceable"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "geospatial_tile_render_boundary",
+      "failure_modes": [
+        "invalid_crs",
+        "tile_service_error",
+        "geometry_wrap_error",
+        "render_extent_error"
+      ],
+      "id": "geospatial_tile_render_boundary",
+      "input_contract": {
+        "geo_context": "GeospatialRenderContext(crs, extent?, transform_policy?)",
+        "render_request": "GeoRenderRequest(geometry|tiles|grid, style?, resolution?)"
+      },
+      "output_contract": {
+        "failure_packet": "GeoRenderFailure(kind, evidence_ref)",
+        "render_plan": "GeoRenderPlan(tiles?, wrapped_geometry?, gridlines?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "cartopy/io/ogc_clients.py",
+        "cartopy/mpl/geoaxes.py",
+        "cartopy/mpl/gridliner.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "geospatial tile/render preparation is representative map-projection behavior",
+      "reason": "geospatial tile/render preparation is a bounded CRS-to-render-plan contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "external_calls": "tile service responses are fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": [
+        "wmts",
+        "quadmesh",
+        "gridliner"
+      ],
+      "validation_gates": [
+        "valid CRS, wrapped geometry and invalid extent cases are covered",
+        "remote tile calls use fixtures",
+        "render-plan output is asserted without GUI side effects"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "python_entrypoint_discovery_boundary",
+      "failure_modes": [
+        "missing_dist_info",
+        "malformed_entrypoint",
+        "duplicate_entrypoint",
+        "metadata_read_error"
+      ],
+      "id": "python_entrypoint_discovery_boundary",
+      "input_contract": {
+        "discovery_context": "EntrypointDiscoveryContext(sys_path?, distribution_paths?, group_filter?)",
+        "metadata_source": "DistributionMetadataSource(path, format?)"
+      },
+      "output_contract": {
+        "entrypoints": "DiscoveredEntrypoints(groups, names, module_refs, extras?)",
+        "failure_packet": "EntrypointDiscoveryFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "entrypoints.py",
+        "stevedore/driver.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "entrypoint/plugin discovery is representative extension-loading behavior",
+      "reason": "entrypoint/plugin discovery is a bounded distribution-metadata contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "distribution metadata is fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": [
+        "iter_files_distros",
+        "init_plugins",
+        "entrypoint"
+      ],
+      "validation_gates": [
+        "valid metadata, malformed entry point and duplicate group cases are covered",
+        "import execution is separated from discovery",
+        "source distribution evidence is preserved"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "geospatial_feature_io_boundary",
+      "failure_modes": [
+        "invalid_feature",
+        "schema_mismatch",
+        "driver_error",
+        "coordinate_transform_error"
+      ],
+      "id": "geospatial_feature_io_boundary",
+      "input_contract": {
+        "feature_stream": "FeatureStream(features, schema?, crs?)",
+        "io_options": "FeatureIoOptions(driver?, layer?, transform_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "FeatureIoFailure(kind, evidence_ref)",
+        "feature_result": "FeatureIoResult(features, schema, crs, diagnostics?)"
+      },
+      "path_contains_any": [
+        "fiona/fio/collect.py",
+        "fiona/fio/dump.py",
+        "geopandas/io/file.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "geospatial feature IO is representative vector-data behavior",
+      "reason": "geospatial feature IO is a bounded feature/schema transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "dataset reads/writes are fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "collect",
+        "dump",
+        "_read_file_fiona"
+      ],
+      "validation_gates": [
+        "valid features, schema mismatch and invalid geometry cases are covered",
+        "CRS and driver metadata are preserved",
+        "file IO is isolated to fixture datasets"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "generated_sdk_resource_traversal_boundary",
+      "failure_modes": [
+        "missing_resource",
+        "api_error",
+        "pagination_error",
+        "credential_context_missing"
+      ],
+      "id": "generated_sdk_resource_traversal_boundary",
+      "input_contract": {
+        "resource_context": "SdkResourceContext(service, credentials_ref?, pagination_policy?)",
+        "traversal_request": "ResourceTraversalRequest(root_id?, child_policy?, fields?)"
+      },
+      "output_contract": {
+        "failure_packet": "SdkTraversalFailure(kind, evidence_ref)",
+        "resource_tree": "SdkResourceTree(nodes, edges, diagnostics?)"
+      },
+      "path_contains_any": [
+        "google-api-python-client",
+        "analytics/",
+        "management_v3_reference.py"
+      ],
+      "ranking_bonus": 36,
+      "ranking_reason": "generated SDK resource traversal is representative API-client behavior",
+      "reason": "generated SDK resource traversal is a bounded API-resource contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "external_calls": "API responses are fixture-backed; live credentials are forbidden by default",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "traverse_hierarchy",
+        "get_first_profile_id"
+      ],
+      "validation_gates": [
+        "normal tree, missing resource and paginated response cases are covered",
+        "API calls use fake service objects",
+        "credential and quota errors return typed evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "native_extension_compiler_flags_boundary",
+      "failure_modes": [
+        "missing_include_path",
+        "unsupported_compiler",
+        "invalid_python_config",
+        "flag_format_error"
+      ],
+      "id": "native_extension_compiler_flags_boundary",
+      "input_contract": {
+        "build_context": "NativeExtensionBuildContext(python_executable, platform?, compiler?)",
+        "flag_request": "CompilerFlagRequest(kind, include_policy?, linker_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "CompilerFlagFailure(kind, evidence_ref)",
+        "flags": "CompilerFlags(cflags?, ldflags?, include_dirs?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "pybind11",
+        "commands.py",
+        "__main__.py"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "native extension compiler flags are representative build-interface behavior",
+      "reason": "native extension compiler flag discovery is a bounded build metadata contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "process_boundary": "compiler/python-config probes are faked by default",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "print_includes",
+        "get_cflags",
+        "get_ldflags"
+      ],
+      "validation_gates": [
+        "valid include flags, missing include path and unsupported compiler cases are covered",
+        "stdout formatting is asserted as output contract",
+        "environment probing is isolated"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "dependency_injection_wiring_boundary",
+      "failure_modes": [
+        "missing_provider",
+        "unresolved_marker",
+        "invalid_wiring_target",
+        "container_scope_error"
+      ],
+      "id": "dependency_injection_wiring_boundary",
+      "input_contract": {
+        "container_context": "ContainerWiringContext(providers, modules?, packages?, scope_policy?)",
+        "injection_target": "InjectionTarget(callable_ref, markers?, annotations?)"
+      },
+      "output_contract": {
+        "failure_packet": "DependencyWiringFailure(kind, evidence_ref)",
+        "wiring_result": "DependencyWiringResult(bound_injections, unresolved?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "dependency_injector/wiring.py",
+        "dependency_injector/schema.py"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "dependency injection wiring is representative container-binding behavior",
+      "reason": "dependency injection wiring is a bounded provider-to-callable binding contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "container/provider mutation must be fixture-backed and reversible",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": [
+        "bind_injection",
+        "setup_injection",
+        "wire"
+      ],
+      "validation_gates": [
+        "normal provider binding, missing provider and invalid marker cases are covered",
+        "container state changes are isolated to fixtures",
+        "unresolved injections preserve callable and provider evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "vcs_worktree_version_discovery_boundary",
+      "failure_modes": [
+        "missing_vcs_root",
+        "invalid_worktree",
+        "version_inference_error",
+        "metadata_conflict"
+      ],
+      "id": "vcs_worktree_version_discovery_boundary",
+      "input_contract": {
+        "project_context": "VersionedProjectContext(root, config?, scm_policy?)",
+        "worktree_request": "WorktreeDiscoveryRequest(path, parent_policy?, fallback_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "VcsVersionDiscoveryFailure(kind, evidence_ref)",
+        "version_source": "VcsVersionSource(root, scm, distance?, dirty?, normalized_version?)"
+      },
+      "path_contains_any": [
+        "setuptools_scm",
+        "vcs_versioning",
+        "worktree_discovery",
+        "version_inference"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "VCS worktree/version discovery is representative packaging metadata behavior",
+      "reason": "VCS worktree/version discovery is a bounded packaging metadata contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "repository metadata is fixture-backed; live git state is not required by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": [
+        "discover_workdir",
+        "infer_version",
+        "version_keyword"
+      ],
+      "validation_gates": [
+        "valid worktree, missing VCS root and dirty-version cases are covered",
+        "version normalization and fallback policy are explicit",
+        "filesystem probing is isolated to fixture repositories"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "http_mock_response_factory_boundary",
+      "failure_modes": [
+        "invalid_status",
+        "malformed_headers",
+        "body_encoding_error",
+        "matcher_context_missing"
+      ],
+      "id": "http_mock_response_factory_boundary",
+      "input_contract": {
+        "matched_request": "MatchedHttpRequest(method, url, headers?, body?, matcher_trace?)",
+        "response_spec": "MockResponseSpec(status, headers?, body?, json?, cookies?)"
+      },
+      "output_contract": {
+        "failure_packet": "MockResponseFailure(kind, evidence_ref)",
+        "response": "PreparedMockResponse(status, headers, body, cookies?, diagnostics?)"
+      },
+      "path_contains_any": [
+        "requests_mock/response.py",
+        "requests_mock/adapter.py"
+      ],
+      "ranking_bonus": 38,
+      "ranking_reason": "HTTP mock response construction is representative test-adapter behavior",
+      "reason": "HTTP mock response factory is a bounded request-to-fixture-response contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "response construction must not mutate matcher registry unless explicitly declared",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "create_response",
+        "get_response",
+        "_match_url"
+      ],
+      "validation_gates": [
+        "status/header/body variants and malformed response specs are covered",
+        "request evidence is preserved in diagnostics",
+        "matcher registry state is fixture-backed"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
       "exclude_if_profile_ids": [
+        "http_mock_response_factory_boundary",
         "web_framework_response_factory"
       ],
       "id": "generic_web_response_facade",
@@ -6749,7 +8216,7 @@
       "ranking_bonus": 30,
       "ranking_reason": "configuration parser captures representative application environment behavior",
       "reason": "environment configuration parser is a bounded settings resolution contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "external_state": "environment and file inputs must be injected or fixture-controlled",
         "requires_validation_gate": true
@@ -6789,7 +8256,7 @@
       "ranking_bonus": 32,
       "ranking_reason": "Matrix Market writer captures representative scientific IO serialization behavior",
       "reason": "Matrix Market writer is a bounded scientific file-format serialization contract",
-      "score_bonus": 22,
+      "score_bonus": 30,
       "side_effect_policy": {
         "filesystem": "writes must target an injected stream or temporary file fixture",
         "requires_validation_gate": true
@@ -6829,7 +8296,7 @@
       "ranking_bonus": 30,
       "ranking_reason": "docstring section validator captures representative documentation quality contract behavior",
       "reason": "docstring section validator is a bounded documentation rule contract",
-      "score_bonus": 20,
+      "score_bonus": 22,
       "side_effect_policy": {
         "mutation_policy": "validation must not mutate source text or rule configuration",
         "requires_validation_gate": true
@@ -6845,6 +8312,1585 @@
         "missing, duplicate and out-of-order sections are covered",
         "malformed headers produce source-linked diagnostics",
         "valid docstrings preserve normalized section ordering"
+      ]
+    },
+    {
+      "contract_family": "signal_subscription_boundary",
+      "failure_modes": [
+        "weak_receiver_collected",
+        "duplicate_receiver",
+        "sender_filter_mismatch",
+        "receiver_signature_error"
+      ],
+      "id": "signal_subscription_boundary",
+      "input_contract": {
+        "receiver": "CallableReceiver(sender, **payload)",
+        "subscription_options": "SignalSubscriptionOptions(sender?, weak?, unique_id?)"
+      },
+      "output_contract": {
+        "connection": "SignalConnection(receiver_ref, sender_filter, weak)",
+        "failure_packet": "SignalSubscriptionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "blinker/base.py",
+        "signal"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "signal subscription is a representative event dispatch contract",
+      "reason": "signal receiver registration is a bounded event subscription contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "receiver registry mutation must be explicit and reversible in tests",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "connect",
+        "disconnect"
+      ],
+      "validation_gates": [
+        "strong and weak receivers are registered with stable sender filtering",
+        "duplicate receivers and invalid callables are covered",
+        "disconnect removes only the intended receiver binding"
+      ]
+    },
+    {
+      "contract_family": "cache_operation_boundary",
+      "failure_modes": [
+        "missing_key",
+        "serialization_error",
+        "backend_write_error",
+        "ttl_policy_violation"
+      ],
+      "id": "cache_operation_boundary",
+      "input_contract": {
+        "cache_key": "CacheKey(namespace?, value, version?)",
+        "cache_options": "CacheOperationOptions(ttl?, tags?, serializer?)"
+      },
+      "output_contract": {
+        "cache_result": "CacheOperationResult(hit?, stored?, value?, expiry?)",
+        "failure_packet": "CacheOperationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "cachelib",
+        "flask_caching",
+        "dogpile/cache"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "cache read/write or memoization boundary is representative reusable behavior",
+      "reason": "cache operation is a bounded key/value lifecycle contract",
+      "score_bonus": 22,
+      "side_effect_policy": {
+        "state": "cache backend mutation must use fake or isolated backend fixtures",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_set",
+        "set",
+        "get",
+        "memoize",
+        "cache_on_arguments",
+        "cache_multi_on_arguments"
+      ],
+      "validation_gates": [
+        "hit, miss and expired values are covered",
+        "serialization and backend errors return typed diagnostics",
+        "key generation and ttl behavior are explicit"
+      ]
+    },
+    {
+      "contract_family": "schema_resource_registry_boundary",
+      "failure_modes": [
+        "unknown_schema",
+        "registry_load_error",
+        "invalid_resource_uri",
+        "version_mismatch"
+      ],
+      "id": "schema_resource_registry_boundary",
+      "input_contract": {
+        "schema_query": "SchemaResourceQuery(uri?, dialect?, version?)",
+        "registry_context": "SchemaRegistryContext(resources, cache_policy?)"
+      },
+      "output_contract": {
+        "schemas": "SchemaResourceResult(resources, aliases, diagnostics?)",
+        "failure_packet": "SchemaRegistryFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "jsonschema_specifications",
+        "schema"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "schema resource registry is a representative validation-domain contract",
+      "reason": "schema resource lookup is a bounded registry contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "registry cache writes must be explicit",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_schemas",
+        "schemas"
+      ],
+      "validation_gates": [
+        "known and unknown schema resources are covered",
+        "dialect/version aliases resolve deterministically",
+        "registry load failures preserve evidence"
+      ]
+    },
+    {
+      "contract_family": "state_machine_factory_boundary",
+      "failure_modes": [
+        "invalid_initial_state",
+        "transition_registration_error",
+        "missing_clock_or_reactor",
+        "callback_binding_error"
+      ],
+      "id": "state_machine_factory_boundary",
+      "input_contract": {
+        "machine_options": "StateMachineOptions(initial_state, transitions, callbacks?)",
+        "runtime_context": "StateMachineRuntime(clock?, scheduler?, logger?)"
+      },
+      "output_contract": {
+        "machine": "StateMachine(handle_event, current_state, diagnostics?)",
+        "failure_packet": "StateMachineFactoryFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "_client_service.py",
+        "state",
+        "machine"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "state-machine factory captures central lifecycle orchestration behavior",
+      "reason": "state-machine construction is a bounded lifecycle contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "constructed machine state must be isolated from global runtime state",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "makemachine",
+        "make_machine"
+      ],
+      "validation_gates": [
+        "initial state and normal transition paths are covered",
+        "invalid transitions produce typed diagnostics",
+        "callbacks and runtime scheduler dependencies are injectable"
+      ]
+    },
+    {
+      "contract_family": "benchmark_fixture_measurement_boundary",
+      "failure_modes": [
+        "timer_not_started",
+        "invalid_rounds",
+        "statistics_unavailable",
+        "calibration_error"
+      ],
+      "id": "benchmark_fixture_measurement_boundary",
+      "input_contract": {
+        "benchmark_call": "BenchmarkCall(function, args?, kwargs?, rounds?)",
+        "measurement_options": "BenchmarkOptions(timer?, warmup?, calibration?)"
+      },
+      "output_contract": {
+        "measurement": "BenchmarkMeasurement(raw_runs, stats, metadata?)",
+        "failure_packet": "BenchmarkMeasurementFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "pytest_benchmark",
+        "benchmark"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "benchmark fixture measurement is a bounded pytest plugin contract",
+      "reason": "benchmark raw measurement is a bounded test-plugin contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "time": "timer and clock access must be injectable or normalized in tests",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_raw",
+        "pedantic",
+        "weave"
+      ],
+      "validation_gates": [
+        "single-call and repeated-call measurements are covered",
+        "timer failures and invalid round counts produce typed diagnostics",
+        "reported statistics are deterministic under fake timer"
+      ]
+    },
+    {
+      "contract_family": "crypto_attribute_bridge_boundary",
+      "failure_modes": [
+        "unsupported_attribute",
+        "native_handle_error",
+        "invalid_value_type",
+        "lifetime_violation"
+      ],
+      "id": "crypto_attribute_bridge_boundary",
+      "input_contract": {
+        "native_object": "CryptoNativeObject(handle, type_name, lifecycle_state)",
+        "assignment": "CryptoAttributeAssignment(name, value)"
+      },
+      "output_contract": {
+        "assignment_result": "CryptoAttributeResult(applied, normalized_value?, diagnostics?)",
+        "failure_packet": "CryptoAttributeFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "openssl/crypto.py",
+        "crypto"
+      ],
+      "ranking_bonus": 24,
+      "ranking_reason": "crypto attribute bridge is a bounded native wrapper contract",
+      "reason": "crypto object attribute assignment is a bounded native-wrapper contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "native_state": "native handle mutation must be isolated behind fake or fixture-backed objects",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "__setattr__"
+      ],
+      "validation_gates": [
+        "supported and unsupported attributes are covered",
+        "invalid value types return typed diagnostics",
+        "native handle lifetime errors are explicit"
+      ]
+    },
+    {
+      "contract_family": "robots_directive_parser_boundary",
+      "failure_modes": [
+        "malformed_directive",
+        "unknown_directive",
+        "encoding_error",
+        "empty_rule"
+      ],
+      "id": "robots_directive_parser_boundary",
+      "input_contract": {
+        "line": "RobotsTxtLine(text, line_no?, encoding?)",
+        "parser_options": "RobotsParserOptions(strict?, default_policy?)"
+      },
+      "output_contract": {
+        "directive": "RobotsDirective(name, value, allow?, diagnostics?)",
+        "failure_packet": "RobotsDirectiveFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "protego",
+        "robots"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "robots directive extraction is representative parser behavior",
+      "reason": "robots.txt directive extraction is a bounded parser contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "parsing must not mutate parser rule state unless explicitly documented",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_extract_directive",
+        "extract_directive"
+      ],
+      "validation_gates": [
+        "allow, disallow and unknown directives are covered",
+        "malformed lines preserve source position diagnostics",
+        "encoding and whitespace normalization are explicit"
+      ]
+    },
+    {
+      "contract_family": "template_codegen_namespace_boundary",
+      "failure_modes": [
+        "duplicate_namespace",
+        "invalid_identifier",
+        "writer_error",
+        "dependency_resolution_error"
+      ],
+      "id": "template_codegen_namespace_boundary",
+      "input_contract": {
+        "template_ir": "TemplateIntermediateRepresentation(namespaces, imports, symbols)",
+        "writer": "CodeWriter(indent_policy, output_stream?)"
+      },
+      "output_contract": {
+        "codegen_result": "TemplateCodegenResult(namespaces_written, imports, diagnostics?)",
+        "failure_packet": "TemplateCodegenFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "mako",
+        "codegen"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "template namespace codegen is representative compiler pipeline behavior",
+      "reason": "template namespace generation is a bounded compiler/codegen contract",
+      "score_bonus": 28,
+      "side_effect_policy": {
+        "stream": "writer side effects must be captured by injected output stream",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "write_namespaces"
+      ],
+      "validation_gates": [
+        "single and multiple namespace generation are covered",
+        "duplicate or invalid identifiers produce typed diagnostics",
+        "writer errors preserve partial output evidence"
+      ]
+    },
+    {
+      "contract_family": "item_value_extraction_boundary",
+      "failure_modes": [
+        "missing_path",
+        "unsupported_item_type",
+        "selector_error",
+        "multiple_value_policy_violation"
+      ],
+      "id": "item_value_extraction_boundary",
+      "input_contract": {
+        "item": "ItemLike(mapping|dataclass|attrs|adapter)",
+        "selector": "ItemValueSelector(path, default?, many?)"
+      },
+      "output_contract": {
+        "values": "ItemValueResult(values, missing_paths, diagnostics?)",
+        "failure_packet": "ItemValueExtractionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "itemloaders",
+        "itemadapter"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "item value extraction is representative scraping data-shaping behavior",
+      "reason": "item value extraction is a bounded data-shaping contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "extraction must not mutate input item unless documented",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_get_jmesvalues",
+        "_json_schema_from_dataclass"
+      ],
+      "validation_gates": [
+        "present, missing and nested values are covered",
+        "unsupported item types return typed diagnostics",
+        "single-value and multi-value policies are explicit"
+      ]
+    },
+    {
+      "contract_family": "plugin_condition_evaluation_boundary",
+      "failure_modes": [
+        "invalid_expression",
+        "unsafe_context",
+        "missing_report_field",
+        "non_boolean_result"
+      ],
+      "id": "plugin_condition_evaluation_boundary",
+      "input_contract": {
+        "condition": "PluginConditionExpression(text, marker_context?)",
+        "runtime_context": "PluginRuntimeContext(report?, config?, item?)"
+      },
+      "output_contract": {
+        "decision": "PluginConditionDecision(matched, reason?, diagnostics?)",
+        "failure_packet": "PluginConditionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "pytest_rerunfailures",
+        "pytest_timeout",
+        "pytest_html",
+        "pytest"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "pytest plugin condition or report hook is representative plugin behavior",
+      "reason": "pytest plugin condition/report hook is a bounded plugin contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "runtime": "pytest config/item/report objects must be fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "evaluate_condition",
+        "pytest_timeout_set_timer",
+        "pytest_runtest_logreport"
+      ],
+      "validation_gates": [
+        "matching and non-matching conditions are covered",
+        "invalid expressions or missing report fields return typed diagnostics",
+        "pytest object side effects are isolated"
+      ]
+    },
+    {
+      "contract_family": "queue_push_boundary",
+      "failure_modes": [
+        "serialization_error",
+        "capacity_exceeded",
+        "priority_order_error",
+        "storage_write_error"
+      ],
+      "id": "queue_push_boundary",
+      "input_contract": {
+        "item": "QueueItem(payload, priority?, key?)",
+        "queue_options": "QueuePushOptions(capacity?, ordering?, serializer?)"
+      },
+      "output_contract": {
+        "push_result": "QueuePushResult(position?, size, persisted?)",
+        "failure_packet": "QueuePushFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "queuelib",
+        "queue.py"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "queue push is representative bounded data-structure behavior",
+      "reason": "queue push is a bounded ordering/storage contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "state": "queue mutation must be isolated to an in-memory or temporary backend",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "push"
+      ],
+      "validation_gates": [
+        "fifo/lifo/priority ordering cases are covered",
+        "serialization and capacity failures return typed diagnostics",
+        "queue size and persisted position are explicit"
+      ]
+    },
+    {
+      "contract_family": "async_generator_delegation_boundary",
+      "failure_modes": [
+        "delegate_raises",
+        "send_after_close",
+        "cancellation",
+        "finalization_error"
+      ],
+      "id": "async_generator_delegation_boundary",
+      "input_contract": {
+        "delegate": "AsyncGeneratorLike(asend, athrow, aclose)",
+        "caller_context": "AsyncGeneratorDelegationContext(send_value?, cancellation?)"
+      },
+      "output_contract": {
+        "yielded_values": "AsyncDelegationResult(values, return_value?, closed)",
+        "failure_packet": "AsyncDelegationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "async_generator",
+        "_impl.py"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "async generator delegation is representative async protocol behavior",
+      "reason": "async generator yield-from behavior is a bounded async protocol contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "async_runtime": "event-loop interactions must use deterministic async fixtures",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "yield_from_"
+      ],
+      "validation_gates": [
+        "normal yielded values and final return are covered",
+        "throw, close and cancellation paths are explicit",
+        "delegate finalization happens exactly once"
+      ]
+    },
+    {
+      "contract_family": "encoding_detection_boundary",
+      "failure_modes": [
+        "insufficient_bytes",
+        "conflicting_detector_scores",
+        "unsupported_encoding",
+        "binary_noise"
+      ],
+      "id": "encoding_detection_boundary",
+      "input_contract": {
+        "data": "ByteSample(bytes, declared_encoding?, language_hint?)",
+        "detector_options": "EncodingDetectorOptions(confidence_threshold?, include_all?)"
+      },
+      "output_contract": {
+        "detections": "EncodingDetectionResult(best?, candidates, confidence, diagnostics?)",
+        "failure_packet": "EncodingDetectionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "chardet"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "encoding detection is representative byte-analysis behavior",
+      "reason": "encoding detection is a bounded byte classification contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "detector state updates must be local to the call or fixture",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "detect",
+        "detect_all"
+      ],
+      "validation_gates": [
+        "high-confidence, low-confidence and ambiguous samples are covered",
+        "binary/noisy input returns stable diagnostics",
+        "candidate ordering and confidence thresholds are explicit"
+      ]
+    },
+    {
+      "contract_family": "object_path_operation_registry_boundary",
+      "failure_modes": [
+        "unknown_operator",
+        "duplicate_registration",
+        "invalid_spec",
+        "scope_conflict"
+      ],
+      "id": "object_path_operation_registry_boundary",
+      "input_contract": {
+        "operation": "PathOperation(name, handler, arity?, precedence?)",
+        "registry": "OperationRegistry(existing_ops, scope?)"
+      },
+      "output_contract": {
+        "registration": "OperationRegistrationResult(registered, replaced?, diagnostics?)",
+        "failure_packet": "OperationRegistrationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "glom"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "object-path operation registration is representative DSL extension behavior",
+      "reason": "object-path operation registration is a bounded DSL registry contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "state": "registry mutation must be local or reversible in tests",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "register_op"
+      ],
+      "validation_gates": [
+        "new and duplicate operation registration are covered",
+        "invalid specs produce typed diagnostics",
+        "registry scoping and replacement policy are explicit"
+      ]
+    },
+    {
+      "contract_family": "interface_verification_boundary",
+      "failure_modes": [
+        "missing_attribute",
+        "signature_mismatch",
+        "invalid_descriptor",
+        "implementation_error"
+      ],
+      "id": "interface_verification_boundary",
+      "input_contract": {
+        "interface": "InterfaceSpec(attributes, methods, invariants?)",
+        "implementation": "ImplementationObject(type, attributes, methods)"
+      },
+      "output_contract": {
+        "verification": "InterfaceVerificationResult(valid, violations, diagnostics?)",
+        "failure_packet": "InterfaceVerificationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "zope/interface",
+        "interface/verify"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "interface verification is representative contract-checking behavior",
+      "reason": "interface element verification is a bounded structural contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "verification must not mutate interface or implementation objects",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "_verify_element",
+        "verifyobject",
+        "verifyclass"
+      ],
+      "validation_gates": [
+        "valid, missing and mismatched attributes are covered",
+        "descriptor and method signature failures are explicit",
+        "diagnostics identify the failing interface element"
+      ]
+    },
+    {
+      "contract_family": "source_statement_boundary_detection",
+      "failure_modes": [
+        "unterminated_statement",
+        "syntax_error",
+        "line_continuation_error",
+        "comment_or_string_confusion"
+      ],
+      "id": "source_statement_boundary_detection",
+      "input_contract": {
+        "source_lines": "SourceLineWindow(lines, cursor?, filename?)",
+        "parse_options": "StatementBoundaryOptions(language, continuation_policy?)"
+      },
+      "output_contract": {
+        "statement": "StatementBoundaryResult(start_line, end_line, text, complete)",
+        "failure_packet": "StatementBoundaryFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "autoflake",
+        "source",
+        "parser"
+      ],
+      "ranking_bonus": 32,
+      "ranking_reason": "source statement boundary detection is representative code-analysis behavior",
+      "reason": "source statement boundary detection is a bounded parser contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "statement detection must not mutate source text",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "multiline_statement"
+      ],
+      "validation_gates": [
+        "single-line, multiline and continued statements are covered",
+        "unterminated or syntactically invalid input returns typed diagnostics",
+        "comments and strings do not corrupt boundary detection"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "event_dispatch_routing_boundary",
+      "failure_modes": [
+        "handler_not_found",
+        "handler_raises",
+        "class_resolution_error",
+        "dispatch_order_conflict"
+      ],
+      "id": "event_dispatch_routing_boundary",
+      "input_contract": {
+        "event": "EventPayload(type, instance?, attributes?)",
+        "handler_registry": "EventHandlerRegistry(class_handlers, fallback_policy?)"
+      },
+      "output_contract": {
+        "dispatch_result": "EventDispatchResult(handlers_called, results?, diagnostics?)",
+        "failure_packet": "EventDispatchFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "zope/event",
+        "classhandler",
+        "event"
+      ],
+      "ranking_bonus": 34,
+      "ranking_reason": "event dispatch routing is representative event-system behavior",
+      "reason": "event class-handler dispatch is a bounded routing contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "state": "handler registry and dispatch side effects must be fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "dispatch",
+        "notify"
+      ],
+      "validation_gates": [
+        "direct, inherited and missing handler routes are covered",
+        "handler exceptions preserve ordered dispatch evidence",
+        "fallback and duplicate-handler policies are explicit"
+      ]
+    },
+    {
+      "contract_family": "template_variable_validation_boundary",
+      "failure_modes": [
+        "missing_variable",
+        "invalid_variable_name",
+        "strict_mode_violation",
+        "template_render_error"
+      ],
+      "id": "template_variable_validation_boundary",
+      "input_contract": {
+        "template_context": "TemplateContext(variables, strict_policy?, engine?)",
+        "variable_reference": "TemplateVariableReference(name, source_location?)"
+      },
+      "output_contract": {
+        "validation_result": "TemplateVariableValidationResult(valid, failure_policy, diagnostics?)",
+        "failure_packet": "TemplateVariableFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": [
+        "pytest_django",
+        "django",
+        "template"
+      ],
+      "ranking_bonus": 30,
+      "ranking_reason": "template variable validation is representative framework test behavior",
+      "reason": "template variable failure policy is a bounded rendering validation contract",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "mutation_policy": "validation must not mutate template context",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_all": [
+        "template",
+        "variable"
+      ],
+      "symbols": [
+        "_fail_for_invalid_template_variable"
+      ],
+      "validation_gates": [
+        "valid, missing and invalid variable references are covered",
+        "strict and permissive failure policies are explicit",
+        "template source locations are preserved in diagnostics"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "framework_cli_command_orchestration_boundary",
+      "failure_modes": ["invalid_option", "missing_target", "operation_rejected", "side_effect_error"],
+      "id": "framework_cli_command_orchestration_boundary",
+      "input_contract": {
+        "command_context": "CommandContext(argv?|request?|admin_state?|config?)",
+        "operation_request": "CommandOperation(name, options?, payload?, actor?)"
+      },
+      "output_contract": {
+        "command_result": "CommandResult(status, emitted_actions?, diagnostics?)",
+        "failure_packet": "CommandFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["cli.py", "commands", "admin", "reqparse", "management"],
+      "ranking_bonus": 36,
+      "ranking_reason": "framework CLI command orchestration is representative user-facing workflow behavior",
+      "reason": "CLI or framework command orchestration is a bounded command-to-action contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "runtime": "database, filesystem, and process effects are fixture-backed by default"
+      },
+      "symbol_contains_any": ["command", "commands", "parse", "run", "inject", "move"],
+      "validation_gates": [
+        "valid command, invalid options and missing target cases are covered",
+        "side effects are separated from command parsing and routing",
+        "diagnostics preserve command and actor evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "async_dev_server_lifecycle_boundary",
+      "failure_modes": ["bind_failed", "startup_error", "shutdown_error", "watcher_error"],
+      "id": "async_dev_server_lifecycle_boundary",
+      "input_contract": {
+        "app_context": "AsyncAppContext(app, loop?, config?, reload_policy?)",
+        "server_options": "ServerOptions(host?, port?, ssl?, watcher?)"
+      },
+      "output_contract": {
+        "server_state": "ServerState(bound_address?, lifecycle_events, diagnostics?)",
+        "failure_packet": "ServerLifecycleFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["aiohttp", "runserver", "devtools", "serve.py", "server"],
+      "ranking_bonus": 36,
+      "ranking_reason": "async dev-server lifecycle is representative framework runtime behavior",
+      "reason": "async development server lifecycle is a bounded app-to-server contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "network": "socket binding and file watchers are fake or fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["serve", "server", "app", "runserver"],
+      "validation_gates": [
+        "normal startup, bind failure and shutdown cases are covered",
+        "reload/watch behavior is separated from application construction",
+        "event loop and socket ownership are explicit"
+      ]
+    },
+    {
+      "contract_family": "source_lines_extraction_boundary",
+      "failure_modes": ["missing_file", "encoding_error", "invalid_line", "object_resolution_error"],
+      "id": "source_lines_extraction_boundary",
+      "input_contract": {
+        "read_options": "SourceReadOptions(context_lines?, encoding?, fallback_policy?)",
+        "source_ref": "SourceReference(module?, filename?, lineno?, object_ref?)"
+      },
+      "output_contract": {
+        "failure_packet": "SourceExtractionFailure(kind, evidence_ref)",
+        "source_window": "SourceWindow(lines, start_line, end_line, diagnostics?)"
+      },
+      "path_contains_any": ["tbtools", "debug", "inspect", "source"],
+      "ranking_bonus": 36,
+      "ranking_reason": "source-line extraction is representative debug tooling behavior",
+      "reason": "source-line extraction is a bounded code-location-to-text contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "source reads use fixture files and do not mutate project files",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["sourcelines", "source_lines", "getline", "inspect"],
+      "validation_gates": [
+        "existing, missing and encoded source files are covered",
+        "line-window boundaries and fallback behavior are explicit",
+        "diagnostics preserve source reference evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "html_or_widget_render_boundary",
+      "failure_modes": ["template_error", "missing_asset", "unsafe_markup", "render_backend_error"],
+      "id": "html_or_widget_render_boundary",
+      "input_contract": {
+        "render_context": "RenderContext(value?, request?, assets?, settings?)",
+        "render_options": "RenderOptions(mode?, escaping?, resource_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "RenderFailure(kind, evidence_ref)",
+        "rendered_markup": "RenderedMarkup(html, assets?, diagnostics?)"
+      },
+      "path_contains_any": ["widgets.py", "convert.py", "panel", "tinymce", "html"],
+      "ranking_bonus": 36,
+      "ranking_reason": "HTML/widget rendering is representative UI adapter behavior",
+      "reason": "HTML or widget rendering is a bounded state-to-markup contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "runtime": "browser, template engine, and asset writes are fake by default"
+      },
+      "symbol_contains_any": ["render", "script_to_html", "html", "widget"],
+      "validation_gates": [
+        "normal, missing asset and unsafe input cases are covered",
+        "escaping and resource inclusion policies are explicit",
+        "rendering is separated from external browser execution"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "visualization_data_binding_boundary",
+      "failure_modes": ["missing_dimension", "unsupported_backend", "binding_error", "data_shape_error"],
+      "id": "visualization_data_binding_boundary",
+      "input_contract": {
+        "binding_options": "BindingOptions(kind?, transforms?, defaults?)",
+        "data_context": "VisualizationDataContext(data, dimensions?, parameters?, backend?)"
+      },
+      "output_contract": {
+        "failure_packet": "VisualizationBindingFailure(kind, evidence_ref)",
+        "view_spec": "ViewSpec(mapping, dimensions?, callbacks?, diagnostics?)"
+      },
+      "path_contains_any": ["holoviews", "hvplot", "param", "plotting.py", "converter.py", "reactive.py", "xarray.py"],
+      "ranking_bonus": 36,
+      "ranking_reason": "visualization/data binding is representative plotting pipeline behavior",
+      "reason": "visualization data binding is a bounded data-to-view specification contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "rendering": "tests assert semantic view specs before backend rendering",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["bind", "converter", "init", "__call__", "sine"],
+      "validation_gates": [
+        "valid data, missing dimension and unsupported backend cases are covered",
+        "parameter binding and callback wiring are explicit",
+        "render backend is separated from semantic mapping"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "notebook_path_security_boundary",
+      "failure_modes": ["unsupported_platform", "permission_denied", "missing_path", "system_api_error"],
+      "id": "notebook_path_security_boundary",
+      "input_contract": {
+        "path_context": "PathSecurityContext(path, user?, platform?, mode?)",
+        "restriction_options": "RestrictionOptions(strict?, fallback_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "PathSecurityFailure(kind, evidence_ref)",
+        "restriction_result": "RestrictionResult(applied, effective_permissions?, diagnostics?)"
+      },
+      "path_contains_any": ["jupyter_core", "paths.py", "notebook", "security"],
+      "ranking_bonus": 36,
+      "ranking_reason": "notebook path/security policy is representative runtime safety behavior",
+      "reason": "notebook path and permission restriction is a bounded filesystem-safety contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "permission changes are fake or temp-fixture backed by default",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["restrict", "path", "user", "permission", "ctypes"],
+      "validation_gates": [
+        "existing, missing and unsupported-platform paths are covered",
+        "permission mutation or fallback behavior is explicit",
+        "security diagnostics preserve platform and path evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "test_server_content_serving_boundary",
+      "failure_modes": ["missing_content", "invalid_status", "header_error", "server_not_running"],
+      "id": "test_server_content_serving_boundary",
+      "input_contract": {
+        "content_options": "ContentOptions(body, status?, headers?, content_type?)",
+        "request_context": "FixtureRequestContext(path?, method?, headers?)"
+      },
+      "output_contract": {
+        "failure_packet": "FixtureServerFailure(kind, evidence_ref)",
+        "fixture_response": "FixtureResponse(status, headers, body, diagnostics?)"
+      },
+      "path_contains_any": ["pytest_localserver", "localserver", "http.py", "server"],
+      "ranking_bonus": 36,
+      "ranking_reason": "local test-server content serving is representative test fixture behavior",
+      "reason": "local test-server content serving is a bounded request-to-response fixture contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "network": "server sockets are fixture-scoped and never require external network",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["serve_content", "localserver", "response", "content"],
+      "validation_gates": [
+        "normal content, missing content and header cases are covered",
+        "status and content type behavior are explicit",
+        "fixture server lifecycle is separated from response construction"
+      ]
+    },
+    {
+      "contract_family": "text_case_formatting_boundary",
+      "failure_modes": ["invalid_text", "locale_error", "separator_error", "format_policy_error"],
+      "id": "text_case_formatting_boundary",
+      "input_contract": {
+        "format_options": "CaseFormatOptions(style, preserve_acronyms?, separators?)",
+        "text_value": "TextValue(text, locale?, word_boundaries?)"
+      },
+      "output_contract": {
+        "failure_packet": "TextCaseFormatFailure(kind, evidence_ref)",
+        "formatted_text": "FormattedText(text, diagnostics?)"
+      },
+      "path_contains_any": ["String.py", "string", "format"],
+      "ranking_bonus": 36,
+      "ranking_reason": "text case formatting is representative string normalization behavior",
+      "reason": "text case formatting is a bounded text-to-text transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "formatting must not mutate caller input collections",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["title_case", "capitalize", "case", "convert_to_title"],
+      "validation_gates": [
+        "empty, mixed-case and separator-heavy values are covered",
+        "locale and acronym behavior are explicit",
+        "invalid input preserves original evidence"
+      ]
+    },
+    {
+      "contract_family": "notebook_page_config_lookup_boundary",
+      "failure_modes": ["missing_section", "invalid_config", "default_resolution_error", "state_update_error"],
+      "id": "notebook_page_config_lookup_boundary",
+      "input_contract": {
+        "page_context": "NotebookPageContext(path?, section?, defaults?, runtime_state?)",
+        "lookup_options": "PageConfigLookupOptions(strict?, mutate_cache?, fallback_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "PageConfigLookupFailure(kind, evidence_ref)",
+        "page_config": "PageConfig(values, defaults_applied?, diagnostics?)"
+      },
+      "path_contains_any": ["notebook/app.py"],
+      "ranking_bonus": 70,
+      "ranking_reason": "notebook page config lookup is representative app configuration behavior",
+      "reason": "notebook page config lookup is a bounded runtime configuration contract",
+      "score_bonus": 28,
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "state": "cache/global state writes are fixture-backed and explicitly asserted"
+      },
+      "symbols": ["get_page_config"],
+      "validation_gates": [
+        "known page, unknown page and default-only cases are covered",
+        "cache/state mutation is explicit and fixture-scoped",
+        "diagnostics preserve section and path evidence"
+      ]
+    },
+    {
+      "contract_family": "factory_field_value_resolution_boundary",
+      "failure_modes": ["unsupported_field", "provider_missing", "constraint_error", "coverage_error"],
+      "id": "factory_field_value_resolution_boundary",
+      "input_contract": {
+        "field_context": "FactoryFieldContext(annotation?, constraints?, provider_map?, coverage?)",
+        "resolution_options": "FieldValueOptions(random_seed?, nullable_policy?, coverage_mode?)"
+      },
+      "output_contract": {
+        "failure_packet": "FieldValueResolutionFailure(kind, evidence_ref)",
+        "field_value": "GeneratedFieldValue(value, provider_ref?, diagnostics?)"
+      },
+      "path_contains_any": ["polyfactory/factories"],
+      "ranking_bonus": 48,
+      "ranking_reason": "factory field value resolution is representative data factory behavior",
+      "reason": "factory field value resolution is a bounded schema-to-value contract",
+      "score_bonus": 28,
+      "side_effect_policy": {
+        "randomness": "random providers use deterministic fixture seeds",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["get_field_value"],
+      "validation_gates": [
+        "simple, constrained and unsupported fields are covered",
+        "provider lookup and fallback behavior are explicit",
+        "randomness and coverage behavior are deterministic under fixtures"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "parallel_manifest_execution_boundary",
+      "failure_modes": ["manifest_error", "worker_failure", "timeout", "partial_result"],
+      "id": "parallel_manifest_execution_boundary",
+      "input_contract": {
+        "manifest": "ExecutionManifest(commands, env?, dependencies?, concurrency?)",
+        "runtime_options": "ParallelRunOptions(max_workers?, timeout?, fail_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "ParallelManifestFailure(kind, evidence_ref)",
+        "run_result": "ParallelManifestResult(completed, failed?, diagnostics?)"
+      },
+      "path_contains_any": ["_parallel.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "parallel manifest execution is representative automation runtime behavior",
+      "reason": "parallel manifest execution is a bounded manifest-to-results contract",
+      "score_bonus": 28,
+      "side_effect_policy": {
+        "processes": "workers and subprocesses are fake or fixture-backed by default",
+        "requires_validation_gate": true
+      },
+      "symbols": ["run_manifest_parallel"],
+      "validation_gates": [
+        "all-success, partial failure and timeout manifests are covered",
+        "worker ordering and aggregation policy are explicit",
+        "process execution is separated from result normalization"
+      ]
+    },
+    {
+      "contract_family": "notebook_metadata_normalization_boundary",
+      "failure_modes": ["invalid_metadata", "schema_version_mismatch", "relaxed_property_error", "mutation_policy_error"],
+      "id": "notebook_metadata_normalization_boundary",
+      "input_contract": {
+        "notebook_document": "NotebookDocument(cells, metadata, nbformat, nbformat_minor)",
+        "validation_options": "NotebookValidationOptions(schema_version?, relax_add_props?)"
+      },
+      "output_contract": {
+        "failure_packet": "NotebookMetadataNormalizationFailure(kind, evidence_ref)",
+        "normalized_notebook": "NotebookDocument(metadata, stripped_keys?, diagnostics?)"
+      },
+      "path_contains_any": ["nbformat/validator.py"],
+      "ranking_bonus": 42,
+      "ranking_reason": "notebook metadata normalization is representative schema validation behavior",
+      "reason": "notebook metadata normalization is a bounded schema-cleanup contract",
+      "score_bonus": 28,
+      "side_effect_policy": {
+        "mutation_policy": "in-place vs copy behavior must be explicit in contract tests",
+        "requires_validation_gate": true
+      },
+      "symbol_contains_any": ["metadata", "strip_invalid"],
+      "symbols": ["_strip_invalida_metadata"],
+      "validation_gates": [
+        "valid, invalid and relaxed metadata cases are covered",
+        "schema-version behavior is explicit",
+        "mutation/copy policy is asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "binary_message_pack_codec_boundary",
+      "failure_modes": ["unsupported_type", "extension_type_error", "buffer_overflow", "malformed_payload"],
+      "id": "binary_message_pack_codec_boundary",
+      "input_contract": {
+        "codec_options": "MessagePackCodecOptions(use_bin_type?, strict_types?, datetime_policy?)",
+        "value": "MessagePackValue(scalar|array|map|extension)"
+      },
+      "output_contract": {
+        "encoded": "MessagePackBytes(buffer, extension_refs?, diagnostics?)",
+        "failure_packet": "MessagePackCodecFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["msgpack/fallback.py"],
+      "ranking_bonus": 36,
+      "ranking_reason": "MessagePack pack/unpack is representative binary codec behavior",
+      "reason": "MessagePack pack/unpack is a bounded binary serialization contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "packing must not mutate caller values",
+        "requires_validation_gate": true
+      },
+      "symbols": ["_pack", "_unpack", "pack_ext_type", "unpackb"],
+      "validation_gates": [
+        "scalar, nested map and extension type cases are covered",
+        "malformed payload and unsupported type failures are explicit",
+        "buffer boundary behavior is asserted"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "netcdf_format_conversion_boundary",
+      "failure_modes": ["missing_variable", "unsupported_dimension", "attribute_conversion_error", "file_write_failure"],
+      "id": "netcdf_format_conversion_boundary",
+      "input_contract": {
+        "conversion_options": "NetcdfConversionOptions(format, compression?, classic_model?)",
+        "dataset": "NetcdfDatasetRef(path, variables?, dimensions?, attributes?)"
+      },
+      "output_contract": {
+        "converted_dataset": "ConvertedNetcdfDataset(path, format, variables, diagnostics?)",
+        "failure_packet": "NetcdfConversionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["netcdf4/utils.py", "netcdf4"],
+      "ranking_bonus": 36,
+      "ranking_reason": "netCDF format conversion is representative scientific file IO behavior",
+      "reason": "netCDF format conversion is a bounded scientific dataset transformation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "filesystem": "input and output datasets are fixture-backed",
+        "requires_validation_gate": true
+      },
+      "symbols": ["nc3tonc4", "_nc3tonc4", "_nc4tonc3", "_StartCountStride"],
+      "validation_gates": [
+        "valid conversion, missing variable and unsupported dimension cases are covered",
+        "attributes and dimensions are preserved or explicitly mapped",
+        "file writes are isolated to temp fixtures"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "arrow_hash_join_graph_visualization_boundary",
+      "failure_modes": ["invalid_graph", "missing_join_node", "layout_error", "render_backend_error"],
+      "id": "arrow_hash_join_graph_visualization_boundary",
+      "input_contract": {
+        "graph": "HashJoinGraph(nodes, edges, labels?, metrics?)",
+        "plot_options": "GraphPlotOptions(dimensions, layout?, output_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "HashJoinGraphPlotFailure(kind, evidence_ref)",
+        "plot_spec": "HashJoinGraphPlotSpec(nodes, edges, coordinates, diagnostics?)"
+      },
+      "path_contains_any": ["arrow/acero/hash_join_graphs.py", "hash_join_graphs.py"],
+      "ranking_bonus": 36,
+      "ranking_reason": "Arrow hash-join graph plotting is representative query-plan diagnostics behavior",
+      "reason": "Arrow hash-join graph plotting is a bounded execution-plan visualization contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "rendering": "tests assert plot specification before backend rendering",
+        "requires_validation_gate": true
+      },
+      "symbols": ["plot_3d", "organize_tests"],
+      "validation_gates": [
+        "valid graph, empty graph and malformed join topology cases are covered",
+        "layout coordinates and labels are deterministic",
+        "render backend side effects are fixture-backed"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "model_explainability_plot_boundary",
+      "failure_modes": ["shape_mismatch", "missing_feature_names", "unsupported_explanation_type", "render_backend_error"],
+      "id": "model_explainability_plot_boundary",
+      "input_contract": {
+        "explanation": "ModelExplanation(values, base_values?, feature_names?, cohorts?)",
+        "plot_options": "ExplainabilityPlotOptions(kind, ordering?, color_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "ExplainabilityPlotFailure(kind, evidence_ref)",
+        "plot_spec": "ExplainabilityPlotSpec(points, feature_order, color_mapping?, diagnostics?)"
+      },
+      "path_contains_any": ["shap/plots"],
+      "ranking_bonus": 36,
+      "ranking_reason": "SHAP explanation plotting is representative model explainability behavior",
+      "reason": "model explainability plotting is a bounded explanation-to-view contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "rendering": "tests assert semantic plot specs before GUI/backend rendering",
+        "requires_validation_gate": true
+      },
+      "symbols": ["summary_legacy", "beeswarm", "bar"],
+      "validation_gates": [
+        "valid explanation, shape mismatch and missing feature-name cases are covered",
+        "feature ordering and color mapping are deterministic",
+        "rendering is isolated from plot-spec generation"
+      ]
+    },
+    {
+      "contract_family": "trading_ml_signal_generation_boundary",
+      "failure_modes": ["insufficient_bars", "invalid_strategy", "feature_generation_error", "model_prediction_error"],
+      "id": "trading_ml_signal_generation_boundary",
+      "input_contract": {
+        "bars": "MarketBars(symbol?, timeframe?, rows, schema)",
+        "strategy": "TradingStrategyRef(name, gateway?, risk_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "TradingSignalFailure(kind, evidence_ref)",
+        "signal": "TradingSignal(direction, confidence?, features_ref?, diagnostics?)"
+      },
+      "path_contains_any": ["gold_trading.py", "trading", "market_data"],
+      "ranking_bonus": 36,
+      "ranking_reason": "ML trading signal generation is representative market-analysis behavior",
+      "reason": "ML trading signal generation has explicit market-bars, strategy, signal, and failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"model_policy": "model/gateway calls are fakeable and fixture-scoped", "requires_validation_gate": true},
+      "symbol_contains_any": ["ml_signal", "generate_signal", "signal"],
+      "validation_gates": [
+        "valid bars, insufficient history and invalid strategy cases are covered",
+        "feature generation and model errors return typed failure evidence",
+        "gateway/live trading side effects are outside the signal contract"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "power_model_formula_runtime_boundary",
+      "failure_modes": ["invalid_configuration", "missing_topology", "actor_launch_error", "report_stream_failure"],
+      "id": "power_model_formula_runtime_boundary",
+      "input_contract": {
+        "config": "SmartWattsConfig(thresholds, topology_ref, stream_policy, formula_flags)",
+        "reports": "HwpcReportStream(source, sampling_frequency?, fixture_mode?)"
+      },
+      "output_contract": {
+        "failure_packet": "PowerFormulaRuntimeFailure(kind, evidence_ref)",
+        "runtime_result": "FormulaRuntimeResult(actors_started, predictions_ref?, diagnostics?)"
+      },
+      "path_contains_any": ["smartwatts", "__main__.py", "power_model.py"],
+      "ranking_bonus": 36,
+      "ranking_reason": "SmartWatts formula runtime is representative power-model orchestration behavior",
+      "reason": "power-model formula runtime has explicit configuration, topology, report stream, and failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"process_policy": "actor/supervisor launch is faked or isolated in contract tests", "requires_validation_gate": true},
+      "symbol_contains_any": ["run_smartwatts", "predict_power", "learn_power_model", "formula"],
+      "validation_gates": [
+        "valid config, invalid threshold and missing topology cases are covered",
+        "actor launch and report stream failures return typed evidence",
+        "long-running supervisor behavior is isolated from default contract tests"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "document_cleanup_conversion_boundary",
+      "failure_modes": ["unsupported_file_type", "parser_failure", "empty_content", "write_error", "output_collision"],
+      "id": "document_cleanup_conversion_boundary",
+      "input_contract": {
+        "document_input": "DocumentInput(path, format_hint?, parser_options?)",
+        "processing_policy": "DocumentProcessingPolicy(output_format, dry_run?, ai_mode?, collision_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "DocumentProcessingFailure(kind, evidence_ref)",
+        "result": "DocumentProcessingResult(status, output_path?, markdown?, diagnostics?)"
+      },
+      "path_contains_any": ["cleaner.py", "parsers", "output/epub.py"],
+      "ranking_bonus": 36,
+      "ranking_reason": "document cleanup/conversion is representative parse-clean-write pipeline behavior",
+      "reason": "document cleanup pipeline has explicit source-document, parser, output artifact, and failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"filesystem": "writes, dry-run and output collision behavior must be fixture-scoped", "requires_validation_gate": true},
+      "symbol_contains_any": ["process_file", "parse_file", "extract_text", "create_epub", "safe_write"],
+      "validation_gates": [
+        "valid document, unsupported type and parser failure cases are covered",
+        "dry-run and duplicate output-name behavior are explicit",
+        "live AI/provider calls are outside default document pipeline tests"
+      ]
+    },
+    {
+      "contract_family": "ansible_module_config_mapper_boundary",
+      "failure_modes": ["missing_option", "invalid_external_id", "unsupported_ovs_field", "module_contract_error"],
+      "id": "ansible_module_config_mapper_boundary",
+      "input_contract": {
+        "module": "AnsibleModuleLike(params, check_mode?, fail_json?)",
+        "mapping_policy": "OvsConfigMappingPolicy(table, field_aliases?, defaults?)"
+      },
+      "output_contract": {
+        "failure_packet": "OvsConfigMappingFailure(kind, evidence_ref)",
+        "ovs_object": "OvsConfigObject(table, external_ids?, other_config?, options?)"
+      },
+      "path_contains_any": ["openvswitch", "plugins/modules"],
+      "ranking_bonus": 34,
+      "ranking_reason": "Ansible module config mapper is representative network-module behavior",
+      "reason": "Ansible module configuration mapping has explicit module-params to OVS object boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "mapping must not mutate OVSDB; module state is fixture-scoped", "requires_validation_gate": true},
+      "symbols": ["map_config_to_obj"],
+      "validation_gates": [
+        "valid params, missing option and malformed external ids are covered",
+        "module fail_json behavior is represented as typed failure evidence",
+        "OVSDB writes are outside the mapper contract"
+      ]
+    },
+    {
+      "contract_family": "ml_compiler_python_codegen_boundary",
+      "failure_modes": ["invalid_graph_node", "unsupported_op", "codegen_escape_error", "compile_context_missing"],
+      "id": "ml_compiler_python_codegen_boundary",
+      "input_contract": {
+        "graph_fragment": "CompilerGraphFragment(nodes, edges, tensor_meta?)",
+        "codegen_context": "PythonCodegenContext(imports, device_policy?, symbol_table?)"
+      },
+      "output_contract": {
+        "failure_packet": "PythonCodegenFailure(kind, evidence_ref)",
+        "python_source": "GeneratedPythonSource(text, imports, diagnostics?)"
+      },
+      "path_contains_any": ["dlinfer", "dynamo_bridge", "pt_patch.py"],
+      "ranking_bonus": 34,
+      "ranking_reason": "ML compiler Python codegen is representative compiler tooling behavior",
+      "reason": "ML compiler Python code generation is a bounded graph-to-source contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"codegen_policy": "generated source is asserted as text; execution is separate", "requires_validation_gate": true},
+      "symbol_contains_any": ["gen_python_code", "codegen"],
+      "validation_gates": [
+        "valid graph, unsupported op and malformed tensor metadata are covered",
+        "generated source is deterministic for a fixed graph fixture",
+        "code execution is not part of the codegen contract"
+      ]
+    },
+    {
+      "contract_family": "api_client_response_fetch_boundary",
+      "failure_modes": ["timeout", "rate_limit", "malformed_response", "missing_item_field"],
+      "id": "api_client_response_fetch_boundary",
+      "input_contract": {
+        "query": "ApiQuery(parameters, pagination?, auth_context?)",
+        "transport": "FakeableHttpTransport(timeout?, retry_policy?)"
+      },
+      "output_contract": {
+        "failure_packet": "ApiFetchFailure(kind, evidence_ref)",
+        "items": "FetchedItems(rows, cursor?, diagnostics?)"
+      },
+      "path_contains_any": ["updatevideos.py", "synconelaptoxoss.py", "client", "api"],
+      "ranking_bonus": 34,
+      "ranking_reason": "API client fetch/parse boundary is representative integration behavior",
+      "reason": "API client response fetching has explicit query, transport, item, and failure boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"network": "HTTP calls must use fake transport or recorded fixtures", "requires_validation_gate": true},
+      "symbol_contains_any": ["direct_api", "bilibili", "download", "upload", "fetch"],
+      "validation_gates": [
+        "happy path, timeout/rate-limit and malformed response are covered",
+        "pagination or item-count policy is explicit",
+        "live network calls are outside default contract tests"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "browser_login_session_boundary",
+      "failure_modes": ["browser_launch_error", "missing_credentials", "captcha_or_mfa_required", "session_cookie_missing"],
+      "id": "browser_login_session_boundary",
+      "input_contract": {
+        "credentials": "LoginCredentials(username?, password?, token?, mfa_policy?)",
+        "browser_context": "BrowserAutomationContext(driver, base_url, timeout?, fixture_mode?)"
+      },
+      "output_contract": {
+        "failure_packet": "BrowserLoginFailure(kind, evidence_ref)",
+        "session": "AuthenticatedSession(cookies?, token?, expires_at?, diagnostics?)"
+      },
+      "path_contains_any": ["synconelaptoxoss.py", "browser", "selenium", "playwright"],
+      "ranking_bonus": 34,
+      "ranking_reason": "browser login/session binding is representative integration behavior",
+      "reason": "browser login flow is a bounded credentials-to-session contract with isolated browser side effects",
+      "score_bonus": 24,
+      "side_effect_policy": {"browser": "browser automation is fixture-backed unless explicitly enabled", "requires_validation_gate": true},
+      "symbol_contains_any": ["login", "auth", "browser"],
+      "validation_gates": [
+        "valid login, invalid credentials and missing cookie cases are covered",
+        "browser launch and captcha/MFA stops return typed failures",
+        "live browser execution is isolated behind explicit opt-in"
+      ]
+    },
+    {
+      "contract_family": "ml_threshold_search_boundary",
+      "failure_modes": ["empty_examples", "missing_scores", "invalid_threshold_grid", "metric_tie"],
+      "id": "ml_threshold_search_boundary",
+      "input_contract": {
+        "examples": "ScoredExamples(items, labels?, scores, metadata?)",
+        "search_policy": "ThresholdSearchPolicy(metric, min?, max?, step?, tie_break?)"
+      },
+      "output_contract": {
+        "failure_packet": "ThresholdSearchFailure(kind, evidence_ref)",
+        "threshold_result": "ThresholdResult(value, metric_score, diagnostics?)"
+      },
+      "path_contains_any": ["find_threshold.py", "threshold"],
+      "ranking_bonus": 38,
+      "ranking_reason": "ML threshold search is representative model-calibration behavior",
+      "reason": "ML threshold search is a bounded score-to-decision calibration contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "threshold search must not train or mutate model state", "requires_validation_gate": true},
+      "symbol_contains_any": ["find_threshold", "threshold"],
+      "validation_gates": [
+        "valid scores, empty examples and missing labels are covered",
+        "metric ties and boundary thresholds are deterministic",
+        "training/inference side effects are outside the threshold contract"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "ci_run_watch_event_boundary",
+      "failure_modes": ["api_timeout", "malformed_run_payload", "terminal_state_missing", "notification_error"],
+      "id": "ci_run_watch_event_boundary",
+      "input_contract": {
+        "watch_request": "CiRunWatchRequest(repo, branch?, run_ids?, poll_policy?)",
+        "event_source": "FakeableCiEventSource(events, rate_limit?, clock?)"
+      },
+      "output_contract": {
+        "failure_packet": "CiRunWatchFailure(kind, evidence_ref)",
+        "watch_result": "CiRunWatchResult(final_states, notifications?, diagnostics?)"
+      },
+      "path_contains_any": ["watchgha", "watch_runs.py", "github"],
+      "ranking_bonus": 38,
+      "ranking_reason": "CI run watching is representative event-state workflow behavior",
+      "reason": "CI run watching has explicit event-source, terminal-state, and notification boundaries",
+      "score_bonus": 24,
+      "side_effect_policy": {"network": "GitHub API and notifications must be fakeable", "requires_validation_gate": true},
+      "symbols": ["watch"],
+      "validation_gates": [
+        "success, failure and timeout event streams are covered",
+        "polling and terminal-state policy are deterministic",
+        "live GitHub calls are outside default contract tests"
+      ]
+    },
+    {
+      "contract_family": "source_shebang_command_parser_boundary",
+      "failure_modes": ["empty_shebang", "env_wrapper_without_command", "quoted_command_error", "unsupported_encoding"],
+      "id": "source_shebang_command_parser_boundary",
+      "input_contract": {
+        "source_header": "SourceHeader(first_line, encoding?)",
+        "parse_policy": "ShebangParsePolicy(env_handling?, platform?)"
+      },
+      "output_contract": {
+        "failure_packet": "ShebangParseFailure(kind, evidence_ref)",
+        "command": "ShebangCommand(executable, args, normalized?)"
+      },
+      "path_contains_any": ["identify.py", "identify/"],
+      "ranking_bonus": 36,
+      "ranking_reason": "shebang parsing is representative source-identification behavior",
+      "reason": "shebang parsing is a bounded source-header to command contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"filesystem": "file reading is outside the parser contract", "requires_validation_gate": true},
+      "symbols": ["parse_shebang"],
+      "validation_gates": [
+        "plain command, env wrapper and empty shebang cases are covered",
+        "quotes and command arguments are preserved",
+        "file IO is outside the parser contract"
+      ]
+    },
+    {
+      "contract_family": "release_version_parser_boundary",
+      "failure_modes": ["invalid_version_text", "unsupported_prerelease", "missing_version", "normalization_error"],
+      "id": "release_version_parser_boundary",
+      "input_contract": {
+        "version_text": "VersionText(raw, source?, vcs_context?)",
+        "parse_policy": "ReleaseVersionPolicy(scheme, prerelease?, build_metadata?)"
+      },
+      "output_contract": {
+        "failure_packet": "ReleaseVersionParseFailure(kind, evidence_ref)",
+        "version": "ReleaseVersion(major, minor, patch, prerelease?, build?, normalized)"
+      },
+      "path_contains_any": ["semantic_release/version", "version/declarations"],
+      "ranking_bonus": 44,
+      "ranking_reason": "release version parsing is representative release-domain behavior",
+      "reason": "release version parsing is a bounded version-text normalization contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"mutation_policy": "parsing must not read or mutate Git state", "requires_validation_gate": true},
+      "symbols": ["parse_version"],
+      "validation_gates": [
+        "stable, prerelease and invalid version strings are covered",
+        "normalization and ordering semantics are deterministic",
+        "Git remote state is outside the version parser contract"
+      ]
+    },
+    {
+      "contract_family": "release_version_planning_boundary",
+      "failure_modes": ["no_release_tags", "commit_parse_error", "invalid_bump_level", "prerelease_policy_error"],
+      "id": "release_version_planning_boundary",
+      "input_contract": {
+        "release_history": "ReleaseHistory(tags, commits, current_version?, branch_policy?)",
+        "bump_policy": "VersionBumpPolicy(forced_level?, prerelease?, allow_zero_version?)"
+      },
+      "output_contract": {
+        "failure_packet": "ReleaseVersionPlanningFailure(kind, evidence_ref)",
+        "next_version": "PlannedReleaseVersion(version, bump_level, tag?, diagnostics?)"
+      },
+      "path_contains_any": ["semantic_release/version/algorithm.py", "semantic_release/cli/commands/version.py"],
+      "ranking_bonus": 46,
+      "ranking_reason": "next-version planning is representative semantic-release domain behavior",
+      "reason": "release version planning is a bounded commits/tags to next-version contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"git": "Git history is fixture data; fetch/tag/push are outside planning", "requires_validation_gate": true},
+      "symbols": ["next_version", "version_from_forced_level", "tags_and_versions", "version"],
+      "validation_gates": [
+        "patch, minor, major and prerelease bump cases are covered",
+        "empty tag history and forced-level behavior are deterministic",
+        "Git network/upstream mutation is outside the planning contract"
+      ]
+    },
+    {
+      "contract_family": "agent_workflow_output_parser_boundary",
+      "failure_modes": ["missing_tool_call", "invalid_message_shape", "unknown_agent_state", "parse_policy_error"],
+      "id": "agent_workflow_output_parser_boundary",
+      "input_contract": {
+        "agent_output": "AgentWorkflowOutput(messages?, tool_calls?, raw_response?, state?)",
+        "parse_policy": "AgentOutputParsePolicy(tool_policy?, fallback?, strict?)"
+      },
+      "output_contract": {
+        "failure_packet": "AgentOutputParseFailure(kind, evidence_ref)",
+        "parsed_output": "ParsedAgentOutput(action?, final_response?, tool_requests?, diagnostics?)"
+      },
+      "path_contains_any": ["llama_index/core/agent/workflow", "agent/workflow"],
+      "ranking_bonus": 38,
+      "ranking_reason": "agent workflow output parsing is representative LLM-agent orchestration behavior",
+      "reason": "agent workflow output parsing is a bounded model-output to workflow-action contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "parsing must not execute tools or mutate workflow state",
+        "requires_validation_gate": true
+      },
+      "symbols": ["parse_agent_output"],
+      "validation_gates": [
+        "final answer, tool-call and malformed message cases are covered",
+        "fallback and strict parsing policies are deterministic",
+        "LLM calls and tool execution are outside the parser contract"
+      ]
+    },
+    {
+      "contract_family": "precommit_mirror_version_discovery_boundary",
+      "failure_modes": ["missing_dependency_pin", "non_exact_specifier", "invalid_version_text", "metadata_shape_error"],
+      "id": "precommit_mirror_version_discovery_boundary",
+      "input_contract": {
+        "project_metadata": "PyProjectMetadata(project.dependencies, source_ref?)",
+        "mirror_policy": "MirrorVersionPolicy(package_name, exact_pin_required)"
+      },
+      "output_contract": {
+        "failure_packet": "MirrorVersionDiscoveryFailure(kind, evidence_ref)",
+        "current_version": "PinnedMirrorVersion(package, version, source_ref)"
+      },
+      "path_contains_any": ["mirror.py", "pre-commit", "precommit"],
+      "ranking_bonus": 38,
+      "ranking_reason": "pre-commit mirror version discovery is representative release synchronization behavior",
+      "reason": "pre-commit mirror version discovery is a bounded metadata-to-version contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"filesystem": "pyproject metadata is fixture input; network and git are outside discovery", "requires_validation_gate": true},
+      "symbols": ["get_current_version"],
+      "validation_gates": [
+        "exactly pinned dependency, missing dependency and non-exact specifier are covered",
+        "invalid version text returns typed failure evidence",
+        "network lookup and git mutation are outside the current-version contract"
+      ]
+    },
+    {
+      "contract_family": "module_exec_facade_boundary",
+      "failure_modes": ["backend_module_missing", "module_state_collision", "package_name_mismatch", "attribute_resolution_error"],
+      "id": "module_exec_facade_boundary",
+      "input_contract": {
+        "module": "ModuleObject(name, package?, dict)",
+        "backend_policy": "ModuleFacadePolicy(preferred_backend, fallback_backend, alias_package)"
+      },
+      "output_contract": {
+        "facade_module": "FacadeModule(name, package, attrs, file_ref?)",
+        "failure_packet": "ModuleFacadeExecutionFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["tlz/_build_tlz.py", "importlib", "loader"],
+      "ranking_bonus": 36,
+      "ranking_reason": "module exec facade is representative import compatibility behavior",
+      "reason": "module exec facade is a bounded backend-module to public-module contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"import_policy": "backend imports and sys.modules mutation are fixture-scoped", "requires_validation_gate": true},
+      "symbols": ["exec_module"],
+      "validation_gates": [
+        "preferred backend, fallback backend and missing backend cases are covered",
+        "public module package/name/file metadata are deterministic",
+        "sys.modules and import side effects are isolated in tests"
+      ]
+    },
+    {
+      "contract_family": "sphinx_theme_config_boundary",
+      "failure_modes": ["deprecated_option_present", "missing_context", "unsupported_sphinx_version", "extension_setup_error"],
+      "id": "sphinx_theme_config_boundary",
+      "input_contract": {
+        "sphinx_app": "SphinxApp(config, event_bus, theme_registry)",
+        "theme_config": "ThemeConfig(html_theme_options, html_context, sphinx_version)"
+      },
+      "output_contract": {
+        "failure_packet": "SphinxThemeConfigFailure(kind, evidence_ref)",
+        "theme_setup": "ThemeSetupResult(warnings, context_updates?, registrations?)"
+      },
+      "path_contains_any": ["sphinx_rtd_theme", "sphinx"],
+      "ranking_bonus": 36,
+      "ranking_reason": "Sphinx theme configuration hook is representative extension behavior",
+      "reason": "Sphinx theme configuration is a bounded app/config to theme-setup contract",
+      "score_bonus": 24,
+      "side_effect_policy": {"sphinx_app": "app hooks and warnings are fakeable in extension contract tests", "requires_validation_gate": true},
+      "symbols": ["config_initiated", "setup", "extend_html_context"],
+      "validation_gates": [
+        "normal config and deprecated options are covered",
+        "theme registration and context injection are deterministic",
+        "Sphinx app mutation is isolated behind a fake app"
       ]
     }
   ],

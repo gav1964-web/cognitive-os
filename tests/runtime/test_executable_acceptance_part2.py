@@ -109,6 +109,33 @@ def test_executable_acceptance_isolated_function_keeps_needed_helpers_and_import
     assert result["summary"]["source_isolated_targets"] == ["src/pkg/parser.py:parse_url"]
 
 
+def test_executable_acceptance_executes_isolated_method_when_internal_import_is_missing(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "src" / "pkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "parser.py").write_text(
+        "from .missing_runtime import helper\n\n"
+        "class Parser:\n"
+        "    def normalize(self, value):\n"
+        "        return value.strip()\n"
+        "    def parse(self, value: str):\n"
+        "        return {'parsed_url': self.normalize(value)}\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("src/pkg/parser.py:parse", {"value": " sample "}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["source_isolated_targets"] == ["src/pkg/parser.py:parse"]
+
+
 def test_executable_acceptance_uses_toml_parse_value_defaults(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

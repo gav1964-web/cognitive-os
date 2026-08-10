@@ -65,7 +65,7 @@ def run_llm_sandbox_implementation(
     if write:
         _write_project(project_dir, operation, prompt)
         compile_result = _run([_python(), "-m", "compileall", "-q", "."], cwd=project_dir)
-        test_result = _run([_python(), "-m", "pytest", "tests", "-q"], cwd=project_dir)
+        test_result = _run([_python(), "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"], cwd=project_dir)
     else:
         compile_result = {"status": "not_run", "command": "python -m compileall -q ."}
         test_result = {"status": "not_run", "command": "python -m pytest tests -q"}

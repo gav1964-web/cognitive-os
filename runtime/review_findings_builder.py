@@ -107,6 +107,8 @@ def _contract_violations(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    if _blocked_handoff(implementation_plan, test_plan):
+        return [] if test_plan.get("status") == "blocked_no_safe_candidate" else [{"code": "blocked_handoff_not_preserved"}]
     violations = []
     spec_acceptance = {item.get("id") for item in technical_spec.get("acceptance_criteria", [])}
     tested = {item.get("acceptance_id") for item in test_plan.get("acceptance_tests", [])}
@@ -224,13 +226,18 @@ def _conformance_checks(
 
 
 def _architecture_drift(technical_spec: dict[str, Any], implementation_plan: dict[str, Any]) -> list[dict[str, Any]]:
+    target = dict(implementation_plan.get("implementation_target", {}))
+    if target.get("status") == "blocked_no_safe_candidate":
+        spec_candidate = str(dict(technical_spec.get("extraction_contract", {})).get("candidate") or "")
+        rejected = str(target.get("rejected_candidate") or "")
+        return [] if not spec_candidate or rejected == spec_candidate else [{"code": "blocked_target_drift"}]
     patch_scope = set(implementation_plan.get("patch_scope", []))
     handoff_scope = set(dict(technical_spec.get("implementation_handoff", {})).get("patch_scope", []))
     extra = sorted(patch_scope - handoff_scope)
     if extra:
         return [{"code": "patch_scope_expanded", "extra_scope": extra}]
     spec_candidate = str(dict(technical_spec.get("extraction_contract", {})).get("candidate") or "")
-    plan_candidate = str(dict(implementation_plan.get("implementation_target", {})).get("candidate") or "")
+    plan_candidate = str(target.get("candidate") or "")
     if spec_candidate and plan_candidate != spec_candidate:
         return [{"code": "implementation_target_drift", "expected": spec_candidate, "actual": plan_candidate}]
     writable_scope = set(str(item) for item in implementation_plan.get("writable_scope", []))

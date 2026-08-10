@@ -30,7 +30,6 @@
       "/tasks/",
       "/test/",
       "/tests/",
-      "/testing/",
       "/tools/",
       "/__pycache__/"
     ],
@@ -51,6 +50,8 @@
     "callable_transform_fallback": {
       "enabled": true,
       "max_candidates": 3,
+      "allow_contract_profile_without_path_match": true,
+      "pathless_allowed_contract_profiles": ["normalize_string", "strip_string", "upper_string", "csv_items"],
       "symbol_contains_any": [
         "command_name",
         "patch_concurrency",
@@ -67,7 +68,7 @@
         "__init__.py"
       ],
       "excluded_symbol_prefixes": ["get_", "is_", "has_", "set_"],
-      "excluded_path_tokens": ["/tests/", "/testing/", "/docs/", "/examples/"]
+      "excluded_path_tokens": ["/tests/", "/docs/", "/examples/"]
     },
     "brief_sort_rules": [
       {

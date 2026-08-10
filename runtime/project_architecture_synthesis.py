@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .architecture_synthesis_policy import load_architecture_synthesis_policy
+from .architecture_slice_naming import semantic_first_slice_name
 from .knowledge_usage_telemetry import record_knowledge_usage
 from .role_knowledge import role_knowledge_distribution
 from .project_facts import facts_from_project_report, llm_fact_digest
@@ -104,8 +105,6 @@ def synthesize_project_architecture(
         "confidence": _confidence(digest, bottlenecks, match),
     }
 
-
-
 def _profile(facts: dict[str, Any], rule: dict[str, Any], match: dict[str, Any]) -> dict[str, Any]:
     domain_profile = dict(facts.get("domain_profile") or {})
     return {
@@ -200,16 +199,17 @@ def _first_slice(rule: dict[str, Any], facts: dict[str, Any], analysis_tasks: di
         rows = _source_targets(recipe.get("target_sources"), facts, analysis_tasks)
         targets = _prefer_targets(rows, _strings(recipe.get("targets_prefer")), knowledge)[:4]
         return {
-            "name": str(recipe.get("name") or "first_bounded_capability_slice"),
+            "name": semantic_first_slice_name(str(recipe.get("name") or "first_bounded_capability_slice"), targets),
             "goal": str(recipe.get("goal") or "Extract one useful capability with explicit input/output and tests."),
             "targets": targets,
             "steps": _strings(recipe.get("steps")),
             "knowledge_rule": rule.get("rule_id"),
         }
+    targets = _targets_by_type(analysis_tasks, {str(item) for item in list(_default_first_slice_policy().get("target_task_types") or [])})[:3]
     return {
-        "name": str(_default_first_slice_policy().get("name") or "first_bounded_capability_slice"),
+        "name": semantic_first_slice_name(str(_default_first_slice_policy().get("name") or "first_bounded_capability_slice"), targets),
         "goal": str(_default_first_slice_policy().get("goal") or "Extract one useful capability with explicit input/output and tests."),
-        "targets": _targets_by_type(analysis_tasks, {str(item) for item in list(_default_first_slice_policy().get("target_task_types") or [])})[:3],
+        "targets": targets,
         "steps": _strings(_default_first_slice_policy().get("steps")),
         "knowledge_rule": rule.get("rule_id"),
     }

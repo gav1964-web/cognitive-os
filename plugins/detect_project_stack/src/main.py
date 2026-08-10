@@ -52,6 +52,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
             dependency_files.append({"path": rel_path, "size_bytes": size, "dependencies": _dependency_names(content)})
         if (lower_name in ENTRYPOINT_NAMES or lower_name.startswith(("run_", "start_"))) and not _is_context_path(rel_path):
             entrypoints.append(rel_path)
+            framework_text += "\n" + _read_small_text(item).lower()
         if suffix in {".bat", ".sh", ".ps1"}:
             scripts.append(rel_path)
         if size >= LARGE_ARTIFACT_BYTES:
@@ -111,7 +112,7 @@ def _dependency_names(content: str) -> list[str]:
 
 def _frameworks(dependency_text: str, entrypoints: list[str]) -> list[str]:
     frameworks = []
-    if "flask" in dependency_text or any(path.endswith("app.py") for path in entrypoints):
+    if "flask" in dependency_text:
         frameworks.append("Flask-like Python web app")
     if "fastapi" in dependency_text:
         frameworks.append("FastAPI")
@@ -129,7 +130,9 @@ def _is_context_path(path: str) -> bool:
             "bench",
             "benchmarks",
             "ci_tools",
+            "continuous_integration",
             "docs",
+            "doctests",
             "downstream",
             "examples",
             "failures-to-investigate",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -36,7 +37,7 @@ def load_semantic_target_profiles(path: str | None = None) -> dict[str, Any]:
 
 def matching_profiles(target: str, *, path: str | None = None) -> list[dict[str, Any]]:
     payload = load_semantic_target_profiles(path)
-    lowered = target.replace("\\", "/").lower()
+    lowered = _normalized_target(target)
     symbol = lowered.rsplit(":", 1)[-1] if ":" in lowered else lowered
     source_path = lowered.split(":", 1)[0] if ":" in lowered else ""
     matched = [profile for profile in payload["profiles"] if _matches(profile, source_path, symbol)]
@@ -135,3 +136,8 @@ def _symbol_matches(profile: dict[str, Any], symbol: str) -> bool:
     if contains_all and all(token in symbol for token in contains_all):
         return True
     return False
+
+
+def _normalized_target(target: str) -> str:
+    lowered = target.replace("\\", "/").lower()
+    return re.sub(r"\([^():]*\bloc\b[^():]*\)$", "", lowered).strip()

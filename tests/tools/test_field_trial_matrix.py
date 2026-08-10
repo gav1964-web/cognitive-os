@@ -16,6 +16,16 @@ def test_field_trial_matrix_counts_patch_reasons_and_failed_checks(tmp_path):
                 "executor": {
                     "patch_synthesis_status": "prepared",
                     "patch_synthesis_reason": "required_input_guard_synthesized",
+                    "strategy_action": "verify_patch",
+                    "strategy_reason": "deterministic_patch_ready",
+                    "executor_playbook_ids": ["executor_playbook_callable_acceptance_verify"],
+                    "task_tree_status": "ready",
+                    "task_tree_boundary": "sandbox_patch_tree",
+                    "task_tree_node_count": 5,
+                    "llm_strategy_status": "not_requested",
+                    "sandbox_candidate_status": "none",
+                    "sandbox_candidate_attempt_status": "not_attempted",
+                    "sandbox_candidate_repair_status": "not_attempted",
                     "acceptance_signal": "executable_callable",
                     "acceptance_skipped_reasons": {},
                     "callable_harness_count": 1,
@@ -30,6 +40,16 @@ def test_field_trial_matrix_counts_patch_reasons_and_failed_checks(tmp_path):
                 "executor": {
                     "patch_synthesis_status": "skipped",
                     "patch_synthesis_reason": "no_supported_patch_pattern",
+                    "strategy_action": "ask_l45_for_patch_recipe_hypothesis",
+                    "strategy_reason": "unsupported_pattern_needs_advisory_recipe",
+                    "executor_playbook_ids": ["executor_playbook_dependency_boundary_profile"],
+                    "task_tree_status": "needs_review",
+                    "task_tree_boundary": "blocked_handoff",
+                    "task_tree_node_count": 5,
+                    "llm_strategy_status": "hypothesis_only",
+                    "sandbox_candidate_status": "candidate_ready_for_sandbox_attempt",
+                    "sandbox_candidate_attempt_status": "applied_in_sandbox",
+                    "sandbox_candidate_repair_status": "applied_in_sandbox",
                     "acceptance_signal": "meta_only",
                     "acceptance_skipped_reasons": {"import_failed": 1},
                     "acceptance_skipped_targets": [
@@ -55,6 +75,20 @@ def test_field_trial_matrix_counts_patch_reasons_and_failed_checks(tmp_path):
     assert matrix["summary"]["acceptance_skipped_reasons"] == {"import_failed": 1}
     assert matrix["summary"]["acceptance_skipped_details"] == {"missing_lib: No module named 'missing_lib'": 1}
     assert matrix["summary"]["patch_reasons"]["no_supported_patch_pattern"] == 1
+    assert matrix["summary"]["task_tree_statuses"] == {"needs_review": 1, "ready": 1}
+    assert matrix["summary"]["task_tree_boundaries"] == {"blocked_handoff": 1, "sandbox_patch_tree": 1}
+    assert matrix["summary"]["strategy_actions"] == {
+        "ask_l45_for_patch_recipe_hypothesis": 1,
+        "verify_patch": 1,
+    }
+    assert matrix["summary"]["executor_playbooks"] == {
+        "executor_playbook_callable_acceptance_verify": 1,
+        "executor_playbook_dependency_boundary_profile": 1,
+    }
+    assert matrix["summary"]["llm_strategy_statuses"] == {"hypothesis_only": 1, "not_requested": 1}
+    assert matrix["summary"]["sandbox_candidate_statuses"] == {"candidate_ready_for_sandbox_attempt": 1, "none": 1}
+    assert matrix["summary"]["sandbox_candidate_attempt_statuses"] == {"applied_in_sandbox": 1, "not_attempted": 1}
+    assert matrix["summary"]["sandbox_candidate_repair_statuses"] == {"applied_in_sandbox": 1, "not_attempted": 1}
     assert matrix["summary"]["failed_checks"] == {"tester_covers_contract": 1}
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from runtime.local_inference import LocalInferenceConfig, _loads_json_object, call_json_chat
+from runtime.local_inference import LocalInferenceConfig, _loads_json_object, call_json_chat, load_llm_profiles
 
 
 class _FakeResponse:
@@ -103,3 +103,16 @@ def test_l45_inference_defaults_to_deepseek_profile(monkeypatch):
     assert config.timeout_seconds == 60
     assert config.response_format is False
     assert config.provider_label == "external_l45_intent_resolver"
+
+
+def test_llm_profiles_config_declares_active_defaults():
+    profiles = load_llm_profiles()["profiles"]
+
+    assert profiles["local_l35"]["model"] == "local"
+    assert profiles["external_l45_intent_resolver"]["model"] == "deepseek/deepseek-chat"
+
+
+def test_l45_model_env_overrides_config_profile(monkeypatch):
+    monkeypatch.setenv("COGNITIVE_OS_L45_MODEL", "provider/custom-model")
+
+    assert LocalInferenceConfig.from_l45_env().model == "provider/custom-model"

@@ -22,7 +22,6 @@
       "template",
       "test",
       "tests",
-      "testing",
       "tools",
       "workspace"
     ],
@@ -44,6 +43,55 @@
     "policy": "Use context-only paths as evidence, but do not select them as first-slice targets when active core alternatives exist."
   },
   "records": [
+    {
+      "rule_id": "semantic_release_version_planning",
+      "record_type": "project_archetype_rule",
+      "priority": 112,
+      "archetype": "release_automation_tool",
+      "label": "semantic release automation tool",
+      "match": {
+        "project_name_contains_any": ["semantic-release", "semantic_release"],
+        "text_contains_any": ["semantic_release", "next_version", "tags_and_versions", "commit_parser", "changelog"],
+        "required_contains_any": ["semantic_release", "next_version", "commit_parser"],
+        "min_score": 55
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "broad", "extraction", "process_boundary"],
+        "primary_target_prefer": ["next_version", "tags_and_versions", "parse_paragraphs", "version.py:version"],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is release/version planning around {target}, where tags, commit parser output, bump policy, and Git side effects need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Commit parsing, tag/version discovery, and next-version planning are separated from Git mutation.",
+        "Bump policy, prerelease handling, and zero-version rules are explicit contracts.",
+        "Changelog and publish flows consume planned release data rather than recomputing it.",
+        "Git fetch/push/tag side effects are isolated behind fakeable adapters for default tests."
+      ],
+      "first_slice": {
+        "name": "release_version_planning_slice",
+        "goal": "Stabilize one tags/commits to next-version planning boundary before release side effects.",
+        "target_sources": ["central", "broad", "extraction", "process_boundary"],
+        "targets_prefer": ["next_version", "tags_and_versions", "parse_paragraphs", "version.py:version"],
+        "steps": [
+          "Define ReleaseHistory, VersionBumpPolicy, PlannedReleaseVersion, and ReleasePlanningFailure contracts.",
+          "Separate commit/tag interpretation from Git fetch, tag, commit, and publish side effects.",
+          "Represent empty history, malformed commit parse, forced bump, and prerelease policy outcomes explicitly.",
+          "Verify patch, minor, major, prerelease, no-tag, and invalid-policy cases with fixture data."
+        ]
+      },
+      "defer": [
+        "Do not use upstream-branch verification as the first reusable release-domain slice.",
+        "Do not execute Git network or publish side effects in default release-planning tests."
+      ],
+      "verification_extra": "Use fake tags and parsed commit fixtures; live Git remotes require an explicit integration profile.",
+      "scenario_summary": [
+        "Parse commits and release tags from project history.",
+        "Apply configured semantic-version bump rules.",
+        "Produce the next planned release version and diagnostics.",
+        "Pass planned release data to changelog, tag, publish, and file-update steps."
+      ],
+      "input_summary": ["git tags", "parsed commits", "current version", "bump/prerelease policy"],
+      "output_summary": ["planned version", "bump level", "release diagnostics", "typed planning failures"]
+    },
     {
       "rule_id": "native_extension_bridge",
       "record_type": "project_archetype_rule",
@@ -1879,7 +1927,14 @@
           "adapters.py",
           "http client",
           "resolve_redirects"
-        ]
+        ],
+        "required_contains_any": [
+          "sessions.py",
+          "adapters.py",
+          "http client",
+          "resolve_redirects"
+        ],
+        "min_score": 70
       },
       "diagnosis": {
         "primary_sources": [
@@ -1945,6 +2000,101 @@
         "structured errors",
         "filesystem/API side effects when present",
         "logs or reports"
+      ]
+    },
+    {
+      "rule_id": "yaml_processing_framework",
+      "record_type": "project_archetype_rule",
+      "priority": 83,
+      "archetype": "yaml_processing_framework",
+      "label": "YAML processing framework",
+      "purpose_summary": "Parse, compose, construct, emit, and serialize YAML streams with safe-loader and LibYAML-backed variants.",
+      "match": {
+        "project_name_contains_any": [
+          "pyyaml",
+          "yaml"
+        ],
+        "text_contains_any": [
+          "yaml processing framework",
+          "yaml.load",
+          "yaml.dump",
+          "safe_load",
+          "libyaml",
+          "parser",
+          "emitter"
+        ],
+        "required_contains_any": [
+          "yaml processing framework",
+          "safe_load",
+          "libyaml"
+        ],
+        "min_score": 70
+      },
+      "scenario_summary": [
+        "Accept YAML text, streams, or Python objects through public load/dump APIs.",
+        "Select safe, full, or LibYAML-backed loader and dumper behavior.",
+        "Parse, compose, construct, represent, serialize, and emit YAML nodes.",
+        "Return Python values, YAML text, or explicit parse/constructor/emitter errors."
+      ],
+      "input_summary": [
+        "YAML text or stream",
+        "Python values",
+        "loader/dumper class",
+        "safety and encoding options"
+      ],
+      "output_summary": [
+        "constructed Python values",
+        "YAML output text",
+        "parse/constructor errors",
+        "emitter/serializer errors"
+      ]
+    },
+    {
+      "rule_id": "django_web_framework",
+      "record_type": "project_archetype_rule",
+      "priority": 84,
+      "archetype": "django_web_framework",
+      "label": "Django web framework",
+      "purpose_summary": "Provide a batteries-included web framework for URL routing, request/response handling, ORM models, templates, forms, admin, settings, and management commands.",
+      "match": {
+        "project_name_contains_any": [
+          "django"
+        ],
+        "text_contains_any": [
+          "django",
+          "web framework",
+          "models.py",
+          "urls.py",
+          "management/commands",
+          "django.conf"
+        ],
+        "required_contains_any": [
+          "django",
+          "web framework",
+          "django.conf",
+          "management/commands"
+        ],
+        "min_score": 70
+      },
+      "scenario_summary": [
+        "Configure applications, settings, URL routing, middleware, and installed apps.",
+        "Handle HTTP requests through views, class-based views, forms, templates, and responses.",
+        "Map models and query operations through the ORM and database backends.",
+        "Run management commands, migrations, checks, and admin workflows."
+      ],
+      "input_summary": [
+        "HTTP request",
+        "settings and app configuration",
+        "model/query data",
+        "template/context values",
+        "management command arguments"
+      ],
+      "output_summary": [
+        "HTTP responses",
+        "database state/query results",
+        "rendered templates",
+        "management command output",
+        "validation/configuration errors"
       ]
     },
     {
@@ -2044,6 +2194,207 @@
         "AsyncLibraryNotFoundError",
         "branch-specific detection evidence for tests",
         "stable public API behavior"
+      ]
+    },
+    {
+      "rule_id": "python_virtual_environment_builder",
+      "record_type": "project_archetype_rule",
+      "priority": 100,
+      "archetype": "python_virtual_environment_builder",
+      "label": "Python virtual environment builder",
+      "purpose_summary": "Create isolated Python environments by selecting an interpreter, validating the destination, installing seed packages, and generating activation scripts.",
+      "match": {
+        "project_name_contains_any": [
+          "virtualenv"
+        ],
+        "text_contains_any": [
+          "virtualenv",
+          "creator",
+          "activator",
+          "seed",
+          "interpreter",
+          "activation script",
+          "site-packages"
+        ],
+        "required_contains_any": [
+          "virtualenv",
+          "creator",
+          "activator"
+        ],
+        "min_score": 58
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "extraction",
+          "process_boundary",
+          "domain_anchors"
+        ],
+        "primary_target_prefer": [
+          "validate_dest",
+          "for_interpreter",
+          "create",
+          "instantiate_template",
+          "entry_points_for",
+          "trigger_update"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is environment creation around {target}, where interpreter selection, destination validation, seed package installation, activation script generation, and filesystem/process failures need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Interpreter discovery, creator selection, destination validation, seed installation, and activation generation are separate contracts.",
+        "Filesystem writes and subprocess calls are isolated behind fakeable adapters.",
+        "Unsupported interpreter, invalid destination, missing seed package, and activation template failures are typed evidence.",
+        "Default contract tests use fixture directories and fake interpreters rather than mutating real environments."
+      ],
+      "first_slice": {
+        "name": "virtualenv_creation_boundary_slice",
+        "goal": "Stabilize one virtual-environment creation boundary from interpreter/destination inputs to a verified environment plan.",
+        "target_sources": [
+          "central",
+          "extraction",
+          "process_boundary",
+          "domain_anchors"
+        ],
+        "targets_prefer": [
+          "validate_dest",
+          "for_interpreter",
+          "create",
+          "instantiate_template",
+          "entry_points_for",
+          "trigger_update"
+        ],
+        "steps": [
+          "Define VirtualenvRequest, InterpreterRef, DestinationPolicy, SeedInstallPlan, ActivationScriptPlan, and VirtualenvCreationFailure contracts.",
+          "Separate interpreter/creator selection from destination validation and filesystem mutation.",
+          "Represent subprocess, seed wheel, symlink, and activation template failures as typed evidence.",
+          "Verify valid destination, existing path conflict, unsupported interpreter, missing seed wheel, and dry-run/fake-filesystem cases."
+        ]
+      },
+      "defer": [
+        "Do not model virtualenv as a generic configuration parser when creator/activator/seed boundaries are present.",
+        "Do not run live pip, symlink, or Mach-O patching behavior in default first-slice tests."
+      ],
+      "verification_extra": "Use temporary fixture directories, fake interpreter metadata, and fake seed-wheel adapters; live environment creation is an integration profile.",
+      "scenario_summary": [
+        "Caller requests an isolated Python environment at a destination path.",
+        "The tool selects a creator for the interpreter and platform.",
+        "Destination, seed packages, and activation templates are validated.",
+        "The boundary returns an environment creation plan or typed failure evidence."
+      ],
+      "input_summary": [
+        "target directory",
+        "Python interpreter metadata",
+        "creator and activator options",
+        "seed package policy"
+      ],
+      "output_summary": [
+        "environment creation plan",
+        "activation script plan",
+        "seed install plan",
+        "typed creation failures"
+      ]
+    },
+    {
+      "rule_id": "document_cleanup_conversion_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 99,
+      "archetype": "document_cleanup_conversion_pipeline",
+      "label": "document cleanup/conversion pipeline",
+      "purpose_summary": "Convert office/PDF/source documents into clean Markdown or packaged text artifacts while preserving parser, AI-cleanup, and output-file contracts.",
+      "match": {
+        "project_name_contains_any": [
+          "doc-cleaner",
+          "document-cleaner",
+          "markdown-converter"
+        ],
+        "text_contains_any": [
+          "doc-cleaner",
+          "clean structured markdown",
+          "parse_file",
+          "process_file",
+          "pdf",
+          "docx",
+          "xlsx",
+          "epub",
+          "markdown"
+        ],
+        "required_contains_any": [
+          "parse_file",
+          "process_file",
+          "markdown",
+          "pdf"
+        ],
+        "min_score": 64
+      },
+      "diagnosis": {
+        "primary_sources": [
+          "central",
+          "extraction",
+          "process_boundary",
+          "domain_anchors"
+        ],
+        "primary_target_prefer": [
+          "process_file",
+          "parse_file",
+          "extract_text",
+          "create_epub",
+          "markdown",
+          "safe_write"
+        ],
+        "template": "{label} with entrypoint {entrypoints}; the main architectural pressure is document parse-clean-write flow around {target}, where parser failures, optional AI cleanup, output collision policy, and artifact writes need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Document parsing, optional cleanup/enrichment, and artifact writing are separate bounded steps.",
+        "Supported file types and parser failures are represented as typed evidence.",
+        "Filesystem writes, dry-run behavior, and output filename collision policy are explicit contracts.",
+        "AI/provider calls are adapter dependencies downstream of the document pipeline boundary."
+      ],
+      "first_slice": {
+        "name": "document_parse_clean_write_slice",
+        "goal": "Stabilize one document path from source file to Markdown/EPUB artifact without live AI or broad UI changes.",
+        "target_sources": [
+          "central",
+          "extraction",
+          "process_boundary",
+          "domain_anchors"
+        ],
+        "targets_prefer": [
+          "process_file",
+          "parse_file",
+          "extract_text",
+          "create_epub",
+          "markdown",
+          "safe_write"
+        ],
+        "steps": [
+          "Define DocumentInput, ParsedDocument, CleanupResult, OutputArtifact, and DocumentProcessingFailure contracts.",
+          "Separate parser dispatch from optional AI cleanup and final artifact writing.",
+          "Declare dry-run, output collision, empty-content, parser failure, and write-error behavior.",
+          "Verify one happy path plus unsupported file, parser error, duplicate output name, and dry-run cases."
+        ]
+      },
+      "defer": [
+        "Do not choose provider-specific AI calls as the first slice when document pipeline boundaries are present.",
+        "Do not include macOS UI packaging or preview rendering in the first document-processing contract."
+      ],
+      "verification_extra": "Use tiny local document/text fixtures and fake AI adapters; default tests must not call live providers.",
+      "scenario_summary": [
+        "Caller submits a local document file or directory entry.",
+        "The pipeline parses supported formats into text/metadata.",
+        "Optional cleanup or AI enrichment runs behind a fakeable adapter.",
+        "The pipeline writes Markdown/EPUB artifacts or returns typed processing failures."
+      ],
+      "input_summary": [
+        "source document path",
+        "parser configuration",
+        "cleanup/AI mode",
+        "output directory and format policy"
+      ],
+      "output_summary": [
+        "Markdown or EPUB artifact path",
+        "processing status",
+        "parser and cleanup diagnostics",
+        "typed document-processing failures"
       ]
     },
     {
@@ -2158,6 +2509,16 @@
         "project_name_contains_any": [
           "iniconfig",
           "configparser"
+        ],
+        "negative_contains_any": [
+          "flask",
+          "fastapi",
+          "http requests"
+        ],
+        "negative_domain_profile_kinds": [
+          "desktop_gui_ide",
+          "protocol_api_client",
+          "env_config_library"
         ],
         "text_contains_any": [
           "ini",
@@ -2959,6 +3320,9 @@
       "archetype": "desktop_gui_ide",
       "label": "desktop GUI/IDE application",
       "match": {
+        "domain_profile_kind": [
+          "desktop_gui_ide"
+        ],
         "project_name_contains_any": [
           "spyder"
         ],
@@ -3368,13 +3732,19 @@
       "label": "CLI framework library",
       "purpose_summary": "Provide a Python framework for declaring command-line interfaces, parsing parameters, invoking callbacks, and rendering terminal-facing errors/output.",
       "match": {
+        "project_name_contains_any": [
+          "click",
+          "typer",
+          "cloup"
+        ],
         "text_contains_any": [
           "click",
           "typer",
           "command line",
           "command line interface",
           "_parse_decls"
-        ]
+        ],
+        "min_score": 60
       },
       "diagnosis": {
         "primary_sources": [
@@ -3789,6 +4159,9 @@
       "archetype": "env_config_library",
       "label": "environment configuration library",
       "match": {
+        "domain_profile_kind": [
+          "env_config_library"
+        ],
         "text_contains_any": [
           "dotenv",
           ".env",
@@ -4644,7 +5017,8 @@
           "type checker",
           "static analysis",
           "lint"
-        ]
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -4722,6 +5096,7 @@
       "priority": 86,
       "archetype": "asgi_wsgi_server_runtime",
       "label": "ASGI/WSGI server runtime",
+      "purpose_summary": "Run ASGI/WSGI applications by owning server startup, protocol adaptation, request lifecycle, concurrency, timeout, and graceful shutdown behavior.",
       "match": {
         "text_contains_any": [
           "uvicorn",
@@ -5009,19 +5384,29 @@
       "label": "template rendering engine",
       "purpose_summary": "Render templates from source text/loaders and caller-provided context while preserving escaping, environment, and error contracts.",
       "match": {
+        "project_name_contains_any": [
+          "jinja",
+          "mako"
+        ],
         "text_contains_any": [
           "jinja",
+          "mako",
           "template loader",
           "template context",
-          "escape",
           "render_template",
           "environment.py",
           "nodes.py"
         ],
+        "required_contains_any": [
+          "jinja",
+          "mako",
+          "template loader",
+          "render_template"
+        ],
         "negative_contains_any": [
-          "werkzeug is a comprehensive",
-          "wsgi"
-        ]
+          "werkzeug is a comprehensive"
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -5092,6 +5477,95 @@
       ]
     },
     {
+      "rule_id": "async_callback_signal_library",
+      "record_type": "project_archetype_rule",
+      "priority": 82,
+      "archetype": "async_callback_signal_library",
+      "label": "async callback signal library",
+      "purpose_summary": "Manage asynchronous callback signals with explicit registration, freeze, dispatch, and callback-error behavior.",
+      "match": {
+        "project_name_contains_any": [
+          "aiosignal",
+          "signal"
+        ],
+        "text_contains_any": [
+          "manage callbacks",
+          "asyncio",
+          "registered asynchronous callbacks",
+          "freeze",
+          "sig.send"
+        ],
+        "required_contains_any": [
+          "manage callbacks",
+          "registered asynchronous callbacks",
+          "sig.send"
+        ],
+        "min_score": 70
+      },
+      "scenario_summary": [
+        "Create a signal and register asynchronous callbacks before it is frozen.",
+        "Freeze callback registration before dispatch.",
+        "Dispatch payloads to registered callbacks in deterministic order.",
+        "Reject mutation after freeze and report invalid callbacks explicitly."
+      ],
+      "input_summary": [
+        "callback functions",
+        "signal payload",
+        "registration lifecycle state",
+        "async runtime context"
+      ],
+      "output_summary": [
+        "callback dispatch completion",
+        "mutation denial errors",
+        "callback validation errors",
+        "dispatch exceptions"
+      ]
+    },
+    {
+      "rule_id": "multi_value_mapping_library",
+      "record_type": "project_archetype_rule",
+      "priority": 82,
+      "archetype": "multi_value_mapping_library",
+      "label": "multi-value mapping collection library",
+      "purpose_summary": "Provide dict-like collections that preserve ordering and support repeated keys, proxies, and case-insensitive variants.",
+      "match": {
+        "project_name_contains_any": [
+          "multidict"
+        ],
+        "text_contains_any": [
+          "dict-like collection",
+          "key-value pairs",
+          "key might occur more than once",
+          "preserves insertion ordering",
+          "case-insensitive dictionaries"
+        ],
+        "required_contains_any": [
+          "dict-like collection",
+          "key might occur more than once",
+          "multidict"
+        ],
+        "min_score": 70
+      },
+      "scenario_summary": [
+        "Construct mutable or proxy mapping instances from caller-provided pairs.",
+        "Read, add, replace, and delete values while preserving repeated-key semantics.",
+        "Apply case-insensitive key normalization where requested.",
+        "Expose immutable proxy views over mutable mapping state."
+      ],
+      "input_summary": [
+        "key-value pairs",
+        "string or case-insensitive keys",
+        "mapping mutation operations",
+        "proxy source mapping"
+      ],
+      "output_summary": [
+        "ordered multi-value mapping state",
+        "lookup results",
+        "immutable proxy views",
+        "key/type validation errors"
+      ]
+    },
+    {
       "rule_id": "auth_security_library",
       "record_type": "project_archetype_rule",
       "priority": 85,
@@ -5107,7 +5581,8 @@
           "authorization",
           "token",
           "session cookie"
-        ]
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -5201,7 +5676,8 @@
           "sentry",
           "sentry-python",
           "opentelemetry"
-        ]
+        ],
+        "min_score": 80
       },
       "diagnosis": {
         "primary_sources": [
@@ -5283,11 +5759,16 @@
           "numpy",
           "scipy",
           "pandas",
-          "sklearn"
+          "sklearn",
+          "zarr"
         ],
         "text_contains_any": [
           "numpy",
           "scipy",
+          "zarr",
+          "chunked",
+          "n-dimensional arrays",
+          "ndimensional arrays",
           "tensor",
           "linear algebra",
           "solver",
@@ -5371,6 +5852,9 @@
       "archetype": "protocol_api_client",
       "label": "protocol/API client library",
       "match": {
+        "domain_profile_kind": [
+          "protocol_api_client"
+        ],
         "text_contains_any": [
           "api client",
           "transport",
@@ -6210,13 +6694,105 @@
       ]
     },
     {
+      "rule_id": "power_model_formula_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 96,
+      "archetype": "power_model_formula_runtime",
+      "label": "power model formula runtime",
+      "purpose_summary": "Run energy/power formula models over hardware performance reports, topology, and streaming measurement inputs.",
+      "match": {
+        "text_contains_any": [
+          "smartwatts",
+          "power model",
+          "powerapi",
+          "rapl",
+          "cpu topology",
+          "formula",
+          "hwpc"
+        ],
+        "required_contains_any": [
+          "smartwatts",
+          "powerapi",
+          "rapl",
+          "power model"
+        ],
+        "min_score": 45
+      },
+      "first_slice": {
+        "name": "power_model_runtime_slice",
+        "goal": "Stabilize one power-model runtime path from configuration and hardware reports to predicted power output or controlled failure.",
+        "target_sources": [
+          "central",
+          "domain_anchors",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "predict_power",
+          "learn_power_model",
+          "generate_formula_configuration",
+          "run_smartwatts"
+        ],
+        "steps": [
+          "Define formula configuration, topology, report sample, and power prediction contracts.",
+          "Separate CLI/runtime actor wiring from model learning and prediction behavior.",
+          "Represent dispatcher/supervisor side effects behind fixture-backed process boundaries.",
+          "Verify valid report, missing topology, invalid threshold, and actor launch failure cases."
+        ]
+      },
+      "scenario_summary": [
+        "Load SmartWatts/PowerAPI configuration and hardware topology inputs.",
+        "Transform HWPC/RAPL reports into CPU or DRAM formula model updates.",
+        "Predict power consumption and publish/report formula outputs.",
+        "Handle invalid configuration, missing reports, and actor/runtime failures."
+      ],
+      "input_summary": [
+        "PowerAPI CLI configuration",
+        "CPU topology and RAPL reference events",
+        "HWPC report samples",
+        "formula learning thresholds"
+      ],
+      "output_summary": [
+        "CPU/DRAM power predictions",
+        "updated formula model state",
+        "dispatcher reports",
+        "typed configuration/runtime failures"
+      ]
+    },
+    {
       "rule_id": "api_service",
       "record_type": "project_archetype_rule",
       "priority": 20,
       "archetype": "api_service",
       "label": "API service",
       "match": {
+        "domain_profile_kind": [
+          "api_service"
+        ],
         "routes_min": 1
+      },
+      "first_slice": {
+        "name": "api_handler_contract_slice",
+        "goal": "Stabilize one HTTP request-to-response handler boundary with validation, adapter calls, side effects, and error response coverage.",
+        "target_sources": [
+          "central",
+          "domain_anchors",
+          "extraction",
+          "bottlenecks"
+        ],
+        "targets_prefer": [
+          "parse",
+          "validate",
+          "handler",
+          "process",
+          "provider"
+        ],
+        "steps": [
+          "Define request payload, validated command, provider result, and error response contracts.",
+          "Separate route/request parsing from domain/provider calls.",
+          "Record filesystem, network, and audit side-effect policy before retry or replay.",
+          "Verify valid request, malformed payload, provider failure, and audit failure cases."
+        ]
       },
       "scenario_summary": [
         "Accept HTTP requests through declared routes and handlers.",

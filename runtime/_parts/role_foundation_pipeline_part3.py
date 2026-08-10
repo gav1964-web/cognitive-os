@@ -18,22 +18,37 @@ from runtime.project_interpreter import interpret_project_report
 from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
 from runtime.scope_selection_document import write_scope_selection_document
+from runtime.scope_selection_policy import (
+    ALIASED_CORE_SUFFIXES,
+    DISFAVORED_SCOPE_ROOTS,
+    MONOREPO_PYTHON_ROOTS,
+    PREFERRED_SCOPE_ROOTS,
+    SOFT_DISFAVORED_SCOPE_ROOTS,
+    candidate_noise_path as _candidate_noise_path,
+    disfavored_scope_root as _disfavored_scope_root,
+    scope_candidate_kind as _scope_candidate_kind,
+    scope_candidate_priority as _scope_candidate_priority,
+    scope_path_score as _scope_path_score,
+    scope_policy_int,
+    scope_policy_list,
+    syntax_error_fixture_path as _syntax_error_fixture_path,
+)
 from runtime.spec_writer_red_team import red_team_technical_spec
 from runtime.technical_spec_document import write_technical_spec_document
 
-def _scope_candidate_priority(rel_path: str) -> int:
-    lowered = rel_path.replace("\\", "/").lower().strip("/")
-    first = lowered.split("/", 1)[0]
-    priority = 0
-    if first in {"src", "lib"}:
-        priority += 40
-    if any(token in first for token in ("core", "runtime", "engine", "sdk")):
-        priority += 25
-    if first.endswith("-ctl") or first.endswith("_ctl") or first in {"cli", "client", "dev"}:
-        priority -= 15
-    if _disfavored_scope_root(rel_path):
-        priority -= 80
-    return priority
+def _syntax_damage_is_fixture_only(source_health: dict[str, Any]) -> bool:
+    return _syntax_damage_is_test_support_only(source_health)
+
+def _syntax_damage_is_test_support_only(source_health: dict[str, Any]) -> bool:
+    if source_health.get("status") != "damaged":
+        return False
+    if int(source_health.get("inaccessible_count") or 0) > 0:
+        return False
+    count = int(source_health.get("syntax_error_count") or 0)
+    samples = [dict(row) for row in list(source_health.get("syntax_error_samples") or []) if isinstance(row, dict)]
+    if not count or count > len(samples):
+        return False
+    return all(_syntax_error_fixture_path(str(row.get("path") or "")) for row in samples)
 
 def _clear_named_package_candidate(project_dir: Path, rel_path: str, best_score: int, second_score: int) -> bool:
     normalized_project = project_dir.name.lower().replace("-", "_")
@@ -44,10 +59,12 @@ def _clear_named_package_candidate(project_dir: Path, rel_path: str, best_score:
         project_aliases.add(repo)
         if owner == repo:
             project_aliases.add(owner)
+    if "_" in normalized_project:
+        project_aliases.add(normalized_project.rsplit("_", 1)[-1])
     return bool(
         normalized_project
         and normalized_candidate in project_aliases
-        and best_score >= 35
+        and best_score >= scope_policy_int("named_package_min_score", 35)
     )
 
 def _project_aliases(project_dir: Path) -> set[str]:
@@ -57,6 +74,12 @@ def _project_aliases(project_dir: Path) -> set[str]:
         owner, repo = normalized.rsplit("__", 1)
         aliases.add(owner)
         aliases.add(repo)
+    if "_" in normalized:
+        aliases.add(normalized.rsplit("_", 1)[-1])
+        parts = [part for part in normalized.split("_") if part]
+        aliases.update("_".join(parts[index:]) for index in range(1, len(parts)))
+    if normalized.endswith("_python"):
+        aliases.add(normalized.removesuffix("_python") + "py")
     aliases.update(alias.replace("_", "") for alias in list(aliases))
     return aliases
 
@@ -67,21 +90,29 @@ def _frontend_python_package_scope(project_dir: Path, candidates: list[dict[str,
     for row in candidates:
         path = str(row.get("path") or "").replace("\\", "/").strip("/")
         first = path.split("/", 1)[0].lower().replace("-", "_")
-        if first in aliases and int(row.get("python_files") or 0) >= 8 and int(row.get("score") or 0) >= 70:
+        if (
+            first in aliases
+            and int(row.get("python_files") or 0) >= scope_policy_int("frontend_package_min_python_files", 8)
+            and int(row.get("score") or 0) >= scope_policy_int("frontend_package_min_score", 70)
+        ):
             if (project_dir / path).is_dir():
                 return dict(row)
     return None
 
 def _application_python_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
     aliases = _project_aliases(project_dir)
-    tooling = {"pylint", "script", "scripts", "tools", "tests", "test", "docs", "dev"}
+    tooling = {"pylint", *DISFAVORED_SCOPE_ROOTS, *SOFT_DISFAVORED_SCOPE_ROOTS}
     has_tooling = any(str(row.get("path") or "").split("/", 1)[0].lower() in tooling for row in candidates)
     if not has_tooling:
         return None
     for row in candidates:
         path = str(row.get("path") or "").replace("\\", "/").strip("/")
         first = path.split("/", 1)[0].lower().replace("-", "_")
-        if first in aliases and int(row.get("python_files") or 0) >= 40 and int(row.get("score") or 0) >= 45:
+        if (
+            first in aliases
+            and int(row.get("python_files") or 0) >= scope_policy_int("application_package_min_python_files", 40)
+            and int(row.get("score") or 0) >= scope_policy_int("application_package_min_score", 45)
+        ):
             if (project_dir / path).is_dir():
                 return dict(row)
     return None
@@ -89,31 +120,35 @@ def _application_python_package_scope(project_dir: Path, candidates: list[dict[s
 def _monorepo_python_modules_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
     for row in candidates:
         path = str(row.get("path") or "").replace("\\", "/").strip("/")
-        if path.lower() not in {"python", "python_modules", "py"}:
+        if path.lower() not in MONOREPO_PYTHON_ROOTS:
             continue
-        if int(row.get("score") or 0) >= 80 and int(row.get("python_files") or 0) >= 40:
+        if (
+            int(row.get("score") or 0) >= scope_policy_int("monorepo_min_score", 80)
+            and int(row.get("python_files") or 0) >= scope_policy_int("monorepo_min_python_files", 40)
+        ):
             if (project_dir / path).is_dir():
                 return dict(row)
     return None
 
 def _aliased_core_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
-    if len(candidates) < 2:
-        return None
-    best = candidates[0]
-    second = candidates[1]
-    path = str(best.get("path") or "").replace("\\", "/").strip("/")
-    first = path.split("/", 1)[0].lower().replace("-", "_")
     aliases = _project_aliases(project_dir)
-    has_alias = any(first == f"{alias}_core" or first == f"{alias}_sdk" for alias in aliases)
-    if not has_alias:
-        return None
-    if int(best.get("score") or 0) < 35 or int(best.get("python_files") or 0) < 40:
-        return None
-    if int(best.get("score") or 0) - int(second.get("score") or 0) < 10:
-        return None
-    if _disfavored_scope_root(path) or not (project_dir / path).is_dir():
-        return None
-    return dict(best)
+    for index, row in enumerate(candidates[: scope_policy_int("aliased_core_top_n", 5)]):
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        first = path.split("/", 1)[0].lower().replace("-", "_")
+        has_alias = any(first == f"{alias}{suffix}" for alias in aliases for suffix in ALIASED_CORE_SUFFIXES)
+        if not has_alias:
+            continue
+        if (
+            int(row.get("score") or 0) < scope_policy_int("aliased_core_min_score", 35)
+            or int(row.get("python_files") or 0) < scope_policy_int("aliased_core_min_python_files", 40)
+        ):
+            continue
+        if index > 0 and int(candidates[0].get("score") or 0) - int(row.get("score") or 0) > scope_policy_int("aliased_core_max_gap", 8):
+            continue
+        if _disfavored_scope_root(path) or not (project_dir / path).is_dir():
+            continue
+        return dict(row)
+    return None
 
 def _library_module_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
     if len(candidates) < 2:
@@ -123,60 +158,25 @@ def _library_module_scope(project_dir: Path, candidates: list[dict[str, Any]]) -
     path = str(best.get("path") or "").replace("\\", "/").strip("/")
     if str(best.get("kind") or "") != "python_project_candidate":
         return None
-    if int(best.get("score") or 0) < 80 or int(best.get("python_files") or 0) < 20:
+    min_score = (
+        scope_policy_int("library_root_min_score", 40)
+        if path.lower() in PREFERRED_SCOPE_ROOTS
+        else scope_policy_int("library_module_min_score", 80)
+    )
+    min_files = (
+        scope_policy_int("library_root_min_python_files", 5)
+        if path.lower() in PREFERRED_SCOPE_ROOTS
+        else scope_policy_int("library_module_min_python_files", 20)
+    )
+    if int(best.get("score") or 0) < min_score or int(best.get("python_files") or 0) < min_files:
         return None
-    if int(best.get("score") or 0) - int(second.get("score") or 0) < 8:
+    if int(best.get("score") or 0) - int(second.get("score") or 0) < scope_policy_int("library_module_min_gap", 8):
         return None
     if _disfavored_scope_root(path) or not (project_dir / path).is_dir():
         return None
     if any(int(row.get("js_ts_files") or 0) > 0 for row in candidates[:4]):
         return None
     return dict(best)
-
-def _scope_path_score(rel_path: str, *, root_name: str, parent_name: str) -> int:
-    lowered = rel_path.replace("\\", "/").lower().strip("/")
-    first = lowered.split("/", 1)[0]
-    normalized_root = root_name.lower().replace("-", "_")
-    normalized_parent = parent_name.lower().replace("-", "_")
-    normalized_first = first.replace("-", "_")
-    score = 0
-    if first in {"src", "lib", "package", "packages"}:
-        score += 35
-    if normalized_first == normalized_root:
-        score += 35
-    if normalized_parent and normalized_first == normalized_parent:
-        score += 45
-    elif normalized_first.startswith(f"{normalized_root}_") or normalized_first.startswith(f"{normalized_root}-"):
-        score += 25
-    elif normalized_root and normalized_root in normalized_first and any(token in normalized_first for token in ("core", "sdk")):
-        score += 22
-    if first in {"tests", "test", "examples", "example", "docs", "doc", "scripts", "script", "bench", "benches", "benchmark", "benchmarks", ".github", "ci"}:
-        score -= 50
-    elif first in {"galleries", "gallery", "dev", "devel", "devel-common", "tools", "utils"}:
-        score -= 25
-    return score
-
-def _disfavored_scope_root(path: str) -> bool:
-    first = path.replace("\\", "/").lower().strip("/").split("/", 1)[0]
-    return first in {"tests", "test", "examples", "example", "docs", "doc", "scripts", "script", "bench", "benches", "benchmark", "benchmarks", ".github", "ci"}
-
-def _candidate_noise_path(path: str) -> bool:
-    lowered = path.replace("\\", "/").lower()
-    parts = [part for part in lowered.split("/") if part]
-    if any(part in {"test_workspace", "source_project", "archives", "runs", "generated", "scratch", "tmp"} for part in parts):
-        return True
-    return lowered.endswith((".zip", ".log", ".jsonl", ".sqlite", ".db", ".pkl", ".pickle", ".bin"))
-
-def _scope_candidate_kind(py_count: int, js_ts_count: int, manifest_hits: list[str]) -> str:
-    has_package = any(path.endswith("package.json") for path in manifest_hits)
-    has_python = py_count > 0
-    if has_python and has_package:
-        return "mixed_python_frontend_candidate"
-    if has_python:
-        return "python_project_candidate"
-    if js_ts_count or has_package:
-        return "frontend_or_extension_candidate"
-    return "artifact_or_unknown_candidate"
 
 def _blocked_scope_score(project_artifact: dict[str, Any], scope_artifact: dict[str, Any]) -> dict[str, Any]:
     project = dict(project_artifact.get("content", {}))

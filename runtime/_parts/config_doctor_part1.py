@@ -6,21 +6,28 @@ from pathlib import Path
 from typing import Any, Callable
 from runtime.architecture_decision_policy import load_architecture_decision_policy
 from runtime.architecture_synthesis_policy import load_architecture_synthesis_policy
+from runtime.contract_transform_contract_profiles import load_contract_transform_contract_profiles
+from runtime.contract_transform_operators import load_contract_transform_operators
 from runtime.executable_acceptance_policy import load_executable_acceptance_policy
+from runtime.executor_solution_patterns import load_executor_solution_patterns
 from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from runtime.interface_contracts import load_interface_contracts
 from runtime.greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from runtime.l4_decision_table import load_l4_decision_rules
+from runtime.local_inference import load_llm_profiles
 from runtime.operation_recipe_rules import load_operation_recipe_rules
 from runtime.patch_synthesis_policy import load_patch_synthesis_policy
+from runtime.programmer_executor_playbooks import load_programmer_executor_playbooks
 from runtime.project_evolution_policy import load_project_evolution_policy
 from runtime.prompt_intake_rules import load_prompt_intake_rules
+from runtime.role_promotion_policy import load_role_promotion_policy
 from runtime.role_directory import load_role_directory
 from runtime.runtime_interpreter_policy import load_runtime_interpreter_policy
 from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
+from runtime.source_target_policy import load_role_source_policy
 from runtime.stage2_template_routes import load_stage2_template_routes
 from runtime.target_quality_policy import load_target_quality_policy
 from runtime.technical_spec_policy import load_technical_spec_policy
@@ -65,8 +72,15 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_architecture_synthesis_policy(catalogs),
             _check_foundation_semantic_quality_policy(catalogs),
             _check_executable_acceptance_policy(catalogs),
+            _check_contract_transform_operators(catalogs),
+            _check_contract_transform_contract_profiles(catalogs),
             _check_patch_synthesis_policy(catalogs),
+            _check_programmer_executor_playbooks(catalogs),
+            _check_executor_solution_patterns(catalogs),
             _check_project_evolution_policy(catalogs),
+            _check_role_promotion_policy(catalogs),
+            _check_llm_profiles(catalogs),
+            _check_role_source_policy(catalogs),
             _check_target_quality_policy(catalogs),
             _check_technical_spec_policy(catalogs),
             _check_architecture_decision_policy(catalogs),
@@ -115,8 +129,15 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "architecture_synthesis_policy": load_architecture_synthesis_policy(str(root / "config" / "architecture_synthesis_policy.json")),
         "foundation_semantic_quality_policy": load_foundation_semantic_quality_policy(str(root / "config" / "foundation_semantic_quality_policy.json")),
         "executable_acceptance_policy": load_executable_acceptance_policy(str(root / "config" / "executable_acceptance_policy.json")),
+        "contract_transform_operators": load_contract_transform_operators(str(root / "config" / "contract_transform_operators.json")),
+        "contract_transform_contract_profiles": load_contract_transform_contract_profiles(str(root / "config" / "contract_transform_contract_profiles.json")),
         "patch_synthesis_policy": load_patch_synthesis_policy(str(root / "config" / "patch_synthesis_policy.json")),
+        "programmer_executor_playbooks": load_programmer_executor_playbooks(str(root / "config" / "programmer_executor_playbooks.json")),
+        "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),
         "project_evolution_policy": load_project_evolution_policy(str(root / "config" / "project_evolution_policy.json")),
+        "role_promotion_policy": load_role_promotion_policy(str(root / "config" / "role_promotion_policy.json")),
+        "llm_profiles": load_llm_profiles(str(root / "config" / "llm_profiles.json")),
+        "role_source_policy": load_role_source_policy(str(root / "config" / "role_source_policy.json")),
         "sandbox_operations": _read_json(root / "registry" / "sandbox_programmer_operations.json"),
         "sandbox_compositions": _read_json(root / "registry" / "sandbox_programmer_compositions.json"),
         "sandbox_attempt_policy": _read_json(root / "registry" / "sandbox_attempt_policy.json"),

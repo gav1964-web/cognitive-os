@@ -106,6 +106,39 @@ def test_spec_writer_adds_domain_contract_family_for_ml_metric_target():
     assert spec["extraction_contract"]["semantic_quality"]["status"] == "strong"
 
 
+def test_spec_writer_uses_context_input_for_no_arg_config_factory():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Build a contract for a no-argument config factory.",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": ["alive_progress/core/configuration.py:create_config"],
+        },
+        "traceability": [
+            {
+                "source": "alive_progress/core/configuration.py:create_config",
+                "requirement": "Capability candidate requires TechnicalSpec.",
+            }
+        ],
+        "source_context": {
+            "alive_progress/core/configuration.py:create_config": {
+                "kind": "broad_function",
+                "signature": {"args": [], "returns": ""},
+                "snippet": {"text": "def create_config(): return Config(...)"},
+            }
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+    contract = spec["extraction_contract"]
+
+    assert contract["contract_family"] == "configuration_object_factory"
+    assert contract["input_contract"]["call_context"].startswith("ConfigFactoryContext")
+    assert contract["output_contract"]["config_object"].startswith("ConfigObject")
+
+
 def test_spec_writer_prefers_executable_ready_contract_over_runtime_object_boundary():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",
@@ -354,6 +387,6 @@ def test_spec_writer_profiles_domain_central_parser_helper_contract():
     contract = spec["extraction_contract"]
 
     assert contract["candidate"] == "pyparsing/helpers.py:one_of"
-    assert contract["semantic_quality"]["status"] == "acceptable"
+    assert contract["semantic_quality"]["status"] == "strong"
     assert contract["contract_family"] == "parser_combinator_helper_boundary"
     assert "semantic_review" not in contract

@@ -61,9 +61,9 @@ def build_answers(
     return {
         "1_scope": {
             "main_task": _main_task(project_type, summary, docs, domain_profile),
-            "supported_scenarios": _scenarios(summary, routes, commands, imports, domain_profile),
-            "inputs": _inputs(routes, commands, imports, domain_profile),
-            "outputs": _outputs(routes, commands, imports, stack, domain_profile),
+            "supported_scenarios": _scenarios(summary, routes, commands, imports, domain_profile, python_structure),
+            "inputs": _inputs(routes, commands, imports, domain_profile, python_structure),
+            "outputs": _outputs(routes, commands, imports, stack, domain_profile, python_structure),
             "code_areas": _code_areas(python_structure),
             "test_surface": insights.get("test_surface", {}),
             "domain_profile": domain_profile,
@@ -190,6 +190,7 @@ def _scenarios(
     commands: list[dict[str, Any]],
     imports: set[str] | None = None,
     domain_profile: dict[str, Any] | None = None,
+    python_structure: dict[str, Any] | None = None,
 ) -> list[str]:
     profile = dict(domain_profile or {})
     imports = imports or set()
@@ -224,6 +225,14 @@ def _scenarios(
                 "Write a submission-style CSV with generated answers.",
             ]
         )
+    if _looks_like_command_handler(python_structure):
+        scenarios.extend(
+            [
+                "Parse user text commands into command name and payload.",
+                "Dispatch recognized commands to handler functions.",
+                "Preserve per-user/session state and return user-facing text responses.",
+            ]
+        )
     if routes:
         scenarios.append(f"Serve HTTP API/web requests across {len(routes)} detected routes.")
     if any(command.get("purpose") == "install_dependencies" for command in commands):
@@ -255,6 +264,7 @@ def _inputs(
     commands: list[dict[str, Any]],
     imports: set[str],
     domain_profile: dict[str, Any] | None = None,
+    python_structure: dict[str, Any] | None = None,
 ) -> list[str]:
     profile = dict(domain_profile or {})
     if profile.get("input_summary"):
@@ -274,6 +284,8 @@ def _inputs(
         inputs.append("files or structured documents")
     if imports & {"requests", "httpx", "openai"}:
         inputs.append("external API responses")
+    if _looks_like_command_handler(python_structure):
+        inputs.extend(["user id/session key", "text command payload"])
     return inputs or ["not enough evidence"]
 
 
@@ -283,6 +295,7 @@ def _outputs(
     imports: set[str],
     stack: dict[str, Any],
     domain_profile: dict[str, Any] | None = None,
+    python_structure: dict[str, Any] | None = None,
 ) -> list[str]:
     profile = dict(domain_profile or {})
     if profile.get("output_summary"):
@@ -302,7 +315,33 @@ def _outputs(
         outputs.append("database state")
     if commands or stack.get("large_artifacts"):
         outputs.append("side effects in local filesystem")
+    if _looks_like_command_handler(python_structure):
+        outputs.extend(["user-facing text response", "updated in-memory session state"])
     return outputs or ["not enough evidence"]
+
+
+def _looks_like_command_handler(python_structure: dict[str, Any] | None) -> bool:
+    names = _function_names(python_structure or {})
+    return (
+        any(name in names for name in ("parse_command", "parse_message", "parse_update"))
+        and any(name in names for name in ("dispatch", "dispatch_command", "handle_message"))
+        and any(name.startswith("handle_") for name in names)
+    )
+
+
+def _function_names(python_structure: dict[str, Any]) -> set[str]:
+    names = set()
+    for file_row in list(python_structure.get("files") or []):
+        if not isinstance(file_row, dict):
+            continue
+        for function in list(file_row.get("functions") or []):
+            if isinstance(function, dict) and function.get("name"):
+                names.add(str(function["name"]))
+    for key in ("central_nodes", "wide_functions", "pure_transform_candidates"):
+        for function in list(python_structure.get(key) or []):
+            if isinstance(function, dict) and function.get("name"):
+                names.add(str(function["name"]))
+    return names
 
 
 def _code_areas(python_structure: dict[str, Any]) -> dict[str, list[str]]:

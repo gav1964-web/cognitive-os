@@ -237,6 +237,10 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     domain_profile = dict(facts.get("domain_profile") or {})
     domain_kind = str(domain_profile.get("kind") or "").lower()
 
+    negative_domain_kinds = _strings(match.get("negative_domain_profile_kinds"))
+    if negative_domain_kinds and domain_kind in {item.lower() for item in negative_domain_kinds}:
+        return 0, []
+
     negative = _strings(match.get("negative_contains_any") or match.get("negative_signals"))
     blocked = [needle for needle in negative if needle.lower() in project_text]
     if blocked:

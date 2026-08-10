@@ -1,6 +1,46 @@
 {
   "schema_version": "patch_synthesis_policy.v1",
   "recipes": {
+    "return_literal_stub": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "return_literal_stub_synthesized",
+      "operation_kind": "replace_stub_with_literal_return",
+      "positive_case_kind": "positive_contract_case",
+      "expect_keys": ["return_value", "equals", "result_value"],
+      "max_literal_repr_chars": 200
+    },
+    "return_literal_notimplemented": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "return_literal_notimplemented_synthesized",
+      "operation_kind": "replace_notimplemented_with_literal_return",
+      "positive_case_kind": "positive_contract_case",
+      "expect_keys": ["return_value", "equals", "result_value"],
+      "max_literal_repr_chars": 200
+    },
+    "contract_transform_identity_return": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "contract_transform_identity_return_synthesized",
+      "operation_kind": "replace_identity_return_with_contract_transform",
+      "positive_case_kind": "positive_contract_case",
+      "expect_keys": ["return_value", "equals", "result_value"],
+      "allowed_transforms": [
+        "strip",
+        "lower",
+        "upper",
+        "strip_lower",
+        "strip_upper",
+        "comma_split_strip_nonempty",
+        "sum_numbers",
+        "len_sequence",
+        "first_item",
+        "last_item",
+        "sorted_list",
+        "unique_preserve_order"
+      ]
+    },
     "required_input_guard": {
       "enabled": true,
       "status": "prepared",

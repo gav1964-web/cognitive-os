@@ -220,11 +220,13 @@ Level 4 contains role skills, not autonomous all-powerful agents:
 | Architect | project report + goal | `ArchitectureDecisionRecord` | does not write code or mutate registry |
 | SpecWriter | ADR | `TechnicalSpec` | does not broaden chosen architecture scope |
 | Implementer Planner | TechnicalSpec / ProductTechnicalSpec | `ImplementationPlan` | does not write code |
-| Programmer Executor | ImplementationPlan | `PatchPackage` + `TestResult` | MVP mode is sandbox/no-source-edit |
+| Programmer Task Builder | ImplementationPlan | `ProgrammerTaskTree` | planning-only; decomposes target, gates and handoff |
+| Sandbox Programmer | `ProgrammerTaskTree` + ImplementationPlan | `PatchPackage` + `TestResult` | sandbox/no-source-edit; LLM strategy is proposal-only |
 | Tester | TechnicalSpec + ImplementationPlan | `TestPlan` | defines verification, does not execute tests |
 | Reviewer | spec + plan + tests + optional result | `ReviewFindings` | reviews, does not patch or promote |
 
 Current hardening has a staged contour. The foundation remains `Project Analyzer -> Architect -> SpecWriter`, and the downstream readiness gates now cover `Implementer Planner -> Tester` before moving on to Reviewer/Executor depth.
+Foundation Roles 1-3 are scored only inside a selected **Python-owned boundary**. The promotion candidate does not claim primary ownership of C/C++/Rust/native implementation, frontend-owned product surfaces, or data/ML correctness beyond Python orchestration; those cases are either narrowed to a Python-facing adapter/package or marked `out_of_scope` for this contour.
 The foundation contour must produce more than MVP-shaped placeholders:
 
 - `ProjectMapReport` must contain source-backed purpose, boundaries, entrypoints, execution path, reusable capabilities, contract/data observations, errors/state/reproducibility notes, data lifecycle and a minimal extraction plan.
@@ -243,7 +245,7 @@ Implementer Planner and Tester now have explicit curriculum gates. Implementer r
 
 Reviewer now has the same curriculum gate style through `tools/reviewer_curriculum.py`. It checks that `ReviewFindings` confirms target coverage, preserves scope, reports no contract violations or architecture drift, distinguishes residual risks from blocking rework, and uses worst-case readiness instead of average-only scoring.
 
-Programmer Executor remains present in the repository, but it is not yet the active quality-expansion target for this stage.
+Programmer Executor is split internally into `ProgrammerTaskTree` planning and sandbox programming. The task-tree builder decomposes the implementation target into bind-target, writable-scope, contract-input, acceptance and verifier-gate nodes, then hands that bounded tree to the sandbox programmer. The sandbox programmer emits an advisory `PatchStrategyProposal` in both `PatchPackage` and `TestResult`. The deterministic proposal classifies whether the next move is patch verification, fixture/profile refinement, contract rebinding, dependency-boundary profiling, or review blocking. If `COGNITIVE_OS_EXECUTOR_USE_L45_LLM=1`, L4.5 may add a hypothesis-only strategy proposal. A shape-valid `SandboxPatchCandidate` can be applied only inside an isolated sandbox and must pass the same verifier gates. If that verified sandbox attempt fails, Executor may request one bounded L4.5 repair hypothesis and apply it in a second sandbox; it still cannot mutate the source project or registry.
 
 Greenfield prompts use a separate planning contour. A request such as "create a server" must not be forced through `ProjectMapReport -> extraction_contract` for an existing source tree. The supported planning path is:
 
@@ -348,7 +350,7 @@ The loop lives in `runtime/fallback_autonomy_loop.py`. It is deliberately narrow
 
 Verified packages include a `ProgrammerSandboxGate` that records project directory presence, verification status, tester approval, and the invariant that user source and registries were not modified. They also include `GeneratedProductQuality`; this is the product-facing readiness signal for whether Cognitive OS produced a usable package at the current threshold.
 
-For bounded implementation prompts that pass adequacy but have no supported deterministic package template, Stage 2 may invoke `runtime/llm_sandbox_implementation.py`. This is not free-form source editing: the model is treated as a hypothesis source, executable code is generated only from an allowlisted sandbox contract, verification runs inside `artifacts/llm_sandbox_implementations/*`, and the result keeps `promotion_allowed=false`. The allowlist is data-driven by `registry/sandbox_programmer_operations.json`; runtime validates stored `text_expression` operations with AST hardening and supports allowlisted stdlib profiles such as line sort/unique, CSV row count/sort/filter/select/sum/JSON records, HTML table to CSV, JSON extract/keys/pretty-print. If deterministic registry matching fails and `use_model=true`, L4.5/Deepseek may normalize the prompt to one existing `operation_id` from that registry; invalid ids, low confidence and provider errors remain controlled blocks. Each sandbox implementation plan now includes a `SandboxOperationGraph` from `runtime/sandbox_operation_graph.py`: a typed read/parse/transform/serialize/write/verify chain with parser/serializer choices, side-effect boundaries, evidence links, and invariants. The graph is an API artifact for L4/L4.5, programmer, tester and admission gates, not prose explanation and not an execution permission. The registry is configurable, but it is not an arbitrary-code execution channel. A verified sandbox result then passes through `runtime/sandbox_programmer_admission.py`; if tester/reviewer admission succeeds, Stage 2 may mark it `release_ready_with_risks` while still forbidding user-source, registry, and KB mutation. With `--write`, the success is also staged as a weak `KnowledgeCandidate` under `artifacts/knowledge_candidates`; repeated verified cases plus teacher/Codex approval are still required before any KB/template crystallization.
+For bounded implementation prompts that pass adequacy but have no supported deterministic package template, Stage 2 may invoke `runtime/llm_sandbox_implementation.py`. This is not free-form source editing: the model is treated as a hypothesis source, executable code is generated only from an allowlisted sandbox contract, verification runs inside `artifacts/llm_sandbox_implementations/*`, and the result keeps `promotion_allowed=false`. The allowlist is data-driven by `registry/sandbox_programmer_operations.json`; runtime validates stored `text_expression` operations with AST hardening and supports allowlisted stdlib profiles such as line sort/unique, CSV row count/sort/filter/select/sum/JSON records, HTML table to CSV, JSON extract/keys/pretty-print. If deterministic registry matching fails and `use_model=true`, the configured L4.5 profile may normalize the prompt to one existing `operation_id` from that registry; invalid ids, low confidence and provider errors remain controlled blocks. Each sandbox implementation plan now includes a `SandboxOperationGraph` from `runtime/sandbox_operation_graph.py`: a typed read/parse/transform/serialize/write/verify chain with parser/serializer choices, side-effect boundaries, evidence links, and invariants. The graph is an API artifact for L4/L4.5, programmer, tester and admission gates, not prose explanation and not an execution permission. The registry is configurable, but it is not an arbitrary-code execution channel. A verified sandbox result then passes through `runtime/sandbox_programmer_admission.py`; if tester/reviewer admission succeeds, Stage 2 may mark it `release_ready_with_risks` while still forbidding user-source, registry, and KB mutation. With `--write`, the success is also staged as a weak `KnowledgeCandidate` under `artifacts/knowledge_candidates`; repeated verified cases plus teacher/Codex approval are still required before any KB/template crystallization.
 
 The prompt-normalization field trial is runnable with:
 
@@ -434,7 +436,7 @@ These checks mean the deterministic planning and sandbox execution gates passed.
 
 ### Direct Provider Migration Sandbox
 
-Legacy provider migration is handled as a reviewed sandbox package, not as direct source editing. The historical `map` field trial used a GigaChat-specific sandbox patch generator; it remains as archived trial evidence, but it is not part of the current default L4/L4.5 provider path. New provider-backed trials should use the Deepseek gateway defaults or an explicitly configured non-GigaChat profile:
+Legacy provider migration is handled as a reviewed sandbox package, not as direct source editing. The historical `map` field trial used a GigaChat-specific sandbox patch generator; it remains as archived trial evidence, but it is not part of the current default L4/L4.5 provider path. New provider-backed trials should use the configured LLM profile in `config/llm_profiles.json` or an explicit CLI/env override:
 
 ```powershell
 python tools\llm_migration_analysis.py --root . --project-dir F:\ubuntu\test\map --target-model GigaChat-2-Pro --write
@@ -746,11 +748,12 @@ In the current MVP:
 
 - many readiness and field-trial paths are deterministic;
 - L3.5 planner proposals must validate before execution;
-- the external L4 profile defaults to `deepseek/deepseek-chat` through `http://127.0.0.1:8000/v1` and can be overridden with `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`;
-- the L4.5 intent/semantic fallback profile defaults to `deepseek/deepseek-chat` through the same OpenAI-compatible gateway and can be overridden with `COGNITIVE_OS_L45_MODEL` / `COGNITIVE_OS_L45_BASE_URL`; L4.5 disables `response_format` by default because the current Deepseek gateway returns contract JSON more reliably without that parameter;
+- the external L4 profile is configured through `config/llm_profiles.json` and can be overridden with `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`;
+- the L4.5 intent/semantic fallback profile defaults to `deepseek/deepseek-chat` through the same OpenAI-compatible gateway and can be overridden with `COGNITIVE_OS_L45_MODEL` / `COGNITIVE_OS_L45_BASE_URL`; L4.5 disables `response_format` by default because the current gateway returns contract JSON more reliably without that parameter;
 - L4 calls remain explicit and use a controlled deterministic fallback when the configured cortex provider is unavailable;
 - LLM outputs are advisory hypotheses or bounded role artifacts, not direct execution authority;
 - L4 project interpretation records must distinguish raw model output from hardened output, including quality warnings, hardening actions, and whether the raw model output was clean.
+- Programmer Executor may request an L4.5 patch-strategy hypothesis with `COGNITIVE_OS_EXECUTOR_USE_L45_LLM=1`; that hypothesis is recorded as advisory material. If it contains a shape-valid unified diff for the bound target, the diff may be applied inside an isolated sandbox and verified there before it can influence any reviewed executable artifact. Failed sandbox candidate verification permits at most one repair proposal, also sandbox-only and verifier-gated.
 
 The preferred replacement path is:
 
@@ -871,7 +874,14 @@ The deterministic L3.5 gate can be measured independently:
 python tools\spinal_benchmark.py --root . --write
 ```
 
-The preferred design is provider-portable and local-first: projects should talk to a configured gateway rather than hardcoding external model API keys.
+The preferred design is provider-portable and local-first: projects should talk to a configured gateway rather than hardcoding external model API keys. Active model profiles live in `config/llm_profiles.json`; environment variables such as `COGNITIVE_OS_LLM_MODEL` and `COGNITIVE_OS_L45_MODEL` may override the file for one run. The current checked-in defaults are `local_l35.model=local` and `external_l45_intent_resolver.model=deepseek/deepseek-chat`. A live GigaChat smoke test confirmed that gateway ids `GigaChat` and `GigaChat-Pro` work, but the current semantic benchmark was weaker than the Deepseek profile.
+
+Use `tools/llm_profile_eval.py` before changing model profiles:
+
+```powershell
+python tools\llm_profile_eval.py --root . --smoke --write
+python tools\llm_profile_eval.py --root . --smoke --benchmark-l45 --write
+```
 
 ## Knowledge Gap Loop
 

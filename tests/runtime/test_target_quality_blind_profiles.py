@@ -45,6 +45,17 @@ def test_semantic_target_quality_accepts_profiled_blind_redteam_contracts():
         "jwt/api_jwt.py:_validate_claims",
         "src/cattrs/gen/typeddicts.py:make_dict_structure_fn",
         "annotation.py:_resolve_evaled_type",
+        "plugins/modules/openvswitch_db.py:map_config_to_obj",
+        "dlinfer/graph/dicp/dynamo_bridge/pt_patch.py:_gen_python_code_bar",
+        "src/updateVideos.py:_bilibili_via_direct_api",
+        "SyncOnelapToXoss.py:login_igpsport_browser",
+        "backend/api/gold_trading.py:_generate_ml_signal",
+        "src/smartwatts/__main__.py:run_smartwatts",
+        "cleaner.py:process_file",
+        "mirror.py:get_current_version",
+        "certifi/core.py:contents",
+        "tlz/_build_tlz.py:exec_module",
+        "sphinx_rtd_theme/__init__.py:config_initiated",
     ]
     for target in cases:
         report = semantic_target_quality_report(

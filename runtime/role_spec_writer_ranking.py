@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .contract_archetype_inference import archetype_ranking_adjustments
+from .contract_transform_contract_profiles import contract_profile_hint
 from .semantic_target_profiles import semantic_ranking_adjustments
 from .target_quality_policy import nested_policy_tokens, policy_tokens, target_quality_section
 
@@ -45,6 +46,7 @@ DOMAIN_QUERY_MODULE_EXCLUDED_SYMBOLS = set(
 DOMAIN_WEAK_ACCESSOR_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "weak_accessor_symbols"))
 DOMAIN_STORAGE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "storage_path_tokens")
 DOMAIN_MIDDLEWARE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "middleware_path_tokens")
+DOMAIN_CORE_TEXT_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "domain_contract", "core_text_tokens")
 REPRESENTATIVE_FLOW_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "flow_tokens")
 REPRESENTATIVE_UTILITY_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "utility_tokens")
 REPRESENTATIVE_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "representative_slice", "representative_path_tokens")
@@ -67,6 +69,11 @@ TRIVIAL_HELPER_PREFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "trivial_help
 LIVENESS_PROBE_SYMBOLS = set(policy_tokens(SPEC_WRITER_POLICY, "liveness_probe_symbols"))
 BOOTSTRAP_SUPPORT_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "bootstrap_support", "symbols"))
 BOOTSTRAP_SUPPORT_ARG_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "bootstrap_support", "arg_path_tokens")
+PROJECT_SUPPORT_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "project_support_surface", "path_tokens")
+PROJECT_SUPPORT_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "project_support_surface", "symbols"))
+PROJECT_SUPPORT_SYMBOL_CONTAINS_ANY = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "project_support_surface", "symbol_contains_any"
+)
 LOW_VALUE_PATH_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "low_value_first_slice", "path_suffixes")
 LOW_VALUE_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "low_value_first_slice", "symbols"))
 MUTATION_LIKE_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "mutation_like_first_slice", "symbols"))
@@ -91,6 +98,9 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     representative_score, representative_reasons = _representative_slice_score(lowered)
     score += representative_score
     reasons.extend(representative_reasons)
+    profile_score, profile_reasons = _contract_profile_score(source, signature, side_effects)
+    score += profile_score
+    reasons.extend(profile_reasons)
     readiness_score, readiness_reasons = _executable_readiness_score(lowered, signature, side_effects)
     score += readiness_score
     reasons.extend(readiness_reasons)
@@ -103,6 +113,9 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     if _is_bootstrap_support_source(lowered):
         score -= 55
         reasons.append("CLI/bootstrap support helper is evidence, not first architectural slice")
+    if _is_project_support_surface(lowered):
+        score -= 55
+        reasons.append("release/build/publish support surface is evidence, not product-domain core")
     if _is_low_value_first_slice_source(lowered):
         score -= 45
         reasons.append("constructor/logging/config helper is evidence, not first implementation target")
@@ -119,6 +132,22 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
         score -= 20
         reasons.append("handler/middleware boundary is less reusable than a core helper")
     return score, reasons
+
+
+def _contract_profile_score(source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
+    if side_effects:
+        return 0, []
+    inputs = {
+        str(arg.get("name") or "payload"): str(arg.get("annotation") or f"Inferred{arg.get('name') or 'Payload'}")
+        for arg in list(signature.get("args", []) or [])
+        if isinstance(arg, dict) and str(arg.get("name") or "") not in {"self", "cls"}
+    }
+    output = {"result": str(signature.get("returns") or "InferredOutput")}
+    hint = contract_profile_hint(target=source, input_contract=inputs, output_contract=output, side_effects=side_effects)
+    if not hint:
+        return 0, []
+    profile = dict(hint.get("contract_profile") or {})
+    return 18, [f"matches executable contract profile {profile.get('id')}"]
 
 
 def _executable_readiness_score(lowered_source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
@@ -239,6 +268,9 @@ def _domain_contract_score(lowered_source: str) -> tuple[int, list[str]]:
     if any(token in path for token in DOMAIN_MIDDLEWARE_PATH_TOKENS):
         score -= 12
         reasons.append("middleware adapter is operational evidence, not first domain contract")
+    if any(token in lowered_source for token in DOMAIN_CORE_TEXT_TOKENS):
+        score += 26
+        reasons.append("source text belongs to product-domain core")
     return score, reasons
 
 
@@ -261,7 +293,10 @@ def _representative_slice_score(lowered_source: str) -> tuple[int, list[str]]:
         score -= 12
         reasons.append("source path looks like utility/support surface")
     profile_adjustments = semantic_ranking_adjustments(f"{path}:{symbol}")
-    archetype_adjustments = archetype_ranking_adjustments(f"{path}:{symbol}")
+    if profile_adjustments.get("profile_ids"):
+        archetype_adjustments = {"score_delta": 0, "reasons": [], "profile_ids": []}
+    else:
+        archetype_adjustments = archetype_ranking_adjustments(f"{path}:{symbol}")
     score += int(profile_adjustments["score_delta"])
     score += int(archetype_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
@@ -300,6 +335,15 @@ def _is_bootstrap_support_source(lowered_source: str) -> bool:
     if symbol.endswith("_args") and any(token in path for token in BOOTSTRAP_SUPPORT_ARG_PATH_TOKENS):
         return True
     return False
+
+
+def _is_project_support_surface(lowered_source: str) -> bool:
+    symbol = lowered_source.rsplit(":", 1)[-1]
+    path = lowered_source.split(":", 1)[0]
+    normalized = f"/{path.lstrip('/')}"
+    if symbol in PROJECT_SUPPORT_SYMBOLS or any(token in symbol for token in PROJECT_SUPPORT_SYMBOL_CONTAINS_ANY):
+        return True
+    return any(token in normalized for token in PROJECT_SUPPORT_PATH_TOKENS)
 
 
 def _is_low_value_first_slice_source(lowered_source: str) -> bool:

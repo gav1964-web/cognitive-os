@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
+from runtime.architecture_slice_naming import semantic_first_slice_name
+from runtime.contract_transform_contract_profiles import contract_profile_hint
 from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
@@ -158,7 +160,7 @@ def _first_slice_contract(synthesis: dict[str, Any]) -> dict[str, Any]:
     if not first_slice and not targets and not steps:
         return {}
     return {
-        "name": str(first_slice.get("name") or "first_bounded_capability_slice"),
+        "name": semantic_first_slice_name(str(first_slice.get("name") or "first_bounded_capability_slice"), targets),
         "goal": str(first_slice.get("goal") or "Define the first bounded capability transformation."),
         "targets": targets[:8],
         "steps": steps[:12],
@@ -236,12 +238,12 @@ def _callable_transform_fallback_candidates(answers: dict[str, Any]) -> list[str
         if not isinstance(item, dict):
             continue
         target = f"{item.get('path')}:{item.get('name')}" if item.get("path") and item.get("name") else ""
-        if _callable_transform_fallback_target(target, policy=policy):
+        if _callable_transform_fallback_target(target, item, policy=policy):
             rows.append(target)
     limit = int(policy.get("max_candidates") or 3)
     return _dedupe_strings(rows)[:limit]
 
-def _callable_transform_fallback_target(target: str, *, policy: dict[str, Any]) -> bool:
+def _callable_transform_fallback_target(target: str, item: dict[str, Any], *, policy: dict[str, Any]) -> bool:
     if not _implementation_brief_source(target):
         return False
     lowered = "/" + target.replace("\\", "/").lower().lstrip("/")
@@ -254,7 +256,26 @@ def _callable_transform_fallback_target(target: str, *, policy: dict[str, Any]) 
     path_tokens = [str(token).lower() for token in list(policy.get("path_contains_any") or [])]
     symbol_match = any(token and token in symbol for token in symbol_tokens)
     path_match = any(token and token in lowered for token in path_tokens)
-    return symbol_match and path_match
+    if symbol_match and path_match:
+        return True
+    return bool(policy.get("allow_contract_profile_without_path_match")) and _profile_compatible_transform(target, item, policy)
+
+def _profile_compatible_transform(target: str, item: dict[str, Any], policy: dict[str, Any]) -> bool:
+    args = [
+        {"name": str(arg.get("name") or ""), "annotation": str(arg.get("annotation") or "")}
+        for arg in list(item.get("args") or [])
+        if isinstance(arg, dict)
+    ]
+    input_contract = {
+        str(arg.get("name") or "payload"): str(arg.get("annotation") or f"Inferred{arg.get('name') or 'Payload'}")
+        for arg in args
+        if str(arg.get("name") or "")
+    }
+    output_contract = {"result": str(item.get("returns") or "InferredOutput")}
+    hint = contract_profile_hint(target=target, input_contract=input_contract, output_contract=output_contract)
+    profile = dict((hint or {}).get("contract_profile") or {})
+    allowed = {str(value) for value in list(policy.get("pathless_allowed_contract_profiles") or [])}
+    return bool(profile) and str(profile.get("id") or "") in allowed
 
 def _provider_parser_sources(project_root: Path) -> list[str]:
     if not project_root.exists() or not project_root.is_dir():

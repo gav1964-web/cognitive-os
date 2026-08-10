@@ -13,8 +13,20 @@ def test_project_evolution_policy_loads_current_catalog() -> None:
 
     assert policy["schema_version"] == "project_evolution_policy.v1"
     assert "kb_or_config_before_code_branch" in policy["principles"]
+    assert policy["chosen_path"]["north_star"] == "stable_role_capability_from_explicit_knowledge_contracts_and_calibrated_field_evidence"
     assert "meta_only_is_not_callable" in policy["evolution_rules"]
     assert "role_score_9_5" in policy["promotion_gates"]
+
+
+def test_project_evolution_policy_declares_route_not_only_gates() -> None:
+    policy = load_project_evolution_policy(str(ROOT / "config" / "project_evolution_policy.json"))
+
+    assert policy["chosen_path"]["architecture_bet"] == "code_is_not_the_only_system_knowledge_carrier"
+    assert "executor_separation" in policy["development_lanes"]
+    assert "failure_recurs_across_unrelated_projects" in policy["decision_rules"]["add_kb_when"]
+    assert "raw_score_rises_while_calibrated_score_is_capped" in policy["stop_signals"]
+    assert policy["evidence_milestones"]["calibrated_9_5"]["minimum_scored_projects"] == 160
+    assert policy["evidence_milestones"]["calibrated_9_7"]["minimum_scored_projects"] == 320
 
 
 def test_project_evolution_allows_9_5_gate_for_field_validated_kb_growth() -> None:

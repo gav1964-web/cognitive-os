@@ -84,97 +84,6 @@ def _active_root_decision(project_dir: Path, active_root: str | Path | None) -> 
         "decision_policy": "downstream roles may run only on selected_root",
     }
 
-def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) -> dict[str, Any]:
-    candidates = list(scope_report.get("candidate_roots") or [])
-    if not candidates:
-        return _active_root_decision(project_dir, None)
-    best = dict(candidates[0])
-    second = dict(candidates[1]) if len(candidates) > 1 else {}
-    best_score = int(best.get("score") or 0)
-    second_score = int(second.get("score") or 0)
-    path = str(best.get("path") or "")
-    native_package = _native_python_package_scope(project_dir)
-    if native_package:
-        return _active_root_decision(project_dir, native_package)
-    frontend_python_package = _frontend_python_package_scope(project_dir, candidates)
-    if frontend_python_package:
-        decision = _active_root_decision(project_dir, frontend_python_package["path"])
-        decision.update(
-            {
-                "source": "auto_python_facing_scope_selector",
-                "selection_confidence": "high",
-                "selected_candidate_score": int(frontend_python_package.get("score") or 0),
-                "evidence": {
-                    "candidate": frontend_python_package,
-                    "runner": "role_foundation_pipeline.auto_active_root",
-                },
-            }
-        )
-        return decision
-    application_package = _application_python_package_scope(project_dir, candidates)
-    if application_package:
-        decision = _active_root_decision(project_dir, application_package["path"])
-        decision.update(
-            {
-                "source": "auto_application_package_scope_selector",
-                "selection_confidence": "high",
-                "selected_candidate_score": int(application_package.get("score") or 0),
-                "evidence": {
-                    "candidate": application_package,
-                    "runner": "role_foundation_pipeline.auto_active_root",
-                },
-            }
-        )
-        return decision
-    for scoped, source in (
-        (_monorepo_python_modules_scope(project_dir, candidates), "auto_monorepo_python_modules_scope_selector"),
-        (_aliased_core_package_scope(project_dir, candidates), "auto_aliased_core_scope_selector"),
-        (_library_module_scope(project_dir, candidates), "auto_library_module_scope_selector"),
-    ):
-        if scoped:
-            decision = _active_root_decision(project_dir, scoped["path"])
-            decision.update(
-                {
-                    "source": source,
-                    "selection_confidence": "high",
-                    "selected_candidate_score": int(scoped.get("score") or 0),
-                    "evidence": {
-                        "candidate": scoped,
-                        "runner": "role_foundation_pipeline.auto_active_root",
-                    },
-                }
-            )
-            return decision
-    if project_dir.name.lower().replace("-", "_") == project_dir.parent.name.lower().replace("-", "_"):
-        return _active_root_decision(project_dir, None)
-    clear_named_package = _clear_named_package_candidate(project_dir, path, best_score, second_score)
-    required_gap = 0 if clear_named_package and best_score >= 90 else 6 if clear_named_package and best_score >= 70 else 12
-    confidence = (
-        "high"
-        if (
-            (best_score >= 75 or clear_named_package)
-            and best_score - second_score >= required_gap
-            and not _disfavored_scope_root(path)
-        )
-        else "low"
-    )
-    if confidence != "high":
-        return _active_root_decision(project_dir, None)
-    decision = _active_root_decision(project_dir, path)
-    decision.update(
-        {
-            "source": "auto_safe_scope_selector",
-            "selection_confidence": confidence,
-            "selected_candidate_score": best_score,
-            "score_gap_to_next": best_score - second_score,
-            "evidence": {
-                "candidate": best,
-                "runner": "role_foundation_pipeline.auto_active_root",
-            },
-        }
-    )
-    return decision
-
 def _native_python_package_scope(project_dir: Path) -> str | None:
     native_named = any(token in project_dir.name.lower() for token in ("rust", "pyo3", "native", "extension"))
     if not ((project_dir / "Cargo.toml").exists() or ((project_dir / "pyproject.toml").exists() and native_named)):
@@ -215,6 +124,8 @@ def _requires_scope_selection(project_map_report: dict[str, Any], *, active_root
         return True
     if int(source_health.get("packaged_copy_signal_count") or 0) > 0:
         return True
+    if _syntax_damage_is_fixture_only(source_health):
+        return False
     if status == "damaged":
         return True
     return False
@@ -278,8 +189,9 @@ def _scope_candidates(project_dir: Path) -> list[dict[str, Any]]:
         children = sorted((path for path in project_dir.iterdir() if path.is_dir()), key=lambda path: path.name.lower())
     except OSError:
         return rows
+    excluded = set(scope_policy_list("candidate_excluded_dirs"))
     for child in children:
-        if child.name in {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache"}:
+        if child.name in excluded:
             continue
         rows.append(_scope_candidate(project_dir, child))
     return sorted(rows, key=lambda row: (int(row["score"]), _scope_candidate_priority(str(row["path"])), row["last_write"] or ""), reverse=True)[:12]
@@ -314,7 +226,7 @@ def _scope_candidate(root: Path, path: Path) -> dict[str, Any]:
             js_ts_count += 1
         elif suffix == ".md":
             md_count += 1
-        if item.name.lower() in {"pyproject.toml", "requirements.txt", "setup.py", "package.json", "readme.md"}:
+        if item.name.lower() in set(scope_policy_list("manifest_names")):
             manifest_hits.append(rel)
         if _candidate_noise_path(rel):
             noise_hits.append(rel)
@@ -346,7 +258,7 @@ def _scope_candidate(root: Path, path: Path) -> dict[str, Any]:
     }
 
 def _iter_candidate_files(path: Path):
-    excluded = {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", "site-packages"}
+    excluded = set(scope_policy_list("candidate_excluded_dirs"))
     stack = [path]
     while stack:
         current = stack.pop()
