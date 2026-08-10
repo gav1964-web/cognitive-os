@@ -1,14 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from runtime.role_implementer_blueprint import (
-    build_executor_handoff,
-    build_implementation_blueprint,
-    build_patch_intent,
-)
-from runtime.role_skill_common import now_iso
-from runtime.stage2_template_routes import select_stage2_case
-from runtime.greenfield_stage2_templates import expected_artifacts_for_case
 
 def _change_plan(
     requirements: list[dict[str, Any]],
