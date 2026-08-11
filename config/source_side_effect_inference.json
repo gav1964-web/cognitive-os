@@ -1,10 +1,15 @@
 {
   "schema_version": "source_side_effect_inference.v1",
+  "contract_only_effects": ["database_read", "memory_state"],
   "effects": [
     {
       "id": "filesystem",
-      "call_exact": ["open"],
-      "call_contains": [".open", "write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod"]
+      "call_exact": [],
+      "call_contains": ["write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod"]
+    },
+    {
+      "id": "filesystem_read",
+      "call_contains": ["read_text", "read_bytes"]
     },
     {
       "id": "network",
@@ -18,6 +23,14 @@
     {
       "id": "database",
       "call_contains": ["cursor.execute", "connection.execute", ".executemany", ".commit", ".rollback"]
+    },
+    {
+      "id": "database_read",
+      "call_contains": ["get_object_or_404", ".objects.", ".filter", ".order_by", ".select_related", ".prefetch_related"]
+    },
+    {
+      "id": "memory_state",
+      "call_contains": [".set_state", ".change_state", ".update_state"]
     },
     {
       "id": "credential_store",

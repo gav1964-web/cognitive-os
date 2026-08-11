@@ -111,7 +111,7 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
     project_score = _quality_score(quality_results, "project_map_report")
     if result.get("blocker") == "scope_selection_required":
         project_score = project_score if project_score is not None else _ten_point(score.get("artifact_score"))
-        return {"project_analyzer": project_score, "architect": None, "spec_writer": None}
+        return _apply_role_score_caps({"project_analyzer": project_score, "architect": None, "spec_writer": None})
 
     architect_quality = _quality_score(quality_results, "adr")
     architect_red = _ten_point(dict(result.get("architect_red_team") or {}).get("score"))
@@ -131,10 +131,18 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
 
     architect_all_scores = [*architect_scores, architect_semantic]
     spec_all_scores = [*spec_scores, spec_semantic]
-    return {
+    return _apply_role_score_caps({
         "project_analyzer": _min_optional(project_score, project_semantic),
         "architect": _min_optional(*architect_all_scores),
         "spec_writer": _min_optional(*spec_all_scores),
+    })
+
+
+def _apply_role_score_caps(scores: dict[str, float | None]) -> dict[str, float | None]:
+    caps = dict(load_foundation_semantic_quality_policy().get("role_score_caps") or {})
+    return {
+        role: min(float(value), float(caps[role])) if value is not None and role in caps else value
+        for role, value in scores.items()
     }
 
 
@@ -154,6 +162,7 @@ def _result_with_loaded_artifacts(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, Any]:
+    published_caps = dict(load_foundation_semantic_quality_policy().get("role_score_caps") or {})
     scored_cases = [case for case in cases if case.get("status") != "out_of_scope"]
     role_mins = {
         role: _min_available([dict(case.get("role_scores") or {}).get(role) for case in scored_cases])
@@ -211,6 +220,7 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
         "below_target": below_target,
         "invariants": {
             "score_policy": "raw minimums diagnose a corpus; calibrated readiness gates promotion claims",
+            "published_role_score_caps": published_caps,
             "controlled_block_readiness_score": 7.0,
             "out_of_scope_projects_are_reported_but_not_scored_for_python_roles": True,
             "blocked_scope_selection_is_valid_project_analyzer_output": True,

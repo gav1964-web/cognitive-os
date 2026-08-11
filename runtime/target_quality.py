@@ -46,6 +46,7 @@ def semantic_target_quality_report(
     structural_evidence: dict[str, Any] | None = None,
     input_contract: dict[str, Any] | None = None,
     output_contract: dict[str, Any] | None = None,
+    side_effect_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not target:
         return {"status": "blocked", "target": "", "score": 0, "reasons": ["no selected extraction candidate"]}
@@ -69,6 +70,7 @@ def semantic_target_quality_report(
         dict(structural_evidence or {}),
         input_contract=input_contract,
         output_contract=output_contract,
+        side_effect_contract=side_effect_contract,
     )
     score += structural_delta
     reasons.extend(structural_reasons)

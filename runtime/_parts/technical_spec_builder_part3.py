@@ -118,16 +118,30 @@ def _output_contract_from_signature(signature: dict[str, Any], fallback: object)
 def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     source = str(candidate.get("source") or "")
     signature = dict(candidate.get("signature", {}) or {})
-    documented = dict(infer_source_contract(candidate).get("docstring_argument_types") or {})
+    semantic = infer_source_contract(candidate)
+    documented = dict(semantic.get("docstring_argument_types") or {})
+    constrained = dict(semantic.get("argument_constraint_types") or {})
+    owner = str(semantic.get("owner_class") or "")
     args = _contract_args(signature)
     if args:
-        return {
-            str(arg.get("name") or "payload"): documented.get(str(arg.get("name") or ""))
-            or _contract_type_from_arg(str(arg.get("name") or "payload"), str(arg.get("annotation") or ""))
+        contract = {
+            str(arg.get("name") or "payload"): _candidate_argument_type(arg, documented, constrained)
             for arg in args
             if isinstance(arg, dict)
         }
+        return {"receiver_state": f"{owner}State", **contract} if owner else contract
+    if owner:
+        return {"receiver_state": f"{owner}State"}
+    if "args" in signature:
+        return {"call_context": "NoArguments"}
     return {"call_context": _inferred_payload_type(source)}
+
+def _candidate_argument_type(arg: dict[str, Any], documented: dict[str, str], constrained: dict[str, str]) -> str:
+    name = str(arg.get("name") or "payload")
+    annotation = str(arg.get("annotation") or "")
+    if annotation and annotation.lower() not in IGNORED_RETURN_ANNOTATIONS:
+        return annotation
+    return documented.get(name) or constrained.get(name) or _contract_type_from_arg(name, annotation)
 
 def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [
@@ -193,11 +207,13 @@ def _camel(value: str) -> str:
 
 def _side_effect_policy(side_effects: list[Any]) -> dict[str, Any]:
     declared = [str(item) for item in side_effects if item]
+    mutating = set(policy_list(TECHNICAL_SPEC_POLICY, "side_effect_idempotency_required"))
+    idempotency_required = bool(set(declared) & mutating)
     return {
         "declared": declared,
-        "idempotency_required": bool(declared),
+        "idempotency_required": idempotency_required,
         "process_boundary_recommended": any(item in SIDE_EFFECT_PROCESS_BOUNDARY for item in declared),
-        "retry_policy": "only after checkpoint/idempotency guard" if declared else "safe to retry if pure contract holds",
+        "retry_policy": "only after checkpoint/idempotency guard" if idempotency_required else "safe to retry if read snapshot or pure contract holds",
     }
 
 def _data_lifecycle(brief: dict[str, Any], architecture_decision: dict[str, Any]) -> list[dict[str, Any]]:

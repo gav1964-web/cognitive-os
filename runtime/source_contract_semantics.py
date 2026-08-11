@@ -21,6 +21,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     args = [row for row in signature.get("args", []) or [] if isinstance(row, dict)]
     args = [row for row in args if str(row.get("name") or "") not in {"self", "cls"}]
     docstring_types = _docstring_argument_types(snippet, [str(row.get("name") or "") for row in args])
+    constraint_types = _argument_constraint_types(function, [str(row.get("name") or "") for row in args])
     return_annotation = str(signature.get("returns") or "").strip()
     inferred_output, output_basis = _output_shape(function, return_annotation, snippet, source_complete=source_complete)
     typed_args = [row for row in args if _concrete_type(row.get("annotation"))]
@@ -29,6 +30,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "source_body_complete": source_complete,
         "docstring_available": bool(ast.get_docstring(function)) if function is not None else _has_docstring_prefix(snippet),
         "docstring_argument_types": docstring_types,
+        "argument_constraint_types": constraint_types,
         "argument_count": len(args),
         "typed_argument_count": len(typed_args),
         "explicit_return_annotation": return_annotation,
@@ -45,6 +47,7 @@ def structural_quality_adjustment(
     *,
     input_contract: dict[str, Any] | None = None,
     output_contract: dict[str, Any] | None = None,
+    side_effect_contract: dict[str, Any] | None = None,
 ) -> tuple[int, list[str]]:
     if not evidence:
         return 0, []
@@ -52,6 +55,7 @@ def structural_quality_adjustment(
     reasons: list[str] = []
     inputs = dict(input_contract or {})
     outputs = dict(output_contract or {})
+    effects = dict(side_effect_contract or {})
     concrete_inputs = [value for value in inputs.values() if _concrete_type(value)]
     if inputs and len(concrete_inputs) == len(inputs):
         score += 6
@@ -76,6 +80,24 @@ def structural_quality_adjustment(
     if evidence.get("docstring_available"):
         score += 2
         reasons.append("callable docstring corroborates structural evidence")
+    declared_effects = list(effects.get("declared") or [])
+    if declared_effects and effects.get("retry_policy") and effects.get("requires_process_boundary"):
+        score += 4
+        reasons.append("declared side effects have explicit retry and isolation policy")
+    elif "declared" in effects and evidence.get("source_body_complete"):
+        score += 2
+        reasons.append("complete source analysis found no declared side effects")
+    input_types = {str(value) for value in inputs.values()}
+    output_types = {str(value) for value in outputs.values()}
+    if "RequestLike" in input_types and "ResponseLike" in output_types and evidence.get("source_body_complete"):
+        score += 3
+        reasons.append("framework request/response boundary is structurally proven")
+    if "VoidSideEffect" in output_types and "memory_state" in declared_effects and evidence.get("source_body_complete"):
+        score += 3
+        reasons.append("state transition boundary is structurally proven")
+    if not declared_effects and _all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):
+        score += 3
+        reasons.append("complete source proves a bounded side-effect-free transform")
     return score, reasons
 
 
@@ -247,8 +269,42 @@ def _documented_output_shape(snippet: str) -> str:
     return documented
 
 
+def _argument_constraint_types(function: ast.AST | None, names: list[str]) -> dict[str, str]:
+    if function is None:
+        return {}
+    values: dict[str, set[object]] = {name: set() for name in names}
+    optional: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Compare) or not isinstance(node.left, ast.Name) or node.left.id not in values:
+            continue
+        name = node.left.id
+        for comparator in node.comparators:
+            constants = _constraint_constants(comparator)
+            optional.update([name] if None in constants else [])
+            values[name].update(value for value in constants if value is not None)
+    result = {}
+    for name, constants in values.items():
+        if not constants:
+            continue
+        literal = "Literal[" + ", ".join(repr(value) for value in sorted(constants, key=str)) + "]"
+        result[name] = f"Optional[{literal}]" if name in optional else literal
+    return result
+
+
+def _constraint_constants(node: ast.AST) -> set[object]:
+    if isinstance(node, ast.Constant):
+        return {node.value}
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return {item.value for item in node.elts if isinstance(item, ast.Constant)}
+    return set()
+
+
 def _concrete_output(contract: dict[str, Any]) -> bool:
     return bool(contract) and all(_concrete_type(value) for value in contract.values())
+
+
+def _all_contract_shapes_concrete(inputs: dict[str, Any], outputs: dict[str, Any]) -> bool:
+    return bool(inputs and outputs) and all(_concrete_type(value) for value in [*inputs.values(), *outputs.values()])
 
 
 def _concrete_type(value: object) -> bool:

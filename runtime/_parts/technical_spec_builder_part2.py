@@ -17,7 +17,6 @@ from runtime.source_target_policy import is_context_only_implementation_target
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
-
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
@@ -89,7 +88,6 @@ def _human_review_material(
         ],
         "release_note": "This TechnicalSpec is an API artifact between SpecWriter and Implementer; it is not permission to edit source code.",
     }
-
 def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     first_slice = dict(brief.get("first_slice") or {})
@@ -122,6 +120,7 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
                 "callers": context.get("callers", []),
                 "callees": context.get("callees", []),
                 "side_effects": context.get("side_effects", []),
+                "contract_side_effects": context.get("contract_side_effects", context.get("side_effects", [])),
                 "claims": context.get("claims", []),
                 "target_binding": context.get("target_binding") or snippet.get("target_binding"),
                 "symbol_occurrences": context.get("symbol_occurrences") or snippet.get("symbol_occurrences", []),
@@ -187,11 +186,12 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
     domain_contract = _domain_extraction_contract(source)
     signature_input_contract = _input_contract_from_candidate(candidate)
     signature_output_contract = _output_contract_from_candidate(candidate)
+    contract_side_effects = list(candidate.get("contract_side_effects", candidate.get("side_effects", [])) or [])
     enriched_contract = enrich_signature_contract(
         target=source,
         input_contract=signature_input_contract,
         output_contract=signature_output_contract,
-        side_effects=list(candidate.get("side_effects", []) or []),
+        side_effects=contract_side_effects,
     )
     signature_input_contract = dict(enriched_contract.get("input_contract") or signature_input_contract)
     signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)
@@ -215,8 +215,8 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         "input_contract": input_contract,
         "output_contract": output_contract,
         "side_effects": {
-            "declared": candidate.get("side_effects", []),
-            "requires_process_boundary": bool(candidate.get("side_effects")),
+            **_side_effect_policy(contract_side_effects),
+            "requires_process_boundary": bool(contract_side_effects),
             **dict(domain_contract.get("side_effect_policy") or {}),
         },
         "evidence_source": candidate.get("source"),
@@ -237,7 +237,7 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         ranked_candidates=[str(row.get("source")) for row in contract["ranked_candidates"] if isinstance(row, dict)],
         source_evidence=[str(row.get("source")) for row in evidence if row.get("source")],
         selection_reason=str(contract.get("selection_reason") or ""),
-        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract},
+        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract, "side_effect_contract": contract["side_effects"]},
     )
     quality = dict(contract.get("semantic_quality") or {})
     quality_reasons = " ".join(str(reason) for reason in list(quality.get("reasons", []) or [])).lower()

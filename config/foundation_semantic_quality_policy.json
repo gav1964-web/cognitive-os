@@ -1,6 +1,11 @@
 {
   "schema_version": "foundation_semantic_quality_policy.v1",
   "status_threshold": 8.8,
+  "role_score_caps": {
+    "project_analyzer": 9.7,
+    "architect": 9.7,
+    "spec_writer": 9.8
+  },
   "specific_text": {
     "min_length": 32,
     "generic_phrases": [

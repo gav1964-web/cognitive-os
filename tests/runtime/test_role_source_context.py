@@ -82,4 +82,14 @@ def test_source_context_infers_nested_network_and_filesystem_calls(tmp_path: Pat
 
     context = build_source_context(project_root=str(project), project_report={}, sources=["transfer.py:forward"])
 
-    assert context["transfer.py:forward"]["snippet"]["side_effects"] == ["filesystem", "network"]
+    assert context["transfer.py:forward"]["snippet"]["side_effects"] == ["filesystem_read", "network"]
+
+
+def test_source_context_tolerates_stale_missing_symbol(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "core.py").write_text("def present():\n    return 1\n", encoding="utf-8")
+
+    context = build_source_context(project_root=str(project), project_report={}, sources=["core.py:missing"])
+
+    assert "core.py:missing" not in context

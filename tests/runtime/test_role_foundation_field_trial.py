@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from runtime.role_artifact_quality import evaluate_technical_spec
-from runtime.role_foundation_field_trial import _primary_language_scope, _report, _role_scores, discover_python_projects
+from runtime.role_foundation_field_trial import _apply_role_score_caps, _primary_language_scope, _report, _role_scores, discover_python_projects
 
 
 def test_field_trial_report_uses_project_and_role_minimums():
@@ -118,7 +118,13 @@ def test_role_scores_use_semantic_review_floor_for_constrained_spec_handoff():
 def test_role_scores_do_not_score_downstream_roles_for_scope_selection_block():
     scores = _role_scores({"blocker": "scope_selection_required", "score": {"artifact_score": 1.0}})
 
-    assert scores == {"project_analyzer": 10.0, "architect": None, "spec_writer": None}
+    assert scores == {"project_analyzer": 9.7, "architect": None, "spec_writer": None}
+
+
+def test_published_role_scores_apply_conservative_caps():
+    assert _apply_role_score_caps(
+        {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 10.0}
+    ) == {"project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.8}
 
 
 def test_technical_spec_quality_accepts_constrained_semantic_review_handoff():

@@ -22,7 +22,8 @@ def load_source_side_effect_policy() -> dict[str, Any]:
 
 def infer_ast_side_effects(node: ast.AST, text: str) -> list[str]:
     policy = load_source_side_effect_policy()
-    calls = {_call_name(child.func).lower() for child in ast.walk(node) if isinstance(child, ast.Call)}
+    call_nodes = [child for child in ast.walk(node) if isinstance(child, ast.Call)]
+    calls = {_call_name(child.func).lower() for child in call_nodes}
     effects = {
         str(rule["id"])
         for rule in policy.get("effects", [])
@@ -35,7 +36,30 @@ def infer_ast_side_effects(node: ast.AST, text: str) -> list[str]:
     lowered = text.lower()
     if any(str(marker).lower() in lowered for marker in memory.get("text_contains", [])):
         effects.add("memory_state")
+    effects.update(_open_effects(call_nodes))
     return sorted(effects)
+
+
+def selection_side_effects(effects: list[str]) -> list[str]:
+    contract_only = {str(item) for item in load_source_side_effect_policy().get("contract_only_effects", [])}
+    return sorted(set(effects) - contract_only)
+
+
+def _open_effects(calls: list[ast.Call]) -> set[str]:
+    effects = set()
+    for call in calls:
+        name = _call_name(call.func).lower()
+        if name != "open" and not name.endswith(".open"):
+            continue
+        mode = _open_mode(call)
+        effects.add("filesystem_write" if any(token in mode for token in "wax+") else "filesystem_read")
+    return effects
+
+
+def _open_mode(call: ast.Call) -> str:
+    values = [call.args[1]] if len(call.args) > 1 else []
+    values.extend(keyword.value for keyword in call.keywords if keyword.arg == "mode")
+    return next((str(value.value).lower() for value in values if isinstance(value, ast.Constant)), "r")
 
 
 def _rule_matches(rule: dict[str, Any], calls: set[str]) -> bool:

@@ -24,6 +24,8 @@
     "argument_rules": [
       {"type": "RequestLike", "exact": ["request", "req"], "contains_any": ["request"]},
       {"type": "ResponseLike", "exact": ["response", "resp"], "contains_any": ["response"]},
+      {"type": "ActionLike", "exact": ["action"], "contains_any": []},
+      {"type": "Identifier", "exact": ["id"], "contains_any": ["_id"]},
       {"type": "PathLike", "contains_any": ["path", "file", "filename"]},
       {"type": "UrlString", "contains_any": ["url", "uri"]},
       {"type": "str", "contains_any": ["text", "message", "content"]},
@@ -52,7 +54,8 @@
       {"type": "str", "snippet_contains_any": ["return str", "return \"\""]}
     ]
   },
-  "side_effect_process_boundary": ["network", "subprocess", "filesystem", "filesystem_write", "database"],
+  "side_effect_process_boundary": ["network", "subprocess", "filesystem", "filesystem_read", "filesystem_write", "database", "database_read"],
+  "side_effect_idempotency_required": ["network", "subprocess", "filesystem", "filesystem_write", "database", "memory_state"],
   "semantic_rerank": {
     "scan_limit": 12,
     "strong_semantic_delta": 8,

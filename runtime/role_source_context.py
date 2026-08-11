@@ -6,8 +6,9 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from .source_side_effect_inference import infer_ast_side_effects
 from .source_contract_semantics import infer_source_contract
+from .source_side_effect_inference import infer_ast_side_effects, selection_side_effects
+from .transitive_side_effects import infer_transitive_side_effects
 
 
 def build_source_context(
@@ -40,7 +41,10 @@ def build_source_context(
                     row["signature"] = snippet["signature"]
                 snippet_effects = list(snippet.get("side_effects", []))
                 if snippet_effects:
-                    row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + snippet_effects))
+                    row["contract_side_effects"] = sorted(set(list(row.get("side_effects", [])) + snippet_effects))
+                selection_effects = list(snippet.get("selection_side_effects", []))
+                if selection_effects:
+                    row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + selection_effects))
         elif source.endswith(".py"):
             module_context = _module_context(root / source)
             if module_context:
@@ -300,6 +304,8 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
             start = max(1, int(getattr(node, "lineno", 1)))
             end = min(len(lines), int(getattr(node, "end_lineno", start)))
             node_text = "\n".join(lines[start - 1 : end])
+            side_effects = infer_transitive_side_effects(tree, node)
+            direct_effects = infer_ast_side_effects(node, node_text)
             result = {
                 "path": path.name,
                 "symbol": symbol,
@@ -307,7 +313,9 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "end_line": end,
                 "text": node_text[:900],
                 "signature": _ast_signature(node),
-                "side_effects": infer_ast_side_effects(node, node_text),
+                "side_effects": side_effects["effects"],
+                "selection_side_effects": selection_side_effects(direct_effects),
+                "side_effect_chains": side_effects["chains"],
                 "structural_contract": infer_source_contract(
                     {"signature": _ast_signature(node), "snippet": node_text}
                 ),
@@ -319,6 +327,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
             elif matches and matches[0].get("kind") == "method":
                 result["target_binding"] = "method_symbol"
                 result["owner_class"] = matches[0].get("class_name")
+                result["structural_contract"]["owner_class"] = matches[0].get("class_name")
             return result
     return None
 

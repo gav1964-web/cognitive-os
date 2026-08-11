@@ -116,3 +116,21 @@ def test_local_mapping_updates_are_not_external_state_mutation():
 
     assert local["state_mutation"] is False
     assert external["state_mutation"] is True
+
+
+def test_argument_constraints_infer_optional_literal_type():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "media_type", "annotation": ""}]},
+            "snippet": (
+                "def chooser(media_type=None):\n"
+                "    if media_type == 'audio':\n        return 1\n"
+                "    if media_type == 'video':\n        return 2\n"
+                "    if media_type is None:\n        return 3\n"
+            ),
+        }
+    )
+
+    assert evidence["argument_constraint_types"] == {
+        "media_type": "Optional[Literal['audio', 'video']]"
+    }
