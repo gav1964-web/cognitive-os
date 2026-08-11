@@ -1,17 +1,5 @@
 from __future__ import annotations
 
-from runtime.greenfield_local10_templates import (
-    acceptance_for as local10_acceptance_for,
-    content_for_case as local10_content_for_case,
-    has_case as local10_has_case,
-)
-from runtime.greenfield_stage2_templates import (
-    acceptance_for as stage2_acceptance_for,
-    content_for_case as stage2_content_for_case,
-    has_case as stage2_has_case,
-)
-
-
 def _sheet_converter() -> str:
     return r'''from __future__ import annotations
 
