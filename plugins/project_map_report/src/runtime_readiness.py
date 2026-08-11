@@ -8,7 +8,6 @@ from .core_paths import classify_source_path, is_core_path
 from .extraction_plan_filters import suppress_whole_workflow_wrappers
 from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
 from .first_slice import preferred_first_slice_candidates
-from .runtime_resume_plan import resume_reuse_plan
 from .runtime_readiness_helpers import (
     all_functions,
     boundary_function_candidates,

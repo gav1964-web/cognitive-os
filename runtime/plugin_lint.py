@@ -31,17 +31,6 @@ def _line_count(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").splitlines())
 
 
-def _reject_plugin_to_plugin_imports(path: Path, plugin_id: str) -> None:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    own_prefix = f"plugins.{plugin_id}."
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                _check_import(alias.name, own_prefix, path)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            _check_import(node.module, own_prefix, path)
-
-
 def _lint_src_file(path: Path, plugin_id: str, side_effects: dict[str, str]) -> None:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     own_prefix = f"plugins.{plugin_id}."

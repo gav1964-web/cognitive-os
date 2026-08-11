@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import re
 import subprocess
 import sys
@@ -284,13 +283,6 @@ def _add_dependency_strings(packages: set[str], line: str) -> None:
         name = _package_name(match.group(1))
         if name:
             packages.add(name)
-
-
-def _module_installed(module: str) -> bool:
-    try:
-        return importlib.util.find_spec(module) is not None
-    except ModuleNotFoundError:
-        return False
 
 
 def _package_name(line: str) -> str:

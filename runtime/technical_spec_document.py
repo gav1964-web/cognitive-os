@@ -294,13 +294,6 @@ def _table(headers: list[str], rows: list[list[object]]) -> list[str]:
     return result
 
 
-def _bullet(values: object) -> list[str]:
-    if not isinstance(values, list):
-        values = list(values) if values else []
-    rows = [f"- {_value(value)}" for value in values if _value(value) != "n/a"]
-    return rows or ["- Не записано."]
-
-
 def _ru_bullet(values: object) -> list[str]:
     if not isinstance(values, list):
         values = list(values) if values else []

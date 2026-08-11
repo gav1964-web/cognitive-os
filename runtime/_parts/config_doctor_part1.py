@@ -19,6 +19,7 @@ from runtime.operation_recipe_rules import load_operation_recipe_rules
 from runtime.patch_synthesis_policy import load_patch_synthesis_policy
 from runtime.programmer_executor_playbooks import load_programmer_executor_playbooks
 from runtime.project_evolution_policy import load_project_evolution_policy
+from runtime.project_probe_env_policy import load_project_probe_env_policy
 from runtime.prompt_intake_rules import load_prompt_intake_rules
 from runtime.role_promotion_policy import load_role_promotion_policy
 from runtime.role_directory import load_role_directory
@@ -78,6 +79,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_programmer_executor_playbooks(catalogs),
             _check_executor_solution_patterns(catalogs),
             _check_project_evolution_policy(catalogs),
+            _check_project_probe_env_policy(catalogs),
             _check_role_promotion_policy(catalogs),
             _check_llm_profiles(catalogs),
             _check_role_source_policy(catalogs),
@@ -135,6 +137,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "programmer_executor_playbooks": load_programmer_executor_playbooks(str(root / "config" / "programmer_executor_playbooks.json")),
         "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),
         "project_evolution_policy": load_project_evolution_policy(str(root / "config" / "project_evolution_policy.json")),
+        "project_probe_env_policy": load_project_probe_env_policy(str(root / "config" / "project_probe_env_policy.json")),
         "role_promotion_policy": load_role_promotion_policy(str(root / "config" / "role_promotion_policy.json")),
         "llm_profiles": load_llm_profiles(str(root / "config" / "llm_profiles.json")),
         "role_source_policy": load_role_source_policy(str(root / "config" / "role_source_policy.json")),

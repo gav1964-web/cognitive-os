@@ -5,6 +5,22 @@ from typing import Any
 from runtime._parts.config_doctor_part1 import _Check
 
 
+def _check_project_probe_env_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("project_probe_env_policy_integrity")
+    policy = dict(catalogs["project_probe_env_policy"])
+    package_map = dict(policy.get("package_to_module") or {})
+    low_risk = {str(item) for item in list(policy.get("low_risk_allowlist") or [])}
+    native = {str(item) for item in list(policy.get("native_or_compiled") or [])}
+    wheel = {str(item) for item in list(policy.get("wheel_only_native_allowlist") or [])}
+    if len(package_map) != len({str(key).lower() for key in package_map}):
+        check.errors.append("project_probe_env_policy_duplicate:package_to_module")
+    if low_risk & native:
+        check.errors.append("project_probe_env_policy_overlap:low_risk_and_native")
+    for package in sorted(wheel - native):
+        check.errors.append(f"project_probe_env_policy_wheel_not_native:{package}")
+    return check
+
+
 def _check_technical_spec_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("technical_spec_policy_integrity")
     policy = dict(catalogs["technical_spec_policy"])

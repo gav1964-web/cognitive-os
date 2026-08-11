@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from .executable_acceptance_isolation import load_source_isolated_callable, load_source_isolated_function
+from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy
 

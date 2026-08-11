@@ -152,10 +152,6 @@ def _artifact(report: dict[str, Any], name: str) -> dict[str, Any]:
     return summary
 
 
-def _artifact_value(report: dict[str, Any], name: str, field: str) -> Any:
-    return _artifact(report, name).get(field)
-
-
 def _summary_value(report: dict[str, Any], name: str, field: str) -> Any:
     return dict(dict(report.get("artifacts") or {}).get(name) or {}).get(field)
 

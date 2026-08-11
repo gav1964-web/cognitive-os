@@ -26,6 +26,7 @@ def test_config_doctor_passes_current_catalogs():
     assert any(check["code"] == "programmer_executor_playbooks_integrity" for check in report["checks"])
     assert any(check["code"] == "executor_solution_patterns_integrity" for check in report["checks"])
     assert any(check["code"] == "project_evolution_policy_integrity" for check in report["checks"])
+    assert any(check["code"] == "project_probe_env_policy_integrity" for check in report["checks"])
     assert any(check["code"] == "role_promotion_policy_integrity" for check in report["checks"])
     assert any(check["code"] == "llm_profiles_integrity" for check in report["checks"])
     assert any(check["code"] == "role_source_policy_integrity" for check in report["checks"])

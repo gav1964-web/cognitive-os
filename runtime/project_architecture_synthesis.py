@@ -371,17 +371,6 @@ def _is_generated_context_part(part: str) -> bool:
     return part == "generated" or part.startswith("generated_") or part.startswith("generated-")
 
 
-def _target_rank(target: str, knowledge: dict[str, Any]) -> tuple[int, int, str]:
-    path = _target_path(target).lower().replace("\\", "/")
-    policy = dict(knowledge.get("source_scope_policy") or {})
-    context_penalty = 10 if _is_context_only_target(target, knowledge) else 0
-    prefixes = tuple(_strings(policy.get("prefer_core_prefixes")))
-    files = set(_strings(policy.get("prefer_core_files")))
-    name = path.rsplit("/", 1)[-1]
-    core_bonus = 0 if path.startswith(prefixes) or name in files else 1
-    return (context_penalty, core_bonus, path)
-
-
 def _target_path(target: str) -> str:
     return str(target).split(":", 1)[0]
 

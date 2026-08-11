@@ -12,7 +12,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from runtime.synthetic_role_kb import (
-    generate_llm_role_qa,
     load_synthetic_role_qa,
     record_role_qa_feedback,
     search_synthetic_role_qa,

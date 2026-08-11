@@ -335,7 +335,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:05c62a279064ed441cde9dc0aedb910fa519a02e2a13bd138cef404fa480f08d",
+      "version_hash": "sha256:1af98eb9a0483de187d4653003538bc91069821600849e1b176569037ae22dc1",
       "fallback_for": []
     },
     {
@@ -351,7 +351,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:cd6448e13e61c247b67badc26f55e9451b1c062ce397fa048d5d45cbac5298f2",
+      "version_hash": "sha256:5fa4e162aedfe84109c2641a337d76097a37bf4e01c5227449b931e804b762a5",
       "fallback_for": []
     },
     {
