@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .runtime_resume_plan import resume_reuse_plan
+
 from .core_paths import classify_source_path, is_core_path
 from .extraction_plan_filters import suppress_whole_workflow_wrappers
 from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key

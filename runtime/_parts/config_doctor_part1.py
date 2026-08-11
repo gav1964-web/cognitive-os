@@ -8,6 +8,7 @@ from runtime.architecture_decision_policy import load_architecture_decision_poli
 from runtime.architecture_synthesis_policy import load_architecture_synthesis_policy
 from runtime.contract_transform_contract_profiles import load_contract_transform_contract_profiles
 from runtime.contract_transform_operators import load_contract_transform_operators
+from runtime.dependency_extraction_policy import load_dependency_extraction_policy
 from runtime.executable_acceptance_policy import load_executable_acceptance_policy
 from runtime.executor_solution_patterns import load_executor_solution_patterns
 from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
@@ -77,6 +78,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_executable_acceptance_policy(catalogs),
             _check_contract_transform_operators(catalogs),
             _check_contract_transform_contract_profiles(catalogs),
+            _check_dependency_extraction_policy(catalogs),
             _check_patch_synthesis_policy(catalogs),
             _check_programmer_executor_playbooks(catalogs),
             _check_executor_solution_patterns(catalogs),
@@ -137,6 +139,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "executable_acceptance_policy": load_executable_acceptance_policy(str(root / "config" / "executable_acceptance_policy.json")),
         "contract_transform_operators": load_contract_transform_operators(str(root / "config" / "contract_transform_operators.json")),
         "contract_transform_contract_profiles": load_contract_transform_contract_profiles(str(root / "config" / "contract_transform_contract_profiles.json")),
+        "dependency_extraction_policy": load_dependency_extraction_policy(str(root / "config" / "dependency_extraction_policy.json")),
         "patch_synthesis_policy": load_patch_synthesis_policy(str(root / "config" / "patch_synthesis_policy.json")),
         "programmer_executor_playbooks": load_programmer_executor_playbooks(str(root / "config" / "programmer_executor_playbooks.json")),
         "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),

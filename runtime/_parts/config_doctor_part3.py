@@ -5,6 +5,17 @@ from typing import Any
 from runtime._parts.config_doctor_part1 import _Check
 
 
+def _check_dependency_extraction_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("dependency_extraction_policy_integrity")
+    policy = dict(catalogs["dependency_extraction_policy"])
+    unsafe_calls = {str(item) for item in list(policy.get("unsafe_call_roots") or [])}
+    safe_calls = {str(item) for item in list(policy.get("safe_call_roots") or [])}
+    safe_bare = {str(item) for item in list(policy.get("safe_bare_calls") or [])}
+    for name in sorted(unsafe_calls & (safe_calls | safe_bare)):
+        check.errors.append(f"dependency_extraction_policy_conflicting_call_root:{name}")
+    return check
+
+
 def _check_pypi_archetype_rules(catalogs: dict[str, Any]) -> _Check:
     check = _Check("pypi_archetype_kb_integrity")
     rules = [dict(row) for row in list(catalogs["pypi_archetype_rules"])]

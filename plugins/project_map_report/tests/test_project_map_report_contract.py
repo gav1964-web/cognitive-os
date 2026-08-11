@@ -1,4 +1,9 @@
 from plugins.project_map_report.src.main import run
+from plugins.project_map_report.src.runtime_readiness import resume_reuse_plan
+
+
+def test_runtime_readiness_preserves_resume_plan_compatibility_export():
+    assert callable(resume_reuse_plan)
 
 
 def test_python_library_without_cli_gets_library_usage_flow():
