@@ -39,19 +39,7 @@ def run_role_pipeline(
         "force_transform": force_transform,
         "architect_advisory_config": architect_advisory_config,
     }
-    run_configured_workflow(
-        state=state,
-        handlers={
-            "analyze": _stage_analyze,
-            "build": _stage_build,
-            "after_build": _stage_after_build,
-            "review": _stage_review,
-            "after_review": _stage_after_review,
-            "after_decision": _stage_after_decision,
-            "assemble_result": _stage_assemble_result,
-            "after_result": _stage_after_result,
-        },
-    )
+    run_configured_workflow(state=state)
     return dict(state["result"])
 
 

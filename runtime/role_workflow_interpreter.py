@@ -31,17 +31,22 @@ def ordered_workflow_stages(*, directory: dict[str, Any] | None = None) -> list[
 def run_configured_workflow(
     *,
     state: dict[str, Any],
-    handlers: dict[str, Callable[[dict[str, Any]], None]],
+    handlers: dict[str, Callable[[dict[str, Any]], None]] | None = None,
     directory: dict[str, Any] | None = None,
 ) -> None:
+    if handlers is None:
+        from .role_workflow_handler_registry import workflow_handler_registry
+
+        handlers = workflow_handler_registry()
     stages = ordered_workflow_stages(directory=directory)
-    missing = [str(stage["stage_id"]) for stage in stages if str(stage["stage_id"]) not in handlers]
+    handler_keys = [str(stage.get("handler_id") or stage["stage_id"]) for stage in stages]
+    missing = [str(stage["stage_id"]) for stage, key in zip(stages, handler_keys) if key not in handlers]
     if missing:
         raise RoleWorkflowInterpreterError(f"role workflow has no runtime handler: {missing[0]}")
-    for stage in stages:
+    for stage, handler_key in zip(stages, handler_keys):
         stage_id = str(stage["stage_id"])
         _require_state(stage_id, "input", list(stage.get("requires") or []), state)
-        handlers[stage_id](state)
+        handlers[handler_key](state)
         _require_state(stage_id, "output", list(stage.get("provides") or []), state)
 
 

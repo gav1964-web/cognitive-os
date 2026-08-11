@@ -5,6 +5,8 @@ import json
 import pytest
 
 from runtime.role_directory import RoleDirectoryError, load_role_directory
+from runtime.config_doctor import _check_role_directory
+from runtime.role_workflow_handler_registry import workflow_handler_registry
 from runtime.role_workflow_interpreter import (
     RoleWorkflowInterpreterError,
     ordered_workflow_stages,
@@ -90,3 +92,21 @@ def test_role_directory_rejects_invalid_stage_contract(tmp_path):
 
     with pytest.raises(RoleDirectoryError, match="provides must be a string list: analyze"):
         load_role_directory(str(directory_path))
+
+
+def test_default_workflow_handlers_are_registered():
+    directory = load_role_directory()
+    registry = workflow_handler_registry()
+
+    assert all(stage["handler_id"] in registry for stage in directory["workflow"]["stages"])
+    assert all(callable(handler) for handler in registry.values())
+
+
+def test_config_doctor_rejects_unknown_workflow_handler():
+    directory = json.loads(json.dumps(load_role_directory()))
+    directory["workflow"]["stages"][0]["handler_id"] = "missing.analyze"
+
+    check = _check_role_directory({"role_directory": directory}).to_dict()
+
+    assert check["status"] == "failed"
+    assert check["errors"] == ["unknown_workflow_handler:analyze:missing.analyze"]
