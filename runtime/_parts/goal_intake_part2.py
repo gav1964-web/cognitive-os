@@ -1,69 +1,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass
 from typing import Any
-from runtime.generic_file_conversion_recipe import is_file_conversion_prompt
-from runtime.prompt_intake_rules import markers as prompt_markers
-from runtime.schema import validate_payload
 
-GOAL_SPEC_SCHEMA_VERSION = "0.1"
-CONFIDENCE_FIELDS = ("intent", "target", "inputs", "outputs", "constraints", "success_criteria", "allowed_actions")
-GOAL_SPEC_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "required": [
-        "artifact_type",
-        "schema_version",
-        "status",
-        "raw_prompt",
-        "normalized_prompt",
-        "intent",
-        "target",
-        "inputs",
-        "outputs",
-        "constraints",
-        "success_criteria",
-        "allowed_actions",
-        "assumptions",
-        "ambiguity_score",
-        "field_confidence",
-        "clarification",
-    ],
-    "additionalProperties": False,
-    "properties": {
-        "artifact_type": {"type": "string"},
-        "schema_version": {"type": "string"},
-        "status": {"type": "string", "enum": ["ready", "needs_clarification"]},
-        "raw_prompt": {"type": "string"},
-        "normalized_prompt": {"type": "string"},
-        "intent": {"type": "string"},
-        "target": {"type": ["string", "null"]},
-        "inputs": {"type": "array", "items": {"type": "string"}},
-        "outputs": {"type": "array", "items": {"type": "string"}},
-        "constraints": {"type": "array", "items": {"type": "string"}},
-        "success_criteria": {"type": "array", "items": {"type": "string"}},
-        "allowed_actions": {"type": "array", "items": {"type": "string"}},
-        "assumptions": {"type": "array", "items": {"type": "string"}},
-        "ambiguity_score": {"type": "number", "minimum": 0, "maximum": 1},
-        "field_confidence": {
-            "type": "object",
-            "required": list(CONFIDENCE_FIELDS),
-            "additionalProperties": False,
-            "properties": {name: {"type": "number", "minimum": 0, "maximum": 1} for name in CONFIDENCE_FIELDS},
-        },
-        "clarification": {
-            "type": ["object", "null"],
-            "required": ["status", "reason_code", "missing", "questions"],
-            "additionalProperties": False,
-            "properties": {
-                "status": {"type": "string"},
-                "reason_code": {"type": "string"},
-                "missing": {"type": "array", "items": {"type": "string"}},
-                "questions": {"type": "array", "items": {"type": "string"}},
-            },
-        },
-    },
-}
+from runtime.prompt_intake_rules import markers as prompt_markers
 
 def _clarification(missing: list[str], intent: str, target: str | None) -> ClarificationPacket | None:
     if not missing:
