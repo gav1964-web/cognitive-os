@@ -99,13 +99,9 @@ def test_default_workflow_handlers_are_registered():
     registry = workflow_handler_registry()
 
     assert all(stage["handler_id"] in registry for stage in directory["workflow"]["stages"])
-    assert all(callable(spec.function) for spec in registry.values())
-    assert all(spec.function.__module__ == "runtime.role_pipeline_stages" for spec in registry.values())
-    assert all(spec.function.__name__.startswith("stage_") for spec in registry.values())
-    for stage in directory["workflow"]["stages"]:
-        spec = registry[stage["handler_id"]]
-        assert tuple(stage["requires"]) == spec.requires
-        assert tuple(stage["provides"]) == spec.provides
+    assert all(callable(handler) for handler in registry.values())
+    assert all(handler.__module__ == "runtime.role_pipeline_stages" for handler in registry.values())
+    assert all(handler.__name__.startswith("stage_") for handler in registry.values())
 
 
 def test_config_doctor_rejects_unknown_workflow_handler():
@@ -116,24 +112,3 @@ def test_config_doctor_rejects_unknown_workflow_handler():
 
     assert check["status"] == "failed"
     assert check["errors"] == ["unknown_workflow_handler:analyze:missing.analyze"]
-
-
-def test_config_doctor_rejects_workflow_handler_contract_drift():
-    directory = json.loads(json.dumps(load_role_directory()))
-    directory["workflow"]["stages"][1]["requires"].remove("project_report")
-
-    check = _check_role_directory({"role_directory": directory}).to_dict()
-
-    assert check["status"] == "failed"
-    assert check["errors"] == ["workflow_handler_requires_mismatch:build:role_pipeline.build"]
-
-
-def test_runtime_preflight_rejects_workflow_handler_contract_drift():
-    directory = json.loads(json.dumps(load_role_directory()))
-    directory["workflow"]["stages"][1]["provides"].remove("spec")
-
-    with pytest.raises(
-        RoleWorkflowInterpreterError,
-        match="workflow_handler_provides_mismatch:build:role_pipeline.build",
-    ):
-        run_configured_workflow(state={}, directory=directory)

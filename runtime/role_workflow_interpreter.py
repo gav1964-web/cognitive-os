@@ -36,12 +36,12 @@ def run_configured_workflow(
 ) -> None:
     stages = ordered_workflow_stages(directory=directory)
     if handlers is None:
-        from .role_workflow_handler_registry import workflow_handler_contract_errors, workflow_handler_registry
+        from .role_workflow_handler_registry import workflow_handler_registration_errors, workflow_handler_registry
 
-        contract_errors = workflow_handler_contract_errors(stages)
-        if contract_errors:
-            raise RoleWorkflowInterpreterError(contract_errors[0])
-        handlers = {handler_id: spec.function for handler_id, spec in workflow_handler_registry().items()}
+        registration_errors = workflow_handler_registration_errors(stages)
+        if registration_errors:
+            raise RoleWorkflowInterpreterError(registration_errors[0])
+        handlers = workflow_handler_registry()
     handler_keys = [str(stage.get("handler_id") or stage["stage_id"]) for stage in stages]
     missing = [str(stage["stage_id"]) for stage, key in zip(stages, handler_keys) if key not in handlers]
     if missing:
