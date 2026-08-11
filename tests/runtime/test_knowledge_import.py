@@ -6,7 +6,12 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from runtime.knowledge_import import infer_archetype_from_pypi, official_docs_fact_candidate, pypi_candidate_from_metadata
+from runtime.knowledge_import import (
+    infer_archetype_from_pypi,
+    load_pypi_archetype_rules,
+    official_docs_fact_candidate,
+    pypi_candidate_from_metadata,
+)
 
 
 def test_infer_archetype_from_pypi_detects_schema_validation():
@@ -21,6 +26,13 @@ def test_infer_archetype_from_pypi_detects_schema_validation():
 
     assert result["rule_id"] == "schema_validation_library"
     assert "validation" in result["matched_signals"]
+
+
+def test_pypi_archetype_rules_load_from_kb():
+    rules = load_pypi_archetype_rules()
+
+    assert len(rules) == 6
+    assert rules[0]["rule_id"] == "schema_validation_library"
 
 
 def test_pypi_candidate_is_staged_and_weak():

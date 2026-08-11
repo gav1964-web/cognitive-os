@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -12,47 +14,32 @@ from .knowledge import official_docs_knowledge
 from .knowledge_admission import build_kb_candidate
 
 
+ROOT = Path(__file__).resolve().parents[1]
 PYPI_API = "https://pypi.org/pypi/{package}/json"
+PYPI_ARCHETYPE_KB_PATH = ROOT / "knowledge" / "architecture_patterns" / "pypi_archetype_inference.json"
 
 
-ARCHETYPE_RULES = [
-    {
-        "rule_id": "schema_validation_library",
-        "label": "schema/validation library",
-        "signals": ["schema", "validation", "validator", "pydantic", "jsonschema", "marshmallow"],
-        "first_slice": "schema_validation_contract_slice",
-    },
-    {
-        "rule_id": "signing_token_utility",
-        "label": "signing/token utility",
-        "signals": ["sign", "signature", "serializer", "token", "dangerous"],
-        "first_slice": "sign_verify_contract_slice",
-    },
-    {
-        "rule_id": "docs_site_generator",
-        "label": "documentation/static site generator",
-        "signals": ["documentation", "markdown", "site", "mkdocs", "theme"],
-        "first_slice": "site_page_render_slice",
-    },
-    {
-        "rule_id": "cloud_api_sdk",
-        "label": "cloud/API SDK",
-        "signals": ["aws", "cloud", "sdk", "client", "endpoint", "service"],
-        "first_slice": "sdk_service_call_slice",
-    },
-    {
-        "rule_id": "media_processing_library",
-        "label": "media processing library",
-        "signals": ["image", "video", "media", "pillow", "moviepy", "ffmpeg"],
-        "first_slice": "media_decode_transform_encode_slice",
-    },
-    {
-        "rule_id": "async_protocol_runtime",
-        "label": "async protocol runtime",
-        "signals": ["async", "protocol", "websocket", "asgi", "trio", "uvicorn"],
-        "first_slice": "async_protocol_event_slice",
-    },
-]
+@lru_cache(maxsize=8)
+def load_pypi_archetype_rules(path: str | None = None) -> list[dict[str, Any]]:
+    source = Path(path).resolve() if path else PYPI_ARCHETYPE_KB_PATH
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "pypi_archetype_inference.v1" or payload.get("status") != "active":
+        raise ValueError("PyPI archetype KB must use active pypi_archetype_inference.v1")
+    rules = payload.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise ValueError("PyPI archetype KB requires non-empty rules")
+    seen = set()
+    for row in rules:
+        if not isinstance(row, dict):
+            raise ValueError("PyPI archetype KB rules must be objects")
+        rule_id = str(row.get("rule_id") or "")
+        if not rule_id or rule_id in seen:
+            raise ValueError(f"PyPI archetype KB rule_id must be unique: {rule_id}")
+        seen.add(rule_id)
+        for field_name in ("label", "signals", "first_slice"):
+            if not row.get(field_name):
+                raise ValueError(f"PyPI archetype KB rule requires {field_name}: {rule_id}")
+    return [dict(row) for row in rules]
 
 
 def fetch_pypi_metadata(package: str) -> dict[str, Any]:
@@ -164,7 +151,7 @@ def official_docs_fact_candidate(
 def infer_archetype_from_pypi(metadata: dict[str, Any]) -> dict[str, Any] | None:
     text = _metadata_text(metadata)
     candidates = []
-    for rule in ARCHETYPE_RULES:
+    for rule in load_pypi_archetype_rules():
         found = [signal for signal in rule["signals"] if signal.lower() in text]
         if found:
             candidates.append({**rule, "matched_signals": found, "score": len(found)})

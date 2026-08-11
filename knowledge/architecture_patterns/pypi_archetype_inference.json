@@ -1,0 +1,42 @@
+{
+  "schema_version": "pypi_archetype_inference.v1",
+  "status": "active",
+  "rules": [
+    {
+      "rule_id": "schema_validation_library",
+      "label": "schema/validation library",
+      "signals": ["schema", "validation", "validator", "pydantic", "jsonschema", "marshmallow"],
+      "first_slice": "schema_validation_contract_slice"
+    },
+    {
+      "rule_id": "signing_token_utility",
+      "label": "signing/token utility",
+      "signals": ["sign", "signature", "serializer", "token", "dangerous"],
+      "first_slice": "sign_verify_contract_slice"
+    },
+    {
+      "rule_id": "docs_site_generator",
+      "label": "documentation/static site generator",
+      "signals": ["documentation", "markdown", "site", "mkdocs", "theme"],
+      "first_slice": "site_page_render_slice"
+    },
+    {
+      "rule_id": "cloud_api_sdk",
+      "label": "cloud/API SDK",
+      "signals": ["aws", "cloud", "sdk", "client", "endpoint", "service"],
+      "first_slice": "sdk_service_call_slice"
+    },
+    {
+      "rule_id": "media_processing_library",
+      "label": "media processing library",
+      "signals": ["image", "video", "media", "pillow", "moviepy", "ffmpeg"],
+      "first_slice": "media_decode_transform_encode_slice"
+    },
+    {
+      "rule_id": "async_protocol_runtime",
+      "label": "async protocol runtime",
+      "signals": ["async", "protocol", "websocket", "asgi", "trio", "uvicorn"],
+      "first_slice": "async_protocol_event_slice"
+    }
+  ]
+}

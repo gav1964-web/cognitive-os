@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from runtime.system_knowledge_ir_backlog import build_ir_loss_backlog, summarize_ir_loss_backlog
+from runtime.system_knowledge_ir_backlog import build_ir_loss_backlog, load_ir_backlog_policy, summarize_ir_loss_backlog
+
+
+def test_ir_loss_backlog_policy_loads_categories():
+    policy = load_ir_backlog_policy()
+
+    assert policy["categories"]["public_interfaces"]["severity"] == "high"
+    assert policy["categories"]["architecture_slices"]["role"] == "architect"
 
 
 def test_ir_loss_backlog_routes_losses_to_roles():

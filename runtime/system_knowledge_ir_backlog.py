@@ -2,35 +2,38 @@
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
-ROLE_BY_CATEGORY = {
-    "purpose": "project_analyzer",
-    "public_interfaces": "project_analyzer",
-    "behavior_contracts": "spec_writer",
-    "architecture_slices": "architect",
-    "acceptance_tests": "spec_writer",
-    "data_artifacts": "project_analyzer",
-}
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_POLICY_PATH = ROOT / "config" / "system_knowledge_ir_backlog_policy.json"
 
-ACTION_BY_CATEGORY = {
-    "purpose": "preserve project purpose in generated README and IR seed",
-    "public_interfaces": "carry route/CLI/file interfaces from IR into generated source and docs",
-    "behavior_contracts": "emit source-backed behavior contracts that generated project analysis can recover",
-    "architecture_slices": "compile first-slice boundaries into generated module names or docs",
-    "acceptance_tests": "materialize acceptance criteria as generated contract tests",
-    "data_artifacts": "copy or summarize required data artifacts with traceable names",
-}
 
-SEVERITY_BY_CATEGORY = {
-    "public_interfaces": "high",
-    "behavior_contracts": "high",
-    "acceptance_tests": "medium",
-    "architecture_slices": "medium",
-    "purpose": "medium",
-    "data_artifacts": "low",
-}
+@lru_cache(maxsize=8)
+def load_ir_backlog_policy(path: str | None = None) -> dict[str, Any]:
+    source = Path(path).resolve() if path else DEFAULT_POLICY_PATH
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "system_knowledge_ir_backlog_policy.v1" or payload.get("status") != "active":
+        raise ValueError("IR backlog policy must use active system_knowledge_ir_backlog_policy.v1")
+    categories = payload.get("categories")
+    if not isinstance(categories, dict) or not categories:
+        raise ValueError("IR backlog policy requires categories")
+    for category, row in categories.items():
+        if not isinstance(row, dict) or not all(row.get(field) for field in ("role", "severity", "suggested_work")):
+            raise ValueError(f"IR backlog policy category is incomplete: {category}")
+        if row["severity"] not in {"high", "medium", "low"}:
+            raise ValueError(f"IR backlog policy severity is invalid: {category}")
+    return payload
+
+
+_POLICY = load_ir_backlog_policy()
+_CATEGORIES = {str(key): dict(value) for key, value in dict(_POLICY["categories"]).items()}
+ROLE_BY_CATEGORY = {key: str(value["role"]) for key, value in _CATEGORIES.items()}
+ACTION_BY_CATEGORY = {key: str(value["suggested_work"]) for key, value in _CATEGORIES.items()}
+SEVERITY_BY_CATEGORY = {key: str(value["severity"]) for key, value in _CATEGORIES.items()}
 
 
 def build_ir_loss_backlog(diff: dict[str, Any]) -> list[dict[str, Any]]:

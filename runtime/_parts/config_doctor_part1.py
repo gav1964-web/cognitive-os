@@ -15,6 +15,7 @@ from runtime.interface_contracts import load_interface_contracts
 from runtime.greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from runtime.l4_decision_table import load_l4_decision_rules
 from runtime.local_inference import load_llm_profiles
+from runtime.knowledge_import import load_pypi_archetype_rules
 from runtime.operation_recipe_rules import load_operation_recipe_rules
 from runtime.patch_synthesis_policy import load_patch_synthesis_policy
 from runtime.programmer_executor_playbooks import load_programmer_executor_playbooks
@@ -29,6 +30,7 @@ from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.source_target_policy import load_role_source_policy
+from runtime.system_knowledge_ir_backlog import load_ir_backlog_policy
 from runtime.stage2_template_routes import load_stage2_template_routes
 from runtime.target_quality_policy import load_target_quality_policy
 from runtime.technical_spec_policy import load_technical_spec_policy
@@ -80,6 +82,8 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_executor_solution_patterns(catalogs),
             _check_project_evolution_policy(catalogs),
             _check_project_probe_env_policy(catalogs),
+            _check_pypi_archetype_rules(catalogs),
+            _check_ir_backlog_policy(catalogs),
             _check_role_promotion_policy(catalogs),
             _check_llm_profiles(catalogs),
             _check_role_source_policy(catalogs),
@@ -138,6 +142,8 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),
         "project_evolution_policy": load_project_evolution_policy(str(root / "config" / "project_evolution_policy.json")),
         "project_probe_env_policy": load_project_probe_env_policy(str(root / "config" / "project_probe_env_policy.json")),
+        "pypi_archetype_rules": load_pypi_archetype_rules(str(root / "knowledge" / "architecture_patterns" / "pypi_archetype_inference.json")),
+        "ir_backlog_policy": load_ir_backlog_policy(str(root / "config" / "system_knowledge_ir_backlog_policy.json")),
         "role_promotion_policy": load_role_promotion_policy(str(root / "config" / "role_promotion_policy.json")),
         "llm_profiles": load_llm_profiles(str(root / "config" / "llm_profiles.json")),
         "role_source_policy": load_role_source_policy(str(root / "config" / "role_source_policy.json")),

@@ -5,6 +5,24 @@ from typing import Any
 from runtime._parts.config_doctor_part1 import _Check
 
 
+def _check_pypi_archetype_rules(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("pypi_archetype_kb_integrity")
+    rules = [dict(row) for row in list(catalogs["pypi_archetype_rules"])]
+    first_slices = {str(row.get("first_slice") or "") for row in rules}
+    if len(first_slices) != len(rules):
+        check.warnings.append("pypi_archetype_kb_reuses_first_slice")
+    return check
+
+
+def _check_ir_backlog_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("system_knowledge_ir_backlog_policy_integrity")
+    categories = dict(dict(catalogs["ir_backlog_policy"]).get("categories") or {})
+    required = {"purpose", "public_interfaces", "behavior_contracts", "architecture_slices", "acceptance_tests", "data_artifacts"}
+    for category in sorted(required - set(categories)):
+        check.errors.append(f"ir_backlog_policy_missing_category:{category}")
+    return check
+
+
 def _check_project_probe_env_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("project_probe_env_policy_integrity")
     policy = dict(catalogs["project_probe_env_policy"])
