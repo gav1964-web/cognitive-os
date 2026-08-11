@@ -79,7 +79,7 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
         if not output_key or output_key in seen_hook_outputs:
             raise RoleDirectoryError(f"role lifecycle output_key must be unique: {output_key}")
         seen_hook_outputs.add(output_key)
-        if hook["phase"] not in {"after_build", "after_review"}:
+        if hook["phase"] not in {"after_build", "after_review", "after_decision", "after_result"}:
             raise RoleDirectoryError(f"unsupported role lifecycle phase: {hook['phase']}")
         if ":" not in str(hook["callable"]):
             raise RoleDirectoryError(f"role lifecycle callable must be module:function: {hook_id}")

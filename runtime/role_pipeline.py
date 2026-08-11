@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -15,7 +14,6 @@ from .local_inference import LocalInferenceConfig
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 from .role_skill_common import load_skill_registry
-from .transformation_flow import run_transformation_flow
 
 
 def run_role_pipeline(
@@ -76,13 +74,14 @@ def run_role_pipeline(
     paths = dict(post_review["artifact_writer"].get("paths") or {})
     human_documents = dict(post_review["human_document_writer"].get("documents") or {})
     next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
-    transform = _maybe_run_transform(
-        root=root,
-        project_dir=project_dir,
-        next_action=next_action,
-        run_transform=run_transform,
-        force_transform=force_transform,
+    lifecycle_context.update(
+        {
+            "next_action": next_action,
+            "run_transform": run_transform,
+            "force_transform": force_transform,
+        }
     )
+    transform = run_lifecycle_phase("after_decision", context=lifecycle_context)["transform"]
     result = {
         "status": "ok",
         "kind": "role_pipeline",
@@ -107,18 +106,11 @@ def run_role_pipeline(
             "l4_5_required": bool(dict(control_plane.get("semantic_escalation", {})).get("l4_5_required")),
         },
     }
-    if write:
-        result["report_path"] = write_role_pipeline_report(root, result).as_posix()
+    lifecycle_context["result"] = result
+    report_writer = run_lifecycle_phase("after_result", context=lifecycle_context)["pipeline_report_writer"]
+    if report_writer.get("report_path"):
+        result["report_path"] = report_writer["report_path"]
     return result
-
-
-def write_role_pipeline_report(root: Path, payload: dict[str, Any]) -> Path:
-    out_dir = root / "artifacts" / "roles" / "pipelines"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    path = out_dir / f"role_pipeline_{stamp}.json"
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
 
 
 def _role_quality(
@@ -186,29 +178,6 @@ def _next_action(review: dict[str, Any]) -> str:
     if recommendation == "approve_with_risks":
         return "review_risks_then_run_project_transform"
     return "run_project_transform"
-
-
-def _maybe_run_transform(
-    *,
-    root: Path,
-    project_dir: Path,
-    next_action: str,
-    run_transform: bool,
-    force_transform: bool,
-) -> dict[str, Any]:
-    if not run_transform:
-        return {"status": "skipped", "reason": "run_transform flag is false"}
-    if next_action == "rework_role_artifacts":
-        return {"status": "skipped", "reason": "review requires rework"}
-    result = run_transformation_flow(root=root, project_dir=project_dir, force=force_transform, promote=False)
-    return {
-        "status": result.get("status"),
-        "kind": result.get("kind"),
-        "report_path": result.get("report_path"),
-        "candidate_path": result.get("candidate_path"),
-        "spec_path": result.get("spec_path"),
-        "selected": result.get("selected"),
-    }
 
 
 @contextmanager

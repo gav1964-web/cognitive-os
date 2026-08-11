@@ -18,6 +18,8 @@ def test_default_lifecycle_hooks_are_loaded_from_role_directory():
         "role_gates",
         "artifact_writer",
         "human_document_writer",
+        "project_transform",
+        "pipeline_report_writer",
     ]
 
 

@@ -352,6 +352,32 @@
         "architecture_decision": "$artifact_type:ArchitectureDecisionRecord",
         "technical_spec": "$artifact_type:TechnicalSpec"
       }
+    },
+    {
+      "hook_id": "project_transform",
+      "phase": "after_decision",
+      "callable": "runtime.role_pipeline_hooks:run_transform_hook",
+      "output_key": "transform",
+      "side_effects": ["filesystem_write"],
+      "permission": "$run_transform",
+      "bindings": {
+        "root": "$root",
+        "project_dir": "$project_dir",
+        "next_action": "$next_action",
+        "force": "$force_transform"
+      }
+    },
+    {
+      "hook_id": "pipeline_report_writer",
+      "phase": "after_result",
+      "callable": "runtime.role_pipeline_hooks:run_pipeline_report_writer_hook",
+      "output_key": "pipeline_report_writer",
+      "side_effects": ["filesystem_write"],
+      "permission": "$write",
+      "bindings": {
+        "root": "$root",
+        "payload": "$result"
+      }
     }
   ],
   "record_type_defaults": {

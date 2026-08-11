@@ -93,3 +93,4 @@ def test_role_pipeline_architect_llm_fallback():
     assert result["safety"]["l4_5_required"] is True
     assert result["safety"]["foundry_invoked"] is False
     assert result["architect_advisory"]["source"] == "deterministic_fallback"
+    assert "report_path" not in result

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from .programmer_executor import run_programmer_executor
 from .role_gate_runner import run_role_gate_report
 from .role_skill_common import write_role_artifact
 from .technical_spec_document import write_technical_spec_document
+from .transformation_flow import run_transformation_flow
 
 
 def run_executor_hook(
@@ -116,3 +118,32 @@ def run_human_document_writer_hook(
             "technical_spec": spec_path.as_posix(),
         },
     }
+
+
+def run_transform_hook(
+    *,
+    root: Path,
+    project_dir: Path,
+    next_action: str,
+    force: bool,
+) -> dict[str, Any]:
+    if next_action == "rework_role_artifacts":
+        return {"status": "skipped", "reason": "review requires rework"}
+    result = run_transformation_flow(root=root, project_dir=project_dir, force=force, promote=False)
+    return {
+        "status": result.get("status"),
+        "kind": result.get("kind"),
+        "report_path": result.get("report_path"),
+        "candidate_path": result.get("candidate_path"),
+        "spec_path": result.get("spec_path"),
+        "selected": result.get("selected"),
+    }
+
+
+def run_pipeline_report_writer_hook(*, root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    out_dir = root / "artifacts" / "roles" / "pipelines"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    path = out_dir / f"role_pipeline_{stamp}.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {"status": "written", "report_path": path.as_posix()}
