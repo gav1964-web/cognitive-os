@@ -14,6 +14,7 @@ from .local_inference import LocalInferenceConfig
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 from .role_skill_common import load_skill_registry
+from .role_workflow_interpreter import run_configured_workflow
 
 
 def run_role_pipeline(
@@ -28,74 +29,126 @@ def run_role_pipeline(
     architect_advisory_config: LocalInferenceConfig | None = None,
 ) -> dict[str, Any]:
     load_skill_registry(root)
-    with _pushd(root):
-        report = analyze_project(project_dir)["project_map_report"]
-    build_pipeline = configured_pipeline_phase("build")
-    artifacts = run_role_artifact_pipeline(
-        goal=goal,
-        project_report=report,
-        architect_advisory_config=architect_advisory_config,
-        pipeline=build_pipeline,
-    )
-    adr = artifact_by_type(artifacts, "ArchitectureDecisionRecord")
-    spec = artifact_by_type(artifacts, "TechnicalSpec")
-    implementation = artifact_by_type(artifacts, "ImplementationPlan")
-    test_plan = artifact_by_type(artifacts, "TestPlan")
-    lifecycle_context = {
+    state = {
         "root": root,
         "project_dir": project_dir,
         "goal": goal,
-        "project_report": report,
-        "artifacts": artifacts,
-        "run_executor": run_executor,
         "write": write,
+        "run_transform": run_transform,
+        "run_executor": run_executor,
+        "force_transform": force_transform,
+        "architect_advisory_config": architect_advisory_config,
     }
-    executor = run_lifecycle_phase("after_build", context=lifecycle_context)["executor"]
-    test_result = dict(executor.get("test_result", {})) if executor.get("test_result") else None
-    review_artifacts = run_role_artifact_pipeline(
-        goal=goal,
-        project_report=report,
-        initial_artifacts=artifacts,
-        architect_advisory_config=architect_advisory_config,
-        test_result=test_result,
+    run_configured_workflow(
+        state=state,
+        handlers={
+            "analyze": _stage_analyze,
+            "build": _stage_build,
+            "after_build": _stage_after_build,
+            "review": _stage_review,
+            "after_review": _stage_after_review,
+            "after_decision": _stage_after_decision,
+            "assemble_result": _stage_assemble_result,
+            "after_result": _stage_after_result,
+        },
+    )
+    return dict(state["result"])
+
+
+def _stage_analyze(state: dict[str, Any]) -> None:
+    with _pushd(state["root"]):
+        state["project_report"] = analyze_project(state["project_dir"])["project_map_report"]
+
+
+def _stage_build(state: dict[str, Any]) -> None:
+    artifacts = run_role_artifact_pipeline(
+        goal=state["goal"],
+        project_report=state["project_report"],
+        architect_advisory_config=state["architect_advisory_config"],
+        pipeline=configured_pipeline_phase("build"),
+    )
+    state["artifacts"] = artifacts
+    for key, artifact_type in (
+        ("adr", "ArchitectureDecisionRecord"),
+        ("spec", "TechnicalSpec"),
+        ("implementation", "ImplementationPlan"),
+        ("test_plan", "TestPlan"),
+    ):
+        state[key] = artifact_by_type(artifacts, artifact_type)
+    state["lifecycle_context"] = {
+        key: state[key]
+        for key in ("root", "project_dir", "goal", "project_report", "artifacts", "run_executor", "write")
+    }
+
+
+def _stage_after_build(state: dict[str, Any]) -> None:
+    executor = run_lifecycle_phase("after_build", context=state["lifecycle_context"])["executor"]
+    state["executor"] = executor
+    state["test_result"] = dict(executor.get("test_result", {})) if executor.get("test_result") else None
+
+
+def _stage_review(state: dict[str, Any]) -> None:
+    artifacts = run_role_artifact_pipeline(
+        goal=state["goal"],
+        project_report=state["project_report"],
+        initial_artifacts=state["artifacts"],
+        architect_advisory_config=state["architect_advisory_config"],
+        test_result=state["test_result"],
         pipeline=configured_pipeline_phase("review"),
     )
-    review = artifact_by_type(review_artifacts, "ReviewFindings")
-    artifacts = review_artifacts
-    lifecycle_context.update(
+    state["artifacts"] = artifacts
+    state["review"] = artifact_by_type(artifacts, "ReviewFindings")
+
+
+def _stage_after_review(state: dict[str, Any]) -> None:
+    context = state["lifecycle_context"]
+    context.update(
         {
-            "artifacts": artifacts,
-            "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+            "artifacts": state["artifacts"],
+            "llm_invoked": bool(dict(state["adr"].get("architect_advisory", {})).get("llm_invoked")),
         }
     )
-    post_review = run_lifecycle_phase("after_review", context=lifecycle_context)
-    control_plane = post_review["cognitive_control_plane"]
-    role_gates = post_review["role_gates"]
-    paths = dict(post_review["artifact_writer"].get("paths") or {})
-    human_documents = dict(post_review["human_document_writer"].get("documents") or {})
-    next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
-    lifecycle_context.update(
+    outputs = run_lifecycle_phase("after_review", context=context)
+    state["control_plane"] = outputs["cognitive_control_plane"]
+    state["role_gates"] = outputs["role_gates"]
+    state["paths"] = dict(outputs["artifact_writer"].get("paths") or {})
+    state["human_documents"] = dict(outputs["human_document_writer"].get("documents") or {})
+    transition = dict(state["control_plane"].get("role_transition", {}))
+    state["next_action"] = str(transition.get("next_action") or _next_action(state["review"]))
+
+
+def _stage_after_decision(state: dict[str, Any]) -> None:
+    context = state["lifecycle_context"]
+    context.update(
         {
-            "next_action": next_action,
-            "run_transform": run_transform,
-            "force_transform": force_transform,
+            "next_action": state["next_action"],
+            "run_transform": state["run_transform"],
+            "force_transform": state["force_transform"],
         }
     )
-    transform = run_lifecycle_phase("after_decision", context=lifecycle_context)["transform"]
+    state["transform"] = run_lifecycle_phase("after_decision", context=context)["transform"]
+
+
+def _stage_assemble_result(state: dict[str, Any]) -> None:
+    adr = state["adr"]
+    control_plane = state["control_plane"]
+    transform = state["transform"]
+    executor = state["executor"]
+    project_dir = state["project_dir"]
     result = {
         "status": "ok",
         "kind": "role_pipeline",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "project": project_dir.as_posix(),
-        "goal": goal,
-        "recommendation": review.get("recommendation"),
-        "next_action": next_action,
+        "goal": state["goal"],
+        "recommendation": state["review"].get("recommendation"),
+        "next_action": state["next_action"],
         "architect_advisory": adr.get("architect_advisory", {}),
         "cognitive_control_plane": control_plane,
-        "role_gates": role_gates,
-        "role_quality": _role_quality(spec, implementation, test_plan, review),
-        "artifacts": _artifact_summary(artifacts, paths),
-        "human_documents": human_documents,
+        "role_gates": state["role_gates"],
+        "role_quality": _role_quality(state["spec"], state["implementation"], state["test_plan"], state["review"]),
+        "artifacts": _artifact_summary(state["artifacts"], state["paths"]),
+        "human_documents": state["human_documents"],
         "transform": transform,
         "executor": executor,
         "safety": {
@@ -106,11 +159,14 @@ def run_role_pipeline(
             "l4_5_required": bool(dict(control_plane.get("semantic_escalation", {})).get("l4_5_required")),
         },
     }
-    lifecycle_context["result"] = result
-    report_writer = run_lifecycle_phase("after_result", context=lifecycle_context)["pipeline_report_writer"]
+    state["result"] = result
+
+
+def _stage_after_result(state: dict[str, Any]) -> None:
+    state["lifecycle_context"]["result"] = state["result"]
+    report_writer = run_lifecycle_phase("after_result", context=state["lifecycle_context"])["pipeline_report_writer"]
     if report_writer.get("report_path"):
-        result["report_path"] = report_writer["report_path"]
-    return result
+        state["result"]["report_path"] = report_writer["report_path"]
 
 
 def _role_quality(

@@ -24,6 +24,7 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
         raise RoleDirectoryError("role directory must use schema_version role_directory.v1 or role_directory.v2")
     if payload.get("status") != "active":
         raise RoleDirectoryError("role directory must be active")
+    _validate_workflow(payload)
     roles = payload.get("roles")
     if not isinstance(roles, dict) or not roles:
         raise RoleDirectoryError("role directory must contain non-empty roles object")
@@ -100,6 +101,34 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
     return payload
 
 
+def _validate_workflow(payload: dict[str, Any]) -> None:
+    workflow = payload.get("workflow")
+    if workflow is None:
+        return
+    if not isinstance(workflow, dict):
+        raise RoleDirectoryError("role directory workflow must be an object")
+    stages = workflow.get("stages")
+    if not isinstance(stages, list) or not stages:
+        raise RoleDirectoryError("role directory workflow must contain non-empty stages list")
+    stage_ids = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            raise RoleDirectoryError("role workflow stage must be an object")
+        stage_id = str(stage.get("stage_id") or "")
+        dependencies = stage.get("depends_on")
+        if not stage_id or stage_id in stage_ids:
+            raise RoleDirectoryError(f"role workflow stage_id must be unique: {stage_id}")
+        if not isinstance(dependencies, list):
+            raise RoleDirectoryError(f"role workflow depends_on must be a list: {stage_id}")
+        stage_ids.append(stage_id)
+    known = set(stage_ids)
+    for stage in stages:
+        stage_id = str(stage["stage_id"])
+        unknown = [str(item) for item in stage["depends_on"] if str(item) not in known]
+        if unknown:
+            raise RoleDirectoryError(f"role workflow stage references unknown dependency: {stage_id}:{unknown[0]}")
+
+
 def _validate_v2_role(role_id: str, role: dict[str, Any]) -> None:
     for field in ("contract", "gates", "fallback_policy", "llm_policy", "kb_policy", "stop_conditions", "quality_criteria"):
         if field not in role:
@@ -161,3 +190,8 @@ def role_for_output_key(output_key: str, *, directory: dict[str, Any] | None = N
 def lifecycle_hooks(*, directory: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     payload = directory or load_role_directory()
     return [dict(row) for row in list(payload.get("lifecycle_hooks") or [])]
+
+
+def workflow_stages(*, directory: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    payload = directory or load_role_directory()
+    return [dict(row) for row in list(dict(payload.get("workflow") or {}).get("stages") or [])]

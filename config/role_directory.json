@@ -6,6 +6,18 @@
     "runtime_is_interpreter": true,
     "role_specific_python_facades": false
   },
+  "workflow": {
+    "stages": [
+      {"stage_id": "analyze", "depends_on": []},
+      {"stage_id": "build", "depends_on": ["analyze"]},
+      {"stage_id": "after_build", "depends_on": ["build"]},
+      {"stage_id": "review", "depends_on": ["after_build"]},
+      {"stage_id": "after_review", "depends_on": ["review"]},
+      {"stage_id": "after_decision", "depends_on": ["after_review"]},
+      {"stage_id": "assemble_result", "depends_on": ["after_decision"]},
+      {"stage_id": "after_result", "depends_on": ["assemble_result"]}
+    ]
+  },
   "roles": {
     "project_analyzer": {
       "label": "Project Analyzer",
