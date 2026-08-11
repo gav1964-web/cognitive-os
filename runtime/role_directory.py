@@ -107,6 +107,9 @@ def _validate_workflow(payload: dict[str, Any]) -> None:
         return
     if not isinstance(workflow, dict):
         raise RoleDirectoryError("role directory workflow must be an object")
+    initial_state = workflow.get("initial_state")
+    if not isinstance(initial_state, list) or any(not isinstance(item, str) or not item for item in initial_state):
+        raise RoleDirectoryError("role directory workflow initial_state must be a string list")
     stages = workflow.get("stages")
     if not isinstance(stages, list) or not stages:
         raise RoleDirectoryError("role directory workflow must contain non-empty stages list")
@@ -202,3 +205,8 @@ def lifecycle_hooks(*, directory: dict[str, Any] | None = None) -> list[dict[str
 def workflow_stages(*, directory: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     payload = directory or load_role_directory()
     return [dict(row) for row in list(dict(payload.get("workflow") or {}).get("stages") or [])]
+
+
+def workflow_initial_state(*, directory: dict[str, Any] | None = None) -> list[str]:
+    payload = directory or load_role_directory()
+    return [str(item) for item in list(dict(payload.get("workflow") or {}).get("initial_state") or [])]

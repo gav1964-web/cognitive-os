@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from .role_directory import workflow_stages
+from .role_directory import workflow_initial_state, workflow_stages
+from .role_workflow_contracts import workflow_dataflow_errors
 
 
 class RoleWorkflowInterpreterError(RuntimeError):
@@ -35,6 +36,10 @@ def run_configured_workflow(
     directory: dict[str, Any] | None = None,
 ) -> None:
     stages = ordered_workflow_stages(directory=directory)
+    initial_state = workflow_initial_state(directory=directory) or list(state)
+    dataflow_errors = workflow_dataflow_errors(stages, initial_state)
+    if dataflow_errors:
+        raise RoleWorkflowInterpreterError(dataflow_errors[0])
     if handlers is None:
         from .role_workflow_handler_registry import workflow_handler_registration_errors, workflow_handler_registry
 

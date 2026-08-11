@@ -7,6 +7,7 @@ import pytest
 from runtime.role_directory import RoleDirectoryError, load_role_directory
 from runtime.config_doctor import _check_role_directory
 from runtime.role_workflow_handler_registry import workflow_handler_registry
+from runtime.role_workflow_contracts import workflow_dataflow_errors
 from runtime.role_workflow_interpreter import (
     RoleWorkflowInterpreterError,
     ordered_workflow_stages,
@@ -65,7 +66,7 @@ def test_workflow_checks_stage_input_before_handler_runs():
     )
     calls = []
 
-    with pytest.raises(RoleWorkflowInterpreterError, match="build missing input: project_report"):
+    with pytest.raises(RoleWorkflowInterpreterError, match="workflow_missing_input_provider:build:project_report"):
         run_configured_workflow(
             state={},
             handlers={"build": lambda state: calls.append("build")},
@@ -112,3 +113,22 @@ def test_config_doctor_rejects_unknown_workflow_handler():
 
     assert check["status"] == "failed"
     assert check["errors"] == ["unknown_workflow_handler:analyze:missing.analyze"]
+
+
+def test_config_doctor_rejects_missing_workflow_input_provider():
+    directory = json.loads(json.dumps(load_role_directory()))
+    directory["workflow"]["stages"][3]["requires"].append("missing_contract")
+
+    check = _check_role_directory({"role_directory": directory}).to_dict()
+
+    assert check["status"] == "failed"
+    assert check["errors"] == ["workflow_missing_input_provider:review:missing_contract"]
+
+
+def test_dataflow_requires_explicit_dependency_for_parallel_output():
+    stages = [
+        {"stage_id": "producer", "depends_on": [], "requires": [], "provides": ["value"]},
+        {"stage_id": "consumer", "depends_on": [], "requires": ["value"], "provides": []},
+    ]
+
+    assert workflow_dataflow_errors(stages, []) == ["workflow_missing_input_provider:consumer:value"]

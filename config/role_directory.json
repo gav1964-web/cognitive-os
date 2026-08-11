@@ -7,6 +7,16 @@
     "role_specific_python_facades": false
   },
   "workflow": {
+    "initial_state": [
+      "root",
+      "project_dir",
+      "goal",
+      "write",
+      "run_transform",
+      "run_executor",
+      "force_transform",
+      "architect_advisory_config"
+    ],
     "stages": [
       {
         "stage_id": "analyze",

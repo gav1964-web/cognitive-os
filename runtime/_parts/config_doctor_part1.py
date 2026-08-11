@@ -26,6 +26,7 @@ from runtime.prompt_intake_rules import load_prompt_intake_rules
 from runtime.role_promotion_policy import load_role_promotion_policy
 from runtime.role_directory import load_role_directory
 from runtime.role_workflow_handler_registry import workflow_handler_registration_errors
+from runtime.role_workflow_contracts import workflow_dataflow_errors
 from runtime.runtime_interpreter_policy import load_runtime_interpreter_policy
 from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
@@ -167,6 +168,8 @@ def _check_role_directory(catalogs: dict[str, Any]) -> _Check:
     outputs: set[str] = set()
     stages = list(dict(directory.get("workflow") or {}).get("stages") or [])
     check.errors.extend(workflow_handler_registration_errors(stages))
+    initial_state = list(dict(directory.get("workflow") or {}).get("initial_state") or [])
+    check.errors.extend(workflow_dataflow_errors(stages, initial_state))
     for step in directory.get("pipeline", []):
         role_id = str(dict(step).get("role_id") or "")
         role = dict(roles.get(role_id) or {})
