@@ -100,6 +100,8 @@ def test_default_workflow_handlers_are_registered():
 
     assert all(stage["handler_id"] in registry for stage in directory["workflow"]["stages"])
     assert all(callable(handler) for handler in registry.values())
+    assert all(handler.__module__ == "runtime.role_pipeline_stages" for handler in registry.values())
+    assert all(handler.__name__.startswith("stage_") for handler in registry.values())
 
 
 def test_config_doctor_rejects_unknown_workflow_handler():
