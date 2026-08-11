@@ -182,6 +182,24 @@ def test_extract_python_structure_prioritizes_root_src_over_nested_packages(tmp_
     assert result["contracts"]["typed_functions"][0]["name"] == "open_array"
 
 
+def test_extract_python_structure_defers_profiling_and_integration_noise(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project/profiling").mkdir(parents=True)
+    Path("project/integration_embedded").mkdir()
+    Path("project/clientlib").mkdir()
+    Path("project/profiling/benchmark.py").write_text("def run_profile():\n    pass\n", encoding="utf-8")
+    Path("project/integration_embedded/conftest.py").write_text("def fixture():\n    pass\n", encoding="utf-8")
+    Path("project/clientlib/query.py").write_text(
+        "def build_query(filters: dict) -> dict:\n    return {'where': filters}\n",
+        encoding="utf-8",
+    )
+
+    result = run({"root": "project", "max_files": 1})
+
+    assert result["files"][0]["path"] == "clientlib/query.py"
+    assert result["contracts"]["typed_functions"][0]["name"] == "build_query"
+
+
 def test_extract_python_structure_does_not_treat_json_dumps_as_file_io(tmp_path, monkeypatch):
     app = tmp_path / "app"
     app.mkdir()

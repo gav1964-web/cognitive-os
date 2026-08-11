@@ -248,6 +248,45 @@ def test_spec_writer_demotes_operational_lifecycle_wrapper_over_builder_contract
     assert "operational lifecycle/mutation wrapper" in install_reasons
 
 
+def test_spec_writer_demotes_run_forever_variants_below_bounded_operation():
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Select a bounded operation before a service loop",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": [
+                "pkg/worker.py:_to_run_forever",
+                "pkg/export.py:dump_bundles",
+            ],
+        },
+        "traceability": [
+            {"source": "pkg/worker.py:_to_run_forever", "requirement": "Runtime loop."},
+            {"source": "pkg/export.py:dump_bundles", "requirement": "Bounded export."},
+        ],
+        "source_context": {
+            "pkg/worker.py:_to_run_forever": {
+                "kind": "central_flow_node",
+                "signature": {"args": [], "returns": "None"},
+                "snippet": {"text": "def _to_run_forever(): ..."},
+            },
+            "pkg/export.py:dump_bundles": {
+                "kind": "broad_function",
+                "signature": {"args": [{"name": "items", "annotation": "list"}], "returns": "dict"},
+                "snippet": {"text": "def dump_bundles(items): ..."},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == "pkg/export.py:dump_bundles"
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    reasons = " ".join(ranked["pkg/worker.py:_to_run_forever"]["reasons"])
+    assert "operational lifecycle/mutation wrapper" in reasons
+
+
 def test_spec_writer_semantic_rerank_prefers_stronger_bounded_slice_when_close():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

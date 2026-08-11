@@ -26,12 +26,15 @@
       "/doc/",
       "/docs/",
       "/examples/",
+      "/profiling/",
       "/scripts/",
       "/tasks/",
       "/test/",
       "/tests/",
       "/tools/",
-      "/__pycache__/"
+      "/__pycache__/",
+      "gunicorn_conf.py",
+      "conftest.py"
     ],
     "domain_evidence_source_tokens": [
       "_llm_client.py:",

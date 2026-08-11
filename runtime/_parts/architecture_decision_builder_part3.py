@@ -75,8 +75,9 @@ def _fallback_architecture_synthesis(project_report: dict[str, Any]) -> dict[str
         str(row.get("capability"))
         for row in list(plan.get("capabilities_to_extract", []) or [])
         if isinstance(row, dict) and row.get("capability")
+        and not is_context_only_implementation_target(str(row["capability"]))
     ]
-    callable_candidates = _callable_transform_fallback_candidates(answers)
+    callable_candidates = [target for target in _callable_transform_fallback_candidates(answers) if not is_context_only_implementation_target(target)]
     candidates = callable_candidates or plan_candidates
     if not candidates:
         candidates = _fallback_python_read_files(summary)

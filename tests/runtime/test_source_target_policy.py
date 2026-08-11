@@ -25,3 +25,14 @@ def test_role_source_policy_keeps_runtime_package_named_testing_allowed():
 
 def test_role_source_policy_blocks_root_task_runner_module():
     assert implementation_target_violation("tasks.py:release")["status"] == "blocked_no_safe_candidate"
+
+
+def test_role_source_policy_blocks_profiling_and_server_config_targets():
+    blocked = [
+        "conftest.py:pytest_configure",
+        "profiling/pyspy.py:vector_search",
+        "bin/gunicorn_conf.py:post_fork",
+    ]
+
+    for target in blocked:
+        assert implementation_target_violation(target)["status"] == "blocked_no_safe_candidate"

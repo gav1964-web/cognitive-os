@@ -271,7 +271,12 @@ def test_architecture_decision_excludes_context_only_first_slice_targets(tmp_pat
                 "artifact_type": "ProjectArchitectureSynthesis",
                 "recommended_first_slice": {
                     "name": "runtime_slice",
-                    "targets": ["pkg/runtime.py:run", "integration/test_runtime.py:run_case"],
+                    "targets": [
+                        "pkg/runtime.py:run",
+                        "integration/test_runtime.py:run_case",
+                        "profiling/pyspy.py:vector_search",
+                        "bin/gunicorn_conf.py:post_fork",
+                    ],
                     "steps": ["Define the runtime contract."],
                 },
             },
@@ -281,6 +286,35 @@ def test_architecture_decision_excludes_context_only_first_slice_targets(tmp_pat
 
     assert adr["first_slice_contract"]["targets"] == ["pkg/runtime.py:run"]
     assert "integration/test_runtime.py:run_case" not in adr["spec_writer_brief"]["files_or_symbols"]
+
+
+def test_architecture_fallback_uses_plan_after_context_only_callable_is_rejected(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+
+    adr = build_architecture_decision(
+        goal="Extract client contract",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 2, "entrypoints": [], "languages": ["Python"]},
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "protocol_api_client"}},
+                "3_capabilities": {
+                    "pure_transforms": [
+                        {"path": "profiling/pyspy.py", "name": "vector_search", "args": []},
+                    ],
+                },
+                "6_runtime_extraction_readiness": {
+                    "minimal_extraction_plan": {
+                        "capabilities_to_extract": [
+                            {"capability": "pkg/client.py:build_query"},
+                        ],
+                    },
+                },
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["pkg/client.py:build_query"]
 
 
 def test_architecture_decision_promotes_pure_ast_parser_over_runtime_plan(tmp_path):

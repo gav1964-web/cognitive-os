@@ -15,6 +15,7 @@
       "/integration/",
       "/integration_tests/",
       "/packaging/pep517_backend/",
+      "/profiling/",
       "/scripts/",
       "/tasks/",
       "/test/",
@@ -25,9 +26,11 @@
     "context_only_file_tokens": [
       "benchmark.py",
       "bench.py",
+      "conftest.py",
       "_bench.py",
       "_benchmark.py",
       "noxfile.py",
+      "gunicorn_conf.py",
       "tasks.py",
       "testclient.py",
       "testing.py"

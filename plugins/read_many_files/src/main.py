@@ -85,7 +85,25 @@ def _candidate_score(path: Path) -> int:
         score -= 15
     if path.suffix.lower() in {".bat", ".ps1", ".sh"}:
         score -= 10
-    if parts & {"changes", "changelog", "downstream", "fixlog", "tests", "tools", "scratch", "examples", "docs", "workspace"}:
+    if parts & {
+        "changes",
+        "changelog",
+        "downstream",
+        "fixlog",
+        "tests",
+        "test",
+        "tools",
+        "scratch",
+        "examples",
+        "docs",
+        "integration",
+        "integration_embedded",
+        "journey_tests",
+        "mock_tests",
+        "profiling",
+        "proto_test",
+        "workspace",
+    }:
         score += 25
     if any(_is_generated_context_dir(part) for part in parts):
         score += 35

@@ -122,6 +122,7 @@
       "replace",
       "rstrip",
       "settings",
+      "target_model",
       "split",
       "startswith",
       "strip",
@@ -289,7 +290,10 @@
         "emit"
       ],
       "lifecycle_symbols": [
+        "_run_forever",
+        "_to_run_forever",
         "run",
+        "run_forever",
         "setup",
         "install",
         "cancel",
@@ -576,12 +580,13 @@
         "set_loglevel",
         "config",
         "configure",
-          "settings",
-          "setup",
-          "test_suite",
-          "decorator",
-          "parse_iso",
-          "build_digest_header"
+        "settings",
+        "target_model",
+        "setup",
+        "test_suite",
+        "decorator",
+        "parse_iso",
+        "build_digest_header"
       ]
     },
     "mutation_like_first_slice": {
