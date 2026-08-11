@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tools.github_full_chain_probe import _quality_score, _run_case, run_probe
+from tools.github_full_chain_scoring import bounded_quality_score, is_controlled_block
 
 
 def test_github_full_chain_probe_marks_rust_workspace_out_of_scope(tmp_path):
@@ -47,3 +48,17 @@ def test_github_full_chain_quality_score_fails_when_multiple_contract_checks_fai
     )
 
     assert _quality_score(checks) < 0.92
+
+
+def test_github_full_chain_quality_is_bounded_by_selected_contract_quality():
+    checks = [{"code": "chain", "passed": True}]
+
+    assert bounded_quality_score(checks, {"score": 76}) == 0.76
+
+
+def test_github_full_chain_recognizes_explicit_controlled_block():
+    spec = {"extraction_contract": {"status": "blocked_no_safe_candidate"}}
+    plan = {"contract_binding": {"binding_status": "blocked_no_safe_candidate"}}
+
+    assert is_controlled_block(spec, plan, []) is True
+    assert is_controlled_block(spec, plan, ["tests/test_api.py:run"]) is False

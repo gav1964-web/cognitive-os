@@ -17,6 +17,14 @@ from runtime.programmer_executor import run_programmer_executor
 from runtime.project_benchmark import analyze_project
 from runtime.role_foundation_field_trial import _primary_language_scope
 from runtime.source_target_policy import is_context_only_implementation_target
+from tools.github_full_chain_scoring import (
+    CONTROLLED_BLOCK_SCORE,
+    bounded_quality_score,
+    is_controlled_block,
+    quality_score as _quality_score,
+    selected_target_quality,
+    summary as _summary,
+)
 
 
 READY_THRESHOLD = 0.92
@@ -141,11 +149,12 @@ def _run_case(
         run_verification=run_verification,
     )
     checks = _chain_checks(adr, spec, plan, test_plan, review, target_chain, forbidden, executor, run_executor)
-    quality = _quality_score(checks)
+    target_quality = selected_target_quality(spec, project_dir.name)
+    quality = bounded_quality_score(checks, target_quality)
     status = "ok" if quality >= READY_THRESHOLD and not forbidden else "needs_review"
-    if blocked_reason == "no_safe_python_candidate" and not target_chain.get("implementation_target") and not forbidden:
+    if is_controlled_block(spec, plan, forbidden):
         status = "blocked_ok"
-        quality = 1.0
+        quality = CONTROLLED_BLOCK_SCORE
         checks = [{"code": "controlled_no_safe_candidate_block", "passed": True}]
     dirty_after = _git_porcelain(project_dir)
     return {
@@ -153,6 +162,7 @@ def _run_case(
         "project_dir": project_dir.as_posix(),
         "status": status,
         "quality_score": quality,
+        "selected_target_quality": target_quality,
         "blocked_reason": blocked_reason,
         "target_chain": target_chain,
         "artifact_status": {
@@ -185,29 +195,6 @@ def write_report(root: Path, report: dict[str, Any], label: str) -> dict[str, st
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     md_path.write_text(_markdown(report), encoding="utf-8")
     return {"report_path": json_path.as_posix(), "markdown_path": md_path.as_posix()}
-
-
-def _summary(cases: list[dict[str, Any]], worst_case: float, ready_by_worst_case: bool) -> dict[str, Any]:
-    scored = [case for case in cases if case["status"] != "out_of_scope"]
-    return {
-        "ok": sum(1 for case in cases if case["status"] == "ok"),
-        "blocked_no_safe_candidate": sum(1 for case in cases if case["status"] == "blocked_ok"),
-        "out_of_scope": sum(1 for case in cases if case["status"] == "out_of_scope"),
-        "needs_review": sum(1 for case in cases if case["status"] == "needs_review"),
-        "avg_quality_score": round(sum(float(case["quality_score"]) for case in scored) / max(1, len(scored)), 3),
-        "worst_case_score": round(worst_case, 3),
-        "ready_threshold": READY_THRESHOLD,
-        "ready_by_worst_case": ready_by_worst_case,
-        "contract_violations": sum(int(case["contract_violations"]) for case in cases),
-        "architecture_drift": sum(int(case["architecture_drift"]) for case in cases),
-        "forbidden_sources": sum(len(case["forbidden_sources"]) for case in cases),
-        "source_code_changes": sum(1 for case in cases if case["source_code_changes"]),
-        "llm_invoked": sum(1 for case in cases if case["llm_invoked"]),
-        "executor_ok": sum(dict(case.get("executor", {})).get("executor_status") == "ok" for case in cases),
-        "patch_package_prepared": sum(dict(case.get("executor", {})).get("patch_package_status") == "prepared" for case in cases),
-        "patch_synthesis_prepared": sum(dict(case.get("executor", {})).get("patch_synthesis_status") == "prepared" for case in cases),
-        "executable_acceptance_passed": sum(dict(case.get("executor", {})).get("executable_acceptance") == "passed" for case in cases),
-    }
 
 
 def _chain_checks(
@@ -303,10 +290,6 @@ def _read_json(path: object) -> dict[str, Any]:
         return {}
     source = Path(str(path))
     return json.loads(source.read_text(encoding="utf-8")) if source.is_file() else {}
-
-
-def _quality_score(checks: list[dict[str, Any]]) -> float:
-    return 0.0 if not checks else round(sum(1 for check in checks if check["passed"]) / len(checks), 3)
 
 
 def _target_chain(
