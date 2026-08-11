@@ -25,7 +25,7 @@ from runtime.project_probe_env_policy import load_project_probe_env_policy
 from runtime.prompt_intake_rules import load_prompt_intake_rules
 from runtime.role_promotion_policy import load_role_promotion_policy
 from runtime.role_directory import load_role_directory
-from runtime.role_workflow_handler_registry import workflow_handler_registry
+from runtime.role_workflow_handler_registry import workflow_handler_contract_errors
 from runtime.runtime_interpreter_policy import load_runtime_interpreter_policy
 from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
@@ -165,12 +165,8 @@ def _check_role_directory(catalogs: dict[str, Any]) -> _Check:
     directory = catalogs["role_directory"]
     roles = dict(directory.get("roles") or {})
     outputs: set[str] = set()
-    handlers = workflow_handler_registry()
-    for stage in dict(directory.get("workflow") or {}).get("stages", []):
-        stage_id = str(dict(stage).get("stage_id") or "")
-        handler_id = str(dict(stage).get("handler_id") or "")
-        if handler_id not in handlers or not callable(handlers.get(handler_id)):
-            check.errors.append(f"unknown_workflow_handler:{stage_id}:{handler_id}")
+    stages = list(dict(directory.get("workflow") or {}).get("stages") or [])
+    check.errors.extend(workflow_handler_contract_errors(stages))
     for step in directory.get("pipeline", []):
         role_id = str(dict(step).get("role_id") or "")
         role = dict(roles.get(role_id) or {})
