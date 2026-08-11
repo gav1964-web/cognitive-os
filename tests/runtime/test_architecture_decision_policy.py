@@ -280,6 +280,7 @@ def test_architecture_decision_excludes_context_only_first_slice_targets(tmp_pat
     )
 
     assert adr["first_slice_contract"]["targets"] == ["pkg/runtime.py:run"]
+    assert "integration/test_runtime.py:run_case" not in adr["spec_writer_brief"]["files_or_symbols"]
 
 
 def test_architecture_decision_promotes_pure_ast_parser_over_runtime_plan(tmp_path):

@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import Any
 
 from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase
-from .project_benchmark import analyze_project
+from .role_project_analysis import analyze_role_project
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 
 
 def stage_analyze(state: dict[str, Any]) -> None:
     with _pushd(state["root"]):
-        state["project_report"] = analyze_project(state["project_dir"])["project_map_report"]
+        state["project_report"] = analyze_role_project(root=state["root"], project_dir=state["project_dir"], goal=state["goal"])["project_map_report"]
 
 
 def stage_build(state: dict[str, Any]) -> None:

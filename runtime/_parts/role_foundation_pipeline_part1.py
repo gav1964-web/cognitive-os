@@ -14,7 +14,8 @@ from runtime.foundation_semantic_quality import evaluate_foundation_semantic_qua
 from runtime.human_document_quality import evaluate_human_role_documents
 from runtime.local_inference import LocalInferenceConfig
 from runtime.project_benchmark import analyze_project
-from runtime.project_interpreter import interpret_project_report
+from runtime.role_project_analysis import enrich_weak_contract_readiness as _enrich_weak_contract_readiness
+from runtime.role_project_analysis import prepare_role_project_report
 from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
 from runtime.scope_selection_document import write_scope_selection_document
@@ -40,11 +41,9 @@ def run_role_foundation_pipeline(
     analysis_project_dir = Path(str(active_root_decision.get("selected_root") or project_dir)).resolve()
     with _pushd(_analysis_cwd(root, analysis_project_dir)):
         analyzer_outputs = analyze_project(analysis_project_dir)
-        project_map_report = analyzer_outputs["project_map_report"]
-        project_map_report = _attach_interpretation(
+        project_map_report = prepare_role_project_report(
             root=root,
             goal=goal,
-            project_map_report=project_map_report,
             analyzer_outputs=analyzer_outputs,
         )
     if active_root_decision["status"] == "selected":
@@ -147,75 +146,6 @@ def run_role_foundation_pipeline(
     }
     if write:
         result["report_path"] = write_role_foundation_report(root, result).as_posix()
-    return result
-
-def _attach_interpretation(
-    *,
-    root: Path,
-    goal: str,
-    project_map_report: dict[str, Any],
-    analyzer_outputs: dict[str, Any],
-) -> dict[str, Any]:
-    """Attach L3.5/L4/synthesis artifacts as evidence, not as source-truth replacement."""
-
-    goal_report = {
-        "goal_id": f"role_foundation_{Path(str(project_map_report.get('root') or '')).name or 'project'}",
-        "goal": goal,
-        "execution": {
-            "status": "ok",
-            "completed_nodes": list(analyzer_outputs),
-            "outputs": analyzer_outputs,
-        },
-    }
-    interpretation = interpret_project_report(goal_report, root=root.as_posix())
-    project_map_report = _enrich_weak_contract_readiness(project_map_report)
-    return {
-        **project_map_report,
-        "level35_project_signals": interpretation.get("level35_project_signals", {}),
-        "level4_project_interpretation": interpretation.get("level4_project_interpretation", {}),
-        "analysis_tasks": interpretation.get("analysis_tasks", {}),
-        "architecture_synthesis": interpretation.get("architecture_synthesis", {}),
-        "knowledge_gap": interpretation.get("knowledge_gap"),
-        "research_plan": interpretation.get("research_plan"),
-    }
-
-def _enrich_weak_contract_readiness(project_map_report: dict[str, Any]) -> dict[str, Any]:
-    answers = dict(project_map_report.get("answers") or {})
-    readiness = dict(answers.get("6_runtime_extraction_readiness") or {})
-    plan = dict(readiness.get("minimal_extraction_plan") or {})
-    targets = _weak_contract_targets(answers, readiness)
-    if targets and not plan.get("capabilities_to_extract"):
-        plan["capabilities_to_extract"] = [
-            {"capability": target, "reason": "source-backed weak contract needs bounded TechnicalSpec"}
-            for target in targets[:6]
-        ]
-        plan.pop("blocked_by", None)
-    if targets and len(readiness.get("data_lifecycle") or []) < 3:
-        readiness["data_lifecycle"] = [
-            {"stage": "input_discovery", "shape": "source-backed test or weak-contract target", "evidence": targets[0]},
-            {"stage": "contract_execution", "shape": "selected callable boundary", "evidence": targets[0]},
-            {"stage": "result_or_failure", "shape": "return value, assertion, or typed failure", "evidence": targets[0]},
-        ]
-    readiness["minimal_extraction_plan"] = plan
-    answers["6_runtime_extraction_readiness"] = readiness
-    return {**project_map_report, "answers": answers}
-
-def _weak_contract_targets(answers: dict[str, Any], readiness: dict[str, Any]) -> list[str]:
-    contracts = dict(answers.get("4_contracts_data") or {})
-    strategy = dict(readiness.get("contract_test_strategy") or {})
-    values = [
-        *list(contracts.get("weak_contract_zones") or []),
-        *str(strategy.get("hand_written_negative_tests") or "").split(";"),
-    ]
-    return _dedupe_strings([str(value).strip() for value in values if ".py:" in str(value)])
-
-def _dedupe_strings(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value and value not in seen:
-            seen.add(value)
-            result.append(value)
     return result
 
 def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict[str, Any]:

@@ -28,6 +28,7 @@
       "_bench.py",
       "_benchmark.py",
       "noxfile.py",
+      "tasks.py",
       "testclient.py",
       "testing.py"
     ],

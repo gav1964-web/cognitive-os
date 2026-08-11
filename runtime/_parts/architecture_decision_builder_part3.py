@@ -329,7 +329,7 @@ def _implementation_brief_source(source: str) -> bool:
     lowered = "/" + source.replace("\\", "/").lower().lstrip("/")
     if ".py:" not in lowered and not lowered.endswith(".py"):
         return False
-    return not any(token in lowered for token in CONTEXT_ONLY_PATH_TOKENS)
+    return not is_context_only_implementation_target(source)
 
 def _fallback_python_read_files(summary: dict[str, Any]) -> list[str]:
     rows = []

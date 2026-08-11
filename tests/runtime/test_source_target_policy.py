@@ -21,3 +21,7 @@ def test_role_source_policy_exposes_scope_selection_kb():
 def test_role_source_policy_keeps_runtime_package_named_testing_allowed():
     assert implementation_target_violation("src/zope/testing/formparser.py:parse")["status"] == "allowed"
     assert implementation_target_violation("tests/test_formparser.py:parse")["status"] == "blocked_no_safe_candidate"
+
+
+def test_role_source_policy_blocks_root_task_runner_module():
+    assert implementation_target_violation("tasks.py:release")["status"] == "blocked_no_safe_candidate"

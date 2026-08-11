@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from runtime.programmer_executor import run_programmer_executor
-from runtime.project_benchmark import analyze_project
 from runtime.role_foundation_field_trial import _primary_language_scope
+from runtime.role_project_analysis import analyze_role_project
 from runtime.source_target_policy import is_context_only_implementation_target
 from tools.github_full_chain_scoring import (
     CONTROLLED_BLOCK_SCORE,
@@ -124,7 +124,7 @@ def _run_case(
         }
 
     dirty_before = _git_porcelain(project_dir)
-    project_report = analyze_project(project_dir)["project_map_report"]
+    project_report = analyze_role_project(root=root, project_dir=project_dir, goal=f"GitHub full-chain probe for {project_dir.name}")["project_map_report"]
     artifacts = run_configured_role_prefix(
         goal=f"GitHub full-chain probe for {project_dir.name}",
         project_report=project_report,
