@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-
-CASE = "web_research_summarizer_fastapi"
-
 def _app() -> str:
     return (
         "from __future__ import annotations\n\n"
