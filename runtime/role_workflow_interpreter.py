@@ -41,12 +41,12 @@ def run_configured_workflow(
     if dataflow_errors:
         raise RoleWorkflowInterpreterError(dataflow_errors[0])
     if handlers is None:
-        from .role_workflow_handler_registry import workflow_handler_registration_errors, workflow_handler_registry
+        from .role_workflow_handler_registry import workflow_handler_functions, workflow_handler_registration_errors
 
         registration_errors = workflow_handler_registration_errors(stages)
         if registration_errors:
             raise RoleWorkflowInterpreterError(registration_errors[0])
-        handlers = workflow_handler_registry()
+        handlers = workflow_handler_functions()
     handler_keys = [str(stage.get("handler_id") or stage["stage_id"]) for stage in stages]
     missing = [str(stage["stage_id"]) for stage, key in zip(stages, handler_keys) if key not in handlers]
     if missing:

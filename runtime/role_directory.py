@@ -124,6 +124,9 @@ def _validate_workflow(payload: dict[str, Any]) -> None:
             raise RoleDirectoryError(f"role workflow stage_id must be unique: {stage_id}")
         if not handler_id:
             raise RoleDirectoryError(f"role workflow stage requires handler_id: {stage_id}")
+        effects = stage.get("effects")
+        if not isinstance(effects, list) or any(not isinstance(item, str) or not item for item in effects):
+            raise RoleDirectoryError(f"role workflow effects must be a string list: {stage_id}")
         if not isinstance(dependencies, list):
             raise RoleDirectoryError(f"role workflow depends_on must be a list: {stage_id}")
         for field in ("requires", "provides"):

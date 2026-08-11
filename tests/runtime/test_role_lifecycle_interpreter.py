@@ -40,6 +40,7 @@ def test_after_build_hook_resolves_artifacts_by_contract_type(tmp_path: Path):
 
     assert outputs["executor"]["status"] == "skipped"
     assert outputs["executor"]["reason"] == "side effect permission denied"
+    assert outputs["executor"]["side_effects"] == ["filesystem_write", "subprocess"]
     assert context["executor"] == outputs["executor"]
 
 

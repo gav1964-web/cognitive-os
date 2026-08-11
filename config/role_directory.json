@@ -21,6 +21,7 @@
       {
         "stage_id": "analyze",
         "handler_id": "role_pipeline.analyze",
+        "effects": ["filesystem_read", "temporary_cwd"],
         "depends_on": [],
         "requires": ["root", "project_dir"],
         "provides": ["project_report"]
@@ -28,6 +29,7 @@
       {
         "stage_id": "build",
         "handler_id": "role_pipeline.build",
+        "effects": ["model_inference"],
         "depends_on": ["analyze"],
         "requires": ["goal", "project_report", "architect_advisory_config"],
         "provides": ["artifacts", "adr", "spec", "implementation", "test_plan", "lifecycle_context"]
@@ -35,6 +37,7 @@
       {
         "stage_id": "after_build",
         "handler_id": "role_pipeline.after_build",
+        "effects": ["delegated_lifecycle"],
         "depends_on": ["build"],
         "requires": ["lifecycle_context"],
         "provides": ["executor", "test_result"]
@@ -42,6 +45,7 @@
       {
         "stage_id": "review",
         "handler_id": "role_pipeline.review",
+        "effects": [],
         "depends_on": ["after_build"],
         "requires": ["goal", "project_report", "artifacts", "architect_advisory_config", "test_result"],
         "provides": ["artifacts", "review"]
@@ -49,6 +53,7 @@
       {
         "stage_id": "after_review",
         "handler_id": "role_pipeline.after_review",
+        "effects": ["delegated_lifecycle"],
         "depends_on": ["review"],
         "requires": ["lifecycle_context", "artifacts", "adr", "review"],
         "provides": ["control_plane", "role_gates", "paths", "human_documents", "next_action"]
@@ -56,6 +61,7 @@
       {
         "stage_id": "after_decision",
         "handler_id": "role_pipeline.after_decision",
+        "effects": ["delegated_lifecycle"],
         "depends_on": ["after_review"],
         "requires": ["lifecycle_context", "next_action", "run_transform", "force_transform"],
         "provides": ["transform"]
@@ -63,6 +69,7 @@
       {
         "stage_id": "assemble_result",
         "handler_id": "role_pipeline.assemble_result",
+        "effects": [],
         "depends_on": ["after_decision"],
         "requires": [
           "project_dir",
@@ -86,6 +93,7 @@
       {
         "stage_id": "after_result",
         "handler_id": "role_pipeline.after_result",
+        "effects": ["delegated_lifecycle"],
         "depends_on": ["assemble_result"],
         "requires": ["lifecycle_context", "result"],
         "provides": ["result"]
@@ -380,7 +388,7 @@
       "phase": "after_build",
       "callable": "runtime.role_pipeline_hooks:run_executor_hook",
       "output_key": "executor",
-      "side_effects": ["filesystem_write"],
+      "side_effects": ["filesystem_write", "subprocess"],
       "permission": "$run_executor",
       "bindings": {
         "root": "$root",

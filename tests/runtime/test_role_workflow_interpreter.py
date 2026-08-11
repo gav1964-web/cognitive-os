@@ -100,9 +100,11 @@ def test_default_workflow_handlers_are_registered():
     registry = workflow_handler_registry()
 
     assert all(stage["handler_id"] in registry for stage in directory["workflow"]["stages"])
-    assert all(callable(handler) for handler in registry.values())
-    assert all(handler.__module__ == "runtime.role_pipeline_stages" for handler in registry.values())
-    assert all(handler.__name__.startswith("stage_") for handler in registry.values())
+    assert all(callable(registration.function) for registration in registry.values())
+    assert all(registration.function.__module__ == "runtime.role_pipeline_stages" for registration in registry.values())
+    assert all(registration.function.__name__.startswith("stage_") for registration in registry.values())
+    for stage in directory["workflow"]["stages"]:
+        assert tuple(stage["effects"]) == registry[stage["handler_id"]].effects
 
 
 def test_config_doctor_rejects_unknown_workflow_handler():
@@ -123,6 +125,27 @@ def test_config_doctor_rejects_missing_workflow_input_provider():
 
     assert check["status"] == "failed"
     assert check["errors"] == ["workflow_missing_input_provider:review:missing_contract"]
+
+
+def test_config_doctor_rejects_workflow_handler_effect_drift():
+    directory = json.loads(json.dumps(load_role_directory()))
+    directory["workflow"]["stages"][0]["effects"].remove("temporary_cwd")
+
+    check = _check_role_directory({"role_directory": directory}).to_dict()
+
+    assert check["status"] == "failed"
+    assert check["errors"] == ["workflow_handler_effects_mismatch:analyze:role_pipeline.analyze"]
+
+
+def test_runtime_preflight_rejects_workflow_handler_effect_drift():
+    directory = json.loads(json.dumps(load_role_directory()))
+    directory["workflow"]["stages"][0]["effects"].append("filesystem_write")
+
+    with pytest.raises(
+        RoleWorkflowInterpreterError,
+        match="workflow_handler_effects_mismatch:analyze:role_pipeline.analyze",
+    ):
+        run_configured_workflow(state={}, directory=directory)
 
 
 def test_dataflow_requires_explicit_dependency_for_parallel_output():
