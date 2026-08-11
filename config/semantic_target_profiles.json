@@ -9892,6 +9892,119 @@
         "theme registration and context injection are deterministic",
         "Sphinx app mutation is isolated behind a fake app"
       ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "async_sql_query_execution_boundary",
+      "failure_modes": ["connection_closed", "invalid_query", "parameter_binding_error", "driver_execution_error"],
+      "id": "async_sql_query_execution_boundary",
+      "input_contract": {
+        "query": "SqlExecutionRequest(sql_or_expression, positional_parameters?, named_parameters?)",
+        "connection_context": "AsyncSqlConnection(driver, dialect, transaction_state?)"
+      },
+      "output_contract": {
+        "result": "AsyncSqlResult(rows?, rowcount?, metadata?, close_policy)",
+        "failure_packet": "SqlExecutionFailure(kind, query_ref?, evidence_ref)"
+      },
+      "path_contains_any": ["aiopg/sa/connection.py", "async_sqlalchemy", "sqlalchemy/asyncio"],
+      "ranking_bonus": 38,
+      "ranking_reason": "async SQL execution is representative query-to-result behavior",
+      "reason": "async SQL execution is a bounded query-and-parameters to result contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "database": "driver calls are fixture-backed and transaction state changes are asserted",
+        "requires_validation_gate": true
+      },
+      "symbols": ["execute", "_execute"],
+      "validation_gates": [
+        "text query, expression query and invalid query paths are covered",
+        "parameter binding and result cleanup are explicit",
+        "closed connection and driver failures preserve query evidence"
+      ]
+    },
+    {
+      "benign_runtime_boundary": true,
+      "contract_family": "async_worker_call_dispatch_boundary",
+      "failure_modes": ["worker_stopped", "connection_closed", "callable_error", "future_cancelled"],
+      "id": "async_worker_call_dispatch_boundary",
+      "input_contract": {
+        "call": "WorkerCall(callable, args?, kwargs?)",
+        "worker_state": "AsyncWorkerState(running, queue, backing_resource?)"
+      },
+      "output_contract": {
+        "result": "AwaitedWorkerResult(value?, exception?, completion_state)",
+        "failure_packet": "WorkerDispatchFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["aiosqlite/core.py", "async_worker", "worker_connection"],
+      "ranking_bonus": 38,
+      "ranking_reason": "async worker dispatch is representative queue-to-result behavior",
+      "reason": "async worker call dispatch is a bounded callable-to-awaited-result contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "concurrency": "queue insertion and future completion are asserted with a controlled worker",
+        "requires_validation_gate": true
+      },
+      "symbols": ["_execute", "dispatch_call", "execute_in_worker"],
+      "validation_gates": [
+        "successful call, callable failure and stopped worker are covered",
+        "queue insertion and future completion ordering are explicit",
+        "cancellation and closed backing-resource behavior return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "partition_assignment_planning_boundary",
+      "failure_modes": ["empty_assignment_pool", "capacity_exhausted", "duplicate_partition", "unbalanced_assignment"],
+      "id": "partition_assignment_planning_boundary",
+      "input_contract": {
+        "partitions": "PartitionSet(unassigned, active_or_standby_policy)",
+        "assignment_state": "AssignmentState(clients, existing_assignments, capacity_limits)"
+      },
+      "output_contract": {
+        "assignment_plan": "PartitionAssignmentPlan(client_partitions, balance_evidence)",
+        "failure_packet": "PartitionAssignmentFailure(kind, partition?, evidence_ref)"
+      },
+      "path_contains_any": ["assignor", "partition"],
+      "ranking_bonus": 40,
+      "ranking_reason": "partition assignment planning is representative deterministic scheduling behavior",
+      "reason": "partition assignment planning is a bounded workload-to-client allocation contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "assignment-state mutation must be asserted through before/after partition maps",
+        "requires_validation_gate": true
+      },
+      "symbols": ["_assign_round_robin", "assign_round_robin", "_perform_assignment", "perform_assignment"],
+      "validation_gates": [
+        "empty, balanced and capacity-constrained assignments are covered",
+        "active and standby placement invariants are explicit",
+        "duplicate or unassignable partitions return typed evidence"
+      ]
+    },
+    {
+      "contract_family": "tabular_column_specification_boundary",
+      "failure_modes": ["invalid_width", "unsupported_alignment", "empty_table_policy_error"],
+      "id": "tabular_column_specification_boundary",
+      "input_contract": {
+        "table_shape": "TableShape(width, column_types?, alignment_policy?)"
+      },
+      "output_contract": {
+        "column_specification": "ColumnSpecification(tokens, width, alignment_by_column)",
+        "failure_packet": "ColumnSpecificationFailure(kind, evidence_ref)"
+      },
+      "path_contains_any": ["format", "table", "latex"],
+      "ranking_bonus": 36,
+      "ranking_reason": "column specification generation is a deterministic tabular formatting transform",
+      "reason": "tabular column specification is a bounded table-shape to layout contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "mutation_policy": "column specification generation must be pure and deterministic",
+        "requires_validation_gate": true
+      },
+      "symbols": ["_colspec", "colspec", "column_spec", "column_specification"],
+      "validation_gates": [
+        "zero, single-column and multi-column widths are covered",
+        "output width and alignment tokens are deterministic",
+        "invalid widths return typed evidence or a documented exception"
+      ]
     }
   ],
   "schema_version": "semantic_target_profiles.v1"

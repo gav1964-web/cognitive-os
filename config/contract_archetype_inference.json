@@ -306,7 +306,6 @@
     {
       "id": "serial_stream_read",
       "symbols": ["read", "readinto"],
-      "symbol_contains_any": ["read"],
       "path_contains_any": ["serial", "stream", "transport", "io"],
       "score_bonus": 22,
       "ranking_bonus": 34,

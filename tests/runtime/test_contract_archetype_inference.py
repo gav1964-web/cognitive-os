@@ -373,3 +373,14 @@ def test_profiled_prompt_toolkit_target_is_not_meta_infrastructure():
     assert report["profiled_contract_family"] is True
     assert report["contract_archetype_ids"] == ["interactive_application_run_loop"]
     assert not any("meta-infrastructure" in reason for reason in report["reasons"])
+
+
+def test_serial_read_archetype_does_not_match_read_substrings():
+    false_matches = [
+        "aiopg/connection.py:_ready",
+        "aiosqlite/core.py:_connection_worker_thread",
+    ]
+
+    for target in false_matches:
+        assert contract_archetype_for_target(target) == {}
+        assert archetype_score_adjustments(target)["profiled_contract_family"] is False

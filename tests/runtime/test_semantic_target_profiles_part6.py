@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from runtime.semantic_target_profiles import contract_for_target, semantic_score_adjustments
+from runtime.semantic_target_profiles import (
+    contract_for_target,
+    semantic_ranking_adjustments,
+    semantic_score_adjustments,
+)
+from runtime.target_quality import semantic_target_quality_report
 
 
 def test_semantic_target_profiles_cover_blind_redteam_40m_gaps():
@@ -179,3 +184,46 @@ def test_semantic_target_profiles_ignore_callable_loc_annotations():
 
     assert contract["contract_family"] == "async_signal_dispatch_boundary"
     assert adjustments["profiled_contract_family"] is True
+
+
+def test_semantic_target_profiles_cover_unified_pipeline_worst_cases():
+    cases = {
+        "aiopg/sa/connection.py:execute": (
+            "async_sql_query_execution_boundary",
+            38,
+        ),
+        "aiosqlite/core.py:_execute": (
+            "async_worker_call_dispatch_boundary",
+            38,
+        ),
+        "faust/assignor/copartitioned_assignor.py:_assign_round_robin": (
+            "partition_assignment_planning_boundary",
+            40,
+        ),
+        "src/tablib/formats/_latex.py:_colspec": (
+            "tabular_column_specification_boundary",
+            36,
+        ),
+    }
+
+    for target, (family, minimum_ranking_bonus) in cases.items():
+        contract = contract_for_target(target)
+        ranking = semantic_ranking_adjustments(target)
+        quality = semantic_target_quality_report(
+            target,
+            ranked_candidates=[target],
+            source_evidence=[target],
+        )
+
+        assert contract["contract_family"] == family
+        assert contract["validation_gates"]
+        assert ranking["score_delta"] >= minimum_ranking_bonus
+        assert quality["profiled_contract_family"] is True
+        assert quality["score"] >= 97
+
+
+def test_async_execute_profiles_do_not_match_generic_execute_symbol():
+    target = "package/core.py:execute"
+
+    assert contract_for_target(target) == {}
+    assert semantic_ranking_adjustments(target)["score_delta"] == 0
