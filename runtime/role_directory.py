@@ -85,6 +85,13 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
             raise RoleDirectoryError(f"role lifecycle callable must be module:function: {hook_id}")
         if not isinstance(hook["bindings"], dict):
             raise RoleDirectoryError(f"role lifecycle hook bindings must be an object: {hook_id}")
+        side_effects = hook.get("side_effects", [])
+        if not isinstance(side_effects, list):
+            raise RoleDirectoryError(f"role lifecycle side_effects must be a list: {hook_id}")
+        if side_effects:
+            permission = hook.get("permission")
+            if not isinstance(permission, str) or not permission.startswith("$"):
+                raise RoleDirectoryError(f"side-effecting role lifecycle hook requires permission binding: {hook_id}")
         for binding in hook["bindings"].values():
             if isinstance(binding, str) and binding.startswith("$artifact_type:"):
                 artifact_type = binding.split(":", 1)[1]

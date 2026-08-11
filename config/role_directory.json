@@ -294,6 +294,8 @@
       "phase": "after_build",
       "callable": "runtime.role_pipeline_hooks:run_executor_hook",
       "output_key": "executor",
+      "side_effects": ["filesystem_write"],
+      "permission": "$run_executor",
       "bindings": {
         "root": "$root",
         "project_dir": "$project_dir",
@@ -323,6 +325,32 @@
       "bindings": {
         "artifacts": "$artifacts",
         "project_report": "$project_report"
+      }
+    },
+    {
+      "hook_id": "artifact_writer",
+      "phase": "after_review",
+      "callable": "runtime.role_pipeline_hooks:run_artifact_writer_hook",
+      "output_key": "artifact_writer",
+      "side_effects": ["filesystem_write"],
+      "permission": "$write",
+      "bindings": {
+        "root": "$root",
+        "artifacts": "$artifacts"
+      }
+    },
+    {
+      "hook_id": "human_document_writer",
+      "phase": "after_review",
+      "callable": "runtime.role_pipeline_hooks:run_human_document_writer_hook",
+      "output_key": "human_document_writer",
+      "side_effects": ["filesystem_write"],
+      "permission": "$write",
+      "bindings": {
+        "root": "$root",
+        "project_report": "$project_report",
+        "architecture_decision": "$artifact_type:ArchitectureDecisionRecord",
+        "technical_spec": "$artifact_type:TechnicalSpec"
       }
     }
   ],

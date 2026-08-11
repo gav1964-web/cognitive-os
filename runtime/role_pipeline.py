@@ -9,15 +9,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .architecture_analysis_document import write_architecture_analysis_document
 from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase
-from .contract_registry import load_artifact_contracts
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
-from .role_skill_common import load_skill_registry, write_role_artifact
-from .technical_spec_document import write_technical_spec_document
+from .role_skill_common import load_skill_registry
 from .transformation_flow import run_transformation_flow
 
 
@@ -53,6 +50,7 @@ def run_role_pipeline(
         "project_report": report,
         "artifacts": artifacts,
         "run_executor": run_executor,
+        "write": write,
     }
     executor = run_lifecycle_phase("after_build", context=lifecycle_context)["executor"]
     test_result = dict(executor.get("test_result", {})) if executor.get("test_result") else None
@@ -75,8 +73,8 @@ def run_role_pipeline(
     post_review = run_lifecycle_phase("after_review", context=lifecycle_context)
     control_plane = post_review["cognitive_control_plane"]
     role_gates = post_review["role_gates"]
-    paths = _write_artifacts(root, artifacts) if write else {}
-    human_documents = _write_human_documents(root, report, adr, spec) if write else {}
+    paths = dict(post_review["artifact_writer"].get("paths") or {})
+    human_documents = dict(post_review["human_document_writer"].get("documents") or {})
     next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
     transform = _maybe_run_transform(
         root=root,
@@ -167,41 +165,6 @@ def _rows_cover_target(rows: object, target: str) -> bool:
         and isinstance(rows, list)
         and any(isinstance(row, dict) and row.get("target") == target for row in rows)
     )
-
-
-def _write_artifacts(root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, str]:
-    paths = {}
-    contracts = load_artifact_contracts()
-    for key, artifact in artifacts.items():
-        artifact_type = str(artifact.get("artifact_type") or "")
-        producer = str(dict(contracts.get(artifact_type, {})).get("producer") or "unknown")
-        path = write_role_artifact(root, producer, artifact)
-        artifact["artifact_path"] = path.as_posix()
-        paths[key] = path.as_posix()
-    return paths
-
-
-def _write_human_documents(
-    root: Path,
-    project_report: dict[str, Any],
-    architecture_decision: dict[str, Any],
-    technical_spec: dict[str, Any],
-) -> dict[str, str]:
-    architecture_path = write_architecture_analysis_document(
-        root=root,
-        project_report={"content": project_report, "project": architecture_decision.get("project")},
-        architecture_decision=architecture_decision,
-        technical_spec=technical_spec,
-        output_group="pipelines",
-    )
-    spec_path = write_technical_spec_document(
-        root=root,
-        project_report={"content": project_report, "project": architecture_decision.get("project")},
-        architecture_decision=architecture_decision,
-        technical_spec=technical_spec,
-        output_group="pipelines",
-    )
-    return {"architecture_analysis": architecture_path.as_posix(), "technical_spec": spec_path.as_posix()}
 
 
 def _artifact_summary(artifacts: dict[str, dict[str, Any]], paths: dict[str, str]) -> dict[str, dict[str, Any]]:

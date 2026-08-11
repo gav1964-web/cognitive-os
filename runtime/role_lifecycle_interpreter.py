@@ -22,6 +22,17 @@ def run_lifecycle_phase(
     for hook in lifecycle_hooks(directory=directory):
         if str(hook.get("phase") or "") != phase:
             continue
+        output_key = str(hook["output_key"])
+        side_effects = list(hook.get("side_effects") or [])
+        if side_effects and _resolve_binding(hook.get("permission"), context) is not True:
+            result = {
+                "status": "skipped",
+                "reason": "side effect permission denied",
+                "side_effects": side_effects,
+            }
+            outputs[output_key] = result
+            context[output_key] = result
+            continue
         function = _load_callable(str(hook.get("callable") or ""))
         kwargs = {
             str(name): _resolve_binding(value, context)
@@ -30,7 +41,6 @@ def run_lifecycle_phase(
         result = function(**kwargs)
         if not isinstance(result, dict):
             raise RoleLifecycleInterpreterError(f"lifecycle hook returned non-object: {hook.get('hook_id')}")
-        output_key = str(hook["output_key"])
         outputs[output_key] = result
         context[output_key] = result
     return outputs

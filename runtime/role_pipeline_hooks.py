@@ -6,9 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .architecture_analysis_document import write_architecture_analysis_document
 from .cognitive_control_plane import run_cognitive_control_plane
+from .contract_registry import load_artifact_contracts
 from .programmer_executor import run_programmer_executor
 from .role_gate_runner import run_role_gate_report
+from .role_skill_common import write_role_artifact
+from .technical_spec_document import write_technical_spec_document
 
 
 def run_executor_hook(
@@ -68,3 +72,47 @@ def run_role_gates_hook(
     project_report: dict[str, Any],
 ) -> dict[str, Any]:
     return run_role_gate_report(artifacts=artifacts, project_report=project_report)
+
+
+def run_artifact_writer_hook(*, root: Path, artifacts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    paths = {}
+    contracts = load_artifact_contracts()
+    for key, artifact in artifacts.items():
+        artifact_type = str(artifact.get("artifact_type") or "")
+        producer = str(dict(contracts.get(artifact_type, {})).get("producer") or "unknown")
+        path = write_role_artifact(root, producer, artifact)
+        artifact["artifact_path"] = path.as_posix()
+        paths[key] = path.as_posix()
+    return {"status": "written", "paths": paths}
+
+
+def run_human_document_writer_hook(
+    *,
+    root: Path,
+    project_report: dict[str, Any],
+    architecture_decision: dict[str, Any],
+    technical_spec: dict[str, Any],
+) -> dict[str, Any]:
+    project = architecture_decision.get("project")
+    report = {"content": project_report, "project": project}
+    architecture_path = write_architecture_analysis_document(
+        root=root,
+        project_report=report,
+        architecture_decision=architecture_decision,
+        technical_spec=technical_spec,
+        output_group="pipelines",
+    )
+    spec_path = write_technical_spec_document(
+        root=root,
+        project_report=report,
+        architecture_decision=architecture_decision,
+        technical_spec=technical_spec,
+        output_group="pipelines",
+    )
+    return {
+        "status": "written",
+        "documents": {
+            "architecture_analysis": architecture_path.as_posix(),
+            "technical_spec": spec_path.as_posix(),
+        },
+    }
