@@ -1,31 +1,5 @@
 from __future__ import annotations
 
-from runtime.greenfield_csv_sort_template import content_for as csv_sort_content_for
-from runtime.greenfield_generic_file_converter_template import content_for as generic_file_converter_content_for
-from runtime.greenfield_image_contents_template import content_for as image_contents_content_for
-from runtime.greenfield_image_table_excel_template import content_for as image_table_excel_content_for
-from runtime.greenfield_news_scraper_template import acceptance_for as news_scraper_acceptance_for
-from runtime.greenfield_news_scraper_template import content_for as news_scraper_content_for
-from runtime.greenfield_news_scraper_template import expected_artifacts as news_scraper_expected_artifacts
-from runtime.greenfield_ocr_template import content_for as ocr_content_for
-from runtime.greenfield_web_research_summarizer_template import acceptance_for as web_research_acceptance_for
-from runtime.greenfield_web_research_summarizer_template import content_for as web_research_content_for
-from runtime.greenfield_web_research_summarizer_template import expected_artifacts as web_research_expected_artifacts
-from runtime.greenfield_web_research_fastapi_template import acceptance_for as web_research_fastapi_acceptance_for
-from runtime.greenfield_web_research_fastapi_template import content_for as web_research_fastapi_content_for
-from runtime.greenfield_web_research_fastapi_template import expected_artifacts as web_research_fastapi_expected_artifacts
-
-CSV_CASE = "fastapi_csv_aggregator"
-KV_CASE = "fastapi_kv_store"
-CSV_SORT_CASE = "csv_sort_cli"
-OCR_CASE = "ocr_image_cli"
-IMAGE_CONTENTS_CASE = "image_contents_cli"
-IMAGE_TABLE_EXCEL_CASE = "image_table_to_excel_cli"
-GENERIC_FILE_CONVERTER_CASE = "generic_file_converter_cli"
-NEWS_SITE_SCRAPER_CASE = "news_site_scraper_cli"
-WEB_RESEARCH_SUMMARIZER_CASE = "web_research_summarizer_cli"
-WEB_RESEARCH_SUMMARIZER_FASTAPI_CASE = "web_research_summarizer_fastapi"
-
 def _aggregator() -> str:
     return (
         "from __future__ import annotations\n\n"
