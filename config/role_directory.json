@@ -243,6 +243,7 @@
     {
       "step_id": "architecture_decision",
       "role_id": "architect",
+      "phase": "build",
       "output_key": "architecture_decision",
       "bindings": {
         "goal": "$goal",
@@ -253,18 +254,21 @@
     {
       "step_id": "technical_spec",
       "role_id": "spec_writer",
+      "phase": "build",
       "output_key": "technical_spec",
       "bindings": {"architecture_decision": "$artifacts.architecture_decision"}
     },
     {
       "step_id": "implementation_plan",
       "role_id": "implementer",
+      "phase": "build",
       "output_key": "implementation_plan",
       "bindings": {"technical_spec": "$artifacts.technical_spec"}
     },
     {
       "step_id": "test_plan",
       "role_id": "tester",
+      "phase": "build",
       "output_key": "test_plan",
       "bindings": {
         "technical_spec": "$artifacts.technical_spec",
@@ -274,6 +278,7 @@
     {
       "step_id": "review_findings",
       "role_id": "reviewer",
+      "phase": "review",
       "output_key": "review_findings",
       "bindings": {
         "technical_spec": "$artifacts.technical_spec",

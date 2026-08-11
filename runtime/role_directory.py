@@ -52,6 +52,9 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
         for field in ("step_id", "role_id", "output_key", "bindings"):
             if field not in step:
                 raise RoleDirectoryError(f"pipeline step requires {field}")
+        phase = str(step.get("phase") or "")
+        if payload.get("schema_version") == "role_directory.v2" and phase not in {"build", "review"}:
+            raise RoleDirectoryError(f"pipeline step requires build or review phase: {step.get('step_id')}")
     return payload
 
 

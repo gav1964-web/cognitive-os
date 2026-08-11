@@ -42,6 +42,14 @@ def configured_pipeline_prefix(
     return {**pipeline, "steps": selected}
 
 
+def configured_pipeline_phase(phase: str) -> dict[str, Any]:
+    pipeline = load_role_artifact_pipeline()
+    selected = [step for step in pipeline["steps"] if str(step.get("phase") or "build") == phase]
+    if not selected:
+        raise ValueError(f"configured role pipeline has no phase: {phase}")
+    return {**pipeline, "steps": selected}
+
+
 def artifact_by_type(artifacts: dict[str, dict[str, Any]], artifact_type: str) -> dict[str, Any]:
     for artifact in artifacts.values():
         if artifact.get("artifact_type") == artifact_type:

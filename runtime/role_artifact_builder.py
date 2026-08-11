@@ -41,19 +41,27 @@ def load_artifact_builders(path: str | None = None) -> dict[str, dict[str, Any]]
     return normalized
 
 
-def build_configured_artifact(*, builder_id: str | None = None, role_id: str | None = None, **kwargs: Any) -> dict[str, Any]:
-    builders = load_artifact_builders()
+def build_configured_artifact(
+    *,
+    builder_id: str | None = None,
+    role_id: str | None = None,
+    directory: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
     if role_id is not None:
-        config = role_builder_config(role_id)
+        config = role_builder_config(role_id, directory=directory)
         builder_id = str(config.get("builder_id") or role_id)
         config["role_id"] = role_id
     else:
+        builders = load_artifact_builders()
         if builder_id not in builders:
             raise ArtifactBuilderError(f"unknown artifact builder: {builder_id}")
         config = builders[str(builder_id)]
     function = _load_callable(str(config["callable"]))
     configured_kwargs = dict(config.get("kwargs") or {})
-    artifact = function(**{**configured_kwargs, **kwargs})
+    call_kwargs = {**configured_kwargs, **kwargs}
+    call_kwargs.setdefault("role_id", str(config["role_id"]))
+    artifact = function(**call_kwargs)
     if not isinstance(artifact, dict):
         raise ArtifactBuilderError(f"builder returned non-object artifact: {builder_id}")
     artifact_type = str(config["artifact_type"])
@@ -64,6 +72,29 @@ def build_configured_artifact(*, builder_id: str | None = None, role_id: str | N
         )
     if artifact.get("role") != role_id:
         raise ArtifactBuilderError(f"builder {builder_id} returned role {artifact.get('role')} instead of {role_id}")
+    return artifact
+
+
+def build_declarative_artifact(
+    *,
+    role_id: str,
+    artifact_type: str,
+    status: str = "ok",
+    include_inputs: list[str] | None = None,
+    static_fields: dict[str, Any] | None = None,
+    **inputs: Any,
+) -> dict[str, Any]:
+    """Build a simple typed artifact entirely from configured inputs."""
+
+    artifact = {
+        "artifact_type": artifact_type,
+        "role": role_id,
+        "status": status,
+        **dict(static_fields or {}),
+    }
+    for name in include_inputs or []:
+        if name in inputs:
+            artifact[str(name)] = inputs[name]
     return artifact
 
 

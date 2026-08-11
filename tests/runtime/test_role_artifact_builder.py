@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from runtime.configured_role_pipeline import configured_pipeline_phase
 from runtime.role_artifact_builder import ArtifactBuilderError, load_artifact_builders
 from runtime.role_artifact_interpreter import load_role_artifact_pipeline
 
@@ -31,6 +32,15 @@ def test_role_pipeline_uses_generic_builder_dispatcher():
     } == {"runtime.role_artifact_builder:build_configured_artifact"}
     assert all("builder_id" not in step["bindings"] for step in pipeline["steps"])
     assert all("role_id" in step for step in pipeline["steps"])
+    assert {step["phase"] for step in pipeline["steps"]} == {"build", "review"}
+
+
+def test_role_pipeline_phases_are_selected_from_config():
+    build = configured_pipeline_phase("build")
+    review = configured_pipeline_phase("review")
+
+    assert [step["role_id"] for step in build["steps"]] == ["architect", "spec_writer", "implementer", "tester"]
+    assert [step["role_id"] for step in review["steps"]] == ["reviewer"]
 
 
 def test_review_findings_builder_is_not_role_module():

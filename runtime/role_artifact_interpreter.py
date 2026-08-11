@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .role_directory import load_role_directory
+from .role_runtime_policy import enforce_role_runtime_policy
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,10 +51,11 @@ def run_role_artifact_pipeline(
     test_result: dict[str, Any] | None = None,
     executable_acceptance_result: dict[str, Any] | None = None,
     pipeline: dict[str, Any] | None = None,
+    directory: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run configured artifact builders with declarative bindings."""
 
-    payload = pipeline or load_role_artifact_pipeline()
+    payload = pipeline or (_pipeline_from_role_directory(directory) if directory is not None else load_role_artifact_pipeline())
     context: dict[str, Any] = {
         "goal": goal,
         "project_report": project_report,
@@ -71,6 +73,8 @@ def run_role_artifact_pipeline(
         }
         if "role_id" not in kwargs:
             kwargs["role_id"] = str(step["role_id"])
+        if str(step.get("builder") or "") == "runtime.role_artifact_builder:build_configured_artifact":
+            kwargs["directory"] = directory
         artifact = builder(**kwargs)
         if not isinstance(artifact, dict):
             raise RoleArtifactInterpreterError(f"builder returned non-object artifact: {step['builder']}")
@@ -79,12 +83,13 @@ def run_role_artifact_pipeline(
             raise RoleArtifactInterpreterError(
                 f"builder {step['builder']} returned role {artifact.get('role')} instead of {expected_role}"
             )
+        enforce_role_runtime_policy(expected_role, artifact, directory=directory)
         context["artifacts"][str(step["output_key"])] = artifact
     return dict(context["artifacts"])
 
 
-def _pipeline_from_role_directory() -> dict[str, Any]:
-    directory = load_role_directory()
+def _pipeline_from_role_directory(directory: dict[str, Any] | None = None) -> dict[str, Any]:
+    directory = directory or load_role_directory()
     steps = []
     for step in list(directory.get("pipeline") or []):
         row = dict(step)
