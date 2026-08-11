@@ -10,15 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from .architecture_analysis_document import write_architecture_analysis_document
-from .cognitive_control_plane import run_cognitive_control_plane
 from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase
 from .contract_registry import load_artifact_contracts
 from .project_benchmark import analyze_project
 from .local_inference import LocalInferenceConfig
 from .role_artifact_interpreter import run_role_artifact_pipeline
-from .role_gate_runner import run_role_gate_report
+from .role_lifecycle_interpreter import run_lifecycle_phase
 from .role_skill_common import load_skill_registry, write_role_artifact
-from .programmer_executor import run_programmer_executor
 from .technical_spec_document import write_technical_spec_document
 from .transformation_flow import run_transformation_flow
 
@@ -48,14 +46,15 @@ def run_role_pipeline(
     spec = artifact_by_type(artifacts, "TechnicalSpec")
     implementation = artifact_by_type(artifacts, "ImplementationPlan")
     test_plan = artifact_by_type(artifacts, "TestPlan")
-    executor = _maybe_run_executor(
-        root=root,
-        project_dir=project_dir,
-        spec=spec,
-        implementation=implementation,
-        test_plan=test_plan,
-        run_executor=run_executor,
-    )
+    lifecycle_context = {
+        "root": root,
+        "project_dir": project_dir,
+        "goal": goal,
+        "project_report": report,
+        "artifacts": artifacts,
+        "run_executor": run_executor,
+    }
+    executor = run_lifecycle_phase("after_build", context=lifecycle_context)["executor"]
     test_result = dict(executor.get("test_result", {})) if executor.get("test_result") else None
     review_artifacts = run_role_artifact_pipeline(
         goal=goal,
@@ -67,13 +66,15 @@ def run_role_pipeline(
     )
     review = artifact_by_type(review_artifacts, "ReviewFindings")
     artifacts = review_artifacts
-    control_plane = run_cognitive_control_plane(
-        goal=goal,
-        artifacts=artifacts,
-        review=review,
-        llm_invoked=bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+    lifecycle_context.update(
+        {
+            "artifacts": artifacts,
+            "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+        }
     )
-    role_gates = run_role_gate_report(artifacts=artifacts, project_report=report)
+    post_review = run_lifecycle_phase("after_review", context=lifecycle_context)
+    control_plane = post_review["cognitive_control_plane"]
+    role_gates = post_review["role_gates"]
     paths = _write_artifacts(root, artifacts) if write else {}
     human_documents = _write_human_documents(root, report, adr, spec) if write else {}
     next_action = str(dict(control_plane.get("role_transition", {})).get("next_action") or _next_action(review))
@@ -244,42 +245,6 @@ def _maybe_run_transform(
         "candidate_path": result.get("candidate_path"),
         "spec_path": result.get("spec_path"),
         "selected": result.get("selected"),
-    }
-
-
-def _maybe_run_executor(
-    *,
-    root: Path,
-    project_dir: Path,
-    spec: dict[str, Any],
-    implementation: dict[str, Any],
-    test_plan: dict[str, Any],
-    run_executor: bool,
-) -> dict[str, Any]:
-    if not run_executor:
-        return {"status": "skipped", "reason": "run_executor flag is false"}
-    result = run_programmer_executor(
-        root=root,
-        project_dir=project_dir,
-        technical_spec=spec,
-        implementation_plan=implementation,
-        test_plan=test_plan,
-        run_verification=True,
-        apply_source=False,
-    )
-    test_result = {}
-    test_result_path = result.get("test_result_path")
-    if test_result_path:
-        test_result = json.loads(Path(str(test_result_path)).read_text(encoding="utf-8"))
-    return {
-        "status": result.get("status"),
-        "execution_dir": result.get("execution_dir"),
-        "patch_package_path": result.get("patch_package_path"),
-        "no_patch_package_path": result.get("no_patch_package_path"),
-        "blocked_execution_report_path": result.get("blocked_execution_report_path"),
-        "test_result_path": test_result_path,
-        "test_result": test_result,
-        "source_code_changes": result.get("source_code_changes", False),
     }
 
 

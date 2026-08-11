@@ -288,6 +288,44 @@
       }
     }
   ],
+  "lifecycle_hooks": [
+    {
+      "hook_id": "programmer_executor",
+      "phase": "after_build",
+      "callable": "runtime.role_pipeline_hooks:run_executor_hook",
+      "output_key": "executor",
+      "bindings": {
+        "root": "$root",
+        "project_dir": "$project_dir",
+        "technical_spec": "$artifact_type:TechnicalSpec",
+        "implementation_plan": "$artifact_type:ImplementationPlan",
+        "test_plan": "$artifact_type:TestPlan",
+        "enabled": "$run_executor"
+      }
+    },
+    {
+      "hook_id": "cognitive_control_plane",
+      "phase": "after_review",
+      "callable": "runtime.role_pipeline_hooks:run_control_plane_hook",
+      "output_key": "cognitive_control_plane",
+      "bindings": {
+        "goal": "$goal",
+        "artifacts": "$artifacts",
+        "review": "$artifact_type:ReviewFindings",
+        "llm_invoked": "$llm_invoked"
+      }
+    },
+    {
+      "hook_id": "role_gates",
+      "phase": "after_review",
+      "callable": "runtime.role_pipeline_hooks:run_role_gates_hook",
+      "output_key": "role_gates",
+      "bindings": {
+        "artifacts": "$artifacts",
+        "project_report": "$project_report"
+      }
+    }
+  ],
   "record_type_defaults": {
     "project_archetype_rule": ["project_analyzer", "architect", "spec_writer"],
     "capability_pattern": ["architect", "spec_writer", "implementer", "tester"],

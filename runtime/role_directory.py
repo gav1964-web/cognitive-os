@@ -55,6 +55,41 @@ def load_role_directory(path: str | None = None) -> dict[str, Any]:
         phase = str(step.get("phase") or "")
         if payload.get("schema_version") == "role_directory.v2" and phase not in {"build", "review"}:
             raise RoleDirectoryError(f"pipeline step requires build or review phase: {step.get('step_id')}")
+    hooks = payload.get("lifecycle_hooks", [])
+    if not isinstance(hooks, list):
+        raise RoleDirectoryError("role directory lifecycle_hooks must be a list")
+    seen_hooks = set()
+    seen_hook_outputs = set()
+    produced_types = {
+        str(artifact_type)
+        for role in roles.values()
+        for artifact_type in list(dict(role).get("produces") or [])
+    }
+    for hook in hooks:
+        if not isinstance(hook, dict):
+            raise RoleDirectoryError("role lifecycle hook must be an object")
+        for field in ("hook_id", "phase", "callable", "output_key", "bindings"):
+            if field not in hook:
+                raise RoleDirectoryError(f"role lifecycle hook requires {field}")
+        hook_id = str(hook["hook_id"])
+        if not hook_id or hook_id in seen_hooks:
+            raise RoleDirectoryError(f"role lifecycle hook_id must be unique: {hook_id}")
+        seen_hooks.add(hook_id)
+        output_key = str(hook["output_key"])
+        if not output_key or output_key in seen_hook_outputs:
+            raise RoleDirectoryError(f"role lifecycle output_key must be unique: {output_key}")
+        seen_hook_outputs.add(output_key)
+        if hook["phase"] not in {"after_build", "after_review"}:
+            raise RoleDirectoryError(f"unsupported role lifecycle phase: {hook['phase']}")
+        if ":" not in str(hook["callable"]):
+            raise RoleDirectoryError(f"role lifecycle callable must be module:function: {hook_id}")
+        if not isinstance(hook["bindings"], dict):
+            raise RoleDirectoryError(f"role lifecycle hook bindings must be an object: {hook_id}")
+        for binding in hook["bindings"].values():
+            if isinstance(binding, str) and binding.startswith("$artifact_type:"):
+                artifact_type = binding.split(":", 1)[1]
+                if artifact_type not in produced_types:
+                    raise RoleDirectoryError(f"role lifecycle hook references unknown artifact type: {artifact_type}")
     return payload
 
 
@@ -114,3 +149,8 @@ def role_for_output_key(output_key: str, *, directory: dict[str, Any] | None = N
         if step.get("output_key") == output_key:
             return str(step.get("role_id") or "")
     raise RoleDirectoryError(f"no role produces configured output: {output_key}")
+
+
+def lifecycle_hooks(*, directory: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    payload = directory or load_role_directory()
+    return [dict(row) for row in list(payload.get("lifecycle_hooks") or [])]
