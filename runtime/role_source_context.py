@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .source_side_effect_inference import infer_ast_side_effects
+from .source_contract_semantics import infer_source_contract
 
 
 def build_source_context(
@@ -307,6 +308,9 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "text": node_text[:900],
                 "signature": _ast_signature(node),
                 "side_effects": infer_ast_side_effects(node, node_text),
+                "structural_contract": infer_source_contract(
+                    {"signature": _ast_signature(node), "snippet": node_text}
+                ),
             }
             if len(matches) > 1:
                 result["symbol_occurrences"] = matches[:8]

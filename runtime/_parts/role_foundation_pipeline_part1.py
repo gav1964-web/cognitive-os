@@ -162,6 +162,9 @@ def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict
         source_evidence=evidence,
         context_evidence=[project_dir.name],
         selection_reason=str(contract.get("selection_reason") or ""),
+        structural_evidence=dict(contract.get("structural_evidence") or {}),
+        input_contract=dict(contract.get("input_contract") or {}),
+        output_contract=dict(contract.get("output_contract") or {}),
     )
 
 def _attach_active_root_evidence(project_map_report: dict[str, Any], active_root_decision: dict[str, Any]) -> dict[str, Any]:

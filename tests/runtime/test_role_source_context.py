@@ -45,6 +45,8 @@ def test_source_context_marks_unique_method_symbol_owner(tmp_path: Path):
 
     assert snippet["target_binding"] == "method_symbol"
     assert snippet["owner_class"] == "Parameter"
+    assert snippet["structural_contract"]["inferred_output_type"] == "TupleLike"
+    assert snippet["structural_contract"]["source_body_complete"] is True
 
 
 def test_source_context_builds_module_script_context(tmp_path: Path):

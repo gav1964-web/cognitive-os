@@ -4,6 +4,7 @@ import ast
 import builtins
 import re
 from typing import Any
+from runtime.source_contract_semantics import infer_source_contract
 from runtime.role_spec_writer_ranking import (
     candidate_level_bonus as _candidate_level_bonus,
     name_and_contract_score as _name_and_contract_score,
@@ -117,10 +118,12 @@ def _output_contract_from_signature(signature: dict[str, Any], fallback: object)
 def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     source = str(candidate.get("source") or "")
     signature = dict(candidate.get("signature", {}) or {})
+    documented = dict(infer_source_contract(candidate).get("docstring_argument_types") or {})
     args = _contract_args(signature)
     if args:
         return {
-            str(arg.get("name") or "payload"): _contract_type_from_arg(str(arg.get("name") or "payload"), str(arg.get("annotation") or ""))
+            str(arg.get("name") or "payload"): documented.get(str(arg.get("name") or ""))
+            or _contract_type_from_arg(str(arg.get("name") or "payload"), str(arg.get("annotation") or ""))
             for arg in args
             if isinstance(arg, dict)
         }
@@ -135,10 +138,11 @@ def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 def _output_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
+    semantic = infer_source_contract(candidate)
+    inferred = str(semantic.get("inferred_output_type") or "").strip()
+    if inferred and inferred.lower() not in IGNORED_RETURN_ANNOTATIONS:
+        return {"result": inferred}
     source = str(candidate.get("source") or "")
-    returns = str(dict(candidate.get("signature", {}) or {}).get("returns") or "").strip()
-    if returns and returns.lower() not in IGNORED_RETURN_ANNOTATIONS:
-        return {"result": returns}
     return {"result": _inferred_result_type(source, str(candidate.get("snippet") or ""))}
 
 def _contract_type_from_arg(name: str, annotation: str) -> str:

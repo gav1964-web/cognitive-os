@@ -6,6 +6,7 @@ from typing import Any
 
 from .contract_archetype_inference import archetype_score_adjustments
 from .semantic_target_profiles import semantic_score_adjustments
+from .source_contract_semantics import structural_quality_adjustment
 from .target_quality_policy import policy_tokens, target_quality_section
 
 
@@ -42,6 +43,9 @@ def semantic_target_quality_report(
     source_evidence: list[str] | None = None,
     context_evidence: list[str] | None = None,
     selection_reason: str = "",
+    structural_evidence: dict[str, Any] | None = None,
+    input_contract: dict[str, Any] | None = None,
+    output_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not target:
         return {"status": "blocked", "target": "", "score": 0, "reasons": ["no selected extraction candidate"]}
@@ -61,6 +65,13 @@ def semantic_target_quality_report(
     if target in source_evidence:
         score += 8
         reasons.append("candidate is present in source evidence")
+    structural_delta, structural_reasons = structural_quality_adjustment(
+        dict(structural_evidence or {}),
+        input_contract=input_contract,
+        output_contract=output_contract,
+    )
+    score += structural_delta
+    reasons.extend(structural_reasons)
     if _strong_contract_hit(lowered, symbol):
         score += 18
         reasons.append("candidate name suggests a bounded contract")
@@ -166,6 +177,7 @@ def semantic_target_quality_report(
         "semantic_profile_ids": profile_ids,
         "contract_archetype_ids": archetype_ids,
         "profiled_contract_family": profiled_contract_family,
+        "structural_evidence": dict(structural_evidence or {}),
     }
 
 

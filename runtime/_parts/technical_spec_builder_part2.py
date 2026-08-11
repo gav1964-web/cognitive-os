@@ -12,6 +12,7 @@ from runtime.role_spec_writer_ranking import (
 )
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
+from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
@@ -35,7 +36,6 @@ IGNORED_RETURN_ANNOTATIONS = set(policy_list(CONTRACT_TYPE_POLICY, "ignored_retu
 ARGUMENT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "argument_rules")
 PAYLOAD_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "payload_rules")
 RESULT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "result_rules")
-
 def _fallback_work_plan_contract(targets: list[str]) -> dict[str, Any]:
     targets = _dedupe([_normalize_source_ref(str(item)) for item in targets if item])
     primary = targets[0]
@@ -125,6 +125,7 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
                 "claims": context.get("claims", []),
                 "target_binding": context.get("target_binding") or snippet.get("target_binding"),
                 "symbol_occurrences": context.get("symbol_occurrences") or snippet.get("symbol_occurrences", []),
+                "structural_contract": context.get("structural_contract") or snippet.get("structural_contract", {}),
             }
         )
     return rows
@@ -182,7 +183,6 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
             "blocked_by": ["no_safe_source_specific_candidate"],
         }
     candidate = dict(ranked[0].get("evidence", {})) if ranked else {}
-    args = list(dict(candidate.get("signature", {})).get("args", []))
     source = str(candidate.get("source") or "")
     domain_contract = _domain_extraction_contract(source)
     signature_input_contract = _input_contract_from_candidate(candidate)
@@ -197,6 +197,7 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
     signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)
     input_contract = _reconciled_input_contract(signature_input_contract, dict(domain_contract.get("input_contract") or {}))
     output_contract = dict(domain_contract.get("output_contract") or signature_output_contract)
+    structural_evidence = infer_source_contract(candidate)
     contract = {
         "candidate": candidate.get("source"),
         "candidate_score": ranked[0]["score"] if ranked else 0,
@@ -219,6 +220,7 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
             **dict(domain_contract.get("side_effect_policy") or {}),
         },
         "evidence_source": candidate.get("source"),
+        "structural_evidence": structural_evidence,
     }
     if domain_contract.get("contract_family"):
         contract["contract_family"] = domain_contract["contract_family"]
@@ -235,6 +237,7 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         ranked_candidates=[str(row.get("source")) for row in contract["ranked_candidates"] if isinstance(row, dict)],
         source_evidence=[str(row.get("source")) for row in evidence if row.get("source")],
         selection_reason=str(contract.get("selection_reason") or ""),
+        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract},
     )
     quality = dict(contract.get("semantic_quality") or {})
     quality_reasons = " ".join(str(reason) for reason in list(quality.get("reasons", []) or [])).lower()
@@ -265,7 +268,6 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
             ],
         }
     return contract
-
 def _semantic_review_override(contract: dict[str, Any], quality: dict[str, Any], preferred_targets: list[Any]) -> dict[str, Any]:
     policy = dict(TECHNICAL_SPEC_POLICY.get("semantic_review_override") or {})
     if not policy.get("enabled"):
