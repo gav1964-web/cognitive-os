@@ -5,11 +5,13 @@ from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
 from runtime.architecture_slice_naming import semantic_first_slice_name
+from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.contract_transform_contract_profiles import contract_profile_hint
 from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
 from runtime.role_source_context import build_source_context
+from runtime.source_target_policy import is_context_only_implementation_target
 
 ARCHITECTURE_DECISION_POLICY = load_architecture_decision_policy()
 FALLBACK_ARCHETYPE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_archetype"])
@@ -155,7 +157,7 @@ def _fallback_slice_steps(primary: str, plan: dict[str, Any], readiness: dict[st
 
 def _first_slice_contract(synthesis: dict[str, Any]) -> dict[str, Any]:
     first_slice = dict(synthesis.get("recommended_first_slice") or {})
-    targets = _dedupe_strings([str(item) for item in list(first_slice.get("targets", [])) if item])
+    targets = _dedupe_strings([str(item) for item in list(first_slice.get("targets", [])) if item and not is_context_only_implementation_target(str(item))])
     steps = _dedupe_strings([str(item) for item in list(first_slice.get("steps", [])) if item])
     if not first_slice and not targets and not steps:
         return {}
@@ -275,7 +277,9 @@ def _profile_compatible_transform(target: str, item: dict[str, Any], policy: dic
     hint = contract_profile_hint(target=target, input_contract=input_contract, output_contract=output_contract)
     profile = dict((hint or {}).get("contract_profile") or {})
     allowed = {str(value) for value in list(policy.get("pathless_allowed_contract_profiles") or [])}
-    return bool(profile) and str(profile.get("id") or "") in allowed
+    archetype = contract_archetype_for_target(target)
+    allowed_archetypes = {str(value) for value in list(policy.get("pathless_allowed_contract_archetypes") or [])}
+    return (bool(profile) and str(profile.get("id") or "") in allowed) or str(archetype.get("contract_family") or "") in allowed_archetypes
 
 def _provider_parser_sources(project_root: Path) -> list[str]:
     if not project_root.exists() or not project_root.is_dir():

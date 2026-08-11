@@ -52,6 +52,7 @@
       "max_candidates": 3,
       "allow_contract_profile_without_path_match": true,
       "pathless_allowed_contract_profiles": ["normalize_string", "strip_string", "upper_string", "csv_items"],
+      "pathless_allowed_contract_archetypes": ["schema_type_normalization_boundary"],
       "symbol_contains_any": [
         "command_name",
         "patch_concurrency",
@@ -65,6 +66,8 @@
         "/config",
         "/options",
         "/settings",
+        "/ast.py",
+        "/parser",
         "__init__.py"
       ],
       "excluded_symbol_prefixes": ["get_", "is_", "has_", "set_"],

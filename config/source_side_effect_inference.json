@@ -1,0 +1,31 @@
+{
+  "schema_version": "source_side_effect_inference.v1",
+  "effects": [
+    {
+      "id": "filesystem",
+      "call_exact": ["open"],
+      "call_contains": [".open", "write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod"]
+    },
+    {
+      "id": "network",
+      "call_exact": ["urlopen"],
+      "call_contains": ["socket", ".send", ".recv", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
+    },
+    {
+      "id": "subprocess",
+      "call_contains": ["subprocess.", "popen", "check_call", "check_output", "os.system"]
+    },
+    {
+      "id": "database",
+      "call_contains": ["cursor.execute", "connection.execute", ".executemany", ".commit", ".rollback"]
+    },
+    {
+      "id": "credential_store",
+      "call_contains": ["secitemadd", "secitemcopymatching", "secitemdelete", "secretservice", "keyring.set_password", "keyring.delete_password"]
+    }
+  ],
+  "memory_state": {
+    "ast_nodes": ["Global", "Nonlocal"],
+    "text_contains": ["threading.lock", "with incident_lock", "with import_lock"]
+  }
+}

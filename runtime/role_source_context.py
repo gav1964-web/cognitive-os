@@ -6,6 +6,8 @@ import ast
 from pathlib import Path
 from typing import Any
 
+from .source_side_effect_inference import infer_ast_side_effects
+
 
 def build_source_context(
     *,
@@ -304,7 +306,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "end_line": end,
                 "text": node_text[:900],
                 "signature": _ast_signature(node),
-                "side_effects": _ast_side_effect_hints(node, node_text),
+                "side_effects": infer_ast_side_effects(node, node_text),
             }
             if len(matches) > 1:
                 result["symbol_occurrences"] = matches[:8]
@@ -353,16 +355,6 @@ def _annotation(node: ast.AST | None) -> str:
         return ast.unparse(node)
     except Exception:
         return ""
-
-
-def _ast_side_effect_hints(node: ast.AST, text: str) -> list[str]:
-    effects = set()
-    if any(isinstance(child, ast.Global) for child in ast.walk(node)):
-        effects.add("memory_state")
-    lowered = text.lower()
-    if "threading.lock" in lowered or "with incident_lock" in lowered or "with import_lock" in lowered:
-        effects.add("memory_state")
-    return sorted(effects)
 
 
 def _source(row: dict[str, Any]) -> str:

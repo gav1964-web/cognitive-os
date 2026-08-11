@@ -1142,7 +1142,7 @@
     {
       "id": "database_auth_handshake",
       "symbol_contains_any": ["auth", "password", "handshake"],
-      "path_contains_any": ["connection", "auth", "mysql", "postgres", "protocol"],
+      "path_contains_any": ["mysql", "postgres", "database", "dbapi", "protocol"],
       "score_bonus": 24,
       "ranking_bonus": 36,
       "benign_runtime_boundary": true,
@@ -2503,6 +2503,36 @@
         "non-numeric inputs preserve sample evidence"
       ],
       "failure_modes": ["empty_sample", "non_numeric_value", "missing_policy_error", "axis_error"]
+    },
+    {
+      "id": "managed_port_forward_boundary",
+      "symbols": ["forward_local", "forward_remote"],
+      "symbol_contains_any": ["port_forward", "forward_tunnel"],
+      "path_contains_any": ["connection", "tunnel", "transport", "forward"],
+      "score_bonus": 24,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "managed port forwarding is a bounded network-lifecycle contract",
+      "contract_family": "managed_port_forward_boundary",
+      "input_contract": {
+        "forward_request": "PortForwardRequest(local_host, local_port, remote_host, remote_port)",
+        "transport_context": "ForwardTransportContext(connection, authorization?, timeout_policy?)"
+      },
+      "output_contract": {
+        "forward_lease": "PortForwardLease(status, endpoints, cleanup_state)",
+        "failure_packet": "PortForwardFailure(kind, endpoint?, retryable?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_calls": "network transport is faked by default; live SSH or socket use requires an integration profile",
+        "cleanup_policy": "listener, socket, tunnel and background task cleanup must be asserted"
+      },
+      "validation_gates": [
+        "successful setup, bind/connect failure and cancellation paths are covered",
+        "local and remote endpoint mapping is explicit",
+        "normal exit and exceptional exit both close the forwarding lease"
+      ],
+      "failure_modes": ["bind_error", "connection_error", "authorization_error", "timeout", "cleanup_error"]
     },
     {
       "id": "lint_rule_checker",

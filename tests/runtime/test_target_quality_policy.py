@@ -38,6 +38,21 @@ def test_target_quality_policy_drives_quality_and_ranking_rules():
     assert "deterministic parser" in " ".join(reasons)
 
 
+def test_validate_url_contract_is_not_treated_as_trivial_url_accessor():
+    target = "package/utils.py:_validate_repository_url"
+
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="deterministic parser/normalizer/validator shape",
+    )
+
+    assert report["status"] == "strong"
+    assert report["score"] >= 95
+    assert not any("trivial accessor" in reason for reason in report["reasons"])
+
+
 def test_profiled_version_operation_is_not_treated_as_support_version_helper():
     report = semantic_target_quality_report(
         "django_redis/client/default.py:incr_version",

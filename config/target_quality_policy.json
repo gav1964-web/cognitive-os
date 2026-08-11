@@ -146,7 +146,8 @@
       "parse",
       "build",
       "resolve",
-      "normalize"
+      "normalize",
+      "validate"
     ],
     "liveness_probe_symbols": [
       "health",

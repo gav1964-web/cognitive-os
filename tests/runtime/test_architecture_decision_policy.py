@@ -257,3 +257,46 @@ def test_architecture_decision_policy_keeps_pathless_sort_profile_out_of_fallbac
     )
 
     assert adr["first_slice_contract"]["targets"] == ["pkg/runtime.py:execute_runtime"]
+
+
+def test_architecture_decision_excludes_context_only_first_slice_targets(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+
+    adr = build_architecture_decision(
+        goal="Extract runtime flow",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 2, "entrypoints": [], "languages": ["Python"]},
+            "architecture_synthesis": {
+                "artifact_type": "ProjectArchitectureSynthesis",
+                "recommended_first_slice": {
+                    "name": "runtime_slice",
+                    "targets": ["pkg/runtime.py:run", "integration/test_runtime.py:run_case"],
+                    "steps": ["Define the runtime contract."],
+                },
+            },
+            "answers": {"1_scope": {"domain_profile": {"kind": "generic"}}},
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["pkg/runtime.py:run"]
+
+
+def test_architecture_decision_promotes_pure_ast_parser_over_runtime_plan(tmp_path):
+    project = tmp_path / "project"
+    (project / "pkg").mkdir(parents=True)
+    (project / "pkg" / "ast.py").write_text("def parse(source: str):\n    return source\n", encoding="utf-8")
+
+    adr = build_architecture_decision(
+        goal="Extract parser",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 1, "entrypoints": [], "languages": ["Python"]},
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "generic"}},
+                "3_capabilities": {"pure_transforms": [{"path": "pkg/ast.py", "name": "parse", "args": [{"name": "source", "annotation": "str"}]}]},
+                "6_runtime_extraction_readiness": {"minimal_extraction_plan": {"capabilities_to_extract": [{"capability": "pkg/cache.py:refresh"}]}},
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["pkg/ast.py:parse"]

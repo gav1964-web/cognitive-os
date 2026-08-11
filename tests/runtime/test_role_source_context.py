@@ -62,3 +62,22 @@ def test_source_context_builds_module_script_context(tmp_path: Path):
     assert row["module_imports"] == ["cv2"]
     assert row["side_effects"] == ["filesystem"]
     assert "cv2.imread" in row["snippet"]
+
+
+def test_source_context_infers_nested_network_and_filesystem_calls(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "transfer.py").write_text(
+        "def forward(transport, path):\n"
+        "    def callback():\n"
+        "        sock = socket.socket()\n"
+        "        sock.connect(('localhost', 22))\n"
+        "    transport.request_port_forward(handler=callback)\n"
+        "    with open(path) as payload:\n"
+        "        transport.sftp.put(payload)\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(project_root=str(project), project_report={}, sources=["transfer.py:forward"])
+
+    assert context["transfer.py:forward"]["snippet"]["side_effects"] == ["filesystem", "network"]
