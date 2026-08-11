@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
+from runtime.role_directory import RoleDirectoryError, load_role_directory
 from runtime.role_workflow_interpreter import (
     RoleWorkflowInterpreterError,
     ordered_workflow_stages,
@@ -52,3 +55,38 @@ def test_workflow_requires_handler_for_every_stage():
         run_configured_workflow(state={}, handlers={"build": lambda state: calls.append("build")}, directory=directory)
 
     assert calls == []
+
+
+def test_workflow_checks_stage_input_before_handler_runs():
+    directory = _directory(
+        [{"stage_id": "build", "depends_on": [], "requires": ["project_report"], "provides": ["artifacts"]}]
+    )
+    calls = []
+
+    with pytest.raises(RoleWorkflowInterpreterError, match="build missing input: project_report"):
+        run_configured_workflow(
+            state={},
+            handlers={"build": lambda state: calls.append("build")},
+            directory=directory,
+        )
+
+    assert calls == []
+
+
+def test_workflow_checks_stage_output_after_handler_runs():
+    directory = _directory(
+        [{"stage_id": "build", "depends_on": [], "requires": [], "provides": ["artifacts"]}]
+    )
+
+    with pytest.raises(RoleWorkflowInterpreterError, match="build missing output: artifacts"):
+        run_configured_workflow(state={}, handlers={"build": lambda state: None}, directory=directory)
+
+
+def test_role_directory_rejects_invalid_stage_contract(tmp_path):
+    directory = json.loads(json.dumps(load_role_directory()))
+    directory["workflow"]["stages"][0]["provides"] = "project_report"
+    directory_path = tmp_path / "role_directory.json"
+    directory_path.write_text(json.dumps(directory), encoding="utf-8")
+
+    with pytest.raises(RoleDirectoryError, match="provides must be a string list: analyze"):
+        load_role_directory(str(directory_path))

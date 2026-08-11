@@ -40,4 +40,21 @@ def run_configured_workflow(
         raise RoleWorkflowInterpreterError(f"role workflow has no runtime handler: {missing[0]}")
     for stage in stages:
         stage_id = str(stage["stage_id"])
+        _require_state(stage_id, "input", list(stage.get("requires") or []), state)
         handlers[stage_id](state)
+        _require_state(stage_id, "output", list(stage.get("provides") or []), state)
+
+
+def _require_state(stage_id: str, boundary: str, paths: list[str], state: dict[str, Any]) -> None:
+    missing = [path for path in paths if not _state_path_exists(state, path)]
+    if missing:
+        raise RoleWorkflowInterpreterError(f"role workflow {stage_id} missing {boundary}: {missing[0]}")
+
+
+def _state_path_exists(state: dict[str, Any], path: str) -> bool:
+    current: Any = state
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True

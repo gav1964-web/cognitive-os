@@ -8,14 +8,70 @@
   },
   "workflow": {
     "stages": [
-      {"stage_id": "analyze", "depends_on": []},
-      {"stage_id": "build", "depends_on": ["analyze"]},
-      {"stage_id": "after_build", "depends_on": ["build"]},
-      {"stage_id": "review", "depends_on": ["after_build"]},
-      {"stage_id": "after_review", "depends_on": ["review"]},
-      {"stage_id": "after_decision", "depends_on": ["after_review"]},
-      {"stage_id": "assemble_result", "depends_on": ["after_decision"]},
-      {"stage_id": "after_result", "depends_on": ["assemble_result"]}
+      {
+        "stage_id": "analyze",
+        "depends_on": [],
+        "requires": ["root", "project_dir"],
+        "provides": ["project_report"]
+      },
+      {
+        "stage_id": "build",
+        "depends_on": ["analyze"],
+        "requires": ["goal", "project_report", "architect_advisory_config"],
+        "provides": ["artifacts", "adr", "spec", "implementation", "test_plan", "lifecycle_context"]
+      },
+      {
+        "stage_id": "after_build",
+        "depends_on": ["build"],
+        "requires": ["lifecycle_context"],
+        "provides": ["executor", "test_result"]
+      },
+      {
+        "stage_id": "review",
+        "depends_on": ["after_build"],
+        "requires": ["goal", "project_report", "artifacts", "architect_advisory_config", "test_result"],
+        "provides": ["artifacts", "review"]
+      },
+      {
+        "stage_id": "after_review",
+        "depends_on": ["review"],
+        "requires": ["lifecycle_context", "artifacts", "adr", "review"],
+        "provides": ["control_plane", "role_gates", "paths", "human_documents", "next_action"]
+      },
+      {
+        "stage_id": "after_decision",
+        "depends_on": ["after_review"],
+        "requires": ["lifecycle_context", "next_action", "run_transform", "force_transform"],
+        "provides": ["transform"]
+      },
+      {
+        "stage_id": "assemble_result",
+        "depends_on": ["after_decision"],
+        "requires": [
+          "project_dir",
+          "goal",
+          "adr",
+          "spec",
+          "implementation",
+          "test_plan",
+          "review",
+          "control_plane",
+          "role_gates",
+          "transform",
+          "executor",
+          "artifacts",
+          "paths",
+          "human_documents",
+          "next_action"
+        ],
+        "provides": ["result"]
+      },
+      {
+        "stage_id": "after_result",
+        "depends_on": ["assemble_result"],
+        "requires": ["lifecycle_context", "result"],
+        "provides": ["result"]
+      }
     ]
   },
   "roles": {

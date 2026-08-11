@@ -120,6 +120,10 @@ def _validate_workflow(payload: dict[str, Any]) -> None:
             raise RoleDirectoryError(f"role workflow stage_id must be unique: {stage_id}")
         if not isinstance(dependencies, list):
             raise RoleDirectoryError(f"role workflow depends_on must be a list: {stage_id}")
+        for field in ("requires", "provides"):
+            values = stage.get(field)
+            if not isinstance(values, list) or any(not isinstance(item, str) or not item for item in values):
+                raise RoleDirectoryError(f"role workflow {field} must be a string list: {stage_id}")
         stage_ids.append(stage_id)
     known = set(stage_ids)
     for stage in stages:
