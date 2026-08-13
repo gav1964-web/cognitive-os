@@ -21,6 +21,7 @@
       "input_contract": {"routes": "RouteTree(routes, mounted_routes?, compatibility_context?)"},
       "output_contract": {"routes": "Iterator[MatchableRoute]", "failure_packet": "RouteFlattenFailure(kind, route_ref?)"},
       "side_effect_policy": {"mutation_policy": "route traversal does not mutate router state", "requires_validation_gate": true},
+      "benign_runtime_boundary": true,
       "validation_gates": ["flat and mounted route trees are covered", "framework compatibility branches yield equivalent route shapes", "empty route collections terminate deterministically"],
       "failure_modes": ["unsupported_route_shape", "compatibility_branch_mismatch", "route_cycle"],
       "reason": "AST proves a generator boundary over framework route-tree variants"

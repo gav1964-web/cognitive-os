@@ -86,6 +86,7 @@ def contract_for_target(target: str) -> dict[str, Any]:
                 "side_effect_policy": dict(profile.get("side_effect_policy") or {}),
                 "validation_gates": list(profile.get("validation_gates") or []),
                 "failure_modes": list(profile.get("failure_modes") or []),
+                "benign_runtime_boundary": bool(profile.get("benign_runtime_boundary")),
                 "knowledge_profile": profile["id"],
             }
     return {}

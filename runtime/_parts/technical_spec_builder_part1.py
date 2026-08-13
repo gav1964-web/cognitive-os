@@ -25,6 +25,7 @@ def build_technical_spec(
     if work_plan_contract.get("status") == "blocked_no_first_slice" and extraction_contract.get("candidate"):
         work_plan_contract = _fallback_work_plan_contract([str(extraction_contract["candidate"])])
     acceptance = _ensure_candidate_acceptance(acceptance, extraction_contract)
+    acceptance = _ensure_contract_family_acceptance(acceptance, extraction_contract)
     interface_contracts = _interface_contracts(brief, evidence, extraction_contract)
     implementation_handoff = {
         "recommended_role": next_role_id,
@@ -183,6 +184,31 @@ def _has_candidate_negative_acceptance(rows: list[dict[str, Any]], candidate: st
         if any(marker in text for marker in ("negative", "invalid", "failure", "fail", "reject")):
             return True
     return False
+
+def _ensure_contract_family_acceptance(
+    criteria: list[dict[str, Any]], extraction_contract: dict[str, Any]
+) -> list[dict[str, Any]]:
+    candidate = str(extraction_contract.get("candidate") or "")
+    family = str(extraction_contract.get("contract_family") or "")
+    if not candidate or not family:
+        return _renumber_acceptance(criteria)
+    rows = list(criteria)
+    for gate in list(extraction_contract.get("validation_gates") or [])[:6]:
+        rows.append({
+            "criterion": f"`{candidate}` contract-family gate is verified: {gate}.",
+            "verification": "materialized contract fixture tied to the selected source target",
+            "source": candidate,
+            "contract_family": family,
+        })
+    for failure in list(extraction_contract.get("failure_modes") or [])[:6]:
+        rows.append({
+            "criterion": f"`{candidate}` handles `{failure}` without hidden mutation or unbounded traversal.",
+            "verification": "negative contract fixture tied to the declared failure mode",
+            "source": candidate,
+            "contract_family": family,
+            "failure_mode": failure,
+        })
+    return _renumber_acceptance(rows)
 
 def _engineering_quality_gate(
     *,

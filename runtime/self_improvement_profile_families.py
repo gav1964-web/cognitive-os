@@ -80,6 +80,7 @@ def _route_flatten_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dic
         "route_iteration": "for " in text and "route" in text,
         "compatibility_branch": _has(node, ast.If) and any(token in text for token in ("iter_route_contexts", "effective_route_contexts", "starlette")),
         "matchable_projection": "matchable_route" in text or "yield starlette_route" in text,
+        "side_effect_free": not _has(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Await, ast.Raise)),
     }
 
 

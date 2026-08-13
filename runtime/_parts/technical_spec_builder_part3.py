@@ -302,20 +302,32 @@ def _verification_strategy(
     work_plan_contract: dict[str, Any],
 ) -> dict[str, Any]:
     candidate = extraction_contract.get("candidate")
-    return {
-        "contract_tests": [
+    gates = list(extraction_contract.get("validation_gates") or [])
+    failures = list(extraction_contract.get("failure_modes") or [])
+    contract_tests = [
             {
                 "target": candidate,
                 "assertion": "input contract is accepted and output contract is produced",
                 "source_acceptance": acceptance[0].get("id") if acceptance else None,
             }
-        ],
-        "negative_tests": [
+        ]
+    contract_tests.extend(
+        {"target": candidate, "assertion": gate, "fixture_kind": "contract_family_gate"}
+        for gate in gates[:6]
+    )
+    negative_tests = [
             {
                 "target": candidate,
                 "assertion": "malformed input returns a controlled error instead of an untyped crash",
             }
-        ],
+        ]
+    negative_tests.extend(
+        {"target": candidate, "assertion": f"declared failure mode is bounded: {failure}", "failure_mode": failure}
+        for failure in failures[:6]
+    )
+    return {
+        "contract_tests": contract_tests,
+        "negative_tests": negative_tests,
         "replay_checks": [
             "Persist input/config/code-version evidence for reproducing the selected scenario.",
             "Do not retry side-effecting boundaries without the declared idempotency policy.",
