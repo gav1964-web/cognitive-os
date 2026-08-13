@@ -30,6 +30,7 @@ def load_project_evolution_policy(path: str | None = None) -> dict[str, Any]:
         "evolution_change_types",
         "promotion_gates",
         "anti_patterns",
+        "self_improvement",
     ):
         if not payload.get(field_name):
             raise ProjectEvolutionPolicyError(f"project evolution policy missing {field_name}")

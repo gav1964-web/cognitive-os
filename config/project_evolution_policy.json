@@ -2,6 +2,9 @@
   "schema_version": "project_evolution_policy.v1",
   "status_threshold": 0.8,
   "principles": [
+    "failed_projects_are_training_examples",
+    "cognitive_os_runs_its_own_improvement_loop",
+    "model_capability_sufficiency_before_maximum_capability",
     "field_evidence_before_score_increase",
     "kb_or_config_before_code_branch",
     "no_source_project_mutation_in_field_trials",
@@ -11,11 +14,23 @@
     "native_extensions_are_separate_boundary_track"
   ],
   "chosen_path": {
-    "north_star": "stable_role_capability_from_explicit_knowledge_contracts_and_calibrated_field_evidence",
+    "north_star": "self_improving_role_capability_from_project_training_and_calibrated_field_evidence",
     "architecture_bet": "code_is_not_the_only_system_knowledge_carrier",
     "field_trial_role": "corpora_are_evidence_not_the_goal",
     "promotion_rule": "raw_scores_may_describe_local_progress_but_calibrated_scores_decide_readiness",
     "implementation_rule": "general_policy_or_kb_first_role_logic_second_project_specific_branch_never"
+  },
+  "self_improvement": {
+    "trigger_score_below": 9.7,
+    "max_training_iterations": 1,
+    "max_challenger_attempts": 3,
+    "local_diagnostician_profile": "local_l35",
+    "teacher_profile": "external_l45_intent_resolver",
+    "teacher_confidence_threshold": 0.78,
+    "max_external_calls_per_iteration": 1,
+    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "model_tier", "staged_kb_candidate"],
+    "forbidden_changes": ["evaluation_policy", "score_threshold", "role_score_caps", "source_project", "active_kb_without_promotion"],
+    "success_rule": "target_reached_or_score_improved_without_role_regression"
   },
   "development_lanes": {
     "evidence_calibration": {

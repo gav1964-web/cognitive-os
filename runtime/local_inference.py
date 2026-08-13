@@ -83,6 +83,7 @@ class LocalInferenceConfig:
     api_key: str | None = None
     provider_label: str = "local"
     telemetry_sink: Callable[[dict[str, Any]], None] | None = None
+    advisory_context: dict[str, Any] | None = None
 
     @classmethod
     def from_env(cls) -> "LocalInferenceConfig":

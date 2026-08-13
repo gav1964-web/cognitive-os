@@ -13,11 +13,24 @@ def arbitrate_candidates(
     *,
     config: LocalInferenceConfig | None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    preferred = str(dict(config.advisory_context or {}).get("preferred_source") or "") if config else ""
+    bounded_sources = {str(row.get("source") or "") for row in ranked[:5]}
+    if preferred and preferred in bounded_sources:
+        chosen = next(row for row in ranked[:5] if str(row.get("source") or "") == preferred)
+        reordered = [chosen, *[row for row in ranked if row is not chosen]]
+        chosen["reasons"] = [*list(chosen.get("reasons") or []), "self-improvement challenger selected this bounded source"]
+        return reordered, {
+            "source": "self_improvement_challenger",
+            "llm_invoked": False,
+            "eligible": True,
+            "accepted": preferred != str(ranked[0].get("source") or ""),
+            "selected_source": preferred,
+        }
     if config is None or not _needs_arbitration(ranked):
         return ranked, {"source": "deterministic", "llm_invoked": False, "eligible": False}
     candidates = ranked[:5]
     try:
-        response = call_json_chat(_messages(candidates), config=config)
+        response = call_json_chat(_messages(candidates, config.advisory_context), config=config)
     except LocalInferenceError as first_error:
         try:
             response = call_json_chat(_retry_messages(candidates[:3]), config=config)
@@ -63,7 +76,7 @@ def _needs_arbitration(ranked: list[dict[str, Any]]) -> bool:
     return first_quality < 97 and score_gap <= 12
 
 
-def _messages(candidates: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _messages(candidates: list[dict[str, Any]], training_context: dict[str, Any] | None = None) -> list[dict[str, str]]:
     compact = []
     for row in candidates:
         evidence = dict(row.get("evidence") or {})
@@ -87,9 +100,11 @@ def _messages(candidates: list[dict[str, Any]]) -> list[dict[str, str]]:
                 "Return JSON with selected_source and reason. Use an exact supplied source only. "
                 "Prefer concrete input/output, deterministic behavior, bounded failure modes, and reusable domain logic. "
                 "Avoid callbacks, lifecycle hooks, observers, wrappers, and helpers with hidden side effects when a stronger contract exists."
+                " If training_context supplies preferred_source, assess that exact existing candidate first; "
+                "use it only when its evidence is stronger than the prior failed target."
             ),
         },
-        {"role": "user", "content": json.dumps({"candidates": compact}, ensure_ascii=False, separators=(",", ":"))},
+        {"role": "user", "content": json.dumps({"candidates": compact, "training_context": dict(training_context or {})}, ensure_ascii=False, separators=(",", ":"))},
     ]
 
 

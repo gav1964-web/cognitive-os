@@ -59,3 +59,21 @@ def test_arbiter_retries_once_with_compact_evidence():
     assert mocked.call_count == 2
     assert result[0]["source"] == "b.py:second"
     assert advisory["accepted"] is True
+
+
+def test_self_improvement_challenger_selects_exact_bounded_source_without_llm():
+    ranked = [
+        {"source": "signals.py:on_done", "score": 90, "semantic_score": 84, "reasons": [], "evidence": {}},
+        {"source": "service.py:sync", "score": 84, "semantic_score": 92, "reasons": [], "evidence": {}},
+    ]
+    config = LocalInferenceConfig(
+        base_url="http://local",
+        model="test",
+        advisory_context={"preferred_source": "service.py:sync"},
+    )
+
+    result, advisory = arbitrate_candidates(ranked, config=config)
+
+    assert result[0]["source"] == "service.py:sync"
+    assert advisory["source"] == "self_improvement_challenger"
+    assert advisory["llm_invoked"] is False

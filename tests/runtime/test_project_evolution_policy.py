@@ -13,7 +13,8 @@ def test_project_evolution_policy_loads_current_catalog() -> None:
 
     assert policy["schema_version"] == "project_evolution_policy.v1"
     assert "kb_or_config_before_code_branch" in policy["principles"]
-    assert policy["chosen_path"]["north_star"] == "stable_role_capability_from_explicit_knowledge_contracts_and_calibrated_field_evidence"
+    assert policy["chosen_path"]["north_star"] == "self_improving_role_capability_from_project_training_and_calibrated_field_evidence"
+    assert policy["self_improvement"]["local_diagnostician_profile"] == "local_l35"
     assert "meta_only_is_not_callable" in policy["evolution_rules"]
     assert "role_score_9_5" in policy["promotion_gates"]
 
