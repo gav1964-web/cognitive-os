@@ -21,6 +21,10 @@ Temporary profiles cannot contain numeric score or ranking bonuses. They may onl
 removes an unprofiled-target cap when source evidence proves every recognition gate. A successful profile is generalized
 into a staged template and still requires independent cases and review before it can enter the active KB.
 
+Independent validation keeps recognition coverage separate from treatment evidence. A project that matches the AST
+recognizer but already scores `9.7+` proves portability of the classifier only; it does not count toward the three
+confirmed improvement cases required for review.
+
 Run one training case:
 
 ```powershell

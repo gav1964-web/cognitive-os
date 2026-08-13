@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import time
 import urllib.parse
 import urllib.request
+from urllib.error import HTTPError
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -155,7 +157,12 @@ def _search_stratum(
 def _search_page(fields: dict[str, str]) -> dict[str, Any]:
     if os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
         return _search_with_gh(fields)
-    return _search_with_urllib(urllib.parse.urlencode(fields))
+    try:
+        return _search_with_urllib(urllib.parse.urlencode(fields))
+    except HTTPError as exc:
+        if exc.code == 403 and shutil.which("gh"):
+            return _search_with_gh(fields)
+        raise
 
 
 def _search_with_urllib(params: str) -> dict[str, Any]:

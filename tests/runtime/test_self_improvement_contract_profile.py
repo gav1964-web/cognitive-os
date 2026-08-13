@@ -1,4 +1,4 @@
-from runtime.self_improvement_contract_profile import synthesize_contract_profile
+from runtime.self_improvement_contract_profile import discover_contract_profile_candidates, synthesize_contract_profile
 
 
 def test_synthesizes_external_sync_profile_from_source_evidence(tmp_path):
@@ -35,3 +35,39 @@ def test_rejects_source_outside_project(tmp_path):
     outside.write_text("async def sync_records():\n    return {}\n", encoding="utf-8")
 
     assert synthesize_contract_profile(tmp_path, "../outside.py:sync_records") is None
+
+
+def test_discovers_only_typed_profile_candidates(tmp_path):
+    (tmp_path / "integration.py").write_text(
+        "async def sync_records(client, db) -> dict[str, int]:\n"
+        "    try:\n"
+        "        rows = await client.fetch()\n"
+        "        changed = len(rows)\n"
+        "        await db.commit()\n"
+        "        return {'changed': changed}\n"
+        "    except RuntimeError:\n"
+        "        raise\n\n"
+        "def sync_fake(value):\n"
+        "    return value\n",
+        encoding="utf-8",
+    )
+
+    result = discover_contract_profile_candidates(tmp_path)
+
+    assert [row["source"] for row in result] == ["integration.py:sync_records"]
+
+
+def test_discovery_honors_file_limit(tmp_path):
+    for name in ("a.py", "b.py"):
+        (tmp_path / name).write_text(
+            "async def sync_records(client, db) -> dict[str, int]:\n"
+            "    try:\n"
+            "        rows = await client.fetch()\n"
+            "        await db.commit()\n"
+            "        return {'changed': len(rows)}\n"
+            "    except RuntimeError:\n"
+            "        raise\n",
+            encoding="utf-8",
+        )
+
+    assert len(discover_contract_profile_candidates(tmp_path, max_files=1)) == 1
