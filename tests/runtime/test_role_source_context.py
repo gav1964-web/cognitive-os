@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
-from runtime.role_source_context import build_source_context
+from runtime.role_source_context import _python_source_paths, build_source_context
+
+
+def test_python_source_discovery_tolerates_unreadable_tree(tmp_path):
+    with patch.object(Path, "rglob", side_effect=FileNotFoundError("vanished path")):
+        assert _python_source_paths(tmp_path) == []
 
 
 def test_source_context_marks_ambiguous_method_symbol(tmp_path: Path):

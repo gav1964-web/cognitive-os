@@ -107,6 +107,18 @@ def known_projects(artifacts: Path) -> set[str]:
         except (OSError, json.JSONDecodeError):
             continue
         known.update(str(row.get("full_name") or "").lower() for row in payload.get("projects", []) if row.get("full_name"))
+    field_trials = artifacts / "field_trials"
+    for report in field_trials.glob("role_foundation_min_field_trial_*.json") if field_trials.is_dir() else []:
+        try:
+            payload = json.loads(report.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for case in payload.get("cases", []):
+            project = str(case.get("project") or "")
+            if "__" in project:
+                owner, repo = project.split("__", 1)
+                if owner and repo:
+                    known.add(f"{owner}/{repo}".lower())
     return known
 
 

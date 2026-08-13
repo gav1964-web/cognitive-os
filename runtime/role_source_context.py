@@ -119,7 +119,7 @@ def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
     functions: dict[str, set[str]] = {}
     unresolved: dict[str, set[str]] = {}
     by_file: dict[str, set[str]] = {}
-    for path in sorted(root.rglob("*.py"))[:80]:
+    for path in _python_source_paths(root):
         rel = path.relative_to(root).as_posix()
         try:
             tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
@@ -152,6 +152,13 @@ def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
             "unresolved_calls": sorted(unresolved.get(source, set()))[:12],
         }
     return graph
+
+
+def _python_source_paths(root: Path) -> list[Path]:
+    try:
+        return sorted(root.rglob("*.py"))[:80]
+    except OSError:
+        return []
 
 
 def _call_names(node: ast.AST) -> set[str]:

@@ -20,6 +20,17 @@ def test_known_projects_reads_only_frozen_top_level_selections(tmp_path):
     assert known_projects(tmp_path) == {"owner/repo"}
 
 
+def test_known_projects_includes_historical_foundation_trials(tmp_path):
+    reports = tmp_path / "field_trials"
+    reports.mkdir()
+    (reports / "role_foundation_min_field_trial_1.json").write_text(
+        json.dumps({"cases": [{"project": "Known__Project"}, {"project": "synthetic"}]}),
+        encoding="utf-8",
+    )
+
+    assert known_projects(tmp_path) == {"known/project"}
+
+
 def test_project_row_keeps_reproducibility_metadata():
     row = _project_row(
         {

@@ -284,17 +284,18 @@ def _profile_compatible_transform(target: str, item: dict[str, Any], policy: dic
     archetype = contract_archetype_for_target(target)
     allowed_archetypes = {str(value) for value in list(policy.get("pathless_allowed_contract_archetypes") or [])}
     return (bool(profile) and str(profile.get("id") or "") in allowed) or str(archetype.get("contract_family") or "") in allowed_archetypes
-
 def _provider_parser_sources(project_root: Path) -> list[str]:
     if not project_root.exists() or not project_root.is_dir():
         return []
     rows: list[str] = []
     for file_glob in PROVIDER_PARSER_FILE_GLOBS:
-        paths = list(project_root.rglob(file_glob))[:20]
+        try:
+            paths = list(project_root.rglob(file_glob))[:20]
+        except OSError:
+            continue
         for path in paths:
             rows.extend(_provider_parser_sources_from_path(project_root, path))
     return rows[:24]
-
 def _provider_parser_sources_from_path(project_root: Path, path: Path) -> list[str]:
     rows: list[str] = []
     try:
@@ -309,7 +310,6 @@ def _provider_parser_sources_from_path(project_root: Path, path: Path) -> list[s
         if any(marker in name.lower() for marker in PROVIDER_PARSER_FUNCTION_MARKERS):
             rows.append(f"{relative}:{name}")
     return rows
-
 def _brief_sources(
     capabilities: list[dict[str, Any]],
     source_context: dict[str, dict[str, Any]],
