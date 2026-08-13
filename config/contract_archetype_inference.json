@@ -3197,6 +3197,35 @@
       "failure_modes": ["invalid_row", "encoding_error", "serialization_error"]
     },
     {
+      "id": "async_sdk_request_adapter",
+      "priority": 110,
+      "symbol_suffixes": ["_req"],
+      "path_contains_any": ["api/", "client/", "transport/"],
+      "score_bonus": 18,
+      "ranking_bonus": 42,
+      "benign_runtime_boundary": true,
+      "reason": "async SDK request adapter is a bounded typed request-to-awaitable-client-result contract",
+      "contract_family": "async_sdk_request_adapter",
+      "input_contract": {
+        "client": "AwaitableRequestClient[Request, Response]",
+        "request_input": "SdkRequestInput(identifier or typed source object)"
+      },
+      "output_contract": {
+        "response": "SdkResponse",
+        "failure_packet": "SdkRequestFailure(kind, request_type, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "network": "request construction, await semantics, timeout ownership and exception normalization are explicit"
+      },
+      "validation_gates": [
+        "request type and argument forwarding are fixture-backed",
+        "client result is awaited exactly once and returned without shape loss",
+        "timeout, transport and SDK errors preserve request-type evidence"
+      ],
+      "failure_modes": ["invalid_request_input", "sdk_request_error", "transport_error", "timeout"]
+    },
+    {
       "id": "lint_rule_checker",
       "symbol_prefixes": ["check_for_"],
       "symbol_contains_any": ["check_for"],

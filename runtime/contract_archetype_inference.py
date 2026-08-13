@@ -28,7 +28,10 @@ def load_contract_archetypes(path: str | None = None) -> dict[str, Any]:
     for row in archetypes:
         if not isinstance(row, dict) or not row.get("id") or not row.get("contract_family"):
             raise ContractArchetypeInferenceError("each contract archetype requires id and contract_family")
-        for field_name in ("symbols", "symbol_prefixes", "symbol_contains_any", "symbol_contains_all", "path_contains_any"):
+        for field_name in (
+            "symbols", "symbol_prefixes", "symbol_suffixes", "symbol_contains_any", "symbol_contains_all",
+            "path_contains_any",
+        ):
             if not isinstance(row.get(field_name, []), list):
                 raise ContractArchetypeInferenceError(f"archetype {row.get('id')} requires {field_name} list")
     return payload
@@ -104,14 +107,17 @@ def _matches(row: dict[str, Any], source_path: str, symbol: str) -> bool:
 def _symbol_matches(row: dict[str, Any], symbol: str) -> bool:
     exact = {str(item).lower() for item in row.get("symbols", [])}
     prefixes = tuple(str(item).lower() for item in row.get("symbol_prefixes", []))
+    suffixes = tuple(str(item).lower() for item in row.get("symbol_suffixes", []))
     contains_any = [str(item).lower() for item in row.get("symbol_contains_any", [])]
     contains_all = [str(item).lower() for item in row.get("symbol_contains_all", [])]
-    has_criteria = bool(exact or prefixes or contains_any or contains_all)
+    has_criteria = bool(exact or prefixes or suffixes or contains_any or contains_all)
     if not has_criteria:
         return True
     if exact and symbol in exact:
         return True
     if prefixes and symbol.startswith(prefixes):
+        return True
+    if suffixes and symbol.endswith(suffixes):
         return True
     if contains_any and any(token in symbol for token in contains_any):
         return True

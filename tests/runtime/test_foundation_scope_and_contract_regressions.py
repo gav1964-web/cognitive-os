@@ -104,6 +104,14 @@ def test_d15_contract_families_are_profiled_without_project_names():
     )
 
 
+def test_d16_async_sdk_request_adapter_is_profiled_without_project_name():
+    profile = contract_archetype_for_target("api/stats.py:broadcast_stats_req")
+
+    assert profile["contract_archetype"] == "async_sdk_request_adapter"
+    assert profile["side_effect_policy"]["requires_validation_gate"] is True
+    assert contract_archetype_for_target("jobs/worker.py:enqueue_req") == {}
+
+
 def test_process_boundary_override_does_not_allow_known_too_broad_profile():
     override = load_technical_spec_policy()["process_boundary_review_override"]
 
