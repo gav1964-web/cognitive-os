@@ -291,6 +291,41 @@ def build_key(provider_id: str, messages: list) -> str:
     assert result["pure_transform_candidates"][0]["name"] == "build_key"
 
 
+def test_extract_python_structure_finds_reproducible_boolean_policy(tmp_path, monkeypatch):
+    (tmp_path / "policy.py").write_text(
+        "def can_comment(media_type: str, allowed: set[str]) -> bool:\n"
+        "    return media_type in allowed\n\n"
+        "def can_like(state, percentage: int) -> bool:\n"
+        "    return randint(1, 100) <= percentage\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = run({"root": "."})
+
+    assert [row["name"] for row in result["bounded_policy_candidates"]] == ["can_comment"]
+
+
+def test_pure_transform_candidates_exclude_void_async_wrappers(tmp_path, monkeypatch):
+    (tmp_path / "main.py").write_text(
+        "def capture_exit(function):\n"
+        "    return function\n\n"
+        "@capture_exit\n"
+        "async def api_server(host='0.0.0.0'):\n"
+        "    await app.run_api_server(host)\n\n"
+        "def normalize(value):\n"
+        "    return value.strip().lower()\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = run({"root": "."})
+
+    names = [row["name"] for row in result["pure_transform_candidates"]]
+    assert "normalize" in names
+    assert "api_server" not in names
+
+
 def test_extract_python_structure_reports_errors_schema_fields_and_tests(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project/app").mkdir(parents=True)

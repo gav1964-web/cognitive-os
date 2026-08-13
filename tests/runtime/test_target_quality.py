@@ -49,6 +49,31 @@ def test_semantic_target_quality_accepts_bounded_factory_contract():
     assert report["score"] >= 85
 
 
+def test_semantic_target_quality_rewards_only_proven_bounded_policy():
+    common = {
+        "ranked_candidates": ["policy.py:can_run"],
+        "source_evidence": ["policy.py:can_run"],
+        "selection_reason": "bounded reproducible policy decision",
+        "structural_evidence": {"source_body_complete": True, "state_mutation": False},
+        "input_contract": {"kind": "str", "allowed": "set[str]"},
+        "output_contract": {"result": "bool"},
+    }
+
+    proven = semantic_target_quality_report(
+        "policy.py:can_run",
+        side_effect_contract={"declared": ["observability"]},
+        **common,
+    )
+    mutating = semantic_target_quality_report(
+        "policy.py:can_run",
+        side_effect_contract={"declared": ["memory_state"]},
+        **common,
+    )
+
+    assert "proved a reproducible boolean policy" in " ".join(proven["reasons"])
+    assert "proved a reproducible boolean policy" not in " ".join(mutating["reasons"])
+
+
 def test_semantic_target_quality_flags_meta_runtime_targets():
     meta = semantic_target_quality_report(
         "p0048/_capability_acquisition.py:acquire_capability",
@@ -348,4 +373,3 @@ def test_semantic_target_quality_caps_unprofiled_shape_only_strong_scores():
     assert report["status"] == "acceptable"
     assert report["score"] == 84
     assert "shape alone" in " ".join(report["reasons"])
-

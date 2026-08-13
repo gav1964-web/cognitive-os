@@ -73,6 +73,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         if kind == "pure_transform":
             score += 40
             reasons.append("pure transform candidate")
+        elif kind == "bounded_policy":
+            score += 55
+            reasons.append("bounded reproducible policy decision")
         elif kind == "central_flow_node":
             score += 45
             reasons.append("central flow node with subsystem-level evidence")

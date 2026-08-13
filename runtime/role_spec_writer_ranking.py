@@ -206,6 +206,7 @@ def _repair_loop_contract_score(lowered_source: str) -> tuple[int, list[str]]:
 
 def candidate_level_bonus(level: str) -> int:
     return {
+        "bounded_policy": 18,
         "core_flow": 12,
         "boundary": 8,
         "broad_split": 5,

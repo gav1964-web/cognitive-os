@@ -79,6 +79,7 @@ def build_answers(
         },
         "3_capabilities": {
             "atomic_reusable_capabilities": capability_candidates(python_structure, routes, commands),
+            "bounded_policy_decisions": python_structure.get("bounded_policy_candidates", [])[:12],
             "pure_transforms": _core_pure_transforms(python_structure),
             "too_broad_functions": _active_nodes(python_structure.get("wide_functions", []))[:8],
             "environment_dependencies": python_structure.get("external_dependencies", {}),

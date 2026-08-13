@@ -10,6 +10,7 @@ from typing import Any
 from .domain_anchors import domain_flow_anchors
 from .insights import class_fields, function_error_profile, import_rows, project_insights
 from .path_priority import is_test_path, iter_python_files, path_priority
+from .policy_candidates import bounded_policy_candidates
 
 
 HTTP_METHOD_DECORATORS = {"get", "post", "put", "delete", "patch", "options", "head"}
@@ -68,6 +69,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "domain_flow_anchors": domain_flow_anchors(all_functions),
         "wide_functions": _wide_functions(all_functions),
         "pure_transform_candidates": _pure_transform_candidates(all_functions),
+        "bounded_policy_candidates": bounded_policy_candidates(all_functions),
         "contracts": _contracts(files),
         "external_dependencies": _external_dependencies(imports),
         "project_insights": insights,
@@ -109,6 +111,9 @@ def _summarize_file(tree: ast.AST, rel_path: str, size: int) -> dict[str, Any]:
                     "decorators": _decorator_names(node),
                     "args": _function_args(node),
                     "returns": _annotation_name(node.returns),
+                    "has_value_return": any(
+                        isinstance(child, ast.Return) and child.value is not None for child in ast.walk(node)
+                    ),
                     "docstring": bool(ast.get_docstring(node)),
                     "calls": sorted(_call_names(node))[:40],
                     "side_effects": _function_side_effects(node),
@@ -291,6 +296,8 @@ def _pure_transform_candidates(functions: list[dict[str, Any]]) -> list[dict[str
     for item in functions:
         name = str(item.get("name", ""))
         if item.get("side_effects"):
+            continue
+        if item.get("decorators") and not item.get("returns") and not item.get("has_value_return"):
             continue
         calls = {str(call).rsplit(".", 1)[-1] for call in item.get("calls", [])}
         if calls & side_effect_names:

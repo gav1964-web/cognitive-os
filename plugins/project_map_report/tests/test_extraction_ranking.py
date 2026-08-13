@@ -3,6 +3,26 @@ from __future__ import annotations
 from plugins.project_map_report.src.extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
 
 
+def test_extraction_ranking_prioritizes_bounded_policy_before_broad_flow():
+    candidates = {}
+    add_extraction_candidate(
+        candidates,
+        {"path": "pkg/runtime.py", "name": "run_workflow", "loc": 160, "call_count": 24},
+        "core_flow",
+        "central flow",
+    )
+    add_extraction_candidate(
+        candidates,
+        {"path": "pkg/policy.py", "name": "can_process", "loc": 20, "call_count": 2},
+        "bounded_policy",
+        "reproducible boolean policy decision",
+    )
+
+    ranked = sorted(candidates.values(), key=extraction_candidate_sort_key)
+
+    assert ranked[0]["capability"] == "pkg/policy.py:can_process"
+
+
 def test_extraction_ranking_demotes_low_value_first_slice_helpers():
     candidates = {}
     for item in [

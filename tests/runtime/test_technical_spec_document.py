@@ -28,6 +28,24 @@ def test_pass_only_hook_is_ranked_below_behavioral_candidate() -> None:
     assert "pass-only callable has no implementation contract" in ranked[1]["reasons"]
 
 
+def test_bounded_policy_is_ranked_before_side_effecting_broad_flow() -> None:
+    ranked = _rank_extraction_candidates(
+        [
+            {
+                "source": "policy.py:can_run",
+                "kind": "bounded_policy",
+                "candidate_level": "bounded_policy",
+                "candidate_score": 90,
+                "signature": {"args": [{"name": "kind"}, {"name": "allowed"}], "returns": "bool"},
+                "side_effects": ["observability"],
+            },
+            {"source": "runtime.py:run_forever", "kind": "broad_function", "side_effects": ["memory_state"]},
+        ]
+    )
+
+    assert ranked[0]["source"] == "policy.py:can_run"
+
+
 def test_technical_spec_document_renders_human_tz_sections() -> None:
     text = render_technical_spec_document(
         project_report={"project": "demo", "content": {"summary": {"root": "demo"}}},

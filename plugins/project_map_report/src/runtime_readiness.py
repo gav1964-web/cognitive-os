@@ -354,6 +354,12 @@ def minimal_extraction_plan(
         if str(item.get("name")) in route_functions:
             continue
         add_extraction_candidate(candidates, item, "boundary", "I/O or runtime boundary candidate")
+    for item in python_structure.get("bounded_policy_candidates", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        add_extraction_candidate(candidates, item, "bounded_policy", "reproducible boolean policy decision")
     for item in python_structure.get("wide_functions", []):
         if not is_core_path(str(item.get("path", ""))):
             continue

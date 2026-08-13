@@ -34,7 +34,8 @@ def add_extraction_candidate(
 
 
 def extraction_candidate_sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
-    return (-int(row["candidate_score"]), level_rank(str(row["candidate_level"])), str(row["capability"]))
+    level = str(row["candidate_level"])
+    return (level_rank(level), -int(row["candidate_score"]), str(row["capability"]))
 
 
 def extraction_candidate_score(item: dict[str, Any], level: str) -> int:
@@ -43,6 +44,7 @@ def extraction_candidate_score(item: dict[str, Any], level: str) -> int:
     call_count = int(item.get("call_count") or len(item.get("calls", [])) or 0)
     effects = set(item.get("side_effects", []) or [])
     score = {
+        "bounded_policy": 88,
         "core_flow": 80,
         "boundary": 70,
         "broad_split": 65,
@@ -287,9 +289,10 @@ def _domain_signal_score(name: str, path: str, groups: dict[str, tuple[str, ...]
 
 def level_rank(level: str) -> int:
     return {
-        "core_flow": 0,
+        "bounded_policy": 0,
+        "core_flow": 1,
         "boundary": 1,
-        "broad_split": 2,
-        "preferred_anchor": 3,
-        "helper_transform": 4,
+        "broad_split": 1,
+        "preferred_anchor": 1,
+        "helper_transform": 1,
     }.get(level, 9)

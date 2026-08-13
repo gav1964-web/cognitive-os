@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .source_contract_semantics import infer_source_contract
+from .role_source_capability_facts import capability_facts
 from .source_side_effect_inference import infer_ast_side_effects, selection_side_effects
 from .transitive_side_effects import infer_transitive_side_effects
 
@@ -222,12 +223,7 @@ def _central_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, An
 def _facts_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, Any]]:
     answers = dict(project_report.get("answers", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
-    capabilities = dict(answers.get("3_capabilities", {}))
-    facts: dict[str, dict[str, Any]] = {}
-    for row in _list(capabilities.get("pure_transforms")):
-        _merge(facts, _source(row), {"kind": "pure_transform", "signature": _signature(row)})
-    for row in _list(capabilities.get("too_broad_functions")):
-        _merge(facts, _source(row), {"kind": "broad_function", "loc": row.get("loc")})
+    facts = capability_facts(answers, readiness)
     for row in _list(readiness.get("mixed_responsibility_functions")):
         _merge(
             facts,
@@ -249,17 +245,6 @@ def _facts_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, Any]
         )
     for row in _list(readiness.get("process_boundary_candidates")):
         _merge(facts, str(row.get("target")), {"process_boundary_reasons": row.get("reasons", [])})
-    plan = dict(readiness.get("minimal_extraction_plan", {}))
-    for row in _list(plan.get("capabilities_to_extract")):
-        _merge(
-            facts,
-            str(row.get("capability")),
-            {
-                "candidate_level": row.get("candidate_level"),
-                "candidate_score": row.get("candidate_score"),
-                "first_contract": row.get("first_contract"),
-            },
-        )
     for row in _list(readiness.get("long_lived_state")):
         evidence = str(row.get("evidence") or "")
         _merge(

@@ -93,3 +93,35 @@ def test_source_context_tolerates_stale_missing_symbol(tmp_path: Path):
     context = build_source_context(project_root=str(project), project_report={}, sources=["core.py:missing"])
 
     assert "core.py:missing" not in context
+
+
+def test_source_context_preserves_bounded_policy_provenance(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "policy.py").write_text(
+        "def can_run(kind: str, allowed: set[str]) -> bool:\n    return kind in allowed\n",
+        encoding="utf-8",
+    )
+    report = {
+        "answers": {
+            "3_capabilities": {
+                "bounded_policy_decisions": [
+                    {"path": "policy.py", "name": "can_run", "args": [], "returns": "bool"}
+                ]
+            },
+            "6_runtime_extraction_readiness": {
+                "minimal_extraction_plan": {
+                    "capabilities_to_extract": [
+                        {"capability": "policy.py:can_run", "candidate_level": "bounded_policy", "candidate_score": 90}
+                    ]
+                }
+            },
+        }
+    }
+
+    row = build_source_context(project_root=str(project), project_report=report, sources=["policy.py:can_run"])[
+        "policy.py:can_run"
+    ]
+
+    assert row["kind"] == "bounded_policy"
+    assert row["candidate_level"] == "bounded_policy"

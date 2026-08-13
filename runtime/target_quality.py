@@ -74,6 +74,9 @@ def semantic_target_quality_report(
     )
     score += structural_delta
     reasons.extend(structural_reasons)
+    if _proven_bounded_policy(reason_text, structural_evidence, output_contract, side_effect_contract):
+        score += 4
+        reasons.append("Project Analyzer proved a reproducible boolean policy contract")
     if _strong_contract_hit(lowered, symbol):
         score += 18
         reasons.append("candidate name suggests a bounded contract")
@@ -309,6 +312,24 @@ def _profiled_suspicious_allowed(suspicious: list[str], symbol: str, profiled_co
     if suspicious == ["/utils/"]:
         return symbol in {"parse_shorthand", "verifycert", "verify_certificate", "validate_certificate"}
     return False
+
+
+def _proven_bounded_policy(
+    reason_text: str,
+    structural_evidence: dict[str, Any] | None,
+    output_contract: dict[str, Any] | None,
+    side_effect_contract: dict[str, Any] | None,
+) -> bool:
+    structural = dict(structural_evidence or {})
+    effects = set(dict(side_effect_contract or {}).get("declared") or [])
+    output_types = {str(value).lower() for value in dict(output_contract or {}).values()}
+    return bool(
+        "bounded reproducible policy decision" in reason_text
+        and "bool" in output_types
+        and structural.get("source_body_complete")
+        and not structural.get("state_mutation")
+        and effects <= {"observability"}
+    )
 
 
 def _generic_unprofiled_candidate(path: str, symbol: str) -> bool:
