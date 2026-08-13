@@ -185,11 +185,21 @@ def _loads_json_object(content: str) -> dict[str, Any]:
     try:
         result = json.loads(content)
     except json.JSONDecodeError:
-        start = content.find("{")
-        end = content.rfind("}")
-        if start < 0 or end <= start:
-            raise
-        result = json.loads(content[start : end + 1])
+        result = _first_embedded_json_object(content)
     if not isinstance(result, dict):
         raise LocalInferenceError("local inference response must decode to object")
     return result
+
+
+def _first_embedded_json_object(content: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
+    for index, character in enumerate(content):
+        if character != "{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(content[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
+    raise json.JSONDecodeError("no JSON object found", content, 0)

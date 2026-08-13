@@ -31,6 +31,7 @@ def run_role_foundation_pipeline(
     write: bool = False,
     active_root: str | Path | None = None,
     architect_advisory_config: LocalInferenceConfig | None = None,
+    spec_writer_advisory_config: LocalInferenceConfig | None = None,
     _auto_scope_depth: int = 0,
     _active_root_is_auto: bool = False,
     _auto_scope_current_root_confirmed: bool = False,
@@ -76,6 +77,7 @@ def run_role_foundation_pipeline(
                 write=write,
                 active_root=selected_root,
                 architect_advisory_config=architect_advisory_config,
+                spec_writer_advisory_config=spec_writer_advisory_config,
                 _auto_scope_depth=_auto_scope_depth + 1,
                 _active_root_is_auto=True,
                 _auto_scope_current_root_confirmed=selected_root == analysis_project_dir,
@@ -117,6 +119,7 @@ def run_role_foundation_pipeline(
         goal=goal,
         project_report=project_map_report,
         architect_advisory_config=architect_advisory_config,
+        spec_writer_advisory_config=spec_writer_advisory_config,
         until_artifact_type="TechnicalSpec",
     )
     artifacts = {
@@ -155,7 +158,10 @@ def run_role_foundation_pipeline(
             "source_code_changes": False,
             "registry_changes": False,
             "foundry_invoked": False,
-            "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+            "llm_invoked": bool(
+                dict(adr.get("architect_advisory", {})).get("llm_invoked")
+                or dict(spec.get("spec_writer_advisory", {})).get("llm_invoked")
+            ),
         },
     }
     if write:

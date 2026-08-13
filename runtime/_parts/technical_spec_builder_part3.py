@@ -349,6 +349,10 @@ def _ranked_contract_sources(extraction_contract: dict[str, Any]) -> list[str]:
     candidate = _normalize_source_ref(str(extraction_contract.get("candidate") or ""))
     if candidate:
         sources.append(candidate)
+    for source in list(extraction_contract.get("supporting_sources") or []):
+        normalized = _normalize_source_ref(str(source or ""))
+        if normalized and _implementation_source(normalized):
+            sources.append(normalized)
     for row in list(extraction_contract.get("ranked_candidates", [])):
         if not isinstance(row, dict):
             continue

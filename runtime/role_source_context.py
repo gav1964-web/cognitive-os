@@ -10,6 +10,7 @@ from .source_contract_semantics import infer_source_contract
 from .role_source_capability_facts import capability_facts
 from .source_side_effect_inference import infer_ast_side_effects, selection_side_effects
 from .transitive_side_effects import infer_transitive_side_effects
+from .project_transitive_effects import project_transitive_effects
 
 
 def build_source_context(
@@ -22,12 +23,14 @@ def build_source_context(
     context = {}
     facts = _facts_by_source(project_report)
     graph = _call_graph(root)
+    project_effects = project_transitive_effects(root)
     flow = _flow_by_source(project_report)
     central = _central_by_source(project_report)
     for source in sources:
         row: dict[str, Any] = {"source": source}
         row.update(facts.get(source, {}))
         row.update(graph.get(source, {}))
+        row.update(project_effects.get(source, {}))
         row.update(flow.get(source, {}))
         row.update(central.get(source, {}))
         if ":" in source:
@@ -35,6 +38,10 @@ def build_source_context(
             module_context = _module_context(root / path_text)
             if module_context:
                 context.setdefault(path_text, {"source": path_text}).update(module_context)
+                class_names = {item["name"] for item in module_context.get("module_classes", [])}
+                function_names = {item["name"] for item in module_context.get("module_functions", [])}
+                if symbol in class_names or symbol in function_names:
+                    row["node_kind"] = "class" if symbol in class_names else "function"
             snippet = _symbol_snippet(root / path_text, symbol)
             if snippet:
                 row["snippet"] = snippet
@@ -46,6 +53,9 @@ def build_source_context(
                 selection_effects = list(snippet.get("selection_side_effects", []))
                 if selection_effects:
                     row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + selection_effects))
+                transitive_effects = list(row.get("transitive_side_effects", []))
+                if transitive_effects:
+                    row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + transitive_effects))
         elif source.endswith(".py"):
             module_context = _module_context(root / source)
             if module_context:
@@ -58,8 +68,6 @@ def build_source_context(
         if len(row) > 1:
             context[source] = row
     return context
-
-
 def _module_context(path: Path) -> dict[str, Any] | None:
     if not path.exists() or path.suffix != ".py":
         return None
@@ -99,8 +107,6 @@ def _module_context(path: Path) -> dict[str, Any] | None:
     if doc:
         result["module_docstring"] = doc[:600]
     return {key: value for key, value in result.items() if value not in ("", [], None)}
-
-
 def _module_side_effects(tree: ast.AST) -> list[str]:
     effects = set()
     for node in ast.walk(tree):

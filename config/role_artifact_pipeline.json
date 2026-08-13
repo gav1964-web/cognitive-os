@@ -20,7 +20,8 @@
       "output_key": "technical_spec",
       "bindings": {
         "builder_id": "technical_spec_v1",
-        "architecture_decision": "$artifacts.architecture_decision"
+        "architecture_decision": "$artifacts.architecture_decision",
+        "advisory_config": "$spec_writer_advisory_config"
       }
     },
     {

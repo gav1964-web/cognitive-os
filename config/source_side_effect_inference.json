@@ -14,7 +14,7 @@
     {
       "id": "network",
       "call_exact": ["urlopen"],
-      "call_contains": ["socket", ".send", ".recv", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
+      "call_contains": ["socket", ".send", ".recv", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "call_api", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
     },
     {
       "id": "subprocess",
@@ -38,7 +38,7 @@
     },
     {
       "id": "observability",
-      "call_contains": ["logger.", "logging.", "log.critical", "log.error", "log.warning", "sys.__excepthook__"]
+      "call_contains": ["logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", "sys.__excepthook__"]
     },
     {
       "id": "external_runtime",

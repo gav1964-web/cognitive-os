@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from runtime.local_inference import LocalInferenceConfig
 from runtime.role_skill_common import now_iso
 
 def build_technical_spec(
@@ -8,6 +9,7 @@ def build_technical_spec(
     architecture_decision: dict[str, Any],
     role_id: str = "spec_writer",
     next_role_id: str = "implementer",
+    advisory_config: LocalInferenceConfig | None = None,
 ) -> dict[str, Any]:
     brief = dict(architecture_decision.get("spec_writer_brief", {}))
     chosen = dict(architecture_decision.get("chosen_option", {}))
@@ -17,7 +19,9 @@ def build_technical_spec(
     work_plan_contract = _work_plan_contract(brief, architecture_decision)
     acceptance = _acceptance_criteria(brief, traceability)
     preferred_targets = [] if work_plan_contract.get("source") == "TechnicalSpec.fallback_from_spec_writer_brief" else list(work_plan_contract.get("targets", []))
-    extraction_contract = _extraction_contract(evidence, preferred_targets=preferred_targets)
+    extraction_contract = _extraction_contract(
+        evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
+    )
     if work_plan_contract.get("status") == "blocked_no_first_slice" and extraction_contract.get("candidate"):
         work_plan_contract = _fallback_work_plan_contract([str(extraction_contract["candidate"])])
     acceptance = _ensure_candidate_acceptance(acceptance, extraction_contract)
@@ -52,6 +56,7 @@ def build_technical_spec(
         "requirements": _requirements_from_brief(brief, traceability),
         "source_evidence": evidence,
         "extraction_contract": extraction_contract,
+        "spec_writer_advisory": extraction_contract.get("candidate_advisory", {}),
         "work_plan_contract": work_plan_contract,
         "interface_contracts": interface_contracts,
         "data_lifecycle": _data_lifecycle(brief, architecture_decision),

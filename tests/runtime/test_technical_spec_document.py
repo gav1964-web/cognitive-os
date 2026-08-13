@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from runtime.technical_spec_document import render_technical_spec_document
-from runtime.technical_spec_builder import _rank_extraction_candidates
+from runtime.technical_spec_builder import _extraction_contract, _rank_extraction_candidates
 
 
 def test_property_accessor_is_ranked_below_behavioral_candidate() -> None:
@@ -28,6 +28,18 @@ def test_pass_only_hook_is_ranked_below_behavioral_candidate() -> None:
     assert "pass-only callable has no implementation contract" in ranked[1]["reasons"]
 
 
+def test_class_declaration_is_ranked_below_its_executable_method() -> None:
+    ranked = _rank_extraction_candidates(
+        [
+            {"source": "db.py:CursorWrapper", "node_kind": "class"},
+            {"source": "db.py:execute", "snippet": "def execute(sql):\n    return cursor.execute(sql)\n"},
+        ]
+    )
+
+    assert ranked[0]["source"] == "db.py:execute"
+    assert "class declaration is context" in " ".join(ranked[1]["reasons"])
+
+
 def test_bounded_policy_is_ranked_before_side_effecting_broad_flow() -> None:
     ranked = _rank_extraction_candidates(
         [
@@ -44,6 +56,28 @@ def test_bounded_policy_is_ranked_before_side_effecting_broad_flow() -> None:
     )
 
     assert ranked[0]["source"] == "policy.py:can_run"
+
+
+def test_extraction_contract_preserves_multi_file_effect_handoff() -> None:
+    contract = _extraction_contract(
+        [
+            {
+                "source": "signals.py:on_task_postrun",
+                "kind": "central_flow_node",
+                "signature": {"args": [{"name": "payload", "annotation": "dict"}], "returns": "None"},
+                "snippet": "def on_task_postrun(payload):\n    publish(payload)\n",
+                "side_effects": ["network"],
+                "contract_slice_sources": ["signals.py:on_task_postrun", "service.py:publish"],
+                "transitive_effect_chains": [
+                    {"effect": "network", "call_chain": ["signals.py:on_task_postrun", "service.py:publish"]}
+                ],
+            }
+        ],
+        preferred_targets=["signals.py:on_task_postrun"],
+    )
+
+    assert contract["supporting_sources"] == ["service.py:publish"]
+    assert contract["effect_handoff_chains"][0]["effect"] == "network"
 
 
 def test_technical_spec_document_renders_human_tz_sections() -> None:

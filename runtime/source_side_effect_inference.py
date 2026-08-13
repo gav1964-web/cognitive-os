@@ -73,6 +73,8 @@ def _rule_matches(rule: dict[str, Any], calls: set[str]) -> bool:
 def _call_name(node: ast.AST) -> str:
     if isinstance(node, ast.Name):
         return node.id
+    if isinstance(node, ast.Call):
+        return _call_name(node.func)
     if isinstance(node, ast.Attribute):
         base = _call_name(node.value)
         return f"{base}.{node.attr}" if base else node.attr

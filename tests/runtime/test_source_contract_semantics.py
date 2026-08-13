@@ -179,6 +179,22 @@ def test_generator_body_produces_iterator_contract():
     assert evidence["output_inference_basis"] == "yield_expression"
 
 
+def test_returned_local_class_is_inferred_as_type_factory():
+    evidence = infer_source_contract(
+        {
+            "snippet": (
+                "def build_wrapper(base):\n"
+                "    class Wrapper(base):\n"
+                "        pass\n"
+                "    return Wrapper\n"
+            )
+        }
+    )
+
+    assert evidence["inferred_output_type"] == "TypeFactory"
+    assert evidence["output_inference_basis"] == "return_expression"
+
+
 def test_argument_usage_and_receiver_return_produce_concrete_contracts():
     evidence = infer_source_contract(
         {

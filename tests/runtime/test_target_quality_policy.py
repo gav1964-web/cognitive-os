@@ -53,6 +53,34 @@ def test_validate_url_contract_is_not_treated_as_trivial_url_accessor():
     assert not any("trivial accessor" in reason for reason in report["reasons"])
 
 
+def test_complete_sdk_operation_is_not_rejected_by_filename_suffix():
+    target = "sdk/accounting_api.py:create_attachment_by_file_name"
+    structural = {
+        "source_body_complete": True,
+        "argument_count": 8,
+        "return_paths": 1,
+        "raises": ["ValueError"],
+    }
+
+    operation = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="deterministic parser/normalizer/validator shape",
+        structural_evidence=structural,
+    )
+    accessor = semantic_target_quality_report(
+        "sdk/model.py:get_name",
+        ranked_candidates=["sdk/model.py:get_name"],
+        source_evidence=["sdk/model.py:get_name"],
+        structural_evidence={"source_body_complete": True, "argument_count": 0, "return_paths": 1, "raises": []},
+    )
+
+    assert operation["status"] in {"acceptable", "strong"}
+    assert "trivial accessor/value helper is weak as first architectural slice" not in operation["reasons"]
+    assert accessor["status"] != "strong"
+
+
 def test_profiled_version_operation_is_not_treated_as_support_version_helper():
     report = semantic_target_quality_report(
         "django_redis/client/default.py:incr_version",

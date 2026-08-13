@@ -126,7 +126,11 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
             for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
             if arg.arg not in {"self", "cls"}
         ]
-        assignments = {**_argument_usage_types(function, argument_names), **_assignment_shapes(function)}
+        assignments = {
+            **_argument_usage_types(function, argument_names),
+            **_assignment_shapes(function),
+            **_local_type_factories(function),
+        }
         yielded = [node for node in ast.walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
         if yielded:
             return "IteratorLike", "yield_expression"
@@ -203,6 +207,14 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         if name.endswith((".execute", ".executemany")):
             return "DatabaseResult"
     return ""
+
+
+def _local_type_factories(function: ast.AST) -> dict[str, str]:
+    return {
+        node.name: "TypeFactory"
+        for node in getattr(function, "body", [])
+        if isinstance(node, ast.ClassDef)
+    }
 
 
 def _function_node(snippet: str) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | None, bool]:

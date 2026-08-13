@@ -34,6 +34,12 @@ def test_local_inference_extracts_json_from_text_response():
     assert _loads_json_object("```json\n{\"ok\": true}\n```") == {"ok": True}
 
 
+def test_local_inference_skips_non_json_reasoning_braces():
+    content = "Reasoning uses {not json} first.\n```json\n{\"ok\": true}\n```"
+
+    assert _loads_json_object(content) == {"ok": True}
+
+
 def test_local_inference_can_disable_response_format():
     with patch("runtime.local_inference.request.urlopen", return_value=_FakeResponse()) as mocked:
         call_json_chat(

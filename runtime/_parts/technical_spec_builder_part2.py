@@ -11,6 +11,7 @@ from runtime.role_spec_writer_ranking import (
     operational_boundary_score as _operational_boundary_score,
 )
 from runtime.role_skill_common import now_iso
+from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
@@ -159,7 +160,9 @@ def _dedupe(values: list[str]) -> list[str]:
         rows.append(value)
     return rows
 
-def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None) -> dict[str, Any]:
+def _extraction_contract(
+    evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None
+) -> dict[str, Any]:
     ranked = _rank_extraction_candidates(evidence); read_only_ranked_context = []
     if FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
         pre_scope_ranked = list(ranked); ranked = _enforce_preferred_first_slice_scope(ranked, preferred_targets or [])
@@ -169,6 +172,7 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [])
     ranked = _semantic_rerank_candidates(ranked, [dict(item.get("evidence", {})) for item in ranked])
     ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
+    ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
     if not ranked:
         return {
             "status": "blocked_no_safe_candidate",
@@ -223,7 +227,15 @@ def _extraction_contract(evidence: list[dict[str, Any]], *, preferred_targets: l
         },
         "evidence_source": candidate.get("source"),
         "structural_evidence": structural_evidence,
+        "candidate_advisory": candidate_advisory,
     }
+    supporting_sources = [
+        str(item) for item in list(candidate.get("contract_slice_sources") or [])
+        if item and str(item) != source
+    ]
+    if supporting_sources:
+        contract["supporting_sources"] = supporting_sources[:7]
+        contract["effect_handoff_chains"] = list(candidate.get("transitive_effect_chains") or [])[:12]
     if domain_contract.get("contract_family"):
         contract["contract_family"] = domain_contract["contract_family"]
         contract["semantic_contract"] = {

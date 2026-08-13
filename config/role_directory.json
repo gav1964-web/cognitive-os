@@ -1,22 +1,9 @@
 {
   "schema_version": "role_directory.v2",
   "status": "active",
-  "policy": {
-    "roles_are_source_of_truth": true,
-    "runtime_is_interpreter": true,
-    "role_specific_python_facades": false
-  },
+  "policy": {"roles_are_source_of_truth": true, "runtime_is_interpreter": true, "role_specific_python_facades": false},
   "workflow": {
-    "initial_state": [
-      "root",
-      "project_dir",
-      "goal",
-      "write",
-      "run_transform",
-      "run_executor",
-      "force_transform",
-      "architect_advisory_config"
-    ],
+    "initial_state": ["root", "project_dir", "goal", "write", "run_transform", "run_executor", "force_transform", "architect_advisory_config", "spec_writer_advisory_config"],
     "stages": [
       {
         "stage_id": "analyze",
@@ -71,23 +58,7 @@
         "handler_id": "role_pipeline.assemble_result",
         "effects": [],
         "depends_on": ["after_decision"],
-        "requires": [
-          "project_dir",
-          "goal",
-          "adr",
-          "spec",
-          "implementation",
-          "test_plan",
-          "review",
-          "control_plane",
-          "role_gates",
-          "transform",
-          "executor",
-          "artifacts",
-          "paths",
-          "human_documents",
-          "next_action"
-        ],
+        "requires": ["project_dir", "goal", "adr", "spec", "implementation", "test_plan", "review", "control_plane", "role_gates", "transform", "executor", "artifacts", "paths", "human_documents", "next_action"],
         "provides": ["result"]
       },
       {
@@ -112,27 +83,14 @@
       "policy": {"llm_authority": "none", "source_mutation": "forbidden"},
       "contract": {
         "inputs": [{"name": "source_tree", "artifact_type": "SourceTree", "required": true}],
-        "outputs": [
-          {"name": "project_map_report", "artifact_type": "ProjectMapReport", "required": true},
-          {"name": "scope_selection_report", "artifact_type": "ScopeSelectionReport", "required": false}
-        ]
+        "outputs": [{"name": "project_map_report", "artifact_type": "ProjectMapReport", "required": true}, {"name": "scope_selection_report", "artifact_type": "ScopeSelectionReport", "required": false}]
       },
       "gates": ["project_path_exists", "python_project_scope", "bounded_file_scan"],
       "fallback_policy": {"on_missing_evidence": "emit_controlled_gap", "on_unsupported_project": "stop_unsupported"},
       "llm_policy": {"allowed": false, "reason": "project facts must be extracted deterministically"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["path_outside_scope", "no_python_files", "scan_contract_failure"],
-      "quality_criteria": [
-        "answers_source_linked",
-        "task_inputs_outputs_and_code_areas_present",
-        "entrypoints_or_runtime_commands_detected",
-        "execution_path_pipeline_candidate_present",
-        "capability_candidates_or_controlled_gap_present",
-        "contracts_data_and_weak_zones_reported",
-        "errors_state_reproducibility_explicit",
-        "data_lifecycle_present",
-        "runtime_extraction_plan_present"
-      ]
+      "quality_criteria": ["answers_source_linked", "task_inputs_outputs_and_code_areas_present", "entrypoints_or_runtime_commands_detected", "execution_path_pipeline_candidate_present", "capability_candidates_or_controlled_gap_present", "contracts_data_and_weak_zones_reported", "errors_state_reproducibility_explicit", "data_lifecycle_present", "runtime_extraction_plan_present"]
     },
     "architect": {
       "label": "Architect",
@@ -152,16 +110,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["no_source_evidence", "forbidden_source_target", "mutation_requested"],
-      "quality_criteria": [
-        "decision_has_source_evidence",
-        "options_include_tradeoffs",
-        "subsystem_boundaries_have_inputs_outputs",
-        "data_lifecycle_and_state_model_present",
-        "risks_are_actionable",
-        "traceability_required",
-        "spec_writer_brief_has_contract_targets",
-        "handoff_is_typed"
-      ],
+      "quality_criteria": ["decision_has_source_evidence", "options_include_tradeoffs", "subsystem_boundaries_have_inputs_outputs", "data_lifecycle_and_state_model_present", "risks_are_actionable", "traceability_required", "spec_writer_brief_has_contract_targets", "handoff_is_typed"],
       "artifact_builder": {
         "builder_id": "architecture_decision_v1",
         "callable": "runtime.architecture_decision_builder:build_architecture_decision",
@@ -187,19 +136,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["missing_adr", "unverifiable_acceptance", "scope_not_bounded"],
-      "quality_criteria": [
-        "requirements_verifiable",
-        "interface_contracts_present",
-        "contract_shapes_specific",
-        "side_effect_gates_present",
-        "data_lifecycle_present",
-        "error_model_present",
-        "acceptance_criteria_source_linked",
-        "traceability_table_present",
-        "spec_writer_red_team_passed",
-        "state_and_replay_policy_present",
-        "implementation_handoff_typed"
-      ],
+      "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed"],
       "artifact_builder": {
         "builder_id": "technical_spec_v1",
         "callable": "runtime.technical_spec_builder:build_technical_spec",
@@ -215,17 +152,10 @@
       "consumes": ["TechnicalSpec"],
       "produces": ["ImplementationPlan", "PatchPackage"],
       "kb_filters": {"role_scope": ["implementer"]},
-      "policy": {
-        "source_mutation": "forbidden_without_approval",
-        "dependency_expansion": "explicit_only",
-        "llm_authority": "hypothesis_only"
-      },
+      "policy": {"source_mutation": "forbidden_without_approval", "dependency_expansion": "explicit_only", "llm_authority": "hypothesis_only"},
       "contract": {
         "inputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}],
-        "outputs": [
-          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true},
-          {"name": "patch_package", "artifact_type": "PatchPackage", "required": false}
-        ]
+        "outputs": [{"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}, {"name": "patch_package", "artifact_type": "PatchPackage", "required": false}]
       },
       "gates": ["technical_spec_contract_present", "writable_scope_bounded", "verification_commands_allowlisted"],
       "fallback_policy": {"on_missing_template": "request_l45_semantic_hypothesis", "on_failed_sandbox": "emit_developer_improvement_request"},
@@ -250,14 +180,8 @@
       "kb_filters": {"role_scope": ["tester"]},
       "policy": {"source_mutation": "forbidden", "live_external_calls": "fake_by_default"},
       "contract": {
-        "inputs": [
-          {"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true},
-          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}
-        ],
-        "outputs": [
-          {"name": "test_plan", "artifact_type": "TestPlan", "required": true},
-          {"name": "test_result", "artifact_type": "TestResult", "required": false}
-        ]
+        "inputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}, {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}],
+        "outputs": [{"name": "test_plan", "artifact_type": "TestPlan", "required": true}, {"name": "test_result", "artifact_type": "TestResult", "required": false}]
       },
       "gates": ["contract_test_matrix_required", "negative_tests_required", "external_calls_faked_by_default"],
       "fallback_policy": {"on_missing_acceptance": "return_to_spec_writer", "on_unverifiable_plan": "return_to_implementer"},
@@ -282,12 +206,7 @@
       "kb_filters": {"role_scope": ["reviewer"]},
       "policy": {"source_mutation": "forbidden", "approval_required_for_promotion": true},
       "contract": {
-        "inputs": [
-          {"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true},
-          {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true},
-          {"name": "test_plan", "artifact_type": "TestPlan", "required": true},
-          {"name": "test_result", "artifact_type": "TestResult", "required": false}
-        ],
+        "inputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}, {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}, {"name": "test_plan", "artifact_type": "TestPlan", "required": true}, {"name": "test_result", "artifact_type": "TestResult", "required": false}],
         "outputs": [{"name": "review_findings", "artifact_type": "ReviewFindings", "required": true}]
       },
       "gates": ["scope_preserved", "contract_violations_checked", "promotion_requires_human_review"],
@@ -316,14 +235,8 @@
         "kb_admission": "requires_repeated_cases_and_human_approval"
       },
       "contract": {
-        "inputs": [
-          {"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": true},
-          {"name": "project_report", "artifact_type": "ProjectMapReport", "required": false}
-        ],
-        "outputs": [
-          {"name": "evidence_candidate", "artifact_type": "EvidenceCandidate", "required": false},
-          {"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": false}
-        ]
+        "inputs": [{"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": true}, {"name": "project_report", "artifact_type": "ProjectMapReport", "required": false}],
+        "outputs": [{"name": "evidence_candidate", "artifact_type": "EvidenceCandidate", "required": false}, {"name": "knowledge_gap", "artifact_type": "KnowledgeGapPacket", "required": false}]
       },
       "gates": ["evidence_refs_required", "source_attribution_required", "kb_admission_policy_required"],
       "fallback_policy": {"on_no_evidence": "emit_knowledge_gap", "on_repeated_verified_cases": "stage_kb_candidate"},
@@ -350,7 +263,7 @@
       "role_id": "spec_writer",
       "phase": "build",
       "output_key": "technical_spec",
-      "bindings": {"architecture_decision": "$artifacts.architecture_decision"}
+      "bindings": {"architecture_decision": "$artifacts.architecture_decision", "advisory_config": "$spec_writer_advisory_config"}
     },
     {
       "step_id": "implementation_plan",

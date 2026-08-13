@@ -132,7 +132,9 @@ def semantic_target_quality_report(
     suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family)
     meta = [token for token in META_INFRASTRUCTURE_TOKENS if token in lowered]
     boundary = _runtime_boundary_hits(lowered, symbol)
-    trivial = _trivial_symbol(symbol)
+    name_looks_trivial = _trivial_symbol(symbol)
+    structurally_nontrivial = _structurally_nontrivial(structural_evidence)
+    trivial = name_looks_trivial and not structurally_nontrivial
     bootstrap = _bootstrap_support_symbol(path, symbol)
     if suspicious and not suspicious_allowed:
         score -= min(30, 10 + len(suspicious) * 5)
@@ -147,6 +149,8 @@ def semantic_target_quality_report(
     if trivial and not profiled_contract_family:
         score -= 25
         reasons.append("trivial accessor/value helper is weak as first architectural slice")
+    elif name_looks_trivial and structurally_nontrivial:
+        reasons.append("complete source structure proves this is not a trivial accessor")
     if _liveness_probe_symbol(symbol):
         score -= 35
         reasons.append("health/status/ping probe is weak as first architectural slice")
@@ -277,6 +281,15 @@ def _trivial_symbol(symbol: str) -> bool:
     if symbol.endswith(TRIVIAL_SUFFIXES) and not any(token in symbol for token in TRIVIAL_SUFFIX_ALLOWED_CONTAINS_ANY):
         return True
     return False
+
+
+def _structurally_nontrivial(evidence: dict[str, Any] | None) -> bool:
+    structural = dict(evidence or {})
+    return bool(
+        structural.get("source_body_complete")
+        and int(structural.get("argument_count") or 0) >= 3
+        and (structural.get("raises") or int(structural.get("return_paths") or 0) > 1)
+    )
 
 
 def _liveness_probe_symbol(symbol: str) -> bool:

@@ -124,6 +124,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         if _pass_only_snippet(candidate.get("snippet")):
             score -= 120
             reasons.append("pass-only callable has no implementation contract")
+        if candidate.get("node_kind") == "class" or _class_declaration_snippet(candidate.get("snippet")):
+            score -= 80
+            reasons.append("class declaration is context, not an executable callable contract")
         unresolved_names = _high_confidence_unresolved_snippet_names(candidate)
         if unresolved_names:
             score -= 70
@@ -178,6 +181,14 @@ def _pass_only_snippet(value: object) -> bool:
         return False
     body = [node for node in function.body if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))]
     return len(body) == 1 and isinstance(body[0], ast.Pass)
+
+def _class_declaration_snippet(value: object) -> bool:
+    snippet = _snippet_text(value)
+    try:
+        tree = ast.parse(snippet)
+    except (SyntaxError, ValueError):
+        return False
+    return bool(tree.body and isinstance(tree.body[0], ast.ClassDef))
 
 def _high_confidence_unresolved_snippet_names(candidate: dict[str, Any]) -> list[str]:
     snippet = _snippet_text(candidate.get("snippet"))

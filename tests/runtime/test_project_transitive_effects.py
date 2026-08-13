@@ -1,0 +1,43 @@
+from runtime.project_transitive_effects import project_transitive_effects
+
+
+def test_project_effects_follow_unique_cross_file_calls(tmp_path):
+    (tmp_path / "service.py").write_text(
+        "def publish(payload):\n    requests.post('/events', json=payload)\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "signals.py").write_text(
+        "from service import publish\n\ndef on_task_postrun(payload):\n    publish(payload)\n",
+        encoding="utf-8",
+    )
+
+    report = project_transitive_effects(tmp_path)
+
+    row = report["signals.py:on_task_postrun"]
+    assert row["transitive_side_effects"] == ["network"]
+    assert row["contract_slice_sources"] == ["service.py:publish", "signals.py:on_task_postrun"]
+
+
+def test_project_effects_do_not_guess_ambiguous_symbols(tmp_path):
+    (tmp_path / "a.py").write_text("def publish(value):\n    open('a', 'w').write(value)\n", encoding="utf-8")
+    (tmp_path / "b.py").write_text("def publish(value):\n    open('b', 'w').write(value)\n", encoding="utf-8")
+    (tmp_path / "caller.py").write_text("def run(value):\n    publish(value)\n", encoding="utf-8")
+
+    report = project_transitive_effects(tmp_path)
+
+    assert report["caller.py:run"] == {}
+
+
+def test_project_effects_do_not_resolve_attribute_calls_by_suffix(tmp_path):
+    (tmp_path / "service.py").write_text(
+        "def post(payload):\n    open('events.log', 'w').write(payload)\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "client.py").write_text(
+        "def send(client, payload):\n    return client.post(payload)\n",
+        encoding="utf-8",
+    )
+
+    report = project_transitive_effects(tmp_path)
+
+    assert report["client.py:send"] == {}
