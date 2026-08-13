@@ -25,6 +25,18 @@ from runtime.web_extraction_profiles import load_web_extraction_profiles
 
 ROOT = Path(__file__).resolve().parents[2]
 
+def _check_self_improvement_contract_families(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("self_improvement_contract_families_integrity")
+    required = ("input_contract", "output_contract", "side_effect_policy", "validation_gates", "failure_modes")
+    for family_id, value in dict(catalogs["self_improvement_contract_families"].get("families") or {}).items():
+        family = dict(value or {})
+        for field_name in required:
+            if not family.get(field_name):
+                check.errors.append(f"self_improvement_family_missing:{family_id}:{field_name}")
+        if int(family.get("score_bonus") or 0) or int(family.get("ranking_bonus") or 0):
+            check.errors.append(f"self_improvement_family_numeric_bonus_forbidden:{family_id}")
+    return check
+
 def _check_target_quality_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("target_quality_policy_integrity")
     policy = dict(catalogs["target_quality_policy"])

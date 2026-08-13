@@ -62,7 +62,9 @@ def train_on_project(
         attempts.append(profile_attempt)
         conclusion["semantic_profile_trial"] = {
             "profile_id": dict(profile_attempt["parameter_changes"]["temporary_semantic_profile"])["id"],
-            "score_delta": round(profile_attempt["result"]["project_min_score"] - baseline["project_min_score"], 2),
+            "score_delta": profile_attempt["profile_score_delta"],
+            "control_score": profile_attempt["control_result"]["project_min_score"],
+            "profile_score": profile_attempt["result"]["project_min_score"],
         }
     trained = best_attempt(baseline, attempts)
     source_changed = _source_fingerprint(project_dir) != source_before
@@ -98,7 +100,9 @@ def _run_contract_profile_attempt(
         advisory = replace(selected, advisory_context=context)
         return _evaluate(root, project_dir, write=True, spec_writer_config=advisory)
 
-    return run_profile_trial(project_dir, sources, evaluate)
+    current = str(baseline.get("selected_extraction_candidate") or "")
+    profile_sources = [source for source in [current, *sources] if source]
+    return run_profile_trial(project_dir, profile_sources, evaluate)
 
 
 def _run_training_attempts(

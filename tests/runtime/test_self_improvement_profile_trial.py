@@ -26,6 +26,8 @@ def test_profile_trial_is_visible_only_inside_evaluation(tmp_path):
     attempt = run_profile_trial(tmp_path, ["integration.py:sync_records"], evaluate)
 
     assert attempt["result"]["project_min_score"] == 9.2
+    assert attempt["control_result"]["project_min_score"] == 9.2
+    assert attempt["profile_score_delta"] == 0.0
     assert seen[0]["contract_family"] == "external_service_state_sync_boundary"
     assert not matching_profiles("integration.py:sync_records")
 
@@ -46,3 +48,26 @@ def test_temporary_profile_rejects_numeric_score_bonus():
     with pytest.raises(SemanticTargetProfileError, match="numeric bonuses"):
         with temporary_semantic_profiles([profile]):
             pass
+
+
+def test_profile_trial_measures_against_same_source_control(tmp_path):
+    source = tmp_path / "admission.py"
+    source.write_text(
+        "def allowed_file(filename):\n"
+        "    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS\n",
+        encoding="utf-8",
+    )
+    calls = 0
+
+    def evaluate(target):
+        nonlocal calls
+        calls += 1
+        score = 9.2 if not matching_profiles(target) else 9.7
+        return {"project_min_score": score, "role_scores": {"spec_writer": score}}
+
+    attempt = run_profile_trial(tmp_path, ["admission.py:allowed_file"], evaluate)
+
+    assert calls == 2
+    assert attempt["control_result"]["project_min_score"] == 9.2
+    assert attempt["result"]["project_min_score"] == 9.7
+    assert attempt["profile_score_delta"] == 0.5

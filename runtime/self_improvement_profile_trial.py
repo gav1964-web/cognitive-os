@@ -19,13 +19,17 @@ def run_profile_trial(
         profile = synthesize_contract_profile(project_dir, source)
         if profile is None:
             continue
+        control = evaluate(source)
         with temporary_semantic_profiles([profile]):
             result = evaluate(source)
+        profile_delta = round(result["project_min_score"] - control["project_min_score"], 2)
         return {
             "parameter_changes": {
                 "spec_writer_candidate_preference": source,
                 "temporary_semantic_profile": profile,
             },
+            "control_result": control,
             "result": result,
+            "profile_score_delta": profile_delta,
         }
     return None

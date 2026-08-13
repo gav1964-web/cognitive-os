@@ -1,5 +1,6 @@
 import json
 
+from runtime.local_inference import LocalInferenceConfig
 from runtime.self_improvement_experience import generalized_profile_record, stage_training_experience
 from runtime.self_improvement_training import (
     _failure_packet,
@@ -117,7 +118,7 @@ def test_profile_candidate_keeps_project_paths_only_in_provenance(tmp_path):
         "failure_modes": ["external_failure"],
         "training_evidence": {"external_io": True},
     }
-    attempts = [{"parameter_changes": {"temporary_semantic_profile": profile}}]
+    attempts = [{"parameter_changes": {"temporary_semantic_profile": profile}, "profile_score_delta": 1.3}]
     path = stage_training_experience(
         tmp_path,
         tmp_path / "private_project",
@@ -138,3 +139,52 @@ def test_profile_candidate_keeps_project_paths_only_in_provenance(tmp_path):
     assert "private/path.py" not in proposed
     assert "private_hash" not in proposed
     assert payload["source_cases"][0]["project"] == "private_project"
+
+
+def test_profile_trial_sources_include_failed_current_target(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_trial(project_dir, sources, evaluate):
+        captured["sources"] = sources
+        return None
+
+    monkeypatch.setattr("runtime.self_improvement_training.run_profile_trial", fake_trial)
+    from runtime.self_improvement_training import _run_contract_profile_attempt
+
+    _run_contract_profile_attempt(
+        tmp_path,
+        tmp_path,
+        {"selected_extraction_candidate": "app.py:allowed_file", "role_scores": {}},
+        {},
+        LocalInferenceConfig(base_url="http://local", model="test"),
+        9.7,
+        ["app.py:other"],
+        {"target_search_exhausted": True},
+    )
+
+    assert captured["sources"] == ["app.py:allowed_file", "app.py:other"]
+
+
+def test_zero_delta_profile_is_not_staged_as_contract_template(tmp_path):
+    profile = {
+        "contract_family": "persistence_append_command",
+        "input_contract": {"record": "Record"},
+        "output_contract": {"result": "Void"},
+        "side_effect_policy": {"database_write": "explicit"},
+        "validation_gates": ["append is covered"],
+        "failure_modes": ["append_failed"],
+        "training_evidence": {"append_call": True},
+    }
+    path = stage_training_experience(
+        tmp_path,
+        tmp_path / "project",
+        {"proposed_knowledge": {"label": "target selection"}},
+        {"project_min_score": 9.0},
+        {"project_min_score": 9.7},
+        {"status": "confirmed_improvement"},
+        [{"parameter_changes": {"temporary_semantic_profile": profile}, "profile_score_delta": 0.0}],
+        {"target_search_exhausted": True},
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["record_type"] == "role_training_experience"

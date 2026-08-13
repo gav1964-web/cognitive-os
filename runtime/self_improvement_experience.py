@@ -69,8 +69,6 @@ def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:
 def _confirmed_profile(attempts: list[dict[str, Any]], outcome: dict[str, Any]) -> dict[str, Any]:
     if outcome.get("status") != "confirmed_improvement":
         return {}
-    profiles = [
-        dict(dict(row.get("parameter_changes") or {}).get("temporary_semantic_profile") or {})
-        for row in attempts
-    ]
+    profiles = [dict(dict(row.get("parameter_changes") or {}).get("temporary_semantic_profile") or {})
+                for row in attempts if float(row.get("profile_score_delta") or 0) > 0]
     return next((profile for profile in profiles if profile), {})

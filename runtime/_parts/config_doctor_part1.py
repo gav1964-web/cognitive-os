@@ -31,6 +31,7 @@ from runtime.runtime_interpreter_policy import load_runtime_interpreter_policy
 from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.semantic_target_profiles import load_semantic_target_profiles
+from runtime.self_improvement_profile_families import load_contract_families
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.source_target_policy import load_role_source_policy
 from runtime.system_knowledge_ir_backlog import load_ir_backlog_policy
@@ -70,6 +71,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_stage2_routes(catalogs, base),
             _check_semantic_resolution(catalogs),
             _check_semantic_target_profiles(catalogs),
+            _check_self_improvement_contract_families(catalogs),
             _check_web_extraction_profiles(catalogs),
             _check_operation_recipes(catalogs),
             _check_sandbox_programmer(catalogs),
@@ -125,6 +127,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "prompt_intake_rules": load_prompt_intake_rules(str(root / "config" / "prompt_intake_rules.json")),
         "semantic_resolution_rules": load_semantic_resolution_rules(str(root / "config" / "semantic_resolution_rules.json")),
         "semantic_target_profiles": load_semantic_target_profiles(str(root / "config" / "semantic_target_profiles.json")),
+        "self_improvement_contract_families": load_contract_families(str(root / "config" / "self_improvement_contract_families.json")),
         "stage2_template_routes": load_stage2_template_routes(str(root / "config" / "stage2_template_routes.json")),
         "web_extraction_profiles": load_web_extraction_profiles(str(root / "config" / "web_extraction_profiles.json")),
         "operation_recipe_rules": load_operation_recipe_rules(str(root / "config" / "operation_recipe_rules.json")),

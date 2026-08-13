@@ -1,0 +1,37 @@
+{
+  "schema_version": "self_improvement_contract_families.v1",
+  "families": {
+    "external_service_state_sync_boundary": {
+      "input_contract": {"request": "ExternalSyncRequest(actor, scope, options?)", "dependencies": "ExternalSyncDependencies(client, state_store, clock?, rate_gate?)"},
+      "output_contract": {"result": "ExternalSyncResult(created_count, updated_count, affected_ids?, warnings?)", "failure_packet": "ExternalSyncFailure(kind, retry_after?, evidence_ref)"},
+      "side_effect_policy": {"external_io": "external calls, retries and rate limits are explicit", "state_mutation": "local mutations and commit boundary are observable", "requires_validation_gate": true},
+      "validation_gates": ["empty input and successful synchronization return structured counts", "external failure and rate limit behavior are bounded", "state writes and commit boundary are explicit and idempotency is reviewed"],
+      "failure_modes": ["external_service_failure", "rate_limited", "partial_state_write", "invalid_session"],
+      "reason": "AST proves an external-service synchronization orchestration contract"
+    },
+    "file_extension_admission_policy": {
+      "input_contract": {"filename": "FileName(value)", "policy": "AllowedExtensionSet(values)"},
+      "output_contract": {"accepted": "bool", "failure_packet": "FileAdmissionFailure(kind, extension?)"},
+      "side_effect_policy": {"mutation_policy": "policy evaluation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["allowed, denied and missing-extension inputs are covered", "extension normalization is explicit", "filename is not interpreted as a filesystem path"],
+      "failure_modes": ["missing_extension", "disallowed_extension", "normalization_mismatch"],
+      "reason": "AST proves a side-effect-free file extension admission policy"
+    },
+    "route_tree_flatten_boundary": {
+      "input_contract": {"routes": "RouteTree(routes, mounted_routes?, compatibility_context?)"},
+      "output_contract": {"routes": "Iterator[MatchableRoute]", "failure_packet": "RouteFlattenFailure(kind, route_ref?)"},
+      "side_effect_policy": {"mutation_policy": "route traversal does not mutate router state", "requires_validation_gate": true},
+      "validation_gates": ["flat and mounted route trees are covered", "framework compatibility branches yield equivalent route shapes", "empty route collections terminate deterministically"],
+      "failure_modes": ["unsupported_route_shape", "compatibility_branch_mismatch", "route_cycle"],
+      "reason": "AST proves a generator boundary over framework route-tree variants"
+    },
+    "persistence_append_command": {
+      "input_contract": {"unit_of_work": "PersistenceSession(add)", "record_data": "RecordAppendInput(values)"},
+      "output_contract": {"result": "VoidPersistenceCommand", "failure_packet": "PersistenceAppendFailure(kind, record_ref?)"},
+      "side_effect_policy": {"database_write": "record construction and unit-of-work append are explicit", "transaction_policy": "commit ownership remains with the caller", "requires_validation_gate": true},
+      "validation_gates": ["valid record construction and append are covered", "persistence failure does not hide transaction ownership", "duplicate/idempotency behavior is reviewed"],
+      "failure_modes": ["record_construction_error", "unit_of_work_rejected", "duplicate_record"],
+      "reason": "AST proves a bounded unit-of-work append command"
+    }
+  }
+}

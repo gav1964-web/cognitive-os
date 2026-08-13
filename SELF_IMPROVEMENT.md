@@ -25,6 +25,17 @@ Independent validation keeps recognition coverage separate from treatment eviden
 recognizer but already scores `9.7+` proves portability of the classifier only; it does not count toward the three
 confirmed improvement cases required for review.
 
+Profile-effect evidence uses a same-source A/B trial. Target selection is held constant: the control evaluates the
+exact source without an overlay, and treatment evaluates it with the temporary typed profile. Only the attributable
+`treatment - control` delta may create a semantic contract profile candidate. A better alternate target is recorded as
+target-selection experience and cannot be credited to the profile.
+
+Run an attributable same-source effect trial:
+
+```powershell
+python tools\self_improvement_profile_effect.py --root . --project-dir PATH --source path/to/file.py:function --write
+```
+
 Run one training case:
 
 ```powershell
