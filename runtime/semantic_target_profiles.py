@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATH = ROOT / "config" / "semantic_target_profiles.json"
+_PROFILE_OVERLAY: ContextVar[tuple[dict[str, Any], ...]] = ContextVar("semantic_target_profile_overlay", default=())
 
 
 class SemanticTargetProfileError(RuntimeError):
@@ -40,13 +43,37 @@ def matching_profiles(target: str, *, path: str | None = None) -> list[dict[str,
     lowered = _normalized_target(target)
     symbol = lowered.rsplit(":", 1)[-1] if ":" in lowered else lowered
     source_path = lowered.split(":", 1)[0] if ":" in lowered else ""
-    matched = [profile for profile in payload["profiles"] if _matches(profile, source_path, symbol)]
+    profiles = [*payload["profiles"], *_PROFILE_OVERLAY.get()]
+    matched = [profile for profile in profiles if _matches(profile, source_path, symbol)]
     matched_ids = {str(profile.get("id")) for profile in matched}
     return [
         profile
         for profile in matched
         if not (set(str(item) for item in profile.get("exclude_if_profile_ids", [])) & matched_ids)
     ]
+
+
+@contextmanager
+def temporary_semantic_profiles(profiles: list[dict[str, Any]]):
+    """Apply validated profiles to one evaluation context without mutating KB."""
+    validated = tuple(_validated_overlay_profile(profile) for profile in profiles)
+    token = _PROFILE_OVERLAY.set((*_PROFILE_OVERLAY.get(), *validated))
+    try:
+        yield
+    finally:
+        _PROFILE_OVERLAY.reset(token)
+
+
+def _validated_overlay_profile(value: dict[str, Any]) -> dict[str, Any]:
+    profile = dict(value)
+    required = ("id", "contract_family", "input_contract", "output_contract", "validation_gates", "failure_modes")
+    if any(not profile.get(field) for field in required):
+        raise SemanticTargetProfileError("temporary semantic profile lacks typed contract evidence")
+    if int(profile.get("score_bonus") or 0) != 0 or int(profile.get("ranking_bonus") or 0) != 0:
+        raise SemanticTargetProfileError("temporary semantic profiles cannot supply numeric bonuses")
+    if not profile.get("symbols") or not profile.get("path_contains_any"):
+        raise SemanticTargetProfileError("temporary semantic profile must be exact-source bounded")
+    return profile
 
 
 def contract_for_target(target: str) -> dict[str, Any]:

@@ -1,5 +1,6 @@
 import json
 
+from runtime.self_improvement_experience import generalized_profile_record, stage_training_experience
 from runtime.self_improvement_training import (
     _failure_packet,
     _outcome,
@@ -82,3 +83,58 @@ def test_training_rejects_current_failed_source_as_challenger():
 
     assert result["recommended_source"] == ""
     assert "same_as_failed_target" in result["policy_violations"]
+
+
+def test_generalized_profile_record_drops_project_specific_selector():
+    profile = {
+        "id": "training_123",
+        "contract_family": "external_service_state_sync_boundary",
+        "symbols": ["sync_telegram"],
+        "path_contains_any": ["app/integrations/telegram.py"],
+        "input_contract": {"request": "Request"},
+        "output_contract": {"result": "Result"},
+        "side_effect_policy": {"external_io": "explicit"},
+        "validation_gates": ["failure is bounded"],
+        "failure_modes": ["external_failure"],
+        "training_evidence": {"external_io": True, "structured_result": True},
+    }
+
+    result = generalized_profile_record(profile)
+
+    assert result["id"] == "external_service_state_sync_boundary"
+    assert "symbols" not in result
+    assert "path_contains_any" not in result
+    assert result["numeric_bonus_from_training"] is False
+
+
+def test_profile_candidate_keeps_project_paths_only_in_provenance(tmp_path):
+    profile = {
+        "contract_family": "external_service_state_sync_boundary",
+        "input_contract": {"request": "Request"},
+        "output_contract": {"result": "Result"},
+        "side_effect_policy": {"external_io": "explicit"},
+        "validation_gates": ["failure is bounded"],
+        "failure_modes": ["external_failure"],
+        "training_evidence": {"external_io": True},
+    }
+    attempts = [{"parameter_changes": {"temporary_semantic_profile": profile}}]
+    path = stage_training_experience(
+        tmp_path,
+        tmp_path / "private_project",
+        {"failure_class": "target_selection", "hypothesis": "private/path.py:sync_private"},
+        {"project_min_score": 8.4},
+        {"project_min_score": 9.7},
+        {"status": "confirmed_improvement"},
+        attempts,
+        {
+            "target_search_exhausted": True,
+            "tested_candidate_preferences": ["private/path.py:sync_private"],
+            "semantic_profile_trial": {"profile_id": "private_hash", "score_delta": 1.3},
+        },
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    proposed = json.dumps(payload["proposed_record"])
+
+    assert "private/path.py" not in proposed
+    assert "private_hash" not in proposed
+    assert payload["source_cases"][0]["project"] == "private_project"

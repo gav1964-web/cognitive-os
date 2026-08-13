@@ -15,6 +15,11 @@ The source project, score threshold, evaluator, role caps, and active knowledge 
 5. Select the best attempt using measured role scores, never an LLM claim.
 6. Stage the experience as a KB candidate. Active KB promotion remains a reviewed operation.
 7. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile.
+8. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
+
+Temporary profiles cannot contain numeric score or ranking bonuses. They may only supply a typed contract family that
+removes an unprofiled-target cap when source evidence proves every recognition gate. A successful profile is generalized
+into a staged template and still requires independent cases and review before it can enter the active KB.
 
 Run one training case:
 

@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
-from .knowledge_admission import build_kb_candidate, write_kb_candidate
 from .local_inference import LocalInferenceConfig
 from .project_evolution_policy import load_project_evolution_policy
 from .role_foundation_field_trial import (
@@ -22,6 +21,8 @@ from .role_foundation_field_trial import (
 )
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .self_improvement_analysis import diagnose_training_failure
+from .self_improvement_experience import stage_training_experience
+from .self_improvement_profile_trial import run_profile_trial
 from .self_improvement_trials import best_attempt, challenger_sources, trial_conclusion
 
 
@@ -53,11 +54,20 @@ def train_on_project(
         limit=int(policy.get("max_challenger_attempts") or 3),
     )
     attempts = _run_training_attempts(root, project_dir, baseline, diagnosis, selected, target, sources)
-    trained = best_attempt(baseline, attempts)
     conclusion = trial_conclusion(baseline, attempts)
+    profile_attempt = _run_contract_profile_attempt(
+        root, project_dir, baseline, diagnosis, selected, target, sources, conclusion
+    )
+    if profile_attempt:
+        attempts.append(profile_attempt)
+        conclusion["semantic_profile_trial"] = {
+            "profile_id": dict(profile_attempt["parameter_changes"]["temporary_semantic_profile"])["id"],
+            "score_delta": round(profile_attempt["result"]["project_min_score"] - baseline["project_min_score"], 2),
+        }
+    trained = best_attempt(baseline, attempts)
     source_changed = _source_fingerprint(project_dir) != source_before
     outcome = _outcome(baseline, trained, target, source_changed=source_changed)
-    candidate_path = _stage_experience(
+    candidate_path = stage_training_experience(
         root, project_dir, diagnosis, baseline, trained, outcome, attempts, conclusion
     ) if write else None
     report = _report(project_dir, target, baseline, diagnosis, trained, status=outcome["status"])
@@ -68,6 +78,27 @@ def train_on_project(
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
+
+
+def _run_contract_profile_attempt(
+    root: Path,
+    project_dir: Path,
+    baseline: dict[str, Any],
+    diagnosis: dict[str, Any],
+    selected: LocalInferenceConfig,
+    target: float,
+    sources: list[str],
+    conclusion: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not conclusion.get("target_search_exhausted"):
+        return None
+
+    def evaluate(source: str) -> dict[str, Any]:
+        context = _training_context({**diagnosis, "recommended_source": source}, baseline, target)
+        advisory = replace(selected, advisory_context=context)
+        return _evaluate(root, project_dir, write=True, spec_writer_config=advisory)
+
+    return run_profile_trial(project_dir, sources, evaluate)
 
 
 def _run_training_attempts(
@@ -188,36 +219,6 @@ def _outcome(
         "role_regressions": regressions,
         "source_project_changed": source_changed,
     }
-
-
-def _stage_experience(
-    root: Path,
-    project_dir: Path,
-    diagnosis: dict[str, Any],
-    before: dict[str, Any],
-    after: dict[str, Any],
-    outcome: dict[str, Any],
-    attempts: list[dict[str, Any]],
-    conclusion: dict[str, Any],
-) -> Path:
-    confirmed = outcome["status"] == "confirmed_improvement"
-    proposed = dict(diagnosis.get("proposed_knowledge") or {})
-    proposed.update({"failure_class": diagnosis.get("failure_class"), "hypothesis": diagnosis.get("hypothesis")})
-    proposed["trial_conclusion"] = conclusion
-    candidate = build_kb_candidate(
-        record_type="role_training_experience",
-        proposed_record=proposed,
-        source_cases=[{
-            "project": project_dir.name,
-            "status": "confirmed" if confirmed else "observed",
-            "before": before["project_min_score"],
-            "after": after["project_min_score"],
-        }],
-        teacher_reference=f"Cognitive OS self-improvement via {dict(diagnosis.get('model_trace') or {}).get('model')}",
-    )
-    candidate["training_outcome"] = outcome
-    candidate["parameter_trials"] = [dict(row.get("parameter_changes") or {}) for row in attempts]
-    return write_kb_candidate(candidate, root=root)
 
 
 def _report(

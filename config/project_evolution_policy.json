@@ -24,11 +24,12 @@
     "trigger_score_below": 9.7,
     "max_training_iterations": 1,
     "max_challenger_attempts": 3,
+    "max_temporary_profile_attempts": 1,
     "local_diagnostician_profile": "local_l35",
     "teacher_profile": "external_l45_intent_resolver",
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
-    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "model_tier", "staged_kb_candidate"],
+    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "temporary_semantic_profile", "model_tier", "staged_kb_candidate"],
     "forbidden_changes": ["evaluation_policy", "score_threshold", "role_score_caps", "source_project", "active_kb_without_promotion"],
     "success_rule": "target_reached_or_score_improved_without_role_regression"
   },

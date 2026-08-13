@@ -15,6 +15,8 @@ def test_project_evolution_policy_loads_current_catalog() -> None:
     assert "kb_or_config_before_code_branch" in policy["principles"]
     assert policy["chosen_path"]["north_star"] == "self_improving_role_capability_from_project_training_and_calibrated_field_evidence"
     assert policy["self_improvement"]["local_diagnostician_profile"] == "local_l35"
+    assert policy["self_improvement"]["max_temporary_profile_attempts"] == 1
+    assert "temporary_semantic_profile" in policy["self_improvement"]["allowed_parameter_changes"]
     assert "meta_only_is_not_callable" in policy["evolution_rules"]
     assert "role_score_9_5" in policy["promotion_gates"]
 
