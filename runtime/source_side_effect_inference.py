@@ -33,6 +33,8 @@ def infer_ast_side_effects(node: ast.AST, text: str) -> list[str]:
     node_names = set(str(item) for item in memory.get("ast_nodes", []))
     if any(type(child).__name__ in node_names for child in ast.walk(node)):
         effects.add("memory_state")
+    if _mutates_external_state(node):
+        effects.add("memory_state")
     lowered = text.lower()
     if any(str(marker).lower() in lowered for marker in memory.get("text_contains", [])):
         effects.add("memory_state")
@@ -75,3 +77,28 @@ def _call_name(node: ast.AST) -> str:
         base = _call_name(node.value)
         return f"{base}.{node.attr}" if base else node.attr
     return ""
+
+
+def _mutates_external_state(node: ast.AST) -> bool:
+    local_names = {
+        target.id
+        for child in ast.walk(node)
+        if isinstance(child, (ast.Assign, ast.AnnAssign))
+        for target in (child.targets if isinstance(child, ast.Assign) else [child.target])
+        if isinstance(target, ast.Name)
+    }
+    for child in ast.walk(node):
+        if not isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            continue
+        targets = child.targets if isinstance(child, ast.Assign) else [child.target]
+        if any(_external_mutation_target(target, local_names) for target in targets):
+            return True
+    return False
+
+
+def _external_mutation_target(target: ast.AST, local_names: set[str]) -> bool:
+    if isinstance(target, ast.Attribute):
+        return True
+    if isinstance(target, ast.Subscript):
+        return not isinstance(target.value, ast.Name) or target.value.id not in local_names
+    return False

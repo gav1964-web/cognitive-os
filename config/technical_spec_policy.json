@@ -20,7 +20,7 @@
     ]
   },
   "contract_type_inference": {
-    "ignored_return_annotations": ["any", "typing.any", "none"],
+    "ignored_return_annotations": ["any", "typing.any", "none", "object"],
     "argument_rules": [
       {"type": "RequestLike", "exact": ["request", "req"], "contains_any": ["request"]},
       {"type": "ResponseLike", "exact": ["response", "resp"], "contains_any": ["response"]},
@@ -28,6 +28,7 @@
       {"type": "Identifier", "exact": ["id"], "contains_any": ["_id"]},
       {"type": "PathLike", "contains_any": ["path", "file", "filename"]},
       {"type": "UrlString", "contains_any": ["url", "uri"]},
+      {"type": "StreamLike", "exact": ["stream"], "contains_any": []},
       {"type": "str", "contains_any": ["text", "message", "content"]},
       {"type": "MappingLike", "contains_any": ["headers", "options", "config", "data", "payload"]},
       {"type": "SequenceLike", "contains_any": ["items", "args"]},
@@ -62,6 +63,7 @@
     "strong_score_slack": 35,
     "strong_close_semantic_delta": 6,
     "strong_close_score_slack": 10,
+    "bounded_transform_score_slack": 55,
     "generic_semantic_delta": 18,
     "generic_score_slack": 20
   },
@@ -86,9 +88,9 @@
     "verdict": "approved_with_constraints"
   },
   "process_boundary_review_override": {
-    "enabled": true,
+    "enabled": false,
     "allowed_statuses": ["suspicious"],
-    "required_profile_ids": ["legacy_batch_orchestrator_too_broad"],
+    "required_profile_ids": [],
     "required_side_effects_any": ["filesystem", "filesystem_read", "filesystem_write", "subprocess", "database"],
     "verdict": "approved_with_constraints"
   },

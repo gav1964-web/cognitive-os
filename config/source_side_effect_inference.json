@@ -1,6 +1,6 @@
 {
   "schema_version": "source_side_effect_inference.v1",
-  "contract_only_effects": ["database_read", "memory_state"],
+  "contract_only_effects": ["database_read"],
   "effects": [
     {
       "id": "filesystem",
@@ -14,7 +14,7 @@
     {
       "id": "network",
       "call_exact": ["urlopen"],
-      "call_contains": ["socket", ".send", ".recv", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
+      "call_contains": ["socket", ".send", ".recv", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
     },
     {
       "id": "subprocess",
@@ -22,7 +22,7 @@
     },
     {
       "id": "database",
-      "call_contains": ["cursor.execute", "connection.execute", ".executemany", ".commit", ".rollback"]
+      "call_contains": ["cursor.execute", "connection.execute", "cur.execute", ".executemany", ".commit", ".rollback"]
     },
     {
       "id": "database_read",
@@ -30,11 +30,19 @@
     },
     {
       "id": "memory_state",
-      "call_contains": [".set_state", ".change_state", ".update_state"]
+      "call_contains": [".set_state", ".change_state", ".update_state", ".before_request", ".after_request"]
     },
     {
       "id": "credential_store",
       "call_contains": ["secitemadd", "secitemcopymatching", "secitemdelete", "secretservice", "keyring.set_password", "keyring.delete_password"]
+    },
+    {
+      "id": "observability",
+      "call_contains": ["logger.", "logging.", "log.critical", "log.error", "log.warning", "sys.__excepthook__"]
+    },
+    {
+      "id": "external_runtime",
+      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys"]
     }
   ],
   "memory_state": {

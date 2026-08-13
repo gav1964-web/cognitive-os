@@ -25,7 +25,13 @@
       "/benchmarks/",
       "/doc/",
       "/docs/",
+      "/docs_src/",
+      "docs_src/",
       "/examples/",
+      "/end_to_end_tests/",
+      "end_to_end_tests/",
+      "/samples/",
+      "_samples/",
       "/profiling/",
       "/scripts/",
       "/tasks/",
@@ -34,7 +40,9 @@
       "/tools/",
       "/__pycache__/",
       "gunicorn_conf.py",
-      "conftest.py"
+      "conftest.py",
+      "setup.py"
+      ,"_pytest.py"
     ],
     "domain_evidence_source_tokens": [
       "_llm_client.py:",
@@ -78,6 +86,10 @@
     },
     "brief_sort_rules": [
       {
+        "tokens": ["setup.py:", "noxfile.py:", "tasks.py:"],
+        "score_delta": 80
+      },
+      {
         "tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
         "score_delta": -40
       },
@@ -106,7 +118,7 @@
         "score_delta": 35
       },
       {
-        "tokens": ["tests/", "docs/", "examples/", "scratch/"],
+        "tokens": ["tests/", "end_to_end_tests/", "docs/", "docs_src/", "examples/", "samples/", "_samples/", "scratch/", "_pytest.py"],
         "score_delta": 40
       }
     ]

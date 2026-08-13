@@ -17,10 +17,14 @@ def source_health(
     file_skipped = [row for row in files.get("skipped", []) if isinstance(row, dict)]
     runtime_skipped = [row for row in runtime_commands.get("skipped", []) if isinstance(row, dict)]
     syntax_errors = [row for row in py_skipped if str(row.get("reason")) == "SyntaxError"]
+    parser_incompatibilities = [
+        row for row in py_skipped if str(row.get("reason")) == "ParserVersionIncompatible"
+    ]
     inaccessible = [
         row
         for row in [*py_skipped, *file_skipped, *runtime_skipped]
-        if str(row.get("reason")) not in {"SyntaxError", "too_large", "max_files_exceeded", "non_text_extension"}
+        if str(row.get("reason"))
+        not in {"SyntaxError", "ParserVersionIncompatible", "too_large", "max_files_exceeded", "non_text_extension"}
     ]
     inaccessible_count = (
         int(tree_skipped.get("inaccessible_files") or 0)
@@ -43,7 +47,7 @@ def source_health(
     status = "clean"
     if syntax_errors or inaccessible_count:
         status = "damaged"
-    elif project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
+    elif parser_incompatibilities or project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
         status = "noisy"
     blockers = []
     if syntax_errors:
@@ -66,6 +70,8 @@ def source_health(
         "project_shape": project_shape,
         "syntax_error_count": len(syntax_errors),
         "syntax_error_samples": syntax_errors[:12],
+        "parser_incompatibility_count": len(parser_incompatibilities),
+        "parser_incompatibility_samples": parser_incompatibilities[:12],
         "inaccessible_count": inaccessible_count,
         "inaccessible_samples": inaccessible[:12],
         "generated_run_signal_count": len(generated_signals),

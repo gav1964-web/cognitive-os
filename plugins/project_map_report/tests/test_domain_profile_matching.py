@@ -25,6 +25,30 @@ def test_domain_profile_uses_weighted_kb_project_name_and_text_markers():
     assert profile["evidence"]
 
 
+def test_domain_profile_does_not_confuse_container_agent_with_multi_agent_runtime():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/container_manager", "frameworks": ["FastAPI"], "entrypoints": ["backend/app.py"], "routes": 8},
+        {"files": [{"path": "README.md", "text": "Self-hosted app for automating Docker container updates, image pruning, and private registries. Remote hosts use an agent."}]},
+        {"files": [{"path": "backend/update.py", "functions": [{"name": "build_update_plan", "calls": []}]}], "imports": ["fastapi"]},
+        [],
+        {"fastapi"},
+    )
+
+    assert profile["kind"] == "container_update_management_service"
+
+
+def test_domain_profile_requires_semantic_multi_agent_marker():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/agents", "frameworks": ["FastAPI"], "entrypoints": ["api.py"], "routes": 3},
+        {"files": [{"path": "README.md", "text": "Agent-to-agent service with AgentCard exchange and consensus orchestration."}]},
+        {"files": [{"path": "orchestrator.py", "functions": [{"name": "run_consensus", "calls": []}]}], "imports": ["fastapi"]},
+        [],
+        {"fastapi"},
+    )
+
+    assert profile["kind"] == "multi_agent_orchestration_runtime"
+
+
 def test_domain_profile_can_match_routes_min_kb_rule_for_api_service():
     profile = infer_domain_profile(
         {"root": "F:/tmp/demo_api", "frameworks": ["FastAPI"], "entrypoints": ["app.py"], "routes": 2},
@@ -261,4 +285,24 @@ def test_domain_profile_recognizes_repeated_transform_library_callables():
     )
 
     assert profile["kind"] == "python_transform_library"
+    assert len(profile["scenario_summary"]) >= 3
+
+
+def test_domain_profile_recognizes_deep_learning_image_pipeline():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/image_lab", "frameworks": [], "entrypoints": ["models.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.md",
+                    "text": "Train a convolutional network for image enhancement using a paired image dataset and model checkpoints.",
+                }
+            ]
+        },
+        {"files": [{"path": "models.py", "functions": [{"name": "forward", "calls": []}]}]},
+        [],
+        {"tensorflow"},
+    )
+
+    assert profile["kind"] == "deep_learning_image_pipeline"
     assert len(profile["scenario_summary"]) >= 3

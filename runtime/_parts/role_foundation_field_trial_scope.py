@@ -117,6 +117,18 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
                 "root_python_package": root_package,
             },
         }
+    if not py_files or _examples_only_python_corpus(path, py_files, python_source_files) or _independent_project_collection(path):
+        return {
+            "status": "out_of_scope",
+            "reason_code": "no_python_owned_product_boundary",
+            "primary_language": "No Python product implementation",
+            "python_files": len(py_files),
+            "python_source_files": len(python_source_files),
+            "rust_files": len(rust_files),
+            "c_files": len(c_files),
+            "cpp_files": len(cpp_files),
+            "evidence": {"top_dirs": sorted(top_dirs), "root_python_package": root_package},
+        }
     return {
         "status": "in_scope",
         "primary_language": "Python",
@@ -133,6 +145,31 @@ def _type_stub_corpus(top_dirs: set[str], py_files: list[Path], pyi_files: list[
     if not {"stdlib", "stubs"}.issubset(top_dirs):
         return False
     return len(pyi_files) >= max(200, len(py_files) * 10)
+
+
+def _examples_only_python_corpus(path: Path, py_files: list[Path], python_source_files: list[Path]) -> bool:
+    if len(python_source_files) == 1 and " " in python_source_files[0].name and not _has_project_manifest(path):
+        return True
+    if python_source_files or not py_files:
+        return False
+    context_roots = {"examples", "example", "tests", "test", "docs", "doc", "templates", ".templates", "_pages", "tools"}
+    support_files = {"setup.py", "noxfile.py", "conftest.py", "release.py", "tasks.py", "_.py"}
+    return all(
+        file.relative_to(path).parts[0].lower() in context_roots
+        or file.name.lower() in support_files
+        or (file.relative_to(path).parts[0].lower() == "scripts" and (len(file.stem) <= 2 or "tmp" in file.stem.lower()))
+        for file in py_files
+    )
+
+
+def _independent_project_collection(path: Path) -> bool:
+    if _has_project_manifest(path) or _root_python_package(path):
+        return False
+    roots = [child for child in path.iterdir() if child.is_dir() and child.name.lower() in {"projects", "recipes"}]
+    if len(roots) != 1:
+        return False
+    members = [child for child in roots[0].iterdir() if child.is_dir()]
+    return sum(bool(_files_with_suffixes(child, {".py"})) for child in members) >= 10
 
 
 def _native_extension_wrapper_without_python_core(python_source_files: list[Path], rust_files: list[Path]) -> bool:
@@ -181,9 +218,13 @@ def _has_project_manifest(path: Path) -> bool:
 
 def _python_role_source_file(path: Path) -> bool:
     normalized = path.as_posix().lower()
-    excluded = {"tests", "test", "docs", "examples", "example", "scripts", ".github", "ci", "templates"}
+    excluded = {"tests", "test", "docs", "examples", "example", "scripts", ".github", "ci", "templates", ".templates", "_pages", "tools"}
     excluded.update({"bench", "benchmark", "benchmarks", "integration"})
+    if "scenarios/example_fixture/" in normalized:
+        return False
     if any(part in excluded for part in normalized.split("/")):
+        return False
+    if path.name.lower() in {"setup.py", "noxfile.py", "conftest.py", "release.py", "tasks.py", "_.py"}:
         return False
     if "test" in path.name.lower() or path.name.lower().endswith("_template.py"):
         return False

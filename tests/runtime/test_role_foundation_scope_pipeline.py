@@ -58,6 +58,20 @@ def test_test_file_syntax_damage_does_not_require_scope_selection():
     assert _requires_scope_selection(report) is False
 
 
+def test_doc_and_example_syntax_damage_does_not_block_product_scope():
+    for path in ("doc/make_enums.py", "Example/legacy_demo.py"):
+        report = {
+            "source_health": {
+                "status": "damaged",
+                "project_shape": "single_project",
+                "inaccessible_count": 0,
+                "syntax_error_count": 1,
+                "syntax_error_samples": [{"path": path, "reason": "SyntaxError"}],
+            }
+        }
+        assert _requires_scope_selection(report) is False
+
+
 def test_role_foundation_blocks_dirty_portfolio_before_adr_and_spec(tmp_path):
     portfolio = tmp_path / "portfolio"
     current = portfolio / "20260101_current"

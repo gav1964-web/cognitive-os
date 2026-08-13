@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -303,7 +304,18 @@ def _confidence(facts: dict[str, Any], bottlenecks: list[dict[str, Any]], match:
 
 
 def _targets_by_type(analysis_tasks: dict[str, Any], task_types: set[str]) -> list[str]:
-    return [str(row.get("target")) for row in _tasks(analysis_tasks) if row.get("type") in task_types and row.get("target")]
+    return [target for row in _tasks(analysis_tasks) if row.get("type") in task_types for target in _target_values(row.get("target"))]
+
+
+def _target_values(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if item]
+    if isinstance(value, str) and value.startswith("["):
+        try:
+            return _target_values(ast.literal_eval(value))
+        except (SyntaxError, ValueError):
+            pass
+    return [str(value)] if value else []
 
 
 def _tasks(analysis_tasks: dict[str, Any]) -> list[dict[str, Any]]:

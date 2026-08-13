@@ -11,7 +11,7 @@ from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
 from runtime.role_source_context import build_source_context
-from runtime.source_target_policy import is_context_only_implementation_target
+from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
 
 ARCHITECTURE_DECISION_POLICY = load_architecture_decision_policy()
 FALLBACK_ARCHETYPE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_archetype"])
@@ -71,14 +71,17 @@ def _fallback_architecture_synthesis(project_report: dict[str, Any]) -> dict[str
     domain_profile = dict(scope.get("domain_profile", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
     plan = dict(readiness.get("minimal_extraction_plan", {}))
-    plan_candidates = [
+    all_plan_candidates = [
         str(row.get("capability"))
         for row in list(plan.get("capabilities_to_extract", []) or [])
         if isinstance(row, dict) and row.get("capability")
-        and not is_context_only_implementation_target(str(row["capability"]))
     ]
-    callable_candidates = [target for target in _callable_transform_fallback_candidates(answers) if not is_context_only_implementation_target(target)]
+    all_callable_candidates = _callable_transform_fallback_candidates(answers)
+    plan_candidates = [target for target in all_plan_candidates if not is_context_only_implementation_target(target)]
+    callable_candidates = [target for target in all_callable_candidates if not is_context_only_implementation_target(target)]
     candidates = callable_candidates or plan_candidates
+    if not candidates:
+        candidates = [target for target in [*all_callable_candidates, *all_plan_candidates] if is_fallback_product_target(target)]
     if not candidates:
         candidates = _fallback_python_read_files(summary)
     if not candidates:
@@ -321,8 +324,11 @@ def _brief_sources(
         + list(source_context)
         + neighbor_sources
     )
+    implementation = [source for source in candidates if _implementation_brief_source(source)]
+    if not implementation:
+        implementation = [source for source in candidates if _fallback_context_brief_source(source)]
     return sorted(
-        [source for source in candidates if _implementation_brief_source(source)],
+        implementation,
         key=lambda source: (0 if source in source_context else 1, *_brief_source_sort_key(source)),
     )[:32]
 
@@ -331,7 +337,9 @@ def _implementation_brief_source(source: str) -> bool:
     if ".py:" not in lowered and not lowered.endswith(".py"):
         return False
     return not is_context_only_implementation_target(source)
-
+def _fallback_context_brief_source(source: str) -> bool:
+    lowered = "/" + source.replace("\\", "/").lower().lstrip("/")
+    return ".py:" in lowered and is_fallback_product_target(source)
 def _fallback_python_read_files(summary: dict[str, Any]) -> list[str]:
     rows = []
     for item in list(summary.get("read_files") or []):
@@ -344,11 +352,9 @@ def _fallback_python_read_files(summary: dict[str, Any]) -> list[str]:
             continue
         rows.append(source)
     return _dedupe_strings(rows)[:4]
-
 def _domain_evidence_source(source: str) -> bool:
     lowered = source.lower()
     return any(token in lowered for token in DOMAIN_EVIDENCE_SOURCE_TOKENS)
-
 def _brief_source_sort_key(source: str) -> tuple[int, str]:
     lowered = source.lower()
     score = 0
@@ -357,14 +363,11 @@ def _brief_source_sort_key(source: str) -> tuple[int, str]:
         if any(token in lowered for token in tokens):
             score += int(rule.get("score_delta") or 0)
     return (score, source)
-
 def _tasks(project_report: dict[str, Any]) -> list[dict[str, Any]]:
     tasks = dict(project_report.get("analysis_tasks", {})).get("tasks", [])
     return [item for item in tasks if isinstance(item, dict)]
-
 def _targets_by_type(tasks: list[dict[str, Any]], types: set[str]) -> list[str]:
     return [str(task.get("target")) for task in tasks if task.get("type") in types and task.get("target")]
-
 def _node_refs(rows: object) -> list[str]:
     if not isinstance(rows, list):
         return []
@@ -375,18 +378,15 @@ def _node_refs(rows: object) -> list[str]:
         if row.get("path") and row.get("name"):
             refs.append(f"{row.get('path')}:{row.get('name')}")
     return refs
-
 def _plan_capability_refs(readiness: dict[str, Any]) -> list[str]:
     plan = dict(readiness.get("minimal_extraction_plan", {}))
     rows = plan.get("capabilities_to_extract", [])
     if not isinstance(rows, list):
         return []
     return [str(row.get("capability")) for row in rows if isinstance(row, dict) and row.get("capability")]
-
 def _decision_summary(summary: dict[str, Any], capabilities: list[dict[str, Any]], risks: list[dict[str, Any]]) -> str:
     project = summary.get("root", "project")
     return f"Treat {project} as a candidate for bounded capability extraction: {len(capabilities)} capability candidates, {len(risks)} architecture risks."
-
 def _source_strata(readiness: dict[str, Any]) -> dict[str, Any]:
     strata = readiness.get("source_strata", {})
     if not isinstance(strata, dict):

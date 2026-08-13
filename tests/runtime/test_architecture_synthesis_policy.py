@@ -3,10 +3,28 @@ from __future__ import annotations
 from pathlib import Path
 
 from runtime.architecture_synthesis_policy import load_architecture_synthesis_policy
+from runtime.architecture_decision_builder import _first_slice_with_source_targets
 from runtime.project_architecture_synthesis import synthesize_project_architecture
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_first_slice_flattens_list_valued_task_targets() -> None:
+    first_slice = {"targets": ["app.py:primary"]}
+    tasks = [{"type": "EXTRACT_CAPABILITY", "target": "['app.py:parse', 'app.py:validate']"}]
+
+    result = _first_slice_with_source_targets(first_slice, tasks)
+
+    assert result["targets"] == ["app.py:primary", "app.py:parse", "app.py:validate"]
+
+
+def test_first_slice_uses_analyzer_extraction_plan_when_advisory_has_no_targets() -> None:
+    plan = {"capabilities_to_extract": [{"capability": "pkg/core.py:normalize"}]}
+
+    result = _first_slice_with_source_targets({}, [], plan=plan)
+
+    assert result["targets"] == ["pkg/core.py:normalize"]
 
 
 def test_architecture_synthesis_policy_loads_current_catalog() -> None:
@@ -58,3 +76,25 @@ def _project_report() -> dict:
             },
         },
     }
+def test_decorated_route_is_not_capped_as_unprofiled_generic_target():
+    from runtime.target_quality import semantic_target_quality_report
+
+    report = semantic_target_quality_report(
+        "app/main.py:hello",
+        ranked_candidates=["app/main.py:hello"],
+        source_evidence=["app/main.py:hello"],
+        structural_evidence={
+            "argument_count": 0,
+            "inferred_output_type": "str",
+            "source_body_available": True,
+            "source_body_complete": True,
+            "decorators": ["app.route"],
+        },
+        output_contract={"result": "str"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert report["profiled_contract_family"] is True
+    assert "decorated_web_route_boundary" in report["contract_archetype_ids"]
+    assert report["score"] >= 91
+    assert not any("unprofiled" in reason for reason in report["reasons"])

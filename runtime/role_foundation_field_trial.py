@@ -41,8 +41,15 @@ def discover_python_projects(roots: list[Path]) -> list[Path]:
         if (base / "projects").is_dir():
             projects.extend(_child_python_projects(base / "projects"))
             continue
+        if (base / ".git").exists():
+            projects.append(base)
+            continue
         if _has_project_manifest(base):
             projects.append(base)
+            continue
+        git_children = [path for path in base.iterdir() if path.is_dir() and (path / ".git").exists()]
+        if git_children:
+            projects.extend(git_children)
             continue
         child_projects = _child_python_projects(base)
         if child_projects:

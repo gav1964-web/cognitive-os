@@ -11,8 +11,13 @@ from runtime.role_spec_writer_ranking import (
 )
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
+from runtime.source_contract_semantics import infer_source_contract
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
+from runtime._parts.technical_spec_builder_part3 import (
+    _input_contract_from_candidate,
+    _output_contract_from_candidate,
+)
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
@@ -63,6 +68,7 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         side_effects = list(candidate.get("side_effects", []) or [])
         signature = dict(candidate.get("signature", {}) or {})
         claims = [str(item) for item in candidate.get("claims", []) or []]
+        decorators = {str(item).lower().rsplit(".", 1)[-1] for item in candidate.get("decorators", []) or []}
 
         if kind == "pure_transform":
             score += 40
@@ -92,6 +98,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         if candidate.get("candidate_score") is not None:
             score += min(int(candidate.get("candidate_score") or 0), 100) // 20
             reasons.append("ProjectMapReport candidate score available")
+        if "property" in decorators:
+            score -= 90
+            reasons.append("property accessor is state evidence, not a meaningful first slice")
 
         if not side_effects:
             score += 25
@@ -210,19 +219,27 @@ def _semantic_rerank_candidates(ranked: list[dict[str, Any]], evidence: list[dic
     enriched = []
     for item in ranked:
         candidate = dict(item)
+        candidate_evidence = dict(candidate.get("evidence") or {})
+        target = str(candidate.get("source") or "")
+        hypothetical_ranking = [target, *[source for source in ranked_sources if source != target]]
+        side_effects = list(
+            candidate_evidence.get("contract_side_effects", candidate_evidence.get("side_effects", [])) or []
+        )
         quality = semantic_target_quality_report(
-            str(candidate.get("source") or ""),
-            ranked_candidates=ranked_sources,
+            target,
+            ranked_candidates=hypothetical_ranking,
             source_evidence=evidence_sources,
             selection_reason="; ".join(str(reason) for reason in candidate.get("reasons", [])),
+            structural_evidence=infer_source_contract(candidate_evidence),
+            input_contract=_input_contract_from_candidate(candidate_evidence),
+            output_contract=_output_contract_from_candidate(candidate_evidence),
+            side_effect_contract={"declared": side_effects, "requires_process_boundary": bool(side_effects)},
         )
         candidate["semantic_quality"] = quality
         candidate["semantic_score"] = int(quality.get("score") or 0)
         candidate["semantic_status"] = str(quality.get("status") or "")
         enriched.append(candidate)
     first = enriched[0]
-    if first["semantic_status"] == "strong":
-        return enriched
     replacement = _best_semantic_replacement(enriched)
     if replacement is None or replacement is first:
         return enriched
@@ -260,6 +277,20 @@ def _semantic_candidate_is_better(item: dict[str, Any], *, first: dict[str, Any]
     score = int(item.get("score") or 0)
     if _would_replace_executable_ready_target_with_method(first, item, first_score=first_score, score=score):
         return False
+    reason_text = " ".join(str(reason) for reason in item.get("reasons", [])).lower()
+    first_reason_text = " ".join(str(reason) for reason in first.get("reasons", [])).lower()
+    if "framework request/response boundary, not first reusable core contract" in reason_text and score < first_score:
+        return False
+    bounded_transform = "deterministic parser/normalizer/validator shape" in reason_text
+    first_is_bounded_transform = "deterministic parser/normalizer/validator shape" in first_reason_text
+    if (
+        status == "strong"
+        and bounded_transform
+        and not first_is_bounded_transform
+        and semantic_score >= first_semantic
+        and score >= first_score - int(SEMANTIC_RERANK_POLICY.get("bounded_transform_score_slack") or 55)
+    ):
+        return True
     if status == "strong" and semantic_score >= first_semantic + int(SEMANTIC_RERANK_POLICY.get("strong_semantic_delta") or 8) and score >= first_score - int(SEMANTIC_RERANK_POLICY.get("strong_score_slack") or 35):
         return True
     if status == "strong" and semantic_score >= first_semantic + int(SEMANTIC_RERANK_POLICY.get("strong_close_semantic_delta") or 6) and score >= first_score - int(SEMANTIC_RERANK_POLICY.get("strong_close_score_slack") or 10):

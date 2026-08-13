@@ -288,6 +288,46 @@ def test_architecture_decision_excludes_context_only_first_slice_targets(tmp_pat
     assert "integration/test_runtime.py:run_case" not in adr["spec_writer_brief"]["files_or_symbols"]
 
 
+def test_architecture_decision_excludes_setup_build_helpers(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    adr = build_architecture_decision(
+        goal="Extract SDK boundary",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 2, "entrypoints": [], "languages": ["Python"]},
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "protocol_api_client"}},
+                "6_runtime_extraction_readiness": {"minimal_extraction_plan": {"capabilities_to_extract": [
+                    {"capability": "setup.py:parse_requirements"},
+                    {"capability": "sdk/client.py:build_request"},
+                ]}},
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["sdk/client.py:build_request"]
+
+
+def test_architecture_decision_excludes_root_docs_src_tutorials(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    adr = build_architecture_decision(
+        goal="Extract model contract",
+        project_report={
+            "summary": {"root": project.as_posix(), "file_count": 2, "entrypoints": [], "languages": ["Python"]},
+            "answers": {
+                "1_scope": {"domain_profile": {"kind": "generic"}},
+                "6_runtime_extraction_readiness": {"minimal_extraction_plan": {"capabilities_to_extract": [
+                    {"capability": "docs_src/tutorial.py:create_db"},
+                    {"capability": "sqlmodel/main.py:get_sqlalchemy_type"},
+                ]}},
+            },
+        },
+    )
+
+    assert adr["first_slice_contract"]["targets"] == ["sqlmodel/main.py:get_sqlalchemy_type"]
+
+
 def test_architecture_fallback_uses_plan_after_context_only_callable_is_rejected(tmp_path):
     project = tmp_path / "project"
     project.mkdir()

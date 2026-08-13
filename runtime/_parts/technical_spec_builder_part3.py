@@ -121,11 +121,12 @@ def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     semantic = infer_source_contract(candidate)
     documented = dict(semantic.get("docstring_argument_types") or {})
     constrained = dict(semantic.get("argument_constraint_types") or {})
+    usage_types = dict(semantic.get("argument_usage_types") or {})
     owner = str(semantic.get("owner_class") or "")
     args = _contract_args(signature)
     if args:
         contract = {
-            str(arg.get("name") or "payload"): _candidate_argument_type(arg, documented, constrained)
+            str(arg.get("name") or "payload"): _candidate_argument_type(arg, documented, constrained, usage_types)
             for arg in args
             if isinstance(arg, dict)
         }
@@ -136,12 +137,14 @@ def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
         return {"call_context": "NoArguments"}
     return {"call_context": _inferred_payload_type(source)}
 
-def _candidate_argument_type(arg: dict[str, Any], documented: dict[str, str], constrained: dict[str, str]) -> str:
+def _candidate_argument_type(
+    arg: dict[str, Any], documented: dict[str, str], constrained: dict[str, str], usage_types: dict[str, str]
+) -> str:
     name = str(arg.get("name") or "payload")
     annotation = str(arg.get("annotation") or "")
     if annotation and annotation.lower() not in IGNORED_RETURN_ANNOTATIONS:
         return annotation
-    return documented.get(name) or constrained.get(name) or _contract_type_from_arg(name, annotation)
+    return documented.get(name) or constrained.get(name) or usage_types.get(name) or _contract_type_from_arg(name, annotation)
 
 def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [
@@ -154,10 +157,13 @@ def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
 def _output_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     semantic = infer_source_contract(candidate)
     inferred = str(semantic.get("inferred_output_type") or "").strip()
+    source = str(candidate.get("source") or "")
+    policy_inferred = _inferred_result_type(source, str(candidate.get("snippet") or ""))
+    if inferred in {"MappingLike", "SequenceLike", "TupleLike", "SetLike"} and policy_inferred != "InferredOutput":
+        return {"result": policy_inferred}
     if inferred and inferred.lower() not in IGNORED_RETURN_ANNOTATIONS:
         return {"result": inferred}
-    source = str(candidate.get("source") or "")
-    return {"result": _inferred_result_type(source, str(candidate.get("snippet") or ""))}
+    return {"result": policy_inferred}
 
 def _contract_type_from_arg(name: str, annotation: str) -> str:
     annotation = annotation.strip()

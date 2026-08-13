@@ -1,6 +1,19 @@
 from __future__ import annotations
 
 from runtime.technical_spec_document import render_technical_spec_document
+from runtime.technical_spec_builder import _rank_extraction_candidates
+
+
+def test_property_accessor_is_ranked_below_behavioral_candidate() -> None:
+    ranked = _rank_extraction_candidates(
+        [
+            {"source": "entities.py:run_id", "kind": "pure_transform", "decorators": ["property"], "side_effects": []},
+            {"source": "client.py:log_run", "kind": "central_flow_node", "side_effects": ["network"]},
+        ]
+    )
+
+    assert ranked[0]["source"] == "client.py:log_run"
+    assert "property accessor" in " ".join(ranked[1]["reasons"])
 
 
 def test_technical_spec_document_renders_human_tz_sections() -> None:

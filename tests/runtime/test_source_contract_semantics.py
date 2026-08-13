@@ -26,6 +26,18 @@ def test_returned_mapping_variable_is_inferred_from_assignment():
     assert evidence["output_inference_basis"] == "return_expression"
 
 
+def test_awaited_repository_get_result_is_inferred_as_entity():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "id", "annotation": "int"}], "returns": ""},
+            "snippet": "async def delete_note(id: int):\n    note = await crud.get(id)\n    return note",
+        }
+    )
+
+    assert evidence["inferred_output_type"] == "EntityLike"
+    assert evidence["output_inference_basis"] == "return_expression"
+
+
 def test_docstring_can_supply_mapping_semantics_when_return_expression_is_opaque():
     evidence = infer_source_contract(
         {
@@ -134,3 +146,171 @@ def test_argument_constraints_infer_optional_literal_type():
     assert evidence["argument_constraint_types"] == {
         "media_type": "Optional[Literal['audio', 'video']]"
     }
+
+
+def test_structural_quality_rewards_explicit_failure_contract():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "value", "annotation": "str"}], "returns": "str"},
+            "snippet": "def validate(value: str) -> str:\n    if not value:\n        raise ValueError('empty')\n    return value",
+        }
+    )
+
+    score, reasons = structural_quality_adjustment(
+        evidence,
+        input_contract={"value": "str"},
+        output_contract={"result": "str"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert score >= 25
+    assert "explicit failure paths prove a negative contract" in reasons
+
+
+def test_generator_body_produces_iterator_contract():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "rows", "annotation": "list[str]"}]},
+            "snippet": "def generate_rows(rows):\n    for row in rows:\n        yield row.strip()",
+        }
+    )
+
+    assert evidence["inferred_output_type"] == "IteratorLike"
+    assert evidence["output_inference_basis"] == "yield_expression"
+
+
+def test_argument_usage_and_receiver_return_produce_concrete_contracts():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "rows", "annotation": ""}]},
+            "snippet": "def add_rows(self, rows):\n    for row in rows:\n        self.add(row)\n    return self",
+        }
+    )
+
+    assert evidence["argument_usage_types"] == {"rows": "IterableLike"}
+    assert evidence["inferred_output_type"] == "ReceiverState"
+
+
+def test_deleted_argument_key_proves_mapping_mutation_and_return_shape():
+    evidence = infer_source_contract(
+        {
+            "signature": {
+                "args": [
+                    {"name": "logger", "annotation": ""},
+                    {"name": "level", "annotation": ""},
+                    {"name": "event", "annotation": ""},
+                ]
+            },
+            "snippet": (
+                "def filter_taskname(logger, level, event):\n"
+                "    if 'taskName' in event:\n"
+                "        del event['taskName']\n"
+                "    return event"
+            ),
+        }
+    )
+
+    assert evidence["argument_usage_types"]["event"] == "MappingLike"
+    assert evidence["inferred_output_type"] == "MappingLike"
+    assert evidence["state_mutation"] is True
+
+
+def test_tensor_to_image_method_chain_proves_array_output():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "tensor", "annotation": ""}]},
+            "snippet": (
+                "def tensor2image(tensor):\n"
+                "    image = tensor[0].cpu().float().numpy()\n"
+                "    return image.astype('uint8')"
+            ),
+        }
+    )
+
+    assert evidence["argument_usage_types"] == {"tensor": "IndexableLike"}
+    assert evidence["inferred_output_type"] == "ArrayLike"
+
+
+def test_string_replacement_preserves_argument_and_output_type():
+    evidence = infer_source_contract(
+        {"signature": {"args": [{"name": "message", "annotation": ""}]}, "snippet": "def alter(message):\n    message = message.replace('old', 'new')\n    return message"}
+    )
+    assert evidence["argument_usage_types"] == {"message": "str"}
+    assert evidence["inferred_output_type"] == "str"
+
+
+def test_subscript_assignment_proves_local_mapping_result():
+    evidence = infer_source_contract(
+        {"snippet": "def tokenize(text):\n    result = tokenizer(text)\n    result['labels'] = []\n    return result"}
+    )
+    assert evidence["inferred_output_type"] == "MappingLike"
+
+
+def test_loop_and_boolean_usage_prove_scalar_argument_types():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "count"}, {"name": "enabled"}]},
+            "snippet": "def run(count, enabled):\n    for _ in range(count):\n        if enabled and count:\n            pass",
+        }
+    )
+    assert evidence["argument_usage_types"] == {"count": "int", "enabled": "bool"}
+
+
+def test_dbapi_execute_proves_sql_input_and_result_shape():
+    evidence = infer_source_contract(
+        {"signature": {"args": [{"name": "sql"}]}, "snippet": "def execute(sql):\n    result = cursor.execute(sql)\n    return result"}
+    )
+    assert evidence["argument_usage_types"] == {"sql": "SQLLike"}
+    assert evidence["inferred_output_type"] == "DatabaseResult"
+
+
+def test_request_call_result_proves_response_shape_through_local_variable():
+    evidence = infer_source_contract(
+        {"snippet": "def update(payload):\n    response = client.perform_request(payload)\n    return response"}
+    )
+    assert evidence["inferred_output_type"] == "ResponseLike"
+
+
+def test_attribute_access_proves_protocol_argument_shape():
+    evidence = infer_source_contract(
+        {"signature": {"args": [{"name": "options", "annotation": "object"}]}, "snippet": "def run(options):\n    return options.mode"}
+    )
+    assert evidence["argument_usage_types"] == {"options": "ProtocolLike"}
+
+
+def test_tensor_reduction_arithmetic_proves_array_output():
+    evidence = infer_source_contract(
+        {"snippet": "def pool(values, mask):\n    total = torch.sum(values * mask, 1)\n    return total / torch.clamp(mask.sum(1), min=1e-9)"}
+    )
+    assert evidence["inferred_output_type"] == "ArrayLike"
+
+
+def test_multiple_structured_return_shapes_produce_union_contract():
+    evidence = infer_source_contract(
+        {"snippet": "def overlay(value):\n    if value:\n        return make_item(value)\n    return [value]"}
+    )
+    assert evidence["inferred_output_type"] == "Union[ItemLike, SequenceLike]"
+
+
+def test_numpy_style_named_return_uses_type_after_colon():
+    evidence = infer_source_contract(
+        {"snippet": "def predict(values):\n    \"\"\"Returns\n    -------\n    p : array of shape [n, k]\n    \"\"\"\n    return np.log(values)"}
+    )
+    assert evidence["inferred_output_type"] == "ArrayLike"
+
+
+def test_format_call_proves_string_output():
+    evidence = infer_source_contract(
+        {"snippet": "def hello(version):\n    message = 'Python {}'.format(version)\n    return message"}
+    )
+    assert evidence["inferred_output_type"] == "str"
+
+
+def test_source_contract_preserves_extracted_decorators():
+    evidence = infer_source_contract({"snippet": "def hello():\n    return 'ok'", "decorators": ["app.route"]})
+    assert evidence["decorators"] == ["app.route"]
+
+    precomputed = infer_source_contract(
+        {"structural_contract": {"inferred_output_type": "str"}, "decorators": ["app.route"]}
+    )
+    assert precomputed["decorators"] == ["app.route"]

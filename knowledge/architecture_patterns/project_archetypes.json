@@ -277,6 +277,71 @@
       ]
     },
     {
+      "rule_id": "deep_learning_image_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 94,
+      "archetype": "deep_learning_image_pipeline",
+      "label": "deep-learning image training and inference pipeline",
+      "match": {
+        "text_contains_any": [
+          "image enhancement",
+          "image-to-image",
+          "cyclegan",
+          "convolutional network",
+          "generator",
+          "discriminator",
+          "torchvision",
+          "tensorflow"
+        ],
+        "required_contains_any": [
+          "image enhancement",
+          "image-to-image",
+          "cyclegan",
+          "convolutional",
+          "torchvision",
+          "tensorflow"
+        ],
+        "required_contains_all": ["image", "model"],
+        "min_score": 35
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "extraction", "process_boundary", "bottlenecks"],
+        "primary_target_prefer": ["forward", "transform", "tensor2image", "load_batch", "load_test_data", "resnet", "adversarial"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is the image dataset-to-model path around {target}, where tensor shapes, model artifacts, device placement, and deterministic fixture inference need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Dataset loading and image preprocessing are separated from model construction and execution.",
+        "Tensor/image shapes, ranges, color channels, and device placement are explicit boundary contracts.",
+        "Training checkpoints and pretrained weights are external artifacts with manifests.",
+        "First verification uses tiny image/tensor fixtures and fake model boundaries without GPU or model downloads."
+      ],
+      "first_slice": {
+        "name": "image_model_transform_slice",
+        "goal": "Stabilize one image-or-tensor transformation from fixture input through a bounded model/preprocessing capability.",
+        "target_sources": ["central", "extraction", "process_boundary"],
+        "targets_prefer": ["forward", "transform", "tensor2image", "load_batch", "resnet", "adversarial"],
+        "steps": [
+          "Define image/tensor input shape, dtype, range, channel order, and output contract.",
+          "Separate dataset and artifact loading from deterministic transformation logic.",
+          "Inject model/device dependencies so contract tests do not require GPU or downloads.",
+          "Verify malformed shape, unsupported channel count, model failure, and deterministic fixture output."
+        ]
+      },
+      "defer": [
+        "Do not require full training, GPU execution, or pretrained model downloads for first verification.",
+        "Do not treat checkpoints, generated images, or datasets as active source code."
+      ],
+      "verification_extra": "Use tiny synthetic image/tensor fixtures and fake model objects for CPU-only contract tests.",
+      "scenario_summary": [
+        "Load or receive image/tensor inputs with explicit shape and value-range contracts.",
+        "Construct or load the configured image model behind an artifact boundary.",
+        "Train, evaluate, or execute a bounded image transformation capability.",
+        "Convert model tensors into inspectable image or metric outputs."
+      ],
+      "input_summary": ["image files or tensors", "dataset batches", "model/checkpoint configuration", "device and preprocessing options"],
+      "output_summary": ["transformed images or tensors", "training/evaluation metrics", "model checkpoints", "explicit shape or model errors"]
+    },
+    {
       "rule_id": "ml_competition_inference_script",
       "record_type": "project_archetype_rule",
       "priority": 93,
@@ -1645,6 +1710,28 @@
       "verification_extra": "Use tiny spec/plan fixtures and fake LLM outputs to verify compile graph construction without live model calls."
     },
     {
+      "rule_id": "container_update_management_service",
+      "record_type": "project_archetype_rule",
+      "priority": 97,
+      "archetype": "container_update_management_service",
+      "label": "container update management service",
+      "match": {
+        "text_contains_any": ["container updates", "update containers", "image pruning", "private registries"],
+        "required_contains_all": ["docker", "container"],
+        "negative_contains_any": ["llm repair", "send_to_model", "model-proposed file update"],
+        "min_score": 30
+      },
+      "purpose_summary": "Manage Docker container checks, updates, registries, remote hosts, and lifecycle operations through explicit policies.",
+      "scenario_summary": [
+        "Discover containers and evaluate whether image updates are available.",
+        "Build and execute bounded update plans for enabled containers.",
+        "Manage local or remote container hosts through authenticated adapters.",
+        "Report update, registry, lifecycle, and notification failures explicitly."
+      ],
+      "input_summary": ["container inventory", "image references", "update policy", "registry credentials", "host configuration"],
+      "output_summary": ["update plans", "container lifecycle results", "image digest state", "notifications", "structured failures"]
+    },
+    {
       "rule_id": "multi_agent_orchestration_runtime",
       "record_type": "project_archetype_rule",
       "priority": 94,
@@ -1654,23 +1741,20 @@
         "framework_contains_any": [
           "fastapi"
         ],
-        "text_contains_any": [
-          "a2a",
-          "agentcard",
-          "agent",
-          "consensus",
-          "orchestrator",
-          "group_manager",
-          "pipeline"
+          "text_contains_any": [
+            "agentcard",
+            "agent-to-agent",
+            "consensus",
+            "orchestrator",
+            "group_manager"
         ],
         "domain_profile_kind": [
           "multi_agent_orchestration_runtime"
         ],
         "min_score": 80,
-        "required_contains_any": [
-          "a2a",
-          "agentcard",
-          "agent-to-agent",
+          "required_contains_any": [
+            "agentcard",
+            "agent-to-agent",
           "consensus",
           "group_manager"
         ],

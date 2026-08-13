@@ -97,6 +97,15 @@ def purpose_sentence(docs: str) -> str:
     return text[:240].strip()
 
 
+def descriptive_purpose_heading(docs: str) -> str:
+    heading = purpose_heading(docs)
+    lowered = heading.lower()
+    words = [word for word in lowered.replace("-", " ").split() if word]
+    if len(words) >= 6 or any(marker in lowered for marker in (" is a ", " is an ", " provides ", " for ")):
+        return heading
+    return ""
+
+
 def _doc_priority(item: dict[str, Any]) -> tuple[int, str]:
     path = str(item.get("path", "")).lower()
     name = path.rsplit("/", 1)[-1]

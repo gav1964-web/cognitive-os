@@ -1,7 +1,21 @@
 from pathlib import Path
 
 from runtime.configured_role_pipeline import artifact_by_type, run_configured_role_prefix
-from runtime.role_project_analysis import prepare_role_project_report
+from runtime.role_project_analysis import enrich_weak_contract_readiness, prepare_role_project_report
+
+
+def test_weak_contract_readiness_flattens_list_valued_source_refs():
+    report = {
+        "answers": {
+            "4_contracts_data": {"weak_contract_zones": [["pkg/a.py:parse", "pkg/b.py:validate"]]},
+            "6_runtime_extraction_readiness": {"minimal_extraction_plan": {}},
+        }
+    }
+
+    enriched = enrich_weak_contract_readiness(report)
+
+    rows = enriched["answers"]["6_runtime_extraction_readiness"]["minimal_extraction_plan"]["capabilities_to_extract"]
+    assert [row["capability"] for row in rows] == ["pkg/a.py:parse", "pkg/b.py:validate"]
 
 
 def test_interpreter_synthesis_remains_advisory_to_configured_architect(monkeypatch, tmp_path: Path):

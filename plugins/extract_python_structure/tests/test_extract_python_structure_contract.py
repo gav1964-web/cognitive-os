@@ -3,6 +3,29 @@ from pathlib import Path
 from plugins.extract_python_structure.src.main import run
 
 
+def test_extract_python_structure_accepts_utf8_bom(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project").mkdir()
+    Path("project/app.py").write_text("\ufeffdef ready():\n    return True\n", encoding="utf-8")
+
+    result = run({"root": "project"})
+
+    assert result["files"][0]["functions"][0]["name"] == "ready"
+    assert result["skipped"] == []
+
+
+def test_extract_python_structure_separates_newer_parser_syntax(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project").mkdir()
+    Path("project/app.py").write_text("class Cache[T]:\n    pass\n", encoding="utf-8")
+
+    result = run({"root": "project"})
+
+    assert result["skipped"] == [
+        {"path": "app.py", "reason": "ParserVersionIncompatible", "line": 1}
+    ]
+
+
 def test_extract_python_structure_detects_imports_functions_and_routes(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project").mkdir()
@@ -107,10 +130,39 @@ def test_extract_python_structure_prioritizes_app_code_over_tools(tmp_path, monk
     assert result["routes"][0]["route"] == "/health"
 
 
+def test_extract_python_structure_defers_build_metadata_behind_named_package(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project/product/apis").mkdir(parents=True)
+    Path("project/setup.py").write_text("def parse_requirements():\n    return []\n", encoding="utf-8")
+    Path("project/product/__init__.py").write_text("", encoding="utf-8")
+    Path("project/product/apis/inference.py").write_text(
+        "def run_inference(model: str, inputs: list) -> list:\n    return list(inputs)\n", encoding="utf-8"
+    )
+
+    result = run({"root": "project", "max_files": 2})
+
+    assert [row["path"] for row in result["files"]] == ["product/__init__.py", "product/apis/inference.py"]
+
+
+def test_extract_python_structure_prioritizes_owned_package_over_config_modules(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project/configs/base").mkdir(parents=True)
+    Path("project/sdk/apis").mkdir(parents=True)
+    for index in range(4):
+        Path(f"project/configs/base/backend_{index}.py").write_text("backend = 'demo'\n", encoding="utf-8")
+    Path("project/sdk/__init__.py").write_text("", encoding="utf-8")
+    Path("project/sdk/apis/inference.py").write_text("def infer(values):\n    return list(values)\n", encoding="utf-8")
+
+    result = run({"root": "project", "max_files": 2})
+
+    assert [row["path"] for row in result["files"]] == ["sdk/__init__.py", "sdk/apis/inference.py"]
+
+
 def test_extract_python_structure_prioritizes_package_code_over_docs_src(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project/typer").mkdir(parents=True)
     Path("project/docs_src/tutorial").mkdir(parents=True)
+    Path("project/docs_src/__init__.py").write_text("", encoding="utf-8")
     Path("project/docs_src/tutorial/main.py").write_text(
         "def main():\n"
         "    print('demo')\n",
@@ -139,6 +191,20 @@ def test_extract_python_structure_prioritizes_package_code_over_docs_src(tmp_pat
     assert result["files"][0]["path"] == "typer/core.py"
     assert result["central_nodes"][0]["path"] == "typer/core.py"
     assert result["central_nodes"][0]["name"] == "invoke"
+
+
+def test_extract_python_structure_defers_end_to_end_generated_clients(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project/end_to_end_tests/generated_client").mkdir(parents=True)
+    Path("project/openapi_client").mkdir(parents=True)
+    Path("project/end_to_end_tests/__init__.py").write_text("", encoding="utf-8")
+    Path("project/end_to_end_tests/generated_client/api.py").write_text("def regen():\n    return None\n", encoding="utf-8")
+    Path("project/openapi_client/__init__.py").write_text("", encoding="utf-8")
+    Path("project/openapi_client/parser.py").write_text("def parse_schema(data: dict) -> dict:\n    return data\n", encoding="utf-8")
+
+    result = run({"root": "project", "max_files": 2})
+
+    assert [row["path"] for row in result["files"]] == ["openapi_client/__init__.py", "openapi_client/parser.py"]
 
 
 def test_extract_python_structure_prioritizes_domain_package_roots(tmp_path, monkeypatch):
@@ -262,3 +328,14 @@ def test_extract_python_structure_reports_errors_schema_fields_and_tests(tmp_pat
     assert insights["test_surface"]["test_functions"] == 1
     assert insights["test_surface"]["test_files_seen"] == 1
     assert result["contracts"]["typed_functions"][0]["name"] == "handle"
+
+
+def test_extract_python_structure_indexes_oversized_single_file_cli_with_explicit_budget(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    source = "# product CLI\n" + ("# retained behavior\n" * 15000) + "def deploy(config: str) -> bool:\n    return bool(config)\n"
+    Path("product.py").write_text(source, encoding="utf-8")
+
+    result = run({"root": ".", "max_files": 10, "max_bytes_per_file": 1_000_000})
+
+    assert result["files"][0]["path"] == "product.py"
+    assert result["contracts"]["typed_functions"][0]["name"] == "deploy"

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from runtime.contract_archetype_inference import (
     archetype_score_adjustments,
     contract_archetype_for_target,
@@ -7,9 +6,9 @@ from runtime.contract_archetype_inference import (
 )
 from runtime.target_quality import semantic_target_quality_report
 
-
 def test_contract_archetype_inference_matches_generalized_holdout_shapes():
     cases = {
+        "backend/core/check_actions/check_actions_util.py:parse_image_spec": "structured_reference_parser",
         "src/attr/_make.py:_create_slots_class": "class_synthesis_factory",
         "src/urllib3/connectionpool.py:urlopen": "protocol_request_transaction",
         "more_itertools/more.py:distinct_permutations": "combinatorial_iterator_generation",
@@ -43,6 +42,21 @@ def test_contract_archetype_inference_matches_generalized_holdout_shapes():
         assert contract["validation_gates"]
         assert contract["failure_modes"]
         assert adjustments["profiled_contract_family"] is True
+
+
+def test_contract_archetypes_cover_type_terminal_hook_and_api_boundaries():
+    cases = {
+        "app/api_routes.py:create_api_base_model": "class_synthesis_factory",
+        "monitor/views.py:header": "terminal_header_rendering",
+        "runtime/ingredient.py:post_run_hook": "lifecycle_hook_registration",
+        "client/http.py:send_api_request": "protocol_request_transaction",
+    }
+
+    for target, expected in cases.items():
+        contract = contract_archetype_for_target(target)
+        assert contract["contract_archetype"] == expected
+        assert contract["input_contract"]
+        assert contract["output_contract"]
 
 
 def test_target_quality_uses_contract_archetype_as_generalized_family():

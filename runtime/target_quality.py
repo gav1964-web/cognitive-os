@@ -97,8 +97,15 @@ def semantic_target_quality_report(
     reasons.extend(archetype_adjustments["reasons"])
     profile_ids = list(profile_adjustments.get("profile_ids") or [])
     archetype_ids = list(archetype_adjustments.get("profile_ids") or [])
+    structural_profile = _structural_contract_family(structural_evidence)
+    if structural_profile:
+        score += 4
+        archetype_ids.append(structural_profile)
+        reasons.append("source decorator proves a bounded web route contract")
     profiled_contract_family = bool(
-        profile_adjustments.get("profiled_contract_family") or archetype_adjustments.get("profiled_contract_family")
+        profile_adjustments.get("profiled_contract_family")
+        or archetype_adjustments.get("profiled_contract_family")
+        or structural_profile
     )
     if "pure transform" in reason_text or "deterministic parser" in reason_text:
         score += 8
@@ -229,6 +236,11 @@ def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) 
     return direct
 
 
+def _structural_contract_family(evidence: dict[str, Any] | None) -> str:
+    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in dict(evidence or {}).get("decorators", [])}
+    return "decorated_web_route_boundary" if decorators & {"route", "get", "post", "put", "patch", "delete"} else ""
+
+
 def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:
     hits = []
     for token in RUNTIME_BOUNDARY_TOKENS:
@@ -253,7 +265,7 @@ def _strong_contract_hit(lowered: str, symbol: str) -> bool:
 def _trivial_symbol(symbol: str) -> bool:
     if symbol in TRIVIAL_SYMBOLS:
         return True
-    if symbol.startswith(TRIVIAL_PREFIXES):
+    if symbol.startswith(TRIVIAL_PREFIXES) and not any(token in symbol for token in TRIVIAL_SUFFIX_ALLOWED_CONTAINS_ANY):
         return True
     if symbol.endswith(TRIVIAL_SUFFIXES) and not any(token in symbol for token in TRIVIAL_SUFFIX_ALLOWED_CONTAINS_ANY):
         return True
@@ -291,7 +303,7 @@ def _profiled_suspicious_allowed(suspicious: list[str], symbol: str, profiled_co
     if suspicious == ["/helpers"]:
         return symbol in {"one_of", "oneof", "infix_notation", "located_expr"}
     if suspicious == ["/utils/"]:
-        return symbol == "parse_shorthand"
+        return symbol in {"parse_shorthand", "verifycert", "verify_certificate", "validate_certificate"}
     return False
 
 

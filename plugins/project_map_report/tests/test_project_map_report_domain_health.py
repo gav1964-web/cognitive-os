@@ -1,6 +1,27 @@
 from plugins.project_map_report.src.main import run
 
 
+def test_project_map_report_treats_newer_python_syntax_as_parser_limit():
+    result = run(
+        {
+            "tree": {"root": "modern", "counts": {"files": 2, "directories": 1}},
+            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": [], "dependency_files": []},
+            "files": {"files": [], "skipped": []},
+            "python_structure": {
+                "files": [{"path": "app.py", "functions": []}],
+                "skipped": [{"path": "cache.py", "reason": "ParserVersionIncompatible", "line": 1}],
+            },
+            "runtime_commands": {"commands": [], "skipped": []},
+        }
+    )
+
+    health = result["source_health"]
+    assert health["status"] == "noisy"
+    assert health["syntax_error_count"] == 0
+    assert health["parser_incompatibility_count"] == 1
+    assert health["inaccessible_count"] == 0
+
+
 def test_project_map_report_uses_domain_flow_anchor_for_first_slice():
     result = run(
         {
@@ -81,6 +102,14 @@ def test_project_map_report_skips_non_purpose_doc_headings_for_main_task():
     )
 
     assert result["answers"]["1_scope"]["main_task"].startswith("Inferred from docs: Real Package")
+
+
+def test_project_map_report_prefers_descriptive_heading_over_warning_paragraph():
+    from plugins.project_map_report.src.doc_purpose import descriptive_purpose_heading
+
+    docs = "# Tool is a self-hosted app for automating Docker container updates\n\nPlease do not use it in production.\n"
+
+    assert descriptive_purpose_heading(docs).startswith("Tool is a self-hosted app")
 
 
 def test_package_init_entrypoint_still_counts_as_library_surface():

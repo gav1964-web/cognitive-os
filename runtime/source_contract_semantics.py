@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import ast
-import re
 import textwrap
 from typing import Any
+
+from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
 
 
 _WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput"}
@@ -14,14 +15,18 @@ _WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutp
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     precomputed = candidate.get("structural_contract")
     if isinstance(precomputed, dict) and precomputed:
-        return dict(precomputed)
+        return {
+            **precomputed,
+            "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
+        }
     signature = dict(candidate.get("signature") or {})
     snippet = _snippet_text(candidate.get("snippet"))
     function, source_complete = _function_node(snippet)
     args = [row for row in signature.get("args", []) or [] if isinstance(row, dict)]
     args = [row for row in args if str(row.get("name") or "") not in {"self", "cls"}]
-    docstring_types = _docstring_argument_types(snippet, [str(row.get("name") or "") for row in args])
+    docstring_types = docstring_argument_types(snippet, [str(row.get("name") or "") for row in args])
     constraint_types = _argument_constraint_types(function, [str(row.get("name") or "") for row in args])
+    usage_types = _argument_usage_types(function, [str(row.get("name") or "") for row in args])
     return_annotation = str(signature.get("returns") or "").strip()
     inferred_output, output_basis = _output_shape(function, return_annotation, snippet, source_complete=source_complete)
     typed_args = [row for row in args if _concrete_type(row.get("annotation"))]
@@ -31,6 +36,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "docstring_available": bool(ast.get_docstring(function)) if function is not None else _has_docstring_prefix(snippet),
         "docstring_argument_types": docstring_types,
         "argument_constraint_types": constraint_types,
+        "argument_usage_types": usage_types,
         "argument_count": len(args),
         "typed_argument_count": len(typed_args),
         "explicit_return_annotation": return_annotation,
@@ -39,6 +45,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "return_paths": _return_path_count(function),
         "raises": _raise_names(function),
         "state_mutation": _has_state_mutation(function),
+        "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
     }
 
 
@@ -80,6 +87,9 @@ def structural_quality_adjustment(
     if evidence.get("docstring_available"):
         score += 2
         reasons.append("callable docstring corroborates structural evidence")
+    if evidence.get("raises") and evidence.get("source_body_complete"):
+        score += 4
+        reasons.append("explicit failure paths prove a negative contract")
     declared_effects = list(effects.get("declared") or [])
     if declared_effects and effects.get("retry_policy") and effects.get("requires_process_boundary"):
         score += 4
@@ -108,15 +118,24 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
         if annotation.lower() not in {"any", "typing.any", "object"}:
             return annotation, "explicit_return_annotation"
     if function is not None:
-        assignments = _assignment_shapes(function)
+        argument_names = [
+            arg.arg
+            for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+            if arg.arg not in {"self", "cls"}
+        ]
+        assignments = {**_argument_usage_types(function, argument_names), **_assignment_shapes(function)}
+        yielded = [node for node in ast.walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
+        if yielded:
+            return "IteratorLike", "yield_expression"
         shapes = [_expression_shape(node.value, assignments) for node in ast.walk(function) if isinstance(node, ast.Return) and node.value]
         shapes = [shape for shape in shapes if shape]
-        if shapes and len(set(shapes)) == 1:
-            return shapes[0], "return_expression"
+        if shapes:
+            unique = sorted(set(shapes))
+            return (unique[0] if len(unique) == 1 else f"Union[{', '.join(unique)}]"), "return_expression"
         if source_complete and not any(isinstance(node, ast.Return) and node.value for node in ast.walk(function)):
             return "VoidSideEffect", "no_value_return"
     lowered = snippet.lower()
-    documented = _documented_output_shape(snippet)
+    documented = documented_output_shape(snippet)
     if documented:
         return documented, "docstring_return_contract"
     if "convert" in lowered and ("kwargs" in lowered or "mapping" in lowered or "dictionary" in lowered):
@@ -134,30 +153,50 @@ def _assignment_shapes(function: ast.AST) -> dict[str, str]:
             for target in targets:
                 if isinstance(target, ast.Name) and shape:
                     shapes[target.id] = shape
+                elif isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
+                    shapes[target.value.id] = "MappingLike"
     return shapes
 
 
 def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
-    if isinstance(node, ast.Dict):
-        return "MappingLike"
-    if isinstance(node, (ast.List, ast.ListComp)):
-        return "SequenceLike"
-    if isinstance(node, ast.Tuple):
-        return "TupleLike"
-    if isinstance(node, ast.Set):
-        return "SetLike"
+    literals = {ast.Dict: "MappingLike", ast.List: "SequenceLike", ast.ListComp: "SequenceLike", ast.Tuple: "TupleLike", ast.Set: "SetLike"}
+    if type(node) in literals:
+        return literals[type(node)]
     if isinstance(node, ast.Name):
+        if node.id in {"self", "cls"}:
+            return "ReceiverState"
         return assignments.get(node.id, "")
+    if isinstance(node, ast.Await):
+        return _expression_shape(node.value, assignments)
     if isinstance(node, ast.Constant):
         return type(node.value).__name__
+    if isinstance(node, ast.BinOp):
+        return "ArrayLike" if "ArrayLike" in {_expression_shape(value, assignments) for value in (node.left, node.right)} else "NumberLike"
     if isinstance(node, ast.Call):
         name = _call_name(node.func).lower()
-        if any(token in name for token in ("render", "response", "redirect")):
+        if name == "isinstance":
+            return "bool"
+        if any(token in name for token in ("render", "request", "response", "redirect")):
             return "ResponseLike"
         if name.endswith(("dict", "to_dict", "kwargs")):
             return "MappingLike"
+        owner, _, operation = name.rpartition(".")
+        if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")):
+            return "EntityLike"
         if name.endswith(("list", "all")):
             return "SequenceLike"
+        if name.endswith(("numpy", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")) or (name.startswith(("torch.", "np.", "numpy.")) and name.endswith(("sum", "mean", "clamp"))):
+            return "ArrayLike"
+        if name.endswith(("_item", "from_json")):
+            return "ItemLike"
+        if name.endswith(("format", "replace", "strip", "zfill")):
+            return "str"
+        if name.startswith(("np.", "numpy.")) and name.endswith(("exp", "log", "log10", "log2")):
+            return "ArrayLike"
+        if name.endswith(("image.frombytes", "image.fromarray")):
+            return "ImageLike"
+        if name.endswith((".execute", ".executemany")):
+            return "DatabaseResult"
     return ""
 
 
@@ -205,8 +244,13 @@ def _has_state_mutation(function: ast.AST | None) -> bool:
         if isinstance(target, ast.Name)
     }
     for node in ast.walk(function):
-        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Delete)):
+            if isinstance(node, ast.Delete):
+                targets = node.targets
+            elif isinstance(node, ast.Assign):
+                targets = node.targets
+            else:
+                targets = [node.target]
             if any(_target_mutates_external_state(target, local_names) for target in targets):
                 return True
     return False
@@ -237,38 +281,6 @@ def _has_docstring_prefix(snippet: str) -> bool:
     return '"""' in snippet or "'''" in snippet
 
 
-def _docstring_argument_types(snippet: str, names: list[str]) -> dict[str, str]:
-    hints: dict[str, str] = {}
-    for name in names:
-        if not name:
-            continue
-        patterns = (
-            rf"(?m)^\s*{re.escape(name)}\s*:\s*([^\n]+)$",
-            rf"(?m)^\s*{re.escape(name)}\s*\(([^)]+)\)\s*:",
-        )
-        for pattern in patterns:
-            match = re.search(pattern, snippet)
-            if match:
-                hints[name] = match.group(1).strip()
-                break
-    return hints
-
-
-def _documented_output_shape(snippet: str) -> str:
-    match = re.search(r"(?is)\breturns?\s*\n\s*-*\s*\n?\s*([A-Za-z_][A-Za-z0-9_.\[\], ]*)", snippet)
-    if not match:
-        return ""
-    documented = match.group(1).strip()
-    lowered = documented.lower()
-    if "tuple" in lowered:
-        return "TupleLike"
-    if "dict" in lowered or "mapping" in lowered:
-        return "MappingLike"
-    if "list" in lowered or "sequence" in lowered:
-        return "SequenceLike"
-    return documented
-
-
 def _argument_constraint_types(function: ast.AST | None, names: list[str]) -> dict[str, str]:
     if function is None:
         return {}
@@ -289,6 +301,61 @@ def _argument_constraint_types(function: ast.AST | None, names: list[str]) -> di
         literal = "Literal[" + ", ".join(repr(value) for value in sorted(constants, key=str)) + "]"
         result[name] = f"Optional[{literal}]" if name in optional else literal
     return result
+
+
+def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[str, str]:
+    if function is None:
+        return {}
+    known = set(names)
+    inferred: dict[str, str] = {}
+    for node in ast.walk(function):
+        if isinstance(node, ast.Delete):
+            for target in node.targets:
+                if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name) and target.value.id in known:
+                    inferred[target.value.id] = "MappingLike"
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            name = node.func.value.id
+            if node.func.attr in {"execute", "executemany"}:
+                for arg in node.args:
+                    if isinstance(arg, ast.Name) and arg.id in known:
+                        inferred[arg.id] = "SQLLike"
+            if name in known and node.func.attr in {"items", "keys", "values", "get", "update", "pop", "setdefault"}:
+                inferred[name] = "MappingLike"
+            elif name in known and node.func.attr in {"startswith", "endswith", "strip", "split", "zfill", "replace"}:
+                inferred[name] = "str"
+            elif name in known and node.func.attr in {"astype", "reshape", "transpose", "swapaxes", "tobytes", "numpy"}:
+                inferred[name] = "ArrayLike"
+            elif name in known:
+                inferred.setdefault(name, "ProtocolLike")
+        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known and node.attr in {"shape", "dtype", "ndim"}:
+            inferred[node.value.id] = "ArrayLike"
+        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known:
+            inferred.setdefault(node.value.id, "ProtocolLike")
+        elif isinstance(node, ast.Call) and _call_name(node.func) == "open":
+            for arg in node.args:
+                if isinstance(arg, ast.Name) and arg.id in known:
+                    inferred[arg.id] = "PathLike"
+        elif isinstance(node, ast.Call) and _call_name(node.func) in {"isinstance", "echo_prompt"}:
+            for arg in node.args[:1]:
+                if isinstance(arg, ast.Name) and arg.id in known:
+                    inferred[arg.id] = "ArrayLike" if _call_name(node.func) == "isinstance" else "str"
+        elif isinstance(node, (ast.For, ast.comprehension)) and isinstance(node.iter, ast.Name) and node.iter.id in known:
+            inferred.setdefault(node.iter.id, "IterableLike")
+        elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id in known:
+            inferred.setdefault(node.value.id, "ArrayLike" if isinstance(node.slice, ast.Tuple) else "IndexableLike")
+        elif isinstance(node, ast.BinOp):
+            for value in (node.left, node.right):
+                if isinstance(value, ast.Name) and value.id in known:
+                    inferred.setdefault(value.id, "NumberLike")
+        elif isinstance(node, ast.BoolOp):
+            for value in node.values:
+                if isinstance(value, ast.Name) and value.id in known:
+                    inferred.setdefault(value.id, "bool")
+        elif isinstance(node, ast.Call) and _call_name(node.func) == "range":
+            for arg in node.args:
+                if isinstance(arg, ast.Name) and arg.id in known:
+                    inferred.setdefault(arg.id, "int")
+    return inferred
 
 
 def _constraint_constants(node: ast.AST) -> set[object]:

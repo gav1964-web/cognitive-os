@@ -306,6 +306,8 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
             node_text = "\n".join(lines[start - 1 : end])
             side_effects = infer_transitive_side_effects(tree, node)
             direct_effects = infer_ast_side_effects(node, node_text)
+            decorators = [_call_name(item.func if isinstance(item, ast.Call) else item)
+                          for item in getattr(node, "decorator_list", [])]
             result = {
                 "path": path.name,
                 "symbol": symbol,
@@ -313,11 +315,12 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "end_line": end,
                 "text": node_text[:900],
                 "signature": _ast_signature(node),
+                "decorators": decorators,
                 "side_effects": side_effects["effects"],
                 "selection_side_effects": selection_side_effects(direct_effects),
                 "side_effect_chains": side_effects["chains"],
                 "structural_contract": infer_source_contract(
-                    {"signature": _ast_signature(node), "snippet": node_text}
+                    {"signature": _ast_signature(node), "snippet": node_text, "decorators": decorators}
                 ),
             }
             if len(matches) > 1:

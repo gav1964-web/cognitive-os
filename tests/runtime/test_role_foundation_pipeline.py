@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from runtime.project_benchmark import analyze_project
 from runtime.role_foundation_pipeline import _auto_active_root_decision, _enrich_weak_contract_readiness
 from runtime.role_foundation_pipeline import run_role_foundation_benchmark, run_role_foundation_pipeline
 
@@ -273,7 +274,11 @@ def test_role_foundation_active_root_tolerates_newer_python_syntax(tmp_path):
     )
 
     assert result["status"] == "ok"
-    assert result["active_root_decision"]["selected_relative_path"] == "modernpkg"
+    assert result["active_root_decision"] is None
+    health = analyze_project(project)["project_map_report"]["source_health"]
+    assert health["status"] == "noisy"
+    assert health["syntax_error_count"] == 0
+    assert health["parser_incompatibility_count"] == 1
 
 
 def test_role_foundation_cli_single_project():

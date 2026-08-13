@@ -8,6 +8,80 @@ def _run_spec_writer(architecture_decision: dict):
     return run_role_skill(producer_for_artifact_type("TechnicalSpec"), architecture_decision=architecture_decision)
 
 
+def test_spec_writer_demotes_arguments_builder_when_domain_target_exists():
+    targets = ("app/main.py:arguments", "app/core.py:trim")
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer domain transform over CLI parser construction",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": list(targets),
+        },
+        "traceability": [
+            {"source": source, "requirement": "Capability candidate requires TechnicalSpec."} for source in targets
+        ],
+        "source_context": {
+            targets[0]: {
+                "kind": "broad_function",
+                "signature": {"args": [], "returns": "ArgumentParser"},
+                "snippet": {"text": "def arguments(): return argparse.ArgumentParser()"},
+                "callers": ["app/main.py:main"],
+            },
+            targets[1]: {
+                "kind": "pure_transform",
+                "signature": {"args": [{"name": "value", "annotation": "str"}], "returns": "str"},
+                "snippet": {"text": "def trim(value): return value.strip()"},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == targets[1]
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "CLI/bootstrap support helper" in " ".join(ranked[targets[0]]["reasons"])
+
+
+def test_semantic_rerank_uses_structural_contract_before_selecting_target():
+    weak = "pkg/service.py:process_records"
+    bounded = "pkg/contracts.py:parse_record"
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Select a structurally proven first slice",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": [weak, bounded],
+        },
+        "traceability": [
+            {"source": weak, "requirement": "Capability candidate requires TechnicalSpec."},
+            {"source": bounded, "requirement": "Capability candidate requires TechnicalSpec."},
+        ],
+        "source_context": {
+            weak: {
+                "kind": "central_flow_node",
+                "signature": {"args": [{"name": "records", "annotation": ""}], "returns": ""},
+                "snippet": {"text": "def process_records(records):\n    return external_call(records)"},
+                "central_flow_node": True,
+                "candidate_score": 100,
+            },
+            bounded: {
+                "kind": "pure_transform",
+                "signature": {"args": [{"name": "text", "annotation": "str"}], "returns": "dict[str, str]"},
+                "snippet": {"text": "def parse_record(text: str) -> dict[str, str]:\n    return {'value': text.strip()}"},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == bounded
+    assert spec["extraction_contract"]["semantic_quality"]["score"] >= 97
+
+
 def test_spec_writer_demotes_test_suite_harness_when_product_event_target_exists():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

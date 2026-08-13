@@ -106,7 +106,7 @@ def analyze_project(project_dir: Path) -> dict[str, Any]:
     tree = scan_project_tree({"path": root_text, "max_files": 2000, "max_depth": 8})
     stack = detect_project_stack({"path": root_text})
     files = read_many_files({"root": root_text, "auto_discover": True, "max_files": 30})
-    python_structure = extract_python_structure({"root": root_text, "max_files": 80})
+    python_structure = extract_python_structure({"root": root_text, "max_files": 80, "max_bytes_per_file": 1_000_000})
     runtime_commands = extract_runtime_commands({"root": root_text})
     report = project_map_report(
         {

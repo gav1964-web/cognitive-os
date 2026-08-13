@@ -5,7 +5,13 @@
       "/tests/",
       "/test/",
       "/docs/",
+      "/docs_src/",
+      "docs_src/",
       "/examples/",
+      "/end_to_end_tests/",
+      "end_to_end_tests/",
+      "/samples/",
+      "_samples/",
       "/scripts/",
       "/tools/",
       "/utils/",
@@ -34,30 +40,38 @@
       "archive",
       "blockwise",
       "crawler",
+      "candidates",
+      "chunk",
       "dag",
       "event_trigger",
       "flow",
+      "handle_",
       "import_hook",
       "modulegraph",
+      "estimate_",
       "plugin_state",
       "process_api",
+      "repos",
       "rebuild",
       "task_engine",
       "task_run",
       "template",
-      "trigger"
+      "trigger",
+      "widget"
     ],
     "strong_contract_tokens": [
       "build_providers_from_config",
       "calculate",
       "compile",
       "decode",
-      "deserialize",
-      "encode",
+    "deserialize",
+    "distance",
+    "encode",
       "format",
       "escape",
       "load_payload",
       "normalize",
+      "output_json",
       "parse",
       "resolve",
       "search",
@@ -66,10 +80,12 @@
       "unsign",
       "validate"
     ],
-    "strong_contract_prefixes": [
-      "build_",
-      "create_",
-      "make_",
+  "strong_contract_prefixes": [
+    "build_",
+    "create_",
+    "generate_",
+    "make_",
+    "register_",
       "query_"
     ],
     "strong_contract_symbols": [
@@ -80,7 +96,7 @@
       "acquire_capability",
       "capability_registry",
       "foundry",
-      "prompt",
+      "prompt_lab",
       "semantic"
     ],
     "runtime_boundary_tokens": [
@@ -148,7 +164,9 @@
       "build",
       "resolve",
       "normalize",
-      "validate"
+      "validate",
+      "candidates",
+      "repos"
     ],
     "liveness_probe_symbols": [
       "health",
@@ -162,6 +180,7 @@
     ],
     "bootstrap_symbols": [
       "parse_args",
+      "arguments",
       "main",
       "is_ignored",
       "should_ignore",
@@ -397,6 +416,7 @@
         "documentation",
         "json_schema",
         "python_type",
+        "interpolate_string",
         "version",
         "exists",
         "helper"
@@ -410,6 +430,7 @@
         "/archive.py"
       ],
       "utility_path_tokens": [
+        "cli.py",
         "/utils/",
         "/widgets/mixins.py",
         "/documentation.py"
@@ -533,6 +554,7 @@
     "bootstrap_support": {
       "symbols": [
         "parse_args",
+        "arguments",
         "main",
         "is_ignored",
         "should_ignore",
@@ -557,13 +579,12 @@
       ],
       "symbols": [
         "release",
-        "publish",
+      "publish",
         "deploy"
       ],
       "symbol_contains_any": [
         "release",
-        "publish",
-        "deploy",
+      "deploy",
         "build_wheel",
         "upload"
       ]
@@ -573,7 +594,9 @@
         "/__init__.py"
       ],
       "symbols": [
-        "__init__",
+      "__init__",
+      "__enter__",
+      "__exit__",
         "configure_logging",
         "setup_logging",
         "basic_config",
@@ -586,7 +609,8 @@
         "test_suite",
         "decorator",
         "parse_iso",
-        "build_digest_header"
+      "build_digest_header"
+      ,"items"
       ]
     },
     "mutation_like_first_slice": {

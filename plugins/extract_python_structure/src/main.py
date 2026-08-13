@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 from typing import Any
 
@@ -42,10 +43,12 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         if size > max_bytes:
             skipped.append({"path": rel_path, "reason": "too_large", "size_bytes": size})
             continue
+        source = path.read_text(encoding="utf-8-sig", errors="ignore")
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"), filename=rel_path)
+            tree = ast.parse(source, filename=rel_path)
         except SyntaxError as exc:
-            skipped.append({"path": rel_path, "reason": "SyntaxError", "line": exc.lineno})
+            reason = "ParserVersionIncompatible" if _newer_python_syntax(source, exc) else "SyntaxError"
+            skipped.append({"path": rel_path, "reason": reason, "line": exc.lineno})
             continue
         summary = _summarize_file(tree, rel_path, size)
         imports.update(summary.get("imports", []))
@@ -70,6 +73,17 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "project_insights": insights,
         "skipped": skipped,
     }
+
+
+def _newer_python_syntax(source: str, error: SyntaxError) -> bool:
+    lines = source.splitlines()
+    if not error.lineno or error.lineno > len(lines):
+        return False
+    line = lines[error.lineno - 1]
+    return bool(
+        re.match(r"^\s*(?:(?:async\s+)?def|class)\s+[A-Za-z_]\w*\s*\[", line)
+        or re.match(r"^\s*type\s+[A-Za-z_]\w*(?:\s*\[.*\])?\s*=", line)
+    )
 
 
 def _summarize_file(tree: ast.AST, rel_path: str, size: int) -> dict[str, Any]:

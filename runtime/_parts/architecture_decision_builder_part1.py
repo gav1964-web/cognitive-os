@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
+from runtime.architecture_slice_naming import semantic_first_slice_name
 from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
@@ -37,7 +38,7 @@ def build_architecture_decision(
     tasks = _tasks(project_report)
     synthesis = _architecture_synthesis(project_report)
     first_slice = _first_slice_contract(synthesis)
-    first_slice = _first_slice_with_source_targets(first_slice, tasks)
+    first_slice = _first_slice_with_source_targets(first_slice, tasks, plan=plan)
     boundaries = _subsystem_boundaries(project_report, tasks)
     capabilities = _capability_model(plan, tasks, first_slice)
     risks = _risks(project_report, tasks)
@@ -115,21 +116,58 @@ def build_architecture_decision(
     }
     return apply_architect_advisory(artifact, config=advisory_config)
 
-def _first_slice_with_source_targets(first_slice: dict[str, Any], tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    if first_slice.get("targets"):
-        return first_slice
-    targets = _dedupe_strings(
-        [
-            str(task.get("target") or "")
-            for task in tasks
-            if ".py:" in str(task.get("target") or "") and str(task.get("type") or "") != "MAP_SUBSYSTEM_BOUNDARY"
-        ]
-    )
+def _first_slice_with_source_targets(
+    first_slice: dict[str, Any], tasks: list[dict[str, Any]], *, plan: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    synthesis_targets = [str(target) for target in list(first_slice.get("targets") or [])]
+    fallback_targets = _task_source_targets(tasks)
+    if not synthesis_targets:
+        fallback_targets.extend(_plan_source_targets(plan or {}))
+    targets = _dedupe_strings(synthesis_targets + fallback_targets)
     if not targets:
         return first_slice
     row = dict(first_slice)
     row["targets"] = targets[:8]
+    if not row.get("name"):
+        row["name"] = semantic_first_slice_name("first_bounded_capability_slice", row["targets"])
+    row.setdefault("goal", str(FALLBACK_SLICE_POLICY.get("default_goal") or "Extract one bounded capability."))
+    row.setdefault(
+        "steps",
+        [str(step).format(primary=row["targets"][0]) for step in list(FALLBACK_SLICE_POLICY.get("steps") or [])],
+    )
+    row.setdefault("knowledge_rule", FALLBACK_SLICE_POLICY.get("knowledge_rule"))
+    row.setdefault("selection_policy", "choose the smallest source-backed slice with explicit input and output")
+    row.setdefault("handoff_expectation", "SpecWriter may rerank targets within this bounded source-backed slice")
     return row
+
+
+def _task_source_targets(tasks: list[dict[str, Any]]) -> list[str]:
+    targets: list[str] = []
+    for task in tasks:
+        if str(task.get("type") or "") == "MAP_SUBSYSTEM_BOUNDARY":
+            continue
+        value = task.get("target")
+        values = value if isinstance(value, list) else _literal_target_list(value)
+        targets.extend(str(item) for item in values if ".py:" in str(item or ""))
+    return targets
+
+
+def _plan_source_targets(plan: dict[str, Any]) -> list[str]:
+    targets: list[str] = []
+    for row in list(plan.get("capabilities_to_extract") or []):
+        value = row.get("capability") if isinstance(row, dict) else row
+        targets.extend(str(item) for item in _literal_target_list(value) if ".py:" in str(item or ""))
+    return targets
+
+
+def _literal_target_list(value: object) -> list[object]:
+    if isinstance(value, str) and value.startswith("["):
+        try:
+            parsed = ast.literal_eval(value)
+            return parsed if isinstance(parsed, list) else [value]
+        except (SyntaxError, ValueError):
+            pass
+    return [value]
 
 def _architecture_options(
     capabilities: list[dict[str, Any]],

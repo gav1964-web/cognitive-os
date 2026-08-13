@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 from typing import Any
 
@@ -84,7 +85,19 @@ def _weak_contract_targets(answers: dict[str, Any], readiness: dict[str, Any]) -
         *list(contracts.get("weak_contract_zones") or []),
         *str(strategy.get("hand_written_negative_tests") or "").split(";"),
     ]
-    return _dedupe_strings([str(value).strip() for value in values if ".py:" in str(value)])
+    return _dedupe_strings([source for value in values for source in _source_refs(value)])
+
+
+def _source_refs(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [source for item in value for source in _source_refs(item)]
+    if isinstance(value, str) and value.startswith("["):
+        try:
+            return _source_refs(ast.literal_eval(value))
+        except (SyntaxError, ValueError):
+            pass
+    text = str(value).strip()
+    return [text] if ".py:" in text else []
 
 
 def _dedupe_strings(values: list[str]) -> list[str]:

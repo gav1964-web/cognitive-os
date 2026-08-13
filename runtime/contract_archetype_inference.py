@@ -39,7 +39,8 @@ def matching_archetypes(target: str, *, path: str | None = None) -> list[dict[st
     lowered = target.replace("\\", "/").lower()
     symbol = lowered.rsplit(":", 1)[-1] if ":" in lowered else lowered
     source_path = lowered.split(":", 1)[0] if ":" in lowered else ""
-    return [row for row in payload["archetypes"] if _matches(row, source_path, symbol)]
+    matches = [row for row in payload["archetypes"] if _matches(row, source_path, symbol)]
+    return sorted(matches, key=lambda row: -int(row.get("priority") or 0))
 
 
 def contract_archetype_for_target(target: str) -> dict[str, Any]:

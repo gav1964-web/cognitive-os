@@ -85,6 +85,7 @@ def _semantic_review_checks(
     required = [str(item).lower() for item in list(policy.get("required_reason_tokens") or []) if item]
     return {
         "status_allowed": str(quality.get("status") or "") in set(policy.get("allowed_statuses") or []),
+        "not_explicitly_too_broad": "too broad" not in reason_text,
         "candidate_score_high_enough": int(contract.get("candidate_score") or 0) >= int(policy.get("min_candidate_score") or 0),
         "candidate_in_first_slice": not policy.get("required_candidate_in_first_slice", True) or candidate in preferred,
         "source_evidence_bound": bool(contract.get("evidence_source") == candidate),

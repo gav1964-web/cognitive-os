@@ -15,6 +15,7 @@ LATE_DIRS = {
     "docs",
     "docs_src",
     "dummyserver",
+    "end_to_end_tests",
     "examples",
     "extras",
     "generated",
@@ -50,10 +51,12 @@ EARLY_DIRS = {
     "src",
 }
 EARLY_FILES = {"api_server.py", "app.py", "main.py", "server.py", "api.py", "__init__.py"}
+LATE_FILES = {"conftest.py", "noxfile.py", "setup.py", "tasks.py"}
 
 
 def iter_python_files(root: Path):
     stack = [root]
+    deferred_files = []
     while stack:
         current = stack.pop()
         dirs = []
@@ -74,9 +77,16 @@ def iter_python_files(root: Path):
                 dirs.append(item)
             elif is_file and item.suffix.lower() == ".py":
                 files.append(item)
-        for item in sorted(files, key=traversal_key):
+        ordered_dirs = sorted(dirs, key=traversal_key)
+        early_files = [item for item in files if traversal_key(item)[0] < 3]
+        regular_files = [item for item in files if 3 <= traversal_key(item)[0] < 8]
+        deferred_files.extend(item for item in files if traversal_key(item)[0] >= 8)
+        for item in sorted(early_files, key=traversal_key):
             yield item
-        stack.extend(reversed(sorted(dirs, key=traversal_key)))
+        stack.extend(reversed(ordered_dirs))
+        for item in sorted(regular_files, key=traversal_key):
+            yield item
+    yield from sorted(deferred_files, key=lambda item: (path_priority(item.as_posix()), item.as_posix().lower()))
 
 
 def is_test_path(path: str) -> bool:
@@ -89,13 +99,15 @@ def traversal_key(path: Path) -> tuple[int, str]:
     if path.is_dir():
         if name == "src":
             return (0, name)
-        if name in EARLY_DIRS:
-            return (1, name)
         if name in LATE_DIRS or _is_generated_context_dir(name):
             return (9, name)
+        if (path / "__init__.py").is_file() or name in EARLY_DIRS:
+            return (1, name)
         return (3, name)
     if name in EARLY_FILES:
         return (0, name)
+    if name in LATE_FILES:
+        return (8, name)
     return (3, name)
 
 
@@ -135,7 +147,7 @@ def path_priority(path: str) -> int:
         for part in parts
     ) or any(_is_generated_context_dir(part) for part in parts):
         return 9
-    helper_names = {"benchmark.py", "bench.py", "noxfile.py", "conftest.py", "run_tests.py", "testclient.py", "testing.py"}
+    helper_names = {"benchmark.py", "bench.py", "run_tests.py", "testclient.py", "testing.py", *LATE_FILES}
     if parts[:2] == ["packaging", "pep517_backend"] or name.endswith(("_benchmark.py", "_bench.py")) or name in helper_names:
         return 8
     if lowered.startswith("src/") or "/src/" in lowered:

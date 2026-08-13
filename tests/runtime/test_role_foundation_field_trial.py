@@ -168,6 +168,20 @@ def test_discover_python_projects_keeps_manifest_root_as_one_project(tmp_path: P
     assert found == [project.resolve()]
 
 
+def test_discovery_keeps_cloned_non_python_repo_for_scope_reporting(tmp_path: Path):
+    corpus = tmp_path / "corpus"
+    python_repo = corpus / "owner__python"
+    non_python_repo = corpus / "owner__other"
+    for repo in (python_repo, non_python_repo):
+        (repo / ".git").mkdir(parents=True)
+    (python_repo / "app.py").write_text("print('ok')\n", encoding="utf-8")
+    (non_python_repo / "main.js").write_text("console.log('ok')\n", encoding="utf-8")
+
+    found = discover_python_projects([corpus])
+
+    assert found == [non_python_repo.resolve(), python_repo.resolve()]
+
+
 def test_primary_language_scope_marks_rust_workspace_with_python_assets_out_of_scope(tmp_path: Path):
     project = tmp_path / "mixed"
     (project / "crates" / "dbt-core" / "src").mkdir(parents=True)
@@ -181,6 +195,7 @@ def test_primary_language_scope_marks_rust_workspace_with_python_assets_out_of_s
     scope = _primary_language_scope(project)
 
     assert scope["status"] == "out_of_scope"
+    assert scope["primary_language"] == "Rust native extension"
     assert scope["reason_code"] == "unsupported_primary_language_for_python_foundation"
 
 
@@ -285,6 +300,62 @@ def test_primary_language_scope_marks_cpp_extension_wrapper_out_of_scope(tmp_pat
 
     assert scope["status"] == "out_of_scope"
     assert scope["primary_language"] == "C++ native extension"
+
+
+def test_primary_language_scope_marks_examples_only_repo_out_of_scope(tmp_path: Path):
+    project = tmp_path / "examples-only"
+    (project / "examples" / "python").mkdir(parents=True)
+    (project / "examples" / "python" / "main.py").write_text("print('example')\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_primary_language_scope_marks_setup_docs_and_tests_only_repo_out_of_scope(tmp_path: Path):
+    project = tmp_path / "support-only"
+    (project / "docs").mkdir(parents=True)
+    (project / "test").mkdir()
+    (project / "setup.py").write_text("from setuptools import setup\n", encoding="utf-8")
+    (project / "docs" / "conf.py").write_text("project = 'sample'\n", encoding="utf-8")
+    (project / "test" / "test_api.py").write_text("def test_api(): pass\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_primary_language_scope_marks_docs_tools_and_temporary_scripts_out_of_scope(tmp_path: Path):
+    project = tmp_path / "docs-tools"
+    (project / "_pages").mkdir(parents=True)
+    (project / "tools").mkdir()
+    (project / "scripts").mkdir()
+    (project / "_pages" / "conf.py").write_text("project = 'docs'\n", encoding="utf-8")
+    (project / "tools" / "lint.py").write_text("print('lint')\n", encoding="utf-8")
+    (project / "scripts" / "pytmp.py").write_text("print('temporary')\n", encoding="utf-8")
+
+    assert _primary_language_scope(project)["status"] == "out_of_scope"
+
+
+def test_primary_language_scope_marks_single_notebook_export_out_of_scope(tmp_path: Path):
+    project = tmp_path / "guide"
+    project.mkdir()
+    (project / "Getting Started.py").write_text("print('notebook export')\n", encoding="utf-8")
+
+    assert _primary_language_scope(project)["status"] == "out_of_scope"
+
+
+def test_primary_language_scope_marks_repo_without_python_out_of_scope(tmp_path: Path):
+    project = tmp_path / "javascript"
+    project.mkdir()
+    (project / "main.js").write_text("console.log('ok')\n", encoding="utf-8")
+
+    scope = _primary_language_scope(project)
+
+    assert scope["status"] == "out_of_scope"
+    assert scope["reason_code"] == "no_python_owned_product_boundary"
 
 
 def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):

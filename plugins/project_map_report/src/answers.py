@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .core_paths import is_core_path
-from .doc_purpose import docs_text, purpose_heading, purpose_sentence
+from .doc_purpose import descriptive_purpose_heading, docs_text, purpose_heading, purpose_sentence
 from .domain_profile import infer_domain_profile
 from .error_model_answers import (
     error_handling_hints,
@@ -170,6 +170,9 @@ def _main_task(project_type: str, summary: dict[str, Any], docs: str, domain_pro
     if profile.get("kind") == "ml_competition_inference_script":
         return "Run an ML competition inference workflow: load prompt/test CSV rows, generate model answers, postprocess them, and write a submission-style CSV."
     if docs:
+        descriptive_heading = descriptive_purpose_heading(docs)
+        if descriptive_heading:
+            return f"Inferred from docs: {descriptive_heading} ({project_type})."
         sentence = purpose_sentence(docs)
         if sentence:
             return f"Inferred from docs: {sentence} ({project_type})."
