@@ -68,6 +68,21 @@ def test_metric_and_model_query_contract_families_are_profiled():
     assert contract_archetype_for_target("httpcore/_async/http2.py:handle_async_request") == {}
 
 
+def test_d14_contract_families_are_profiled_without_project_names():
+    cases = {
+        "account_outputs.py:_add_token_to_remote_pool": "remote_pool_import_transaction",
+        "src/wifi/mixin.py:scan": "wireless_scan_state_reconciliation",
+        "vcs/core.py:_safe_restore": "vcs_stash_restore_transaction",
+        "socialscan/util.py:query": "async_identity_availability_query",
+        "gateway/client.py:heartbeat": "protocol_heartbeat_loop",
+        "tracking/processing_utils.py:sample_target_adaptive": "adaptive_image_target_crop",
+        "face/MTCNN.py:predict_onet": "multi_head_image_inference",
+    }
+
+    for target, expected in cases.items():
+        assert contract_archetype_for_target(target)["contract_archetype"] == expected
+
+
 def test_process_boundary_override_does_not_allow_known_too_broad_profile():
     override = load_technical_spec_policy()["process_boundary_review_override"]
 

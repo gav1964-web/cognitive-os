@@ -27,6 +27,11 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     candidates = list(scope_report.get("candidate_roots") or [])
     if not candidates:
         return _active_root_decision(project_dir, None)
+    if _current_root_is_python_product(project_dir):
+        decision = _active_root_decision(project_dir, project_dir)
+        decision["source"] = "auto_current_python_product_root"
+        decision["selection_confidence"] = "high"
+        return decision
     best = dict(candidates[0])
     second = dict(candidates[1]) if len(candidates) > 1 else {}
     best_score = int(best.get("score") or 0)
@@ -100,6 +105,22 @@ def _flat_script_collection_candidate(candidate: dict[str, Any]) -> bool:
         and not candidate.get("manifest_samples")
         and int(candidate.get("python_files") or 0) <= scope_policy_int("flat_script_collection_max_files", 20)
     )
+
+
+def _current_root_is_python_product(project_dir: Path) -> bool:
+    root_modules = list(project_dir.glob("*.py"))
+    if (project_dir / "__init__.py").exists() and len(root_modules) >= 5:
+        return True
+    entrypoints = {"main.py", "app.py", "manage.py", "train.py"}
+    if not any(path.name.lower() in entrypoints for path in root_modules):
+        return False
+    package_dirs = [
+        child for child in project_dir.iterdir()
+        if child.is_dir()
+        and (child / "__init__.py").exists()
+        and not _disfavored_scope_root(child.name)
+    ]
+    return len(package_dirs) >= 2
 
 
 def _selected_scope_decision(project_dir: Path, candidate: dict[str, Any], source: str) -> dict[str, Any]:

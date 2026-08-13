@@ -33,6 +33,7 @@ def run_role_foundation_pipeline(
     architect_advisory_config: LocalInferenceConfig | None = None,
     _auto_scope_depth: int = 0,
     _active_root_is_auto: bool = False,
+    _auto_scope_current_root_confirmed: bool = False,
 ) -> dict[str, Any]:
     load_skill_registry(root)
     active_root_decision = _active_root_decision(project_dir, active_root)
@@ -50,21 +51,34 @@ def run_role_foundation_pipeline(
         project_map_report = _attach_active_root_evidence(project_map_report, active_root_decision)
     project_artifact = _project_map_artifact(analysis_project_dir, goal, project_map_report)
     active_root_selected = active_root_decision["status"] == "selected"
-    scope_report = _scope_selection_report(analysis_project_dir, project_map_report, analyzer_outputs, active_root_selected=active_root_selected)
-    scope_required = _requires_scope_selection(project_map_report, active_root_selected=active_root_selected)
+    current_root_confirmed = _auto_scope_current_root_confirmed
+    scope_report = _scope_selection_report(
+        analysis_project_dir,
+        project_map_report,
+        analyzer_outputs,
+        active_root_selected=active_root_selected,
+        current_root_confirmed=current_root_confirmed,
+    )
+    scope_required = _requires_scope_selection(
+        project_map_report,
+        active_root_selected=active_root_selected,
+        current_root_confirmed=current_root_confirmed,
+    )
     auto_scope_useful = scope_required or _syntax_damage_is_test_support_only(dict(project_map_report.get("source_health") or {}))
     if (not active_root_selected or _active_root_is_auto) and _auto_scope_depth < 2 and auto_scope_useful:
         auto_decision = _auto_active_root_decision(analysis_project_dir, scope_report)
         if auto_decision["status"] == "selected":
+            selected_root = Path(str(auto_decision["selected_root"])).resolve()
             return run_role_foundation_pipeline(
                 root=root,
                 project_dir=project_dir,
                 goal=goal,
                 write=write,
-                active_root=Path(str(auto_decision["selected_root"])),
+                active_root=selected_root,
                 architect_advisory_config=architect_advisory_config,
                 _auto_scope_depth=_auto_scope_depth + 1,
                 _active_root_is_auto=True,
+                _auto_scope_current_root_confirmed=selected_root == analysis_project_dir,
             )
     if scope_required:
         scope_artifact = _scope_selection_artifact(analysis_project_dir, goal, scope_report)

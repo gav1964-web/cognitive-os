@@ -87,3 +87,15 @@ Zarr implements compressed, chunked, N-dimensional arrays for parallel computing
 """
 
     assert purpose_sentence(docs) == "Zarr implements compressed, chunked, N-dimensional arrays for parallel computing."
+
+
+def test_purpose_sentence_skips_sponsor_pitch_before_product_description() -> None:
+    docs = """PythonInquirer
+==============
+
+Nominate contributors for GitHub Sponsors using this form.
+
+PyInquirer is a collection of common interactive command line user interfaces.
+"""
+
+    assert purpose_sentence(docs) == "PyInquirer is a collection of common interactive command line user interfaces."

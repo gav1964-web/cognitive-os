@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+
 
 NON_PURPOSE_HEADINGS = {
     "agents.md",
@@ -141,9 +143,12 @@ def _non_purpose_heading(normalized: str) -> bool:
 
 
 def _non_purpose_sentence(normalized: str) -> bool:
+    project_policy = dict(load_foundation_semantic_quality_policy().get("project_analyzer") or {})
+    marketing = [str(item).lower() for item in project_policy.get("marketing_purpose_markers", [])]
     return (
         "intentionally excludes" in normalized
         or normalized.startswith("what is not included")
         or normalized.startswith("the package excludes")
         or normalized.startswith("not included")
+        or any(marker in normalized for marker in marketing)
     )

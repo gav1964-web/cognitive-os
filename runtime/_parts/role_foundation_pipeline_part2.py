@@ -110,10 +110,17 @@ def _scope_selection_artifact(project_dir: Path, goal: str, scope_report: dict[s
         "forbidden_actions_enforced": ["build_adr", "build_technical_spec", "write_code", "execute_pipeline"],
     }
 
-def _requires_scope_selection(project_map_report: dict[str, Any], *, active_root_selected: bool = False) -> bool:
+def _requires_scope_selection(
+    project_map_report: dict[str, Any],
+    *,
+    active_root_selected: bool = False,
+    current_root_confirmed: bool = False,
+) -> bool:
     source_health = dict(project_map_report.get("source_health") or {})
     shape = str(source_health.get("project_shape") or "")
     status = str(source_health.get("status") or "")
+    if current_root_confirmed:
+        return False
     if active_root_selected:
         if int(source_health.get("packaged_copy_signal_count") or 0) > 0:
             return True
@@ -136,6 +143,7 @@ def _scope_selection_report(
     analyzer_outputs: dict[str, Any],
     *,
     active_root_selected: bool = False,
+    current_root_confirmed: bool = False,
 ) -> dict[str, Any]:
     source_health = dict(project_map_report.get("source_health") or {})
     candidates = _scope_candidates(project_dir)
@@ -144,7 +152,11 @@ def _scope_selection_report(
     confidence = "single_candidate" if len(candidates) == 1 else "ambiguous"
     return {
         "artifact_type": "ScopeSelectionReport",
-        "status": "blocked_until_scope_selected" if _requires_scope_selection(project_map_report, active_root_selected=active_root_selected) else "not_required",
+        "status": "blocked_until_scope_selected" if _requires_scope_selection(
+            project_map_report,
+            active_root_selected=active_root_selected,
+            current_root_confirmed=current_root_confirmed,
+        ) else "not_required",
         "root": project_dir.as_posix(),
         "reason": _scope_selection_reason(source_health),
         "source_health": source_health,

@@ -205,3 +205,42 @@ def test_auto_scope_does_not_select_flat_script_collection_as_product(tmp_path):
     decision = _auto_active_root_decision(project, scope)
 
     assert decision["status"] == "not_selected"
+
+
+def test_auto_scope_keeps_current_python_package_root(tmp_path):
+    project = tmp_path / "library"
+    project.mkdir()
+    for name in ("__init__.py", "config.py", "registry.py", "resolver.py", "module.py"):
+        (project / name).write_text("value = 1\n", encoding="utf-8")
+    (project / "pip_package").mkdir()
+    scope = {"candidate_roots": [{"path": "pip_package", "score": 13, "python_files": 1}]}
+
+    decision = _auto_active_root_decision(project, scope)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_root"] == project.resolve().as_posix()
+    assert decision["source"] == "auto_current_python_product_root"
+
+
+def test_confirmed_current_root_does_not_reblock_on_packaged_copy_signal():
+    report = {"source_health": {"status": "clean", "packaged_copy_signal_count": 1}}
+
+    assert _requires_scope_selection(
+        report,
+        active_root_selected=True,
+        current_root_confirmed=True,
+    ) is False
+
+
+def test_auto_scope_keeps_modular_entrypoint_application_root(tmp_path):
+    project = tmp_path / "ml-system"
+    for package in ("backbone", "head"):
+        (project / package).mkdir(parents=True)
+        (project / package / "__init__.py").write_text("", encoding="utf-8")
+    (project / "train.py").write_text("def train(): pass\n", encoding="utf-8")
+    scope = {"candidate_roots": [{"path": "backbone", "score": 20, "python_files": 3}]}
+
+    decision = _auto_active_root_decision(project, scope)
+
+    assert decision["status"] == "selected"
+    assert decision["selected_root"] == project.resolve().as_posix()
