@@ -65,6 +65,28 @@ def test_search_uses_authenticated_gh_transport_when_token_exists():
     assert search.call_count == 1
 
 
+def test_search_paginates_only_until_enough_unseen_projects_exist():
+    policy = {
+        "minimum_stars": 1, "maximum_size_kb": 10, "maximum_search_pages": 3,
+        "production_signal_tokens": ["sdk"],
+    }
+    items = lambda names: {
+        "items": [
+            {"full_name": name, "clone_url": "url", "stargazers_count": 10, "size": 2,
+             "description": "production sdk", "topics": []}
+            for name in names
+        ]
+    }
+    with patch("tools.github_blind_corpus._search_page", side_effect=[items(["old/sdk"]), items(["new/sdk1", "new/sdk2"])]) as search:
+        rows = _search_stratum(
+            {"queries": ["topic:sdk"]}, policy, excluded={"old/sdk"}, needed=2
+        )
+
+    assert {row["full_name"] for row in rows} == {"old/sdk", "new/sdk1", "new/sdk2"}
+    assert search.call_count == 2
+    assert search.call_args_list[1].args[0]["page"] == "2"
+
+
 def test_authenticated_search_does_not_put_token_in_command():
     completed = type("Completed", (), {"returncode": 0, "stdout": '{"items": []}', "stderr": ""})()
     with patch("subprocess.run", return_value=completed) as run:

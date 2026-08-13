@@ -188,3 +188,20 @@ def test_auto_scope_selects_core_package_when_integrations_are_ambiguous(tmp_pat
 
     assert decision["selected_relative_path"] == "llama-index-core"
     assert decision["source"] == "auto_aliased_core_scope_selector"
+
+
+def test_auto_scope_does_not_select_flat_script_collection_as_product(tmp_path):
+    project = tmp_path / "script_collection"
+    (project / "src").mkdir(parents=True)
+    scope = {
+        "candidate_roots": [
+            {
+                "path": "src", "score": 92, "kind": "python_project_candidate",
+                "python_files": 6, "max_depth": 0, "manifest_samples": [],
+            }
+        ]
+    }
+
+    decision = _auto_active_root_decision(project, scope)
+
+    assert decision["status"] == "not_selected"

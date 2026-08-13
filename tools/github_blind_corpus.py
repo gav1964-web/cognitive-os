@@ -47,9 +47,9 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
     selected: list[dict[str, Any]] = []
     claimed = set(blacklist)
     for stratum in policy["strata"]:
-        candidates = _search_stratum(stratum, policy)
-        rows = [row for row in candidates if row["full_name"].lower() not in claimed and _eligible(row, policy)]
         count = int(policy["projects_per_stratum"])
+        candidates = _search_stratum(stratum, policy, excluded=claimed, needed=count)
+        rows = [row for row in candidates if row["full_name"].lower() not in claimed and _eligible(row, policy)]
         if len(rows) < count:
             raise RuntimeError(f"not enough unseen projects for {stratum['id']}: {len(rows)} < {count}")
         for row in rows[:count]:
@@ -110,24 +110,40 @@ def known_projects(artifacts: Path) -> set[str]:
     return known
 
 
-def _search_stratum(stratum: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
+def _search_stratum(
+    stratum: dict[str, Any],
+    policy: dict[str, Any],
+    *,
+    excluded: set[str] | None = None,
+    needed: int = 0,
+) -> list[dict[str, Any]]:
     by_name: dict[str, dict[str, Any]] = {}
+    excluded = excluded or set()
     qualifiers = (
         f"language:Python stars:>={int(policy['minimum_stars'])} "
         f"size:<={int(policy['maximum_size_kb'])} archived:false fork:false"
     )
-    for query in stratum["queries"]:
-        fields = {"q": f"{query} {qualifiers}", "sort": "stars", "order": "desc", "per_page": "50"}
-        params = urllib.parse.urlencode(fields)
-        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-        if token:
-            payload = _search_with_gh(fields)
-        else:
-            payload = _search_with_urllib(params)
-        for item in payload.get("items", []):
-            row = _project_row(item)
-            by_name.setdefault(row["full_name"].lower(), row)
+    max_pages = int(policy.get("maximum_search_pages") or 3) if needed else 1
+    for page in range(1, max_pages + 1):
+        for query in stratum["queries"]:
+            fields = {
+                "q": f"{query} {qualifiers}", "sort": "stars", "order": "desc",
+                "per_page": "100", "page": str(page),
+            }
+            payload = _search_page(fields)
+            for item in payload.get("items", []):
+                row = _project_row(item)
+                by_name.setdefault(row["full_name"].lower(), row)
+            eligible = [row for key, row in by_name.items() if key not in excluded and _eligible(row, policy)]
+            if needed and len(eligible) >= needed:
+                return sorted(by_name.values(), key=lambda row: (-row["stars"], row["full_name"].lower()))
     return sorted(by_name.values(), key=lambda row: (-row["stars"], row["full_name"].lower()))
+
+
+def _search_page(fields: dict[str, str]) -> dict[str, Any]:
+    if os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
+        return _search_with_gh(fields)
+    return _search_with_urllib(urllib.parse.urlencode(fields))
 
 
 def _search_with_urllib(params: str) -> dict[str, Any]:

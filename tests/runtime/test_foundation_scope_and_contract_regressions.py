@@ -25,7 +25,39 @@ def test_scope_ignores_example_fixture_when_root_cli_is_product(tmp_path):
     assert result["status"] == "in_scope"
 
 
+def test_scope_rejects_integration_fixtures_without_product_source(tmp_path):
+    fixture = tmp_path / "integration-test" / "models" / "dummy-chat"
+    fixture.mkdir(parents=True)
+    (fixture / "model.py").write_text("class Model: pass\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["python_source_files"] == 0
+
+
+def test_scope_rejects_documentation_led_demo(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "data").mkdir()
+    (tmp_path / "src" / "classify.py").write_text("print('demo')\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("guide\n" * 5_000, encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
 def test_metric_and_model_query_contract_families_are_profiled():
+    assert contract_archetype_for_target("sdk/client.py:__parse_response")["contract_archetype"] == (
+        "sdk_response_parse_verification"
+    )
+    assert contract_archetype_for_target("Augmentor/Pipeline.py:keras_generator_from_array")["contract_archetype"] == (
+        "array_batch_generator"
+    )
+    assert contract_archetype_for_target("oauth/compliance/slack.py:slack_compliance_fix")["contract_archetype"] == (
+        "oauth_compliance_hook"
+    )
     assert contract_archetype_for_target("dns/_ddr.py:ddr_tls_check_async")["contract_archetype"] == (
         "async_tls_validation_boundary"
     )

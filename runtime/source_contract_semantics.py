@@ -113,9 +113,12 @@ def structural_quality_adjustment(
 
 def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, source_complete: bool) -> tuple[str, str]:
     if annotation:
-        if annotation.lower() in {"none", "nonetype"}:
+        has_value_return = function is not None and any(
+            isinstance(node, ast.Return) and node.value is not None for node in ast.walk(function)
+        )
+        if annotation.lower() in {"none", "nonetype"} and not has_value_return:
             return "VoidSideEffect", "explicit_none_annotation"
-        if annotation.lower() not in {"any", "typing.any", "object"}:
+        if annotation.lower() not in {"any", "typing.any", "object", "none", "nonetype"}:
             return annotation, "explicit_return_annotation"
     if function is not None:
         argument_names = [
@@ -170,6 +173,8 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         return _expression_shape(node.value, assignments)
     if isinstance(node, ast.Constant):
         return type(node.value).__name__
+    if isinstance(node, ast.Attribute):
+        return "AttributeValue"
     if isinstance(node, ast.BinOp):
         return "ArrayLike" if "ArrayLike" in {_expression_shape(value, assignments) for value in (node.left, node.right)} else "NumberLike"
     if isinstance(node, ast.Call):

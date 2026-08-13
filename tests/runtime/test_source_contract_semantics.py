@@ -314,3 +314,12 @@ def test_source_contract_preserves_extracted_decorators():
         {"structural_contract": {"inferred_output_type": "str"}, "decorators": ["app.route"]}
     )
     assert precomputed["decorators"] == ["app.route"]
+
+
+def test_value_return_overrides_incorrect_none_annotation():
+    evidence = infer_source_contract(
+        {"signature": {"returns": "None"}, "snippet": "def task() -> None:\n    return entity.id"}
+    )
+
+    assert evidence["inferred_output_type"] == "AttributeValue"
+    assert evidence["output_inference_basis"] == "return_expression"

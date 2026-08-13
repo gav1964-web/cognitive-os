@@ -117,7 +117,13 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
                 "root_python_package": root_package,
             },
         }
-    if not py_files or _examples_only_python_corpus(path, py_files, python_source_files) or _independent_project_collection(path):
+    no_owned_boundary = (
+        not py_files
+        or _examples_only_python_corpus(path, py_files, python_source_files)
+        or _independent_project_collection(path)
+        or _documentation_led_demo(path, python_source_files, root_package)
+    )
+    if no_owned_boundary:
         return {
             "status": "out_of_scope",
             "reason_code": "no_python_owned_product_boundary",
@@ -152,7 +158,10 @@ def _examples_only_python_corpus(path: Path, py_files: list[Path], python_source
         return True
     if python_source_files or not py_files:
         return False
-    context_roots = {"examples", "example", "tests", "test", "docs", "doc", "templates", ".templates", "_pages", "tools"}
+    context_roots = {
+        "examples", "example", "tests", "test", "docs", "doc", "templates", ".templates", "_pages", "tools",
+        "integration-test", "integration_test", "integration_tests",
+    }
     support_files = {"setup.py", "noxfile.py", "conftest.py", "release.py", "tasks.py", "_.py"}
     return all(
         file.relative_to(path).parts[0].lower() in context_roots
@@ -170,6 +179,16 @@ def _independent_project_collection(path: Path) -> bool:
         return False
     members = [child for child in roots[0].iterdir() if child.is_dir()]
     return sum(bool(_files_with_suffixes(child, {".py"})) for child in members) >= 10
+
+
+def _documentation_led_demo(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
+    if _has_project_manifest(path) or root_package or len(python_source_files) > 2:
+        return False
+    top_dirs = {child.name.lower() for child in path.iterdir() if child.is_dir()}
+    if "src" not in top_dirs or not top_dirs.intersection({"data", "images", "assets", "notebooks"}):
+        return False
+    readmes = [child for child in path.iterdir() if child.is_file() and child.name.lower().startswith("readme")]
+    return bool(readmes) and max(file.stat().st_size for file in readmes) >= 20_000
 
 
 def _native_extension_wrapper_without_python_core(python_source_files: list[Path], rust_files: list[Path]) -> bool:
@@ -219,7 +238,7 @@ def _has_project_manifest(path: Path) -> bool:
 def _python_role_source_file(path: Path) -> bool:
     normalized = path.as_posix().lower()
     excluded = {"tests", "test", "docs", "examples", "example", "scripts", ".github", "ci", "templates", ".templates", "_pages", "tools"}
-    excluded.update({"bench", "benchmark", "benchmarks", "integration"})
+    excluded.update({"bench", "benchmark", "benchmarks", "integration", "integration-test", "integration_test", "integration_tests"})
     if "scenarios/example_fixture/" in normalized:
         return False
     if any(part in excluded for part in normalized.split("/")):
@@ -232,7 +251,10 @@ def _python_role_source_file(path: Path) -> bool:
 
 
 def _root_python_package(path: Path) -> str | None:
-    excluded = {"tests", "test", "docs", "examples", "scripts", "crates", "bench", "benchmark", "benchmarks", "integration"}
+    excluded = {
+        "tests", "test", "docs", "examples", "scripts", "crates", "bench", "benchmark", "benchmarks",
+        "integration", "integration-test", "integration_test", "integration_tests",
+    }
     for child in sorted(path.iterdir(), key=lambda item: item.name.lower()):
         if not child.is_dir() or child.name.startswith(".") or child.name.lower() in excluded:
             continue

@@ -3,6 +3,7 @@
   "projects_per_stratum": 8,
   "minimum_stars": 300,
   "maximum_size_kb": 30000,
+  "maximum_search_pages": 3,
   "excluded_name_tokens": ["awesome", "blogs", "boilerplate", "cookiecutter", "example", "examples", "interview-questions", "projects", "resources", "starter", "template", "tutorial", "udacity"],
   "excluded_description_tokens": ["awesome list", "books, papers", "collection of", "course", "curated list", "example end to end", "examples of", "interview questions", "learning resource", "starter template", "tutorial", "udacity"],
   "production_signal_tokens": ["api", "automation", "client", "command-line", "data", "framework", "library", "machine learning", "platform", "production", "sdk", "server", "service", "tool", "toolkit"],
@@ -44,7 +45,15 @@
         "topic:cloud-sdk",
         "topic:api-integration",
         "topic:third-party-api",
-        "topic:webhook"
+        "topic:webhook",
+        "topic:oauth-client",
+        "topic:openapi-client",
+        "topic:graphql-client",
+        "topic:payment-api",
+        "topic:kubernetes-client",
+        "topic:database-driver",
+        "topic:discord-api",
+        "topic:telegram-api"
       ]
     },
     {

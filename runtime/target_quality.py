@@ -101,7 +101,7 @@ def semantic_target_quality_report(
     if structural_profile:
         score += 4
         archetype_ids.append(structural_profile)
-        reasons.append("source decorator proves a bounded web route contract")
+        reasons.append("source decorator proves a bounded framework contract")
     profiled_contract_family = bool(
         profile_adjustments.get("profiled_contract_family")
         or archetype_adjustments.get("profiled_contract_family")
@@ -238,7 +238,11 @@ def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) 
 
 def _structural_contract_family(evidence: dict[str, Any] | None) -> str:
     decorators = {str(value).lower().rsplit(".", 1)[-1] for value in dict(evidence or {}).get("decorators", [])}
-    return "decorated_web_route_boundary" if decorators & {"route", "get", "post", "put", "patch", "delete"} else ""
+    if decorators & {"route", "get", "post", "put", "patch", "delete"}:
+        return "decorated_web_route_boundary"
+    if "task" in decorators:
+        return "decorated_background_task_boundary"
+    return ""
 
 
 def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:

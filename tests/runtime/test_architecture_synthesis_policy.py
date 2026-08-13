@@ -98,3 +98,21 @@ def test_decorated_route_is_not_capped_as_unprofiled_generic_target():
     assert "decorated_web_route_boundary" in report["contract_archetype_ids"]
     assert report["score"] >= 91
     assert not any("unprofiled" in reason for reason in report["reasons"])
+
+
+def test_decorated_background_task_is_a_profiled_framework_boundary():
+    from runtime.target_quality import semantic_target_quality_report
+
+    report = semantic_target_quality_report(
+        "app/tasks.py:process_item",
+        ranked_candidates=["app/tasks.py:process_item"],
+        source_evidence=["app/tasks.py:process_item"],
+        structural_evidence={"source_body_complete": True, "decorators": ["celery.task"]},
+        input_contract={"item_id": "UUID"},
+        output_contract={"result": "AttributeValue"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert report["profiled_contract_family"] is True
+    assert "decorated_background_task_boundary" in report["contract_archetype_ids"]
+    assert not any("unprofiled" in reason for reason in report["reasons"])

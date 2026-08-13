@@ -32,6 +32,8 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     best_score = int(best.get("score") or 0)
     second_score = int(second.get("score") or 0)
     path = str(best.get("path") or "")
+    if _flat_script_collection_candidate(best):
+        return _active_root_decision(project_dir, None)
     native_package = _native_python_package_scope(project_dir)
     if native_package:
         return _active_root_decision(project_dir, native_package)
@@ -88,6 +90,16 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
         }
     )
     return decision
+
+
+def _flat_script_collection_candidate(candidate: dict[str, Any]) -> bool:
+    path = str(candidate.get("path") or "").replace("\\", "/").strip("/").lower()
+    return bool(
+        path in PREFERRED_SCOPE_ROOTS
+        and int(candidate.get("max_depth") or 0) == 0
+        and not candidate.get("manifest_samples")
+        and int(candidate.get("python_files") or 0) <= scope_policy_int("flat_script_collection_max_files", 20)
+    )
 
 
 def _selected_scope_decision(project_dir: Path, candidate: dict[str, Any], source: str) -> dict[str, Any]:

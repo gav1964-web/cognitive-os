@@ -36,3 +36,12 @@ def test_role_source_policy_blocks_profiling_and_server_config_targets():
 
     for target in blocked:
         assert implementation_target_violation(target)["status"] == "blocked_no_safe_candidate"
+
+
+def test_role_source_policy_blocks_integration_test_variants():
+    for target in (
+        "integration-test/models/dummy.py:run",
+        "integration_test/models/dummy.py:run",
+        "integration_tests/models/dummy.py:run",
+    ):
+        assert implementation_target_violation(target)["status"] == "blocked_no_safe_candidate"
