@@ -16,6 +16,18 @@ def test_property_accessor_is_ranked_below_behavioral_candidate() -> None:
     assert "property accessor" in " ".join(ranked[1]["reasons"])
 
 
+def test_pass_only_hook_is_ranked_below_behavioral_candidate() -> None:
+    ranked = _rank_extraction_candidates(
+        [
+            {"source": "plugin.py:empty_hook", "kind": "pure_transform", "snippet": "def empty_hook(app):\n    pass\n"},
+            {"source": "plugin.py:clean_cache", "kind": "pure_transform", "snippet": "def clean_cache(app):\n    return app.clean()\n"},
+        ]
+    )
+
+    assert ranked[0]["source"] == "plugin.py:clean_cache"
+    assert "pass-only callable has no implementation contract" in ranked[1]["reasons"]
+
+
 def test_technical_spec_document_renders_human_tz_sections() -> None:
     text = render_technical_spec_document(
         project_report={"project": "demo", "content": {"summary": {"root": "demo"}}},

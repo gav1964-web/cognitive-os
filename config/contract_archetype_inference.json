@@ -3167,6 +3167,36 @@
       "failure_modes": ["shape_mismatch", "model_execution_error", "missing_output_head", "output_reshape_error"]
     },
     {
+      "id": "test_lifecycle_instrumentation_wrapper",
+      "priority": 109,
+      "symbol_contains_any": ["hook_for_unittest", "test_teardown_hook", "test_lifecycle_hook"],
+      "path_contains_any": ["hooks", "unittest", "instrumentation"],
+      "score_bonus": 30,
+      "ranking_bonus": 46,
+      "reason": "test lifecycle instrumentation is a bounded original-method to recording wrapper contract",
+      "contract_family": "test_lifecycle_instrumentation_wrapper",
+      "input_contract": {"records": "InstrumentationRecords", "original_method": "LifecycleCallable(args, kwargs)"},
+      "output_contract": {"wrapped_method": "LifecycleCallable(preserves_return_and_exception_semantics)", "failure_packet": "InstrumentationFailure(kind, lifecycle_label?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "instrumentation": "record grouping, method invocation and restoration ownership are explicit"},
+      "validation_gates": ["recorded and unrecorded lifecycle paths are covered", "wrapped return values and exceptions are preserved", "module/class label discovery tolerates missing metadata"],
+      "failure_modes": ["signature_binding_error", "metadata_missing", "recording_error", "wrapped_method_error"]
+    },
+    {
+      "id": "tabular_csv_serialization",
+      "priority": 109,
+      "symbol_contains_any": ["display_csv", "matrix_to_csv", "rows_to_csv"],
+      "path_contains_any": ["cli", "display", "export", "csv"],
+      "score_bonus": 28,
+      "ranking_bonus": 44,
+      "reason": "tabular CSV serialization is a bounded row matrix to escaped text transform",
+      "contract_family": "tabular_csv_serialization",
+      "input_contract": {"rows": "TabularRows(iterable[iterable[scalar]])", "dialect": "CsvDialect(optional delimiter, quoting, line_ending)"},
+      "output_contract": {"csv_text": "CsvText(rows, escaped_fields, terminal_line_policy)", "failure_packet": "CsvSerializationFailure(kind, row_index?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "mutation_policy": "input rows are not mutated and temporary buffers are locally owned"},
+      "validation_gates": ["empty, single and multiple rows are covered", "delimiter, quote, newline and unicode fields are escaped by CSV rules", "invalid row values preserve row-index evidence"],
+      "failure_modes": ["invalid_row", "encoding_error", "serialization_error"]
+    },
+    {
       "id": "lint_rule_checker",
       "symbol_prefixes": ["check_for_"],
       "symbol_contains_any": ["check_for"],

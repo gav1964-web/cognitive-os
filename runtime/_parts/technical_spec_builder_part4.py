@@ -118,6 +118,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         if candidate.get("snippet"):
             score += 5
             reasons.append("snippet available for source-backed review")
+        if _pass_only_snippet(candidate.get("snippet")):
+            score -= 120
+            reasons.append("pass-only callable has no implementation contract")
         unresolved_names = _high_confidence_unresolved_snippet_names(candidate)
         if unresolved_names:
             score -= 70
@@ -157,6 +160,21 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
             }
         )
     return sorted(ranked, key=lambda item: (-int(item["score"]), int(item["index"]), str(item.get("source") or "")))
+
+
+def _pass_only_snippet(value: object) -> bool:
+    snippet = _snippet_text(value)
+    if not snippet or "..." in snippet:
+        return False
+    try:
+        tree = ast.parse(snippet)
+    except SyntaxError:
+        return False
+    function = next((node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))), None)
+    if function is None:
+        return False
+    body = [node for node in function.body if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))]
+    return len(body) == 1 and isinstance(body[0], ast.Pass)
 
 def _high_confidence_unresolved_snippet_names(candidate: dict[str, Any]) -> list[str]:
     snippet = _snippet_text(candidate.get("snippet"))

@@ -122,6 +122,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _examples_only_python_corpus(path, py_files, python_source_files)
         or _independent_project_collection(path)
         or _documentation_led_demo(path, python_source_files, root_package)
+        or _documentation_code_examples(path, python_source_files, root_package)
     )
     if no_owned_boundary:
         return {
@@ -189,6 +190,18 @@ def _documentation_led_demo(path: Path, python_source_files: list[Path], root_pa
         return False
     readmes = [child for child in path.iterdir() if child.is_file() and child.name.lower().startswith("readme")]
     return bool(readmes) and max(file.stat().st_size for file in readmes) >= 20_000
+
+
+def _documentation_code_examples(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
+    if _has_project_manifest(path) or root_package or not python_source_files:
+        return False
+    top_dirs = {child.name.lower() for child in path.iterdir() if child.is_dir()}
+    if not {"code", "docs", "notebooks"}.issubset(top_dirs):
+        return False
+    root_modules = {child.name.lower() for child in path.glob("*.py")}
+    if root_modules.intersection({"main.py", "app.py", "manage.py", "train.py"}):
+        return False
+    return all(file.relative_to(path).parts[0].lower() in {"code", "docs"} for file in python_source_files)
 
 
 def _native_extension_wrapper_without_python_core(python_source_files: list[Path], rust_files: list[Path]) -> bool:

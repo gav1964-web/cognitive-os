@@ -48,6 +48,18 @@ def test_scope_rejects_documentation_led_demo(tmp_path):
     assert result["reason_code"] == "no_python_owned_product_boundary"
 
 
+def test_scope_rejects_documentation_glossary_code_examples(tmp_path):
+    for dirname in ("code", "docs", "notebooks"):
+        (tmp_path / dirname).mkdir()
+    for name in ("cnn.py", "knn.py", "loss_functions.py"):
+        (tmp_path / "code" / name).write_text("def example(): return 1\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
 def test_metric_and_model_query_contract_families_are_profiled():
     assert contract_archetype_for_target("sdk/client.py:__parse_response")["contract_archetype"] == (
         "sdk_response_parse_verification"
@@ -81,6 +93,15 @@ def test_d14_contract_families_are_profiled_without_project_names():
 
     for target, expected in cases.items():
         assert contract_archetype_for_target(target)["contract_archetype"] == expected
+
+
+def test_d15_contract_families_are_profiled_without_project_names():
+    assert contract_archetype_for_target("hooks/unittest.py:set_hook_for_unittest_module_teardown")[
+        "contract_archetype"
+    ] == "test_lifecycle_instrumentation_wrapper"
+    assert contract_archetype_for_target("cli/display.py:display_csv")["contract_archetype"] == (
+        "tabular_csv_serialization"
+    )
 
 
 def test_process_boundary_override_does_not_allow_known_too_broad_profile():
