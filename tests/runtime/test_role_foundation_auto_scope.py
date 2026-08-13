@@ -120,3 +120,39 @@ def test_auto_scope_selects_github_owner_repo_suffix_package(tmp_path):
     assert decision["status"] == "selected"
     assert decision["selected_relative_path"] == "botocore"
     assert decision["source"].startswith("auto_")
+
+
+def test_auto_scope_keeps_manifest_backed_main_and_source_package_at_root(tmp_path):
+    (tmp_path / "source").mkdir()
+    (tmp_path / "source" / "__init__.py").write_text("")
+    (tmp_path / "main.py").write_text("def main(): return 0\n")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='downloader'\n")
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": [_candidate("source", 80, 20)]})
+
+    assert decision["selected_relative_path"] == "."
+    assert decision["source"] == "auto_current_python_product_root"
+
+
+def test_auto_scope_does_not_assume_manifest_backed_script_collection_is_safe(tmp_path):
+    for name in ("actions.py", "auth.py", "webhook-bot.py"):
+        (tmp_path / name).write_text("def run(): return 0\n")
+    (tmp_path / "requirements.txt").write_text("requests\n")
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": [_candidate("core", 70, 10)]})
+
+    assert decision["selected_relative_path"] is None
+    assert decision["source"] != "auto_current_python_product_root"
+
+
+def test_auto_scope_keeps_manifest_backed_root_package_with_subpackage(tmp_path):
+    (tmp_path / "dedupfs").mkdir()
+    (tmp_path / "dedupfs" / "__init__.py").write_text("")
+    (tmp_path / "__init__.py").write_text("")
+    (tmp_path / "service.py").write_text("def run(): return 0\n")
+    (tmp_path / "requirements.txt").write_text("telethon\n")
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": [_candidate("dedupfs", 65, 8)]})
+
+    assert decision["selected_relative_path"] == "."
+    assert decision["source"] == "auto_current_python_product_root"

@@ -111,16 +111,19 @@ def _current_root_is_python_product(project_dir: Path) -> bool:
     root_modules = list(project_dir.glob("*.py"))
     if (project_dir / "__init__.py").exists() and len(root_modules) >= 5:
         return True
-    entrypoints = {"main.py", "app.py", "manage.py", "train.py"}
-    if not any(path.name.lower() in entrypoints for path in root_modules):
+    manifests = set(scope_policy_list("python_product_manifest_names"))
+    if not any((project_dir / name).is_file() for name in manifests):
         return False
+    entrypoints = set(scope_policy_list("python_product_entrypoints"))
     package_dirs = [
         child for child in project_dir.iterdir()
         if child.is_dir()
         and (child / "__init__.py").exists()
         and not _disfavored_scope_root(child.name)
     ]
-    return len(package_dirs) >= 2
+    has_entrypoint = any(path.name.lower() in entrypoints for path in root_modules)
+    root_package_app = (project_dir / "__init__.py").exists() and bool(package_dirs)
+    return has_entrypoint or root_package_app
 
 
 def _selected_scope_decision(project_dir: Path, candidate: dict[str, Any], source: str) -> dict[str, Any]:

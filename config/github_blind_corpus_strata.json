@@ -53,7 +53,12 @@
         "topic:kubernetes-client",
         "topic:database-driver",
         "topic:discord-api",
-        "topic:telegram-api"
+        "topic:telegram-api",
+        "topic:aws-sdk",
+        "topic:google-cloud",
+        "topic:slack-api",
+        "topic:mqtt-client",
+        "topic:gitlab-api"
       ]
     },
     {

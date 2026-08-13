@@ -12,7 +12,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from runtime.role_foundation_field_trial import run_role_foundation_field_trial
 
 
+def _configure_stdout() -> None:
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> int:
+    _configure_stdout()
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument(

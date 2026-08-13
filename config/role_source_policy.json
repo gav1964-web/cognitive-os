@@ -91,6 +91,8 @@
     "candidate_noise_parts": ["archives", "generated", "runs", "scratch", "source_project", "test_workspace", "tmp"],
     "candidate_noise_suffixes": [".bin", ".db", ".jsonl", ".log", ".pickle", ".pkl", ".sqlite", ".zip"],
     "manifest_names": ["package.json", "pyproject.toml", "readme.md", "requirements.txt", "setup.py"],
+    "python_product_manifest_names": ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "pipfile"],
+    "python_product_entrypoints": ["main.py", "app.py", "manage.py", "train.py"],
     "path_score_roots": ["src", "lib", "package", "packages"],
     "path_score_root_bonus": 35,
     "path_score_project_name_bonus": 35,

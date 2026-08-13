@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from tools.github_blind_corpus import _checkout_ready, _eligible, _project_row, _search_stratum, _search_with_gh, known_projects
@@ -94,6 +95,13 @@ def test_authenticated_search_does_not_put_token_in_command():
 
     command = run.call_args.args[0]
     assert "secret-token" not in " ".join(command)
+
+
+def test_sdk_stratum_keeps_multiple_integration_ecosystems():
+    policy = json.loads((Path(__file__).resolve().parents[2] / "config" / "github_blind_corpus_strata.json").read_text())
+    sdk = next(row for row in policy["strata"] if row["id"] == "sdk_integrations")
+
+    assert {"topic:aws-sdk", "topic:slack-api", "topic:mqtt-client", "topic:gitlab-api"}.issubset(sdk["queries"])
 
 
 def test_authenticated_search_retries_one_rate_limit_window():
