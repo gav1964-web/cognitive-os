@@ -12,6 +12,8 @@ def structural_contract_family(
     decorators = {str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])}
     if decorators & {"route", "action", "get", "post", "put", "patch", "delete"}:
         return "decorated_web_route_boundary"
+    if "errorhandler" in decorators:
+        return "decorated_web_error_boundary"
     if "task" in decorators:
         return "decorated_background_task_boundary"
     usage = dict(facts.get("argument_usage_types") or {})
@@ -63,6 +65,31 @@ def structural_contract_family(
         and not facts.get("state_mutation")
     ):
         return "mapping_observability_report_command"
+    if (
+        output_type == "VoidSideEffect"
+        and "IterableLike" in usage_types
+        and observed == {"observability"}
+        and facts.get("source_body_complete")
+        and not facts.get("state_mutation")
+    ):
+        return "iterable_observability_report_command"
+    if (
+        output_type.startswith("Union[")
+        and {"ArrayLike", "TupleLike"} <= {part.strip() for part in output_type[6:-1].split(",")}
+        and int(facts.get("return_paths") or 0) >= 2
+        and facts.get("source_body_complete")
+        and not observed
+        and not facts.get("state_mutation")
+    ):
+        return "multi_shape_prediction_boundary"
+    if (
+        output_type == "SetLike"
+        and "ProtocolLike" in usage_types
+        and facts.get("source_body_complete")
+        and not observed
+        and not facts.get("state_mutation")
+    ):
+        return "protocol_operator_result_boundary"
     if (
         output_type == "bool"
         and facts.get("async_callable")

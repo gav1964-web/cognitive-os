@@ -39,6 +39,19 @@ def test_known_projects_excludes_cross_forge_repository_names(tmp_path: Path):
     assert "unique-engine" in repos
 
 
+def test_known_projects_includes_effective_replacements(tmp_path: Path):
+    corpus = tmp_path / "gitlab_blind"
+    corpus.mkdir()
+    (corpus / "effective_selection.json").write_text(
+        json.dumps({"projects": [{"full_name": "replacement/final-tool"}]}), encoding="utf-8"
+    )
+
+    names, repos = known_projects(tmp_path)
+
+    assert "replacement/final-tool" in names
+    assert "final-tool" in repos
+
+
 def test_gitlab_project_row_and_eligibility():
     row = _project_row(_item(7, "group/runtime-engine"))
     policy = {

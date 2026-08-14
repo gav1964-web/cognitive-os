@@ -158,6 +158,39 @@ def test_source_proven_common_contract_shapes_get_structural_families():
         assert report["contract_archetype_ids"] == [family]
 
 
+def test_additional_source_proven_contract_shapes_get_structural_families():
+    cases = [
+        (
+            {"source_body_complete": True, "inferred_output_type": "VoidSideEffect", "argument_usage_types": {"rows": "IterableLike"}, "observed_side_effects": ["observability"], "state_mutation": False},
+            "iterable_observability_report_command",
+        ),
+        (
+            {"source_body_complete": True, "inferred_output_type": "Union[ArrayLike, TupleLike]", "return_paths": 2, "observed_side_effects": [], "state_mutation": False},
+            "multi_shape_prediction_boundary",
+        ),
+        (
+            {"source_body_complete": True, "inferred_output_type": "ResponseLike", "decorators": ["app.errorhandler"]},
+            "decorated_web_error_boundary",
+        ),
+        (
+            {"source_body_complete": True, "inferred_output_type": "SetLike", "argument_usage_types": {"context": "ProtocolLike"}, "observed_side_effects": [], "state_mutation": False},
+            "protocol_operator_result_boundary",
+        ),
+    ]
+    for evidence, family in cases:
+        report = semantic_target_quality_report(
+            "src/domain.py:process",
+            ranked_candidates=["src/domain.py:process"],
+            source_evidence=["src/domain.py:process"],
+            structural_evidence=evidence,
+            input_contract={"value": "DomainInput"},
+            output_contract={"result": evidence["inferred_output_type"]},
+            side_effect_contract={"declared": evidence.get("observed_side_effects", [])},
+        )
+        assert report["contract_archetype_ids"] == [family]
+        assert report["score"] >= 97
+
+
 def test_mapping_report_command_requires_observability_only_boundary():
     target = "fingerprint.py:identify_fingerprint"
     structural = {

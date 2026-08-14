@@ -125,7 +125,9 @@ def _write_clone_report(
 
 
 def replace_failed(root: Path, corpus: Path) -> dict[str, Any]:
-    selection = json.loads((corpus / "selection.json").read_text(encoding="utf-8"))
+    effective_path = corpus / "effective_selection.json"
+    selection_path = effective_path if effective_path.exists() else corpus / "selection.json"
+    selection = json.loads(selection_path.read_text(encoding="utf-8"))
     clone_report = json.loads((corpus / "clone_report.json").read_text(encoding="utf-8"))
     failed = {row["full_name"] for row in clone_report["results"] if row["status"] != "ok"}
     known_names, known_repos = known_projects(root / "artifacts")
@@ -159,11 +161,13 @@ def replace_failed(root: Path, corpus: Path) -> dict[str, Any]:
             raise RuntimeError(f"no cloneable replacement for {original['full_name']}")
         effective.append(replacement)
         replacements.append({"original": original, "replacement": replacement, "attempts": attempts})
+    replacement_path = corpus / "replacement_report.json"
+    previous = json.loads(replacement_path.read_text(encoding="utf-8")).get("replacements", []) if replacement_path.exists() else []
     payload = {
         "artifact_type": "GitLabBlindCorpusReplacementReport", "status": "ok",
-        "created_at": _now(), "replacements": replacements,
+        "created_at": _now(), "replacements": [*previous, *replacements],
     }
-    (corpus / "replacement_report.json").write_text(
+    replacement_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     effective_payload = {**selection, "artifact_type": "GitLabBlindCorpusEffectiveSelection",
@@ -178,7 +182,10 @@ def replace_failed(root: Path, corpus: Path) -> dict[str, Any]:
 def known_projects(artifacts: Path) -> tuple[set[str], set[str]]:
     names: set[str] = set()
     repos: set[str] = set()
-    for selection in artifacts.glob("*/selection.json") if artifacts.is_dir() else []:
+    selections = []
+    for pattern in ("*/selection.json", "*/effective_selection.json"):
+        selections.extend(artifacts.glob(pattern) if artifacts.is_dir() else [])
+    for selection in selections:
         try:
             payload = json.loads(selection.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):

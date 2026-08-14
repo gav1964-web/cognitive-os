@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from runtime._parts.role_foundation_field_trial_scope import _primary_language_scope
 from runtime.contract_archetype_inference import contract_archetype_for_target
+from runtime.role_foundation_pipeline import _auto_active_root_decision
 from runtime.technical_spec_policy import load_technical_spec_policy
 
 
@@ -41,6 +44,50 @@ def test_scope_keeps_small_root_and_src_products(tmp_path):
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "product.py").write_text("def run(): return 1\n", encoding="utf-8")
     assert _primary_language_scope(tmp_path)["status"] == "in_scope"
+
+
+def test_auto_scope_selects_real_root_package_over_higher_scored_workflow(tmp_path):
+    (tmp_path / "workflow").mkdir()
+    package = tmp_path / "temnn"
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    candidates = [
+        {"path": "workflow", "score": 70, "python_files": 71},
+        {"path": "temnn", "score": 48, "python_files": 22},
+    ]
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": candidates})
+
+    assert decision["status"] == "selected"
+    assert Path(decision["selected_root"]).resolve() == package.resolve()
+    assert decision["source"] == "auto_root_python_package_scope_selector"
+
+
+def test_auto_scope_selects_substantial_python_automation_boundary(tmp_path):
+    (tmp_path / "images").mkdir()
+    automation = tmp_path / "ci"
+    automation.mkdir()
+    candidates = [
+        {"path": "images", "score": 50, "python_files": 5, "js_ts_files": 0},
+        {"path": "ci", "score": 18, "python_files": 20, "js_ts_files": 3},
+    ]
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": candidates})
+
+    assert decision["status"] == "selected"
+    assert Path(decision["selected_root"]).resolve() == automation.resolve()
+    assert decision["source"] == "auto_python_automation_scope_selector"
+
+
+def test_auto_scope_does_not_promote_small_ci_helper_collection(tmp_path):
+    (tmp_path / "ci").mkdir()
+
+    decision = _auto_active_root_decision(
+        tmp_path,
+        {"candidate_roots": [{"path": "ci", "score": 18, "python_files": 2, "js_ts_files": 0}]},
+    )
+
+    assert decision["status"] != "selected"
 
 
 def test_scope_rejects_large_distributed_project_portfolio(tmp_path):

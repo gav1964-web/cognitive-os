@@ -23,6 +23,35 @@ def _named_package_over_tests_scope(project_dir: Path, candidates: list[dict[str
     return None
 
 
+def _root_python_package_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    minimum_files = scope_policy_int("root_package_scope_min_python_files", 5)
+    minimum_score = scope_policy_int("root_package_scope_min_score", 20)
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        if not path or "/" in path or _disfavored_scope_root(path):
+            continue
+        if int(row.get("python_files") or 0) < minimum_files or int(row.get("score") or 0) < minimum_score:
+            continue
+        if (project_dir / path / "__init__.py").is_file():
+            return dict(row)
+    return None
+
+
+def _automation_python_scope(project_dir: Path, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    allowed_roots = {value.lower() for value in scope_policy_list("automation_scope_roots")}
+    minimum_files = scope_policy_int("automation_scope_min_python_files", 15)
+    max_js_percent = scope_policy_int("automation_scope_max_js_per_python_percent", 50)
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        python_files = int(row.get("python_files") or 0)
+        js_files = int(row.get("js_ts_files") or 0)
+        if path.lower() not in allowed_roots or python_files < minimum_files:
+            continue
+        if js_files * 100 <= python_files * max_js_percent and (project_dir / path).is_dir():
+            return dict(row)
+    return None
+
+
 def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) -> dict[str, Any]:
     candidates = list(scope_report.get("candidate_roots") or [])
     if not candidates:
@@ -42,6 +71,10 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     native_package = _native_python_package_scope(project_dir)
     if native_package:
         return _active_root_decision(project_dir, native_package)
+    if package_scope := _root_python_package_scope(project_dir, candidates):
+        return _selected_scope_decision(project_dir, package_scope, "auto_root_python_package_scope_selector")
+    if automation_scope := _automation_python_scope(project_dir, candidates):
+        return _selected_scope_decision(project_dir, automation_scope, "auto_python_automation_scope_selector")
     frontend_python_package = _frontend_python_package_scope(project_dir, candidates)
     if frontend_python_package:
         return _selected_scope_decision(
