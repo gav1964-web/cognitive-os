@@ -277,6 +277,59 @@
       ]
     },
     {
+      "rule_id": "neural_network_training_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 95,
+      "archetype": "neural_network_training_pipeline",
+      "label": "neural-network training and evaluation pipeline",
+      "architect_consumable": true,
+      "match": {
+        "text_contains_any": ["neural network", "backpropagation", "stochastic gradient descent", "feedforward", "mnist_loader"],
+        "required_contains_any": ["backpropagation", "stochastic gradient descent", "mnist_loader"],
+        "required_contains_all": ["network"],
+        "domain_profile_kind": ["neural_network_training_pipeline"],
+        "min_score": 35
+      },
+      "purpose_summary": "Train and evaluate feedforward neural networks through explicit dataset loading, forward propagation, backpropagation, optimization, and metric boundaries.",
+      "diagnosis": {
+        "primary_sources": ["central", "extraction", "process_boundary", "bottlenecks"],
+        "primary_target_prefer": ["backprop", "update_mini_batch", "feedforward", "sgd"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is the dataset-to-training path around {target}, where tensor shapes, parameter updates, evaluation metrics, randomness, and model artifacts need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Dataset loading and sample normalization are separated from model construction and optimization.",
+        "Feature, label, weight, bias, gradient, and batch shapes are explicit contracts.",
+        "Random initialization and sample ordering accept reproducibility controls.",
+        "Model persistence and heavyweight training are adapters outside the first deterministic contract test."
+      ],
+      "first_slice": {
+        "name": "neural_training_step_slice",
+        "goal": "Stabilize one forward/backpropagation or mini-batch update from tiny tensor fixtures to explicit gradients or parameter updates.",
+        "target_sources": ["central", "extraction", "process_boundary"],
+        "targets_prefer": ["network3.py:sgd", "network2.py:sgd", "backprop", "update_mini_batch", "feedforward"],
+        "target_limit": 1,
+        "steps": [
+          "Define tensor shapes, dtypes, label encoding, batch size, and model parameter contracts.",
+          "Separate deterministic forward/gradient calculation from dataset loading and training orchestration.",
+          "Expose random seed or injected initialization where reproducibility affects output.",
+          "Verify tiny known tensors, malformed shapes, empty batches, and stable gradient or parameter-update results."
+        ]
+      },
+      "defer": [
+        "Do not require full-dataset training, GPU execution, downloads, or long convergence tests for first verification.",
+        "Do not treat datasets, plots, generated figures, or serialized model artifacts as active source code."
+      ],
+      "verification_extra": "Use tiny synthetic tensors and fixed model parameters for deterministic CPU-only contract tests.",
+      "scenario_summary": [
+        "Load and normalize labeled training or evaluation samples.",
+        "Construct a neural network with explicit layer and parameter shapes.",
+        "Run feedforward, backpropagation, and bounded mini-batch optimization.",
+        "Evaluate predictions and persist or report model metrics and parameters."
+      ],
+      "input_summary": ["training and evaluation samples", "network layer sizes", "weights and biases", "optimizer, batch, epoch, and seed settings"],
+      "output_summary": ["predictions and activations", "gradients and updated parameters", "evaluation metrics", "model parameter artifacts", "explicit shape or numeric errors"]
+    },
+    {
       "rule_id": "deep_learning_image_pipeline",
       "record_type": "project_archetype_rule",
       "priority": 94,
@@ -3290,9 +3343,11 @@
       "priority": 90,
       "archetype": "proxy_security_tool",
       "label": "proxy/security inspection tool",
+      "architect_consumable": true,
       "match": {
         "project_name_contains_any": [
-          "mitmproxy"
+          "mitmproxy",
+          "decept"
         ],
         "text_contains_any": [
           "proxy",
@@ -3305,10 +3360,16 @@
         ],
         "required_contains_any": [
           "mitmproxy",
-          "intercept"
+          "intercept",
+          "proxy/sniffer",
+          "traffic proxy",
+          "proxy"
         ],
         "required_contains_all": [
           "proxy"
+        ],
+        "domain_profile_kind": [
+          "proxy_security_tool"
         ],
         "min_score": 80,
         "negative_contains_any": [
@@ -3337,6 +3398,9 @@
           "bottlenecks"
         ],
         "primary_target_prefer": [
+          "unpack",
+          "repack",
+          "normalize",
           "flow",
           "proxy",
           "cert",
@@ -3356,17 +3420,23 @@
         "name": "proxy_flow_normalization_slice",
         "goal": "Stabilize one intercepted flow from transport event to normalized flow record.",
         "target_sources": [
+          "domain_anchors",
+          "extraction",
           "central",
           "orchestrators",
           "process_boundary"
         ],
         "targets_prefer": [
+          "unpack",
+          "repack",
+          "normalize",
           "flow",
           "proxy",
           "cert",
           "tls",
           "intercept"
         ],
+        "target_limit": 1,
         "steps": [
           "Define RawProxyEvent and NormalizedFlow contracts.",
           "Separate TLS/cert and protocol parsing from user hook mutation.",

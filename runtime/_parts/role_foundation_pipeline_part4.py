@@ -112,8 +112,6 @@ def _current_root_is_python_product(project_dir: Path) -> bool:
     if (project_dir / "__init__.py").exists() and len(root_modules) >= 5:
         return True
     manifests = set(scope_policy_list("python_product_manifest_names"))
-    if not any((project_dir / name).is_file() for name in manifests):
-        return False
     entrypoints = set(scope_policy_list("python_product_entrypoints"))
     package_dirs = [
         child for child in project_dir.iterdir()
@@ -122,6 +120,10 @@ def _current_root_is_python_product(project_dir: Path) -> bool:
         and not _disfavored_scope_root(child.name)
     ]
     has_entrypoint = any(path.name.lower() in entrypoints for path in root_modules)
+    if has_entrypoint and len(package_dirs) >= 2:
+        return True
+    if not any((project_dir / name).is_file() for name in manifests):
+        return False
     root_package_app = (project_dir / "__init__.py").exists() and bool(package_dirs)
     return has_entrypoint or root_package_app
 

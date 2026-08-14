@@ -20,6 +20,15 @@ def source_health(
     parser_incompatibilities = [
         row for row in py_skipped if str(row.get("reason")) == "ParserVersionIncompatible"
     ]
+    parser_incompatibilities.extend(
+        {
+            "path": str(row.get("path") or ""),
+            "reason": "ParserVersionIncompatible",
+            "compatibility_mode": str(row.get("parser_compatibility") or ""),
+        }
+        for row in python_structure.get("files", [])
+        if isinstance(row, dict) and row.get("parser_compatibility")
+    )
     inaccessible = [
         row
         for row in [*py_skipped, *file_skipped, *runtime_skipped]

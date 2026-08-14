@@ -61,6 +61,7 @@
     "syntax_fixture_data_path_tokens": ["/data/", "/eval_files/"],
     "syntax_fixture_doc_path_tokens": ["/docs/"],
     "syntax_fixture_doc_required_any": ["example", "/samples/"],
+    "syntax_fixture_file_tokens": ["_template.py", "template.py"],
     "preferred_root_bonus": 40,
     "preferred_roots": ["src", "lib"],
     "core_root_bonus": 25,

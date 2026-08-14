@@ -22,6 +22,22 @@ def test_project_map_report_treats_newer_python_syntax_as_parser_limit():
     assert health["inaccessible_count"] == 0
 
 
+def test_project_map_report_tracks_compatibility_parsed_python2_as_noisy():
+    result = run(
+        {
+            "tree": {"root": "legacy", "counts": {"files": 1, "directories": 0}},
+            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": [], "dependency_files": []},
+            "files": {"files": [], "skipped": []},
+            "python_structure": {"files": [{"path": "app.py", "functions": [], "parser_compatibility": "python2_compatibility_ast"}], "skipped": []},
+            "runtime_commands": {"commands": [], "skipped": []},
+        }
+    )
+    health = result["source_health"]
+    assert health["status"] == "noisy"
+    assert health["syntax_error_count"] == 0
+    assert health["parser_incompatibility_count"] == 1
+
+
 def test_project_map_report_uses_domain_flow_anchor_for_first_slice():
     result = run(
         {

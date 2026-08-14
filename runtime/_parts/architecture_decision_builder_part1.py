@@ -127,7 +127,8 @@ def _first_slice_with_source_targets(
     if not targets:
         return first_slice
     row = dict(first_slice)
-    row["targets"] = targets[:8]
+    target_limit = max(1, min(8, int(row.get("target_limit") or 8)))
+    row["targets"] = targets[:target_limit]
     if not row.get("name"):
         row["name"] = semantic_first_slice_name("first_bounded_capability_slice", row["targets"])
     row.setdefault("goal", str(FALLBACK_SLICE_POLICY.get("default_goal") or "Extract one bounded capability."))

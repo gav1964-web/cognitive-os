@@ -2,6 +2,22 @@
   "schema_version": "contract_archetype_inference.v1",
   "archetypes": [
     {
+      "id": "proxy_flow_orchestration_boundary",
+      "priority": 111,
+      "symbols": ["proxy_loop", "raw_proxy_loop"],
+      "path_contains_any": ["proxy", "decept", "mitmproxy"],
+      "score_bonus": 2,
+      "ranking_bonus": 24,
+      "benign_runtime_boundary": true,
+      "reason": "proxy flow orchestration is a bounded transport-event to forwarded-flow lifecycle contract",
+      "contract_family": "proxy_flow_orchestration_boundary",
+      "input_contract": {"flow_input": "ProxyFlowInput(local_endpoint, remote_endpoint, transport_mode, hooks?, timeout?)"},
+      "output_contract": {"operation": "VoidSideEffect", "observable_effects": "ProxyFlowEffects(forwarded_packets?, captured_events?, termination_reason)", "failure_packet": "ProxyFlowFailure(kind, direction?, retryable?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "network": "socket transport, hooks, timeout and cancellation are fixture-backed and explicitly owned"},
+      "validation_gates": ["inbound and outbound forwarding are covered", "timeout, disconnect and malformed packet termination are explicit", "hook mutation and partial-send failures preserve direction evidence"],
+      "failure_modes": ["connect_failure", "timeout", "peer_disconnect", "malformed_packet", "hook_failure", "partial_send"]
+    },
+    {
       "id": "sdk_response_parse_verification",
       "priority": 108,
       "symbol_contains_all": ["parse", "response"],

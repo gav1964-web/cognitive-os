@@ -306,3 +306,15 @@ def test_domain_profile_recognizes_deep_learning_image_pipeline():
 
     assert profile["kind"] == "deep_learning_image_pipeline"
     assert len(profile["scenario_summary"]) >= 3
+
+
+def test_domain_profile_recognizes_neural_network_training_pipeline():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/neural_lab", "frameworks": [], "entrypoints": [], "routes": 0},
+        {"files": [{"path": "README.md", "text": "Train a neural network with stochastic gradient descent and backpropagation."}]},
+        {"files": [{"path": "network.py", "functions": [{"name": "backprop", "calls": []}]}]},
+        [],
+        {"numpy"},
+    )
+    assert profile["kind"] == "neural_network_training_pipeline"
+    assert "gradients and updated parameters" in profile["output_summary"]

@@ -1,9 +1,9 @@
 from __future__ import annotations
-
 import ast
 from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
+from runtime.architecture_advisory_policy import trusted_architecture_advisory
 from runtime.architecture_slice_naming import semantic_first_slice_name
 from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.contract_transform_contract_profiles import contract_profile_hint
@@ -13,7 +13,6 @@ from runtime.role_skill_common import now_iso
 from runtime.role_source_context import build_source_context
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
 from runtime.python_source_files import is_python_source_ref
-
 ARCHITECTURE_DECISION_POLICY = load_architecture_decision_policy()
 FALLBACK_ARCHETYPE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_archetype"])
 FALLBACK_SLICE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_slice"])
@@ -23,7 +22,6 @@ DOMAIN_EVIDENCE_SOURCE_TOKENS = policy_list(SOURCE_SELECTION_POLICY, "domain_evi
 PROVIDER_PARSER_FILE_GLOBS = policy_list(SOURCE_SELECTION_POLICY, "provider_parser_file_globs")
 PROVIDER_PARSER_FUNCTION_MARKERS = policy_list(SOURCE_SELECTION_POLICY, "provider_parser_function_markers")
 BRIEF_SORT_RULES = policy_rules(SOURCE_SELECTION_POLICY, "brief_sort_rules")
-
 def _traceability(
     tasks: list[dict[str, Any]],
     capabilities: list[dict[str, Any]],
@@ -58,13 +56,15 @@ def _traceability(
 
 def _architecture_synthesis(project_report: dict[str, Any]) -> dict[str, Any]:
     synthesis = project_report.get("architecture_synthesis")
-    if isinstance(synthesis, dict):
-        return synthesis
+    if isinstance(synthesis, dict) and synthesis:
+        return dict(synthesis)
+    advisory = project_report.get("architecture_synthesis_advisory")
+    if trusted_architecture_advisory(advisory):
+        return dict(advisory)
     content = project_report.get("content")
     if isinstance(content, dict) and isinstance(content.get("architecture_synthesis"), dict):
         return dict(content["architecture_synthesis"])
     return _fallback_architecture_synthesis(project_report)
-
 def _fallback_architecture_synthesis(project_report: dict[str, Any]) -> dict[str, Any]:
     summary = dict(project_report.get("summary", {}))
     answers = dict(project_report.get("answers", {}))
@@ -170,6 +170,7 @@ def _first_slice_contract(synthesis: dict[str, Any]) -> dict[str, Any]:
         "name": semantic_first_slice_name(str(first_slice.get("name") or "first_bounded_capability_slice"), targets),
         "goal": str(first_slice.get("goal") or "Define the first bounded capability transformation."),
         "targets": targets[:8],
+        "target_limit": first_slice.get("target_limit"),
         "steps": steps[:12],
         "knowledge_rule": first_slice.get("knowledge_rule"),
         "selection_policy": "choose the smallest source-backed slice that can produce a TechnicalSpec without widening writable scope",

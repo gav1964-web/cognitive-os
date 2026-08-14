@@ -62,3 +62,24 @@ def test_architecture_decision_does_not_handoff_test_only_sources_as_implementat
     assert brief["files_or_symbols"] == []
     assert brief["contract_targets"] == []
     assert brief["blocked_by"] == ["no_safe_source_specific_candidate"]
+
+
+def test_architect_consumes_advisory_synthesis_as_evidence():
+    adr = build_architecture_decision(
+        goal="Analyze training project",
+        project_report={
+            "summary": {"root": "training", "file_count": 2, "languages": ["Python"]},
+            "answers": {"1_scope": {"main_task": "Train a model"}, "6_runtime_extraction_readiness": {}},
+            "architecture_synthesis_advisory": {
+                "artifact_type": "ProjectArchitectureSynthesis",
+                "source": "knowledge_backed_architecture_synthesis",
+                "architect_consumable": True,
+                "recommended_first_slice": {
+                    "name": "training_step", "goal": "Bound one update", "target_limit": 1,
+                    "targets": ["network.py:backprop"], "steps": ["Verify gradients"],
+                },
+            },
+        },
+    )
+    assert adr["first_slice_contract"]["targets"] == ["network.py:backprop"]
+    assert adr["architecture_synthesis"]["source"] == "knowledge_backed_architecture_synthesis"

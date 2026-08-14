@@ -1,7 +1,6 @@
 """Knowledge-backed architecture synthesis for project-analysis reports."""
 
 from __future__ import annotations
-
 import ast
 import hashlib
 from pathlib import Path
@@ -24,10 +23,7 @@ from .project_architecture_knowledge import (
     match_project_lessons,
     match_risk_patterns,
 )
-
-
 ARCHITECTURE_SYNTHESIS_POLICY = load_architecture_synthesis_policy()
-
 
 def synthesize_project_architecture(
     report: dict[str, Any],
@@ -70,6 +66,7 @@ def synthesize_project_architecture(
         "artifact_type": "ProjectArchitectureSynthesis",
         "layer": "L4",
         "source": "knowledge_backed_architecture_synthesis",
+        "architect_consumable": bool(rule.get("architect_consumable")),
         "synthesis_id": _synthesis_id(digest, first_slice),
         "knowledge": {
             "path": KNOWLEDGE_PATH.as_posix(),
@@ -198,11 +195,13 @@ def _first_slice(rule: dict[str, Any], facts: dict[str, Any], analysis_tasks: di
     recipe = dict(rule.get("first_slice") or {})
     if recipe:
         rows = _source_targets(recipe.get("target_sources"), facts, analysis_tasks)
-        targets = _prefer_targets(rows, _strings(recipe.get("targets_prefer")), knowledge)[:4]
+        target_limit = max(1, min(4, int(recipe.get("target_limit") or 4)))
+        targets = _prefer_targets(rows, _strings(recipe.get("targets_prefer")), knowledge)[:target_limit]
         return {
             "name": semantic_first_slice_name(str(recipe.get("name") or "first_bounded_capability_slice"), targets),
             "goal": str(recipe.get("goal") or "Extract one useful capability with explicit input/output and tests."),
             "targets": targets,
+            "target_limit": target_limit,
             "steps": _strings(recipe.get("steps")),
             "knowledge_rule": rule.get("rule_id"),
         }

@@ -19,6 +19,7 @@ SYNTAX_FIXTURE_DATA_ROOTS = tuple(scope_policy_list("syntax_fixture_data_roots")
 SYNTAX_FIXTURE_DATA_TOKENS = scope_policy_list("syntax_fixture_data_path_tokens")
 SYNTAX_FIXTURE_DOC_TOKENS = scope_policy_list("syntax_fixture_doc_path_tokens")
 SYNTAX_FIXTURE_DOC_REQUIRED = scope_policy_list("syntax_fixture_doc_required_any")
+SYNTAX_FIXTURE_FILE_TOKENS = scope_policy_list("syntax_fixture_file_tokens")
 CANDIDATE_NOISE_PARTS = set(scope_policy_list("candidate_noise_parts"))
 CANDIDATE_NOISE_SUFFIXES = tuple(scope_policy_list("candidate_noise_suffixes"))
 PATH_SCORE_ROOTS = set(scope_policy_list("path_score_roots"))
@@ -38,7 +39,8 @@ def syntax_error_fixture_path(path: str) -> bool:
         SYNTAX_FIXTURE_DATA_ROOTS
     )
     test_support_file = first in SYNTAX_FIXTURE_ROOTS
-    return bool(fixture_parts) or test_support_file or test_data or example_doc
+    template_file = any(token in lowered for token in SYNTAX_FIXTURE_FILE_TOKENS)
+    return bool(fixture_parts) or test_support_file or test_data or example_doc or template_file
 
 
 def scope_candidate_priority(rel_path: str) -> int:

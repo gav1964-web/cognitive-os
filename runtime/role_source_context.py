@@ -12,6 +12,7 @@ from .source_side_effect_inference import infer_ast_side_effects, selection_side
 from .transitive_side_effects import infer_transitive_side_effects
 from .project_transitive_effects import project_transitive_effects
 from .python_source_files import is_python_source_file, iter_python_source_files
+from .python_parser_compatibility import parse_compatible_source
 
 
 def build_source_context(
@@ -74,7 +75,7 @@ def _module_context(path: Path) -> dict[str, Any] | None:
         return None
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
-        tree = ast.parse(text)
+        tree, _ = parse_compatible_source(text, path.as_posix())
     except SyntaxError:
         return None
     imports: set[str] = set()
@@ -129,7 +130,7 @@ def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
     for path in _python_source_paths(root):
         rel = path.relative_to(root).as_posix()
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+            tree, _ = parse_compatible_source(path.read_text(encoding="utf-8", errors="replace"), path.as_posix())
         except SyntaxError:
             continue
         local_defs = {
@@ -291,7 +292,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
         return None
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     try:
-        tree = ast.parse("\n".join(lines))
+        tree, _ = parse_compatible_source("\n".join(lines), path.as_posix())
     except SyntaxError:
         return None
     matches = _symbol_matches(tree, symbol)
