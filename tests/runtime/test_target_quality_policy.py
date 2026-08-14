@@ -118,3 +118,80 @@ def test_profiled_pytest_decorator_is_not_treated_as_utility_noise():
     assert report["score"] >= 95
     assert report["contract_archetype_ids"] == ["pytest_fixture_or_decorator_registration"]
     assert not any("support/utility target: decorator" in reason for reason in report["reasons"])
+
+
+def test_source_proven_persistence_command_gets_structural_family():
+    target = "database/custom_graph.py:add_value"
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        structural_evidence={
+            "source_body_complete": True,
+            "inferred_output_type": "VoidSideEffect",
+            "observed_side_effects": ["database"],
+        },
+        input_contract={"session": "PersistenceSession", "value": "RecordInput"},
+        output_contract={"result": "VoidSideEffect"},
+        side_effect_contract={"declared": ["database"]},
+    )
+
+    assert report["profiled_contract_family"] is True
+    assert report["contract_archetype_ids"] == ["persistence_append_command"]
+    assert report["score"] >= 97
+
+
+def test_mapping_report_command_requires_observability_only_boundary():
+    target = "fingerprint.py:identify_fingerprint"
+    structural = {
+        "source_body_complete": True,
+        "argument_count": 1,
+        "argument_usage_types": {"fingerprint": "MappingLike"},
+        "inferred_output_type": "VoidSideEffect",
+        "state_mutation": False,
+    }
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        structural_evidence=structural,
+        input_contract={"fingerprint": "MappingLike"},
+        output_contract={"result": "VoidSideEffect"},
+        side_effect_contract={"declared": ["observability"]},
+    )
+    network = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        structural_evidence=structural,
+        input_contract={"fingerprint": "MappingLike"},
+        output_contract={"result": "VoidSideEffect"},
+        side_effect_contract={"declared": ["network", "observability"]},
+    )
+
+    assert report["contract_archetype_ids"] == ["mapping_observability_report_command"]
+    assert report["score"] >= 97
+    assert network["contract_archetype_ids"] == []
+
+
+def test_external_authorization_policy_requires_async_network_boolean_contract():
+    target = "chat.py:verify_user_for_room"
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        structural_evidence={
+            "source_body_complete": True,
+            "async_callable": True,
+            "return_paths": 2,
+            "inferred_output_type": "bool",
+            "observed_side_effects": ["network", "observability"],
+            "state_mutation": False,
+        },
+        input_contract={"chat_info": "AuthorizationContext"},
+        output_contract={"authorized": "bool"},
+        side_effect_contract={"declared": ["filesystem", "network", "observability"]},
+    )
+
+    assert report["contract_archetype_ids"] == ["external_authorization_policy"]
+    assert report["score"] >= 97

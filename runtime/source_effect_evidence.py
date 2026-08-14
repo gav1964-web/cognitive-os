@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from typing import Any
 
+from runtime.source_side_effect_inference import infer_ast_side_effects
+
 
 _UNIT_OF_WORK_NAMES = {"session", "db", "database", "unit_of_work", "uow"}
 _DATABASE_WRITE_CALLS = {"add", "append", "delete", "execute_write", "executemany", "flush", "commit"}
@@ -14,7 +16,7 @@ def observed_side_effects(function: ast.AST | None, args: list[dict[str, Any]]) 
     if function is None:
         return []
     argument_names = {str(row.get("name") or "").lower() for row in args}
-    effects = set()
+    effects = set(infer_ast_side_effects(function, ast.unparse(function)))
     for node in ast.walk(function):
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
             continue

@@ -18,3 +18,15 @@ def test_metric_increment_is_observability_effect():
     node = ast.parse("def record():\n    requests_total.labels('ok').inc()\n").body[0]
 
     assert "observability" in infer_ast_side_effects(node, ast.unparse(node))
+
+
+def test_stdout_and_cprint_are_observability_effects():
+    node = ast.parse("def report():\n    print('summary')\n    cprint.info('result')\n").body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["observability"]
+
+
+def test_redis_membership_lookup_is_network_effect():
+    node = ast.parse("async def verify(pool, user):\n    return await pool.sismember('users', user)\n").body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["network"]

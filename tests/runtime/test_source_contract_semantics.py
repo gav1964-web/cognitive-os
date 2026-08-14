@@ -177,7 +177,7 @@ def test_generator_body_produces_iterator_contract():
 
     assert evidence["inferred_output_type"] == "IteratorLike"
     assert evidence["output_inference_basis"] == "yield_expression"
-
+    assert evidence["yield_paths"] == 1
 
 def test_returned_local_class_is_inferred_as_type_factory():
     evidence = infer_source_contract(
@@ -372,6 +372,18 @@ def test_receiver_request_dispatch_is_visible_when_response_is_returned_separate
 
     assert evidence["inferred_output_type"] == "AttributeValue"
     assert evidence["dynamic_dispatch"] is True
+
+def test_recursive_xml_serializer_proves_root_and_nested_output_shapes():
+    evidence = infer_source_contract({
+        "snippet": (
+            "def serialize(self, model, tag='event', level=0):\n"
+            "    xml = Element(tag)\n"
+            "    return etree.tostring(xml) if level == 0 else xml"
+        ),
+    })
+
+    assert evidence["inferred_output_type"] == "Union[XMLNodeLike, bytes]"
+    assert evidence["output_inference_basis"] == "return_expression"
 
 
 def test_read_only_session_and_local_append_do_not_prove_database_write():

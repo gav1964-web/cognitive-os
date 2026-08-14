@@ -302,6 +302,10 @@
       ],
       "dynamic_dispatch_output_types": ["DispatchedResult"],
       "dynamic_dispatch_penalty": [55],
+      "bounded_serialization_output_types": ["Union[XMLNodeLike, bytes]"],
+      "bounded_serialization_bonus": [75],
+      "route_flatten_output_prefixes": ["Iterator["],
+      "route_flatten_bonus": [45],
       "control_symbol_contains_any": [
         "reload",
         "watch",

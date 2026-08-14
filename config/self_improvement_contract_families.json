@@ -1,6 +1,30 @@
 {
   "schema_version": "self_improvement_contract_families.v1",
   "families": {
+    "external_authorization_policy": {
+      "input_contract": {"authorization_context": "AuthorizationContext(actor, resource, tenant?)"},
+      "output_contract": {"authorized": "bool", "failure_packet": "AuthorizationCheckFailure(kind, dependency?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["network"], "external_check": "authorization depends on an external membership or policy store", "requires_validation_gate": true},
+      "validation_gates": ["authorized, denied and dependency-unavailable paths return explicit booleans", "external membership lookup and cleanup are bounded", "diagnostic output does not expose credentials or private payloads"],
+      "failure_modes": ["dependency_unavailable", "duplicate_identity", "resource_not_allowed", "cleanup_failure"],
+      "reason": "AST and side-effect evidence prove an asynchronous external authorization policy"
+    },
+    "mapping_observability_report_command": {
+      "input_contract": {"report_data": "ReportInputMapping(values)"},
+      "output_contract": {"result": "VoidReportCommand", "failure_packet": "ReportRenderingFailure(kind, field?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["observability"], "output_policy": "rendered report is emitted to the configured observability sink", "requires_validation_gate": true},
+      "validation_gates": ["complete and partial mappings produce bounded report output", "missing comparison data is represented explicitly", "rendering does not mutate the supplied mapping"],
+      "failure_modes": ["empty_report_data", "unsupported_field_value", "rendering_failure"],
+      "reason": "AST and side-effect evidence prove a bounded mapping-to-observability report command"
+    },
+    "stateful_recursive_xml_serialization_boundary": {
+      "input_contract": {"modelObject": "XMLSerializableModel(properties, nested_values, type?)", "tagName": "XMLTagName", "level": "RecursionDepth", "receiver_state": "XMLSerializerState(merge_policy)"},
+      "output_contract": {"result": "Union[bytes, XMLNodeLike]", "failure_packet": "XMLSerializationFailure(kind, property_path?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["memory_state"], "input_mutation": "root Event type normalization mutates the supplied model before traversal", "local_tree_mutation": "XML node construction remains local to the call tree", "requires_validation_gate": true},
+      "validation_gates": ["root serialization returns bytes and nested serialization returns an XML node", "nested objects and lists preserve tag and attribute structure", "input type normalization and merge precedence are explicit"],
+      "failure_modes": ["unsupported_property_value", "recursive_object_cycle", "invalid_tag_name", "type_normalization_failure", "xml_merge_failure"],
+      "reason": "AST proves recursive model-to-XML serialization with explicit input normalization"
+    },
     "dynamic_method_dispatch_boundary": {
       "input_contract": {"method": "DispatchMethodName", "receiver_state": "DispatchReceiver(request_values, handlers)"},
       "output_contract": {"result": "DispatchedResult", "failure_packet": "DispatchFailure(kind, method, evidence_ref?)"},

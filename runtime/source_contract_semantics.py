@@ -6,11 +6,10 @@ import ast
 import textwrap
 from typing import Any
 
-from runtime.source_contract_helpers import local_type_factories
+from runtime.source_contract_helpers import binary_result_shape, is_file_extension_policy, local_type_factories, target_mutates_external_state, xml_call_shape, yield_path_count
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
 from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
-
 
 _WEAK_TYPES = {
     "", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult",
@@ -37,6 +36,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     typed_args = [row for row in args if _concrete_type(row.get("annotation"))]
     return {
         "source_body_available": function is not None,
+        "async_callable": isinstance(function, ast.AsyncFunctionDef),
         "source_body_complete": source_complete,
         "docstring_available": bool(ast.get_docstring(function)) if function is not None else _has_docstring_prefix(snippet),
         "docstring_argument_types": docstring_types,
@@ -48,9 +48,11 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "inferred_output_type": inferred_output,
         "output_inference_basis": output_basis,
         "return_paths": _return_path_count(function),
+        "yield_paths": yield_path_count(function),
         "raises": _raise_names(function),
         "state_mutation": _has_state_mutation(function),
         "dynamic_dispatch": has_receiver_request_dispatch(function) if function is not None else False,
+        "file_extension_policy": is_file_extension_policy(function),
         "observed_side_effects": observed_side_effects(function, args),
         "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
     }
@@ -182,6 +184,12 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         if node.id in {"self", "cls"}:
             return "ReceiverState"
         return assignments.get(node.id, "")
+    if isinstance(node, ast.IfExp):
+        shapes = {_expression_shape(branch, assignments) for branch in (node.body, node.orelse)} - {""}
+        ordered = sorted(shapes)
+        return ordered[0] if len(ordered) == 1 else f"Union[{', '.join(ordered)}]" if ordered else ""
+    if isinstance(node, (ast.BoolOp, ast.Compare)):
+        return "bool"
     if isinstance(node, ast.Await):
         return _expression_shape(node.value, assignments)
     if isinstance(node, ast.Constant):
@@ -189,7 +197,7 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
     if isinstance(node, ast.Attribute):
         return "AttributeValue"
     if isinstance(node, ast.BinOp):
-        return "ArrayLike" if "ArrayLike" in {_expression_shape(value, assignments) for value in (node.left, node.right)} else "NumberLike"
+        return binary_result_shape({_expression_shape(value, assignments) for value in (node.left, node.right)})
     if isinstance(node, ast.Call):
         if is_receiver_request_dispatch(node):
             return "DispatchedResult"
@@ -215,6 +223,9 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
             return "ArrayLike"
         if name.endswith(("image.frombytes", "image.fromarray")):
             return "ImageLike"
+        xml_shape = xml_call_shape(name)
+        if xml_shape:
+            return xml_shape
         if name.endswith((".execute", ".executemany")):
             return "DatabaseResult"
     return ""
@@ -269,16 +280,8 @@ def _has_state_mutation(function: ast.AST | None) -> bool:
                 targets = node.targets
             else:
                 targets = [node.target]
-            if any(_target_mutates_external_state(target, local_names) for target in targets):
+            if any(target_mutates_external_state(target, local_names) for target in targets):
                 return True
-    return False
-
-
-def _target_mutates_external_state(target: ast.AST, local_names: set[str]) -> bool:
-    if isinstance(target, ast.Attribute):
-        return True
-    if isinstance(target, ast.Subscript):
-        return not isinstance(target.value, ast.Name) or target.value.id not in local_names
     return False
 
 

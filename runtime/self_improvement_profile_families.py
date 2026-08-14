@@ -26,6 +26,7 @@ def load_contract_families(path: str | None = None) -> dict[str, Any]:
 
 def recognize_contract_family(node: ast.AsyncFunctionDef | ast.FunctionDef) -> tuple[str, dict[str, bool]] | None:
     recognizers = (
+        ("stateful_recursive_xml_serialization_boundary", _stateful_xml_serialization_evidence),
         ("dynamic_method_dispatch_boundary", _dynamic_dispatch_evidence),
         ("external_service_state_sync_boundary", _sync_evidence),
         ("file_extension_admission_policy", _file_admission_evidence),
@@ -42,6 +43,29 @@ def recognize_contract_family(node: ast.AsyncFunctionDef | ast.FunctionDef) -> t
 def family_profile(family_id: str, evidence: dict[str, bool]) -> dict[str, Any]:
     family = dict(dict(load_contract_families()["families"])[family_id])
     return {"contract_family": family_id, **family, "score_bonus": 0, "ranking_bonus": 0, "training_evidence": evidence}
+
+
+def _stateful_xml_serialization_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:
+    text = ast.unparse(node).lower()
+    calls = _calls(node)
+    args = {arg.arg.lower() for arg in node.args.args}
+    model_names = args & {"model", "modelobject", "model_object", "obj", "value"}
+    return {
+        "serialization_intent": "serialize" in node.name.lower() and "xml" in text,
+        "model_input": bool(model_names),
+        "xml_tree_construction": any(call.endswith(("element", "subelement")) for call in calls),
+        "property_traversal": "get_properties" in text and _has(node, (ast.For, ast.ListComp)),
+        "recursive_descent": any(call.endswith(f".{node.name.lower()}") for call in calls),
+        "root_bytes_output": any(call.endswith(("tostring", "tostringlist")) for call in calls),
+        "input_normalization": any(
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id.lower() in model_names
+            for item in ast.walk(node)
+            if isinstance(item, (ast.Assign, ast.AnnAssign))
+            for target in (item.targets if isinstance(item, ast.Assign) else [item.target])
+        ),
+    }
 
 
 def _dynamic_dispatch_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:

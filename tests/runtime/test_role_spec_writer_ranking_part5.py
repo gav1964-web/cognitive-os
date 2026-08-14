@@ -119,6 +119,73 @@ def test_spec_writer_demotes_dynamic_receiver_dispatch_below_bounded_serializer(
     assert "dynamic receiver dispatch" in " ".join(ranked[dispatch]["reasons"])
 
 
+def test_spec_writer_prefers_stateful_xml_serializer_over_state_snapshot_hook():
+    snapshot = "cot_node.py:__getstate__"
+    serializer = "xml_serializer.py:serialize_model_to_cot"
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Select the project-domain serialization boundary",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {"scope": ["Prepare one spec."], "files_or_symbols": [snapshot, serializer]},
+        "traceability": [
+            {"source": source, "requirement": "Capability candidate requires TechnicalSpec."}
+            for source in (snapshot, serializer)
+        ],
+        "source_context": {
+            snapshot: {
+                "kind": "unknown",
+                "signature": {"args": [], "returns": "dict"},
+                "snippet": {"text": "def __getstate__(self):\n    return self.__dict__"},
+            },
+            serializer: {
+                "kind": "unknown",
+                "signature": {"args": [{"name": "model"}], "returns": ""},
+                "side_effects": ["memory_state"],
+                "snippet": {"text": (
+                    "def serialize_model_to_cot(self, model, level=0):\n"
+                    "    xml = Element('event')\n"
+                    "    model.type = normalize(model.type)\n"
+                    "    return etree.tostring(xml) if level == 0 else xml"
+                )},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == serializer
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "root and nested serialization outputs" in " ".join(ranked[serializer]["reasons"])
+
+
+def test_spec_writer_accepts_source_proven_route_iterator_in_middleware():
+    target = "pkg/middleware.py:_flatten_routes"
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Stabilize framework route compatibility",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {"scope": ["Prepare one spec."], "files_or_symbols": [target]},
+        "traceability": [{"source": target, "requirement": "Capability requires TechnicalSpec."}],
+        "source_context": {
+            target: {
+                "kind": "unknown",
+                "signature": {"args": [{"name": "routes", "annotation": "Sequence[BaseRoute]"}], "returns": "Iterator[BaseRoute]"},
+                "snippet": {"text": (
+                    "def _flatten_routes(routes: Sequence[BaseRoute]) -> Iterator[BaseRoute]:\n"
+                    "    for route in routes:\n        yield route"
+                )},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == target
+    assert spec["extraction_contract"]["semantic_quality"]["score"] >= 97
+
+
 def test_spec_writer_demotes_test_suite_harness_when_product_event_target_exists():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

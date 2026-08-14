@@ -100,11 +100,11 @@ def semantic_target_quality_report(
     reasons.extend(archetype_adjustments["reasons"])
     profile_ids = list(profile_adjustments.get("profile_ids") or [])
     archetype_ids = list(archetype_adjustments.get("profile_ids") or [])
-    structural_profile = _structural_contract_family(structural_evidence)
+    structural_profile = _structural_contract_family(structural_evidence, side_effect_contract)
     if structural_profile:
         score += 4
         archetype_ids.append(structural_profile)
-        reasons.append("source decorator proves a bounded framework contract")
+        reasons.append("source structure proves a bounded contract family")
     profiled_contract_family = bool(
         profile_adjustments.get("profiled_contract_family")
         or archetype_adjustments.get("profiled_contract_family")
@@ -142,7 +142,11 @@ def semantic_target_quality_report(
     if meta and not (prompt_lab_boundary or profiled_contract_family):
         score -= min(45, 20 + len(meta) * 8)
         reasons.append("meta-infrastructure target, not project-domain slice: " + ", ".join(meta[:4]))
-    benign_boundary = bool(profile_adjustments["benign_runtime_boundary"] or archetype_adjustments["benign_runtime_boundary"])
+    benign_boundary = bool(
+        profile_adjustments["benign_runtime_boundary"]
+        or archetype_adjustments["benign_runtime_boundary"]
+        or structural_profile == "route_tree_flatten_boundary"
+    )
     if boundary and not (repair_boundary or ml_generation_boundary or benign_boundary):
         score -= min(35, 12 + len(boundary) * 5)
         reasons.append("runtime/API boundary target needs semantic review: " + ", ".join(boundary[:4]))
@@ -243,12 +247,52 @@ def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) 
     return direct
 
 
-def _structural_contract_family(evidence: dict[str, Any] | None) -> str:
-    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in dict(evidence or {}).get("decorators", [])}
+def _structural_contract_family(
+    evidence: dict[str, Any] | None, side_effect_contract: dict[str, Any] | None = None
+) -> str:
+    facts = dict(evidence or {})
+    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])}
     if decorators & {"route", "get", "post", "put", "patch", "delete"}:
         return "decorated_web_route_boundary"
     if "task" in decorators:
         return "decorated_background_task_boundary"
+    usage = dict(facts.get("argument_usage_types") or {})
+    if (
+        str(facts.get("inferred_output_type") or "").lower().startswith("iterator[")
+        and usage.get("routes") == "IterableLike"
+        and int(facts.get("yield_paths") or 0) > 0
+    ):
+        return "route_tree_flatten_boundary"
+    if (
+        str(facts.get("inferred_output_type") or "") == "VoidSideEffect"
+        and "database" in list(facts.get("observed_side_effects") or [])
+        and facts.get("source_body_complete")
+    ):
+        return "persistence_append_command"
+    if facts.get("file_extension_policy") and str(facts.get("inferred_output_type") or "") == "bool":
+        return "file_extension_admission_policy"
+    effects = set(dict(side_effect_contract or {}).get("declared") or [])
+    observed_effects = set(facts.get("observed_side_effects") or [])
+    if (
+        str(facts.get("inferred_output_type") or "") == "VoidSideEffect"
+        and int(facts.get("argument_count") or 0) == 1
+        and "MappingLike" in set(dict(facts.get("argument_usage_types") or {}).values())
+        and effects == {"observability"}
+        and facts.get("source_body_complete")
+        and not facts.get("state_mutation")
+    ):
+        return "mapping_observability_report_command"
+    if (
+        str(facts.get("inferred_output_type") or "") == "bool"
+        and facts.get("async_callable")
+        and int(facts.get("return_paths") or 0) >= 2
+        and "network" in effects
+        and "network" in observed_effects
+        and observed_effects <= {"network", "observability"}
+        and facts.get("source_body_complete")
+        and not facts.get("state_mutation")
+    ):
+        return "external_authorization_policy"
     return ""
 
 

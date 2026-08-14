@@ -29,6 +29,18 @@ OPERATIONAL_DYNAMIC_DISPATCH_OUTPUTS = set(
 OPERATIONAL_DYNAMIC_DISPATCH_PENALTY = int(
     nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "dynamic_dispatch_penalty")[0]
 )
+OPERATIONAL_SERIALIZATION_OUTPUTS = set(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "bounded_serialization_output_types")
+)
+OPERATIONAL_SERIALIZATION_BONUS = int(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "bounded_serialization_bonus")[0]
+)
+OPERATIONAL_ROUTE_OUTPUT_PREFIXES = nested_policy_tokens(
+    SPEC_WRITER_POLICY, "operational_boundary", "route_flatten_output_prefixes"
+)
+OPERATIONAL_ROUTE_FLATTEN_BONUS = int(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "route_flatten_bonus")[0]
+)
 OPERATIONAL_CONTROL_SYMBOL_CONTAINS_ANY = nested_policy_tokens(
     SPEC_WRITER_POLICY, "operational_boundary", "control_symbol_contains_any"
 )
@@ -226,6 +238,16 @@ def structural_contract_score(evidence: dict[str, Any]) -> tuple[int, list[str]]
     if evidence.get("dynamic_dispatch") or output_type in OPERATIONAL_DYNAMIC_DISPATCH_OUTPUTS:
         return -OPERATIONAL_DYNAMIC_DISPATCH_PENALTY, [
             "dynamic receiver dispatch is routing evidence, not a bounded pure transform"
+        ]
+    if output_type in OPERATIONAL_SERIALIZATION_OUTPUTS:
+        return OPERATIONAL_SERIALIZATION_BONUS, [
+            "source-proven root and nested serialization outputs form a bounded domain contract"
+        ]
+    usage = dict(evidence.get("argument_usage_types") or {})
+    route_iterator = output_type.startswith(OPERATIONAL_ROUTE_OUTPUT_PREFIXES)
+    if route_iterator and usage.get("routes") == "IterableLike" and int(evidence.get("yield_paths") or 0) > 0:
+        return OPERATIONAL_ROUTE_FLATTEN_BONUS, [
+            "source-proven route iterator is a bounded framework compatibility contract"
         ]
     return 0, []
 

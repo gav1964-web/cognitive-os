@@ -45,6 +45,25 @@ def test_synthesizes_dynamic_dispatch_profile_from_source_evidence(tmp_path):
     assert all(profile["training_evidence"].values())
 
 
+def test_synthesizes_stateful_recursive_xml_serializer_profile(tmp_path):
+    (tmp_path / "serializer.py").write_text(
+        "class Serializer:\n"
+        "    def serialize_model(self, modelObject, tagName='event', level=0):\n"
+        "        if modelObject.type == 'human':\n            modelObject.type = normalize(modelObject.type)\n"
+        "        xml = Element(tagName)\n"
+        "        for name in modelObject.get_properties():\n"
+        "            child = self.serialize_model(getattr(modelObject, name), name, level + 1)\n"
+        "            xml.append(child)\n"
+        "        return etree.tostring(xml) if level == 0 else xml\n",
+        encoding="utf-8",
+    )
+
+    profile = synthesize_contract_profile(tmp_path, "serializer.py:serialize_model")
+
+    assert profile["contract_family"] == "stateful_recursive_xml_serialization_boundary"
+    assert all(profile["training_evidence"].values())
+
+
 def test_rejects_unbounded_getattr_invocation(tmp_path):
     (tmp_path / "domain.py").write_text(
         "def execute(target, method):\n    return getattr(target, method)()\n",
