@@ -300,6 +300,8 @@
         "handle_request",
         "handle_async_request"
       ],
+      "dynamic_dispatch_output_types": ["DispatchedResult"],
+      "dynamic_dispatch_penalty": [55],
       "control_symbol_contains_any": [
         "reload",
         "watch",

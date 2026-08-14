@@ -82,6 +82,43 @@ def test_semantic_rerank_uses_structural_contract_before_selecting_target():
     assert spec["extraction_contract"]["semantic_quality"]["score"] >= 97
 
 
+def test_spec_writer_demotes_dynamic_receiver_dispatch_below_bounded_serializer():
+    dispatch = "domain.py:execute"
+    serializer = "xml_serializer.py:serialize_model"
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Prefer bounded serialization over opaque dispatch",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Prepare one implementable capability extraction spec."],
+            "files_or_symbols": [dispatch, serializer],
+        },
+        "traceability": [
+            {"source": source, "requirement": "Capability candidate requires TechnicalSpec."}
+            for source in (dispatch, serializer)
+        ],
+        "source_context": {
+            dispatch: {
+                "kind": "pure_transform",
+                "signature": {"args": [{"name": "method"}], "returns": ""},
+                "snippet": {"text": "def execute(self, method=None):\n    return getattr(self, method)(**self.request.get_values())"},
+            },
+            serializer: {
+                "kind": "pure_transform",
+                "signature": {"args": [{"name": "model", "annotation": "Node"}], "returns": "str"},
+                "snippet": {"text": "def serialize_model(model: Node) -> str:\n    return render(model)"},
+            },
+        },
+    }
+
+    spec = _run_spec_writer(adr)
+
+    assert spec["extraction_contract"]["candidate"] == serializer
+    ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
+    assert "dynamic receiver dispatch" in " ".join(ranked[dispatch]["reasons"])
+
+
 def test_spec_writer_demotes_test_suite_harness_when_product_event_target_exists():
     adr = {
         "artifact_type": "ArchitectureDecisionRecord",

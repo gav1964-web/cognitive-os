@@ -350,6 +350,30 @@ def test_session_add_proves_database_side_effect():
     assert evidence["observed_side_effects"] == ["database"]
 
 
+def test_receiver_request_dispatch_proves_delegated_result():
+    evidence = infer_source_contract({
+        "signature": {"args": [{"name": "method"}]},
+        "snippet": "def execute(self, method=None):\n    return getattr(self, method)(**self.request.get_values())",
+    })
+
+    assert evidence["inferred_output_type"] == "DispatchedResult"
+    assert evidence["output_inference_basis"] == "return_expression"
+    assert evidence["dynamic_dispatch"] is True
+
+
+def test_receiver_request_dispatch_is_visible_when_response_is_returned_separately():
+    evidence = infer_source_contract({
+        "snippet": (
+            "def execute(self, method=None):\n"
+            "    getattr(self, method)(**self.request.get_values())\n"
+            "    return self.response"
+        ),
+    })
+
+    assert evidence["inferred_output_type"] == "AttributeValue"
+    assert evidence["dynamic_dispatch"] is True
+
+
 def test_read_only_session_and_local_append_do_not_prove_database_write():
     query = infer_source_contract({
         "signature": {"args": [{"name": "session"}]},

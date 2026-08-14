@@ -26,6 +26,7 @@ def load_contract_families(path: str | None = None) -> dict[str, Any]:
 
 def recognize_contract_family(node: ast.AsyncFunctionDef | ast.FunctionDef) -> tuple[str, dict[str, bool]] | None:
     recognizers = (
+        ("dynamic_method_dispatch_boundary", _dynamic_dispatch_evidence),
         ("external_service_state_sync_boundary", _sync_evidence),
         ("file_extension_admission_policy", _file_admission_evidence),
         ("route_tree_flatten_boundary", _route_flatten_evidence),
@@ -41,6 +42,23 @@ def recognize_contract_family(node: ast.AsyncFunctionDef | ast.FunctionDef) -> t
 def family_profile(family_id: str, evidence: dict[str, bool]) -> dict[str, Any]:
     family = dict(dict(load_contract_families()["families"])[family_id])
     return {"contract_family": family_id, **family, "score_bonus": 0, "ranking_bonus": 0, "training_evidence": evidence}
+
+
+def _dynamic_dispatch_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:
+    selectors = {arg.arg.lower() for arg in node.args.args if arg.arg not in {"self", "cls"}}
+    dynamic_calls = [
+        item for item in ast.walk(node)
+        if isinstance(item, ast.Call) and isinstance(item.func, ast.Call)
+        and _call_name(item.func.func).lower() == "getattr"
+    ]
+    return {
+        "selector_input": bool(selectors & {"method", "action", "handler", "operation"}),
+        "receiver_lookup": any(call.func.args and isinstance(call.func.args[0], ast.Name) and call.func.args[0].id in {"self", "cls"} for call in dynamic_calls),
+        "selector_lookup": any(len(call.func.args) > 1 and isinstance(call.func.args[1], ast.Name) and call.func.args[1].id.lower() in selectors for call in dynamic_calls),
+        "request_values_forwarded": any(any(keyword.arg is None and "request" in ast.unparse(keyword.value).lower() for keyword in call.keywords) for call in dynamic_calls),
+        "delegated_result": any(isinstance(item, ast.Return) and item.value in dynamic_calls for item in ast.walk(node)),
+        "bounded_body": len(list(ast.walk(node))) <= 40,
+    }
 
 
 def _sync_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:

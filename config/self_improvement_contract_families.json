@@ -1,6 +1,15 @@
 {
   "schema_version": "self_improvement_contract_families.v1",
   "families": {
+    "dynamic_method_dispatch_boundary": {
+      "input_contract": {"method": "DispatchMethodName", "receiver_state": "DispatchReceiver(request_values, handlers)"},
+      "output_contract": {"result": "DispatchedResult", "failure_packet": "DispatchFailure(kind, method, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["dynamic_dispatch"], "delegation_policy": "effects and return behavior belong to the selected handler", "requires_validation_gate": true},
+      "validation_gates": ["known method names receive request values and return the delegated result", "missing or forbidden method names fail explicitly", "delegate exceptions and side effects are not hidden"],
+      "failure_modes": ["missing_method", "forbidden_method", "invalid_request_values", "delegate_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a dynamic method dispatcher over receiver state and request values"
+    },
     "external_service_state_sync_boundary": {
       "input_contract": {"request": "ExternalSyncRequest(actor, scope, options?)", "dependencies": "ExternalSyncDependencies(client, state_store, clock?, rate_gate?)"},
       "output_contract": {"result": "ExternalSyncResult(created_count, updated_count, affected_ids?, warnings?)", "failure_packet": "ExternalSyncFailure(kind, retry_after?, evidence_ref)"},

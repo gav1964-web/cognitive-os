@@ -23,6 +23,12 @@ REPAIR_GENERATED_PATH_TOKENS = nested_policy_tokens(SPEC_WRITER_POLICY, "repair_
 OPERATIONAL_API_PATH_SUFFIXES = nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "api_path_suffixes")
 OPERATIONAL_API_RUNTIME_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "api_runtime_symbols"))
 OPERATIONAL_DISPATCHER_SYMBOLS = set(nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "dispatcher_symbols"))
+OPERATIONAL_DYNAMIC_DISPATCH_OUTPUTS = set(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "dynamic_dispatch_output_types")
+)
+OPERATIONAL_DYNAMIC_DISPATCH_PENALTY = int(
+    nested_policy_tokens(SPEC_WRITER_POLICY, "operational_boundary", "dynamic_dispatch_penalty")[0]
+)
 OPERATIONAL_CONTROL_SYMBOL_CONTAINS_ANY = nested_policy_tokens(
     SPEC_WRITER_POLICY, "operational_boundary", "control_symbol_contains_any"
 )
@@ -213,6 +219,15 @@ def candidate_level_bonus(level: str) -> int:
         "preferred_anchor": 4,
         "helper_transform": 2,
     }.get(level, 0)
+
+
+def structural_contract_score(evidence: dict[str, Any]) -> tuple[int, list[str]]:
+    output_type = str(evidence.get("inferred_output_type") or "").lower()
+    if evidence.get("dynamic_dispatch") or output_type in OPERATIONAL_DYNAMIC_DISPATCH_OUTPUTS:
+        return -OPERATIONAL_DYNAMIC_DISPATCH_PENALTY, [
+            "dynamic receiver dispatch is routing evidence, not a bounded pure transform"
+        ]
+    return 0, []
 
 
 def operational_boundary_score(source: str, signature: dict[str, Any], claims: list[str]) -> tuple[int, list[str]]:

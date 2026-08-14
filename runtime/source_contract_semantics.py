@@ -6,11 +6,15 @@ import ast
 import textwrap
 from typing import Any
 
+from runtime.source_contract_helpers import local_type_factories
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
+from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
 
 
-_WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput"}
+_WEAK_TYPES = {
+    "", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult",
+}
 
 
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
@@ -46,6 +50,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "return_paths": _return_path_count(function),
         "raises": _raise_names(function),
         "state_mutation": _has_state_mutation(function),
+        "dynamic_dispatch": has_receiver_request_dispatch(function) if function is not None else False,
         "observed_side_effects": observed_side_effects(function, args),
         "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
     }
@@ -133,7 +138,7 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
         assignments = {
             **_argument_usage_types(function, argument_names),
             **_assignment_shapes(function),
-            **_local_type_factories(function),
+            **local_type_factories(function),
         }
         yielded = [node for node in ast.walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
         if yielded:
@@ -186,6 +191,8 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
     if isinstance(node, ast.BinOp):
         return "ArrayLike" if "ArrayLike" in {_expression_shape(value, assignments) for value in (node.left, node.right)} else "NumberLike"
     if isinstance(node, ast.Call):
+        if is_receiver_request_dispatch(node):
+            return "DispatchedResult"
         name = _call_name(node.func).lower()
         if name == "isinstance":
             return "bool"
@@ -211,16 +218,6 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         if name.endswith((".execute", ".executemany")):
             return "DatabaseResult"
     return ""
-
-
-def _local_type_factories(function: ast.AST) -> dict[str, str]:
-    return {
-        node.name: "TypeFactory"
-        for node in getattr(function, "body", [])
-        if isinstance(node, ast.ClassDef)
-    }
-
-
 def _function_node(snippet: str) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | None, bool]:
     if not snippet:
         return None, False

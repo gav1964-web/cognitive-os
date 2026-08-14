@@ -8,6 +8,7 @@ from runtime.role_spec_writer_ranking import (
     candidate_level_bonus as _candidate_level_bonus,
     name_and_contract_score as _name_and_contract_score,
     operational_boundary_score as _operational_boundary_score,
+    structural_contract_score as _structural_contract_score,
 )
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
@@ -57,7 +58,6 @@ def _hint_text(value: object, default: str) -> str:
         return str(value[0])
     text = str(value or "").strip()
     return text or default
-
 def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ranked = []
     for index, row in enumerate(evidence):
@@ -140,6 +140,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         name_score, name_reasons = _name_and_contract_score(str(candidate.get("source") or ""), signature, side_effects)
         score += name_score
         reasons.extend(name_reasons)
+        structural_score, structural_reasons = _structural_contract_score(infer_source_contract(candidate))
+        score += structural_score
+        reasons.extend(structural_reasons)
         if any("idempotency" in claim.lower() for claim in claims):
             score -= 10
             reasons.append("idempotency risk claim present")

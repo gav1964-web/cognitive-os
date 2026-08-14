@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import os
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +48,7 @@ def discover_contract_profile_candidates(
 ) -> list[dict[str, Any]]:
     """Discover exact source targets accepted by the current typed recognizer."""
     candidates: list[dict[str, Any]] = []
-    paths = sorted(project_dir.rglob("*.py"))[: max(0, max_files)]
+    paths = _python_paths(project_dir, max_files=max_files)
     for path in paths:
         if any(part in {".git", ".venv", "venv", "node_modules"} for part in path.parts):
             continue
@@ -83,3 +84,19 @@ def _within(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _python_paths(root: Path, *, max_files: int) -> list[Path]:
+    if max_files <= 0:
+        return []
+    paths: list[Path] = []
+    excluded = {".git", ".venv", "venv", "node_modules"}
+    for current, directories, files in os.walk(root, onerror=lambda _error: None):
+        directories[:] = sorted(name for name in directories if name not in excluded)
+        for name in sorted(files):
+            if not name.endswith(".py"):
+                continue
+            paths.append(Path(current) / name)
+            if len(paths) >= max_files:
+                return paths
+    return paths
