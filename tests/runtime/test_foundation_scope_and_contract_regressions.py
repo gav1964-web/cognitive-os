@@ -15,6 +15,50 @@ def test_scope_rejects_independent_project_collection(tmp_path):
     assert result["reason_code"] == "no_python_owned_product_boundary"
 
 
+def test_scope_rejects_nested_tutorial_and_support_only_python(tmp_path):
+    tutorial = tmp_path / "course" / "docker" / "step3"
+    tutorial.mkdir(parents=True)
+    (tutorial / "main.py").write_text("print('lesson')\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_scope_rejects_root_installation_helpers_without_product(tmp_path):
+    (tmp_path / "meson_post_install.py").write_text("print('install')\n", encoding="utf-8")
+    (tmp_path / "kill.py").write_text("print('stop helper')\n", encoding="utf-8")
+
+    assert _primary_language_scope(tmp_path)["status"] == "out_of_scope"
+
+
+def test_scope_keeps_small_root_and_src_products(tmp_path):
+    (tmp_path / "product.py").write_text("def run(): return 1\n", encoding="utf-8")
+    assert _primary_language_scope(tmp_path)["status"] == "in_scope"
+
+    (tmp_path / "product.py").unlink()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "product.py").write_text("def run(): return 1\n", encoding="utf-8")
+    assert _primary_language_scope(tmp_path)["status"] == "in_scope"
+
+
+def test_scope_rejects_large_distributed_project_portfolio(tmp_path):
+    for root_index in range(4):
+        root = tmp_path / f"area_{root_index}"
+        for project_index in range(5):
+            project = root / f"project_{project_index}"
+            project.mkdir(parents=True)
+            (project / "requirements.txt").write_text("requests\n", encoding="utf-8")
+        for module_index in range(250):
+            (root / f"module_{module_index}.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
 def test_scope_ignores_example_fixture_when_root_cli_is_product(tmp_path):
     (tmp_path / "scenarios" / "example_fixture").mkdir(parents=True)
     (tmp_path / "scenarios" / "example_fixture" / "verify.py").write_text("def run():\n    return 1\n")

@@ -120,6 +120,26 @@
     "library_module_min_python_files": 20,
     "library_module_min_gap": 8,
     "flat_script_collection_max_files": 20,
+    "portfolio_min_python_files": 1000,
+    "portfolio_min_python_roots": 4,
+    "portfolio_min_nested_manifests": 20,
+    "incidental_python_product_modules": [
+      "app.py",
+      "cli.py",
+      "main.py",
+      "manage.py",
+      "server.py"
+    ],
+    "incidental_python_support_modules": [
+      "install.py",
+      "kill.py",
+      "meson_post_install.py",
+      "post_install.py"
+    ],
+    "incidental_python_product_roots": [
+      "app",
+      "src"
+    ],
     "safe_selector_high_score": 75,
     "safe_selector_named_package_high_score": 90,
     "safe_selector_named_package_medium_score": 70,

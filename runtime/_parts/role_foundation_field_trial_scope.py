@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from runtime.source_target_policy import scope_policy_int, scope_policy_list
+
 
 def _primary_language_scope(path: Path) -> dict[str, Any]:
     top_files = {child.name.lower() for child in path.iterdir() if child.is_file()}
@@ -126,6 +128,8 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         not py_files
         or _examples_only_python_corpus(path, py_files, python_source_files)
         or _independent_project_collection(path)
+        or _distributed_project_portfolio(path, py_files)
+        or _incidental_python_support(path, python_source_files, root_package)
         or _documentation_led_demo(path, python_source_files, root_package)
         or _documentation_code_examples(path, python_source_files, root_package)
         or _documentation_index_with_fetch_script(path, python_source_files, root_package)
@@ -186,6 +190,43 @@ def _independent_project_collection(path: Path) -> bool:
         return False
     members = [child for child in roots[0].iterdir() if child.is_dir()]
     return sum(bool(_files_with_suffixes(child, {".py"})) for child in members) >= 10
+
+
+def _distributed_project_portfolio(path: Path, py_files: list[Path]) -> bool:
+    if (
+        _has_project_manifest(path)
+        or _root_python_package(path)
+        or len(py_files) < scope_policy_int("portfolio_min_python_files", 1_000)
+    ):
+        return False
+    python_roots = {file.relative_to(path).parts[0].lower() for file in py_files}
+    nested_manifests = 0
+    manifest_names = {"pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"}
+    excluded = {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache"}
+    for current, dirs, files in os.walk(path, topdown=True, onerror=lambda _exc: None):
+        dirs[:] = [name for name in dirs if name not in excluded]
+        if Path(current) != path:
+            nested_manifests += sum(name.lower() in manifest_names for name in files)
+    return (
+        len(python_roots) >= scope_policy_int("portfolio_min_python_roots", 4)
+        and nested_manifests >= scope_policy_int("portfolio_min_nested_manifests", 20)
+    )
+
+
+def _incidental_python_support(
+    path: Path, python_source_files: list[Path], root_package: str | None
+) -> bool:
+    if _has_project_manifest(path) or root_package or not 1 <= len(python_source_files) <= 2:
+        return False
+    relative = [file.relative_to(path) for file in python_source_files]
+    root_product_modules = set(scope_policy_list("incidental_python_product_modules"))
+    if any(len(file.parts) == 1 and file.name.lower() in root_product_modules for file in relative):
+        return False
+    support_modules = set(scope_policy_list("incidental_python_support_modules"))
+    if all(file.name.lower() in support_modules for file in relative):
+        return True
+    product_roots = set(scope_policy_list("incidental_python_product_roots"))
+    return all(len(file.parts) >= 2 and file.parts[0].lower() not in product_roots for file in relative)
 
 
 def _documentation_led_demo(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
