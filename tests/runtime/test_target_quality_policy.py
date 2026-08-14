@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from runtime.role_spec_writer_ranking import name_and_contract_score
+from runtime.target_structural_families import load_structural_family_rules, structural_contract_family
 from runtime.target_quality import semantic_target_quality_report
 from runtime.target_quality_policy import load_target_quality_policy
 
@@ -13,6 +16,50 @@ def test_target_quality_policy_loads_required_sections():
     assert "spec_writer_ranking" in policy
     assert policy["target_quality"]["suspicious_path_tokens"]
     assert policy["spec_writer_ranking"]["deterministic_shape_tokens"]
+
+
+def test_structural_family_rules_are_kb_driven(tmp_path):
+    path = tmp_path / "rules.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "structural_contract_family_rules.v1",
+                "rules": [
+                    {
+                        "family_id": "custom_sequence_boundary",
+                        "all": [{"field": "usage_types", "op": "contains", "value": "SequenceLike"}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    family = structural_contract_family(
+        {"argument_usage_types": {"items": "SequenceLike"}}, rules_path=str(path)
+    )
+
+    assert family == "custom_sequence_boundary"
+
+
+def test_structural_family_rules_reject_unknown_operator(tmp_path):
+    path = tmp_path / "rules.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "structural_contract_family_rules.v1",
+                "rules": [{"family_id": "unsafe", "all": [{"field": "value", "op": "eval"}]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        load_structural_family_rules(str(path))
+    except ValueError as exc:
+        assert "invalid structural condition" in str(exc)
+    else:
+        raise AssertionError("unknown operators must be rejected")
 
 
 def test_target_quality_policy_drives_quality_and_ranking_rules():
@@ -189,6 +236,28 @@ def test_additional_source_proven_contract_shapes_get_structural_families():
         )
         assert report["contract_archetype_ids"] == [family]
         assert report["score"] >= 97
+
+
+def test_decorated_identity_loader_combines_structure_and_ranking_evidence():
+    target = "app/models.py:load_user"
+    report = semantic_target_quality_report(
+        target,
+        ranked_candidates=[target],
+        source_evidence=[target],
+        selection_reason="pure transform with deterministic identity lookup",
+        structural_evidence={
+            "source_body_complete": True,
+            "inferred_output_type": "InferredOutput",
+            "decorators": ["login.user_loader"],
+            "state_mutation": False,
+        },
+        input_contract={"identity": "IdentityKey"},
+        output_contract={"principal": "InferredOutput"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert report["contract_archetype_ids"] == ["decorated_identity_loader_boundary"]
+    assert report["score"] >= 97
 
 
 def test_mapping_report_command_requires_observability_only_boundary():

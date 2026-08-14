@@ -26,7 +26,12 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         and {"include", "modules"}.issubset(top_dirs)
         and bool({"objects", "python"}.intersection(top_dirs))
     )
-    cpp_runtime_core = len(cpp_files) >= 20 and not root_package and "src" in top_dirs
+    cpp_minimum = scope_policy_int("cpp_runtime_core_min_files", 10)
+    cpp_runtime_core = (
+        len(cpp_files) >= max(cpp_minimum, len(python_source_files))
+        and not root_package
+        and "src" in top_dirs
+    )
     native_core_without_python_impl = (
         "cargo.toml" in top_files
         and rust_files
@@ -130,6 +135,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _independent_project_collection(path)
         or _distributed_project_portfolio(path, py_files)
         or _incidental_python_support(path, python_source_files, root_package)
+        or _incidental_python_automation(path, python_source_files, root_package)
         or _documentation_led_demo(path, python_source_files, root_package)
         or _documentation_code_examples(path, python_source_files, root_package)
         or _documentation_index_with_fetch_script(path, python_source_files, root_package)
@@ -227,6 +233,21 @@ def _incidental_python_support(
         return True
     product_roots = set(scope_policy_list("incidental_python_product_roots"))
     return all(len(file.parts) >= 2 and file.parts[0].lower() not in product_roots for file in relative)
+
+
+def _incidental_python_automation(
+    path: Path, python_source_files: list[Path], root_package: str | None
+) -> bool:
+    if root_package or not python_source_files:
+        return False
+    strong_manifests = ("pyproject.toml", "setup.py", "setup.cfg")
+    if any((path / name).is_file() for name in strong_manifests):
+        return False
+    maximum = scope_policy_int("incidental_python_automation_max_files", 20)
+    if len(python_source_files) > maximum:
+        return False
+    roots = set(scope_policy_list("incidental_python_automation_roots"))
+    return all(file.relative_to(path).parts[0].lower() in roots for file in python_source_files)
 
 
 def _documentation_led_demo(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:

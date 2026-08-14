@@ -38,6 +38,7 @@ from runtime.system_knowledge_ir_backlog import load_ir_backlog_policy
 from runtime.stage2_template_routes import load_stage2_template_routes
 from runtime.target_quality_policy import load_target_quality_policy
 from runtime.technical_spec_policy import load_technical_spec_policy
+from runtime.target_structural_families import load_structural_family_rules
 from runtime.web_extraction_profiles import load_web_extraction_profiles
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -128,6 +129,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "semantic_resolution_rules": load_semantic_resolution_rules(str(root / "config" / "semantic_resolution_rules.json")),
         "semantic_target_profiles": load_semantic_target_profiles(str(root / "config" / "semantic_target_profiles.json")),
         "self_improvement_contract_families": load_contract_families(str(root / "config" / "self_improvement_contract_families.json")),
+        "structural_contract_family_rules": load_structural_family_rules(str(root / "knowledge" / "contract_families" / "structural_recognition.json")),
         "stage2_template_routes": load_stage2_template_routes(str(root / "config" / "stage2_template_routes.json")),
         "web_extraction_profiles": load_web_extraction_profiles(str(root / "config" / "web_extraction_profiles.json")),
         "operation_recipe_rules": load_operation_recipe_rules(str(root / "config" / "operation_recipe_rules.json")),

@@ -35,6 +35,15 @@ def _check_self_improvement_contract_families(catalogs: dict[str, Any]) -> _Chec
                 check.errors.append(f"self_improvement_family_missing:{family_id}:{field_name}")
         if int(family.get("score_bonus") or 0) or int(family.get("ranking_bonus") or 0):
             check.errors.append(f"self_improvement_family_numeric_bonus_forbidden:{family_id}")
+    structural = dict(catalogs["structural_contract_family_rules"])
+    structural_ids = [str(dict(rule).get("family_id") or "") for rule in structural.get("rules", [])]
+    if len(structural_ids) != len(set(structural_ids)):
+        check.errors.append("structural_contract_family_duplicate_id")
+    if not structural_ids:
+        check.errors.append("structural_contract_family_rules_missing")
+    templates = set(dict(catalogs["self_improvement_contract_families"].get("families") or {}))
+    for family_id in sorted(set(structural_ids) - templates):
+        check.errors.append(f"structural_contract_family_template_missing:{family_id}")
     return check
 
 def _check_target_quality_policy(catalogs: dict[str, Any]) -> _Check:
@@ -52,6 +61,10 @@ def _check_target_quality_policy(catalogs: dict[str, Any]) -> _Check:
     ):
         if not target_quality.get(field_name):
             check.errors.append(f"target_quality_policy_missing:{field_name}")
+    for rule in target_quality.get("special_boundaries", []):
+        value = dict(rule or {})
+        if not value.get("id") or not value.get("target_contains_any") or not value.get("reason_contains_any"):
+            check.errors.append("target_quality_special_boundary_invalid")
     for section_name in (
         "repair_loop",
         "operational_boundary",
@@ -371,6 +384,7 @@ def _check_role_source_policy(catalogs: dict[str, Any]) -> _Check:
         "disfavored_roots",
         "manifest_names",
         "preferred_roots",
+        "auto_selector_strategy_order",
         "syntax_fixture_roots",
     ):
         if not scope.get(field_name):

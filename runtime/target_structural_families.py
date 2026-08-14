@@ -1,104 +1,120 @@
-"""Config-backed structural contract family recognition."""
+"""Interpret declarative structural contract-family recognition rules."""
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "contract_families" / "structural_recognition.json"
+SUPPORTED_OPERATORS = {
+    "equals", "falsy", "gte", "intersects", "contains", "contains_all",
+    "contains_count_at_least", "set_equals", "starts_with_ci", "subset_of", "truthy",
+}
+
+
+@lru_cache(maxsize=1)
+def load_structural_family_rules(path: str | None = None) -> dict[str, Any]:
+    payload = json.loads(Path(path or DEFAULT_PATH).read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "structural_contract_family_rules.v1":
+        raise ValueError("structural contract family rules schema mismatch")
+    rules = payload.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise ValueError("structural contract family rules must contain rules")
+    seen: set[str] = set()
+    for rule in rules:
+        family_id = str(dict(rule or {}).get("family_id") or "")
+        conditions = dict(rule or {}).get("all")
+        if not family_id or family_id in seen or not isinstance(conditions, list) or not conditions:
+            raise ValueError(f"invalid structural contract family rule: {family_id or '<missing>'}")
+        seen.add(family_id)
+        for condition in conditions:
+            row = dict(condition or {})
+            if not row.get("field") or row.get("op") not in SUPPORTED_OPERATORS:
+                raise ValueError(f"invalid structural condition in {family_id}")
+    return payload
+
+
 def structural_contract_family(
-    evidence: dict[str, Any] | None, side_effect_contract: dict[str, Any] | None = None
+    evidence: dict[str, Any] | None,
+    side_effect_contract: dict[str, Any] | None = None,
+    *,
+    rules_path: str | None = None,
 ) -> str:
+    facts = _normalized_facts(evidence, side_effect_contract)
+    for rule in load_structural_family_rules(rules_path)["rules"]:
+        if all(_matches(facts, dict(condition)) for condition in rule["all"]):
+            return str(rule["family_id"])
+    return ""
+
+
+def _normalized_facts(
+    evidence: dict[str, Any] | None, side_effect_contract: dict[str, Any] | None
+) -> dict[str, Any]:
     facts = dict(evidence or {})
-    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])}
-    if decorators & {"route", "action", "get", "post", "put", "patch", "delete"}:
-        return "decorated_web_route_boundary"
-    if "errorhandler" in decorators:
-        return "decorated_web_error_boundary"
-    if "task" in decorators:
-        return "decorated_background_task_boundary"
     usage = dict(facts.get("argument_usage_types") or {})
     output_type = str(facts.get("inferred_output_type") or "")
-    observed = set(facts.get("observed_side_effects") or [])
-    effects = set(dict(side_effect_contract or {}).get("declared") or [])
-    if (
-        output_type == "VoidSideEffect" and facts.get("async_callable")
-        and "IterableLike" in set(usage.values()) and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "async_batch_processing_boundary"
-    if (
-        output_type == "VoidSideEffect" and "MappingLike" in set(usage.values())
-        and "memory_state" in effects and facts.get("source_body_complete")
-        and facts.get("state_mutation")
-    ):
-        return "ordered_mapping_mutation_boundary"
-    if (
-        output_type == "MappingLike" and "database" in set(facts.get("observed_side_effects") or [])
-        and facts.get("source_body_complete") and not facts.get("state_mutation")
-    ):
-        return "database_read_mapping_boundary"
-    if output_type.lower().startswith("iterator[") and usage.get("routes") == "IterableLike" and facts.get("yield_paths"):
-        return "route_tree_flatten_boundary"
-    if output_type == "VoidSideEffect" and "database" in observed and facts.get("source_body_complete"):
-        return "persistence_append_command"
-    if facts.get("file_extension_policy") and output_type == "bool":
-        return "file_extension_admission_policy"
-    usage_types = set(usage.values())
-    if output_type == "ResponseLike" and {"KeyLike", "ProtocolLike"} <= usage_types and not observed and facts.get("source_body_complete"):
-        return "response_collection_ordering_transform"
-    if (
-        output_type.startswith("Union[")
-        and sum(value == "PathLike" for value in usage.values()) >= 2
-        and "MappingLike" in usage_types
-        and "filesystem_read" in observed
-        and observed <= {"filesystem_read", "observability"}
-        and int(facts.get("return_paths") or 0) >= 2
-        and facts.get("source_body_complete")
-    ):
-        return "cached_analysis_transform"
-    if (
-        output_type == "VoidSideEffect"
-        and int(facts.get("argument_count") or 0) == 1
-        and "MappingLike" in usage_types
-        and effects == {"observability"}
-        and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "mapping_observability_report_command"
-    if (
-        output_type == "VoidSideEffect"
-        and "IterableLike" in usage_types
-        and observed == {"observability"}
-        and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "iterable_observability_report_command"
-    if (
-        output_type.startswith("Union[")
-        and {"ArrayLike", "TupleLike"} <= {part.strip() for part in output_type[6:-1].split(",")}
-        and int(facts.get("return_paths") or 0) >= 2
-        and facts.get("source_body_complete")
-        and not observed
-        and not facts.get("state_mutation")
-    ):
-        return "multi_shape_prediction_boundary"
-    if (
-        output_type == "SetLike"
-        and "ProtocolLike" in usage_types
-        and facts.get("source_body_complete")
-        and not observed
-        and not facts.get("state_mutation")
-    ):
-        return "protocol_operator_result_boundary"
-    if (
-        output_type == "bool"
-        and facts.get("async_callable")
-        and int(facts.get("return_paths") or 0) >= 2
-        and "network" in effects
-        and "network" in observed
-        and observed <= {"network", "observability"}
-        and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "external_authorization_policy"
-    return ""
+    union_members = []
+    if output_type.startswith("Union[") and output_type.endswith("]"):
+        union_members = [part.strip() for part in output_type[6:-1].split(",")]
+    facts.update(
+        {
+            "decorators": [str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])],
+            "usage": usage,
+            "usage_types": list(usage.values()),
+            "output_type": output_type,
+            "output_union_members": union_members,
+            "observed_effects": list(facts.get("observed_side_effects") or []),
+            "declared_effects": list(dict(side_effect_contract or {}).get("declared") or []),
+        }
+    )
+    return facts
+
+
+def _matches(facts: dict[str, Any], condition: dict[str, Any]) -> bool:
+    actual = _field_value(facts, str(condition["field"]))
+    operator = str(condition["op"])
+    expected = condition.get("value")
+    if operator == "equals":
+        return actual == expected
+    if operator == "truthy":
+        return bool(actual)
+    if operator == "falsy":
+        return not actual
+    if operator == "gte":
+        return _number(actual) >= _number(expected)
+    if operator == "starts_with_ci":
+        return str(actual).lower().startswith(str(expected).lower())
+    actual_set = set(actual or [])
+    expected_set = set(expected or [])
+    if operator == "contains":
+        return expected in actual_set
+    if operator == "contains_all":
+        return expected_set <= actual_set
+    if operator == "intersects":
+        return bool(actual_set & expected_set)
+    if operator == "set_equals":
+        return actual_set == expected_set
+    if operator == "subset_of":
+        return actual_set <= expected_set
+    if operator == "contains_count_at_least":
+        return list(actual or []).count(expected) >= int(condition.get("count") or 1)
+    return False
+
+
+def _field_value(facts: dict[str, Any], field: str) -> Any:
+    value: Any = facts
+    for part in field.split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
+
+
+def _number(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0

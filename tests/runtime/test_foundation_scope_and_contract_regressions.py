@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from runtime._parts.role_foundation_field_trial_scope import _primary_language_scope
+from runtime._parts import role_foundation_pipeline_part4 as scope_pipeline
 from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.role_foundation_pipeline import _auto_active_root_decision
 from runtime.technical_spec_policy import load_technical_spec_policy
@@ -90,6 +91,31 @@ def test_auto_scope_does_not_promote_small_ci_helper_collection(tmp_path):
     assert decision["status"] != "selected"
 
 
+def test_auto_scope_strategy_order_is_policy_driven(tmp_path, monkeypatch):
+    package = tmp_path / "product"
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    automation = tmp_path / "ci"
+    automation.mkdir()
+    candidates = [
+        {"path": "product", "score": 60, "python_files": 20, "js_ts_files": 0},
+        {"path": "ci", "score": 18, "python_files": 20, "js_ts_files": 0},
+    ]
+    original = scope_pipeline.scope_policy_list
+
+    def reordered(field_name):
+        if field_name == "auto_selector_strategy_order":
+            return ["python_automation", "root_python_package"]
+        return original(field_name)
+
+    monkeypatch.setattr(scope_pipeline, "scope_policy_list", reordered)
+
+    decision = scope_pipeline._auto_active_root_decision(tmp_path, {"candidate_roots": candidates})
+
+    assert Path(decision["selected_root"]).resolve() == automation.resolve()
+    assert decision["source"] == "auto_python_automation_scope_selector"
+
+
 def test_scope_rejects_large_distributed_project_portfolio(tmp_path):
     for root_index in range(4):
         root = tmp_path / f"area_{root_index}"
@@ -172,6 +198,49 @@ def test_scope_rejects_cython_extension_without_python_core(tmp_path):
 
     assert result["status"] == "out_of_scope"
     assert result["primary_language"] == "Cython native extension"
+
+
+def test_scope_rejects_cpp_core_with_python_grpc_test_support(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "grpc_test").mkdir()
+    for index in range(10):
+        (tmp_path / "src" / f"core_{index}.cpp").write_text("int run() { return 1; }\n", encoding="utf-8")
+    for index in range(9):
+        (tmp_path / "grpc_test" / f"client_{index}.py").write_text("def run(): return 1\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["primary_language"] == "C++"
+
+
+def test_scope_rejects_incidental_python_in_non_python_automation(tmp_path):
+    lesson = tmp_path / "ansible" / "40-container-example"
+    lesson.mkdir(parents=True)
+    for index in range(5):
+        (lesson / f"helper_{index}.py").write_text("def run(): return 1\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_auto_scope_selects_standalone_python_project_in_monorepo(tmp_path):
+    (tmp_path / "testing").mkdir()
+    engine = tmp_path / "engine"
+    engine.mkdir()
+    (engine / "pyproject.toml").write_text("[project]\nname='engine'\n", encoding="utf-8")
+    candidates = [
+        {"path": "testing", "score": 110, "python_files": 26, "js_ts_files": 62},
+        {"path": "component", "score": 110, "python_files": 811, "js_ts_files": 249},
+        {"path": "engine", "score": 70, "python_files": 82, "js_ts_files": 0},
+    ]
+
+    decision = _auto_active_root_decision(tmp_path, {"candidate_roots": candidates})
+
+    assert Path(decision["selected_root"]).resolve() == engine.resolve()
+    assert decision["source"] == "auto_standalone_python_project_scope_selector"
 
 
 def test_metric_and_model_query_contract_families_are_profiled():

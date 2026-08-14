@@ -114,20 +114,9 @@ def semantic_target_quality_report(
     if "pure transform" in reason_text or "deterministic parser" in reason_text:
         score += 8
         reasons.append("ranking reason marks deterministic transform")
-    repair_boundary = "llm hypothesis boundary" in reason_text or "repair-attempt contract" in reason_text
-    if repair_boundary and "send_to_model" in lowered:
-        score += 18
-        reasons.append("LLM repair hypothesis boundary is a valid architectural contract target")
-    ml_generation_boundary = "ml inference/submission boundary" in reason_text or "ml generation" in reason_text
-    if ml_generation_boundary and "generate_response" in lowered:
-        score += 18
-        reasons.append("ML generation boundary is a valid architectural contract target")
-    prompt_lab_boundary = "prompt_lab" in lowered and (
-        "first-slice target" in reason_text or "prompt-lab" in reason_text or "run artifact" in reason_text
-    )
-    if prompt_lab_boundary:
-        score += 18
-        reasons.append("prompt-lab run/artifact boundary is a valid project-domain target")
+    special_boundary = _special_boundary_adjustments(lowered, reason_text)
+    score += special_boundary["score_delta"]
+    reasons.extend(special_boundary["reasons"])
 
     suspicious = _suspicious_hits(path, symbol)
     suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family)
@@ -140,7 +129,7 @@ def semantic_target_quality_report(
     if suspicious and not suspicious_allowed:
         score -= min(30, 10 + len(suspicious) * 5)
         reasons.append("support/utility target: " + ", ".join(suspicious[:4]))
-    if meta and not (prompt_lab_boundary or profiled_contract_family):
+    if meta and not (special_boundary["allow_meta"] or profiled_contract_family):
         score -= min(45, 20 + len(meta) * 8)
         reasons.append("meta-infrastructure target, not project-domain slice: " + ", ".join(meta[:4]))
     benign_boundary = bool(
@@ -148,7 +137,7 @@ def semantic_target_quality_report(
         or archetype_adjustments["benign_runtime_boundary"]
         or structural_profile == "route_tree_flatten_boundary"
     )
-    if boundary and not (repair_boundary or ml_generation_boundary or benign_boundary):
+    if boundary and not (special_boundary["allow_runtime"] or benign_boundary):
         score -= min(35, 12 + len(boundary) * 5)
         reasons.append("runtime/API boundary target needs semantic review: " + ", ".join(boundary[:4]))
     if trivial and not profiled_contract_family:
@@ -176,8 +165,8 @@ def semantic_target_quality_report(
         reasons.append("parser combinator helper remains acceptable until executable grammar behavior is proven")
 
     score = max(0, min(100, score))
-    disqualifying_boundary = boundary and not (repair_boundary or ml_generation_boundary or benign_boundary)
-    disqualifying_meta = meta and not (prompt_lab_boundary or profiled_contract_family)
+    disqualifying_boundary = boundary and not (special_boundary["allow_runtime"] or benign_boundary)
+    disqualifying_meta = meta and not (special_boundary["allow_meta"] or profiled_contract_family)
     liveness_probe = _liveness_probe_symbol(symbol)
     disqualifying_trivial = trivial and not profiled_contract_family
     disqualifying_bootstrap = bootstrap and not profiled_contract_family
@@ -347,3 +336,22 @@ def _generic_unprofiled_candidate(path: str, symbol: str) -> bool:
     if not any(token in path for token in GENERIC_UNPROFILED_PATH_TOKENS):
         return False
     return any(token in symbol for token in GENERIC_UNPROFILED_SYMBOL_CONTAINS_ANY)
+
+
+def _special_boundary_adjustments(target: str, reason_text: str) -> dict[str, Any]:
+    matched = []
+    for value in TARGET_QUALITY_POLICY.get("special_boundaries", []):
+        rule = dict(value or {})
+        target_tokens = [str(token).lower() for token in rule.get("target_contains_any", [])]
+        reason_tokens = [str(token).lower() for token in rule.get("reason_contains_any", [])]
+        if target_tokens and not any(token in target for token in target_tokens):
+            continue
+        if reason_tokens and not any(token in reason_text for token in reason_tokens):
+            continue
+        matched.append(rule)
+    return {
+        "score_delta": sum(int(rule.get("score_bonus") or 0) for rule in matched),
+        "reasons": [str(rule["reason"]) for rule in matched if rule.get("reason")],
+        "allow_runtime": any(bool(rule.get("allow_runtime_boundary")) for rule in matched),
+        "allow_meta": any(bool(rule.get("allow_meta_infrastructure")) for rule in matched),
+    }

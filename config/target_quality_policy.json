@@ -231,6 +231,32 @@
       "/_py/path.py",
       "/runtime.py",
       "/template.py"
+    ],
+    "special_boundaries": [
+      {
+        "id": "llm_repair_hypothesis_boundary",
+        "target_contains_any": ["send_to_model"],
+        "reason_contains_any": ["llm hypothesis boundary", "repair-attempt contract"],
+        "score_bonus": 18,
+        "allow_runtime_boundary": true,
+        "reason": "LLM repair hypothesis boundary is a valid architectural contract target"
+      },
+      {
+        "id": "ml_generation_boundary",
+        "target_contains_any": ["generate_response"],
+        "reason_contains_any": ["ml inference/submission boundary", "ml generation"],
+        "score_bonus": 18,
+        "allow_runtime_boundary": true,
+        "reason": "ML generation boundary is a valid architectural contract target"
+      },
+      {
+        "id": "prompt_lab_run_artifact_boundary",
+        "target_contains_any": ["prompt_lab"],
+        "reason_contains_any": ["first-slice target", "prompt-lab", "run artifact"],
+        "score_bonus": 18,
+        "allow_meta_infrastructure": true,
+        "reason": "prompt-lab run/artifact boundary is a valid project-domain target"
+      }
     ]
   },
   "spec_writer_ranking": {

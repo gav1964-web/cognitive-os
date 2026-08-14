@@ -83,6 +83,76 @@
       "validation_gates": ["valid record construction and append are covered", "persistence failure does not hide transaction ownership", "duplicate/idempotency behavior is reviewed"],
       "failure_modes": ["record_construction_error", "unit_of_work_rejected", "duplicate_record"],
       "reason": "AST proves a bounded unit-of-work append command"
+    },
+    "decorated_web_route_boundary": {
+      "input_contract": {"request": "WebRequest", "route_context": "RouteContext"},
+      "output_contract": {"response": "WebResponseLike"},
+      "side_effect_policy": {"declared": ["framework_dispatch"], "requires_validation_gate": true},
+      "validation_gates": ["route parameters and response shape are explicit", "framework errors preserve request evidence"],
+      "failure_modes": ["invalid_route_input", "handler_failure", "response_shape_mismatch"]
+    },
+    "decorated_web_error_boundary": {
+      "input_contract": {"error": "WebErrorContext"},
+      "output_contract": {"response": "ErrorResponseLike"},
+      "side_effect_policy": {"declared": ["framework_dispatch"], "requires_validation_gate": true},
+      "validation_gates": ["registered error classes map to stable response shapes", "error details follow disclosure policy"],
+      "failure_modes": ["unregistered_error", "error_rendering_failure", "unsafe_error_disclosure"]
+    },
+    "decorated_background_task_boundary": {
+      "input_contract": {"task_input": "BackgroundTaskInput"},
+      "output_contract": {"result": "BackgroundTaskResult"},
+      "side_effect_policy": {"declared": ["task_runtime"], "requires_validation_gate": true},
+      "validation_gates": ["retry and idempotency behavior are explicit", "task failure remains observable"],
+      "failure_modes": ["task_rejected", "task_failure", "retry_exhausted"]
+    },
+    "decorated_identity_loader_boundary": {
+      "input_contract": {"identity": "IdentityKey"},
+      "output_contract": {"principal": "Optional[AuthenticatedPrincipal]"},
+      "side_effect_policy": {"declared": ["identity_store_read"], "requires_validation_gate": true},
+      "validation_gates": ["known, missing and malformed identities have explicit results", "identity lookup does not mutate authentication state"],
+      "failure_modes": ["invalid_identity", "principal_not_found", "identity_store_failure"]
+    },
+    "async_batch_processing_boundary": {
+      "input_contract": {"items": "IterableLike"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["async_processing"], "requires_validation_gate": true},
+      "validation_gates": ["empty and partial batches terminate deterministically", "per-item failure policy is explicit"],
+      "failure_modes": ["invalid_item", "partial_batch_failure", "cancellation"]
+    },
+    "ordered_mapping_mutation_boundary": {
+      "input_contract": {"mapping": "MappingLike", "receiver_state": "MutableState"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["memory_state"], "requires_validation_gate": true},
+      "validation_gates": ["mapping order is deterministic", "state mutation and rollback behavior are explicit"],
+      "failure_modes": ["invalid_mapping", "partial_state_mutation", "ordering_conflict"]
+    },
+    "database_read_mapping_boundary": {
+      "input_contract": {"query": "DatabaseReadQuery"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": ["database"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated reads return stable mapping shapes", "database failures preserve query evidence"],
+      "failure_modes": ["query_failure", "mapping_shape_mismatch", "record_not_found"]
+    },
+    "iterable_observability_report_command": {
+      "input_contract": {"report_items": "IterableLike"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["observability"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated iterables produce bounded output", "reporting does not mutate input items"],
+      "failure_modes": ["invalid_report_item", "rendering_failure", "observability_sink_failure"]
+    },
+    "multi_shape_prediction_boundary": {
+      "input_contract": {"model_input": "PredictionInput", "options": "PredictionOptions"},
+      "output_contract": {"result": "Union[ArrayLike, TupleLike]"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["each prediction mode has an explicit output shape", "invalid model state fails before returning partial output"],
+      "failure_modes": ["invalid_model_state", "unsupported_prediction_mode", "prediction_shape_mismatch"]
+    },
+    "protocol_operator_result_boundary": {
+      "input_contract": {"context": "ProtocolLike"},
+      "output_contract": {"result": "SetLike"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["protocol context requirements are explicit", "operator result tokens are stable and bounded"],
+      "failure_modes": ["invalid_protocol_context", "operator_failure", "invalid_result_token"]
     }
   }
 }

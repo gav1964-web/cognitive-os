@@ -8,7 +8,7 @@
   "excluded_description_tokens": ["mirror of", "deprecated", "archived", "learning exercise", "collection of links"],
   "strata": [
     {"id": "legacy_automation", "queries": ["automation", "command line", "backup", "monitoring", "migration", "deployment", "scraper", "bot"]},
-    {"id": "data_ml_scientific", "queries": ["machine learning", "data pipeline", "scientific", "neural network", "computer vision", "natural language", "forecasting", "bioinformatics"]},
+    {"id": "data_ml_scientific", "queries": ["machine learning", "data pipeline", "scientific", "neural network", "computer vision", "natural language", "forecasting", "bioinformatics", "data science", "pytorch", "tensorflow", "astronomy", "computational physics", "computational chemistry", "genomics", "geospatial analysis", "scientific computing", "numerical simulation", "medical imaging", "climate modeling", "quantum computing", "optimization solver"]},
     {"id": "backend_api", "queries": ["fastapi", "django", "flask", "rest api", "web service", "graphql", "microservice", "backend"]},
     {"id": "infra_devops_monorepo", "queries": ["devops", "kubernetes", "ansible", "ci cd", "infrastructure", "orchestration", "monorepo", "platform engineering"]},
     {"id": "mixed_unusual", "queries": ["security", "proxy", "protocol", "compiler", "desktop", "multimedia", "hardware", "simulation"]}

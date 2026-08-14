@@ -52,6 +52,53 @@ def _automation_python_scope(project_dir: Path, candidates: list[dict[str, Any]]
     return None
 
 
+def _standalone_python_project_scope(
+    project_dir: Path, candidates: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    minimum_files = scope_policy_int("standalone_project_min_python_files", 40)
+    minimum_score = scope_policy_int("standalone_project_min_score", 45)
+    max_js_percent = scope_policy_int("standalone_project_max_js_per_python_percent", 25)
+    for row in candidates:
+        path = str(row.get("path") or "").replace("\\", "/").strip("/")
+        python_files = int(row.get("python_files") or 0)
+        js_files = int(row.get("js_ts_files") or 0)
+        if python_files < minimum_files or int(row.get("score") or 0) < minimum_score:
+            continue
+        if js_files * 100 > python_files * max_js_percent:
+            continue
+        if (project_dir / path / "pyproject.toml").is_file():
+            return dict(row)
+    return None
+
+
+def _configured_scope_strategy_decision(
+    project_dir: Path, candidates: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    strategies = {
+        "root_python_package": (_root_python_package_scope, "auto_root_python_package_scope_selector"),
+        "python_automation": (_automation_python_scope, "auto_python_automation_scope_selector"),
+        "frontend_python_package": (_frontend_python_package_scope, "auto_python_facing_scope_selector"),
+        "named_package_over_tests": (_named_package_over_tests_scope, "auto_named_package_over_tests_scope_selector"),
+        "application_python_package": (_application_python_package_scope, "auto_application_package_scope_selector"),
+        "standalone_python_project": (_standalone_python_project_scope, "auto_standalone_python_project_scope_selector"),
+        "monorepo_python_modules": (_monorepo_python_modules_scope, "auto_monorepo_python_modules_scope_selector"),
+        "aliased_core_package": (_aliased_core_package_scope, "auto_aliased_core_scope_selector"),
+        "library_module": (_library_module_scope, "auto_library_module_scope_selector"),
+    }
+    for strategy_id in scope_policy_list("auto_selector_strategy_order"):
+        if strategy_id == "native_python_package":
+            if native_package := _native_python_package_scope(project_dir):
+                return _active_root_decision(project_dir, native_package)
+            continue
+        strategy = strategies.get(strategy_id)
+        if not strategy:
+            continue
+        selector, source = strategy
+        if candidate := selector(project_dir, candidates):
+            return _selected_scope_decision(project_dir, candidate, source)
+    return None
+
+
 def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) -> dict[str, Any]:
     candidates = list(scope_report.get("candidate_roots") or [])
     if not candidates:
@@ -68,32 +115,8 @@ def _auto_active_root_decision(project_dir: Path, scope_report: dict[str, Any]) 
     path = str(best.get("path") or "")
     if _flat_script_collection_candidate(best):
         return _active_root_decision(project_dir, None)
-    native_package = _native_python_package_scope(project_dir)
-    if native_package:
-        return _active_root_decision(project_dir, native_package)
-    if package_scope := _root_python_package_scope(project_dir, candidates):
-        return _selected_scope_decision(project_dir, package_scope, "auto_root_python_package_scope_selector")
-    if automation_scope := _automation_python_scope(project_dir, candidates):
-        return _selected_scope_decision(project_dir, automation_scope, "auto_python_automation_scope_selector")
-    frontend_python_package = _frontend_python_package_scope(project_dir, candidates)
-    if frontend_python_package:
-        return _selected_scope_decision(
-            project_dir,
-            frontend_python_package,
-            "auto_python_facing_scope_selector",
-        )
-    if package_scope := _named_package_over_tests_scope(project_dir, candidates):
-        return _selected_scope_decision(project_dir, package_scope, "auto_named_package_over_tests_scope_selector")
-    application_package = _application_python_package_scope(project_dir, candidates)
-    if application_package:
-        return _selected_scope_decision(project_dir, application_package, "auto_application_package_scope_selector")
-    for scoped, source in (
-        (_monorepo_python_modules_scope(project_dir, candidates), "auto_monorepo_python_modules_scope_selector"),
-        (_aliased_core_package_scope(project_dir, candidates), "auto_aliased_core_scope_selector"),
-        (_library_module_scope(project_dir, candidates), "auto_library_module_scope_selector"),
-    ):
-        if scoped:
-            return _selected_scope_decision(project_dir, scoped, source)
+    if configured := _configured_scope_strategy_decision(project_dir, candidates):
+        return configured
     if project_dir.name.lower().replace("-", "_") == project_dir.parent.name.lower().replace("-", "_"):
         return _active_root_decision(project_dir, None)
     clear_named_package = _clear_named_package_candidate(project_dir, path, best_score, second_score)
