@@ -35,6 +35,7 @@ def run_role_foundation_pipeline(
     _auto_scope_depth: int = 0,
     _active_root_is_auto: bool = False,
     _auto_scope_current_root_confirmed: bool = False,
+    _evaluation_target: str | None = None,
 ) -> dict[str, Any]:
     load_skill_registry(root)
     active_root_decision = _active_root_decision(project_dir, active_root)
@@ -115,12 +116,19 @@ def run_role_foundation_pipeline(
         if write:
             result["report_path"] = write_role_foundation_report(root, result).as_posix()
         return result
+    artifact_transform = None
+    if _evaluation_target:
+        from runtime.evaluation_target_clamp import evaluation_target_transform
+        from runtime.source_target_evidence import source_target_evidence
+        target_evidence = source_target_evidence(analysis_project_dir, _evaluation_target)
+        artifact_transform = evaluation_target_transform(_evaluation_target, target_evidence)
     built_artifacts = run_configured_role_prefix(
         goal=goal,
         project_report=project_map_report,
         architect_advisory_config=architect_advisory_config,
         spec_writer_advisory_config=spec_writer_advisory_config,
         until_artifact_type="TechnicalSpec",
+        artifact_transform=artifact_transform,
     )
     artifacts = {
         "project_map_report": project_artifact,

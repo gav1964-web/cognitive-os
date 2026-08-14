@@ -53,6 +53,7 @@ def run_role_artifact_pipeline(
     executable_acceptance_result: dict[str, Any] | None = None,
     pipeline: dict[str, Any] | None = None,
     directory: dict[str, Any] | None = None,
+    artifact_transform: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run configured artifact builders with declarative bindings."""
 
@@ -80,6 +81,8 @@ def run_role_artifact_pipeline(
         artifact = builder(**kwargs)
         if not isinstance(artifact, dict):
             raise RoleArtifactInterpreterError(f"builder returned non-object artifact: {step['builder']}")
+        if artifact_transform is not None:
+            artifact = artifact_transform(artifact)
         expected_role = str(step.get("role_id") or "")
         if expected_role and artifact.get("role") != expected_role:
             raise RoleArtifactInterpreterError(

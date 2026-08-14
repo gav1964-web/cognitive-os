@@ -149,6 +149,7 @@ def _evaluate(
     write: bool,
     architect_config: LocalInferenceConfig | None = None,
     spec_writer_config: LocalInferenceConfig | None = None,
+    evaluation_target: str | None = None,
 ) -> dict[str, Any]:
     result = run_role_foundation_pipeline(
         root=root,
@@ -157,6 +158,7 @@ def _evaluate(
         write=write,
         architect_advisory_config=architect_config,
         spec_writer_advisory_config=spec_writer_config,
+        _evaluation_target=evaluation_target,
     )
     loaded = _result_with_loaded_artifacts(result)
     semantic = evaluate_foundation_semantic_quality(loaded)

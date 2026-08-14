@@ -29,7 +29,10 @@ def main() -> int:
     )
     effect = evaluate_profile_effect(
         project, args.source,
-        lambda: _evaluate(root, project, write=True, spec_writer_config=config),
+        lambda: _evaluate(
+            root, project, write=True, spec_writer_config=config,
+            evaluation_target=args.source,
+        ),
     )
     candidate = stage_profile_effect(root, project, effect) if args.write else None
     effect["knowledge_candidate_path"] = candidate.as_posix() if candidate else None
