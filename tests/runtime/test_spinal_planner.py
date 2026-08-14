@@ -9,15 +9,14 @@ from runtime.spinal_planner import adapt_from_interrupt_packet, plan_from_intent
 from runtime.spinal_quality import score_spinal_result
 
 
-def _registry() -> CapabilityRegistry:
-    root = Path(__file__).resolve().parents[2]
+def _registry(root: Path) -> CapabilityRegistry:
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     return registry
 
 
-def test_spinal_planner_builds_deterministic_motor_plan() -> None:
-    registry = _registry()
+def test_spinal_planner_builds_deterministic_motor_plan(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     intent = intent_packet(
         correlation_id="goal_spinal_1",
         intent="NORMALIZE_AND_HASH",
@@ -41,8 +40,8 @@ def test_spinal_planner_builds_deterministic_motor_plan() -> None:
     assert score_spinal_result(result, registry)["passed"] is True
 
 
-def test_spinal_planner_uses_llm_only_as_validated_proposal() -> None:
-    registry = _registry()
+def test_spinal_planner_uses_llm_only_as_validated_proposal(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     intent = intent_packet(
         correlation_id="goal_spinal_2",
         intent="CUSTOM_CHAIN",
@@ -88,8 +87,8 @@ def test_spinal_planner_uses_llm_only_as_validated_proposal() -> None:
     assert score_spinal_result(result, registry)["passed"] is True
 
 
-def test_spinal_planner_turns_interrupt_into_motor_signal() -> None:
-    registry = _registry()
+def test_spinal_planner_turns_interrupt_into_motor_signal(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     interrupt = interrupt_packet(
         correlation_id="goal_spinal_3",
         interrupt={

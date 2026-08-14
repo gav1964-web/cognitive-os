@@ -135,8 +135,8 @@ def test_goal_spec_contract_rejects_extra_fields():
         validate_goal_spec(spec)
 
 
-def test_goal_orchestrator_uses_goal_intake_clarification():
-    registry = CapabilityRegistry(ROOT)
+def test_goal_orchestrator_uses_goal_intake_clarification(runtime_workspace):
+    registry = CapabilityRegistry(runtime_workspace)
     registry.reset_from_plugins()
 
     decision = decide_goal_route("process this", registry)
@@ -146,8 +146,8 @@ def test_goal_orchestrator_uses_goal_intake_clarification():
     assert decision.clarification_question
 
 
-def test_goal_orchestrator_routes_project_fact_questions_to_answer_capability(tmp_path):
-    registry = CapabilityRegistry(Path(__file__).resolve().parents[2])
+def test_goal_orchestrator_routes_project_fact_questions_to_answer_capability(runtime_workspace):
+    registry = CapabilityRegistry(runtime_workspace)
     registry.reset_from_plugins()
 
     decision = decide_goal_route(

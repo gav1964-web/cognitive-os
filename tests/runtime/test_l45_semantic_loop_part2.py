@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 from runtime.cognitive_control_plane import run_prompt_product_control_plane
 from runtime.contract_registry import ContractRegistry
 from runtime.l4_decision_table import decision_table_catalog, match_prompt_product_rule
@@ -68,8 +67,8 @@ def test_l45_model_path_uses_deepseek_default(monkeypatch):
     assert captured["config"].provider_label == "external_l45_intent_resolver"
 
 
-def test_contract_registry_knows_l45_loop_artifacts():
-    root = Path(__file__).resolve().parents[2]
+def test_contract_registry_knows_l45_loop_artifacts(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     contracts = ContractRegistry.from_capability_registry(registry)

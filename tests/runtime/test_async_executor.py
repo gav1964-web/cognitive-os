@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -13,8 +12,8 @@ from runtime.registry import CapabilityRegistry
 
 
 @pytest.mark.asyncio
-async def test_async_executor_runs_happy_path():
-    root = Path(__file__).resolve().parents[2]
+async def test_async_executor_runs_happy_path(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = load_pipeline(root / "pipelines" / "fetch_parse_save.json")
 
@@ -29,8 +28,8 @@ async def test_async_executor_runs_happy_path():
 
 
 @pytest.mark.asyncio
-async def test_async_executor_runs_branching_dag():
-    root = Path(__file__).resolve().parents[2]
+async def test_async_executor_runs_branching_dag(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = Pipeline(
         id="branching",
@@ -52,14 +51,14 @@ async def test_async_executor_runs_branching_dag():
 
 
 @pytest.mark.asyncio
-async def test_async_executor_emits_packets_and_recovers_through_spinal_layer():
-    root = Path(__file__).resolve().parents[2]
+async def test_async_executor_emits_packets_and_recovers_through_spinal_layer(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
 
 
 @pytest.mark.asyncio
-async def test_async_executor_blocks_when_fallback_also_fails():
-    root = Path(__file__).resolve().parents[2]
+async def test_async_executor_blocks_when_fallback_also_fails(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = load_pipeline(root / "pipelines" / "fetch_parse_save.json")
     packets = []

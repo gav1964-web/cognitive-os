@@ -1,11 +1,9 @@
-from pathlib import Path
-
 from runtime.registry import CapabilityRegistry
 from runtime.spinal_benchmark import run_spinal_benchmark
 
 
-def test_spinal_benchmark_passes_contract_and_route_gates():
-    root = Path(__file__).resolve().parents[2]
+def test_spinal_benchmark_passes_contract_and_route_gates(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
 
     result = run_spinal_benchmark(root)

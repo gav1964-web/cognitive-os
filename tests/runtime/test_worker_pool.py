@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
 
 from runtime.durable_queue import DurableQueue
@@ -9,8 +8,8 @@ from runtime.registry import CapabilityRegistry
 from runtime.worker_pool import WorkerPool
 
 
-def test_worker_pool_drains_durable_queue():
-    root = Path(__file__).resolve().parents[2]
+def test_worker_pool_drains_durable_queue(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
     queue = DurableQueue(root)
@@ -33,8 +32,8 @@ def test_worker_pool_drains_durable_queue():
     assert queue.load(first)["result"]["outputs"]["hash"]["hash"].startswith("sha256:")
 
 
-def test_worker_pool_retries_failed_job_until_max_attempts():
-    root = Path(__file__).resolve().parents[2]
+def test_worker_pool_retries_failed_job_until_max_attempts(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
     queue = DurableQueue(root)
@@ -58,8 +57,8 @@ def test_worker_pool_retries_failed_job_until_max_attempts():
     assert job["attempts"] == 2
 
 
-def test_worker_pool_bounded_loop_runs_to_idle():
-    root = Path(__file__).resolve().parents[2]
+def test_worker_pool_bounded_loop_runs_to_idle(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
     queue = DurableQueue(root)
@@ -79,8 +78,8 @@ def test_worker_pool_bounded_loop_runs_to_idle():
     assert result["processed"] == 1
 
 
-def test_worker_pool_persists_spinal_packet_trace_and_recovery():
-    root = Path(__file__).resolve().parents[2]
+def test_worker_pool_persists_spinal_packet_trace_and_recovery(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
     queue = DurableQueue(root)

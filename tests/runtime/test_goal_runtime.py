@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -11,12 +10,11 @@ from runtime.registry import CapabilityRegistry
 
 
 @pytest.fixture()
-def root_and_registry():
-    root = Path(__file__).resolve().parents[2]
+def root_and_registry(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
-    yield root, registry
-    CapabilityRegistry(root).reset_from_plugins()
+    return root, registry
 
 
 def _intent(correlation_id: str, objective: str, required: list[str]):

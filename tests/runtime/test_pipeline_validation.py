@@ -10,8 +10,8 @@ from runtime.registry import CapabilityRegistry
 
 
 @pytest.fixture()
-def registry():
-    root = Path(__file__).resolve().parents[2]
+def registry(runtime_workspace):
+    root = runtime_workspace
     reg = CapabilityRegistry(root)
     reg.reset_from_plugins()
     return reg

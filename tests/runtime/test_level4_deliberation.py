@@ -1,12 +1,10 @@
-from pathlib import Path
-
 from runtime.goal_orchestrator import decide_goal_route
 from runtime.level4_deliberation import build_deliberation
 from runtime.registry import CapabilityRegistry
 
 
-def test_level4_deliberation_records_route_risks_and_recommendation():
-    root = Path(__file__).resolve().parents[2]
+def test_level4_deliberation_records_route_risks_and_recommendation(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     decision = decide_goal_route("Parse a PDF file from $input.path", registry)
@@ -25,8 +23,8 @@ def test_level4_deliberation_records_route_risks_and_recommendation():
     assert any(risk["code"] == "no_mature_memory_template" for risk in deliberation["risks"])
 
 
-def test_level4_deliberation_prefers_mature_memory_template():
-    root = Path(__file__).resolve().parents[2]
+def test_level4_deliberation_prefers_mature_memory_template(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     decision = decide_goal_route("Parse a PDF file from $input.path", registry)

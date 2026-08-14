@@ -6,14 +6,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from runtime.deterministic_goal_planner import plan_from_required_capabilities
 from runtime.registry import CapabilityRegistry
 
 
-def test_deterministic_goal_planner_builds_list_files_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
+@pytest.fixture()
+def registry(runtime_workspace):
+    registry = CapabilityRegistry(runtime_workspace)
     registry.reset_from_plugins()
+    return registry
+
+
+def test_deterministic_goal_planner_builds_list_files_plan(registry):
 
     planned = plan_from_required_capabilities("List files from $input.path", ["list_files"], registry)
 
@@ -22,10 +28,7 @@ def test_deterministic_goal_planner_builds_list_files_plan():
     assert planned["pipeline"]["nodes"][0]["capability"] == "list_files"
 
 
-def test_deterministic_goal_planner_builds_scan_project_tree_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_scan_project_tree_plan(registry):
 
     planned = plan_from_required_capabilities(
         "Analyze project map",
@@ -56,10 +59,7 @@ def test_deterministic_goal_planner_builds_scan_project_tree_plan():
     assert planned["pipeline"]["nodes"][-1]["input"]["tree"] == "$nodes.scan_project_tree.output"
 
 
-def test_deterministic_goal_planner_builds_project_fact_question_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_project_fact_question_plan(registry):
 
     planned = plan_from_required_capabilities(
         "Analyze project and answer simple file questions",
@@ -116,10 +116,7 @@ def test_goal_run_list_files_uses_deterministic_planner():
     assert payload["execution"]["outputs"]["list_files"]["files"]
 
 
-def test_deterministic_goal_planner_builds_markdown_file_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_markdown_file_plan(registry):
 
     planned = plan_from_required_capabilities(
         "Convert markdown file from $input.input_path to plain text file at $input.output_path",
@@ -135,10 +132,7 @@ def test_deterministic_goal_planner_builds_markdown_file_plan():
     ]
 
 
-def test_deterministic_goal_planner_builds_markdown_to_rtf_file_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_markdown_to_rtf_file_plan(registry):
 
     planned = plan_from_required_capabilities(
         "Convert markdown file from $input.input_path to RTF file at $input.output_path",
@@ -155,10 +149,7 @@ def test_deterministic_goal_planner_builds_markdown_to_rtf_file_plan():
     assert planned["pipeline"]["nodes"][-1]["input"]["text"] == "$nodes.markdown_to_rtf.output.rtf"
 
 
-def test_deterministic_goal_planner_builds_translate_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_translate_plan(registry):
 
     planned = plan_from_required_capabilities("Translate $input.text to German", ["translate_text"], registry)
 
@@ -168,10 +159,7 @@ def test_deterministic_goal_planner_builds_translate_plan():
     assert planned["pipeline"]["nodes"][0]["input"]["target_language"] == "German"
 
 
-def test_deterministic_goal_planner_builds_replace_text_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_replace_text_plan(registry):
 
     planned = plan_from_required_capabilities(
         "По проекту F:/ubuntu/test/5.1 замени порт подключения клиентов 8000 на 9000",
@@ -184,10 +172,7 @@ def test_deterministic_goal_planner_builds_replace_text_plan():
     assert planned["pipeline"]["nodes"][0]["input"]["old_value"] == "$input.old_value"
 
 
-def test_deterministic_goal_planner_builds_provider_probe_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_provider_probe_plan(registry):
 
     planned = plan_from_required_capabilities(
         "По проекту F:/ubuntu/test/5.1 запусти сервер и протестируй работу с провайдерами",
@@ -200,10 +185,7 @@ def test_deterministic_goal_planner_builds_provider_probe_plan():
     assert planned["pipeline"]["nodes"][0]["input"]["base_url"] == "$input.base_url"
 
 
-def test_deterministic_goal_planner_builds_disable_gigachat_auto_model_plan():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_disable_gigachat_auto_model_plan(registry):
 
     planned = plan_from_required_capabilities(
         "По проекту F:/ubuntu/test/5.1 убери возможность автовыбора модели у провайдера GigaChat",
@@ -250,10 +232,7 @@ def test_goal_run_translate_uses_promoted_capability():
     assert payload["execution"]["outputs"]["translate_text"] == {"text": "hallo", "language": "German"}
 
 
-def test_deterministic_goal_planner_builds_parse_pdf_plan_when_available():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_parse_pdf_plan_when_available(registry):
     if "parse_pdf" not in registry.capabilities:
         return
 
@@ -264,10 +243,7 @@ def test_deterministic_goal_planner_builds_parse_pdf_plan_when_available():
     assert planned["pipeline"]["nodes"][0]["input"]["path"] == "$input.path"
 
 
-def test_deterministic_goal_planner_builds_spreadsheet_conversion_plans():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_deterministic_goal_planner_builds_spreadsheet_conversion_plans(registry):
 
     to_csv = plan_from_required_capabilities("Convert XLSX file to CSV", ["spreadsheet_to_csv"], registry)
     to_xlsx = plan_from_required_capabilities("Convert CSV file to XLSX", ["csv_to_spreadsheet"], registry)
