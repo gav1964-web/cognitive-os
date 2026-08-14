@@ -7,6 +7,7 @@ from typing import Any
 from .contract_archetype_inference import archetype_score_adjustments
 from .semantic_target_profiles import semantic_score_adjustments
 from .source_contract_semantics import structural_quality_adjustment
+from .target_structural_families import structural_contract_family as _structural_contract_family
 from .target_quality_policy import policy_tokens, target_quality_section
 
 
@@ -245,55 +246,6 @@ def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) 
         if contextual.get("profile_ids"):
             return contextual
     return direct
-
-
-def _structural_contract_family(
-    evidence: dict[str, Any] | None, side_effect_contract: dict[str, Any] | None = None
-) -> str:
-    facts = dict(evidence or {})
-    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])}
-    if decorators & {"route", "get", "post", "put", "patch", "delete"}:
-        return "decorated_web_route_boundary"
-    if "task" in decorators:
-        return "decorated_background_task_boundary"
-    usage = dict(facts.get("argument_usage_types") or {})
-    if (
-        str(facts.get("inferred_output_type") or "").lower().startswith("iterator[")
-        and usage.get("routes") == "IterableLike"
-        and int(facts.get("yield_paths") or 0) > 0
-    ):
-        return "route_tree_flatten_boundary"
-    if (
-        str(facts.get("inferred_output_type") or "") == "VoidSideEffect"
-        and "database" in list(facts.get("observed_side_effects") or [])
-        and facts.get("source_body_complete")
-    ):
-        return "persistence_append_command"
-    if facts.get("file_extension_policy") and str(facts.get("inferred_output_type") or "") == "bool":
-        return "file_extension_admission_policy"
-    effects = set(dict(side_effect_contract or {}).get("declared") or [])
-    observed_effects = set(facts.get("observed_side_effects") or [])
-    if (
-        str(facts.get("inferred_output_type") or "") == "VoidSideEffect"
-        and int(facts.get("argument_count") or 0) == 1
-        and "MappingLike" in set(dict(facts.get("argument_usage_types") or {}).values())
-        and effects == {"observability"}
-        and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "mapping_observability_report_command"
-    if (
-        str(facts.get("inferred_output_type") or "") == "bool"
-        and facts.get("async_callable")
-        and int(facts.get("return_paths") or 0) >= 2
-        and "network" in effects
-        and "network" in observed_effects
-        and observed_effects <= {"network", "observability"}
-        and facts.get("source_body_complete")
-        and not facts.get("state_mutation")
-    ):
-        return "external_authorization_policy"
-    return ""
 
 
 def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:

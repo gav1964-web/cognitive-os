@@ -60,6 +60,29 @@ def test_scope_rejects_documentation_glossary_code_examples(tmp_path):
     assert result["reason_code"] == "no_python_owned_product_boundary"
 
 
+def test_scope_rejects_documentation_index_with_fetch_script(tmp_path):
+    (tmp_path / "README.md").write_text("[paper](https://example.test)\n" * 1_000, encoding="utf-8")
+    (tmp_path / "fetch_papers.py").write_text("print('refresh index')\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_scope_rejects_cython_extension_without_python_core(tmp_path):
+    package = tmp_path / "ocr"
+    package.mkdir()
+    (tmp_path / "setup.py").write_text("from setuptools import setup\n", encoding="utf-8")
+    (package / "__init__.py").write_text("from .ocr import Engine\n", encoding="utf-8")
+    (package / "ocr.pyx").write_text("cdef class Engine:\n    pass\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["primary_language"] == "Cython native extension"
+
+
 def test_metric_and_model_query_contract_families_are_profiled():
     assert contract_archetype_for_target("sdk/client.py:__parse_response")["contract_archetype"] == (
         "sdk_response_parse_verification"

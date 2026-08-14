@@ -11,6 +11,7 @@ from .role_source_capability_facts import capability_facts
 from .source_side_effect_inference import infer_ast_side_effects, selection_side_effects
 from .transitive_side_effects import infer_transitive_side_effects
 from .project_transitive_effects import project_transitive_effects
+from .python_source_files import is_python_source_file, iter_python_source_files
 
 
 def build_source_context(
@@ -56,7 +57,7 @@ def build_source_context(
                 transitive_effects = list(row.get("transitive_side_effects", []))
                 if transitive_effects:
                     row["side_effects"] = sorted(set(list(row.get("side_effects", [])) + transitive_effects))
-        elif source.endswith(".py"):
+        elif is_python_source_file(root / source):
             module_context = _module_context(root / source)
             if module_context:
                 row.update(module_context)
@@ -69,7 +70,7 @@ def build_source_context(
             context[source] = row
     return context
 def _module_context(path: Path) -> dict[str, Any] | None:
-    if not path.exists() or path.suffix != ".py":
+    if not is_python_source_file(path):
         return None
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -161,10 +162,7 @@ def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
 
 
 def _python_source_paths(root: Path) -> list[Path]:
-    try:
-        return sorted(root.rglob("*.py"))[:80]
-    except OSError:
-        return []
+    return list(iter_python_source_files(root, limit=80))
 
 
 def _call_names(node: ast.AST) -> set[str]:
@@ -289,7 +287,7 @@ def _facts_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, Any]
 
 
 def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
-    if not path.exists() or path.suffix != ".py":
+    if not is_python_source_file(path):
         return None
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     try:

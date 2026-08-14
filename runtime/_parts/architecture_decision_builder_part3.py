@@ -12,6 +12,7 @@ from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
 from runtime.role_source_context import build_source_context
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
+from runtime.python_source_files import is_python_source_ref
 
 ARCHITECTURE_DECISION_POLICY = load_architecture_decision_policy()
 FALLBACK_ARCHETYPE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_archetype"])
@@ -333,20 +334,18 @@ def _brief_sources(
     )[:32]
 
 def _implementation_brief_source(source: str) -> bool:
-    lowered = "/" + source.replace("\\", "/").lower().lstrip("/")
-    if ".py:" not in lowered and not lowered.endswith(".py"):
+    if not is_python_source_ref(source):
         return False
     return not is_context_only_implementation_target(source)
 def _fallback_context_brief_source(source: str) -> bool:
-    lowered = "/" + source.replace("\\", "/").lower().lstrip("/")
-    return ".py:" in lowered and is_fallback_product_target(source)
+    return is_python_source_ref(source) and ":" in source and is_fallback_product_target(source)
 def _fallback_python_read_files(summary: dict[str, Any]) -> list[str]:
     rows = []
     for item in list(summary.get("read_files") or []):
         source = str(item or "").replace("\\", "/")
         lowered = "/" + source.lower().lstrip("/")
         policy_allowed = any(token in lowered for token in FALLBACK_READ_FILE_PATH_TOKENS)
-        if ("/" in source and not policy_allowed) or not lowered.endswith(".py"):
+        if ("/" in source and not policy_allowed) or not is_python_source_ref(source):
             continue
         if any(token in lowered for token in CONTEXT_ONLY_PATH_TOKENS):
             continue

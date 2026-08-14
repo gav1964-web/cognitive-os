@@ -11,9 +11,7 @@ from runtime.source_contract_docstrings import documented_output_shape, docstrin
 from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
 
-_WEAK_TYPES = {
-    "", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult",
-}
+_WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult"}
 
 
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
@@ -362,6 +360,8 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                     inferred[arg.id] = "ArrayLike" if _call_name(node.func) == "isinstance" else "str"
         elif isinstance(node, (ast.For, ast.comprehension)) and isinstance(node.iter, ast.Name) and node.iter.id in known:
             inferred.setdefault(node.iter.id, "IterableLike")
+        elif isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Name) and node.slice.id in known:
+            inferred.setdefault(node.slice.id, "KeyLike")
         elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id in known:
             inferred.setdefault(node.value.id, "ArrayLike" if isinstance(node.slice, ast.Tuple) else "IndexableLike")
         elif isinstance(node, ast.BinOp):

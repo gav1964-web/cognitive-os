@@ -15,6 +15,7 @@ from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
+from runtime.python_source_files import is_python_source_ref
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
@@ -136,9 +137,7 @@ def _implementation_source(source: str) -> bool:
     lowered = source.lower()
     if _context_only_implementation_source(lowered):
         return False
-    if ".py:" in lowered:
-        return True
-    if lowered.endswith(".py"):
+    if is_python_source_ref(source):
         return True
     if lowered.startswith("[") and " " in lowered:
         return True

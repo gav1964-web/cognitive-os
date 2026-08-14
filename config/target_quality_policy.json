@@ -96,8 +96,7 @@
       "acquire_capability",
       "capability_registry",
       "foundry",
-      "prompt_lab",
-      "semantic"
+      "prompt_lab"
     ],
     "runtime_boundary_tokens": [
       "handle_async_request",

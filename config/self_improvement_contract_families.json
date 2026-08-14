@@ -1,6 +1,22 @@
 {
   "schema_version": "self_improvement_contract_families.v1",
   "families": {
+    "cached_analysis_transform": {
+      "input_contract": {"cache_paths": "Sequence[PathLike]", "analysis_data": "MappingLike"},
+      "output_contract": {"result": "Union[SequenceLike, TupleLike]"},
+      "side_effect_policy": {"declared": ["filesystem_read", "observability"], "requires_validation_gate": true},
+      "validation_gates": ["cache hit and computation paths return equivalent result shapes", "input mappings are not mutated"],
+      "failure_modes": ["cache_missing", "cache_invalid", "analysis_input_invalid"],
+      "reason": "AST evidence proves a bounded cached analysis stage"
+    },
+    "response_collection_ordering_transform": {
+      "input_contract": {"collection": "ProtocolLike", "selector": "KeyLike"},
+      "output_contract": {"result": "ResponseLike"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["ordering is deterministic for a stable selector", "the source collection is not mutated"],
+      "failure_modes": ["missing_selector", "incomparable_value", "malformed_collection_item"],
+      "reason": "AST evidence proves a bounded response collection ordering transform"
+    },
     "external_authorization_policy": {
       "input_contract": {"authorization_context": "AuthorizationContext(actor, resource, tenant?)"},
       "output_contract": {"authorized": "bool", "failure_packet": "AuthorizationCheckFailure(kind, dependency?, evidence_ref?)"},

@@ -13,6 +13,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
     rust_files = _files_with_suffixes(path, {".rs"})
     c_files = _files_with_suffixes(path, {".c", ".h"})
     cpp_files = _files_with_suffixes(path, {".cc", ".cpp", ".cxx", ".hpp"})
+    cython_files = _files_with_suffixes(path, {".pyx", ".pxd"})
     native_files = [*rust_files, *c_files, *cpp_files]
     python_source_files = [file for file in py_files if _python_role_source_file(file.relative_to(path))]
     root_package = _root_python_package(path)
@@ -33,6 +34,9 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
     )
     native_extension_wrapper = _native_extension_wrapper_without_python_core(python_source_files, rust_files)
     cpp_extension_wrapper = _cpp_extension_wrapper_without_python_core(top_files, root_package, python_source_files, cpp_files)
+    cython_extension_wrapper = _cython_extension_wrapper_without_python_core(
+        top_files, root_package, python_source_files, cython_files
+    )
     rust_workspace = "cargo.toml" in top_files and ("crates" in top_dirs or len(rust_files) >= max(20, len(py_files) * 2))
     rust_dominates = len(rust_files) >= max(50, len(py_files) * 5)
     python_is_embedded = not has_root_python_source and (
@@ -85,11 +89,11 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
                 "src_dir": "src" in top_dirs,
             },
         }
-    if cpp_extension_wrapper:
+    if cpp_extension_wrapper or cython_extension_wrapper:
         return {
             "status": "out_of_scope",
             "reason_code": "unsupported_primary_language_for_python_foundation",
-            "primary_language": "C++ native extension",
+            "primary_language": "Cython native extension" if cython_extension_wrapper else "C++ native extension",
             "python_files": len(py_files),
             "python_source_files": len(python_source_files),
             "rust_files": len(rust_files),
@@ -97,6 +101,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
             "cpp_files": len(cpp_files),
             "evidence": {
                 "native_source_files": len(native_files),
+                "cython_source_files": len(cython_files),
                 "root_python_package": root_package,
                 "extension_manifest": sorted(top_files.intersection({"setup.py", "pyproject.toml"})),
             },
@@ -123,6 +128,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _independent_project_collection(path)
         or _documentation_led_demo(path, python_source_files, root_package)
         or _documentation_code_examples(path, python_source_files, root_package)
+        or _documentation_index_with_fetch_script(path, python_source_files, root_package)
     )
     if no_owned_boundary:
         return {
@@ -204,6 +210,17 @@ def _documentation_code_examples(path: Path, python_source_files: list[Path], ro
     return all(file.relative_to(path).parts[0].lower() in {"code", "docs"} for file in python_source_files)
 
 
+def _documentation_index_with_fetch_script(
+    path: Path, python_source_files: list[Path], root_package: str | None
+) -> bool:
+    if _has_project_manifest(path) or root_package or not 1 <= len(python_source_files) <= 2:
+        return False
+    if not all(file.parent == path and file.stem.lower().startswith(("fetch", "download", "scrape")) for file in python_source_files):
+        return False
+    readmes = [file for file in path.iterdir() if file.is_file() and file.name.lower().startswith("readme")]
+    return bool(readmes) and max(file.stat().st_size for file in readmes) >= 20_000
+
+
 def _native_extension_wrapper_without_python_core(python_source_files: list[Path], rust_files: list[Path]) -> bool:
     active = [file for file in python_source_files if file.name.lower() not in {"release.py", "build.py", "noxfile.py"}]
     if not rust_files or len(active) != 1:
@@ -222,6 +239,15 @@ def _cpp_extension_wrapper_without_python_core(
         return False
     active = [file for file in python_source_files if file.name.lower() not in {"release.py", "build.py", "noxfile.py"}]
     return len(active) <= 1 and len(cpp_files) >= len(active)
+
+
+def _cython_extension_wrapper_without_python_core(
+    top_files: set[str], root_package: str | None, python_source_files: list[Path], cython_files: list[Path]
+) -> bool:
+    if not cython_files or not top_files.intersection({"setup.py", "pyproject.toml"}):
+        return False
+    active = [file for file in python_source_files if file.name.lower() != "__init__.py"]
+    return bool(root_package) and not active
 
 
 def _child_python_projects(path: Path) -> list[Path]:

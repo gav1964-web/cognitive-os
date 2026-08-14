@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .source_side_effect_inference import infer_ast_side_effects
+from .python_source_files import iter_python_source_files
 
 
 def project_transitive_effects(root: Path, *, max_files: int = 80, max_depth: int = 2) -> dict[str, dict[str, Any]]:
@@ -28,10 +29,7 @@ def project_transitive_effects(root: Path, *, max_files: int = 80, max_depth: in
 
 def _project_nodes(root: Path, *, max_files: int) -> dict[str, dict[str, Any]]:
     nodes: dict[str, dict[str, Any]] = {}
-    try:
-        paths = sorted(root.rglob("*.py"))[:max_files]
-    except OSError:
-        return nodes
+    paths = list(iter_python_source_files(root, limit=max_files))
     for path in paths:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))

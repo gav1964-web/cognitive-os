@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from runtime.python_source_files import is_python_source_file
 
 
 EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
@@ -75,7 +76,7 @@ def iter_python_files(root: Path):
                 if item.name in EXCLUDED_DIRS or _is_generated_context_dir(item.name) or item.name.startswith("."):
                     continue
                 dirs.append(item)
-            elif is_file and item.suffix.lower() == ".py":
+            elif is_file and is_python_source_file(item):
                 files.append(item)
         ordered_dirs = sorted(dirs, key=traversal_key)
         early_files = [item for item in files if traversal_key(item)[0] < 3]

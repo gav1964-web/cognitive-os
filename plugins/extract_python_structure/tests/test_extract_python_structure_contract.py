@@ -14,6 +14,20 @@ def test_extract_python_structure_accepts_utf8_bom(tmp_path, monkeypatch):
     assert result["skipped"] == []
 
 
+def test_extract_python_structure_accepts_extensionless_python_executable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project").mkdir()
+    Path("project/protocol").write_text(
+        "#!/usr/bin/env python3\nclass Protocol:\n    def parse_spec(self, spec):\n        return spec.split(',')\n",
+        encoding="utf-8",
+    )
+
+    result = run({"root": "project"})
+
+    assert result["files"][0]["path"] == "protocol"
+    assert result["files"][0]["functions"][0]["name"] == "parse_spec"
+
+
 def test_extract_python_structure_separates_newer_parser_syntax(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project").mkdir()

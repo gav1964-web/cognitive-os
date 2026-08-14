@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from runtime.python_source_files import is_python_source_ref
 
 
 def _subsystem_boundaries(project_report: dict[str, Any], tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -272,9 +273,9 @@ def _contract_targets(files_or_symbols: list[str], source_context: dict[str, dic
     return rows
 
 def _implementation_source(source: str) -> bool:
-    lowered = source.lower()
-    if ".py:" in lowered:
+    if is_python_source_ref(source) and ":" in source:
         return True
+    lowered = source.lower()
     if lowered.startswith("[") and " " in lowered:
         return True
     return False

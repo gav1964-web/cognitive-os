@@ -36,6 +36,20 @@ def test_source_context_marks_ambiguous_method_symbol(tmp_path: Path):
     assert {row["class_name"] for row in snippet["symbol_occurrences"]} == {"Command", "Group"}
 
 
+def test_source_context_reads_extensionless_python_executable(tmp_path: Path):
+    script = tmp_path / "protocol"
+    script.write_text(
+        "#!/usr/bin/python\nclass Protocol:\n    def parse_spec(self, spec):\n        return spec.split(',')\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(
+        project_root=str(tmp_path), project_report={}, sources=["protocol:parse_spec"]
+    )
+
+    assert context["protocol:parse_spec"]["snippet"]["owner_class"] == "Protocol"
+
+
 def test_source_context_marks_unique_method_symbol_owner(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

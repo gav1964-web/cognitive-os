@@ -33,3 +33,12 @@ def test_structural_contract_uses_configured_external_effect_markers():
     })
 
     assert evidence["observed_side_effects"] == ["network", "observability"]
+
+
+def test_mapping_subscript_selector_is_inferred_as_key_like():
+    evidence = infer_source_contract({
+        "signature": {"args": [{"name": "origin"}, {"name": "by_key"}]},
+        "snippet": "def order(origin, by_key):\n    return sorted(origin, key=lambda item: item[by_key])",
+    })
+
+    assert evidence["argument_usage_types"]["by_key"] == "KeyLike"
