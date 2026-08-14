@@ -120,7 +120,7 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
     quality = dict(score.get("quality") or {})
     quality_results = dict(quality.get("results") or {})
     project_score = _quality_score(quality_results, "project_map_report")
-    if result.get("blocker") == "scope_selection_required":
+    if result.get("blocker") in {"scope_selection_required", "no_safe_python_candidate"}:
         project_score = project_score if project_score is not None else _ten_point(score.get("artifact_score"))
         return _apply_role_score_caps({"project_analyzer": project_score, "architect": None, "spec_writer": None})
 
@@ -318,6 +318,8 @@ def _case_status(result: dict[str, Any]) -> str:
     if _spec_writer_blocked_no_safe_candidate(result):
         return "blocked_ok"
     if result.get("status") == "blocked" and result.get("blocker") == "scope_selection_required":
+        return "blocked_ok"
+    if result.get("status") == "blocked" and result.get("blocker") == "no_safe_python_candidate":
         return "blocked_ok"
     return "needs_review"
 

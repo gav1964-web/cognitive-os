@@ -372,29 +372,25 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
             for value in node.values:
                 if isinstance(value, ast.Name) and value.id in known:
                     inferred.setdefault(value.id, "bool")
+        elif isinstance(node, ast.Compare):
+            for value in (node.left, *node.comparators):
+                if isinstance(value, ast.Name) and value.id in known:
+                    inferred.setdefault(value.id, "ScalarLike")
         elif isinstance(node, ast.Call) and _call_name(node.func) == "range":
             for arg in node.args:
                 if isinstance(arg, ast.Name) and arg.id in known:
                     inferred.setdefault(arg.id, "int")
     return inferred
-
-
 def _constraint_constants(node: ast.AST) -> set[object]:
     if isinstance(node, ast.Constant):
         return {node.value}
     if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
         return {item.value for item in node.elts if isinstance(item, ast.Constant)}
     return set()
-
-
 def _concrete_output(contract: dict[str, Any]) -> bool:
     return bool(contract) and all(_concrete_type(value) for value in contract.values())
-
-
 def _all_contract_shapes_concrete(inputs: dict[str, Any], outputs: dict[str, Any]) -> bool:
     return bool(inputs and outputs) and all(_concrete_type(value) for value in [*inputs.values(), *outputs.values()])
-
-
 def _concrete_type(value: object) -> bool:
     text = str(value or "").strip().lower()
     return bool(text) and text not in _WEAK_TYPES and not text.startswith("inferred")

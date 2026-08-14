@@ -264,6 +264,18 @@ def test_domain_profile_recognizes_django_framework_without_routes():
     assert profile["kind"] == "django_web_framework"
 
 
+def test_domain_profile_does_not_treat_infra_blueprint_text_as_web_framework():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/deployment-toolkit", "frameworks": [], "entrypoints": [], "routes": 0},
+        {"files": [{"path": "README.md", "text": "Deployment blueprint for infrastructure."}]},
+        {"files": []},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "generic"
+
+
 def test_domain_profile_recognizes_repeated_transform_library_callables():
     profile = infer_domain_profile(
         {"root": "F:/tmp/sample_tool", "frameworks": [], "entrypoints": ["mod_0.py"], "routes": 0},

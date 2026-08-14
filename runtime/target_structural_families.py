@@ -10,7 +10,7 @@ def structural_contract_family(
 ) -> str:
     facts = dict(evidence or {})
     decorators = {str(value).lower().rsplit(".", 1)[-1] for value in facts.get("decorators", [])}
-    if decorators & {"route", "get", "post", "put", "patch", "delete"}:
+    if decorators & {"route", "action", "get", "post", "put", "patch", "delete"}:
         return "decorated_web_route_boundary"
     if "task" in decorators:
         return "decorated_background_task_boundary"
@@ -18,6 +18,23 @@ def structural_contract_family(
     output_type = str(facts.get("inferred_output_type") or "")
     observed = set(facts.get("observed_side_effects") or [])
     effects = set(dict(side_effect_contract or {}).get("declared") or [])
+    if (
+        output_type == "VoidSideEffect" and facts.get("async_callable")
+        and "IterableLike" in set(usage.values()) and facts.get("source_body_complete")
+        and not facts.get("state_mutation")
+    ):
+        return "async_batch_processing_boundary"
+    if (
+        output_type == "VoidSideEffect" and "MappingLike" in set(usage.values())
+        and "memory_state" in effects and facts.get("source_body_complete")
+        and facts.get("state_mutation")
+    ):
+        return "ordered_mapping_mutation_boundary"
+    if (
+        output_type == "MappingLike" and "database" in set(facts.get("observed_side_effects") or [])
+        and facts.get("source_body_complete") and not facts.get("state_mutation")
+    ):
+        return "database_read_mapping_boundary"
     if output_type.lower().startswith("iterator[") and usage.get("routes") == "IterableLike" and facts.get("yield_paths"):
         return "route_tree_flatten_boundary"
     if output_type == "VoidSideEffect" and "database" in observed and facts.get("source_body_complete"):

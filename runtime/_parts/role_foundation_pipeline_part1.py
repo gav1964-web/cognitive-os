@@ -116,6 +116,39 @@ def run_role_foundation_pipeline(
         if write:
             result["report_path"] = write_role_foundation_report(root, result).as_posix()
         return result
+    if _no_safe_python_candidate(project_map_report):
+        artifacts = {"project_map_report": project_artifact}
+        paths = _write_artifacts(root, artifacts) if write else {}
+        quality = evaluate_role_artifacts(artifacts)
+        result = {
+            "status": "blocked",
+            "kind": "role_foundation_pipeline",
+            "milestone": "ProjectMapReport -> Python-owned boundary admission",
+            "created_at": _now(),
+            "project": analysis_project_dir.as_posix(),
+            "portfolio_root": project_dir.as_posix(),
+            "goal": goal,
+            "blocker": "no_safe_python_candidate",
+            "score": {
+                "passed": False,
+                "blocked": True,
+                "blocker": "no_safe_python_candidate",
+                "quality": quality,
+                "artifact_score": float(dict(quality.get("results", {}).get("project_map_report") or {}).get("score") or 0.0) / 100.0,
+                "warnings": [],
+            },
+            "artifacts": _artifact_summary(artifacts, paths),
+            "human_documents": {},
+            "safety": {
+                "source_code_changes": False,
+                "registry_changes": False,
+                "foundry_invoked": False,
+                "llm_invoked": False,
+            },
+        }
+        if write:
+            result["report_path"] = write_role_foundation_report(root, result).as_posix()
+        return result
     artifact_transform = None
     if _evaluation_target:
         from runtime.evaluation_target_clamp import evaluation_target_transform
@@ -175,6 +208,15 @@ def run_role_foundation_pipeline(
     if write:
         result["report_path"] = write_role_foundation_report(root, result).as_posix()
     return result
+
+
+def _no_safe_python_candidate(project_map_report: dict[str, Any]) -> bool:
+    answers = dict(project_map_report.get("answers") or {})
+    readiness = dict(answers.get("6_runtime_extraction_readiness") or {})
+    plan = dict(readiness.get("minimal_extraction_plan") or {})
+    blocked = plan.get("blocked_by") or []
+    blockers = [blocked] if isinstance(blocked, str) else list(blocked)
+    return "no_safe_python_candidate" in {str(item) for item in blockers}
 
 def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract", {}) or {})

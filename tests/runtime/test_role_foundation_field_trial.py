@@ -121,6 +121,12 @@ def test_role_scores_do_not_score_downstream_roles_for_scope_selection_block():
     assert scores == {"project_analyzer": 9.7, "architect": None, "spec_writer": None}
 
 
+def test_role_scores_do_not_score_downstream_roles_without_safe_python_candidate():
+    scores = _role_scores({"blocker": "no_safe_python_candidate", "score": {"artifact_score": 0.94}})
+
+    assert scores == {"project_analyzer": 9.4, "architect": None, "spec_writer": None}
+
+
 def test_published_role_scores_apply_conservative_caps():
     assert _apply_role_score_caps(
         {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 10.0}

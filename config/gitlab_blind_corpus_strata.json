@@ -1,0 +1,16 @@
+{
+  "schema_version": "gitlab_blind_corpus_strata.v1",
+  "projects_per_stratum": 8,
+  "minimum_stars": 10,
+  "maximum_search_pages": 2,
+  "minimum_recent_year": 2020,
+  "excluded_name_tokens": ["awesome", "tutorial", "course", "interview", "cheatsheet", "examples", "demo"],
+  "excluded_description_tokens": ["mirror of", "deprecated", "archived", "learning exercise", "collection of links"],
+  "strata": [
+    {"id": "legacy_automation", "queries": ["automation", "command line", "backup", "monitoring", "migration", "deployment", "scraper", "bot"]},
+    {"id": "data_ml_scientific", "queries": ["machine learning", "data pipeline", "scientific", "neural network", "computer vision", "natural language", "forecasting", "bioinformatics"]},
+    {"id": "backend_api", "queries": ["fastapi", "django", "flask", "rest api", "web service", "graphql", "microservice", "backend"]},
+    {"id": "infra_devops_monorepo", "queries": ["devops", "kubernetes", "ansible", "ci cd", "infrastructure", "orchestration", "monorepo", "platform engineering"]},
+    {"id": "mixed_unusual", "queries": ["security", "proxy", "protocol", "compiler", "desktop", "multimedia", "hardware", "simulation"]}
+  ]
+}

@@ -3800,6 +3800,7 @@
           "werkzeug",
           "starlette"
         ],
+        "min_score": 70,
         "negative_contains_any": [
           "/v1/chat/completions",
           "/chat/completions",
@@ -6913,6 +6914,52 @@
         "dispatcher reports",
         "typed configuration/runtime failures"
       ]
+    },
+    {
+      "rule_id": "bioinformatics_sequence_toolkit",
+      "record_type": "project_archetype_rule",
+      "priority": 91,
+      "archetype": "bioinformatics_sequence_toolkit",
+      "label": "bioinformatics sequence toolkit",
+      "purpose_summary": "Validate, transform, and analyze DNA/RNA or FASTA sequence data through bounded biological sequence operations.",
+      "match": {
+        "text_contains_any": [
+          "fasta",
+          "nucleotide",
+          "reverse_complement",
+          "gc_content",
+          "dna_codons",
+          "rna_codons",
+          "aminoacid"
+        ],
+        "required_contains_any": [
+          "fasta",
+          "nucleotide",
+          "reverse_complement",
+          "gc_content"
+        ],
+        "min_score": 39
+      },
+      "first_slice": {
+        "name": "biological_sequence_transform_slice",
+        "goal": "Stabilize one DNA/RNA sequence validation or transformation contract with invalid-alphabet and boundary coverage.",
+        "target_sources": ["domain_anchors", "extraction", "central"],
+        "targets_prefer": ["validate_seq", "reverse_complement", "gc_content", "transcription", "translate_seq"],
+        "steps": [
+          "Define sequence alphabet, sequence kind, and normalization contracts.",
+          "Separate FASTA parsing from biological sequence transforms.",
+          "Make invalid symbols, empty sequences, and incomplete codons explicit failures.",
+          "Verify DNA, RNA, mixed-case, empty, and malformed sequence cases."
+        ]
+      },
+      "scenario_summary": [
+        "Validate DNA or RNA sequences against the declared nucleotide alphabet.",
+        "Compute nucleotide frequency, GC content, complements, and reading frames.",
+        "Transcribe DNA to RNA or translate codons to amino-acid sequences.",
+        "Read and normalize labelled FASTA sequence records."
+      ],
+      "input_summary": ["DNA/RNA sequence text", "sequence type and reading-frame options", "FASTA records"],
+      "output_summary": ["validated sequence", "frequency and GC metrics", "complement/transcription/translation results", "typed sequence errors"]
     },
     {
       "rule_id": "api_service",

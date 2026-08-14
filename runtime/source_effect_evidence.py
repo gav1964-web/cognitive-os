@@ -8,8 +8,8 @@ from typing import Any
 from runtime.source_side_effect_inference import infer_ast_side_effects
 
 
-_UNIT_OF_WORK_NAMES = {"session", "db", "database", "unit_of_work", "uow"}
-_DATABASE_WRITE_CALLS = {"add", "append", "delete", "execute_write", "executemany", "flush", "commit"}
+_UNIT_OF_WORK_NAMES = {"con", "conn", "connection", "session", "db", "database", "unit_of_work", "uow"}
+_DATABASE_WRITE_CALLS = {"add", "append", "delete", "execute", "execute_write", "executemany", "flush", "commit"}
 
 
 def observed_side_effects(function: ast.AST | None, args: list[dict[str, Any]]) -> list[str]:
