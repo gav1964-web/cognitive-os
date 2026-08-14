@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -12,9 +13,12 @@ from runtime.registry import CapabilityRegistry
 
 
 @pytest.fixture()
-def registry():
+def registry(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    reg = CapabilityRegistry(root)
+    workspace = tmp_path / "registry_workspace"
+    shutil.copytree(root / "plugins", workspace / "plugins")
+    shutil.copytree(root / "registry", workspace / "registry")
+    reg = CapabilityRegistry(workspace)
     reg.reset_from_plugins()
     return reg
 

@@ -47,6 +47,12 @@
         "type": "object"
       }
     },
+    "bounded_policy_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "contracts": {
       "type": "object"
     },

@@ -13,10 +13,27 @@ from runtime.goal_session import GoalSessionStore
 from runtime.registry import CapabilityRegistry
 
 
-def test_goal_orchestrator_routes_known_goal_to_l35():
+def _isolated_registry(tmp_path: Path) -> CapabilityRegistry:
     root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
+    workspace = tmp_path / "registry_workspace"
+    shutil.copytree(root / "plugins", workspace / "plugins")
+    shutil.copytree(root / "registry", workspace / "registry")
+    registry = CapabilityRegistry(workspace)
     registry.reset_from_plugins()
+    return registry
+
+
+def _isolated_runtime_root(tmp_path: Path) -> Path:
+    root = Path(__file__).resolve().parents[2]
+    workspace = tmp_path / "runtime_workspace"
+    for name in ("config", "knowledge", "plugins", "registry", "roles"):
+        shutil.copytree(root / name, workspace / name)
+    CapabilityRegistry(workspace).reset_from_plugins(reason="isolated_test_setup")
+    return workspace
+
+
+def test_goal_orchestrator_routes_known_goal_to_l35(tmp_path):
+    registry = _isolated_registry(tmp_path)
 
     decision = decide_goal_route("Normalize input text and hash it", registry)
 
@@ -24,10 +41,8 @@ def test_goal_orchestrator_routes_known_goal_to_l35():
     assert decision.required_capabilities == ["normalize_text", "hash_payload"]
 
 
-def test_goal_orchestrator_asks_for_clarification_on_vague_goal():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_asks_for_clarification_on_vague_goal(tmp_path):
+    registry = _isolated_registry(tmp_path)
 
     decision = decide_goal_route("help me", registry)
 
@@ -35,10 +50,8 @@ def test_goal_orchestrator_asks_for_clarification_on_vague_goal():
     assert decision.clarification_question
 
 
-def test_goal_orchestrator_requests_capability_for_missing_tooling():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_requests_capability_for_missing_tooling(tmp_path):
+    registry = _isolated_registry(tmp_path)
 
     registry.mark_status("translate_text", "retired", reason="test_missing_translate")
 
@@ -48,10 +61,8 @@ def test_goal_orchestrator_requests_capability_for_missing_tooling():
     assert decision.missing_capability_hint == "translate_text"
 
 
-def test_goal_orchestrator_routes_translation_when_capability_exists():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_routes_translation_when_capability_exists(tmp_path):
+    registry = _isolated_registry(tmp_path)
 
     decision = decide_goal_route("Translate this text to German", registry)
 
@@ -59,10 +70,8 @@ def test_goal_orchestrator_routes_translation_when_capability_exists():
     assert decision.required_capabilities == ["translate_text"]
 
 
-def test_goal_orchestrator_routes_project_analysis_when_capability_exists():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_routes_project_analysis_when_capability_exists(tmp_path):
+    registry = _isolated_registry(tmp_path)
 
     decision = decide_goal_route("Analyze project map", registry)
 
@@ -154,9 +163,8 @@ def test_goal_run_cli_requests_capability_spec():
 
 def test_goal_run_project_development_prompt_generates_synthesis(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    project = root / "artifacts" / "test_project_development_prompt"
-    if project.exists():
-        shutil.rmtree(project)
+    runtime_root = _isolated_runtime_root(tmp_path)
+    project = runtime_root / "project"
     project.mkdir(parents=True)
     try:
         (project / "app.py").write_text(
@@ -177,7 +185,7 @@ def test_goal_run_project_development_prompt_generates_synthesis(tmp_path):
                 sys.executable,
                 str(root / "tools" / "goal_run.py"),
                 "--root",
-                str(root),
+                str(runtime_root),
                 "--goal",
                 f"Проанализируй проект {project} и предложи развитие проекта",
                 "--input-json",
@@ -197,10 +205,8 @@ def test_goal_run_project_development_prompt_generates_synthesis(tmp_path):
     assert payload["architecture_synthesis"]["artifact_type"] == "ProjectArchitectureSynthesis"
 
 
-def test_goal_orchestrator_can_use_llm_for_route_decision():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_can_use_llm_for_route_decision(tmp_path):
+    registry = _isolated_registry(tmp_path)
     response = {
         "action": "ASK_CLARIFICATION",
         "reason_code": "MODEL_NEEDS_INPUT",
@@ -216,10 +222,8 @@ def test_goal_orchestrator_can_use_llm_for_route_decision():
     assert decision.reason_code == "GOAL_INTAKE_MISSING_REQUIRED_FIELDS"
 
 
-def test_goal_orchestrator_sanitizes_noisy_llm_plan_decision():
-    root = Path(__file__).resolve().parents[2]
-    registry = CapabilityRegistry(root)
-    registry.reset_from_plugins()
+def test_goal_orchestrator_sanitizes_noisy_llm_plan_decision(tmp_path):
+    registry = _isolated_registry(tmp_path)
     response = {
         "action": "PLAN_WITH_L35",
         "reason_code": "MODEL_ROUTE",
