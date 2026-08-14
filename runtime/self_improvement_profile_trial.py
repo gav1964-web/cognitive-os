@@ -22,6 +22,8 @@ def run_profile_trial(
         control = evaluate(source)
         with temporary_semantic_profiles([profile]):
             result = evaluate(source)
+        if not _same_selected_source(source, control, result):
+            continue
         profile_delta = round(result["project_min_score"] - control["project_min_score"], 2)
         return {
             "parameter_changes": {
@@ -33,3 +35,7 @@ def run_profile_trial(
             "profile_score_delta": profile_delta,
         }
     return None
+
+
+def _same_selected_source(source: str, control: dict[str, Any], treatment: dict[str, Any]) -> bool:
+    return all(str(row.get("selected_extraction_candidate") or "") == source for row in (control, treatment))

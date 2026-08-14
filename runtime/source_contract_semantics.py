@@ -7,6 +7,7 @@ import textwrap
 from typing import Any
 
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
+from runtime.source_effect_evidence import observed_side_effects
 
 
 _WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput"}
@@ -45,6 +46,7 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "return_paths": _return_path_count(function),
         "raises": _raise_names(function),
         "state_mutation": _has_state_mutation(function),
+        "observed_side_effects": observed_side_effects(function, args),
         "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
     }
 
@@ -102,7 +104,9 @@ def structural_quality_adjustment(
     if "RequestLike" in input_types and "ResponseLike" in output_types and evidence.get("source_body_complete"):
         score += 3
         reasons.append("framework request/response boundary is structurally proven")
-    if "VoidSideEffect" in output_types and "memory_state" in declared_effects and evidence.get("source_body_complete"):
+    void_outputs = {"VoidSideEffect", "VoidPersistenceCommand"}
+    mutating_effects = {"memory_state", "database", "filesystem_write", "network"}
+    if output_types & void_outputs and set(declared_effects) & mutating_effects and evidence.get("source_body_complete"):
         score += 3
         reasons.append("state transition boundary is structurally proven")
     if not declared_effects and _all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):

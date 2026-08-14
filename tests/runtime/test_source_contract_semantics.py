@@ -339,3 +339,26 @@ def test_value_return_overrides_incorrect_none_annotation():
 
     assert evidence["inferred_output_type"] == "AttributeValue"
     assert evidence["output_inference_basis"] == "return_expression"
+
+
+def test_session_add_proves_database_side_effect():
+    evidence = infer_source_contract({
+        "signature": {"args": [{"name": "session"}, {"name": "value"}]},
+        "snippet": "def add_value(session, value):\n    record = Record(value=value)\n    session.add(record)",
+    })
+
+    assert evidence["observed_side_effects"] == ["database"]
+
+
+def test_read_only_session_and_local_append_do_not_prove_database_write():
+    query = infer_source_contract({
+        "signature": {"args": [{"name": "session"}]},
+        "snippet": "def rows(session):\n    return session.query(Record).all()",
+    })
+    local = infer_source_contract({
+        "signature": {"args": [{"name": "values"}, {"name": "value"}]},
+        "snippet": "def append(values, value):\n    values.append(value)",
+    })
+
+    assert query["observed_side_effects"] == []
+    assert local["observed_side_effects"] == []

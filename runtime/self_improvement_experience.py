@@ -49,7 +49,7 @@ def stage_training_experience(
 
 def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:
     evidence = dict(profile.get("training_evidence") or {})
-    return {
+    result = {
         "id": str(profile.get("contract_family") or ""),
         "contract_family": profile.get("contract_family"),
         "input_contract": dict(profile.get("input_contract") or {}),
@@ -59,11 +59,15 @@ def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:
         "failure_modes": list(profile.get("failure_modes") or []),
         "recognition_policy": {
             "source": "python_ast",
+            "recognizer": profile.get("contract_family"),
             "required_evidence": sorted(key for key, present in evidence.items() if present),
-            "symbol_prefixes": ["sync_", "import_", "refresh_", "reconcile_"],
         },
         "numeric_bonus_from_training": False,
     }
+    for field in ("input_bindings", "benign_runtime_boundary"):
+        if profile.get(field):
+            result[field] = profile[field]
+    return result
 
 
 def _confirmed_profile(attempts: list[dict[str, Any]], outcome: dict[str, Any]) -> dict[str, Any]:

@@ -190,9 +190,10 @@ def _extraction_contract(
     candidate = dict(ranked[0].get("evidence", {})) if ranked else {}
     source = str(candidate.get("source") or "")
     domain_contract = _domain_extraction_contract(source)
+    structural_evidence = infer_source_contract(candidate)
     signature_input_contract = _input_contract_from_candidate(candidate)
     signature_output_contract = _output_contract_from_candidate(candidate)
-    contract_side_effects = list(candidate.get("contract_side_effects", candidate.get("side_effects", [])) or [])
+    contract_side_effects = _dedupe([*list(candidate.get("contract_side_effects", candidate.get("side_effects", [])) or []), *list(structural_evidence.get("observed_side_effects") or []), *list(dict(domain_contract.get("side_effect_policy") or {}).get("declared") or [])])
     enriched_contract = enrich_signature_contract(
         target=source,
         input_contract=signature_input_contract,
@@ -201,9 +202,8 @@ def _extraction_contract(
     )
     signature_input_contract = dict(enriched_contract.get("input_contract") or signature_input_contract)
     signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)
-    input_contract = _reconciled_input_contract(signature_input_contract, dict(domain_contract.get("input_contract") or {}))
+    input_contract = _reconciled_input_contract(signature_input_contract, dict(domain_contract.get("input_contract") or {}), dict(domain_contract.get("input_bindings") or {}))
     output_contract = dict(domain_contract.get("output_contract") or signature_output_contract)
-    structural_evidence = infer_source_contract(candidate)
     contract = {
         "candidate": candidate.get("source"),
         "candidate_score": ranked[0]["score"] if ranked else 0,
@@ -289,26 +289,11 @@ def _domain_extraction_contract(source: str) -> dict[str, Any]:
         return profile_contract
     return contract_archetype_for_target(source)
 
-def _reconciled_input_contract(signature_contract: dict[str, str], domain_contract: dict[str, Any]) -> dict[str, str]:
-    if not signature_contract:
-        return {str(key): str(value) for key, value in domain_contract.items()}
-    if not domain_contract:
-        return signature_contract
-    signature_keys = list(signature_contract)
-    domain_keys = list(domain_contract)
-    if signature_keys == domain_keys:
-        return {key: str(domain_contract.get(key) or signature_contract[key]) for key in signature_keys}
-    if signature_keys == ["call_context"] and "call_context" in domain_contract:
-        return {str(key): str(value) for key, value in domain_contract.items()}
-    if len(signature_keys) == len(domain_keys):
-        return {
-            signature_key: str(domain_contract.get(domain_key) or signature_contract[signature_key])
-            for signature_key, domain_key in zip(signature_keys, domain_keys)
-        }
-    aggregate_keys = {"consensus_input", "failure_evidence"}
-    if aggregate_keys & set(str(key) for key in domain_contract):
-        return {str(key): str(value) for key, value in domain_contract.items()}
-    return signature_contract
+def _reconciled_input_contract(
+    signature_contract: dict[str, str], domain_contract: dict[str, Any], bindings: dict[str, Any] | None = None
+) -> dict[str, str]:
+    from runtime.contract_input_reconciliation import reconcile_input_contract
+    return reconcile_input_contract(signature_contract, domain_contract, bindings)
 def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferred_targets: list[Any]) -> list[dict[str, Any]]:
     preferred = [_normalize_source_ref(str(item)) for item in preferred_targets if item]
     if not ranked or not preferred:

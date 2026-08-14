@@ -22,6 +22,22 @@ def evaluate_profile_effect(
     control = evaluate()
     with temporary_semantic_profiles([profile]):
         treatment = evaluate()
+    selected = {
+        "control": str(control.get("selected_extraction_candidate") or ""),
+        "treatment": str(treatment.get("selected_extraction_candidate") or ""),
+    }
+    if selected["control"] != source or selected["treatment"] != source:
+        return {
+            "status": "source_not_selected",
+            "source": source,
+            "contract_family": profile["contract_family"],
+            "profile": profile,
+            "control": control,
+            "treatment": treatment,
+            "selected_sources": selected,
+            "score_delta": 0.0,
+            "role_regressions": [],
+        }
     delta = round(treatment["project_min_score"] - control["project_min_score"], 2)
     regressions = [
         role for role, score in dict(control.get("role_scores") or {}).items()

@@ -82,6 +82,7 @@ def contract_for_target(target: str) -> dict[str, Any]:
             return {
                 "contract_family": profile["contract_family"],
                 "input_contract": dict(profile.get("input_contract") or {}),
+                "input_bindings": dict(profile.get("input_bindings") or {}),
                 "output_contract": dict(profile.get("output_contract") or {}),
                 "side_effect_policy": dict(profile.get("side_effect_policy") or {}),
                 "validation_gates": list(profile.get("validation_gates") or []),

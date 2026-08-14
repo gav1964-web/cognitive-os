@@ -21,7 +21,7 @@ def test_profile_trial_is_visible_only_inside_evaluation(tmp_path):
 
     def evaluate(target):
         seen.extend(matching_profiles(target))
-        return {"project_min_score": 9.2, "role_scores": {"spec_writer": 9.2}}
+        return {"project_min_score": 9.2, "role_scores": {"spec_writer": 9.2}, "selected_extraction_candidate": target}
 
     attempt = run_profile_trial(tmp_path, ["integration.py:sync_records"], evaluate)
 
@@ -63,7 +63,7 @@ def test_profile_trial_measures_against_same_source_control(tmp_path):
         nonlocal calls
         calls += 1
         score = 9.2 if not matching_profiles(target) else 9.7
-        return {"project_min_score": score, "role_scores": {"spec_writer": score}}
+        return {"project_min_score": score, "role_scores": {"spec_writer": score}, "selected_extraction_candidate": target}
 
     attempt = run_profile_trial(tmp_path, ["admission.py:allowed_file"], evaluate)
 
@@ -71,3 +71,20 @@ def test_profile_trial_measures_against_same_source_control(tmp_path):
     assert attempt["control_result"]["project_min_score"] == 9.2
     assert attempt["result"]["project_min_score"] == 9.7
     assert attempt["profile_score_delta"] == 0.5
+
+
+def test_profile_trial_skips_source_that_pipeline_did_not_select(tmp_path):
+    _project = tmp_path / "admission.py"
+    _project.write_text(
+        "def allowed_file(filename):\n"
+        "    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS\n",
+        encoding="utf-8",
+    )
+
+    attempt = run_profile_trial(
+        tmp_path,
+        ["admission.py:allowed_file"],
+        lambda target: {"project_min_score": 9.2, "role_scores": {}, "selected_extraction_candidate": "other.py:run"},
+    )
+
+    assert attempt is None

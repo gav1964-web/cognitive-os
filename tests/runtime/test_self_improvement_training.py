@@ -106,6 +106,26 @@ def test_generalized_profile_record_drops_project_specific_selector():
     assert "symbols" not in result
     assert "path_contains_any" not in result
     assert result["numeric_bonus_from_training"] is False
+    assert result["recognition_policy"]["recognizer"] == "external_service_state_sync_boundary"
+    assert "symbol_prefixes" not in result["recognition_policy"]
+
+
+def test_generalized_profile_preserves_portable_family_bindings():
+    profile = {
+        "contract_family": "persistence_append_command",
+        "input_contract": {"unit_of_work": "Session", "record_data": "RecordInput"},
+        "input_bindings": {"unit_of_work": ["session"], "record_data": ["*remaining"]},
+        "output_contract": {"result": "VoidPersistenceCommand"},
+        "side_effect_policy": {"declared": ["database"]},
+        "validation_gates": ["append is covered"],
+        "failure_modes": ["append_rejected"],
+        "training_evidence": {"append_call": True},
+    }
+
+    result = generalized_profile_record(profile)
+
+    assert result["input_bindings"] == profile["input_bindings"]
+    assert result["recognition_policy"]["required_evidence"] == ["append_call"]
 
 
 def test_profile_candidate_keeps_project_paths_only_in_provenance(tmp_path):

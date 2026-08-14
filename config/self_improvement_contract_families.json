@@ -28,8 +28,9 @@
     },
     "persistence_append_command": {
       "input_contract": {"unit_of_work": "PersistenceSession(add)", "record_data": "RecordAppendInput(values)"},
+      "input_bindings": {"unit_of_work": ["session", "db", "unit_of_work", "uow"], "record_data": ["*remaining"]},
       "output_contract": {"result": "VoidPersistenceCommand", "failure_packet": "PersistenceAppendFailure(kind, record_ref?)"},
-      "side_effect_policy": {"database_write": "record construction and unit-of-work append are explicit", "transaction_policy": "commit ownership remains with the caller", "requires_validation_gate": true},
+      "side_effect_policy": {"declared": ["database"], "database_write": "record construction and unit-of-work append are explicit", "transaction_policy": "commit ownership remains with the caller", "requires_validation_gate": true},
       "validation_gates": ["valid record construction and append are covered", "persistence failure does not hide transaction ownership", "duplicate/idempotency behavior is reviewed"],
       "failure_modes": ["record_construction_error", "unit_of_work_rejected", "duplicate_record"],
       "reason": "AST proves a bounded unit-of-work append command"
