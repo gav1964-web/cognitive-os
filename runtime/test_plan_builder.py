@@ -25,6 +25,7 @@ def build_test_plan(
     contract_binding = dict(implementation_plan.get("contract_binding", {}))
     target = _target_name(implementation_target, patch_scope)
     dependency_policy = _dependency_policy(technical_spec, implementation_plan, target)
+    executable_acceptance, scope_binding = _target_bound_acceptance(acceptance, target)
     return {
         "artifact_type": "TestPlan",
         "role": role_id,
@@ -39,7 +40,10 @@ def build_test_plan(
         "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target, dependency_policy),
         "dependency_policy": dependency_policy,
         "acceptance_tests": _acceptance_tests(acceptance, target),
-        "executable_acceptance": _executable_acceptance(acceptance, contract_binding, target),
+        "executable_acceptance": {
+            **_executable_acceptance(executable_acceptance, contract_binding, target),
+            "scope_binding": scope_binding,
+        },
         "negative_tests": _negative_tests(target, contract_binding),
         "smoke_checklist": _smoke_checklist(verification),
         "regression_risks": _regression_risks(evidence_scope, writable_scope, technical_spec, target),
@@ -67,6 +71,23 @@ def _plan_status(implementation_target: dict[str, Any]) -> str:
     if implementation_target.get("status") == "blocked_no_safe_candidate":
         return "blocked_no_safe_candidate"
     return "ok"
+
+
+def _target_bound_acceptance(
+    acceptance: list[dict[str, Any]], target: str
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    scoped = [row for row in acceptance if isinstance(row, dict) and str(row.get("source") or "") == target]
+    unscoped = [row for row in acceptance if isinstance(row, dict) and not row.get("source")]
+    selected = scoped if scoped else unscoped
+    return selected, {
+        "status": "target_bound" if scoped else "legacy_unscoped",
+        "target": target,
+        "selected_criteria": len(selected),
+        "excluded_other_target_criteria": sum(
+            isinstance(row, dict) and bool(row.get("source")) and str(row.get("source")) != target
+            for row in acceptance
+        ),
+    }
 
 
 def _test_target(

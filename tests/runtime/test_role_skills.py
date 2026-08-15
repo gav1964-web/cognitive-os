@@ -344,7 +344,7 @@ def test_tester_skill_returns_test_plan():
     assert test_plan["smoke_checklist"]
     assert test_plan["regression_risks"]
     assert test_plan["reproducibility"]["required_artifacts"]
-    assert test_plan["next_artifact"]["recommended_role"] == "reviewer"
+    assert test_plan["next_artifact"]["recommended_role"] == "task_tree_builder"
     assert test_plan["forbidden_actions_observed"] == []
 
 
@@ -372,5 +372,11 @@ def test_tester_skill_covers_all_acceptance_criteria_but_bounds_executable_oblig
         row for row in test_plan["executable_acceptance"]["obligations"] if row.get("kind") == "positive_contract_case"
     ]
     assert spec_ids <= tested_ids
-    assert len(executable_positive) == 10
+    target = implementation["implementation_target"]["candidate"]
+    target_bound_ids = {
+        row["id"] for row in spec["acceptance_criteria"] if row.get("source") == target
+    }
+    assert len(executable_positive) == min(10, len(target_bound_ids))
+    assert {row["acceptance_id"] for row in executable_positive} <= target_bound_ids
+    assert not any(str(row["acceptance_id"]).startswith("AC-EXTRA-") for row in executable_positive)
     assert any(row["execution_mode"] == "review_checklist" for row in test_plan["acceptance_tests"])
