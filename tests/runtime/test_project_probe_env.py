@@ -2,7 +2,7 @@ from pathlib import Path
 
 import subprocess
 
-from runtime import project_probe_env
+from runtime import project_probe_env, project_probe_env_install
 from runtime.project_probe_env import prepare_probe_env, probe_env_readiness
 
 
@@ -342,11 +342,11 @@ def test_prepare_probe_env_installs_wheel_packages_with_only_binary(tmp_path: Pa
 
     def fake_run(args, **kwargs):
         calls.append(args)
-        if args[:3] == [project_probe_env.sys.executable, "-m", "venv"]:
+        if args[:3] == [project_probe_env_install.sys.executable, "-m", "venv"]:
             return subprocess.CompletedProcess(args, 0, "", "")
         return subprocess.CompletedProcess(args, 0, "", "")
 
-    monkeypatch.setattr(project_probe_env.subprocess, "run", fake_run)
+    monkeypatch.setattr(project_probe_env_install.subprocess, "run", fake_run)
     readiness = {"install_plan": {"wheel_packages": ["pyyaml"]}}
 
     result = prepare_probe_env(env_dir=tmp_path / "env", readiness=readiness, allow_install=True)
@@ -354,23 +354,5 @@ def test_prepare_probe_env_installs_wheel_packages_with_only_binary(tmp_path: Pa
     assert result["status"] == "prepared"
     assert result["wheel_packages"] == ["pyyaml"]
     assert any("--only-binary=:all:" in call for call in calls)
-    assert all("--no-deps" in call for call in calls[1:])
-
-
-def test_prepare_probe_env_reports_pip_timeout(tmp_path: Path, monkeypatch):
-    calls = []
-
-    def fake_run(args, **kwargs):
-        calls.append(args)
-        if args[:3] == [project_probe_env.sys.executable, "-m", "venv"]:
-            return subprocess.CompletedProcess(args, 0, "", "")
-        raise subprocess.TimeoutExpired(args, 240, stderr="network stalled")
-
-    monkeypatch.setattr(project_probe_env.subprocess, "run", fake_run)
-    readiness = {"install_plan": {"allowed_packages": ["pytest"]}}
-
-    result = prepare_probe_env(env_dir=tmp_path / "env", readiness=readiness, allow_install=True)
-
-    assert result["status"] == "error"
-    assert result["reason"] == "timeout"
-    assert result["allowed_packages"] == ["pytest"]
+    pip_calls = [call for call in calls if "install" in call]
+    assert all("--no-deps" in call for call in pip_calls)

@@ -76,6 +76,16 @@
       "consumers": ["programmer_executor"],
       "required_fields": ["artifact_type", "status", "profile_fingerprint", "approved_packages", "scope", "authority"]
     },
+    "DependencyProbeSessionApproval": {
+      "producer": "human",
+      "consumers": ["programmer_executor", "reviewer"],
+      "required_fields": ["artifact_type", "status", "project_root", "target", "allowed_profile_statuses", "max_steps", "authority"]
+    },
+    "DependencyProbeSessionResult": {
+      "producer": "programmer_executor",
+      "consumers": ["tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "session_validation", "steps", "next_profile"]
+    },
     "IsolatedDependencyProbeResult": {
       "producer": "programmer_executor",
       "consumers": ["tester", "reviewer", "human"],

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import re
-import subprocess
-import sys
 from configparser import ConfigParser
 from pathlib import Path
 from typing import Any
@@ -18,6 +16,7 @@ from .project_probe_env_policy import (
     PACKAGE_TO_MODULE,
     WHEEL_ONLY_NATIVE_ALLOWLIST,
 )
+from .project_probe_env_install import prepare_probe_env
 
 
 def probe_env_readiness(project_dir: Path, behavior: dict[str, Any]) -> dict[str, Any]:
@@ -74,93 +73,6 @@ def dependency_module_plan(
             "reason": "External project dependencies are diagnosed but not installed without an explicit controlled environment policy.",
         },
     }
-
-
-def prepare_probe_env(
-    *, env_dir: Path, readiness: dict[str, Any], allow_install: bool = False,
-    install_timeout_seconds: int = 240, prefer_binary: bool = False,
-) -> dict[str, Any]:
-    plan = dict(readiness.get("install_plan") or {})
-    packages = [str(item) for item in plan.get("allowed_packages", [])]
-    blocked = [str(item) for item in plan.get("blocked_packages", [])]
-    review = [str(item) for item in plan.get("review_packages", [])]
-    native = [str(item) for item in plan.get("native_packages", [])]
-    wheel = [str(item) for item in plan.get("wheel_packages", [])]
-    if not packages and not wheel:
-        return {
-            "status": "skipped",
-            "reason": "no allowed packages",
-            "blocked_packages": blocked,
-            "review_packages": review,
-            "native_packages": native,
-            "wheel_packages": wheel,
-        }
-    if not allow_install:
-        return {
-            "status": "planned",
-            "allowed_packages": packages,
-            "wheel_packages": wheel,
-            "blocked_packages": blocked,
-            "review_packages": review,
-            "native_packages": native,
-            "env_dir": env_dir.as_posix(),
-        }
-    env_dir.parent.mkdir(parents=True, exist_ok=True)
-    if not (env_dir / "pyvenv.cfg").exists():
-        created = subprocess.run([sys.executable, "-m", "venv", str(env_dir)], capture_output=True, text=True, timeout=120)
-        if created.returncode != 0:
-            return {"status": "error", "phase": "venv", "stderr": created.stderr[-1000:], "env_dir": env_dir.as_posix()}
-    pip = _pip_path(env_dir)
-    try:
-        installed = _install_probe_packages(
-            pip,
-            packages,
-            wheel,
-            timeout_seconds=install_timeout_seconds,
-            prefer_binary=prefer_binary,
-        )
-    except subprocess.TimeoutExpired as exc:
-        stderr = (exc.stderr or b"").decode(errors="ignore") if isinstance(exc.stderr, bytes) else str(exc.stderr or "")
-        stdout = (exc.stdout or b"").decode(errors="ignore") if isinstance(exc.stdout, bytes) else str(exc.stdout or "")
-        return {"status": "error", "phase": "pip", "reason": "timeout", "stdout": stdout[-1200:], "stderr": stderr[-1200:], "allowed_packages": packages, "wheel_packages": wheel, "env_dir": env_dir.as_posix()}
-    if installed.returncode != 0:
-        return {"status": "error", "phase": "pip", "stderr": installed.stderr[-1200:], "allowed_packages": packages, "wheel_packages": wheel, "env_dir": env_dir.as_posix()}
-    return {
-        "status": "prepared",
-        "allowed_packages": packages,
-        "wheel_packages": wheel,
-        "blocked_packages": blocked,
-        "review_packages": review,
-        "native_packages": native,
-        "env_dir": env_dir.as_posix(),
-        "python": _python_path(env_dir).as_posix(),
-    }
-
-
-def _install_probe_packages(
-    pip: Path, packages: list[str], wheel: list[str], *,
-    timeout_seconds: int, prefer_binary: bool,
-) -> subprocess.CompletedProcess[str]:
-    result = subprocess.CompletedProcess([], 0, "", "")
-    if packages:
-        binary_args = ["--prefer-binary"] if prefer_binary else []
-        result = subprocess.run(
-            [str(pip), "install", "--disable-pip-version-check", "--no-deps", *binary_args, *packages],
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-        )
-        if result.returncode != 0:
-            return result
-    if wheel:
-        result = subprocess.run(
-            [str(pip), "install", "--disable-pip-version-check", "--no-deps", "--only-binary=:all:", *wheel],
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-        )
-    return result
-
 
 def _dependency_modules(behavior: dict[str, Any]) -> list[str]:
     result = []
@@ -389,11 +301,3 @@ def _install_plan(candidates: list[dict[str, Any]], requirements: set[str]) -> d
         "native_packages": sorted(set(native)),
         "policy": "declared low-risk dependencies install normally; selected native dependencies install wheel-only; native/heavy/unknown require review",
     }
-
-
-def _python_path(env_dir: Path) -> Path:
-    return env_dir / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
-
-
-def _pip_path(env_dir: Path) -> Path:
-    return env_dir / ("Scripts/pip.exe" if sys.platform == "win32" else "bin/pip")

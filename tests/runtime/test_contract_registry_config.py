@@ -11,6 +11,8 @@ def test_artifact_contracts_are_loaded_from_external_config():
     contracts = load_artifact_contracts()
 
     assert "TechnicalSpec" in contracts
+    assert "DependencyProbeSessionApproval" in contracts
+    assert "DependencyProbeSessionResult" in contracts
     assert "required_fields" in contracts["TechnicalSpec"]
     assert "producer" in contracts["TechnicalSpec"]
 

@@ -29,6 +29,7 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
         "package_companions",
         "low_risk_allowlist",
         "internal_probe_stubs",
+        "verified_wheel_fallback",
         "isolated_dependency_profile",
     ):
         value = payload.get(field_name)
@@ -39,6 +40,10 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
     if not wheel <= native:
         raise ValueError("wheel_only_native_allowlist must be a subset of native_or_compiled")
     isolated = dict(payload["isolated_dependency_profile"])
+    fallback = dict(payload["verified_wheel_fallback"])
+    for field_name in ("metadata_url_template", "trusted_file_hosts", "cache_dir_name", "download_timeout_seconds"):
+        if not fallback.get(field_name):
+            raise ValueError(f"verified wheel fallback policy requires: {field_name}")
     for field_name in (
         "environment_kind",
         "env_path_template",
@@ -46,6 +51,10 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
         "approval_status",
         "approval_scope",
         "allowed_authorities",
+        "session_approval_artifact_type",
+        "session_approval_status",
+        "session_allowed_profile_statuses",
+        "session_max_steps",
         "install_timeout_seconds",
         "import_timeout_seconds",
         "verification_gates",

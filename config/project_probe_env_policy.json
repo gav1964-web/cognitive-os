@@ -151,6 +151,13 @@
     "static_http_route_fallback",
     "static_shape_fallback"
   ],
+  "verified_wheel_fallback": {
+    "enabled": true,
+    "metadata_url_template": "https://pypi.org/pypi/{package}/json",
+    "trusted_file_hosts": ["files.pythonhosted.org"],
+    "cache_dir_name": "_verified_wheels",
+    "download_timeout_seconds": 90
+  },
   "isolated_dependency_profile": {
     "environment_kind": "venv",
     "env_path_template": "artifacts/dependency_envs/{project}/{target_hash}",
@@ -159,6 +166,10 @@
     "approval_status": "approved",
     "approval_scope": "isolated_dependency_import_probe",
     "allowed_authorities": ["human", "reviewer"],
+    "session_approval_artifact_type": "DependencyProbeSessionApproval",
+    "session_approval_status": "approved",
+    "session_allowed_profile_statuses": ["ready_for_probe", "review_required"],
+    "session_max_steps": 20,
     "require_exact_package_set": true,
     "install_timeout_seconds": 240,
     "import_timeout_seconds": 60,

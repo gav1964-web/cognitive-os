@@ -108,6 +108,7 @@ def _profile_fingerprint(profile: dict[str, Any]) -> str:
         "target": profile.get("target"),
         "missing_modules": list(profile.get("missing_modules") or []),
         "manifest_evidence": dict(profile.get("manifest_evidence") or {}),
+        "environment": dict(profile.get("environment") or {}),
         "package_candidates": list(profile.get("package_candidates") or []),
         "install_plan": dict(profile.get("install_plan") or {}),
     }
