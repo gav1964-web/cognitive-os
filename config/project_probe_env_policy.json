@@ -97,6 +97,7 @@
     "boltons",
     "botocore",
     "click",
+    "colorama",
     "cssselect",
     "cycler",
     "docstring-parser",

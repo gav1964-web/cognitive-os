@@ -18,7 +18,7 @@ def test_project_probe_env_policy_loads_current_catalog() -> None:
     assert policy["package_to_module"]["pyyaml"] == "yaml"
     assert "pyyaml" in policy["wheel_only_native_allowlist"]
     assert "pyparsing" in policy["low_risk_allowlist"]
-    assert {"cycler", "fonttools", "python-dateutil", "six"} <= set(policy["low_risk_allowlist"])
+    assert {"colorama", "cycler", "fonttools", "python-dateutil", "six"} <= set(policy["low_risk_allowlist"])
     assert {"contourpy", "kiwisolver"} <= set(policy["wheel_only_native_allowlist"])
 
 
