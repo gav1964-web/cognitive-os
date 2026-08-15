@@ -15,7 +15,7 @@ from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
-from runtime.spec_writer_target_binding import standalone_target_eligibility
+from runtime.spec_writer_target_binding import promote_environment_ready_candidate, standalone_target_eligibility
 from runtime.python_source_files import is_python_source_ref
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
@@ -174,6 +174,7 @@ def _extraction_contract(
         ranked = _semantic_rerank_candidates(ranked, evidence)
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [])
     ranked = _semantic_rerank_candidates(ranked, [dict(item.get("evidence", {})) for item in ranked])
+    ranked = promote_environment_ready_candidate(ranked)
     ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
     if not ranked:

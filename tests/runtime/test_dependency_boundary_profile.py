@@ -96,3 +96,29 @@ def test_implementation_plan_preserves_dependency_profile():
     )
 
     assert plan["dependency_boundary_profile"] == profile
+
+
+def test_executor_returns_required_reselection_to_architect(tmp_path):
+    profile = build_dependency_boundary_profile(
+        {"candidate": "pkg/adapter.py:run", "dependency_readiness": {"missing_external_modules": ["sdk"]}}
+    )
+    request = {
+        "artifact_type": "FirstSliceReselectionRequest",
+        "status": "required",
+        "current_target": "pkg/adapter.py:run",
+    }
+    proposal = build_patch_strategy(
+        project_dir=tmp_path,
+        technical_spec={},
+        implementation_plan={
+            "implementation_target": {"candidate": "pkg/adapter.py:run"},
+            "dependency_boundary_profile": profile,
+            "first_slice_reselection_request": request,
+        },
+        test_plan={},
+        synthesis={"status": "prepared"},
+        acceptance_summary={"skipped_reason_counts": {"import_failed_missing_module": 1}},
+    )
+
+    assert proposal["first_slice_reselection_request"] == request
+    assert proposal["deterministic_strategy"]["action"] == "return_to_architect_for_first_slice_reselection"

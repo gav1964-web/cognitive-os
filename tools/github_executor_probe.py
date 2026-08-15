@@ -213,6 +213,9 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
             module for case in cases for module in list(case.get("dependency_missing_modules") or [])
         ),
         "dependency_profile_statuses": _counts(str(case.get("dependency_profile_status") or "none") for case in cases),
+        "first_slice_reselection_statuses": _counts(
+            str(case.get("first_slice_reselection_status") or "none") for case in cases
+        ),
         "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
         "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
         "task_tree_dependency_edges_total": sum(int(case.get("task_tree_dependency_edge_count") or 0) for case in cases),
@@ -273,6 +276,7 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
     patterns = [str(row.get("id") or "") for row in list(strategy.get("solution_patterns") or []) if isinstance(row, dict)]
     rebind = dict(strategy.get("contract_rebind_request") or {})
     dependency_profile = dict(strategy.get("dependency_boundary_profile") or {})
+    reselection = dict(strategy.get("first_slice_reselection_request") or {})
     return {
         "strategy_action": str(deterministic.get("action") or ""),
         "strategy_reason": str(deterministic.get("reason") or ""),
@@ -289,6 +293,7 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
         ],
         "dependency_profile_status": str(dependency_profile.get("status") or "none"),
         "dependency_profile_missing_modules": [str(item) for item in list(dependency_profile.get("missing_modules") or [])],
+        "first_slice_reselection_status": str(reselection.get("status") or "none"),
     }
 
 

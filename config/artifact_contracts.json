@@ -61,6 +61,11 @@
       "consumers": ["architect", "implementer", "programmer_executor", "tester", "reviewer"],
       "required_fields": ["artifact_type", "status", "target", "missing_modules"]
     },
+    "FirstSliceReselectionRequest": {
+      "producer": "spec_writer",
+      "consumers": ["architect", "implementer", "programmer_executor", "reviewer"],
+      "required_fields": ["artifact_type", "status", "current_target"]
+    },
     "PatchPackage": {
       "producer": "programmer_executor",
       "consumers": ["tester", "reviewer"],

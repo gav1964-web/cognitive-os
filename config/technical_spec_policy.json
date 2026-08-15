@@ -85,6 +85,7 @@
     "max_local_import_depth": 4,
     "missing_external_penalty_each": 24,
     "max_missing_external_penalty": 72,
+    "environment_ready_reselection_score_slack": 40,
     "reason_prefix": "runtime environment misses external imports",
     "profile_resolution_options": [
       "select_environment_ready_ranked_candidate",
@@ -101,6 +102,12 @@
       "auto_install_dependency",
       "mutate_project_manifest",
       "treat_stub_success_as_semantic_equivalence"
+    ],
+    "reselection_required_properties": [
+      "standalone_callable_target",
+      "environment_ready_or_isolated_dependency_profile_accepted",
+      "source_backed_input_output_contract",
+      "bounded_side_effect_policy"
     ]
   },
   "semantic_review_override": {

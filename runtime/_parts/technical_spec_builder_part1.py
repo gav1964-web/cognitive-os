@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from runtime.local_inference import LocalInferenceConfig
 from runtime.dependency_boundary_profile import build_dependency_boundary_profile
+from runtime.first_slice_reselection_request import build_first_slice_reselection_request
 from runtime.role_skill_common import now_iso
 
 def build_technical_spec(
@@ -24,6 +25,7 @@ def build_technical_spec(
         evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
     )
     dependency_boundary_profile = build_dependency_boundary_profile(extraction_contract)
+    first_slice_reselection_request = build_first_slice_reselection_request(extraction_contract, dependency_boundary_profile)
     if work_plan_contract.get("status") == "blocked_no_first_slice" and extraction_contract.get("candidate"):
         work_plan_contract = _fallback_work_plan_contract([str(extraction_contract["candidate"])])
     acceptance = _ensure_candidate_acceptance(acceptance, extraction_contract)
@@ -60,6 +62,7 @@ def build_technical_spec(
         "source_evidence": evidence,
         "extraction_contract": extraction_contract,
         "dependency_boundary_profile": dependency_boundary_profile,
+        "first_slice_reselection_request": first_slice_reselection_request,
         "spec_writer_advisory": extraction_contract.get("candidate_advisory", {}),
         "work_plan_contract": work_plan_contract,
         "interface_contracts": interface_contracts,

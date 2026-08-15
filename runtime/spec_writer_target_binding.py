@@ -34,3 +34,29 @@ def dependency_readiness_adjustment(candidate: dict[str, Any]) -> tuple[int, lis
     penalty = min(maximum, each * len(missing))
     prefix = str(policy.get("reason_prefix") or "runtime environment misses external imports")
     return -penalty, [f"{prefix}: {', '.join(missing[:6])}"]
+
+
+def promote_environment_ready_candidate(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not ranked or _candidate_is_environment_ready(ranked[0]):
+        return ranked
+    policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
+    slack = int(policy.get("environment_ready_reselection_score_slack") or 0)
+    first_score = int(ranked[0].get("score") or 0)
+    alternatives = [
+        item for item in ranked[1:]
+        if _candidate_is_environment_ready(item) and int(item.get("score") or 0) >= first_score - slack
+    ]
+    if not alternatives:
+        return ranked
+    selected = sorted(alternatives, key=lambda item: (-int(item.get("score") or 0), int(item.get("index") or 0)))[0]
+    selected["reasons"] = [
+        *list(selected.get("reasons") or []),
+        "environment-ready candidate selected within configured score slack",
+    ]
+    return [selected, *[item for item in ranked if item is not selected]]
+
+
+def _candidate_is_environment_ready(item: dict[str, Any]) -> bool:
+    source = str(item.get("source") or "")
+    readiness = dict(dict(item.get("evidence") or {}).get("dependency_readiness") or {})
+    return ":" in source and readiness.get("status") == "ready"
