@@ -13,12 +13,10 @@ from runtime.role_spec_writer_ranking import (
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
+from runtime.spec_writer_target_binding import standalone_target_eligibility
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
-from runtime._parts.technical_spec_builder_part3 import (
-    _input_contract_from_candidate,
-    _output_contract_from_candidate,
-)
+from runtime._parts.technical_spec_builder_part3 import _input_contract_from_candidate, _output_contract_from_candidate
 
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
@@ -38,13 +36,11 @@ IGNORED_RETURN_ANNOTATIONS = set(policy_list(CONTRACT_TYPE_POLICY, "ignored_retu
 ARGUMENT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "argument_rules")
 PAYLOAD_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "payload_rules")
 RESULT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "result_rules")
-
 def _step_target(first_slice: dict[str, Any], index: int) -> str | None:
     targets = [str(item) for item in list(first_slice.get("targets", [])) if item]
     if not targets:
         return None
     return targets[min(index - 1, len(targets) - 1)]
-
 def _stage_contract_expectation(stage: str) -> str:
     lowered = stage.lower()
     if "input" in lowered:
@@ -52,7 +48,6 @@ def _stage_contract_expectation(stage: str) -> str:
     if "output" in lowered:
         return "output must match declared schema or artifact path policy"
     return "intermediate shape must be named before handoff"
-
 def _hint_text(value: object, default: str) -> str:
     if isinstance(value, list) and value:
         return str(value[0])
@@ -69,6 +64,7 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         signature = dict(candidate.get("signature", {}) or {})
         claims = [str(item) for item in candidate.get("claims", []) or []]
         decorators = {str(item).lower().rsplit(".", 1)[-1] for item in candidate.get("decorators", []) or []}
+        eligibility = standalone_target_eligibility(candidate)
 
         if kind == "pure_transform":
             score += 40
@@ -134,6 +130,8 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         if candidate.get("target_binding") == "ambiguous_method_symbol":
             score -= 48
             reasons.append("method symbol is ambiguous across classes and needs class-qualified target binding")
+        if not eligibility["eligible"]:
+            reasons.append(str(eligibility["reason"]))
         if candidate.get("callers"):
             score += 5
             reasons.append("caller context available")
@@ -164,6 +162,8 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
                 "reasons": reasons,
                 "side_effects": side_effects,
                 "target_binding": candidate.get("target_binding"),
+                "standalone_eligible": eligibility["eligible"],
+                "blocked_reason": eligibility["reason_code"],
                 "evidence": candidate,
                 "index": index,
             }

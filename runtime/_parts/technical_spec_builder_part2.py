@@ -15,6 +15,7 @@ from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
+from runtime.spec_writer_target_binding import standalone_target_eligibility
 from runtime.python_source_files import is_python_source_ref
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
@@ -163,6 +164,8 @@ def _extraction_contract(
     evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None
 ) -> dict[str, Any]:
     ranked = _rank_extraction_candidates(evidence); read_only_ranked_context = []
+    binding_rejections = [item for item in ranked if item.get("standalone_eligible") is False]
+    ranked = [item for item in ranked if item.get("standalone_eligible") is not False]
     if FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
         pre_scope_ranked = list(ranked); ranked = _enforce_preferred_first_slice_scope(ranked, preferred_targets or [])
         read_only_ranked_context = pre_scope_ranked
@@ -173,18 +176,22 @@ def _extraction_contract(
     ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
     if not ranked:
+        blocked_codes = _dedupe([str(item.get("blocked_reason") or "") for item in binding_rejections])
+        rejection_rows = _binding_rejection_rows(binding_rejections)
         return {
             "status": "blocked_no_safe_candidate",
             "candidate": None,
             "candidate_score": 0,
-            "selection_reason": "no source-specific evidence available for a bounded extraction contract",
+            "selection_reason": "; ".join(str(item.get("reason") or "") for item in rejection_rows)
+            or "no source-specific evidence available for a bounded extraction contract",
             "ranked_candidates": [],
+            "binding_rejections": rejection_rows,
             "semantic_quality": semantic_target_quality_report(""),
             "input_contract": {},
             "output_contract": {},
             "side_effects": {"declared": [], "requires_process_boundary": False},
             "evidence_source": None,
-            "blocked_by": ["no_safe_source_specific_candidate"],
+            "blocked_by": blocked_codes or ["no_safe_source_specific_candidate"],
         }
     candidate = dict(ranked[0].get("evidence", {})) if ranked else {}
     source = str(candidate.get("source") or "")
@@ -228,6 +235,8 @@ def _extraction_contract(
         "structural_evidence": structural_evidence,
         "candidate_advisory": candidate_advisory,
     }
+    if binding_rejections:
+        contract["binding_rejections"] = _binding_rejection_rows(binding_rejections)
     supporting_sources = [
         str(item) for item in list(candidate.get("contract_slice_sources") or [])
         if item and str(item) != source
@@ -282,6 +291,19 @@ def _extraction_contract(
             ],
         }
     return contract
+
+
+def _binding_rejection_rows(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    for item in ranked[:12]:
+        eligibility = standalone_target_eligibility(dict(item.get("evidence") or {}))
+        rows.append({
+            "source": item.get("source"),
+            "target_binding": item.get("target_binding"),
+            "reason": eligibility["reason"],
+            "reason_code": item.get("blocked_reason"),
+        })
+    return rows
 def _domain_extraction_contract(source: str) -> dict[str, Any]:
     profile_contract = contract_for_target(source)
     if profile_contract:

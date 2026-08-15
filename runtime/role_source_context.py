@@ -328,6 +328,8 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 result["target_binding"] = "method_symbol"
                 result["owner_class"] = matches[0].get("class_name")
                 result["structural_contract"]["owner_class"] = matches[0].get("class_name")
+            elif matches and matches[0].get("kind") == "nested_function":
+                result.update({"target_binding": "nested_function", "parent_function": matches[0].get("parent_name")})
             return result
     return None
 

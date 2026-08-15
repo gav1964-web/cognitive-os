@@ -71,6 +71,15 @@
     "enforce_candidate_within_targets": true,
     "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
   },
+  "target_binding_policy": {
+    "blocked_standalone_bindings": ["nested_function"],
+    "blocked_reason_codes": {
+      "nested_function": "nested_function_requires_closure"
+    },
+    "blocked_reasons": {
+      "nested_function": "nested function depends on enclosing closure state and is not a standalone extraction target"
+    }
+  },
   "semantic_review_override": {
     "enabled": true,
     "min_candidate_score": 60,

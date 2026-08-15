@@ -69,6 +69,21 @@ def test_source_context_marks_unique_method_symbol_owner(tmp_path: Path):
     assert snippet["structural_contract"]["source_body_complete"] is True
 
 
+def test_source_context_marks_nested_function_parent(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "workflow.py").write_text(
+        "def outer(limit):\n    def inner(value):\n        return value < limit\n    return inner\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(project_root=str(project), project_report={}, sources=["workflow.py:inner"])
+    snippet = context["workflow.py:inner"]["snippet"]
+
+    assert snippet["target_binding"] == "nested_function"
+    assert snippet["parent_function"] == "outer"
+
+
 def test_source_context_builds_module_script_context(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
