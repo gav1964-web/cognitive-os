@@ -46,6 +46,8 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
         "approval_status",
         "approval_scope",
         "allowed_authorities",
+        "install_timeout_seconds",
+        "import_timeout_seconds",
         "verification_gates",
         "forbidden_actions",
     ):

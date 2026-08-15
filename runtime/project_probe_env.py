@@ -31,10 +31,12 @@ def dependency_module_plan(
     missing_modules: list[str],
     *,
     install_hints: set[str] | None = None,
+    additional_declared_packages: set[str] | None = None,
 ) -> dict[str, Any]:
     missing = list(dict.fromkeys(str(item) for item in missing_modules if item))
     hints = set(install_hints or set())
     requirements, dependency_files = _declared_packages(project_dir)
+    requirements.update(str(item).replace("_", "-").lower() for item in additional_declared_packages or set())
     candidates = []
     for module in missing:
         package = _package_for_module(module, requirements)
@@ -74,7 +76,10 @@ def dependency_module_plan(
     }
 
 
-def prepare_probe_env(*, env_dir: Path, readiness: dict[str, Any], allow_install: bool = False) -> dict[str, Any]:
+def prepare_probe_env(
+    *, env_dir: Path, readiness: dict[str, Any], allow_install: bool = False,
+    install_timeout_seconds: int = 240, prefer_binary: bool = False,
+) -> dict[str, Any]:
     plan = dict(readiness.get("install_plan") or {})
     packages = [str(item) for item in plan.get("allowed_packages", [])]
     blocked = [str(item) for item in plan.get("blocked_packages", [])]
@@ -107,10 +112,17 @@ def prepare_probe_env(*, env_dir: Path, readiness: dict[str, Any], allow_install
             return {"status": "error", "phase": "venv", "stderr": created.stderr[-1000:], "env_dir": env_dir.as_posix()}
     pip = _pip_path(env_dir)
     try:
-        installed = _install_probe_packages(pip, packages, wheel)
+        installed = _install_probe_packages(
+            pip,
+            packages,
+            wheel,
+            timeout_seconds=install_timeout_seconds,
+            prefer_binary=prefer_binary,
+        )
     except subprocess.TimeoutExpired as exc:
         stderr = (exc.stderr or b"").decode(errors="ignore") if isinstance(exc.stderr, bytes) else str(exc.stderr or "")
-        return {"status": "error", "phase": "pip", "reason": "timeout", "stderr": stderr[-1200:], "allowed_packages": packages, "wheel_packages": wheel, "env_dir": env_dir.as_posix()}
+        stdout = (exc.stdout or b"").decode(errors="ignore") if isinstance(exc.stdout, bytes) else str(exc.stdout or "")
+        return {"status": "error", "phase": "pip", "reason": "timeout", "stdout": stdout[-1200:], "stderr": stderr[-1200:], "allowed_packages": packages, "wheel_packages": wheel, "env_dir": env_dir.as_posix()}
     if installed.returncode != 0:
         return {"status": "error", "phase": "pip", "stderr": installed.stderr[-1200:], "allowed_packages": packages, "wheel_packages": wheel, "env_dir": env_dir.as_posix()}
     return {
@@ -125,18 +137,27 @@ def prepare_probe_env(*, env_dir: Path, readiness: dict[str, Any], allow_install
     }
 
 
-def _install_probe_packages(pip: Path, packages: list[str], wheel: list[str]) -> subprocess.CompletedProcess[str]:
+def _install_probe_packages(
+    pip: Path, packages: list[str], wheel: list[str], *,
+    timeout_seconds: int, prefer_binary: bool,
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.CompletedProcess([], 0, "", "")
     if packages:
-        result = subprocess.run([str(pip), "install", "--disable-pip-version-check", *packages], capture_output=True, text=True, timeout=240)
+        binary_args = ["--prefer-binary"] if prefer_binary else []
+        result = subprocess.run(
+            [str(pip), "install", "--disable-pip-version-check", "--no-deps", *binary_args, *packages],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
         if result.returncode != 0:
             return result
     if wheel:
         result = subprocess.run(
-            [str(pip), "install", "--disable-pip-version-check", "--only-binary=:all:", *wheel],
+            [str(pip), "install", "--disable-pip-version-check", "--no-deps", "--only-binary=:all:", *wheel],
             capture_output=True,
             text=True,
-            timeout=240,
+            timeout=timeout_seconds,
         )
     return result
 

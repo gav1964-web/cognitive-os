@@ -354,6 +354,7 @@ def test_prepare_probe_env_installs_wheel_packages_with_only_binary(tmp_path: Pa
     assert result["status"] == "prepared"
     assert result["wheel_packages"] == ["pyyaml"]
     assert any("--only-binary=:all:" in call for call in calls)
+    assert all("--no-deps" in call for call in calls[1:])
 
 
 def test_prepare_probe_env_reports_pip_timeout(tmp_path: Path, monkeypatch):

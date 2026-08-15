@@ -82,6 +82,8 @@ def test_approved_probe_prepares_isolated_env_and_imports_only(tmp_path, monkeyp
 
     assert result["status"] == "passed"
     assert calls[0][1]["allow_install"] is True
+    assert calls[0][1]["install_timeout_seconds"] == 240
+    assert calls[0][1]["prefer_binary"] is True
     install_plan = calls[0][1]["readiness"]["install_plan"]
     assert install_plan["allowed_packages"] == ["scientific-sdk"]
     assert install_plan["review_packages"] == []
@@ -99,6 +101,38 @@ def _profile(root):
         target="pkg/core.py:normalize",
         missing_modules=["attr"],
     )
+
+
+def test_failed_import_builds_new_approval_bound_profile(tmp_path, monkeypatch):
+    profile = _profile(tmp_path)
+    monkeypatch.setattr(
+        isolated_dependency_probe,
+        "prepare_probe_env",
+        lambda **kwargs: {"status": "prepared", "python": str(tmp_path / "fake-python")},
+    )
+
+    def fake_run(command, **kwargs):
+        if "importlib.metadata" in command[2]:
+            return subprocess.CompletedProcess(command, 0, '{"attrs": ["numpy>=1.26"]}', "")
+        return subprocess.CompletedProcess(command, 1, "", "ModuleNotFoundError: No module named 'numpy'")
+
+    monkeypatch.setattr(isolated_dependency_probe.subprocess, "run", fake_run)
+
+    result = run_isolated_dependency_probe(
+        workspace_root=tmp_path,
+        profile=profile,
+        approval=_approval(profile),
+    )
+
+    follow_up = result["follow_up_profile"]
+    assert result["status"] == "failed"
+    assert follow_up["missing_modules"] == ["numpy"]
+    assert follow_up["status"] == "ready_for_probe"
+    assert follow_up["install_plan"]["wheel_packages"] == ["numpy"]
+    assert follow_up["manifest_evidence"]["approved_distribution_requirements"] == {
+        "attrs": ["numpy>=1.26"]
+    }
+    assert follow_up["profile_fingerprint"] != profile["profile_fingerprint"]
 
 
 def _approval(profile):

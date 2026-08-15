@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from .isolated_dependency_profile import build_isolated_dependency_profile
 from .project_probe_env import prepare_probe_env
 from .project_probe_env_policy import load_project_probe_env_policy
 
@@ -31,13 +34,14 @@ def validate_dependency_probe_approval(
     native = list(dict(profile.get("install_plan") or {}).get("native_packages") or [])
     if native:
         errors.append("native_dependency_requires_platform_specific_runner")
-    return {
+    result = {
         "artifact_type": "DependencyProbeApprovalValidation",
         "status": "accepted" if not errors else "rejected",
         "profile_fingerprint": profile.get("profile_fingerprint"),
         "checks": checks,
         "errors": errors,
     }
+    return result
 
 
 def run_isolated_dependency_probe(
@@ -58,10 +62,13 @@ def run_isolated_dependency_probe(
     if path_check["status"] != "accepted":
         return {**base, "status": "blocked", "phase": "path_policy", "path_check": path_check}
     readiness = _approved_readiness(profile)
+    environment = dict(profile.get("environment") or {})
     prepared = prepare_probe_env(
         env_dir=Path(str(path_check["env_dir"])),
         readiness=readiness,
         allow_install=True,
+        install_timeout_seconds=int(environment.get("install_timeout_seconds") or 240),
+        prefer_binary=bool(environment.get("prefer_binary", False)),
     )
     if prepared.get("status") != "prepared":
         return {**base, "status": "failed", "phase": "environment", "environment_result": prepared}
@@ -73,7 +80,12 @@ def run_isolated_dependency_probe(
         *modules,
     ]
     try:
-        probe = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        probe = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=int(environment.get("import_timeout_seconds") or 60),
+        )
     except subprocess.TimeoutExpired as exc:
         return {
             **base,
@@ -82,7 +94,7 @@ def run_isolated_dependency_probe(
             "reason": "timeout",
             "stderr": str(exc.stderr or "")[-1200:],
         }
-    return {
+    result = {
         **base,
         "status": "passed" if probe.returncode == 0 else "failed",
         "phase": "complete" if probe.returncode == 0 else "import_probe",
@@ -97,6 +109,19 @@ def run_isolated_dependency_probe(
             "import_probe_only": True,
         },
     }
+    missing = _missing_module(probe.stderr) if probe.returncode != 0 else ""
+    if missing:
+        transitive_evidence = _installed_requirement_evidence(
+            str(prepared["python"]),
+            list(dict(profile.get("approval_request") or {}).get("requested_packages") or []),
+        )
+        result["follow_up_profile"] = build_isolated_dependency_profile(
+            project_root=profile.get("project_root"),
+            target=str(profile.get("target") or ""),
+            missing_modules=[missing],
+            transitive_evidence=transitive_evidence,
+        )
+    return result
 
 
 def _environment_path(workspace_root: Path, profile: dict[str, Any]) -> dict[str, Any]:
@@ -132,3 +157,30 @@ def _within(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _missing_module(stderr: str) -> str:
+    match = re.search(r"No module named ['\"]([^'\"]+)['\"]", str(stderr or ""))
+    return str(match.group(1)).split(".", 1)[0] if match else ""
+
+
+def _installed_requirement_evidence(python: str, packages: list[str]) -> dict[str, list[str]]:
+    script = (
+        "import importlib.metadata as m,json,sys;"
+        "from pip._vendor.packaging.requirements import Requirement as R;"
+        "active=lambda s:(R(s).marker is None or R(s).marker.evaluate({'extra':''}));"
+        "print(json.dumps({p:[s for s in (m.requires(p) or []) if active(s)] for p in sys.argv[1:]}))"
+    )
+    probe = subprocess.run(
+        [python, "-c", script, *packages], capture_output=True, text=True, timeout=30,
+    )
+    if probe.returncode != 0:
+        return {}
+    try:
+        payload = json.loads(probe.stdout)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return {
+        str(package): [str(requirement) for requirement in list(requirements or [])]
+        for package, requirements in dict(payload).items()
+    }

@@ -48,19 +48,25 @@
     "httptools",
     "libsass",
     "lxml",
+    "matplotlib",
     "msgspec",
     "multidict",
+    "numpy",
     "pycurl",
     "pyyaml",
+    "scipy",
     "ujson"
   ],
   "wheel_only_native_allowlist": [
     "httptools",
     "libsass",
     "lxml",
+    "matplotlib",
     "msgspec",
     "multidict",
+    "numpy",
     "pyyaml",
+    "scipy",
     "ujson"
   ],
   "package_companions": {
@@ -135,6 +141,9 @@
     "approval_scope": "isolated_dependency_import_probe",
     "allowed_authorities": ["human", "reviewer"],
     "require_exact_package_set": true,
+    "install_timeout_seconds": 240,
+    "import_timeout_seconds": 60,
+    "prefer_binary": true,
     "verification_gates": [
       "dependency_is_declared_by_project",
       "package_mapping_is_source_proven",

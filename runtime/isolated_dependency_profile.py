@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ def build_isolated_dependency_profile(
     project_root: str | Path | None,
     target: str | None,
     missing_modules: list[str],
+    transitive_evidence: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     modules = list(dict.fromkeys(str(item) for item in missing_modules if item))
     base = {
@@ -32,7 +34,13 @@ def build_isolated_dependency_profile(
             "status": "project_root_unavailable",
             "authority": "diagnostic_only_no_install",
         }
-    plan = dependency_module_plan(root, modules)
+    transitive_evidence = dict(transitive_evidence or {})
+    transitive_packages = {
+        _requirement_name(requirement)
+        for requirements in transitive_evidence.values()
+        for requirement in requirements
+    } - {""}
+    plan = dependency_module_plan(root, modules, additional_declared_packages=transitive_packages)
     install_plan = dict(plan.get("install_plan") or {})
     status = _profile_status(install_plan)
     policy = dict(load_project_probe_env_policy()["isolated_dependency_profile"])
@@ -47,6 +55,7 @@ def build_isolated_dependency_profile(
         "manifest_evidence": {
             "dependency_files": list(plan.get("dependency_files") or []),
             "declared_packages": list(plan.get("declared_packages") or []),
+            "approved_distribution_requirements": transitive_evidence,
         },
         "package_candidates": list(plan.get("install_candidates") or []),
         "install_plan": install_plan,
@@ -56,6 +65,9 @@ def build_isolated_dependency_profile(
             "outside_source_project": True,
             "automatic_install_allowed": bool(policy.get("automatic_install_allowed", False)),
             "execution_status": "not_executed",
+            "install_timeout_seconds": int(policy["install_timeout_seconds"]),
+            "import_timeout_seconds": int(policy["import_timeout_seconds"]),
+            "prefer_binary": bool(policy.get("prefer_binary", False)),
         },
         "verification_gates": list(policy["verification_gates"]),
         "forbidden_actions": list(policy["forbidden_actions"]),
@@ -78,6 +90,11 @@ def _profile_status(install_plan: dict[str, Any]) -> str:
     return "blocked_no_install_candidate"
 
 
+def _requirement_name(requirement: str) -> str:
+    match = re.match(r"\s*([A-Za-z0-9_.-]+)", str(requirement))
+    return match.group(1).replace("_", "-").lower() if match else ""
+
+
 def _next_step(status: str) -> str:
     return {
         "ready_for_probe": "request_explicit_permission_then_prepare_isolated_environment",
@@ -90,6 +107,7 @@ def _profile_fingerprint(profile: dict[str, Any]) -> str:
     evidence = {
         "target": profile.get("target"),
         "missing_modules": list(profile.get("missing_modules") or []),
+        "manifest_evidence": dict(profile.get("manifest_evidence") or {}),
         "package_candidates": list(profile.get("package_candidates") or []),
         "install_plan": dict(profile.get("install_plan") or {}),
     }
