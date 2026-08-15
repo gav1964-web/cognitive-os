@@ -122,3 +122,28 @@ def test_executor_returns_required_reselection_to_architect(tmp_path):
 
     assert proposal["first_slice_reselection_request"] == request
     assert proposal["deterministic_strategy"]["action"] == "return_to_architect_for_first_slice_reselection"
+
+
+def test_executor_does_not_repeat_terminal_architect_reselection(tmp_path):
+    request = {
+        "artifact_type": "FirstSliceReselectionRequest",
+        "status": "required",
+        "resolution_status": "exhausted",
+        "terminal": True,
+    }
+    proposal = build_patch_strategy(
+        project_dir=tmp_path,
+        technical_spec={},
+        implementation_plan={
+            "implementation_target": {"candidate": "pkg/adapter.py:run"},
+            "dependency_boundary_profile": {"status": "resolution_required"},
+            "first_slice_reselection_request": request,
+        },
+        test_plan={},
+        synthesis={"status": "skipped"},
+        acceptance_summary={"skipped_reason_counts": {"import_failed_missing_module": 1}},
+    )
+
+    strategy = proposal["deterministic_strategy"]
+    assert strategy["action"] == "resolve_dependency_boundary_from_profile"
+    assert strategy["reason"] == "architect_reselection_exhausted_dependency_resolution_required"

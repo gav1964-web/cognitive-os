@@ -216,6 +216,9 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "first_slice_reselection_statuses": _counts(
             str(case.get("first_slice_reselection_status") or "none") for case in cases
         ),
+        "first_slice_reselection_resolution_statuses": _counts(
+            str(case.get("first_slice_reselection_resolution_status") or "none") for case in cases
+        ),
         "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
         "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
         "task_tree_dependency_edges_total": sum(int(case.get("task_tree_dependency_edge_count") or 0) for case in cases),
@@ -257,7 +260,6 @@ def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_pl
         "dependency_missing_modules": [str(item) for item in list(readiness.get("missing_external_modules") or [])],
     }
 
-
 def _first_test_plan_profile(test_plan: dict[str, Any]) -> dict[str, Any]:
     for obligation in list(dict(test_plan.get("executable_acceptance") or {}).get("obligations") or []):
         if not isinstance(obligation, dict):
@@ -266,7 +268,6 @@ def _first_test_plan_profile(test_plan: dict[str, Any]) -> dict[str, Any]:
         if profile:
             return profile
     return {}
-
 
 def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
     deterministic = dict(strategy.get("deterministic_strategy") or {})
@@ -294,6 +295,7 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
         "dependency_profile_status": str(dependency_profile.get("status") or "none"),
         "dependency_profile_missing_modules": [str(item) for item in list(dependency_profile.get("missing_modules") or [])],
         "first_slice_reselection_status": str(reselection.get("status") or "none"),
+        "first_slice_reselection_resolution_status": str(reselection.get("resolution_status") or "none"),
     }
 
 

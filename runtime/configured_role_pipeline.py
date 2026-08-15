@@ -6,6 +6,7 @@ from typing import Any
 
 from .role_artifact_interpreter import load_role_artifact_pipeline, run_role_artifact_pipeline
 from .role_directory import load_role_directory
+from .technical_spec_policy import load_technical_spec_policy
 
 
 def run_configured_role_prefix(
@@ -20,7 +21,104 @@ def run_configured_role_prefix(
         until_artifact_type=until_artifact_type,
         until_output_key=until_output_key,
     )
-    return run_role_artifact_pipeline(goal=goal, project_report=project_report, pipeline=pipeline, **kwargs)
+    artifacts = run_role_artifact_pipeline(goal=goal, project_report=project_report, pipeline=pipeline, **kwargs)
+    if not _pipeline_produces(pipeline, "TechnicalSpec"):
+        return artifacts
+    return _close_first_slice_reselection_loop(
+        artifacts=artifacts,
+        goal=goal,
+        project_report=project_report,
+        pipeline=pipeline,
+        pipeline_kwargs=kwargs,
+    )
+
+
+def _close_first_slice_reselection_loop(
+    *,
+    artifacts: dict[str, dict[str, Any]],
+    goal: str,
+    project_report: dict[str, Any],
+    pipeline: dict[str, Any],
+    pipeline_kwargs: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    from .architect_first_slice_reselection import reselect_architecture_first_slice
+
+    policy = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
+    if not policy.get("enabled", True):
+        return artifacts
+    maximum = max(0, int(policy.get("max_iterations") or 0))
+    user_transform = pipeline_kwargs.get("artifact_transform")
+    current = artifacts
+    for iteration in range(1, maximum + 1):
+        adr = artifact_by_type(current, "ArchitectureDecisionRecord")
+        spec = artifact_by_type(current, "TechnicalSpec")
+        resolution = reselect_architecture_first_slice(
+            architecture_decision=adr,
+            technical_spec=spec,
+            project_report=project_report,
+            iteration=iteration,
+        )
+        revised = dict(resolution.get("architecture_decision") or adr)
+        if resolution.get("status") != "selected":
+            current[_artifact_key(current, "ArchitectureDecisionRecord")] = revised
+            _attach_reselection_resolution(spec, resolution, terminal=True)
+            _propagate_reselection_request(current, spec)
+            return current
+        rerun_kwargs = dict(pipeline_kwargs)
+        rerun_kwargs["artifact_transform"] = _replacement_transform(revised, user_transform)
+        current = run_role_artifact_pipeline(
+            goal=goal,
+            project_report=project_report,
+            pipeline=pipeline,
+            **rerun_kwargs,
+        )
+        rerun_spec = artifact_by_type(current, "TechnicalSpec")
+        _attach_reselection_resolution(rerun_spec, resolution, terminal=False)
+        _propagate_reselection_request(current, rerun_spec)
+        if dict(rerun_spec.get("first_slice_reselection_request") or {}).get("status") != "required":
+            return current
+    spec = artifact_by_type(current, "TechnicalSpec")
+    _attach_reselection_resolution(spec, {"status": "iteration_limit"}, terminal=True)
+    _propagate_reselection_request(current, spec)
+    return current
+
+
+def _replacement_transform(revised_adr: dict[str, Any], user_transform: Any) -> Any:
+    def transform(artifact: dict[str, Any]) -> dict[str, Any]:
+        transformed = user_transform(artifact) if callable(user_transform) else artifact
+        if transformed.get("artifact_type") == "ArchitectureDecisionRecord":
+            return revised_adr
+        return transformed
+
+    return transform
+
+
+def _attach_reselection_resolution(
+    spec: dict[str, Any], resolution: dict[str, Any], *, terminal: bool
+) -> None:
+    request = dict(spec.get("first_slice_reselection_request") or {})
+    request["resolution_status"] = resolution.get("status")
+    request["terminal"] = terminal
+    if resolution.get("outcome"):
+        request["outcome"] = resolution["outcome"]
+    spec["first_slice_reselection_request"] = request
+
+
+def _propagate_reselection_request(
+    artifacts: dict[str, dict[str, Any]], technical_spec: dict[str, Any]
+) -> None:
+    request = dict(technical_spec.get("first_slice_reselection_request") or {})
+    for artifact in artifacts.values():
+        if "first_slice_reselection_request" in artifact:
+            artifact["first_slice_reselection_request"] = dict(request)
+
+
+def _artifact_key(artifacts: dict[str, dict[str, Any]], artifact_type: str) -> str:
+    return next(key for key, artifact in artifacts.items() if artifact.get("artifact_type") == artifact_type)
+
+
+def _pipeline_produces(pipeline: dict[str, Any], artifact_type: str) -> bool:
+    return any(artifact_type in producer_artifact_types(str(step.get("role_id") or "")) for step in pipeline["steps"])
 
 
 def configured_pipeline_prefix(

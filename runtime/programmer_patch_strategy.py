@@ -107,6 +107,12 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
         return _strategy("request_implementation_plan_contract_rebind", "nested_closure_target", confidence=0.82)
     if reasons.get("import_failed_missing_module") or reasons.get("import_failed_import_error"):
         if reselection.get("status") == "required":
+            if reselection.get("terminal") is True:
+                return _strategy(
+                    "resolve_dependency_boundary_from_profile",
+                    "architect_reselection_exhausted_dependency_resolution_required",
+                    confidence=0.86,
+                )
             return _strategy("return_to_architect_for_first_slice_reselection", "no_environment_ready_first_slice", confidence=0.84)
         if dependency_profile.get("status") == "resolution_required":
             return _strategy("resolve_dependency_boundary_from_profile", "dependency_profile_requires_resolution", confidence=0.78)

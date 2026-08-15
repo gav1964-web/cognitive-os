@@ -110,6 +110,22 @@
       "bounded_side_effect_policy"
     ]
   },
+  "first_slice_reselection": {
+    "enabled": true,
+    "max_iterations": 1,
+    "expanded_candidate_limit": 64,
+    "selected_target_limit": 8,
+    "candidate_sources": [
+      "pure_transforms",
+      "atomic_reusable_capabilities",
+      "too_broad_functions",
+      "process_boundary_candidates",
+      "mixed_responsibility_functions",
+      "hidden_orchestrators",
+      "dataflows",
+      "minimal_extraction_plan"
+    ]
+  },
   "semantic_review_override": {
     "enabled": true,
     "min_candidate_score": 60,
