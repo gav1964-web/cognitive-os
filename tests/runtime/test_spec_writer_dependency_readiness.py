@@ -28,6 +28,8 @@ def test_spec_writer_prefers_environment_ready_candidate():
     assert contract["candidate"] == "pkg/core.py:normalize"
     assert "missing_runtime_sdk" in " ".join(ranked["pkg/optional.py:run"]["reasons"])
     assert ranked["pkg/optional.py:run"]["dependency_readiness"]["status"] == "missing_external"
+    assert contract["dependency_readiness"]["status"] == "ready"
+    assert spec["dependency_boundary_profile"]["status"] == "not_required"
 
 
 def _context(symbol: str, missing: list[str]) -> dict:

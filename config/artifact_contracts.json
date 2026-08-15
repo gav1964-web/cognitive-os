@@ -56,6 +56,11 @@
       "consumers": ["spec_writer", "implementer", "tester", "task_tree_builder", "reviewer"],
       "required_fields": ["artifact_type", "status", "current_target", "reason", "evidence", "candidate_targets", "requested_updates", "authority", "next_step"]
     },
+    "DependencyBoundaryProfile": {
+      "producer": "spec_writer",
+      "consumers": ["architect", "implementer", "programmer_executor", "tester", "reviewer"],
+      "required_fields": ["artifact_type", "status", "target", "missing_modules"]
+    },
     "PatchPackage": {
       "producer": "programmer_executor",
       "consumers": ["tester", "reviewer"],

@@ -102,13 +102,14 @@ def _absolute_from_import(package: list[str], level: int, module: str) -> str:
 def _local_module_path(root: Path, module: str) -> Path | None:
     if not module:
         return None
-    base = root.joinpath(*module.split("."))
-    module_file = base.with_suffix(".py")
-    package_file = base / "__init__.py"
-    if module_file.is_file():
-        return module_file.resolve()
-    if package_file.is_file():
-        return package_file.resolve()
+    for source_root in (root, root / "src"):
+        base = source_root.joinpath(*module.split("."))
+        module_file = base.with_suffix(".py")
+        package_file = base / "__init__.py"
+        if module_file.is_file():
+            return module_file.resolve()
+        if package_file.is_file():
+            return package_file.resolve()
     return None
 
 

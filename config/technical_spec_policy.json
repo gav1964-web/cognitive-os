@@ -85,7 +85,23 @@
     "max_local_import_depth": 4,
     "missing_external_penalty_each": 24,
     "max_missing_external_penalty": 72,
-    "reason_prefix": "runtime environment misses external imports"
+    "reason_prefix": "runtime environment misses external imports",
+    "profile_resolution_options": [
+      "select_environment_ready_ranked_candidate",
+      "provision_declared_project_dependencies_in_isolated_environment",
+      "use_controlled_stub_only_when_acceptance_does_not_depend_on_external_semantics"
+    ],
+    "profile_verification_gates": [
+      "dependency_source_is_declared_or_source_proven",
+      "isolated_import_probe_passes",
+      "callable_acceptance_passes_without_live_external_service",
+      "source_diff_remains_empty_until_profile_is_accepted"
+    ],
+    "profile_forbidden_actions": [
+      "auto_install_dependency",
+      "mutate_project_manifest",
+      "treat_stub_success_as_semantic_equivalence"
+    ]
   },
   "semantic_review_override": {
     "enabled": true,

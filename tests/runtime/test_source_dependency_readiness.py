@@ -26,3 +26,17 @@ def test_dependency_readiness_treats_stdlib_and_local_modules_as_ready(tmp_path:
 
     assert readiness["status"] == "ready"
     assert readiness["missing_external_modules"] == []
+
+
+def test_dependency_readiness_resolves_absolute_import_from_src_layout(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "src" / "sample_pkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "helper.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (package / "entry.py").write_text("from sample_pkg.helper import VALUE\n", encoding="utf-8")
+
+    readiness = source_dependency_readiness(project, "src/sample_pkg/entry.py")
+
+    assert readiness["status"] == "ready"
+    assert "sample_pkg.helper" in readiness["local_imports"]

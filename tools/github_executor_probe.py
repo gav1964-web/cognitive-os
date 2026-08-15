@@ -212,6 +212,7 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "dependency_missing_modules": _counts(
             module for case in cases for module in list(case.get("dependency_missing_modules") or [])
         ),
+        "dependency_profile_statuses": _counts(str(case.get("dependency_profile_status") or "none") for case in cases),
         "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
         "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
         "task_tree_dependency_edges_total": sum(int(case.get("task_tree_dependency_edge_count") or 0) for case in cases),
@@ -271,6 +272,7 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
     playbooks = [str(row.get("id") or "") for row in list(strategy.get("executor_playbooks") or []) if isinstance(row, dict)]
     patterns = [str(row.get("id") or "") for row in list(strategy.get("solution_patterns") or []) if isinstance(row, dict)]
     rebind = dict(strategy.get("contract_rebind_request") or {})
+    dependency_profile = dict(strategy.get("dependency_boundary_profile") or {})
     return {
         "strategy_action": str(deterministic.get("action") or ""),
         "strategy_reason": str(deterministic.get("reason") or ""),
@@ -285,6 +287,8 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
             for row in list(rebind.get("candidate_targets") or [])
             if isinstance(row, dict) and row.get("target")
         ],
+        "dependency_profile_status": str(dependency_profile.get("status") or "none"),
+        "dependency_profile_missing_modules": [str(item) for item in list(dependency_profile.get("missing_modules") or [])],
     }
 
 

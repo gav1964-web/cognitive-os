@@ -71,6 +71,7 @@ def build_implementation_plan(
         "executor_handoff": build_executor_handoff(patch_intent=patch_intent),
         "patch_package_contract": _patch_package_contract(target, writable_scope, expected_files),
         "dependency_policy": _dependency_policy(technical_spec),
+        "dependency_boundary_profile": dict(technical_spec.get("dependency_boundary_profile") or {}),
         "implementation_steps": _implementation_steps(requirements, evidence_scope, target),
         "quality_gates": quality_gates,
         "debug_rework_policy": _debug_rework_policy(),

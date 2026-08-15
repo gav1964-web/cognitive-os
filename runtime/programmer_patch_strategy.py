@@ -37,6 +37,7 @@ def build_patch_strategy(
         "patch_synthesis": _synthesis_summary(synthesis),
         "acceptance_summary": dict(acceptance_summary or {}),
         "contract_alignment": _contract_alignment(target, test_plan),
+        "dependency_boundary_profile": dict(implementation_plan.get("dependency_boundary_profile") or {}),
     }
     quality = _patch_quality(synthesis)
     pattern_context = _pattern_context(acceptance_summary, synthesis, quality)
@@ -50,6 +51,7 @@ def build_patch_strategy(
         "llm_policy": "disabled" if not use_l45_llm else "l45_hypothesis_only",
         "target": target,
         "contract_alignment": evidence["contract_alignment"],
+        "dependency_boundary_profile": evidence["dependency_boundary_profile"],
         "deterministic_strategy": deterministic,
         "patch_quality": quality,
         "executor_playbooks": playbooks,
@@ -82,6 +84,7 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     acceptance = dict(evidence.get("acceptance_summary") or {})
     alignment = dict(evidence.get("contract_alignment") or {})
     reasons = dict(acceptance.get("skipped_reason_counts") or {})
+    dependency_profile = dict(evidence.get("dependency_boundary_profile") or {})
     if alignment.get("status") == "target_drift":
         reason = (
             "test_plan_target_drift"
@@ -100,6 +103,8 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     if reasons.get("nested_function_requires_closure"):
         return _strategy("request_implementation_plan_contract_rebind", "nested_closure_target", confidence=0.82)
     if reasons.get("import_failed_missing_module") or reasons.get("import_failed_import_error"):
+        if dependency_profile.get("status") == "resolution_required":
+            return _strategy("resolve_dependency_boundary_from_profile", "dependency_profile_requires_resolution", confidence=0.78)
         return _strategy("request_dependency_boundary_profile", "optional_dependency_boundary", confidence=0.68)
     if reasons.get("import_failed_runtime_error"):
         return _strategy("block_for_review", "import_time_runtime_boundary", confidence=0.66)
