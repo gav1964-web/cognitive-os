@@ -104,7 +104,7 @@ def run_programmer_executor(
     test_result["sandbox_candidate_repair_attempt"] = repair_attempt
     if repair_strategy:
         test_result["executor_repair_strategy"] = repair_strategy
-    test_result["executor_strategy"] = build_patch_strategy(
+    final_strategy = build_patch_strategy(
         project_dir=execution_project_dir,
         technical_spec=technical_spec,
         implementation_plan=implementation_plan,
@@ -113,6 +113,9 @@ def run_programmer_executor(
         acceptance_summary=dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {}),
         use_l45_llm=llm_strategy_enabled(),
     )
+    test_result["executor_strategy"] = final_strategy
+    rebind_request = dict(final_strategy.get("contract_rebind_request") or {})
+    rebind_path = _write_json(execution_dir / "contract_rebind_request.json", rebind_request) if rebind_request else None
     patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot, synthesis, strategy, task_tree)
     patch_package["sandbox_candidate_attempt"] = candidate_attempt
     patch_package["sandbox_candidate_repair_attempt"] = repair_attempt
@@ -132,6 +135,7 @@ def run_programmer_executor(
         "task_tree_path": task_tree_path.as_posix(),
         "patch_package_path": patch_path.as_posix(),
         "test_result_path": test_result_path.as_posix(),
+        "contract_rebind_request_path": rebind_path.as_posix() if rebind_path else None,
         "source_code_changes": False,
         "registry_changes": False,
         "apply_source": False,
@@ -139,6 +143,7 @@ def run_programmer_executor(
             "test_result": test_result_path.as_posix(),
             "next_role": "reviewer",
             "reason": "Reviewer can consume this TestResult with the original TechnicalSpec, ImplementationPlan and TestPlan.",
+            "contract_rebind_request": rebind_path.as_posix() if rebind_path else None,
         },
     }
     _write_json(execution_dir / "result.json", result)

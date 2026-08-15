@@ -214,6 +214,12 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "task_tree_unmapped_acceptance_total": sum(int(case.get("task_tree_unmapped_acceptance_count") or 0) for case in cases),
         "task_tree_changes_traced": sum(case.get("task_tree_all_changes_traced") is True for case in cases),
         "strategy_actions": _counts(str(case.get("strategy_action") or "unknown") for case in cases),
+        "contract_rebind_requested": sum(bool(case.get("contract_rebind_requested")) for case in cases),
+        "contract_rebind_reasons": _counts(
+            str(case.get("contract_rebind_reason"))
+            for case in cases
+            if case.get("contract_rebind_requested")
+        ),
         "executor_playbooks": _counts(playbook for case in cases for playbook in list(case.get("executor_playbook_ids") or [])),
         "solution_patterns": _counts(pattern for case in cases for pattern in list(case.get("solution_pattern_ids") or [])),
         "llm_strategy_statuses": _counts(str(case.get("llm_strategy_status") or "none") for case in cases),
@@ -256,6 +262,7 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
     candidate = dict(strategy.get("sandbox_patch_candidate") or {})
     playbooks = [str(row.get("id") or "") for row in list(strategy.get("executor_playbooks") or []) if isinstance(row, dict)]
     patterns = [str(row.get("id") or "") for row in list(strategy.get("solution_patterns") or []) if isinstance(row, dict)]
+    rebind = dict(strategy.get("contract_rebind_request") or {})
     return {
         "strategy_action": str(deterministic.get("action") or ""),
         "strategy_reason": str(deterministic.get("reason") or ""),
@@ -263,6 +270,13 @@ def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
         "solution_pattern_ids": [item for item in patterns if item],
         "llm_strategy_status": str(llm.get("status") or "none"),
         "sandbox_candidate_status": str(candidate.get("status") or "none"),
+        "contract_rebind_requested": bool(rebind),
+        "contract_rebind_reason": str(rebind.get("reason") or ""),
+        "contract_rebind_candidates": [
+            str(row.get("target") or "")
+            for row in list(rebind.get("candidate_targets") or [])
+            if isinstance(row, dict) and row.get("target")
+        ],
     }
 
 

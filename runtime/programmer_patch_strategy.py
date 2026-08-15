@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .contract_rebind_request import build_contract_rebind_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
 
@@ -61,6 +62,16 @@ def build_patch_strategy(
             "source_diff_reviewed",
         ],
     }
+    if deterministic["action"] == "request_implementation_plan_contract_rebind":
+        proposal["contract_rebind_request"] = build_contract_rebind_request(
+            target=target,
+            reason=str(deterministic["reason"]),
+            alignment=dict(evidence["contract_alignment"]),
+            technical_spec=technical_spec,
+            implementation_plan=implementation_plan,
+            test_plan=test_plan,
+            acceptance_summary=acceptance_summary,
+        )
     proposal["sandbox_patch_candidate"] = _sandbox_candidate(proposal, evidence)
     proposal["recommended_next_step"] = _recommended_next_step(proposal)
     return proposal
@@ -72,7 +83,12 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     alignment = dict(evidence.get("contract_alignment") or {})
     reasons = dict(acceptance.get("skipped_reason_counts") or {})
     if alignment.get("status") == "target_drift":
-        return _strategy("request_implementation_plan_contract_rebind", "test_plan_target_drift", confidence=0.81)
+        reason = (
+            "test_plan_target_drift"
+            if alignment.get("reason") == "obligation_target_mismatch"
+            else "test_plan_acceptance_scope_drift"
+        )
+        return _strategy("request_implementation_plan_contract_rebind", reason, confidence=0.81)
     if acceptance.get("signal_strength") == "executable_callable":
         return _strategy("verify_patch", "callable_acceptance_available", confidence=0.78)
     if reasons.get("positive_sample_execution_failed"):
@@ -239,18 +255,41 @@ def _contract_alignment(target: str, test_plan: dict[str, Any]) -> dict[str, Any
             if isinstance(item, dict) and item.get("target") and str(item.get("target")) != target
         }
     )
-    refs = sorted(
+    criterion_refs = [
+        (str(item.get("source_criterion") or ""), ref)
+        for item in obligations
+        if isinstance(item, dict)
+        for ref in set(re.findall(r"[\w./-]+\.py:[A-Za-z_]\w*", str(item.get("source_criterion") or "")))
+    ]
+    refs = sorted({ref for _, ref in criterion_refs})
+    mismatches = [ref for ref in refs if target and ref != target]
+    direct = sorted(
         {
             ref
-            for item in obligations
-            if isinstance(item, dict)
-            for ref in re.findall(r"[\w./-]+\.py:[A-Za-z_]\w*", str(item.get("source_criterion") or ""))
+            for criterion, ref in criterion_refs
+            if ref != target and "selected extraction_contract" in criterion.lower()
         }
     )
-    mismatches = [ref for ref in refs if target and ref != target]
-    if target_mismatches:
-        return {"status": "target_drift", "target": target, "mismatched_targets": target_mismatches[:5], "source_refs": mismatches[:5]}
-    return {"status": "aligned", "target": target, "mismatched_targets": [], "source_refs": mismatches[:5]}
+    counts = {ref: sum(1 for _, candidate in criterion_refs if candidate == ref) for ref in mismatches}
+    repeated = sorted(ref for ref, count in counts.items() if count >= 2)
+    candidates = list(dict.fromkeys(target_mismatches + direct + repeated))[:5]
+    if target_mismatches or direct or repeated:
+        reason = "obligation_target_mismatch" if target_mismatches else "authoritative_source_criterion_mismatch"
+        return {
+            "status": "target_drift",
+            "reason": reason,
+            "target": target,
+            "mismatched_targets": target_mismatches[:5],
+            "source_refs": mismatches[:5],
+            "candidate_targets": candidates,
+        }
+    return {
+        "status": "aligned",
+        "target": target,
+        "mismatched_targets": [],
+        "source_refs": mismatches[:5],
+        "candidate_targets": [],
+    }
 
 
 def _patch_quality(synthesis: dict[str, Any]) -> dict[str, Any]:

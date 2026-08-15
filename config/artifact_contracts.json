@@ -51,6 +51,11 @@
       "consumers": ["programmer_executor", "reviewer"],
       "required_fields": ["artifact_type", "target", "nodes", "coverage", "verifier_gates", "stop_conditions"]
     },
+    "ContractRebindRequest": {
+      "producer": "programmer_executor",
+      "consumers": ["spec_writer", "implementer", "tester", "task_tree_builder", "reviewer"],
+      "required_fields": ["artifact_type", "status", "current_target", "reason", "evidence", "candidate_targets", "requested_updates", "authority", "next_step"]
+    },
     "PatchPackage": {
       "producer": "programmer_executor",
       "consumers": ["tester", "reviewer"],

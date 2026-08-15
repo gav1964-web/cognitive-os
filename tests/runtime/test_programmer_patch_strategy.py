@@ -179,6 +179,7 @@ def test_patch_strategy_requests_rebind_on_test_plan_target_drift(tmp_path: Path
     assert proposal["contract_alignment"]["status"] == "target_drift"
     assert proposal["deterministic_strategy"]["action"] == "request_implementation_plan_contract_rebind"
     assert proposal["deterministic_strategy"]["reason"] == "test_plan_target_drift"
+    assert proposal["contract_rebind_request"]["candidate_targets"][0]["target"] == "pkg/other.py:build"
 
 
 def test_patch_strategy_blocks_invalid_llm_patch_candidate(tmp_path: Path, monkeypatch):

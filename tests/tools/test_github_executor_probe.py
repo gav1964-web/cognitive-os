@@ -1,5 +1,5 @@
 from tools import github_executor_probe
-from tools.github_executor_probe import _boundary_track, _run_case, _summary, _task_tree_fields
+from tools.github_executor_probe import _boundary_track, _run_case, _strategy_fields, _summary, _task_tree_fields
 from tools.github_implementer_probe import _quality_score
 
 
@@ -19,6 +19,8 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
             "patch_quality_level": "signature_fallback_guard",
             "patch_quality_review_required": True,
             "strategy_action": "verify_patch",
+            "contract_rebind_requested": True,
+            "contract_rebind_reason": "nested_closure_target",
             "executor_playbook_ids": ["executor_playbook_callable_acceptance_verify"],
             "solution_pattern_ids": ["executor_pattern_signature_fallback_review"],
             "llm_strategy_status": "not_requested",
@@ -75,6 +77,8 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
         "task_tree_unmapped_acceptance_total": 0,
         "task_tree_changes_traced": 0,
         "strategy_actions": {"unknown": 2, "verify_patch": 1},
+        "contract_rebind_requested": 1,
+        "contract_rebind_reasons": {"nested_closure_target": 1},
         "executor_playbooks": {"executor_playbook_callable_acceptance_verify": 1},
         "solution_patterns": {"executor_pattern_blocked_handoff": 1, "executor_pattern_signature_fallback_review": 1},
         "llm_strategy_statuses": {"none": 2, "not_requested": 1},
@@ -83,6 +87,21 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
         "sandbox_candidate_repair_statuses": {"none": 2, "not_attempted": 1},
         "source_code_changes": 1,
     }
+
+
+def test_strategy_fields_exposes_contract_rebind_evidence() -> None:
+    fields = _strategy_fields(
+        {
+            "contract_rebind_request": {
+                "reason": "test_plan_target_drift",
+                "candidate_targets": [{"target": "pkg/other.py:build"}],
+            }
+        }
+    )
+
+    assert fields["contract_rebind_requested"] is True
+    assert fields["contract_rebind_reason"] == "test_plan_target_drift"
+    assert fields["contract_rebind_candidates"] == ["pkg/other.py:build"]
 
 
 def test_boundary_track_classifies_native_optional_and_fixture_boundaries() -> None:
