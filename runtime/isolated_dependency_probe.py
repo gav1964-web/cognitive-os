@@ -109,7 +109,39 @@ def run_isolated_dependency_probe(
             "import_probe_only": True,
         },
     }
-    missing = _missing_module(probe.stderr) if probe.returncode != 0 else ""
+    target_module = _target_module(str(profile.get("target") or ""))
+    if probe.returncode == 0 and target_module:
+        try:
+            target_probe = subprocess.run(
+                [
+                    str(prepared["python"]),
+                    "-c",
+                    "import importlib,sys;sys.path.insert(0,sys.argv[1]);importlib.import_module(sys.argv[2])",
+                    str(profile.get("project_root") or ""),
+                    target_module,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=int(environment.get("import_timeout_seconds") or 60),
+            )
+        except subprocess.TimeoutExpired as exc:
+            return {
+                **result,
+                "status": "failed",
+                "phase": "target_import_probe",
+                "reason": "timeout",
+                "target_module": target_module,
+                "stderr": str(exc.stderr or "")[-1200:],
+            }
+        result.update({
+            "status": "passed" if target_probe.returncode == 0 else "failed",
+            "phase": "complete" if target_probe.returncode == 0 else "target_import_probe",
+            "target_module": target_module,
+            "returncode": target_probe.returncode,
+            "stdout": target_probe.stdout[-1200:],
+            "stderr": target_probe.stderr[-1200:],
+        })
+    missing = _missing_module(str(result.get("stderr") or "")) if result["status"] == "failed" else ""
     if missing:
         transitive_evidence = _installed_requirement_evidence(
             str(prepared["python"]),
@@ -162,6 +194,11 @@ def _within(path: Path, root: Path) -> bool:
 def _missing_module(stderr: str) -> str:
     match = re.search(r"No module named ['\"]([^'\"]+)['\"]", str(stderr or ""))
     return str(match.group(1)).split(".", 1)[0] if match else ""
+
+
+def _target_module(target: str) -> str:
+    path = str(target).split(":", 1)[0].replace("\\", "/").strip("/")
+    return path[:-3].replace("/", ".") if path.endswith(".py") else ""
 
 
 def _installed_requirement_evidence(python: str, packages: list[str]) -> dict[str, list[str]]:

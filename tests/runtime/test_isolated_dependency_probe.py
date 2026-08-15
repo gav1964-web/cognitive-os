@@ -135,6 +135,36 @@ def test_failed_import_builds_new_approval_bound_profile(tmp_path, monkeypatch):
     assert follow_up["profile_fingerprint"] != profile["profile_fingerprint"]
 
 
+def test_target_import_builds_follow_up_from_approved_distribution(tmp_path, monkeypatch):
+    profile = _profile(tmp_path)
+    monkeypatch.setattr(
+        isolated_dependency_probe,
+        "prepare_probe_env",
+        lambda **kwargs: {"status": "prepared", "python": str(tmp_path / "fake-python")},
+    )
+
+    def fake_run(command, **kwargs):
+        script = command[2]
+        if "importlib.metadata" in script:
+            return subprocess.CompletedProcess(command, 0, '{"attrs": ["scipy>=1.8"]}', "")
+        if "sys.path.insert" in script:
+            return subprocess.CompletedProcess(command, 1, "", "ModuleNotFoundError: No module named 'scipy'")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(isolated_dependency_probe.subprocess, "run", fake_run)
+
+    result = run_isolated_dependency_probe(
+        workspace_root=tmp_path,
+        profile=profile,
+        approval=_approval(profile),
+    )
+
+    assert result["status"] == "failed"
+    assert result["phase"] == "target_import_probe"
+    assert result["target_module"] == "pkg.core"
+    assert result["follow_up_profile"]["install_plan"]["wheel_packages"] == ["scipy"]
+
+
 def _approval(profile):
     request = profile["approval_request"]
     return {
