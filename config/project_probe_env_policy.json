@@ -110,6 +110,7 @@
     "pydantic",
     "pydantic-settings",
     "pygments",
+    "pyparsing",
     "pyproject-hooks",
     "pytest",
     "python-discovery",
