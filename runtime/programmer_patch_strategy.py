@@ -87,6 +87,7 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     alignment = dict(evidence.get("contract_alignment") or {})
     reasons = dict(acceptance.get("skipped_reason_counts") or {})
     dependency_profile = dict(evidence.get("dependency_boundary_profile") or {})
+    isolated_profile = dict(dependency_profile.get("isolated_environment_profile") or {})
     reselection = dict(evidence.get("first_slice_reselection_request") or {})
     if alignment.get("status") == "target_drift":
         reason = (
@@ -108,6 +109,21 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     if reasons.get("import_failed_missing_module") or reasons.get("import_failed_import_error"):
         if reselection.get("status") == "required":
             if reselection.get("terminal") is True:
+                isolated_status = str(isolated_profile.get("status") or "")
+                if isolated_status == "ready_for_probe":
+                    return _strategy(
+                        "prepare_isolated_dependency_probe",
+                        "declared_low_risk_dependency_profile_ready",
+                        confidence=0.88,
+                    )
+                if isolated_status == "review_required":
+                    return _strategy(
+                        "review_isolated_dependency_profile",
+                        "declared_dependency_requires_risk_review",
+                        confidence=0.86,
+                    )
+                if isolated_status.startswith("blocked_"):
+                    return _strategy("block_for_review", "isolated_dependency_profile_blocked", confidence=0.9)
                 return _strategy(
                     "resolve_dependency_boundary_from_profile",
                     "architect_reselection_exhausted_dependency_resolution_required",

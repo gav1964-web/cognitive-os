@@ -147,3 +147,27 @@ def test_executor_does_not_repeat_terminal_architect_reselection(tmp_path):
     strategy = proposal["deterministic_strategy"]
     assert strategy["action"] == "resolve_dependency_boundary_from_profile"
     assert strategy["reason"] == "architect_reselection_exhausted_dependency_resolution_required"
+
+
+def test_executor_routes_terminal_profile_to_dependency_risk_review(tmp_path):
+    request = {"status": "required", "resolution_status": "exhausted", "terminal": True}
+    dependency = {
+        "status": "resolution_required",
+        "isolated_environment_profile": {"status": "review_required"},
+    }
+    proposal = build_patch_strategy(
+        project_dir=tmp_path,
+        technical_spec={},
+        implementation_plan={
+            "implementation_target": {"candidate": "pkg/adapter.py:run"},
+            "dependency_boundary_profile": dependency,
+            "first_slice_reselection_request": request,
+        },
+        test_plan={},
+        synthesis={"status": "skipped"},
+        acceptance_summary={"skipped_reason_counts": {"import_failed_missing_module": 1}},
+    )
+
+    strategy = proposal["deterministic_strategy"]
+    assert strategy["action"] == "review_isolated_dependency_profile"
+    assert strategy["reason"] == "declared_dependency_requires_risk_review"

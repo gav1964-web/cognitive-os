@@ -16,6 +16,8 @@ from runtime.configured_role_pipeline import artifact_by_type, run_configured_ro
 from runtime.executor_solution_patterns import select_solution_patterns
 from runtime.programmer_executor import run_programmer_executor
 from runtime.project_benchmark import analyze_project
+from tools.github_executor_probe_fields import contract_profile_fields as _contract_profile_fields
+from tools.github_executor_probe_fields import strategy_fields as _strategy_fields
 
 
 def main() -> int:
@@ -213,6 +215,9 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
             module for case in cases for module in list(case.get("dependency_missing_modules") or [])
         ),
         "dependency_profile_statuses": _counts(str(case.get("dependency_profile_status") or "none") for case in cases),
+        "isolated_dependency_profile_statuses": _counts(
+            str(case.get("isolated_dependency_profile_status") or "none") for case in cases
+        ),
         "first_slice_reselection_statuses": _counts(
             str(case.get("first_slice_reselection_status") or "none") for case in cases
         ),
@@ -242,60 +247,6 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
             str(case.get("sandbox_candidate_repair_status") or "none") for case in cases
         ),
         "source_code_changes": sum(bool(case.get("source_code_changes")) for case in cases),
-    }
-
-
-def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_plan: dict[str, Any]) -> dict[str, Any]:
-    extraction = dict(spec.get("extraction_contract") or {})
-    readiness = dict(extraction.get("dependency_readiness") or {})
-    spec_profile = dict(dict(spec.get("extraction_contract") or {}).get("contract_profile") or {})
-    plan_profile = dict(dict(plan.get("contract_binding") or {}).get("contract_profile") or {})
-    test_profile = _first_test_plan_profile(test_plan)
-    profile = test_profile or plan_profile or spec_profile
-    return {
-        "contract_profile_id": str(profile.get("id") or ""),
-        "contract_profile_operator_id": str(profile.get("operator_id") or ""),
-        "contract_profile_source": str(profile.get("source") or ("test_plan" if test_profile else "")),
-        "dependency_readiness_status": str(readiness.get("status") or "unknown"),
-        "dependency_missing_modules": [str(item) for item in list(readiness.get("missing_external_modules") or [])],
-    }
-
-def _first_test_plan_profile(test_plan: dict[str, Any]) -> dict[str, Any]:
-    for obligation in list(dict(test_plan.get("executable_acceptance") or {}).get("obligations") or []):
-        if not isinstance(obligation, dict):
-            continue
-        profile = dict(obligation.get("contract_profile") or {})
-        if profile:
-            return profile
-    return {}
-
-def _strategy_fields(strategy: dict[str, Any]) -> dict[str, Any]:
-    deterministic = dict(strategy.get("deterministic_strategy") or {})
-    llm = dict(strategy.get("llm_strategy") or {})
-    candidate = dict(strategy.get("sandbox_patch_candidate") or {})
-    playbooks = [str(row.get("id") or "") for row in list(strategy.get("executor_playbooks") or []) if isinstance(row, dict)]
-    patterns = [str(row.get("id") or "") for row in list(strategy.get("solution_patterns") or []) if isinstance(row, dict)]
-    rebind = dict(strategy.get("contract_rebind_request") or {})
-    dependency_profile = dict(strategy.get("dependency_boundary_profile") or {})
-    reselection = dict(strategy.get("first_slice_reselection_request") or {})
-    return {
-        "strategy_action": str(deterministic.get("action") or ""),
-        "strategy_reason": str(deterministic.get("reason") or ""),
-        "executor_playbook_ids": [item for item in playbooks if item],
-        "solution_pattern_ids": [item for item in patterns if item],
-        "llm_strategy_status": str(llm.get("status") or "none"),
-        "sandbox_candidate_status": str(candidate.get("status") or "none"),
-        "contract_rebind_requested": bool(rebind),
-        "contract_rebind_reason": str(rebind.get("reason") or ""),
-        "contract_rebind_candidates": [
-            str(row.get("target") or "")
-            for row in list(rebind.get("candidate_targets") or [])
-            if isinstance(row, dict) and row.get("target")
-        ],
-        "dependency_profile_status": str(dependency_profile.get("status") or "none"),
-        "dependency_profile_missing_modules": [str(item) for item in list(dependency_profile.get("missing_modules") or [])],
-        "first_slice_reselection_status": str(reselection.get("status") or "none"),
-        "first_slice_reselection_resolution_status": str(reselection.get("resolution_status") or "none"),
     }
 
 

@@ -29,9 +29,9 @@
       "id": "executor_playbook_dependency_boundary_profile",
       "label": "Optional dependency boundary requires a controlled profile",
       "match": {"skipped_reason": "import_failed_missing_module"},
-      "action": "request_dependency_boundary_profile",
-      "safe_next_step": "add a generated module or metadata profile only when import is external",
-      "required_gates": ["dependency_is_external", "profile_attrs_are_minimal", "source_project_unchanged"],
+      "action": "resolve_dependency_boundary_from_profile",
+      "safe_next_step": "consume the manifest-backed isolated dependency profile without mutating the source project",
+      "required_gates": ["dependency_is_external", "dependency_is_declared", "isolated_environment_only", "source_project_unchanged"],
       "confidence": 0.68
     },
     {

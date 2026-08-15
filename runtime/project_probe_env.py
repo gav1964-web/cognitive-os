@@ -23,6 +23,17 @@ from .project_probe_env_policy import (
 def probe_env_readiness(project_dir: Path, behavior: dict[str, Any]) -> dict[str, Any]:
     missing = _dependency_modules(behavior)
     hints = _dependency_install_hints(behavior)
+    return dependency_module_plan(project_dir, missing, install_hints=hints)
+
+
+def dependency_module_plan(
+    project_dir: Path,
+    missing_modules: list[str],
+    *,
+    install_hints: set[str] | None = None,
+) -> dict[str, Any]:
+    missing = list(dict.fromkeys(str(item) for item in missing_modules if item))
+    hints = set(install_hints or set())
     requirements, dependency_files = _declared_packages(project_dir)
     candidates = []
     for module in missing:

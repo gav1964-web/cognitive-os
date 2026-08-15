@@ -24,7 +24,10 @@ def build_technical_spec(
     extraction_contract = _extraction_contract(
         evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
     )
-    dependency_boundary_profile = build_dependency_boundary_profile(extraction_contract)
+    dependency_boundary_profile = build_dependency_boundary_profile(
+        extraction_contract,
+        project_root=str(architecture_decision.get("project") or ""),
+    )
     first_slice_reselection_request = build_first_slice_reselection_request(extraction_contract, dependency_boundary_profile)
     if work_plan_contract.get("status") == "blocked_no_first_slice" and extraction_contract.get("candidate"):
         work_plan_contract = _fallback_work_plan_contract([str(extraction_contract["candidate"])])

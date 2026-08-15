@@ -29,6 +29,7 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
         "package_companions",
         "low_risk_allowlist",
         "internal_probe_stubs",
+        "isolated_dependency_profile",
     ):
         value = payload.get(field_name)
         if not isinstance(value, (dict, list)) or not value:
@@ -37,6 +38,10 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
     wheel = set(_strings(payload["wheel_only_native_allowlist"]))
     if not wheel <= native:
         raise ValueError("wheel_only_native_allowlist must be a subset of native_or_compiled")
+    isolated = dict(payload["isolated_dependency_profile"])
+    for field_name in ("environment_kind", "env_path_template", "verification_gates", "forbidden_actions"):
+        if not isolated.get(field_name):
+            raise ValueError(f"isolated dependency profile policy requires: {field_name}")
     return payload
 
 

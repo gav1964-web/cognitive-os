@@ -1,0 +1,81 @@
+"""Build a non-executing isolated environment plan from project manifests."""
+
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+from typing import Any
+
+from .project_probe_env import dependency_module_plan
+from .project_probe_env_policy import load_project_probe_env_policy
+
+
+def build_isolated_dependency_profile(
+    *,
+    project_root: str | Path | None,
+    target: str | None,
+    missing_modules: list[str],
+) -> dict[str, Any]:
+    modules = list(dict.fromkeys(str(item) for item in missing_modules if item))
+    base = {
+        "artifact_type": "IsolatedDependencyProfile",
+        "target": target,
+        "missing_modules": modules,
+    }
+    if not modules:
+        return {**base, "status": "not_required"}
+    root = Path(str(project_root or ""))
+    if not project_root or not root.is_dir():
+        return {
+            **base,
+            "status": "project_root_unavailable",
+            "authority": "diagnostic_only_no_install",
+        }
+    plan = dependency_module_plan(root, modules)
+    install_plan = dict(plan.get("install_plan") or {})
+    status = _profile_status(install_plan)
+    policy = dict(load_project_probe_env_policy()["isolated_dependency_profile"])
+    env_path = str(policy["env_path_template"]).format(
+        project=root.name,
+        target_hash=hashlib.sha256(str(target or "").encode("utf-8")).hexdigest()[:12],
+    )
+    return {
+        **base,
+        "status": status,
+        "project_root": root.resolve().as_posix(),
+        "manifest_evidence": {
+            "dependency_files": list(plan.get("dependency_files") or []),
+            "declared_packages": list(plan.get("declared_packages") or []),
+        },
+        "package_candidates": list(plan.get("install_candidates") or []),
+        "install_plan": install_plan,
+        "environment": {
+            "kind": policy["environment_kind"],
+            "path": env_path,
+            "outside_source_project": True,
+            "automatic_install_allowed": bool(policy.get("automatic_install_allowed", False)),
+            "execution_status": "not_executed",
+        },
+        "verification_gates": list(policy["verification_gates"]),
+        "forbidden_actions": list(policy["forbidden_actions"]),
+        "authority": "profile_plan_only_explicit_install_permission_required",
+        "next_step": _next_step(status),
+    }
+
+
+def _profile_status(install_plan: dict[str, Any]) -> str:
+    if install_plan.get("blocked_packages"):
+        return "blocked_undeclared"
+    if install_plan.get("review_packages") or install_plan.get("native_packages"):
+        return "review_required"
+    if install_plan.get("allowed_packages") or install_plan.get("wheel_packages"):
+        return "ready_for_probe"
+    return "blocked_no_install_candidate"
+
+
+def _next_step(status: str) -> str:
+    return {
+        "ready_for_probe": "request_explicit_permission_then_prepare_isolated_environment",
+        "review_required": "review_declared_dependency_risk_then_accept_or_reject_profile",
+        "blocked_undeclared": "return_to_dependency_contract_review",
+    }.get(status, "review_dependency_mapping_and_manifest_evidence")
