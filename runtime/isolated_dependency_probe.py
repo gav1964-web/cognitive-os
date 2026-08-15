@@ -143,10 +143,13 @@ def run_isolated_dependency_probe(
         })
     missing = _missing_module(str(result.get("stderr") or "")) if result["status"] == "failed" else ""
     if missing:
-        transitive_evidence = _installed_requirement_evidence(
+        transitive_evidence = dict(
+            dict(profile.get("manifest_evidence") or {}).get("approved_distribution_requirements") or {}
+        )
+        transitive_evidence.update(_installed_requirement_evidence(
             str(prepared["python"]),
             list(dict(profile.get("approval_request") or {}).get("requested_packages") or []),
-        )
+        ))
         result["follow_up_profile"] = build_isolated_dependency_profile(
             project_root=profile.get("project_root"),
             target=str(profile.get("target") or ""),

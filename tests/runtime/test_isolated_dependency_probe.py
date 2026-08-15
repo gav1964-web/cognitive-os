@@ -165,6 +165,45 @@ def test_target_import_builds_follow_up_from_approved_distribution(tmp_path, mon
     assert result["follow_up_profile"]["install_plan"]["wheel_packages"] == ["scipy"]
 
 
+def test_follow_up_preserves_prior_distribution_evidence(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    profile = build_isolated_dependency_profile(
+        project_root=project,
+        target="pkg/core.py:normalize",
+        missing_modules=["packaging"],
+        transitive_evidence={"matplotlib": ["packaging>=20", "pillow>=8"]},
+    )
+    monkeypatch.setattr(
+        isolated_dependency_probe,
+        "prepare_probe_env",
+        lambda **kwargs: {"status": "prepared", "python": str(tmp_path / "fake-python")},
+    )
+
+    def fake_run(command, **kwargs):
+        script = command[2]
+        if "importlib.metadata" in script:
+            return subprocess.CompletedProcess(command, 0, '{"packaging": []}', "")
+        if "sys.path.insert" in script:
+            return subprocess.CompletedProcess(command, 1, "", "ModuleNotFoundError: No module named 'PIL'")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(isolated_dependency_probe.subprocess, "run", fake_run)
+
+    result = run_isolated_dependency_probe(
+        workspace_root=tmp_path,
+        profile=profile,
+        approval=_approval(profile),
+    )
+
+    follow_up = result["follow_up_profile"]
+    assert follow_up["status"] == "ready_for_probe"
+    assert follow_up["install_plan"]["wheel_packages"] == ["pillow"]
+    assert set(follow_up["manifest_evidence"]["approved_distribution_requirements"]) == {
+        "matplotlib", "packaging"
+    }
+
+
 def _approval(profile):
     request = profile["approval_request"]
     return {

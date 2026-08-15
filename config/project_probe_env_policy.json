@@ -15,6 +15,7 @@
     "msgspec": "msgspec",
     "multidict": "multidict",
     "mypy-extensions": "mypy_extensions",
+    "pillow": "PIL",
     "platformdirs": "platformdirs",
     "public": "public",
     "pydantic-settings": "pydantic_settings",
@@ -52,6 +53,7 @@
     "msgspec",
     "multidict",
     "numpy",
+    "pillow",
     "pycurl",
     "pyyaml",
     "scipy",
@@ -65,6 +67,7 @@
     "msgspec",
     "multidict",
     "numpy",
+    "pillow",
     "pyyaml",
     "scipy",
     "ujson"
