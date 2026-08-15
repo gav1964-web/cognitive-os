@@ -20,6 +20,7 @@ from runtime.knowledge_import import load_pypi_archetype_rules
 from runtime.operation_recipe_rules import load_operation_recipe_rules
 from runtime.patch_synthesis_policy import load_patch_synthesis_policy
 from runtime.programmer_executor_playbooks import load_programmer_executor_playbooks
+from runtime.programmer_task_tree import load_programmer_task_tree_policy
 from runtime.project_evolution_policy import load_project_evolution_policy
 from runtime.project_probe_env_policy import load_project_probe_env_policy
 from runtime.prompt_intake_rules import load_prompt_intake_rules
@@ -81,11 +82,13 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             _check_architecture_synthesis_policy(catalogs),
             _check_foundation_semantic_quality_policy(catalogs),
             _check_executable_acceptance_policy(catalogs),
+            _check_executable_acceptance_source_isolation(catalogs),
             _check_contract_transform_operators(catalogs),
             _check_contract_transform_contract_profiles(catalogs),
             _check_dependency_extraction_policy(catalogs),
             _check_patch_synthesis_policy(catalogs),
             _check_programmer_executor_playbooks(catalogs),
+            _check_programmer_task_tree_policy(catalogs),
             _check_executor_solution_patterns(catalogs),
             _check_project_evolution_policy(catalogs),
             _check_project_probe_env_policy(catalogs),
@@ -149,6 +152,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "dependency_extraction_policy": load_dependency_extraction_policy(str(root / "config" / "dependency_extraction_policy.json")),
         "patch_synthesis_policy": load_patch_synthesis_policy(str(root / "config" / "patch_synthesis_policy.json")),
         "programmer_executor_playbooks": load_programmer_executor_playbooks(str(root / "config" / "programmer_executor_playbooks.json")),
+        "programmer_task_tree_policy": load_programmer_task_tree_policy(str(root / "knowledge" / "role_qa" / "programmer_task_tree_policy.json")),
         "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),
         "project_evolution_policy": load_project_evolution_policy(str(root / "config" / "project_evolution_policy.json")),
         "project_probe_env_policy": load_project_probe_env_policy(str(root / "config" / "project_probe_env_policy.json")),
@@ -165,6 +169,23 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
 
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+def _check_programmer_task_tree_policy(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("programmer_task_tree_policy_integrity")
+    policy = dict(catalogs["programmer_task_tree_policy"])
+    limits = dict(policy.get("limits") or {})
+    if policy.get("status") != "active":
+        check.errors.append("programmer_task_tree_policy_not_active")
+    for field_name in ("expected_files", "changes", "acceptance", "max_nodes"):
+        if int(limits.get(field_name) or 0) <= 0:
+            check.errors.append(f"programmer_task_tree_policy_invalid_limit:{field_name}")
+    for field_name in ("required_gates", "allowed_actions", "forbidden_actions", "stop_conditions"):
+        if not policy.get(field_name):
+            check.errors.append(f"programmer_task_tree_policy_missing:{field_name}")
+    expected_max = int(limits.get("changes") or 0) + int(limits.get("acceptance") or 0) + 3
+    if int(limits.get("max_nodes") or 0) < expected_max:
+        check.errors.append("programmer_task_tree_policy_max_nodes_too_small")
+    return check
 
 def _check_role_directory(catalogs: dict[str, Any]) -> _Check:
     check = _Check("role_directory_pipeline_integrity")

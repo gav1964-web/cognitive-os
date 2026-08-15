@@ -50,6 +50,7 @@ def run_executable_acceptance(
             "dependency_stub_targets": harness.get("dependency_stub_targets", {}),
             "dependency_metadata_profile_targets": harness.get("dependency_metadata_profile_targets", {}),
             "dependency_module_profile_targets": harness.get("dependency_module_profile_targets", {}),
+            "effect_module_stub_targets": harness.get("effect_module_stub_targets", {}),
             "passed": passed,
         },
         "command": command_result,
@@ -60,7 +61,6 @@ def run_executable_acceptance(
     result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     result["result_path"] = result_path.as_posix()
     return result
-
 def _pytest_source(root: Path, obligations_path: Path, project_dir: Path, harness: dict[str, Any]) -> str:
     runtime_root = root.resolve().as_posix()
     escaped = obligations_path.resolve().as_posix()

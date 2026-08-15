@@ -109,6 +109,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
                 "acceptance_signal": "blocked",
                 "acceptance_skipped_reasons": {},
                 "acceptance_skipped_targets": [],
+                "effect_module_stub_targets": {},
                 "boundary_track": "blocked_handoff",
                 **profile,
                 **tree,
@@ -151,6 +152,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
             "acceptance_signal": acceptance.get("signal_strength"),
             "acceptance_skipped_reasons": acceptance.get("skipped_reason_counts"),
             "acceptance_skipped_targets": acceptance.get("skipped_targets"),
+            "effect_module_stub_targets": acceptance.get("effect_module_stub_targets", {}),
             "boundary_track": boundary_track,
             **profile,
             **tree,
@@ -164,7 +166,7 @@ def _run_case(*, root: Path, project_dir: Path, run_verification: bool) -> dict[
             "target": str(dict(plan.get("implementation_target", {})).get("candidate") or ""),
             "source_code_changes": before != after,
         }
-    except Exception as exc:  # pragma: no cover - field-trial reporting path.
+    except (Exception, SystemExit) as exc:  # field-trial isolation includes argparse exits from foreign projects.
         return {"project": project_dir.name, "project_dir": project_dir.as_posix(), "status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -196,11 +198,21 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "patch_quality_review_required": sum(bool(case.get("patch_quality_review_required")) for case in cases),
         "acceptance_callable": sum(case.get("acceptance_signal") == "executable_callable" for case in cases),
         "acceptance_meta_only": sum(case.get("acceptance_signal") == "meta_only" for case in cases),
+        "acceptance_effect_stubbed": sum(bool(case.get("effect_module_stub_targets")) for case in cases),
+        "effect_stub_modules": _counts(
+            module
+            for case in cases
+            for modules in dict(case.get("effect_module_stub_targets") or {}).values()
+            for module in list(modules or [])
+        ),
         "boundary_tracks": _counts(str(case.get("boundary_track") or "unknown") for case in cases),
         "contract_profiles": _counts(str(case.get("contract_profile_id") or "none") for case in cases),
         "contract_profile_operators": _counts(str(case.get("contract_profile_operator_id") or "none") for case in cases),
         "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
         "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
+        "task_tree_dependency_edges_total": sum(int(case.get("task_tree_dependency_edge_count") or 0) for case in cases),
+        "task_tree_unmapped_acceptance_total": sum(int(case.get("task_tree_unmapped_acceptance_count") or 0) for case in cases),
+        "task_tree_changes_traced": sum(case.get("task_tree_all_changes_traced") is True for case in cases),
         "strategy_actions": _counts(str(case.get("strategy_action") or "unknown") for case in cases),
         "executor_playbooks": _counts(playbook for case in cases for playbook in list(case.get("executor_playbook_ids") or [])),
         "solution_patterns": _counts(pattern for case in cases for pattern in list(case.get("solution_pattern_ids") or [])),
@@ -269,10 +281,17 @@ def _patch_quality_level(case: dict[str, Any]) -> str:
 
 
 def _task_tree_fields(task_tree: dict[str, Any]) -> dict[str, Any]:
+    summary = dict(task_tree.get("summary") or {})
+    coverage = dict(task_tree.get("coverage") or {})
     return {
         "task_tree_status": str(task_tree.get("status") or ""),
         "task_tree_boundary": str(dict(task_tree.get("boundary") or {}).get("track") or ""),
-        "task_tree_node_count": int(dict(task_tree.get("summary") or {}).get("node_count") or 0),
+        "task_tree_node_count": int(summary.get("node_count") or 0),
+        "task_tree_change_node_count": int(summary.get("change_node_count") or 0),
+        "task_tree_acceptance_node_count": int(summary.get("acceptance_node_count") or 0),
+        "task_tree_dependency_edge_count": int(summary.get("dependency_edge_count") or 0),
+        "task_tree_unmapped_acceptance_count": len(list(coverage.get("unmapped_acceptance_ids") or [])),
+        "task_tree_all_changes_traced": coverage.get("all_changes_traced") is True,
     }
 
 

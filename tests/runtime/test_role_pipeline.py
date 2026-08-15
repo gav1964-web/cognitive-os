@@ -32,6 +32,8 @@ def test_role_pipeline_returns_next_action(tmp_path):
     assert Path(result["human_documents"]["architecture_analysis"]).exists()
     assert Path(result["human_documents"]["technical_spec"]).exists()
     assert result["artifacts"]["review_findings"]["artifact_type"] == "ReviewFindings"
+    assert result["artifacts"]["programmer_task_tree"]["artifact_type"] == "ProgrammerTaskTree"
+    assert result["artifacts"]["programmer_task_tree"]["role"] == "task_tree_builder"
 
 
 def test_role_pipeline_cli_writes_report():

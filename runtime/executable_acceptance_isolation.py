@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance_isolation_globals import isolated_global_nodes
+from .executable_acceptance_effect_stubs import configured_effect_stubs
 
 
 def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
@@ -33,9 +34,9 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = symbol in set(method_fixture_policy().get("local_import_stub_functions") or [])
         with _source_import_path(path), _fresh_local_package(namespace):
-            _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+            effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         func = namespace.get(symbol)
-        return {"callable": func, "reason": "" if callable(func) else "target_not_callable"}
+        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "effect_module_stubs": effect_stubs}
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
 
@@ -87,7 +88,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = f"{class_node.name}.{symbol}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
         with _source_import_path(path), _fresh_local_package(namespace):
-            _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+            effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         cls = namespace[class_node.name]
         member = getattr(cls, symbol, None)
         if callable(member) and _callable_accepts_without_self(member):
@@ -106,6 +107,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             "source_isolated": True,
             "source_isolated_method": True,
             "method_dependencies": sorted(method_names & selected),
+            "effect_module_stubs": effect_stubs,
         }
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
@@ -215,27 +217,29 @@ def _callable_accepts_without_self(func: object) -> bool:
     count = int(getattr(getattr(func, "__code__", None), "co_argcount", 0) or 0)
     return count == 0 or not args or args[0] not in {"self", "cls"}
 
-def _exec_with_stubs(module: ast.Module, path: Path, namespace: dict[str, Any], *, local_import_stubs: bool) -> None:
+def _exec_with_stubs(module: ast.Module, path: Path, namespace: dict[str, Any], *, local_import_stubs: bool) -> list[str]:
     code = compile(module, str(path), "exec")
     installed: list[str] = []
     if local_import_stubs:
         _install_local_import_stubs(module, namespace)
     _install_known_profile_modules(_imported_module_names(module))
-    for _ in range(12):
-        try:
-            _install_lazy_loader_stub()
-            exec(code, namespace)
-            return
-        except ModuleNotFoundError as exc:
-            missing = str(getattr(exc, "name", "") or "")
-            if not missing or missing in installed or _is_local_missing(missing, namespace):
-                raise
-            if _install_profile_module(missing):
+    with configured_effect_stubs(_imported_module_names(module)) as effect_stubs:
+        for _ in range(12):
+            try:
+                _install_lazy_loader_stub()
+                exec(code, namespace)
+                return effect_stubs
+            except ModuleNotFoundError as exc:
+                missing = str(getattr(exc, "name", "") or "")
+                if not missing or missing in installed or _is_local_missing(missing, namespace):
+                    raise
+                if _install_profile_module(missing):
+                    installed.append(missing)
+                    continue
+                _install_stub_module(missing)
                 installed.append(missing)
-                continue
-            _install_stub_module(missing)
-            installed.append(missing)
-    exec(code, namespace)
+        exec(code, namespace)
+        return effect_stubs
 
 
 def _imported_module_names(module: ast.Module) -> set[str]:

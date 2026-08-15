@@ -79,6 +79,10 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
         return _strategy("request_fixture_or_contract_refinement", "positive_sample_not_materializable", confidence=0.72)
     if reasons.get("positive_signature_mismatch"):
         return _strategy("request_implementation_plan_contract_rebind", "signature_contract_mismatch", confidence=0.74)
+    if reasons.get("method_target_needs_instance_fixture"):
+        return _strategy("request_fixture_or_contract_refinement", "method_instance_fixture_missing", confidence=0.72)
+    if reasons.get("nested_function_requires_closure"):
+        return _strategy("request_implementation_plan_contract_rebind", "nested_closure_target", confidence=0.82)
     if reasons.get("import_failed_missing_module") or reasons.get("import_failed_import_error"):
         return _strategy("request_dependency_boundary_profile", "optional_dependency_boundary", confidence=0.68)
     if reasons.get("import_failed_runtime_error"):

@@ -24,6 +24,7 @@ def run_executor_hook(
     technical_spec: dict[str, Any],
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
+    task_tree: dict[str, Any],
     enabled: bool,
 ) -> dict[str, Any]:
     if not enabled:
@@ -34,6 +35,7 @@ def run_executor_hook(
         technical_spec=technical_spec,
         implementation_plan=implementation_plan,
         test_plan=test_plan,
+        task_tree=task_tree,
         run_verification=True,
         apply_source=False,
     )

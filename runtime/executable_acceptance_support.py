@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import ast, asyncio, inspect, io, sys
+import asyncio, inspect, io, sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any
@@ -12,6 +12,7 @@ from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
 from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy, sample_value, skipped_recovery_hint
+from .executable_acceptance_target_shape import ast_skip_reason
 
 ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 
@@ -29,6 +30,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
     dependency_stubs: dict[str, list[str]] = {}
     metadata_profiles: dict[str, list[str]] = {}
     module_profiles: dict[str, list[str]] = {}
+    effect_stubs: dict[str, list[str]] = {}
     for row in obligations:
         target = str(row.get("target") or "")
         if not target or target in targets or any(item["target"] == target for item in skipped):
@@ -54,6 +56,8 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
                 metadata_profiles[target] = list(support["dependency_metadata_profiles"])
             if support.get("dependency_module_profiles"):
                 module_profiles[target] = list(support["dependency_module_profiles"])
+            if support.get("effect_module_stubs"):
+                effect_stubs[target] = list(support["effect_module_stubs"])
             if support["strict_negative"]:
                 strict_negative.append(target)
         else:
@@ -79,6 +83,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
         "dependency_metadata_profile_targets": metadata_profiles,
         "dependency_module_profile_targets": module_profiles,
         "dependency_module_profile_attrs": _module_profile_attrs(module_profiles),
+        "effect_module_stub_targets": effect_stubs,
         "strict_negative_targets": strict_negative,
         "meta_checked_targets": [item["target"] for item in skipped],
         "skipped_targets": skipped,
@@ -141,7 +146,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             cleanup_dependency_stubs(loaded)
             return _source_isolated_support(isolated, target, obligations)
         cleanup_dependency_stubs(loaded)
-        return _unsupported(_ast_skip_reason(path, symbol), str(method.get("detail") or ""))
+        return _unsupported(ast_skip_reason(path, symbol), str(method.get("detail") or ""))
     if loaded.get("reason"):
         if str(loaded["reason"]) in {"import_failed_missing_module", "import_failed_runtime_error"}:
             isolated = load_source_isolated_callable(path, symbol)
@@ -152,7 +157,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported(str(loaded["reason"]), str(loaded.get("detail") or ""))
     if not callable(func):
         cleanup_dependency_stubs(loaded)
-        return _unsupported(_ast_skip_reason(path, symbol))
+        return _unsupported(ast_skip_reason(path, symbol))
     binding = positive_case_binding(func, target, obligations)
     if not binding["accepted"]:
         cleanup_dependency_stubs(loaded)
@@ -183,6 +188,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         "dependency_stubs": list(loaded.get("dependency_stubs") or []),
         "dependency_metadata_profiles": list(loaded.get("dependency_metadata_profiles") or []),
         "dependency_module_profiles": list(loaded.get("dependency_module_profiles") or []),
+        "effect_module_stubs": list(loaded.get("effect_module_stubs") or []),
         "argument_mapping": binding["mapping"],
         "argument_defaults": binding["defaults"],
         "drop_surplus_payload": bool(binding.get("drop_surplus_payload")),
@@ -205,7 +211,7 @@ def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: l
     binding = positive_case_binding(func, target, obligations)
     if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload"))):
         return _unsupported("positive_sample_execution_failed")
-    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": list(loaded.get("effect_module_stubs") or []), "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
 
 def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -327,6 +333,14 @@ def _adapt_given_to_signature(signature: inspect.Signature, given: dict[str, Any
         return {}
     if set(given) <= set(params):
         return {key: key for key in given}
+    exact = {name: name for name in params if name in given}
+    required = {
+        name
+        for name, param in signature.parameters.items()
+        if param.kind in ACCEPTED_PARAM_KINDS and param.default is inspect.Parameter.empty
+    }
+    if required <= set(exact):
+        return exact
     if len(params) < len(given):
         return None
     return dict(zip(params, given))
@@ -364,22 +378,6 @@ def _call_args_kwargs(func: object, payload: dict[str, Any]) -> tuple[list[Any],
             continue
         args.append(kwargs.pop(name))
     return args, kwargs
-
-def _ast_skip_reason(path: Path, symbol: str) -> str:
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except Exception:
-        return "target_not_callable"
-    top_level = any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == symbol for node in tree.body)
-    if top_level:
-        return "target_not_callable"
-    matches = [node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == symbol]
-    if len(matches) == 1:
-        return "method_target_needs_instance_fixture"
-    if len(matches) > 1:
-        return "ambiguous_nested_callable_target"
-    return "target_not_callable"
-
 
 def _module_profile_attrs(module_profiles: dict[str, list[str]]) -> dict[str, dict[str, Any]]:
     profiles = dict(dependency_stub_policy().get("generated_module_profiles") or {})

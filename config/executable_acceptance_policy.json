@@ -141,11 +141,24 @@
       "ambiguous_nested_callable_target": "bind the target to ClassName.method or provide a source-specific callable path"
     }
   },
+  "source_isolation_policy": {
+    "effect_module_stubs": {
+      "socket": {
+        "attributes": {
+          "AF_INET": 2,
+          "SHUT_RDWR": 2,
+          "SOCK_STREAM": 1,
+          "socket": {"__fixture__": "callable_object_noop"}
+        }
+      }
+    }
+  },
   "skipped_recovery": {
     "ambiguous_nested_callable_target": "disambiguate the nested callable with class or enclosing function context",
     "import_failed_missing_module": "install the optional dependency or add a controlled dependency profile when it is external",
     "import_failed_runtime_error": "isolate import-time side effects or move the acceptance target behind a lightweight import boundary",
     "method_target_needs_instance_fixture": "provide an instance fixture recipe for the owning class",
+    "nested_function_requires_closure": "rebind to the enclosing callable or specify explicit closure fixtures",
     "positive_sample_execution_failed": "extend sample_values or fixture recipes for the failing signature and domain shape",
     "positive_signature_mismatch": "add argument mapping rules or tighten the TechnicalSpec contract binding",
     "target_not_callable": "choose a concrete function or method target instead of a module constant or generated symbol",

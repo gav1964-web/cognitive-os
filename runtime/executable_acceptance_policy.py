@@ -60,6 +60,11 @@ def method_fixture_policy() -> dict[str, Any]:
     }
 
 
+def source_isolation_policy() -> dict[str, Any]:
+    policy = dict(_policy().get("source_isolation_policy") or {})
+    return {"effect_module_stubs": dict(policy.get("effect_module_stubs") or {})}
+
+
 def skipped_recovery_hint(reason: str) -> str:
     recovery = dict(_policy().get("skipped_recovery") or {})
     return str(recovery.get(reason) or "")

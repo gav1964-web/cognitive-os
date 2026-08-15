@@ -51,6 +51,24 @@
       "safe_next_step": "isolate import-time side effects or choose a lighter target",
       "required_gates": ["human_or_reviewer_boundary_decision", "no_source_mutation"],
       "confidence": 0.66
+    },
+    {
+      "id": "executor_playbook_method_fixture_gap",
+      "label": "Bound method requires a controlled instance fixture",
+      "match": {"skipped_reason": "method_target_needs_instance_fixture"},
+      "action": "request_fixture_or_contract_refinement",
+      "safe_next_step": "build a bounded instance fixture or rebind to a callable boundary",
+      "required_gates": ["fixture_is_config_backed", "source_project_unchanged"],
+      "confidence": 0.72
+    },
+    {
+      "id": "executor_playbook_nested_closure_rebind",
+      "label": "Nested closure is not a standalone patch target",
+      "match": {"skipped_reason": "nested_function_requires_closure"},
+      "action": "request_implementation_plan_contract_rebind",
+      "safe_next_step": "rebind to the enclosing callable or provide explicit closure inputs",
+      "required_gates": ["enclosing_callable_identified", "contract_binding_updated", "source_project_unchanged"],
+      "confidence": 0.82
     }
   ]
 }

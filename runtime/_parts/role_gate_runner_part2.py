@@ -111,6 +111,42 @@ def _contract_matrix_targets_candidate(artifact: dict[str, Any], artifacts: dict
 def _verification_is_project_scoped(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(artifact.get("smoke_checklist")), "project-scoped smoke checklist exists"
 
+def _target_or_blocked_handoff_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    blocked = dict(artifact.get("boundary", {})).get("track") == "blocked_handoff"
+    return bool(artifact.get("target") or blocked), "task tree has a target or controlled blocked handoff"
+
+def _dependencies_acyclic(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    nodes = [dict(row) for row in artifact.get("nodes", []) if isinstance(row, dict)]
+    dependencies = {str(row.get("id")): [str(item) for item in row.get("depends_on", [])] for row in nodes}
+    resolved: set[str] = set()
+    while dependencies:
+        ready = [node_id for node_id, refs in dependencies.items() if all(ref in resolved for ref in refs)]
+        if not ready:
+            return False, "task tree contains a cycle or dangling dependency"
+        for node_id in ready:
+            resolved.add(node_id)
+            dependencies.pop(node_id)
+    return bool(nodes), "task tree dependencies are acyclic and resolvable"
+
+def _acceptance_coverage_explicit(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    coverage = dict(artifact.get("coverage", {}))
+    return isinstance(coverage.get("unmapped_acceptance_ids"), list), "acceptance coverage records unmapped obligations explicitly"
+
+def _changes_are_dependency_ordered(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    changes = [dict(row) for row in artifact.get("nodes", []) if isinstance(row, dict) and row.get("kind") == "change"]
+    return all(row.get("depends_on") for row in changes), "every change node has an explicit predecessor"
+
+def _acceptance_is_fully_mapped(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    coverage = dict(artifact.get("coverage", {}))
+    return not list(coverage.get("unmapped_acceptance_ids") or []), "all bounded acceptance obligations map to task nodes"
+
+def _evidence_refs_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    nodes = [dict(row) for row in artifact.get("nodes", []) if isinstance(row, dict)]
+    return bool(nodes) and all(row.get("evidence_refs") for row in nodes), "every task node points to upstream evidence"
+
+def _stop_conditions_explicit(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    return bool(artifact.get("stop_conditions")), "task tree declares executor stop conditions"
+
 def _scope_preserved(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return dict(artifact.get("coverage_assessment", {})).get("scope_preserved") is True, "review confirms scope preservation"
 

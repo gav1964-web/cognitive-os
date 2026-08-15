@@ -5,6 +5,23 @@ from typing import Any
 from runtime._parts.config_doctor_part1 import _Check
 
 
+def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _Check:
+    check = _Check("executable_acceptance_source_isolation_integrity")
+    policy = dict(catalogs["executable_acceptance_policy"])
+    isolation = dict(policy.get("source_isolation_policy") or {})
+    profiles = dict(isolation.get("effect_module_stubs") or {})
+    if not profiles:
+        check.errors.append("executable_acceptance_source_isolation_missing:effect_module_stubs")
+    for module_name, profile in profiles.items():
+        attrs = dict(dict(profile or {}).get("attributes") or {})
+        if not module_name or not attrs:
+            check.errors.append(f"executable_acceptance_source_isolation_invalid:{module_name}")
+        for value in attrs.values():
+            if isinstance(value, dict) and value.get("__fixture__") not in {"callable_object_noop"}:
+                check.errors.append(f"executable_acceptance_source_isolation_unknown_fixture:{module_name}")
+    return check
+
+
 def _check_dependency_extraction_policy(catalogs: dict[str, Any]) -> _Check:
     check = _Check("dependency_extraction_policy_integrity")
     policy = dict(catalogs["dependency_extraction_policy"])

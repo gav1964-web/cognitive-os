@@ -3,484 +3,163 @@
   "contracts": {
     "GoalSpec": {
       "producer": "goal_intake",
-      "consumers": [
-        "L4"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "intent",
-        "inputs",
-        "outputs",
-        "constraints",
-        "success_criteria"
-      ]
+      "consumers": ["L4"],
+      "required_fields": ["artifact_type", "intent", "inputs", "outputs", "constraints", "success_criteria"]
     },
     "ProjectMapReport": {
       "producer": "project_analyzer",
-      "consumers": [
-        "architect"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "project",
-        "summary"
-      ]
+      "consumers": ["architect"],
+      "required_fields": ["artifact_type", "project", "summary"]
     },
     "ScopeSelectionReport": {
       "producer": "project_analyzer",
-      "consumers": [
-        "human",
-        "role_pipeline"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "root",
-        "reason",
-        "recommended_action",
-        "selection_confidence",
-        "candidate_roots",
-        "blocked_downstream_artifacts"
-      ]
+      "consumers": ["human", "role_pipeline"],
+      "required_fields": ["artifact_type", "status", "root", "reason", "recommended_action", "selection_confidence", "candidate_roots", "blocked_downstream_artifacts"]
     },
     "ActiveRootDecision": {
       "producer": "human",
-      "consumers": [
-        "role_pipeline",
-        "project_analyzer",
-        "architect",
-        "spec_writer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "portfolio_root",
-        "selected_root",
-        "selected_relative_path",
-        "source",
-        "decision_policy"
-      ]
+      "consumers": ["role_pipeline", "project_analyzer", "architect", "spec_writer"],
+      "required_fields": ["artifact_type", "status", "portfolio_root", "selected_root", "selected_relative_path", "source", "decision_policy"]
     },
     "ArchitectureDecisionRecord": {
       "producer": "architect",
-      "consumers": [
-        "spec_writer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "architecture_options",
-        "chosen_option",
-        "rejected_options",
-        "first_slice_contract",
-        "risks",
-        "traceability",
-        "source_context",
-        "spec_writer_brief"
-      ]
+      "consumers": ["spec_writer"],
+      "required_fields": ["artifact_type", "architecture_options", "chosen_option", "rejected_options", "first_slice_contract", "risks", "traceability", "source_context", "spec_writer_brief"]
     },
     "TechnicalSpec": {
       "producer": "spec_writer",
-      "consumers": [
-        "implementer",
-        "tester",
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "requirements",
-        "source_evidence",
-        "extraction_contract",
-        "work_plan_contract",
-        "interface_contracts",
-        "acceptance_criteria",
-        "traceability_table"
-      ]
+      "consumers": ["implementer", "tester", "reviewer"],
+      "required_fields": ["artifact_type", "requirements", "source_evidence", "extraction_contract", "work_plan_contract", "interface_contracts", "acceptance_criteria", "traceability_table"]
     },
     "SystemKnowledgeIR": {
       "producer": "system_knowledge_compiler",
-      "consumers": [
-        "project_compiler",
-        "programmer_executor",
-        "tester",
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "schema_version",
-        "origin",
-        "purpose",
-        "project_identity",
-        "public_interfaces",
-        "domain_model",
-        "behavior_contracts",
-        "architecture_slices",
-        "dependency_policy",
-        "acceptance_tests",
-        "source_traceability",
-        "quality_targets"
-      ]
+      "consumers": ["project_compiler", "programmer_executor", "tester", "reviewer"],
+      "required_fields": ["artifact_type", "schema_version", "origin", "purpose", "project_identity", "public_interfaces", "domain_model", "behavior_contracts", "architecture_slices", "dependency_policy", "acceptance_tests", "source_traceability", "quality_targets"]
     },
     "ImplementationPlan": {
       "producer": "implementer",
-      "consumers": [
-        "programmer_executor",
-        "tester",
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "patch_scope",
-        "expected_files",
-        "verification_commands",
-        "rollback_plan"
-      ]
+      "consumers": ["programmer_executor", "tester", "reviewer"],
+      "required_fields": ["artifact_type", "patch_scope", "expected_files", "verification_commands", "rollback_plan"]
     },
     "TestPlan": {
       "producer": "tester",
-      "consumers": [
-        "programmer_executor",
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "acceptance_tests",
-        "executable_acceptance",
-        "negative_tests",
-        "regression_risks"
-      ]
+      "consumers": ["programmer_executor", "reviewer"],
+      "required_fields": ["artifact_type", "acceptance_tests", "executable_acceptance", "negative_tests", "regression_risks"]
+    },
+    "ProgrammerTaskTree": {
+      "producer": "task_tree_builder",
+      "consumers": ["programmer_executor", "reviewer"],
+      "required_fields": ["artifact_type", "target", "nodes", "coverage", "verifier_gates", "stop_conditions"]
     },
     "PatchPackage": {
       "producer": "programmer_executor",
-      "consumers": [
-        "tester",
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "expected_files",
-        "patches",
-        "policy"
-      ]
+      "consumers": ["tester", "reviewer"],
+      "required_fields": ["artifact_type", "expected_files", "patches", "policy"]
     },
     "TestResult": {
       "producer": "programmer_executor",
-      "consumers": [
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "commands"
-      ]
+      "consumers": ["reviewer"],
+      "required_fields": ["artifact_type", "status", "commands"]
     },
     "ExecutableAcceptanceResult": {
       "producer": "programmer_executor",
-      "consumers": [
-        "reviewer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "generated_tests",
-        "summary",
-        "command"
-      ]
+      "consumers": ["reviewer"],
+      "required_fields": ["artifact_type", "status", "generated_tests", "summary", "command"]
     },
     "ReviewFindings": {
       "producer": "reviewer",
-      "consumers": [
-        "human",
-        "release_gate"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "findings",
-        "risk_assessment",
-        "recommendation"
-      ]
+      "consumers": ["human", "release_gate"],
+      "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation"]
     },
     "CognitiveControlPlaneDecision": {
       "producer": "cognitive_control_plane",
-      "consumers": [
-        "role_pipeline",
-        "semantic_reasoner",
-        "human",
-        "release_gate"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "layer",
-        "artifact_promotion_gate",
-        "role_transition",
-        "semantic_escalation"
-      ]
+      "consumers": ["role_pipeline", "semantic_reasoner", "human", "release_gate"],
+      "required_fields": ["artifact_type", "layer", "artifact_promotion_gate", "role_transition", "semantic_escalation"]
     },
     "SemanticHypothesisRequest": {
       "producer": "cognitive_control_plane",
-      "consumers": [
-        "semantic_reasoner",
-        "human"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "layer",
-        "source_decision",
-        "trigger_reasons",
-        "question",
-        "output_contract",
-        "forbidden_actions",
-        "return_path"
-      ]
+      "consumers": ["semantic_reasoner", "human"],
+      "required_fields": ["artifact_type", "layer", "source_decision", "trigger_reasons", "question", "output_contract", "forbidden_actions", "return_path"]
     },
     "SemanticEvidencePack": {
       "producer": "cognitive_control_plane",
-      "consumers": [
-        "semantic_reasoner",
-        "human"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "layer",
-        "status",
-        "prompt_facts",
-        "control_facts",
-        "forbidden_actions",
-        "authority"
-      ]
+      "consumers": ["semantic_reasoner", "human"],
+      "required_fields": ["artifact_type", "layer", "status", "prompt_facts", "control_facts", "forbidden_actions", "authority"]
     },
     "SemanticHypothesisProposal": {
       "producer": "semantic_reasoner",
-      "consumers": [
-        "cognitive_control_plane",
-        "human"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "layer",
-        "hypothesis_type",
-        "proposal",
-        "confidence",
-        "evidence_refs",
-        "risks",
-        "return_to_gate"
-      ]
+      "consumers": ["cognitive_control_plane", "human"],
+      "required_fields": ["artifact_type", "layer", "hypothesis_type", "proposal", "confidence", "evidence_refs", "risks", "return_to_gate"]
     },
     "L4SemanticValidationResult": {
       "producer": "cognitive_control_plane",
-      "consumers": [
-        "verified_system_package",
-        "human",
-        "stage2_template_curriculum"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "layer",
-        "status",
-        "source_request",
-        "source_proposal",
-        "contract_validation",
-        "quality",
-        "accepted_action",
-        "decision"
-      ]
+      "consumers": ["verified_system_package", "human", "stage2_template_curriculum"],
+      "required_fields": ["artifact_type", "layer", "status", "source_request", "source_proposal", "contract_validation", "quality", "accepted_action", "decision"]
     },
     "Stage2TemplateBacklogItem": {
       "producer": "semantic_reasoner",
-      "consumers": [
-        "human",
-        "engineer",
-        "stage2_template_curriculum"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "template_id",
-        "purpose",
-        "requires_human_review",
-        "next_step"
-      ]
+      "consumers": ["human", "engineer", "stage2_template_curriculum"],
+      "required_fields": ["artifact_type", "status", "template_id", "purpose", "requires_human_review", "next_step"]
     },
     "SuccessfulResolutionCandidate": {
       "producer": "semantic_reasoner",
-      "consumers": [
-        "human",
-        "knowledge_admission",
-        "stage2_template_curriculum"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "resolution_id",
-        "means_used",
-        "verification_plan",
-        "kb_candidate",
-        "next_step"
-      ]
+      "consumers": ["human", "knowledge_admission", "stage2_template_curriculum"],
+      "required_fields": ["artifact_type", "status", "resolution_id", "means_used", "verification_plan", "kb_candidate", "next_step"]
     },
     "DeveloperImprovementRequest": {
       "producer": "semantic_reasoner",
-      "consumers": [
-        "human",
-        "developer"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "request_id",
-        "missing_capability",
-        "problem",
-        "suggested_work",
-        "next_step"
-      ]
+      "consumers": ["human", "developer"],
+      "required_fields": ["artifact_type", "status", "request_id", "missing_capability", "problem", "suggested_work", "next_step"]
     },
     "Stage2TemplateAdmissionResult": {
       "producer": "stage2_template_admission",
-      "consumers": [
-        "human",
-        "engineer",
-        "verified_system_package"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "case",
-        "blockers",
-        "invariants"
-      ]
+      "consumers": ["human", "engineer", "verified_system_package"],
+      "required_fields": ["artifact_type", "status", "case", "blockers", "invariants"]
     },
     "SemanticProposalReplay": {
       "producer": "semantic_replay",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "request",
-        "proposal",
-        "validation",
-        "model_quality_mode",
-        "outcome",
-        "audit"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "request", "proposal", "validation", "model_quality_mode", "outcome", "audit"]
     },
     "L45SemanticBenchmarkReport": {
       "producer": "l45_semantic_benchmark",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "model_quality_mode",
-        "summary",
-        "cases"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "model_quality_mode", "summary", "cases"]
     },
     "L45SemanticCorpusAnalyticsReport": {
       "producer": "l45_semantic_analytics",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "source_report",
-        "summary",
-        "boundary_counts",
-        "action_counts"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "source_report", "summary", "boundary_counts", "action_counts"]
     },
     "L45RiskPolicyGapReport": {
       "producer": "l45_semantic_analytics",
-      "consumers": [
-        "human",
-        "evaluation",
-        "cognitive_control_plane"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "source_report",
-        "summary",
-        "gaps",
-        "policy_recommendations"
-      ]
+      "consumers": ["human", "evaluation", "cognitive_control_plane"],
+      "required_fields": ["artifact_type", "status", "source_report", "summary", "gaps", "policy_recommendations"]
     },
     "L45SemanticComparisonReport": {
       "producer": "l45_semantic_comparison",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "summary",
-        "cases",
-        "interpretation"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "summary", "cases", "interpretation"]
     },
     "L45SemanticEvaluationSuiteReport": {
       "producer": "l45_semantic_eval_suite",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "config",
-        "summary",
-        "profiles"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "config", "summary", "profiles"]
     },
     "L45ModelFailureAnalysisReport": {
       "producer": "l45_model_failure_analysis",
-      "consumers": [
-        "human",
-        "evaluation"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "summary",
-        "failures",
-        "recommendations"
-      ]
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "summary", "failures", "recommendations"]
     },
     "L4DecisionTable": {
       "producer": "l4_decision_table",
-      "consumers": [
-        "cognitive_control_plane",
-        "human"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "rule_count",
-        "rules",
-        "principle"
-      ]
+      "consumers": ["cognitive_control_plane", "human"],
+      "required_fields": ["artifact_type", "status", "rule_count", "rules", "principle"]
     },
     "PromptBoundaryClassification": {
       "producer": "prompt_boundary_classifier",
-      "consumers": [
-        "prompt_adequacy",
-        "cognitive_control_plane",
-        "human"
-      ],
-      "required_fields": [
-        "artifact_type",
-        "status",
-        "boundary",
-        "confidence",
-        "reasons",
-        "recommended_action"
-      ]
+      "consumers": ["prompt_adequacy", "cognitive_control_plane", "human"],
+      "required_fields": ["artifact_type", "status", "boundary", "confidence", "reasons", "recommended_action"]
     }
   }
 }

@@ -22,6 +22,7 @@ def run_programmer_executor(
     technical_spec: dict[str, Any],
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
+    task_tree: dict[str, Any] | None = None,
     run_verification: bool = True,
     apply_source: bool = False,
     max_commands: int = 3,
@@ -35,13 +36,14 @@ def run_programmer_executor(
             implementation_plan,
             test_plan,
             "blocked_no_safe_candidate",
+            task_tree,
         )
     if apply_source:
-        return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, "source_edit_apply_not_enabled_in_mvp")
+        return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, "source_edit_apply_not_enabled_in_mvp", task_tree)
 
     execution_dir = _execution_dir(root)
     execution_dir.mkdir(parents=True, exist_ok=True)
-    task_tree = build_programmer_task_tree(
+    task_tree = task_tree or build_programmer_task_tree(
         technical_spec=technical_spec,
         implementation_plan=implementation_plan,
         test_plan=test_plan,
@@ -150,10 +152,11 @@ def _blocked_result(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     reason: str,
+    task_tree: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     execution_dir = _execution_dir(root)
     execution_dir.mkdir(parents=True, exist_ok=True)
-    task_tree = build_programmer_task_tree(
+    task_tree = task_tree or build_programmer_task_tree(
         technical_spec=technical_spec,
         implementation_plan=implementation_plan,
         test_plan=test_plan,

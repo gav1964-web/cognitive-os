@@ -4,6 +4,7 @@ from runtime.executable_acceptance_policy import (
     dependency_stub_policy,
     external_call_tokens,
     method_fixture_policy,
+    source_isolation_policy,
     sample_value,
     skipped_recovery_hint,
 )
@@ -29,7 +30,9 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert "great_expectations.util" in dependency_stub_policy()["generated_module_profiles"]
     assert "WsgiToAsgiInstance.build_environ" in method_fixture_policy()["instance_attribute_profiles"]
     assert "DataProfilerColumnDomainBuilder._get_domains" in method_fixture_policy()["instance_attribute_profiles"]
+    assert "socket" in source_isolation_policy()["effect_module_stubs"]
     assert "optional dependency" in skipped_recovery_hint("import_failed_missing_module")
+    assert "closure" in skipped_recovery_hint("nested_function_requires_closure")
     assert sample_value("Callable[[dict], str]", "id_of") == {"__fixture__": "callable_id_of"}
     assert sample_value("ParseFloat", "parse_float") == {"__fixture__": "callable_float"}
     assert sample_value("ConfigParser", "cfg") == {"__fixture__": "configparser_flake8_empty"}

@@ -128,6 +128,20 @@ def test_patch_strategy_blocks_import_runtime_boundary(tmp_path: Path):
     assert proposal["executor_playbooks"][0]["authority"] == "advisory_playbook_only"
 
 
+def test_patch_strategy_rebinds_nested_closure_target(tmp_path: Path):
+    proposal = build_patch_strategy(
+        project_dir=tmp_path,
+        technical_spec={},
+        implementation_plan={"implementation_target": {"candidate": "main.py:filterfunc"}},
+        test_plan={},
+        synthesis={"status": "prepared", "reason": "required_input_guard_synthesized"},
+        acceptance_summary={"signal_strength": "meta_only", "skipped_reason_counts": {"nested_function_requires_closure": 1}},
+    )
+
+    assert proposal["deterministic_strategy"]["action"] == "request_implementation_plan_contract_rebind"
+    assert proposal["deterministic_strategy"]["reason"] == "nested_closure_target"
+
+
 def test_patch_strategy_marks_skipped_synthesis_as_verified_no_patch(tmp_path: Path):
     proposal = build_patch_strategy(
         project_dir=tmp_path,

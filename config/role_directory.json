@@ -111,12 +111,7 @@
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["no_source_evidence", "forbidden_source_target", "mutation_requested"],
       "quality_criteria": ["decision_has_source_evidence", "options_include_tradeoffs", "subsystem_boundaries_have_inputs_outputs", "data_lifecycle_and_state_model_present", "risks_are_actionable", "traceability_required", "spec_writer_brief_has_contract_targets", "handoff_is_typed"],
-      "artifact_builder": {
-        "builder_id": "architecture_decision_v1",
-        "callable": "runtime.architecture_decision_builder:build_architecture_decision",
-        "artifact_type": "ArchitectureDecisionRecord",
-        "kwargs": {"role_id": "architect", "next_role_id": "spec_writer"}
-      }
+      "artifact_builder": {"builder_id": "architecture_decision_v1", "callable": "runtime.architecture_decision_builder:build_architecture_decision", "artifact_type": "ArchitectureDecisionRecord", "kwargs": {"role_id": "architect", "next_role_id": "spec_writer"}}
     },
     "spec_writer": {
       "label": "Spec Writer",
@@ -137,12 +132,7 @@
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["missing_adr", "unverifiable_acceptance", "scope_not_bounded"],
       "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed"],
-      "artifact_builder": {
-        "builder_id": "technical_spec_v1",
-        "callable": "runtime.technical_spec_builder:build_technical_spec",
-        "artifact_type": "TechnicalSpec",
-        "kwargs": {"role_id": "spec_writer", "next_role_id": "implementer"}
-      }
+      "artifact_builder": {"builder_id": "technical_spec_v1", "callable": "runtime.technical_spec_builder:build_technical_spec", "artifact_type": "TechnicalSpec", "kwargs": {"role_id": "spec_writer", "next_role_id": "implementer"}}
     },
     "implementer": {
       "label": "Implementer",
@@ -163,12 +153,7 @@
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["source_edit_without_approval", "dependency_policy_violation", "unbounded_patch_scope"],
       "quality_criteria": ["plan_has_patch_intent", "executor_handoff_present", "rollback_policy_present"],
-      "artifact_builder": {
-        "builder_id": "implementation_plan_v1",
-        "callable": "runtime.implementation_plan_builder:build_implementation_plan",
-        "artifact_type": "ImplementationPlan",
-        "kwargs": {"role_id": "implementer", "next_role_id": "tester"}
-      }
+      "artifact_builder": {"builder_id": "implementation_plan_v1", "callable": "runtime.implementation_plan_builder:build_implementation_plan", "artifact_type": "ImplementationPlan", "kwargs": {"role_id": "implementer", "next_role_id": "tester"}}
     },
     "tester": {
       "label": "Tester",
@@ -189,12 +174,28 @@
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["live_external_call_required", "missing_implementation_plan", "no_verifiable_acceptance"],
       "quality_criteria": ["negative_tests_present", "contract_matrix_targets_candidate", "verification_is_project_scoped"],
-      "artifact_builder": {
-        "builder_id": "test_plan_v1",
-        "callable": "runtime.test_plan_builder:build_test_plan",
-        "artifact_type": "TestPlan",
-        "kwargs": {"role_id": "tester", "next_role_id": "reviewer"}
-      }
+      "artifact_builder": {"builder_id": "test_plan_v1", "callable": "runtime.test_plan_builder:build_test_plan", "artifact_type": "TestPlan", "kwargs": {"role_id": "tester", "next_role_id": "task_tree_builder"}}
+    },
+    "task_tree_builder": {
+      "label": "Task Tree Builder",
+      "order": 55,
+      "description": "Converts implementation and acceptance evidence into a bounded dependency graph for Programmer Executor.",
+      "capabilities": ["decompose_changes", "bind_acceptance", "order_dependencies", "define_stop_conditions"],
+      "consumes": ["TechnicalSpec", "ImplementationPlan", "TestPlan"],
+      "produces": ["ProgrammerTaskTree"],
+      "kb_filters": {"role_scope": ["task_tree_builder"]},
+      "policy": {"source_mutation": "forbidden", "llm_authority": "none"},
+      "contract": {
+        "inputs": [{"name": "technical_spec", "artifact_type": "TechnicalSpec", "required": true}, {"name": "implementation_plan", "artifact_type": "ImplementationPlan", "required": true}, {"name": "test_plan", "artifact_type": "TestPlan", "required": true}],
+        "outputs": [{"name": "programmer_task_tree", "artifact_type": "ProgrammerTaskTree", "required": true}]
+      },
+      "gates": ["target_or_blocked_handoff_present", "dependencies_acyclic", "acceptance_coverage_explicit"],
+      "fallback_policy": {"on_unmapped_acceptance": "return_to_tester", "on_unbounded_change": "return_to_implementer"},
+      "llm_policy": {"allowed": false, "reason": "task graph must remain reproducible from typed upstream artifacts"},
+      "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
+      "stop_conditions": ["no_safe_bounded_target", "unmapped_acceptance", "dependency_policy_violation"],
+      "quality_criteria": ["changes_are_dependency_ordered", "acceptance_is_fully_mapped", "evidence_refs_present", "stop_conditions_explicit"],
+      "artifact_builder": {"builder_id": "programmer_task_tree_v1", "callable": "runtime.programmer_task_tree:build_programmer_task_tree", "artifact_type": "ProgrammerTaskTree", "kwargs": {"role_id": "task_tree_builder"}}
     },
     "reviewer": {
       "label": "Reviewer",
@@ -215,12 +216,7 @@
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["unsafe_source_mutation", "contract_violation", "unreviewed_promotion"],
       "quality_criteria": ["recommendation_explicit", "risks_have_mitigation", "review_target_matches_plan"],
-      "artifact_builder": {
-        "builder_id": "review_findings_v1",
-        "callable": "runtime.review_findings_builder:build_review_findings",
-        "artifact_type": "ReviewFindings",
-        "kwargs": {"role_id": "reviewer"}
-      }
+      "artifact_builder": {"builder_id": "review_findings_v1", "callable": "runtime.review_findings_builder:build_review_findings", "artifact_type": "ReviewFindings", "kwargs": {"role_id": "reviewer"}}
     },
     "researcher": {
       "label": "Researcher",
@@ -283,6 +279,10 @@
       }
     },
     {
+      "step_id": "programmer_task_tree", "role_id": "task_tree_builder", "phase": "build", "output_key": "programmer_task_tree",
+      "bindings": {"technical_spec": "$artifacts.technical_spec", "implementation_plan": "$artifacts.implementation_plan", "test_plan": "$artifacts.test_plan"}
+    },
+    {
       "step_id": "review_findings",
       "role_id": "reviewer",
       "phase": "review",
@@ -309,6 +309,7 @@
         "technical_spec": "$artifact_type:TechnicalSpec",
         "implementation_plan": "$artifact_type:ImplementationPlan",
         "test_plan": "$artifact_type:TestPlan",
+        "task_tree": "$artifact_type:ProgrammerTaskTree",
         "enabled": "$run_executor"
       }
     },

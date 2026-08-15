@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import socket
+import sys
 from pathlib import Path
 
 from runtime.executable_acceptance import run_executable_acceptance
@@ -81,6 +83,82 @@ def test_source_isolated_method_keeps_module_helper_closure(tmp_path: Path):
     assert result["status"] == "passed"
     assert result["summary"]["signal_strength"] == "executable_callable"
     assert result["summary"]["source_isolated_targets"] == ["src/pkg/module.py:handle"]
+
+
+def test_source_isolated_function_stubs_configured_socket_effect(tmp_path: Path):
+    project = tmp_path / "project"
+    module = project / "commands" / "check_connection.py"
+    module.parent.mkdir(parents=True)
+    module.write_text(
+        "import socket\n\n"
+        "def is_open(ip, port, timeout=30):\n"
+        "    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n"
+        "    client.settimeout(timeout)\n"
+        "    client.connect((ip, int(port)))\n"
+        "    client.shutdown(socket.SHUT_RDWR)\n"
+        "    client.close()\n"
+        "    return True\n\n"
+        "raise RuntimeError('import-time side effect')\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("commands/check_connection.py:is_open", {"ip": "127.0.0.1", "port": 9, "timeout": 1}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["source_isolated_targets"] == ["commands/check_connection.py:is_open"]
+    assert result["summary"]["effect_module_stub_targets"] == {"commands/check_connection.py:is_open": ["socket"]}
+    assert sys.modules["socket"] is socket
+
+
+def test_bound_method_ignores_explicit_receiver_state_surplus(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "class Preconfig:\n"
+        "    def set_template(self, name):\n"
+        "        self.files_made = []\n"
+        "        self.template = name\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:set_template", {"receiver_state": "sample", "name": "value"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["argument_mappings"]["module.py:set_template"] == {"name": "name"}
+
+
+def test_nested_closure_requires_contract_rebind(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "def outer(allowed):\n"
+        "    def filterfunc(item):\n"
+        "        return item in allowed\n"
+        "    return filterfunc\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:filterfunc", {"item": "sample"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["summary"]["signal_strength"] == "meta_only"
+    assert result["summary"]["skipped_reason_counts"] == {"nested_function_requires_closure": 1}
 
 
 def test_source_isolated_method_uses_profiled_local_framework_helpers(tmp_path: Path):

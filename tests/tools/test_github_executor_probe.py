@@ -1,4 +1,5 @@
-from tools.github_executor_probe import _boundary_track, _summary
+from tools import github_executor_probe
+from tools.github_executor_probe import _boundary_track, _run_case, _summary, _task_tree_fields
 from tools.github_implementer_probe import _quality_score
 
 
@@ -9,6 +10,7 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
             "executor_status": "ok",
             "executable_acceptance": "passed",
             "acceptance_signal": "executable_callable",
+            "effect_module_stub_targets": {"pkg/net.py:is_open": ["socket"]},
             "boundary_track": "pure_python_callable",
             "task_tree_status": "ready",
             "task_tree_boundary": "sandbox_patch_tree",
@@ -62,11 +64,16 @@ def test_summary_counts_executor_acceptance_and_source_changes() -> None:
         "patch_quality_review_required": 1,
         "acceptance_callable": 1,
         "acceptance_meta_only": 0,
+        "acceptance_effect_stubbed": 1,
+        "effect_stub_modules": {"socket": 1},
         "boundary_tracks": {"blocked_handoff": 1, "pure_python_callable": 1, "unknown": 1},
         "contract_profiles": {"none": 3},
         "contract_profile_operators": {"none": 3},
         "task_tree_statuses": {"needs_review": 1, "ready": 1, "unknown": 1},
         "task_tree_boundaries": {"blocked_handoff": 1, "sandbox_patch_tree": 1, "unknown": 1},
+        "task_tree_dependency_edges_total": 0,
+        "task_tree_unmapped_acceptance_total": 0,
+        "task_tree_changes_traced": 0,
         "strategy_actions": {"unknown": 2, "verify_patch": 1},
         "executor_playbooks": {"executor_playbook_callable_acceptance_verify": 1},
         "solution_patterns": {"executor_pattern_blocked_handoff": 1, "executor_pattern_signature_fallback_review": 1},
@@ -92,6 +99,33 @@ def test_boundary_track_classifies_native_optional_and_fixture_boundaries() -> N
     )
     assert _boundary_track({"signal_strength": "meta_only", "skipped_reason_counts": {"import_failed_missing_module": 1}}) == "optional_dependency_boundary"
     assert _boundary_track({"signal_strength": "meta_only", "skipped_reason_counts": {"positive_sample_execution_failed": 1}}) == "fixture_or_runtime_shape_boundary"
+
+
+def test_case_isolates_foreign_argparse_system_exit(tmp_path, monkeypatch) -> None:
+    project = tmp_path / "foreign_cli"
+    project.mkdir()
+    monkeypatch.setattr(github_executor_probe, "_git_porcelain", lambda _path: "")
+    monkeypatch.setattr(github_executor_probe, "analyze_project", lambda _path: (_ for _ in ()).throw(SystemExit(2)))
+
+    result = _run_case(root=tmp_path, project_dir=project, run_verification=False)
+
+    assert result["status"] == "failed"
+    assert result["error"] == "SystemExit: 2"
+
+
+def test_task_tree_fields_expose_quality_evidence() -> None:
+    fields = _task_tree_fields(
+        {
+            "status": "ready",
+            "boundary": {"track": "sandbox_patch_tree"},
+            "summary": {"node_count": 8, "change_node_count": 3, "acceptance_node_count": 2, "dependency_edge_count": 9},
+            "coverage": {"unmapped_acceptance_ids": [], "all_changes_traced": True},
+        }
+    )
+
+    assert fields["task_tree_dependency_edge_count"] == 9
+    assert fields["task_tree_unmapped_acceptance_count"] == 0
+    assert fields["task_tree_all_changes_traced"] is True
 
 
 def test_implementer_probe_accepts_zero_arg_input_contract() -> None:

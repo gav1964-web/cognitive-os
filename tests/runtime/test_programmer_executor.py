@@ -76,9 +76,10 @@ def test_programmer_executor_writes_patch_package_and_test_result(tmp_path: Path
     task_tree = json.loads(Path(result["task_tree_path"]).read_text(encoding="utf-8"))
     assert patch["artifact_type"] == "PatchPackage"
     assert task_tree["artifact_type"] == "ProgrammerTaskTree"
-    assert task_tree["role"] == "programmer_task_builder"
-    assert task_tree["programmer_handoff"]["next_role"] == "sandbox_programmer"
-    assert patch["programmer_task_tree"]["summary"]["node_count"] == 5
+    assert task_tree["role"] == "task_tree_builder"
+    assert task_tree["programmer_handoff"]["next_role"] == "programmer_executor"
+    assert patch["programmer_task_tree"]["summary"]["node_count"] == 6
+    assert patch["programmer_task_tree"]["summary"]["acceptance_node_count"] == 3
     assert patch["implementation_blueprint"]["artifact_type"] == "ImplementationBlueprint"
     assert patch["patch_intent"]["mode"] == "sandbox_first"
     assert patch["executor_handoff"]["recommended_tool"] == "tools/apply_implementation_plan.py"
@@ -276,7 +277,7 @@ def test_programmer_executor_writes_formal_blocked_handoff_artifacts(tmp_path: P
     assert result["status"] == "blocked"
     assert task_tree["boundary"]["track"] == "blocked_handoff"
     assert no_patch["artifact_type"] == "NoPatchPackage"
-    assert no_patch["programmer_task_tree"]["role"] == "programmer_task_builder"
+    assert no_patch["programmer_task_tree"]["role"] == "task_tree_builder"
     assert no_patch["patches"] == []
     assert no_patch["policy"]["patch_generation_allowed"] is False
     assert blocked_report["artifact_type"] == "BlockedExecutionReport"
