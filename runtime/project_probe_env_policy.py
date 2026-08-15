@@ -39,7 +39,16 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
     if not wheel <= native:
         raise ValueError("wheel_only_native_allowlist must be a subset of native_or_compiled")
     isolated = dict(payload["isolated_dependency_profile"])
-    for field_name in ("environment_kind", "env_path_template", "verification_gates", "forbidden_actions"):
+    for field_name in (
+        "environment_kind",
+        "env_path_template",
+        "approval_artifact_type",
+        "approval_status",
+        "approval_scope",
+        "allowed_authorities",
+        "verification_gates",
+        "forbidden_actions",
+    ):
         if not isolated.get(field_name):
             raise ValueError(f"isolated dependency profile policy requires: {field_name}")
     return payload

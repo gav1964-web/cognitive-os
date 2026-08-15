@@ -18,6 +18,9 @@ def test_declared_low_risk_dependency_is_ready_for_isolated_probe(tmp_path):
     assert profile["install_plan"]["allowed_packages"] == ["attrs"]
     assert profile["environment"]["automatic_install_allowed"] is False
     assert profile["environment"]["outside_source_project"] is True
+    assert len(profile["profile_fingerprint"]) == 64
+    assert profile["approval_request"]["requested_packages"] == ["attrs"]
+    assert profile["approval_request"]["risk_status"] == "ready_for_probe"
 
 
 def test_declared_unknown_dependency_requires_risk_review(tmp_path):
@@ -35,6 +38,7 @@ def test_declared_unknown_dependency_requires_risk_review(tmp_path):
     assert profile["status"] == "review_required"
     assert profile["install_plan"]["review_packages"] == ["scientific-sdk"]
     assert profile["package_candidates"][0]["declared"] is True
+    assert profile["approval_request"]["requested_packages"] == ["scientific-sdk"]
 
 
 def test_undeclared_dependency_is_blocked(tmp_path):

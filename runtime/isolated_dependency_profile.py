@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +40,7 @@ def build_isolated_dependency_profile(
         project=root.name,
         target_hash=hashlib.sha256(str(target or "").encode("utf-8")).hexdigest()[:12],
     )
-    return {
+    profile = {
         **base,
         "status": status,
         "project_root": root.resolve().as_posix(),
@@ -61,6 +62,10 @@ def build_isolated_dependency_profile(
         "authority": "profile_plan_only_explicit_install_permission_required",
         "next_step": _next_step(status),
     }
+    fingerprint = _profile_fingerprint(profile)
+    profile["profile_fingerprint"] = fingerprint
+    profile["approval_request"] = _approval_request(profile, policy, fingerprint)
+    return profile
 
 
 def _profile_status(install_plan: dict[str, Any]) -> str:
@@ -79,3 +84,40 @@ def _next_step(status: str) -> str:
         "review_required": "review_declared_dependency_risk_then_accept_or_reject_profile",
         "blocked_undeclared": "return_to_dependency_contract_review",
     }.get(status, "review_dependency_mapping_and_manifest_evidence")
+
+
+def _profile_fingerprint(profile: dict[str, Any]) -> str:
+    evidence = {
+        "target": profile.get("target"),
+        "missing_modules": list(profile.get("missing_modules") or []),
+        "package_candidates": list(profile.get("package_candidates") or []),
+        "install_plan": dict(profile.get("install_plan") or {}),
+    }
+    canonical = json.dumps(evidence, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _approval_request(
+    profile: dict[str, Any], policy: dict[str, Any], fingerprint: str
+) -> dict[str, Any]:
+    plan = dict(profile.get("install_plan") or {})
+    packages = sorted({
+        str(item)
+        for key in ("allowed_packages", "wheel_packages", "review_packages", "native_packages")
+        for item in list(plan.get(key) or [])
+    })
+    return {
+        "artifact_type": "DependencyProbeApprovalRequest",
+        "status": "approval_required",
+        "profile_fingerprint": fingerprint,
+        "requested_packages": packages,
+        "risk_status": profile.get("status"),
+        "scope": policy["approval_scope"],
+        "allowed_authorities": list(policy["allowed_authorities"]),
+        "constraints": [
+            "isolated_environment_only",
+            "import_probe_only",
+            "source_project_unchanged",
+            "approval_invalidated_when_profile_fingerprint_changes",
+        ],
+    }

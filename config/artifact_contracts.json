@@ -66,6 +66,21 @@
       "consumers": ["implementer", "programmer_executor", "tester", "reviewer", "human"],
       "required_fields": ["artifact_type", "status", "target", "missing_modules"]
     },
+    "DependencyProbeApprovalRequest": {
+      "producer": "spec_writer",
+      "consumers": ["human", "reviewer"],
+      "required_fields": ["artifact_type", "status", "profile_fingerprint", "requested_packages", "risk_status", "scope", "allowed_authorities", "constraints"]
+    },
+    "DependencyProbeApproval": {
+      "producer": "human",
+      "consumers": ["programmer_executor"],
+      "required_fields": ["artifact_type", "status", "profile_fingerprint", "approved_packages", "scope", "authority"]
+    },
+    "IsolatedDependencyProbeResult": {
+      "producer": "programmer_executor",
+      "consumers": ["tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "profile_fingerprint", "approval_validation"]
+    },
     "FirstSliceReselectionRequest": {
       "producer": "spec_writer",
       "consumers": ["architect", "implementer", "programmer_executor", "reviewer"],

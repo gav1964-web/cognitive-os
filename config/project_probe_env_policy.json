@@ -130,6 +130,11 @@
     "environment_kind": "venv",
     "env_path_template": "artifacts/dependency_envs/{project}/{target_hash}",
     "automatic_install_allowed": false,
+    "approval_artifact_type": "DependencyProbeApproval",
+    "approval_status": "approved",
+    "approval_scope": "isolated_dependency_import_probe",
+    "allowed_authorities": ["human", "reviewer"],
+    "require_exact_package_set": true,
     "verification_gates": [
       "dependency_is_declared_by_project",
       "package_mapping_is_source_proven",
