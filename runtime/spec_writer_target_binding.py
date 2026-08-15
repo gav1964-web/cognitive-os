@@ -21,3 +21,16 @@ def standalone_target_eligibility(candidate: dict[str, Any]) -> dict[str, Any]:
         "reason": "" if eligible else str(reasons.get(binding) or "target binding is not standalone executable"),
         "policy": "technical_spec_policy.target_binding_policy",
     }
+
+
+def dependency_readiness_adjustment(candidate: dict[str, Any]) -> tuple[int, list[str]]:
+    policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
+    readiness = dict(candidate.get("dependency_readiness") or {})
+    missing = [str(item) for item in list(readiness.get("missing_external_modules") or []) if item]
+    if not policy.get("enabled", True) or not missing:
+        return 0, []
+    each = int(policy.get("missing_external_penalty_each") or 0)
+    maximum = int(policy.get("max_missing_external_penalty") or 0)
+    penalty = min(maximum, each * len(missing))
+    prefix = str(policy.get("reason_prefix") or "runtime environment misses external imports")
+    return -penalty, [f"{prefix}: {', '.join(missing[:6])}"]

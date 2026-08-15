@@ -13,7 +13,7 @@ from .transitive_side_effects import infer_transitive_side_effects
 from .project_transitive_effects import project_transitive_effects
 from .python_source_files import is_python_source_file, iter_python_source_files
 from .python_parser_compatibility import parse_compatible_source
-
+from .source_dependency_readiness import source_dependency_readiness
 
 def build_source_context(
     *,
@@ -46,6 +46,7 @@ def build_source_context(
                     row["node_kind"] = "class" if symbol in class_names else "function"
             snippet = _symbol_snippet(root / path_text, symbol)
             if snippet:
+                row["dependency_readiness"] = source_dependency_readiness(root, path_text)
                 row["snippet"] = snippet
                 if "signature" not in row and snippet.get("signature"):
                     row["signature"] = snippet["signature"]

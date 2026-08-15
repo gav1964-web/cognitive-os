@@ -130,6 +130,7 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
                 "target_binding": context.get("target_binding") or snippet.get("target_binding"),
                 "symbol_occurrences": context.get("symbol_occurrences") or snippet.get("symbol_occurrences", []),
                 "structural_contract": context.get("structural_contract") or snippet.get("structural_contract", {}),
+                "dependency_readiness": dict(context.get("dependency_readiness") or {}),
             }
         )
     return rows
@@ -221,6 +222,7 @@ def _extraction_contract(
                 "score": item.get("score"),
                 "reasons": item.get("reasons", []),
                 "side_effects": item.get("side_effects", []),
+                "dependency_readiness": dict(dict(item.get("evidence") or {}).get("dependency_readiness") or {}),
             }
             for item in ranked[:32]
         ],
@@ -234,6 +236,7 @@ def _extraction_contract(
         "evidence_source": candidate.get("source"),
         "structural_evidence": structural_evidence,
         "candidate_advisory": candidate_advisory,
+        "dependency_readiness": dict(candidate.get("dependency_readiness") or {}),
     }
     if binding_rejections:
         contract["binding_rejections"] = _binding_rejection_rows(binding_rejections)

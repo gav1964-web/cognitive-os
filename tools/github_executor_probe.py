@@ -208,6 +208,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "boundary_tracks": _counts(str(case.get("boundary_track") or "unknown") for case in cases),
         "contract_profiles": _counts(str(case.get("contract_profile_id") or "none") for case in cases),
         "contract_profile_operators": _counts(str(case.get("contract_profile_operator_id") or "none") for case in cases),
+        "dependency_readiness_statuses": _counts(str(case.get("dependency_readiness_status") or "unknown") for case in cases),
+        "dependency_missing_modules": _counts(
+            module for case in cases for module in list(case.get("dependency_missing_modules") or [])
+        ),
         "task_tree_statuses": _counts(str(case.get("task_tree_status") or "unknown") for case in cases),
         "task_tree_boundaries": _counts(str(case.get("task_tree_boundary") or "unknown") for case in cases),
         "task_tree_dependency_edges_total": sum(int(case.get("task_tree_dependency_edge_count") or 0) for case in cases),
@@ -234,7 +238,9 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_plan: dict[str, Any]) -> dict[str, str]:
+def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_plan: dict[str, Any]) -> dict[str, Any]:
+    extraction = dict(spec.get("extraction_contract") or {})
+    readiness = dict(extraction.get("dependency_readiness") or {})
     spec_profile = dict(dict(spec.get("extraction_contract") or {}).get("contract_profile") or {})
     plan_profile = dict(dict(plan.get("contract_binding") or {}).get("contract_profile") or {})
     test_profile = _first_test_plan_profile(test_plan)
@@ -243,6 +249,8 @@ def _contract_profile_fields(spec: dict[str, Any], plan: dict[str, Any], test_pl
         "contract_profile_id": str(profile.get("id") or ""),
         "contract_profile_operator_id": str(profile.get("operator_id") or ""),
         "contract_profile_source": str(profile.get("source") or ("test_plan" if test_profile else "")),
+        "dependency_readiness_status": str(readiness.get("status") or "unknown"),
+        "dependency_missing_modules": [str(item) for item in list(readiness.get("missing_external_modules") or [])],
     }
 
 

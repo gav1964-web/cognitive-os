@@ -80,6 +80,13 @@
       "nested_function": "nested function depends on enclosing closure state and is not a standalone extraction target"
     }
   },
+  "dependency_readiness": {
+    "enabled": true,
+    "max_local_import_depth": 4,
+    "missing_external_penalty_each": 24,
+    "max_missing_external_penalty": 72,
+    "reason_prefix": "runtime environment misses external imports"
+  },
   "semantic_review_override": {
     "enabled": true,
     "min_candidate_score": 60,

@@ -13,11 +13,10 @@ from runtime.role_spec_writer_ranking import (
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
-from runtime.spec_writer_target_binding import standalone_target_eligibility
+from runtime.spec_writer_target_binding import dependency_readiness_adjustment, standalone_target_eligibility
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
 from runtime._parts.technical_spec_builder_part3 import _input_contract_from_candidate, _output_contract_from_candidate
-
 _BUILTIN_NAMES = set(dir(builtins))
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
 SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
@@ -65,6 +64,7 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         claims = [str(item) for item in candidate.get("claims", []) or []]
         decorators = {str(item).lower().rsplit(".", 1)[-1] for item in candidate.get("decorators", []) or []}
         eligibility = standalone_target_eligibility(candidate)
+        dependency_score, dependency_reasons = dependency_readiness_adjustment(candidate); score += dependency_score; reasons.extend(dependency_reasons)
 
         if kind == "pure_transform":
             score += 40
