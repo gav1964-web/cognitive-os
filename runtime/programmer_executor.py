@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .programmer_candidate_flow import prepare_candidate_synthesis, prepare_repair_synthesis
+from .programmer_dependency_session import run_executor_dependency_session
 from .programmer_patch_synthesizer import synthesize_patch_package
 from .programmer_patch_strategy import build_patch_strategy, llm_strategy_enabled
 from .programmer_task_tree import build_programmer_task_tree
@@ -26,6 +27,7 @@ def run_programmer_executor(
     run_verification: bool = True,
     apply_source: bool = False,
     max_commands: int = 3,
+    dependency_probe_session_approval: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target = dict(implementation_plan.get("implementation_target", {}))
     if target.get("status") == "blocked_no_safe_candidate":
@@ -114,6 +116,15 @@ def run_programmer_executor(
         use_l45_llm=llm_strategy_enabled(),
     )
     test_result["executor_strategy"] = final_strategy
+    dependency_session = run_executor_dependency_session(
+        root=root, strategy=final_strategy, approval=dependency_probe_session_approval,
+    )
+    dependency_session_path = None
+    if dependency_session:
+        test_result["dependency_probe_session_result"] = dependency_session
+        dependency_session_path = _write_json(
+            execution_dir / "dependency_probe_session_result.json", dependency_session,
+        )
     rebind_request = dict(final_strategy.get("contract_rebind_request") or {})
     rebind_path = _write_json(execution_dir / "contract_rebind_request.json", rebind_request) if rebind_request else None
     patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot, synthesis, strategy, task_tree)
@@ -136,6 +147,9 @@ def run_programmer_executor(
         "patch_package_path": patch_path.as_posix(),
         "test_result_path": test_result_path.as_posix(),
         "contract_rebind_request_path": rebind_path.as_posix() if rebind_path else None,
+        "dependency_probe_session_result_path": (
+            dependency_session_path.as_posix() if dependency_session_path else None
+        ),
         "source_code_changes": False,
         "registry_changes": False,
         "apply_source": False,

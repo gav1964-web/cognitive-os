@@ -11,6 +11,7 @@ from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
 from .contract_rebind_request import build_contract_rebind_request
+from .dependency_probe_session import build_dependency_probe_session_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
 
@@ -76,6 +77,10 @@ def build_patch_strategy(
             test_plan=test_plan,
             acceptance_summary=acceptance_summary,
         )
+    if isolated_profile := dict(evidence["dependency_boundary_profile"].get("isolated_environment_profile") or {}):
+        complete_scope = all(isolated_profile.get(key) for key in ("project_root", "target", "profile_fingerprint"))
+        if complete_scope and isolated_profile.get("status") in {"ready_for_probe", "review_required"}:
+            proposal["dependency_probe_session_request"] = build_dependency_probe_session_request(isolated_profile)
     proposal["sandbox_patch_candidate"] = _sandbox_candidate(proposal, evidence)
     proposal["recommended_next_step"] = _recommended_next_step(proposal)
     return proposal

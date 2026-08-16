@@ -11,8 +11,29 @@ from .isolated_dependency_probe import run_isolated_dependency_probe
 from .project_probe_env_policy import load_project_probe_env_policy
 
 
+def build_dependency_probe_session_request(profile: dict[str, Any]) -> dict[str, Any]:
+    policy = dict(load_project_probe_env_policy()["isolated_dependency_profile"])
+    return {
+        "artifact_type": "DependencyProbeSessionApprovalRequest",
+        "status": "approval_required",
+        "project_root": profile.get("project_root"),
+        "target": profile.get("target"),
+        "initial_profile_fingerprint": profile.get("profile_fingerprint"),
+        "allowed_profile_statuses": list(policy["session_allowed_profile_statuses"]),
+        "max_steps": int(policy["session_max_steps"]),
+        "allowed_authorities": list(policy["allowed_authorities"]),
+        "constraints": [
+            "same_project_and_target_only",
+            "exact_approval_per_profile_fingerprint",
+            "manifest_backed_dependencies_only",
+            "isolated_environment_only",
+            "source_project_unchanged",
+        ],
+    }
+
+
 def validate_dependency_probe_session(
-    profile: dict[str, Any], session: dict[str, Any] | None,
+    profile: dict[str, Any], session: dict[str, Any] | None, *, require_initial_profile: bool = True,
 ) -> dict[str, Any]:
     session = dict(session or {})
     policy = dict(load_project_probe_env_policy()["isolated_dependency_profile"])
@@ -27,6 +48,10 @@ def validate_dependency_probe_session(
         "status": session.get("status") == policy["session_approval_status"],
         "project_root": _same_path(session.get("project_root"), profile.get("project_root")),
         "target": session.get("target") == profile.get("target"),
+        "initial_profile_fingerprint": (
+            not require_initial_profile
+            or session.get("initial_profile_fingerprint") == profile.get("profile_fingerprint")
+        ),
         "authority": session.get("authority") in list(policy["allowed_authorities"]),
         "allowed_statuses": bool(allowed_by_session) and allowed_by_session <= allowed_by_policy,
         "profile_status": profile.get("status") in allowed_by_session,
@@ -48,7 +73,9 @@ def run_dependency_probe_session(
     profile = dict(initial_profile)
     steps = []
     for index in range(1, int(session.get("max_steps") or 0) + 1):
-        validation = validate_dependency_probe_session(profile, session)
+        validation = validate_dependency_probe_session(
+            profile, session, require_initial_profile=index == 1,
+        )
         if validation["status"] != "accepted":
             return _session_result("blocked", steps, profile, validation)
         approval = _exact_approval(profile, session, validation["session_fingerprint"])
@@ -77,7 +104,7 @@ def dependency_probe_session_fingerprint(session: dict[str, Any]) -> str:
         key: session.get(key)
         for key in (
             "artifact_type", "status", "project_root", "target",
-            "allowed_profile_statuses", "max_steps", "authority",
+            "initial_profile_fingerprint", "allowed_profile_statuses", "max_steps", "authority",
         )
     }
     canonical = json.dumps(evidence, ensure_ascii=True, sort_keys=True, separators=(",", ":"))

@@ -19,6 +19,17 @@ def test_session_rejects_different_target(tmp_path):
     assert "target" in validation["errors"]
 
 
+def test_session_rejects_stale_initial_profile(tmp_path):
+    profile = _profile(tmp_path)
+    session = _session(profile)
+    session["initial_profile_fingerprint"] = "stale-profile"
+
+    validation = validate_dependency_probe_session(profile, session)
+
+    assert validation["status"] == "rejected"
+    assert "initial_profile_fingerprint" in validation["errors"]
+
+
 def test_session_delegates_exact_approvals_across_profiles(tmp_path, monkeypatch):
     first = _profile(tmp_path)
     second = deepcopy(first)
@@ -86,6 +97,7 @@ def _session(profile):
         "status": "approved",
         "project_root": profile["project_root"],
         "target": profile["target"],
+        "initial_profile_fingerprint": profile["profile_fingerprint"],
         "allowed_profile_statuses": ["ready_for_probe", "review_required"],
         "max_steps": 5,
         "authority": "human",

@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument("--max-commands", type=int, default=3)
     parser.add_argument("--apply-source", action="store_true")
     parser.add_argument("--use-l45-llm", action="store_true")
+    parser.add_argument("--dependency-probe-session-approval")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -47,6 +48,10 @@ def main() -> int:
             run_verification=args.run_verification,
             apply_source=args.apply_source,
             max_commands=args.max_commands,
+            dependency_probe_session_approval=(
+                _load_json(root, args.dependency_probe_session_approval)
+                if args.dependency_probe_session_approval else None
+            ),
         )
     finally:
         if args.use_l45_llm:
