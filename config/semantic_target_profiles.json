@@ -1,6 +1,138 @@
 {
   "profiles": [
     {
+      "contract_family": "desktop_workspace_command_boundary",
+      "failure_modes": ["invalid_workspace", "invalid_window_id", "command_missing", "command_failed", "timeout"],
+      "id": "desktop_workspace_command_boundary",
+      "input_contract": {
+        "workspace": "WorkspaceIdentifier(non_negative_integer)",
+        "window": "DesktopWindowIdentifier(native_window_id)"
+      },
+      "output_contract": {
+        "result": "WorkspaceMoveResult(window, workspace, exit_status)",
+        "failure_packet": "WorkspaceCommandFailure(kind, command, exit_status?, evidence_ref)"
+      },
+      "path_contains_any": ["wm.py", "window_manager", "workspace"],
+      "ranking_bonus": 38,
+      "ranking_reason": "desktop workspace mutation is a bounded external command",
+      "reason": "workspace movement has explicit identifiers, process isolation, and command failure semantics",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "subprocess": "command arguments are list-based, timeout-bounded, and verified with a fake process adapter",
+        "requires_validation_gate": true
+      },
+      "symbols": ["move_to_workspace", "move_window_to_workspace", "set_desktop_for_window"],
+      "validation_gates": [
+        "workspace and window identifiers are validated before command execution",
+        "success, missing command, non-zero exit, and timeout cases are covered",
+        "tests use a fake process adapter and never mutate the live desktop"
+      ]
+    },
+    {
+      "contract_family": "recursive_mapping_merge_boundary",
+      "failure_modes": ["non_mapping_input", "unsupported_list_policy", "recursive_type_conflict", "input_mutation"],
+      "id": "recursive_mapping_merge_boundary",
+      "input_contract": {
+        "base_mapping": "Mapping[str, Any]",
+        "override_mapping": "Mapping[str, Any]",
+        "merge_policy": "MappingMergePolicy(recursive, list_strategy)"
+      },
+      "output_contract": {
+        "merged_mapping": "MergedMapping(copy, precedence=override)",
+        "failure_packet": "MappingMergeFailure(kind, key_path?, evidence_ref)"
+      },
+      "path_contains_any": ["ansible_utils", "mapping", "merge"],
+      "ranking_bonus": 38,
+      "ranking_reason": "recursive mapping merge is representative deterministic configuration behavior",
+      "reason": "mapping merge has explicit precedence, recursion, list policy, and immutability contracts",
+      "score_bonus": 20,
+      "side_effect_policy": {"mutation_policy": "caller mappings and lists remain unchanged", "requires_validation_gate": true},
+      "symbols": ["merge_hash", "merge_mapping", "recursive_merge"],
+      "validation_gates": [
+        "replace, keep, append, prepend, and remove-present list policies are covered where supported",
+        "nested mapping precedence and non-mapping failures are explicit",
+        "input mappings remain unchanged after success and failure"
+      ]
+    },
+    {
+      "contract_family": "rate_limit_header_value_parser",
+      "failure_modes": ["missing_value", "malformed_limit", "unsupported_parameter", "numeric_overflow"],
+      "id": "rate_limit_header_value_parser",
+      "input_contract": {"raw_header": "RateLimitHeaderValue(primary_value, parameters?)"},
+      "output_contract": {
+        "limit_value": "RateLimitValue(raw_primary_value, numeric_value?)",
+        "failure_packet": "RateLimitParseFailure(kind, raw_value, evidence_ref)"
+      },
+      "path_contains_any": ["docker_hub_limit", "collector.py", "rate_limit"],
+      "ranking_bonus": 36,
+      "ranking_reason": "rate-limit header extraction is representative monitoring protocol parsing",
+      "reason": "rate-limit headers have a bounded primary-value and parameter parsing contract",
+      "score_bonus": 20,
+      "side_effect_policy": {"observability": "verbose diagnostics are captured or disabled during parser tests", "requires_validation_gate": true},
+      "symbols": ["limit_extractor", "parse_rate_limit", "extract_rate_limit"],
+      "validation_gates": [
+        "plain, parameterized, empty, and malformed header values are covered",
+        "numeric conversion and unit semantics remain explicit at the caller boundary",
+        "parser tests perform no live registry request"
+      ]
+    },
+    {
+      "contract_family": "otp_token_migration_reader",
+      "failure_modes": ["file_missing", "malformed_xml", "malformed_token_json", "invalid_secret", "unsupported_token_type"],
+      "id": "otp_token_migration_reader",
+      "input_contract": {"source_file": "LegacyOtpXmlFile(path, ordered_token_records)"},
+      "output_contract": {
+        "tokens": "Iterator[MigratedOtpToken(label, secret_base32, algorithm, digits, type, period_or_counter)]",
+        "failure_packet": "OtpMigrationFailure(kind, token_ref?, evidence_ref)"
+      },
+      "path_contains_any": ["freeotp", "otp", "token_migrat"],
+      "ranking_bonus": 38,
+      "ranking_reason": "OTP migration reader is representative security-data conversion behavior",
+      "reason": "OTP migration has explicit XML, JSON, secret encoding, ordering, and token-type contracts",
+      "score_bonus": 20,
+      "side_effect_policy": {
+        "filesystem": "only caller-provided fixture files are read; paths and file size are bounded",
+        "secrets": "fixtures contain synthetic secrets and diagnostics never expose decoded secret material",
+        "requires_validation_gate": true
+      },
+      "symbols": ["read_tokens", "load_otp_tokens", "migrate_tokens"],
+      "validation_gates": [
+        "TOTP, HOTP, unsupported type, malformed XML, and malformed JSON cases are covered",
+        "token order and issuer/label fallback behavior are preserved",
+        "secret bytes are encoded deterministically without logging secret material"
+      ]
+    },
+    {
+      "contract_family": "biological_sequence_design_boundary",
+      "failure_modes": ["invalid_graph_shape", "unsupported_selection_strategy", "invalid_temperature", "model_inference_failure", "non_reproducible_sampling"],
+      "id": "biological_sequence_design_boundary",
+      "input_contract": {
+        "model": "SequenceDesignModel(parameters, category_count, device)",
+        "sequence_graph": "BiologicalSequenceGraph(nodes, edges, attributes, fixed_residues?)",
+        "selection_policy": "ResidueSelectionPolicy(strategy, random_position, temperature, seed?)"
+      },
+      "output_contract": {
+        "designed_sequence": "DesignedSequence(residue_ids, probabilities, provenance)",
+        "failure_packet": "SequenceDesignFailure(kind, position?, evidence_ref)"
+      },
+      "path_contains_any": ["protein_design", "sequence_design", "bioinformatics"],
+      "ranking_bonus": 52,
+      "ranking_reason": "biological sequence design is representative scientific model behavior",
+      "reason": "sequence design has bounded graph/model inputs and explicit residue-selection outputs",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "model_state": "inference mode and device placement are explicit; caller model and graph inputs are not mutated",
+        "randomness": "sampling strategy, temperature, and random seed are explicit and reproducible",
+        "requires_validation_gate": true
+      },
+      "symbols": ["design_sequence", "design_protein", "predict_sequence"],
+      "validation_gates": [
+        "graph dimensions, category count, and fixed-residue values are validated before inference",
+        "map, sampled, and reference-guided strategies have deterministic fixture coverage",
+        "sampling records temperature and seed while preserving model/input state"
+      ]
+    },
+    {
       "contract_family": "numerical_brute_force_optimization_boundary",
       "failure_modes": ["invalid_parameter_grid", "objective_failure", "nan_or_inf_score", "resource_limit"],
       "id": "numerical_brute_force_optimization_boundary",

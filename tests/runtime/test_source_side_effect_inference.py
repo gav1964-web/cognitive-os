@@ -46,6 +46,28 @@ def test_pandas_read_sql_is_a_database_read_contract_effect():
     assert "database_read" in infer_ast_side_effects(node, ast.unparse(node))
 
 
+def test_dataframe_file_transform_declares_read_and_write_effects():
+    node = ast.parse(
+        "def normalize(input_file, output_file):\n"
+        "    frame = pd.read_csv(input_file)\n"
+        "    frame.to_csv(output_file, index=False)\n"
+    ).body[0]
+
+    effects = infer_ast_side_effects(node, ast.unparse(node))
+
+    assert "filesystem_read" in effects
+    assert "filesystem_write" in effects
+
+
+def test_element_tree_parse_declares_filesystem_read_effect():
+    node = ast.parse(
+        "def read_tokens(filename):\n"
+        "    return xml.etree.ElementTree.parse(filename).getroot()\n"
+    ).body[0]
+
+    assert "filesystem_read" in infer_ast_side_effects(node, ast.unparse(node))
+
+
 def test_terminal_renderer_method_is_an_observability_effect():
     node = ast.parse("def render(qr):\n    qr.print_tty()\n").body[0]
 

@@ -50,6 +50,19 @@ def test_reselection_request_returns_semantic_block_to_architect():
     assert request["blocking_evidence"]["rejected_candidates"][0]["source"] == "pkg/runtime.py:get_value"
 
 
+def test_reselection_request_rejects_candidate_without_bound_source_body():
+    request = build_first_slice_reselection_request(
+        {
+            "candidate": "pkg/api.py:handle",
+            "structural_evidence": {"source_body_available": False},
+        },
+        {"status": "not_required", "missing_modules": []},
+    )
+
+    assert request["status"] == "required"
+    assert request["trigger"] == "source_body_not_bound_in_approved_first_slice"
+
+
 def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()

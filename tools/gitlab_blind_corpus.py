@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +26,7 @@ API_URL = "https://gitlab.com/api/v4/projects"
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("phase", choices=("select", "clone", "replace-failed"))
     parser.add_argument("--root", default=".")
@@ -251,6 +252,10 @@ def _search_page(params: dict[str, str]) -> list[dict[str, Any]]:
                 raise
             delay = int(exc.headers.get("Retry-After") or (attempt + 1) * 2)
             time.sleep(delay)
+        except (TimeoutError, URLError):
+            if attempt == 1:
+                return []
+            time.sleep(attempt + 1)
     return []
 
 

@@ -9,7 +9,11 @@
     },
     {
       "id": "filesystem_read",
-      "call_contains": ["read_text", "read_bytes"]
+      "call_contains": ["read_text", "read_bytes", "read_csv", "read_parquet", "read_excel", "read_feather", "elementtree.parse"]
+    },
+    {
+      "id": "filesystem_write",
+      "call_contains": ["to_csv", "to_parquet", "to_excel", "to_feather", "to_pickle"]
     },
     {
       "id": "network",

@@ -1,8 +1,8 @@
 {
   "schema_version": "gitlab_blind_corpus_strata.v1",
   "projects_per_stratum": 8,
-  "minimum_stars": 10,
-  "maximum_search_pages": 2,
+  "minimum_stars": 3,
+  "maximum_search_pages": 5,
   "minimum_recent_year": 2020,
   "excluded_name_tokens": ["awesome", "tutorial", "course", "interview", "cheatsheet", "examples", "demo"],
   "excluded_description_tokens": ["mirror of", "deprecated", "archived", "learning exercise", "collection of links"],

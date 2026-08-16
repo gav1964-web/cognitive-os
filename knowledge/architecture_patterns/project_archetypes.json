@@ -3511,7 +3511,6 @@
         "required_contains_any": [
           "spyder",
           "qt",
-          "widget",
           "lsp"
         ]
       },
@@ -5926,14 +5925,19 @@
       "record_type": "project_archetype_rule",
       "priority": 65,
       "archetype": "scientific_compute_library",
+      "architect_consumable": true,
       "label": "scientific/numerical compute library",
       "match": {
+        "domain_profile_kind": [
+          "scientific_compute_library"
+        ],
         "project_name_contains_any": [
           "numpy",
           "scipy",
           "pandas",
           "sklearn",
-          "zarr"
+          "zarr",
+          "proteinsolver"
         ],
         "text_contains_any": [
           "numpy",
@@ -5943,12 +5947,22 @@
           "n-dimensional arrays",
           "ndimensional arrays",
           "tensor",
+          "tensorflow",
           "linear algebra",
           "solver",
           "fft",
-          "matrix"
+          "matrix",
+          "differential equation",
+          "boundary condition",
+          "variational problem",
+          "neural network",
+          "derivative",
+          "protein design",
+          "protein sequence",
+          "bioinformatics",
+          "amino acid"
         ],
-        "min_score": 80
+        "min_score": 39
       },
       "diagnosis": {
         "primary_sources": [
@@ -5961,7 +5975,10 @@
           "compute",
           "solve",
           "fit",
-          "transform"
+          "transform",
+          "design",
+          "predict",
+          "sequence"
         ],
         "template": "{label} with entrypoint {entrypoints}; the main risk is array-input-compute-result flow around {target}, where shape/dtype contracts, numerical stability, backend policy, and reproducibility need explicit verification."
       },
@@ -5983,7 +6000,10 @@
           "compute",
           "solve",
           "fit",
-          "transform"
+          "transform",
+          "design",
+          "predict",
+          "sequence"
         ],
         "steps": [
           "Define ArrayInput and ComputeResult contracts with shape/dtype/tolerance.",

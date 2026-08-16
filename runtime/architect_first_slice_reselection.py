@@ -23,6 +23,7 @@ def reselect_architecture_first_slice(
         return {"status": "not_required", "architecture_decision": architecture_decision}
     policy = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
     sources = _expanded_candidate_sources(project_report, architecture_decision, policy)
+    sources = _domain_aligned_sources(sources, architecture_decision, policy)
     project_root = str(
         architecture_decision.get("project")
         or dict(project_report.get("summary") or {}).get("root")
@@ -104,6 +105,18 @@ def _expanded_candidate_sources(
     sources.extend(str(item) for item in dict(architecture_decision.get("source_context") or {}))
     limit = max(1, int(policy.get("expanded_candidate_limit") or 64))
     return list(dict.fromkeys(source for source in sources if ".py:" in source))[:limit]
+
+
+def _domain_aligned_sources(
+    sources: list[str], architecture_decision: dict[str, Any], policy: dict[str, Any]
+) -> list[str]:
+    first_slice = dict(architecture_decision.get("first_slice_contract") or {})
+    knowledge_rule = str(first_slice.get("knowledge_rule") or "")
+    tokens_by_rule = dict(policy.get("domain_candidate_required_any") or {})
+    tokens = [str(item).lower() for item in list(tokens_by_rule.get(knowledge_rule) or [])]
+    if not tokens:
+        return sources
+    return [source for source in sources if any(token in source.lower() for token in tokens)]
 
 
 def _row_sources(value: Any) -> list[str]:

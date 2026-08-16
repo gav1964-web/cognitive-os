@@ -118,6 +118,9 @@
     "max_iterations": 1,
     "expanded_candidate_limit": 64,
     "selected_target_limit": 32,
+    "domain_candidate_required_any": {
+      "scientific_compute_library": ["array", "tensor", "compute", "fit", "solve", "solver", "math/", "model", "predict", "transform", "domain", "derivative", "integral", "sequence", "protein"]
+    },
     "candidate_sources": [
       "pure_transforms",
       "atomic_reusable_capabilities",

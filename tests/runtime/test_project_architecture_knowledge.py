@@ -132,3 +132,32 @@ def test_structured_converter_rule_is_architect_consumable():
 
     assert match["rule"]["rule_id"] == "structured_data_converter_library"
     assert match["rule"]["architect_consumable"] is True
+
+
+def test_scientific_compute_rule_is_architect_consumable():
+    facts = {
+        "root": "proteinsolver",
+        "domain_profile": {"kind": "scientific_compute_library"},
+        "inputs": ["protein sequence graph", "trained model", "tensor"],
+        "central": ["proteinsolver/utils/protein_design.py:design_sequence"],
+        "capabilities": ["design protein sequence", "predict amino acid probabilities"],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] == "scientific_compute_library"
+    assert match["rule"]["architect_consumable"] is True
+
+
+def test_scientific_domain_profile_beats_generic_converter_markers():
+    facts = {
+        "root": "equation_solver",
+        "domain_profile": {"kind": "scientific_compute_library"},
+        "inputs": ["structured tensor", "boundary conditions"],
+        "central": ["math/derivative.py:derivative_stack"],
+        "capabilities": ["validate structured domain", "solve differential equation"],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] == "scientific_compute_library"

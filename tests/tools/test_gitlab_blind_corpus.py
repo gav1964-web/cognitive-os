@@ -6,6 +6,7 @@ from tools.gitlab_blind_corpus import (
     _eligible,
     _project_row,
     _safe_remove_checkout,
+    _search_page,
     _search_stratum,
     known_projects,
 )
@@ -82,6 +83,17 @@ def test_search_stratum_filters_known_repository_mirror():
         )
 
     assert [row["full_name"] for row in rows if row["full_name"] != "mirror/known-tool"] == ["fresh/new-tool"]
+
+
+def test_search_page_turns_repeated_timeout_into_empty_page():
+    with (
+        patch("tools.gitlab_blind_corpus.urllib.request.urlopen", side_effect=TimeoutError),
+        patch("tools.gitlab_blind_corpus.time.sleep") as sleep,
+    ):
+        rows = _search_page({"search": "scientific"})
+
+    assert rows == []
+    sleep.assert_called_once_with(1)
 
 
 def test_safe_remove_checkout_is_limited_to_source_children(tmp_path: Path):
