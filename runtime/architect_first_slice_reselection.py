@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+from .project_probe_env import declared_project_packages
 from .role_source_context import build_source_context
 from .spec_writer_target_binding import standalone_target_eligibility
 from .technical_spec_policy import load_technical_spec_policy
@@ -33,7 +35,14 @@ def reselect_architecture_first_slice(
         sources=sources,
     )
     ready = [source for source in sources if _environment_ready_callable(expanded_context.get(source))]
-    selected = ready[: max(1, int(policy.get("selected_target_limit") or 8))]
+    declared = declared_project_packages(Path(project_root)) if project_root else set()
+    eligible = [
+        source
+        for source in sources
+        if _environment_ready_callable(expanded_context.get(source))
+        or _declared_dependency_callable(expanded_context.get(source), declared, policy)
+    ]
+    selected = eligible[: max(1, int(policy.get("selected_target_limit") or 8))]
     evidence = {
         "artifact_type": "FirstSliceReselectionOutcome",
         "iteration": iteration,
@@ -41,6 +50,7 @@ def reselect_architecture_first_slice(
         "trigger": request.get("trigger"),
         "expanded_candidate_count": len(sources),
         "environment_ready_candidate_count": len(ready),
+        "declared_dependency_candidate_count": len(set(eligible) - set(ready)),
         "selected_targets": selected,
         "authority": "architect",
         "source": "ProjectMapReport expanded candidate evidence",
@@ -114,6 +124,31 @@ def _environment_ready_callable(context: dict[str, Any] | None) -> bool:
     )
 
 
+def _declared_dependency_callable(
+    context: dict[str, Any] | None,
+    declared_packages: set[str],
+    policy: dict[str, Any],
+) -> bool:
+    if not policy.get("allow_declared_dependency_candidates", False):
+        return False
+    row = dict(context or {})
+    snippet = dict(row.get("snippet") or {})
+    readiness = dict(row.get("dependency_readiness") or {})
+    missing = {_normalize_distribution(item) for item in readiness.get("missing_external_modules") or []}
+    eligibility = standalone_target_eligibility({"target_binding": snippet.get("target_binding")})
+    return bool(
+        missing
+        and missing <= declared_packages
+        and row.get("node_kind") == "function"
+        and snippet.get("text")
+        and eligibility.get("eligible")
+    )
+
+
+def _normalize_distribution(value: Any) -> str:
+    return str(value).replace("_", "-").lower()
+
+
 def _revised_architecture_decision(
     architecture_decision: dict[str, Any],
     *,
@@ -130,7 +165,7 @@ def _revised_architecture_decision(
         "deferred_targets": list(dict.fromkeys(old_targets + list(old_slice.get("deferred_targets") or []))),
         "steps": _reselection_steps(selected_targets[0]),
         "source": "FirstSliceReselectionRequest + ProjectMapReport expanded evidence",
-        "selection_policy": "environment-ready source-backed callable within Architect-expanded candidate window",
+        "selection_policy": "environment-ready or manifest-backed callable within Architect-expanded candidate window",
         "reselection_iteration": outcome["iteration"],
     }
     source_context = dict(revised.get("source_context") or {})

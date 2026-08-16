@@ -112,6 +112,7 @@
   },
   "first_slice_reselection": {
     "enabled": true,
+    "allow_declared_dependency_candidates": true,
     "max_iterations": 1,
     "expanded_candidate_limit": 64,
     "selected_target_limit": 8,

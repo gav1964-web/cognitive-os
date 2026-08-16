@@ -96,6 +96,35 @@ def test_architect_reports_exhausted_without_environment_ready_candidate(tmp_pat
     assert resolution["architecture_decision"]["first_slice_reselection_history"][-1]["status"] == "exhausted"
 
 
+def test_architect_can_reselect_callable_with_manifest_declared_dependency(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (tmp_path / "setup.py").write_text(
+        "from setuptools import setup\nsetup(install_requires=['optional-sdk'])\n",
+        encoding="utf-8",
+    )
+    (package / "adapter.py").write_text(
+        "import optional_sdk\n\ndef convert_value(value: str) -> str:\n"
+        "    return optional_sdk.convert(value)\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "selected"
+    assert resolution["outcome"]["environment_ready_candidate_count"] == 0
+    assert resolution["outcome"]["declared_dependency_candidate_count"] == 1
+    assert resolution["outcome"]["selected_targets"] == ["pkg/adapter.py:convert_value"]
+
+
 def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monkeypatch):
     initial = {
         "architecture_decision": {"artifact_type": "ArchitectureDecisionRecord", "role": "architect"},

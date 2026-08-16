@@ -83,6 +83,23 @@ def test_unrendered_python_template_does_not_block_product_scope():
     assert _requires_scope_selection(report) is False
 
 
+def test_single_damaged_file_is_quarantined_with_multiple_safe_candidates():
+    report = {
+        "source_health": {
+            "status": "damaged", "project_shape": "single_project", "inaccessible_count": 0,
+            "syntax_error_count": 1, "syntax_error_samples": [{"path": "broken.py", "reason": "SyntaxError"}],
+        },
+        "answers": {"6_runtime_extraction_readiness": {"minimal_extraction_plan": {
+            "capabilities_to_extract": [
+                {"capability": "pkg/a.py:parse"}, {"capability": "pkg/b.py:build"},
+                {"capability": "pkg/c.py:validate"}, {"capability": "broken.py:run"},
+            ]
+        }}},
+    }
+
+    assert _requires_scope_selection(report) is False
+
+
 def test_role_foundation_blocks_dirty_portfolio_before_adr_and_spec(tmp_path):
     portfolio = tmp_path / "portfolio"
     current = portfolio / "20260101_current"

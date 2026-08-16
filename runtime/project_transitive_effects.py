@@ -32,7 +32,8 @@ def _project_nodes(root: Path, *, max_files: int) -> dict[str, dict[str, Any]]:
     paths = list(iter_python_source_files(root, limit=max_files))
     for path in paths:
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+            text = path.read_text(encoding="utf-8", errors="replace")
+            tree = ast.parse(text)
             relative = path.relative_to(root).as_posix()
         except (OSError, SyntaxError, ValueError):
             continue
@@ -43,9 +44,19 @@ def _project_nodes(root: Path, *, max_files: int) -> dict[str, dict[str, Any]]:
             nodes[source] = {
                 "symbol": node.name,
                 "calls": _called_symbols(node),
-                "effects": set(infer_ast_side_effects(node, ast.unparse(node))),
+                "effects": set(infer_ast_side_effects(node, _node_text(text, node))),
             }
     return nodes
+
+
+def _node_text(source: str, node: ast.AST) -> str:
+    segment = ast.get_source_segment(source, node)
+    if segment is not None:
+        return segment
+    try:
+        return ast.unparse(node)
+    except (TypeError, ValueError):
+        return ""
 
 
 def _source_effect_report(

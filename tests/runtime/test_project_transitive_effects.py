@@ -41,3 +41,15 @@ def test_project_effects_do_not_resolve_attribute_calls_by_suffix(tmp_path):
     report = project_transitive_effects(tmp_path)
 
     assert report["client.py:send"] == {}
+
+
+def test_project_effects_do_not_depend_on_ast_unparse(monkeypatch, tmp_path):
+    (tmp_path / "service.py").write_text(
+        "def publish(payload):\n    open('events.log', 'w').write(payload)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("runtime.project_transitive_effects.ast.unparse", lambda node: (_ for _ in ()).throw(ValueError("unsupported f-string")))
+
+    report = project_transitive_effects(tmp_path)
+
+    assert report["service.py:publish"] == {}

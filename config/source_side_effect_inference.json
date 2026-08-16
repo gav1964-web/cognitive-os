@@ -14,7 +14,7 @@
     {
       "id": "network",
       "call_exact": ["urlopen"],
-      "call_contains": ["socket", ".send", ".recv", ".sismember", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "call_api", "request_port_forward", "cancel_port_forward", "forward_tunnel", "sftp", "upload", "download"]
+      "call_contains": ["socket", ".send", ".recv", ".sismember", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "call_api", "request_port_forward", "cancel_port_forward", "forward_tunnel", "hdfs.create", "hdfs.mkdirs", "sftp", "upload", "download"]
     },
     {
       "id": "subprocess",

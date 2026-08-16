@@ -82,6 +82,38 @@
       "failure_modes": ["invalid_array_shape", "projection_failure", "artifact_write_failure"],
       "reason": "AST proves an array projection with an explicit artifact boundary"
     },
+    "object_mapping_projection": {
+      "input_contract": {"source": "ProtocolLike"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["public fields map deterministically", "private and callable values follow explicit inclusion policy", "source state is not mutated"],
+      "failure_modes": ["unsupported_source_shape", "field_projection_failure", "key_normalization_collision"],
+      "reason": "AST proves a bounded object-to-mapping projection"
+    },
+    "callable_decorator_factory": {
+      "input_contract": {"declaration": "DecoratorDeclaration", "options": "DecoratorOptions"},
+      "output_contract": {"result": "Callable"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "factory construction is isolated from invocation effects", "requires_validation_gate": true},
+      "validation_gates": ["factory returns a callable for valid options", "invalid declaration combinations fail explicitly", "invocation effects remain in the returned callable contract"],
+      "failure_modes": ["invalid_declaration", "unsupported_option_combination", "callable_construction_failure"],
+      "reason": "AST proves a bounded callable decorator factory"
+    },
+    "parameterized_text_builder": {
+      "input_contract": {"parameters": "TextBuilderParameters"},
+      "output_contract": {"result": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "text construction is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["all placeholders bind deterministically", "escaping and empty values are covered", "output is stable for identical parameters"],
+      "failure_modes": ["missing_parameter", "invalid_parameter_type", "template_render_failure"],
+      "reason": "AST proves a bounded parameterized text builder"
+    },
+    "mapping_observability_validation_command": {
+      "input_contract": {"path": "PathLike", "values": "MappingLike"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["observability"], "output_policy": "validation findings are emitted explicitly", "requires_validation_gate": true},
+      "validation_gates": ["valid and obsolete mapping entries are covered", "diagnostics identify the failing key", "input mapping is not mutated"],
+      "failure_modes": ["invalid_mapping", "obsolete_entry", "diagnostic_sink_failure"],
+      "reason": "AST proves a mapping validation command with observable findings"
+    },
     "validated_string_projection": {
       "input_contract": {"source": "ProjectionSource", "projection_options": "StringProjectionOptions"},
       "output_contract": {"result": "str", "failure_packet": "StringProjectionFailure(kind, evidence_ref?)"},

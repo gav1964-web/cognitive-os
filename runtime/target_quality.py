@@ -7,7 +7,7 @@ from typing import Any
 from .contract_archetype_inference import archetype_score_adjustments
 from .semantic_target_profiles import semantic_score_adjustments
 from .source_contract_semantics import structural_quality_adjustment
-from .target_structural_families import structural_contract_family as _structural_contract_family
+from .target_structural_families import structural_contract_family_rule
 from .target_quality_policy import policy_tokens, target_quality_section
 
 
@@ -101,9 +101,10 @@ def semantic_target_quality_report(
     reasons.extend(archetype_adjustments["reasons"])
     profile_ids = list(profile_adjustments.get("profile_ids") or [])
     archetype_ids = list(archetype_adjustments.get("profile_ids") or [])
-    structural_profile = _structural_contract_family(structural_evidence, side_effect_contract)
+    structural_rule = structural_contract_family_rule(structural_evidence, side_effect_contract)
+    structural_profile = str(structural_rule.get("family_id") or "")
     if structural_profile:
-        score += 4
+        score += int(structural_rule.get("score_bonus") or 4)
         archetype_ids.append(structural_profile)
         reasons.append("source structure proves a bounded contract family")
     profiled_contract_family = bool(
@@ -135,7 +136,7 @@ def semantic_target_quality_report(
     benign_boundary = bool(
         profile_adjustments["benign_runtime_boundary"]
         or archetype_adjustments["benign_runtime_boundary"]
-        or structural_profile == "route_tree_flatten_boundary"
+        or structural_rule.get("benign_runtime_boundary")
     )
     if boundary and not (special_boundary["allow_runtime"] or benign_boundary):
         score -= min(35, 12 + len(boundary) * 5)

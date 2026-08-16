@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from runtime.scope_selection_policy import syntax_error_fixture_path
+from runtime.scope_selection_policy import syntax_damage_is_quarantinable, syntax_error_fixture_path
 
 
 def red_team_architecture_decision(adr: dict[str, Any], project_report: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -238,6 +238,8 @@ def _source_tree_scope_is_clean(project_report: dict[str, Any]) -> bool:
     status = str(source_health.get("status") or "clean")
     shape = str(source_health.get("project_shape") or "single_project")
     if _syntax_damage_is_fixture_only(source_health):
+        return True
+    if syntax_damage_is_quarantinable(dict(project_report.get("content", project_report))):
         return True
     if status == "damaged" or shape == "dirty_portfolio" or int(source_health.get("packaged_copy_signal_count") or 0) > 0:
         return bool(source_health.get("active_root_decision"))

@@ -62,6 +62,35 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "object_mapping_projection", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "equals", "value": "MappingLike"},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "callable_decorator_factory", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "Callable"},
+      {"field": "argument_count", "op": "gte", "value": 2},
+      {"field": "return_paths", "op": "gte", "value": 1},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "parameterized_text_builder", "score_bonus": 10, "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "argument_count", "op": "gte", "value": 4},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "mapping_observability_validation_command", "score_bonus": 4, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "MappingLike"},
+      {"field": "observed_effects", "op": "contains", "value": "observability"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "validated_string_projection", "all": [
       {"field": "output_type", "op": "equals", "value": "str"},
       {"field": "argument_count", "op": "gte", "value": 3},

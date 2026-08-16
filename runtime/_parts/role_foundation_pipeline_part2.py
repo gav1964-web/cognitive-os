@@ -18,6 +18,7 @@ from runtime.project_interpreter import interpret_project_report
 from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
 from runtime.scope_selection_document import write_scope_selection_document
+from runtime.scope_selection_policy import syntax_damage_is_quarantinable as _syntax_damage_is_quarantinable
 from runtime.spec_writer_red_team import red_team_technical_spec
 from runtime.technical_spec_document import write_technical_spec_document
 
@@ -133,9 +134,12 @@ def _requires_scope_selection(
         return True
     if _syntax_damage_is_fixture_only(source_health):
         return False
+    if _syntax_damage_is_quarantinable(project_map_report):
+        return False
     if status == "damaged":
         return True
     return False
+
 
 def _scope_selection_report(
     project_dir: Path,

@@ -74,6 +74,12 @@ def dependency_module_plan(
         },
     }
 
+
+def declared_project_packages(project_dir: Path) -> set[str]:
+    """Return normalized distribution names declared by project manifests."""
+    packages, _ = _declared_packages(project_dir)
+    return packages
+
 def _dependency_modules(behavior: dict[str, Any]) -> list[str]:
     result = []
     pattern = re.compile(r"No module named ['\"]([^'\"]+)['\"]")

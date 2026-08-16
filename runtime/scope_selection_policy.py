@@ -43,6 +43,26 @@ def syntax_error_fixture_path(path: str) -> bool:
     return bool(fixture_parts) or test_support_file or test_data or example_doc or template_file
 
 
+def syntax_damage_is_quarantinable(project_report: dict[str, Any]) -> bool:
+    source_health = dict(project_report.get("source_health") or {})
+    if source_health.get("status") != "damaged" or int(source_health.get("inaccessible_count") or 0) > 0:
+        return False
+    samples = [dict(row) for row in source_health.get("syntax_error_samples", []) if isinstance(row, dict)]
+    count = int(source_health.get("syntax_error_count") or 0)
+    if not count or count > len(samples) or count > scope_policy_int("quarantinable_production_syntax_error_max", 0):
+        return False
+    damaged = {str(row.get("path") or "").replace("\\", "/") for row in samples}
+    answers = dict(project_report.get("answers") or {})
+    readiness = dict(answers.get("6_runtime_extraction_readiness") or {})
+    plan = dict(readiness.get("minimal_extraction_plan") or {})
+    candidates = [dict(row) for row in plan.get("capabilities_to_extract", []) if isinstance(row, dict)]
+    safe = [
+        row for row in candidates
+        if not any(str(row.get("source") or row.get("capability") or "").startswith(f"{path}:") for path in damaged)
+    ]
+    return len(safe) >= scope_policy_int("quarantine_min_safe_candidates", 3)
+
+
 def scope_candidate_priority(rel_path: str) -> int:
     lowered = rel_path.replace("\\", "/").lower().strip("/")
     first = lowered.split("/", 1)[0]

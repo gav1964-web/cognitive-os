@@ -43,11 +43,20 @@ def structural_contract_family(
     *,
     rules_path: str | None = None,
 ) -> str:
+    return str(structural_contract_family_rule(evidence, side_effect_contract, rules_path=rules_path).get("family_id") or "")
+
+
+def structural_contract_family_rule(
+    evidence: dict[str, Any] | None,
+    side_effect_contract: dict[str, Any] | None = None,
+    *,
+    rules_path: str | None = None,
+) -> dict[str, Any]:
     facts = _normalized_facts(evidence, side_effect_contract)
     for rule in load_structural_family_rules(rules_path)["rules"]:
         if all(_matches(facts, dict(condition)) for condition in rule["all"]):
-            return str(rule["family_id"])
-    return ""
+            return dict(rule)
+    return {}
 
 
 def _normalized_facts(

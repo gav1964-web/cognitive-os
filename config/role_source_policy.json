@@ -62,6 +62,8 @@
     "syntax_fixture_doc_path_tokens": ["/docs/"],
     "syntax_fixture_doc_required_any": ["example", "/samples/"],
     "syntax_fixture_file_tokens": ["_template.py", "template.py"],
+    "quarantinable_production_syntax_error_max": 1,
+    "quarantine_min_safe_candidates": 3,
     "preferred_root_bonus": 40,
     "preferred_roots": ["src", "lib"],
     "core_root_bonus": 25,

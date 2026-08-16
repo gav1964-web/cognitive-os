@@ -7,7 +7,7 @@ import textwrap
 from typing import Any
 
 from runtime.source_contract_helpers import binary_result_shape, is_file_extension_policy, local_type_factories, target_mutates_external_state, xml_call_shape, yield_path_count
-from runtime.source_ast_scope import callable_scope_walk
+from runtime.source_ast_scope import callable_scope_walk, nested_definitions
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
 from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
@@ -136,10 +136,12 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
             for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
             if arg.arg not in {"self", "cls"}
         ]
+        nested_callables = {node.name: "Callable" for node in nested_definitions(function) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         assignments = {
             **_argument_usage_types(function, argument_names),
             **_assignment_shapes(function),
             **local_type_factories(function),
+            **nested_callables,
         }
         yielded = [node for node in callable_scope_walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
         if yielded:
