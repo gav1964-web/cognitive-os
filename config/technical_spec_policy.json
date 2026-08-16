@@ -88,6 +88,7 @@
     "missing_external_penalty_each": 24,
     "max_missing_external_penalty": 72,
     "environment_ready_reselection_score_slack": 40,
+    "environment_ready_reselection_semantic_slack": 0,
     "reason_prefix": "runtime environment misses external imports",
     "profile_resolution_options": [
       "select_environment_ready_ranked_candidate",

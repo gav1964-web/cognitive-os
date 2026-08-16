@@ -43,10 +43,13 @@ def promote_environment_ready_candidate(ranked: list[dict[str, Any]]) -> list[di
         return ranked
     policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
     slack = int(policy.get("environment_ready_reselection_score_slack") or 0)
+    semantic_slack = int(policy.get("environment_ready_reselection_semantic_slack") or 0)
     first_score = int(ranked[0].get("score") or 0)
+    first_semantic = int(ranked[0].get("semantic_score") or 0)
     alternatives = [
         item for item in ranked[1:]
         if _candidate_is_environment_ready(item) and int(item.get("score") or 0) >= first_score - slack
+        and _preserves_semantic_quality(item, first_semantic=first_semantic, slack=semantic_slack)
     ]
     if not alternatives:
         return ranked
@@ -56,6 +59,11 @@ def promote_environment_ready_candidate(ranked: list[dict[str, Any]]) -> list[di
         "environment-ready candidate selected within configured score slack",
     ]
     return [selected, *[item for item in ranked if item is not selected]]
+
+
+def _preserves_semantic_quality(item: dict[str, Any], *, first_semantic: int, slack: int) -> bool:
+    candidate_semantic = int(item.get("semantic_score") or 0)
+    return not first_semantic or not candidate_semantic or candidate_semantic >= first_semantic - slack
 
 
 def _candidate_is_environment_ready(item: dict[str, Any]) -> bool:

@@ -82,6 +82,14 @@
       "failure_modes": ["invalid_array_shape", "projection_failure", "artifact_write_failure"],
       "reason": "AST proves an array projection with an explicit artifact boundary"
     },
+    "numerical_array_transform_boundary": {
+      "input_contract": {"data": "ArrayLike", "options": "NumericalTransformOptions?"},
+      "output_contract": {"result": "ArrayLike", "failure_packet": "NumericalTransformFailure(kind, shape?, dtype?)"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "numerical transformation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["input and output shapes and dtypes are explicit", "invalid shape and non-finite inputs are covered", "input arrays are not mutated"],
+      "failure_modes": ["invalid_array_shape", "unsupported_dtype", "non_finite_input", "numerical_failure"],
+      "reason": "AST proves a side-effect-free numerical array transformation"
+    },
     "object_mapping_projection": {
       "input_contract": {"source": "ProtocolLike"},
       "output_contract": {"result": "MappingLike"},

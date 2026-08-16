@@ -74,6 +74,13 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "numerical_array_transform_boundary", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "equals", "value": "ArrayLike"},
+      {"field": "usage_types", "op": "contains", "value": "ArrayLike"},
+      {"field": "declared_effects", "op": "set_equals", "value": []},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "filesystem_typed_collection_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
       {"field": "output_type", "op": "starts_with_ci", "value": "List["},
       {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},

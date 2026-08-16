@@ -6,13 +6,13 @@ import ast
 import textwrap
 from typing import Any
 
-from runtime.source_contract_helpers import binary_result_shape, is_file_extension_policy, local_type_factories, target_mutates_external_state, xml_call_shape, yield_path_count
+from runtime.source_contract_helpers import is_file_extension_policy, local_type_factories, target_mutates_external_state, yield_path_count
+from runtime.source_contract_types import all_contract_shapes_concrete, concrete_output, concrete_type
 from runtime.source_ast_scope import callable_scope_walk, nested_definitions
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
-from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
+from runtime.source_dispatch_evidence import has_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
-
-_WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult"}
+from runtime.source_expression_shapes import assignment_shapes, expression_shape
 
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     precomputed = candidate.get("structural_contract")
@@ -27,11 +27,12 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     args = [row for row in signature.get("args", []) or [] if isinstance(row, dict)]
     args = [row for row in args if str(row.get("name") or "") not in {"self", "cls"}]
     docstring_types = docstring_argument_types(snippet, [str(row.get("name") or "") for row in args])
-    constraint_types = _argument_constraint_types(function, [str(row.get("name") or "") for row in args])
+    argument_names = [str(row.get("name") or "") for row in args]
+    constraint_types = {**_argument_default_types(function, argument_names), **_argument_constraint_types(function, argument_names)}
     usage_types = _argument_usage_types(function, [str(row.get("name") or "") for row in args])
     return_annotation = str(signature.get("returns") or "").strip()
     inferred_output, output_basis = _output_shape(function, return_annotation, snippet, source_complete=source_complete)
-    typed_args = [row for row in args if _concrete_type(row.get("annotation"))]
+    typed_args = [row for row in args if concrete_type(row.get("annotation"))]
     return {
         "source_body_available": function is not None,
         "async_callable": isinstance(function, ast.AsyncFunctionDef),
@@ -70,7 +71,7 @@ def structural_quality_adjustment(
     inputs = dict(input_contract or {})
     outputs = dict(output_contract or {})
     effects = dict(side_effect_contract or {})
-    concrete_inputs = [value for value in inputs.values() if _concrete_type(value)]
+    concrete_inputs = [value for value in inputs.values() if concrete_type(value)]
     if inputs and len(concrete_inputs) == len(inputs):
         score += 6
         reasons.append("source-bound input shapes are concrete")
@@ -79,10 +80,10 @@ def structural_quality_adjustment(
         reasons.append("source-bound input shapes are partially concrete")
     explicit_return = str(evidence.get("explicit_return_annotation") or "").strip()
     inferred_output = str(evidence.get("inferred_output_type") or "").strip()
-    if _concrete_type(explicit_return) or explicit_return.lower() in {"none", "nonetype"}:
+    if concrete_type(explicit_return) or explicit_return.lower() in {"none", "nonetype"}:
         score += 8
         reasons.append("return behavior is bound to an explicit annotation")
-    elif _concrete_type(inferred_output) and _concrete_output(outputs):
+    elif concrete_type(inferred_output) and concrete_output(outputs):
         score += 5
         reasons.append("return shape is inferred from callable body or docstring")
     if evidence.get("source_body_complete"):
@@ -114,7 +115,7 @@ def structural_quality_adjustment(
     if output_types & void_outputs and set(declared_effects) & mutating_effects and evidence.get("source_body_complete"):
         score += 3
         reasons.append("state transition boundary is structurally proven")
-    if not declared_effects and _all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):
+    if not declared_effects and all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):
         score += 3
         reasons.append("complete source proves a bounded side-effect-free transform")
     return score, reasons
@@ -136,16 +137,17 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
             if arg.arg not in {"self", "cls"}
         ]
         nested_callables = {node.name: "Callable" for node in nested_definitions(function) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        usage_shapes = _argument_usage_types(function, argument_names)
         assignments = {
-            **_argument_usage_types(function, argument_names),
-            **_assignment_shapes(function),
+            **usage_shapes,
+            **assignment_shapes(function, usage_shapes),
             **local_type_factories(function),
             **nested_callables,
         }
         yielded = [node for node in callable_scope_walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
         if yielded:
             return "IteratorLike", "yield_expression"
-        shapes = [_expression_shape(node.value, assignments) for node in callable_scope_walk(function) if isinstance(node, ast.Return) and node.value]
+        shapes = [expression_shape(node.value, assignments) for node in callable_scope_walk(function) if isinstance(node, ast.Return) and node.value]
         shapes = [shape for shape in shapes if shape]
         if shapes:
             unique = sorted(set(shapes))
@@ -161,76 +163,6 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
     return "InferredOutput", "insufficient_structural_evidence"
 
 
-def _assignment_shapes(function: ast.AST) -> dict[str, str]:
-    shapes: dict[str, str] = {}
-    for node in callable_scope_walk(function):
-        if isinstance(node, (ast.Assign, ast.AnnAssign)):
-            value = node.value
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            shape = _expression_shape(value, shapes) if value is not None else ""
-            for target in targets:
-                if isinstance(target, ast.Name) and shape:
-                    shapes[target.id] = shape
-                elif isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
-                    shapes[target.value.id] = "MappingLike"
-    return shapes
-
-
-def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
-    literals = {ast.Dict: "MappingLike", ast.List: "SequenceLike", ast.ListComp: "SequenceLike", ast.Tuple: "TupleLike", ast.Set: "SetLike"}
-    if type(node) in literals:
-        return literals[type(node)]
-    if isinstance(node, ast.Name):
-        if node.id in {"self", "cls"}:
-            return "ReceiverState"
-        return assignments.get(node.id, "")
-    if isinstance(node, ast.IfExp):
-        shapes = {_expression_shape(branch, assignments) for branch in (node.body, node.orelse)} - {""}
-        ordered = sorted(shapes)
-        return ordered[0] if len(ordered) == 1 else f"Union[{', '.join(ordered)}]" if ordered else ""
-    if isinstance(node, (ast.BoolOp, ast.Compare)):
-        return "bool"
-    if isinstance(node, ast.Await):
-        return _expression_shape(node.value, assignments)
-    if isinstance(node, ast.Constant):
-        return type(node.value).__name__
-    if isinstance(node, ast.Attribute):
-        return "AttributeValue"
-    if isinstance(node, ast.BinOp):
-        return binary_result_shape({_expression_shape(value, assignments) for value in (node.left, node.right)})
-    if isinstance(node, ast.Call):
-        if is_receiver_request_dispatch(node):
-            return "DispatchedResult"
-        raw_name = _call_name(node.func); name = raw_name.lower()
-        if name == "isinstance":
-            return "bool"
-        if any(token in name for token in ("render", "request", "response", "redirect")):
-            return "ResponseLike"
-        if name.endswith(("dict", "to_dict", "kwargs")):
-            return "MappingLike"
-        owner, _, operation = name.rpartition(".")
-        if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")):
-            return "EntityLike"
-        if name.endswith(("list", "all")):
-            return "SequenceLike"
-        if name.endswith(("numpy", "array", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")) or (name.startswith(("torch.", "np.", "numpy.")) and name.endswith(("sum", "mean", "clamp"))):
-            return "ArrayLike"
-        if name.endswith(("_item", "from_json")):
-            return "ItemLike"
-        if name.endswith(("format", "replace", "strip", "zfill")):
-            return "str"
-        if name.endswith(("unpad", "unpadding")): return "bytes"
-        if name.startswith(("np.", "numpy.")) and name.endswith(("exp", "log", "log10", "log2")):
-            return "ArrayLike"
-        if name.endswith(("image.frombytes", "image.fromarray")):
-            return "ImageLike"
-        xml_shape = xml_call_shape(name)
-        if xml_shape:
-            return xml_shape
-        if raw_name.rsplit(".", 1)[-1][:1].isupper(): return f"ConstructedObject[{raw_name.rsplit('.', 1)[-1]}]"
-        if name.endswith((".execute", ".executemany")):
-            return "DatabaseResult"
-    return ""
 def _function_node(snippet: str) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | None, bool]:
     if not snippet:
         return None, False
@@ -326,11 +258,33 @@ def _argument_constraint_types(function: ast.AST | None, names: list[str]) -> di
     return result
 
 
+def _argument_default_types(function: ast.AST | None, names: list[str]) -> dict[str, str]:
+    if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return {}
+    positional = [arg for arg in [*function.args.posonlyargs, *function.args.args] if arg.arg in names]
+    rows = list(zip(positional[-len(function.args.defaults):], function.args.defaults)) if function.args.defaults else []
+    rows.extend(
+        (arg, default) for arg, default in zip(function.args.kwonlyargs, function.args.kw_defaults)
+        if arg.arg in names and default is not None
+    )
+    result = {}
+    for arg, default in rows:
+        if isinstance(default, ast.Constant):
+            result[arg.arg] = type(default.value).__name__
+        elif isinstance(default, (ast.List, ast.Tuple, ast.Dict, ast.Set)):
+            result[arg.arg] = {ast.List: "SequenceLike", ast.Tuple: "TupleLike", ast.Dict: "MappingLike", ast.Set: "SetLike"}[type(default)]
+    return result
+
+
 def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[str, str]:
     if function is None:
         return {}
     known = set(names)
     inferred: dict[str, str] = {}
+    numerical_context = any(
+        isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow."))
+        for node in callable_scope_walk(function)
+    )
     for node in callable_scope_walk(function):
         if isinstance(node, ast.Delete):
             for target in node.targets:
@@ -338,6 +292,11 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                     inferred[target.value.id] = "MappingLike"
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
             name = node.func.value.id
+            call_name = _call_name(node.func).lower()
+            if (name == "self" and numerical_context) or call_name.startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow.")):
+                for arg in node.args:
+                    if isinstance(arg, ast.Name) and arg.id in known:
+                        inferred[arg.id] = "ArrayLike"
             if node.func.attr in {"execute", "executemany"}:
                 for arg in node.args:
                     if isinstance(arg, ast.Name) and arg.id in known:
@@ -350,10 +309,18 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                 inferred[name] = "ArrayLike"
             elif name in known:
                 inferred.setdefault(name, "ProtocolLike")
+        elif isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow.")):
+            for arg in node.args:
+                if isinstance(arg, ast.Name) and arg.id in known:
+                    inferred[arg.id] = "ArrayLike"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known and node.attr in {"shape", "dtype", "ndim"}:
             inferred[node.value.id] = "ArrayLike"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known:
             inferred.setdefault(node.value.id, "ProtocolLike")
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if isinstance(node.value, ast.Name) and node.value.id in known and any(isinstance(target, (ast.Tuple, ast.List)) for target in targets):
+                inferred[node.value.id] = "ArrayLike" if numerical_context else "SequenceLike"
         elif isinstance(node, ast.Call) and _call_name(node.func) == "open":
             for arg in node.args:
                 if isinstance(arg, ast.Name) and arg.id in known:
@@ -391,10 +358,3 @@ def _constraint_constants(node: ast.AST) -> set[object]:
     if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
         return {item.value for item in node.elts if isinstance(item, ast.Constant)}
     return set()
-def _concrete_output(contract: dict[str, Any]) -> bool:
-    return bool(contract) and all(_concrete_type(value) for value in contract.values())
-def _all_contract_shapes_concrete(inputs: dict[str, Any], outputs: dict[str, Any]) -> bool:
-    return bool(inputs and outputs) and all(_concrete_type(value) for value in [*inputs.values(), *outputs.values()])
-def _concrete_type(value: object) -> bool:
-    text = str(value or "").strip().lower()
-    return bool(text) and text not in _WEAK_TYPES and not text.startswith("inferred")

@@ -17,6 +17,15 @@ def test_environment_ready_candidate_is_promoted_within_score_slack():
     assert "environment-ready candidate selected" in ranked[0]["reasons"][-1]
 
 
+def test_environment_ready_candidate_does_not_replace_stronger_semantic_contract():
+    missing = _ranked("pkg/domain.py:normalize", 80, "missing_external", semantic_score=100)
+    ready = _ranked("runtests.py:lint_main", 75, "ready", semantic_score=92)
+
+    ranked = promote_environment_ready_candidate([missing, ready])
+
+    assert ranked[0]["source"] == "pkg/domain.py:normalize"
+
+
 def test_reselection_request_is_required_without_ready_function_alternative():
     request = build_first_slice_reselection_request(
         {"candidate": "pkg/adapter.py:run"},
@@ -286,10 +295,11 @@ def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monk
     assert result["implementation_plan"]["first_slice_reselection_request"] == request
 
 
-def _ranked(source: str, score: int, status: str) -> dict:
+def _ranked(source: str, score: int, status: str, *, semantic_score: int = 0) -> dict:
     return {
         "source": source,
         "score": score,
+        "semantic_score": semantic_score,
         "index": 0 if status == "missing_external" else 1,
         "reasons": [],
         "evidence": {"dependency_readiness": {"status": status}},
