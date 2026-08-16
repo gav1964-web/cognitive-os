@@ -13,7 +13,9 @@ from .python_parser_compatibility import parse_compatible_source
 from .technical_spec_policy import load_technical_spec_policy
 
 
-def source_dependency_readiness(project_root: Path, relative_path: str) -> dict[str, Any]:
+def source_dependency_readiness(
+    project_root: Path, relative_path: str, symbol: str | None = None
+) -> dict[str, Any]:
     policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
     if not policy.get("enabled", True):
         return {"status": "disabled", "missing_external_modules": []}
@@ -21,17 +23,21 @@ def source_dependency_readiness(project_root: Path, relative_path: str) -> dict[
         str(project_root.resolve()),
         str(relative_path).replace("\\", "/"),
         int(policy.get("max_local_import_depth") or 0),
+        str(symbol or ""),
     )
 
 
 @lru_cache(maxsize=4096)
-def _readiness(root_text: str, relative_path: str, max_depth: int) -> dict[str, Any]:
+def _readiness(root_text: str, relative_path: str, max_depth: int, symbol: str = "") -> dict[str, Any]:
     root = Path(root_text)
     start = (root / relative_path).resolve()
     external: set[str] = set()
     local_modules: set[str] = set()
     visited: set[Path] = set()
-    _walk_imports(root, start, max_depth, visited, local_modules, external)
+    if symbol:
+        _walk_symbol_imports(root, start, symbol, max_depth, visited, local_modules, external)
+    else:
+        _walk_imports(root, start, max_depth, visited, local_modules, external)
     policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
     compat_stdlib = {str(item) for item in policy.get("stdlib_compat_modules", [])}
     missing = sorted(module for module in external if module not in compat_stdlib and not _module_available(module))
@@ -42,8 +48,73 @@ def _readiness(root_text: str, relative_path: str, max_depth: int) -> dict[str, 
         "local_imports": sorted(local_modules)[:24],
         "external_imports": sorted(external)[:24],
         "missing_external_modules": missing[:12],
-        "analysis": "static_import_graph_no_project_import",
+        "analysis": "function_scoped_static_import_graph" if symbol else "static_import_graph_no_project_import",
     }
+
+
+def _walk_symbol_imports(
+    root: Path, path: Path, symbol: str, depth: int, visited: set[Path],
+    local_modules: set[str], external: set[str],
+) -> None:
+    if not path.is_file():
+        return
+    visited.add(path)
+    try:
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8", errors="replace"), path.as_posix())
+    except (OSError, SyntaxError):
+        return
+    modules = _modules_used_by_symbol(tree, symbol)
+    if modules is None:
+        _walk_imports(root, path, depth, visited, local_modules, external)
+        return
+    for module in modules:
+        local_path = _local_module_path(root, module)
+        if local_path is not None:
+            local_modules.add(module)
+            _walk_imports(root, local_path, depth - 1, visited, local_modules, external)
+            continue
+        root_module = module.split(".", 1)[0]
+        if root_module and root_module not in sys.stdlib_module_names:
+            external.add(root_module)
+
+
+def _modules_used_by_symbol(tree: ast.Module, symbol: str) -> set[str] | None:
+    imports: dict[str, str] = {}
+    wildcard_modules: set[str] = set()
+    definitions = {
+        node.name: node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            imports.update({alias.asname or alias.name.split(".", 1)[0]: alias.name for alias in node.names})
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                if alias.name == "*":
+                    wildcard_modules.add(node.module)
+                else:
+                    imports[alias.asname or alias.name] = node.module
+    start = definitions.get(symbol.rsplit(".", 1)[-1])
+    if start is None:
+        return None
+    selected: list[ast.AST] = []
+    queue = [start]
+    seen = set()
+    while queue:
+        node = queue.pop()
+        if id(node) in seen:
+            continue
+        seen.add(id(node))
+        selected.append(node)
+        called = {
+            child.func.id for child in ast.walk(node)
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+        }
+        queue.extend(definitions[name] for name in called if name in definitions)
+    loaded = {
+        child.id for node in selected for child in ast.walk(node)
+        if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+    }
+    return {module for name, module in imports.items() if name in loaded} | wildcard_modules
 
 
 def _walk_imports(

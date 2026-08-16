@@ -72,6 +72,8 @@ def test_reselection_request_rejects_candidate_without_bound_source_body():
     assert request["trigger"] == "source_body_not_bound_in_approved_first_slice"
 
 
+
+
 def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()

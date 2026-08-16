@@ -100,6 +100,45 @@ def test_single_damaged_file_is_quarantined_with_multiple_safe_candidates():
     assert _requires_scope_selection(report) is False
 
 
+def test_three_known_damaged_files_are_quarantined_with_safe_candidates():
+    damaged = [f"broken_{index}.py" for index in range(3)]
+    report = {
+        "source_health": {
+            "status": "damaged", "project_shape": "single_project", "inaccessible_count": 0,
+            "syntax_error_count": 3,
+            "syntax_error_samples": [{"path": path, "reason": "SyntaxError"} for path in damaged],
+        },
+        "answers": {"6_runtime_extraction_readiness": {"minimal_extraction_plan": {
+            "capabilities_to_extract": [
+                {"capability": "pkg/a.py:parse"}, {"capability": "pkg/b.py:build"},
+                {"capability": "pkg/c.py:validate"}, {"capability": "broken_1.py:run"},
+            ]
+        }}},
+    }
+
+    assert _requires_scope_selection(report) is False
+
+
+def test_four_damaged_files_still_require_scope_selection():
+    report = {
+        "source_health": {
+            "status": "damaged", "project_shape": "single_project", "inaccessible_count": 0,
+            "syntax_error_count": 4,
+            "syntax_error_samples": [
+                {"path": f"broken_{index}.py", "reason": "SyntaxError"} for index in range(4)
+            ],
+        },
+        "answers": {"6_runtime_extraction_readiness": {"minimal_extraction_plan": {
+            "capabilities_to_extract": [
+                {"capability": "pkg/a.py:parse"}, {"capability": "pkg/b.py:build"},
+                {"capability": "pkg/c.py:validate"},
+            ]
+        }}},
+    }
+
+    assert _requires_scope_selection(report) is True
+
+
 def test_role_foundation_blocks_dirty_portfolio_before_adr_and_spec(tmp_path):
     portfolio = tmp_path / "portfolio"
     current = portfolio / "20260101_current"

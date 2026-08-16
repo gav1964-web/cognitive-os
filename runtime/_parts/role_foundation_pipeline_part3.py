@@ -14,6 +14,7 @@ from runtime.foundation_semantic_quality import evaluate_foundation_semantic_qua
 from runtime.human_document_quality import evaluate_human_role_documents
 from runtime.local_inference import LocalInferenceConfig
 from runtime.project_benchmark import analyze_project
+from runtime.python_source_files import is_python_source_ref
 from runtime.project_interpreter import interpret_project_report
 from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
@@ -289,7 +290,7 @@ def _acceptance_is_source_linked(spec: dict[str, Any]) -> bool:
     return any(
         isinstance(row, dict)
         and row.get("source")
-        and ":" in str(row.get("source"))
+        and is_python_source_ref(str(row.get("source")))
         and str(row.get("source")) in str(row.get("criterion"))
         for row in criteria
     )

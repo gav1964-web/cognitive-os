@@ -48,6 +48,20 @@
       ,"_pytest.py"
     ],
     "fallback_product_path_tokens": ["/scripts/"],
+    "module_script_boundary": {
+      "enabled": true,
+      "allowed_source_health": ["clean"],
+      "allowed_project_shapes": ["single_project"],
+      "max_entrypoint_candidates": 2,
+      "candidate_limit": 2,
+      "required_blocker": "no_safe_python_candidate",
+      "candidate_kind": "module_script_process_boundary",
+      "reason": "clean executable Python entrypoint requires a bounded main/run extraction contract",
+      "network_imports": ["aiohttp", "boto3", "github", "google", "grpc", "httpx", "openai", "requests", "urllib"],
+      "secret_env_markers": ["credential", "key", "password", "secret", "token"],
+      "path_argument_markers": ["dest", "file", "out", "path", "source", "src"],
+      "json_output_calls": ["json.dump", "json.dumps"]
+    },
     "blocked_status": "blocked_no_safe_candidate",
     "blocked_by": [
       "no_safe_source_specific_candidate",
@@ -63,7 +77,7 @@
     "syntax_fixture_doc_path_tokens": ["/docs/"],
     "syntax_fixture_doc_required_any": ["example", "/samples/"],
     "syntax_fixture_file_tokens": ["_template.py", "template.py"],
-    "quarantinable_production_syntax_error_max": 1,
+    "quarantinable_production_syntax_error_max": 3,
     "quarantine_min_safe_candidates": 3,
     "preferred_root_bonus": 40,
     "preferred_roots": ["src", "lib"],

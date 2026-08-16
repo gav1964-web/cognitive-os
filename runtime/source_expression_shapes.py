@@ -71,7 +71,7 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if name.endswith(("numpy", "array", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")): return "ArrayLike"
     if name.startswith(ARRAY_PREFIXES) and name.endswith(ARRAY_CALL_SUFFIXES): return "ArrayLike"
     if name.endswith(("_item", "from_json")): return "ItemLike"
-    if name.endswith(("format", "replace", "strip", "zfill")): return "str"
+    if name.endswith(("format", "replace", "strip", "translate", "zfill")): return "str"
     if name.endswith(("unpad", "unpadding")): return "bytes"
     if name.endswith(("image.frombytes", "image.fromarray")): return "ImageLike"
     xml_shape = xml_call_shape(name)

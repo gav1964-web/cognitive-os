@@ -109,3 +109,21 @@ def test_dependency_readiness_ignores_qualified_type_checking_imports(tmp_path: 
     readiness = source_dependency_readiness(project, "entry.py")
 
     assert readiness["status"] == "ready"
+
+
+def test_function_readiness_ignores_unused_module_dependency(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "entry.py").write_text(
+        "import definitely_missing_cognitive_os_dep\n\n"
+        "def normalize(value):\n    return value.strip()\n\n"
+        "def remote(value):\n    return definitely_missing_cognitive_os_dep.convert(value)\n",
+        encoding="utf-8",
+    )
+
+    normalize = source_dependency_readiness(project, "entry.py", "normalize")
+    remote = source_dependency_readiness(project, "entry.py", "remote")
+
+    assert normalize["status"] == "ready"
+    assert normalize["analysis"] == "function_scoped_static_import_graph"
+    assert remote["missing_external_modules"] == ["definitely_missing_cognitive_os_dep"]

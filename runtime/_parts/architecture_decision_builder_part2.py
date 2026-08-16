@@ -273,7 +273,7 @@ def _contract_targets(files_or_symbols: list[str], source_context: dict[str, dic
     return rows
 
 def _implementation_source(source: str) -> bool:
-    if is_python_source_ref(source) and ":" in source:
+    if is_python_source_ref(source) and not is_context_only_implementation_target(source):
         return True
     lowered = source.lower()
     if lowered.startswith("[") and " " in lowered:

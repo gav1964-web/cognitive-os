@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from runtime.scope_selection_policy import syntax_damage_is_quarantinable, syntax_error_fixture_path
+from runtime.python_source_files import is_python_source_ref
 
 
 def red_team_architecture_decision(adr: dict[str, Any], project_report: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -279,7 +280,7 @@ def _syntax_damage_is_fixture_only(source_health: dict[str, Any]) -> bool:
 
 def _looks_like_source(value: object) -> bool:
     text = str(value or "")
-    return bool(text and (".py:" in text or ":" in text or text.startswith("ProjectMapReport.")))
+    return bool(text and (is_python_source_ref(text) or ":" in text or text.startswith("ProjectMapReport.")))
 
 
 def _normalize_source_ref(source: str) -> str:

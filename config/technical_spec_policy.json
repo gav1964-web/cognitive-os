@@ -85,6 +85,7 @@
     "enabled": true,
     "max_local_import_depth": 4,
     "stdlib_compat_modules": ["ConfigParser", "urllib2", "urlparse"],
+    "unsupported_runtime_names": ["basestring", "long", "raw_input", "unicode", "xrange"],
     "missing_external_penalty_each": 24,
     "max_missing_external_penalty": 72,
     "environment_ready_reselection_score_slack": 40,

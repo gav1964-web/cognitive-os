@@ -34,6 +34,7 @@ def reselect_architecture_first_slice(
         project_root=project_root,
         project_report=project_report,
         sources=sources,
+        function_scoped_dependencies=True,
     )
     sources = _qualify_ambiguous_method_sources(sources, expanded_context)
     missing_context = [source for source in sources if source not in expanded_context]
@@ -42,6 +43,7 @@ def reselect_architecture_first_slice(
             project_root=project_root,
             project_report=project_report,
             sources=missing_context,
+            function_scoped_dependencies=True,
         ))
     ready = [source for source in sources if _environment_ready_callable(expanded_context.get(source))]
     declared = declared_project_packages(Path(project_root)) if project_root else set()

@@ -13,11 +13,14 @@ def build_first_slice_reselection_request(
     semantic_block = extraction_contract.get("status") == "blocked_no_safe_candidate"
     structural = dict(extraction_contract.get("structural_evidence") or {})
     source_unbound = bool(extraction_contract.get("candidate")) and structural.get("source_body_available") is False
+    source_context_blocked = bool(dependency_profile.get("source_context_blockers"))
     ready = [
         row for row in list(dependency_profile.get("ranked_alternatives") or [])
         if isinstance(row, dict) and row.get("readiness_status") == "ready" and ":" in str(row.get("target") or "")
     ]
-    if not semantic_block and not source_unbound and (dependency_profile.get("status") != "resolution_required" or ready):
+    if not semantic_block and not source_unbound and not source_context_blocked and (
+        dependency_profile.get("status") != "resolution_required" or ready
+    ):
         return {
             "artifact_type": "FirstSliceReselectionRequest",
             "status": "not_required",

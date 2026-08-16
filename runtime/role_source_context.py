@@ -15,12 +15,15 @@ from .python_source_files import is_python_source_file, iter_python_source_files
 from .python_parser_compatibility import parse_compatible_source
 from .source_dependency_readiness import source_dependency_readiness
 from .role_source_symbols import symbol_matches
+from .module_script_contract import module_script_contract
+from .source_standalone_dependencies import blocking_runtime_names, standalone_dependency_facts
 
 def build_source_context(
     *,
     project_root: str,
     project_report: dict[str, Any],
     sources: list[str],
+    function_scoped_dependencies: bool = False,
 ) -> dict[str, dict[str, Any]]:
     root = Path(project_root)
     context = {}
@@ -47,7 +50,17 @@ def build_source_context(
                     row["node_kind"] = "class" if symbol in class_names else "function"
             snippet = _symbol_snippet(root / path_text, symbol)
             if snippet:
-                row["dependency_readiness"] = source_dependency_readiness(root, path_text)
+                dependency = source_dependency_readiness(
+                    root, path_text, symbol if function_scoped_dependencies else None
+                )
+                unresolved = blocking_runtime_names(list(snippet.get("unresolved_runtime_names") or []))
+                if dependency.get("status") == "ready" and unresolved:
+                    dependency.update({
+                        "status": "source_context_required",
+                        "unresolved_runtime_names": unresolved,
+                        "analysis": "function has unresolved runtime names outside its standalone scope",
+                    })
+                row["dependency_readiness"] = dependency
                 row["snippet"] = snippet
                 if "signature" not in row and snippet.get("signature"):
                     row["signature"] = snippet["signature"]
@@ -100,31 +113,19 @@ def _module_context(path: Path) -> dict[str, Any] | None:
         elif isinstance(node, ast.ClassDef):
             classes.append({"name": node.name, "line": int(getattr(node, "lineno", 0) or 0)})
     doc = ast.get_docstring(tree) or ""
+    script_contract = module_script_contract(tree, imports)
     result: dict[str, Any] = {
         "path": path.name,
         "module_imports": sorted(imports)[:16],
         "module_functions": functions[:12],
         "module_classes": classes[:12],
         "module_snippet": text[:1200],
-        "module_side_effects": _module_side_effects(tree),
+        "module_side_effects": script_contract["side_effects"],
+        **script_contract,
     }
     if doc:
         result["module_docstring"] = doc[:600]
     return {key: value for key, value in result.items() if value not in ("", [], None)}
-def _module_side_effects(tree: ast.AST) -> list[str]:
-    effects = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        call = _call_name(node.func)
-        lowered = call.lower()
-        if lowered in {"open", "path.open"} or "imread" in lowered or "imwrite" in lowered:
-            effects.add("filesystem")
-        if any(token in lowered for token in ("request", "urlopen", "subprocess", "popen")):
-            effects.add("process_boundary")
-    return sorted(effects)
-
-
 def _call_graph(root: Path) -> dict[str, dict[str, Any]]:
     functions: dict[str, set[str]] = {}
     unresolved: dict[str, set[str]] = {}
@@ -328,6 +329,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "structural_contract": infer_source_contract(
                     {"signature": _ast_signature(node), "snippet": node_text, "decorators": decorators}
                 ),
+                **standalone_dependency_facts(tree, node),
             }
             if len(matches) > 1:
                 result["symbol_occurrences"] = matches[:8]

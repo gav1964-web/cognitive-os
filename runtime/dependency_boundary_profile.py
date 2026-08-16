@@ -14,6 +14,17 @@ def build_dependency_boundary_profile(
 ) -> dict[str, Any]:
     readiness = dict(extraction_contract.get("dependency_readiness") or {})
     missing = [str(item) for item in list(readiness.get("missing_external_modules") or []) if item]
+    if readiness.get("status") == "source_context_required":
+        return {
+            "artifact_type": "DependencyBoundaryProfile",
+            "status": "resolution_required",
+            "target": extraction_contract.get("candidate"),
+            "missing_modules": [],
+            "source_context_blockers": list(readiness.get("unresolved_runtime_names") or []),
+            "ranked_alternatives": _ranked_alternatives(extraction_contract),
+            "authority": "static_standalone_scope_validation",
+            "next_step": "reselect a standalone target or explicitly expand its source context",
+        }
     if not missing:
         return {
             "artifact_type": "DependencyBoundaryProfile",

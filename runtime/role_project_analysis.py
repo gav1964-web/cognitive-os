@@ -8,6 +8,7 @@ from typing import Any
 
 from .project_benchmark import analyze_project
 from .project_interpreter import interpret_project_report
+from .module_script_boundary import enrich_module_script_readiness
 
 
 def analyze_role_project(*, root: Path, project_dir: Path, goal: str) -> dict[str, Any]:
@@ -40,6 +41,7 @@ def prepare_role_project_report(
     }
     interpretation = interpret_project_report(goal_report, root=root.as_posix())
     project_map_report = enrich_weak_contract_readiness(project_map_report)
+    project_map_report = enrich_module_script_readiness(project_map_report)
     return {
         **project_map_report,
         "level35_project_signals": interpretation.get("level35_project_signals", {}),

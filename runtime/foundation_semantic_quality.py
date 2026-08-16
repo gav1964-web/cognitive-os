@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+from .foundation_source_context_quality import source_context_is_sufficient
 from .semantic_target_profiles import matching_profiles
 
 
@@ -93,7 +94,9 @@ def _architect_checks(project: dict[str, Any], adr: dict[str, Any], spec: dict[s
         _check("brief_has_contract_and_acceptance_targets", bool(brief.get("contract_targets")) and bool(brief.get("acceptance_targets"))),
         _check("risks_are_actionable", _risks_are_actionable(adr.get("risks"), policy=policy)),
         _check("fact_judgment_ledger_separates_claims", _ledger_is_usable(adr.get("fact_judgment_ledger"))),
-        _check("source_context_has_multiple_refs", len(dict(adr.get("source_context") or {})) >= int(architect_policy.get("minimum_source_context_refs") or 3)),
+        _check("source_context_has_multiple_refs", source_context_is_sufficient(
+            content, adr, minimum_refs=int(architect_policy.get("minimum_source_context_refs") or 3)
+        )),
         _check("open_questions_and_non_goals_present", isinstance(adr.get("open_questions"), list) and bool(adr.get("non_goals"))),
     ]
 

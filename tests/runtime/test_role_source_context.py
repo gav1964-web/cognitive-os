@@ -116,8 +116,30 @@ def test_source_context_builds_module_script_context(tmp_path: Path):
     row = context["basics.py"]
     assert row["kind"] == "module_script"
     assert row["module_imports"] == ["cv2"]
-    assert row["side_effects"] == ["filesystem"]
+    assert row["side_effects"] == ["filesystem", "stdout"]
     assert "cv2.imread" in row["snippet"]
+
+
+def test_source_context_extracts_module_cli_environment_and_output_contract(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "backup.py").write_text(
+        "import json\nimport os\nimport sys\nimport github\n"
+        "username = sys.argv[1]\noutfile = sys.argv[2]\n"
+        "client = github.Github(os.environ['GITHUB_TOKEN'])\n"
+        "with open(outfile, 'w') as stream:\n    stream.write(json.dumps({'user': username}))\n",
+        encoding="utf-8",
+    )
+
+    row = build_source_context(project_root=str(project), project_report={}, sources=["backup.py"])["backup.py"]
+
+    assert row["signature"]["args"] == [
+        {"name": "username", "annotation": "str"},
+        {"name": "outfile", "annotation": "PathLike"},
+        {"name": "github_token", "annotation": "SecretStr"},
+    ]
+    assert row["structural_contract"]["inferred_output_type"] == "JsonFileArtifact"
+    assert row["contract_side_effects"] == ["environment", "filesystem_write", "network"]
 
 
 def test_source_context_infers_nested_network_and_filesystem_calls(tmp_path: Path):
@@ -179,3 +201,35 @@ def test_source_context_preserves_bounded_policy_provenance(tmp_path: Path):
 
     assert row["kind"] == "bounded_policy"
     assert row["candidate_level"] == "bounded_policy"
+
+
+def test_source_context_marks_unresolved_runtime_name_not_standalone(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "legacy.py").write_text(
+        "def render(values):\n    return [xrange(value) for value in values]\n",
+        encoding="utf-8",
+    )
+
+    row = build_source_context(project_root=str(project), project_report={}, sources=["legacy.py:render"])[
+        "legacy.py:render"
+    ]
+
+    assert row["snippet"]["unresolved_runtime_names"] == ["xrange"]
+    assert row["dependency_readiness"]["status"] == "source_context_required"
+
+
+def test_source_context_records_unknown_global_without_automatic_block(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "handler.py").write_text(
+        "def handle(value):\n    return injected_framework_adapter(value)\n",
+        encoding="utf-8",
+    )
+
+    row = build_source_context(project_root=str(project), project_report={}, sources=["handler.py:handle"])[
+        "handler.py:handle"
+    ]
+
+    assert row["snippet"]["unresolved_runtime_names"] == ["injected_framework_adapter"]
+    assert row["dependency_readiness"]["status"] == "ready"
