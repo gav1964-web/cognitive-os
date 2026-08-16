@@ -212,7 +212,7 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
             return "EntityLike"
         if name.endswith(("list", "all")):
             return "SequenceLike"
-        if name.endswith(("numpy", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")) or (name.startswith(("torch.", "np.", "numpy.")) and name.endswith(("sum", "mean", "clamp"))):
+        if name.endswith(("numpy", "array", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")) or (name.startswith(("torch.", "np.", "numpy.")) and name.endswith(("sum", "mean", "clamp"))):
             return "ArrayLike"
         if name.endswith(("_item", "from_json")):
             return "ItemLike"

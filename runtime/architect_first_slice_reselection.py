@@ -128,6 +128,7 @@ def _revised_architecture_decision(
         **old_slice,
         "targets": selected_targets,
         "deferred_targets": list(dict.fromkeys(old_targets + list(old_slice.get("deferred_targets") or []))),
+        "steps": _reselection_steps(selected_targets[0]),
         "source": "FirstSliceReselectionRequest + ProjectMapReport expanded evidence",
         "selection_policy": "environment-ready source-backed callable within Architect-expanded candidate window",
         "reselection_iteration": outcome["iteration"],
@@ -136,6 +137,10 @@ def _revised_architecture_decision(
     source_context.update(expanded_context)
     brief = dict(revised.get("spec_writer_brief") or {})
     brief["first_slice"] = first_slice
+    brief["acceptance_targets"] = [
+        f"Reselected first slice verifies step {index}: {step}"
+        for index, step in enumerate(first_slice["steps"], start=1)
+    ]
     brief["files_or_symbols"] = list(dict.fromkeys(selected_targets + list(brief.get("files_or_symbols") or [])))
     revised.update({
         "first_slice_contract": first_slice,
@@ -143,6 +148,15 @@ def _revised_architecture_decision(
         "spec_writer_brief": brief,
     })
     return _attach_outcome(revised, outcome)
+
+
+def _reselection_steps(target: str) -> list[str]:
+    return [
+        f"Confirm `{target}` has a stable input/output contract from source evidence.",
+        f"Keep writable scope limited to `{target}` until TechnicalSpec acceptance passes.",
+        "Map caller and callee context before implementation handoff.",
+        "Add contract tests for the selected capability before promotion.",
+    ]
 
 
 def _attach_outcome(architecture_decision: dict[str, Any], outcome: dict[str, Any]) -> dict[str, Any]:

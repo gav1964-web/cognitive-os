@@ -238,6 +238,27 @@ def test_additional_source_proven_contract_shapes_get_structural_families():
         assert report["score"] >= 97
 
 
+def test_artifact_and_validated_projection_shapes_are_kb_families():
+    cases = [
+        ({"inferred_output_type": "VoidSideEffect", "observed_side_effects": ["filesystem"]}, "filesystem_artifact_command"),
+        ({"inferred_output_type": "ArrayLike", "argument_usage_types": {"data": "ArrayLike"}, "observed_side_effects": ["filesystem"]}, "array_artifact_projection"),
+        ({"inferred_output_type": "str", "argument_count": 3, "return_paths": 2, "raises": ["ValueError"], "observed_side_effects": []}, "validated_string_projection"),
+    ]
+    for evidence, family in cases:
+        evidence.update({"source_body_complete": True, "state_mutation": False})
+        report = semantic_target_quality_report(
+            "src/domain.py:project",
+            ranked_candidates=["src/domain.py:project"],
+            source_evidence=["src/domain.py:project"],
+            structural_evidence=evidence,
+            input_contract={"value": "DomainInput"},
+            output_contract={"result": evidence["inferred_output_type"]},
+            side_effect_contract={"declared": evidence.get("observed_side_effects", [])},
+        )
+        assert report["contract_archetype_ids"] == [family]
+        assert report["score"] >= 97
+
+
 def test_decorated_identity_loader_combines_structure_and_ranking_evidence():
     target = "app/models.py:load_user"
     report = semantic_target_quality_report(

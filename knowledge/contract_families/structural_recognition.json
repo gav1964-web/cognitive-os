@@ -49,6 +49,28 @@
       {"field": "file_extension_policy", "op": "truthy"},
       {"field": "output_type", "op": "equals", "value": "bool"}
     ]},
+    {"family_id": "filesystem_artifact_command", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "array_artifact_projection", "all": [
+      {"field": "output_type", "op": "equals", "value": "ArrayLike"},
+      {"field": "usage_types", "op": "contains", "value": "ArrayLike"},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "validated_string_projection", "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "argument_count", "op": "gte", "value": 3},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "raises", "op": "truthy"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "response_collection_ordering_transform", "all": [
       {"field": "output_type", "op": "equals", "value": "ResponseLike"},
       {"field": "usage_types", "op": "contains_all", "value": ["KeyLike", "ProtocolLike"]},

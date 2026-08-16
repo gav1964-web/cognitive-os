@@ -66,6 +66,30 @@
       "failure_modes": ["missing_extension", "disallowed_extension", "normalization_mismatch"],
       "reason": "AST proves a side-effect-free file extension admission policy"
     },
+    "filesystem_artifact_command": {
+      "input_contract": {"artifact_input": "ArtifactSource", "destination": "FilesystemDestination"},
+      "output_contract": {"result": "VoidSideEffect", "failure_packet": "ArtifactWriteFailure(kind, destination?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["filesystem"], "write_policy": "filesystem output is explicit and isolated", "requires_validation_gate": true},
+      "validation_gates": ["successful output and invalid destination paths are covered", "partial writes and overwrite behavior are explicit", "input objects are not mutated"],
+      "failure_modes": ["invalid_destination", "artifact_encoding_failure", "partial_write"],
+      "reason": "AST proves a bounded filesystem artifact command"
+    },
+    "array_artifact_projection": {
+      "input_contract": {"data": "ArrayLike", "projection_options": "ArrayProjectionOptions", "destination": "FilesystemDestination?"},
+      "output_contract": {"result": "ArrayLike", "failure_packet": "ArrayProjectionFailure(kind, shape?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["filesystem"], "write_policy": "optional artifact persistence is explicit", "requires_validation_gate": true},
+      "validation_gates": ["input and output array shapes are explicit", "save-disabled and save-enabled paths return equivalent array shapes", "filesystem failure does not hide projection state"],
+      "failure_modes": ["invalid_array_shape", "projection_failure", "artifact_write_failure"],
+      "reason": "AST proves an array projection with an explicit artifact boundary"
+    },
+    "validated_string_projection": {
+      "input_contract": {"source": "ProjectionSource", "projection_options": "StringProjectionOptions"},
+      "output_contract": {"result": "str", "failure_packet": "StringProjectionFailure(kind, evidence_ref?)"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["short and extended projection branches are covered", "missing required source data raises an explicit failure", "format options do not mutate source state"],
+      "failure_modes": ["missing_source_data", "unsupported_projection_mode", "formatting_failure"],
+      "reason": "AST proves a validated multi-branch string projection"
+    },
     "route_tree_flatten_boundary": {
       "input_contract": {"routes": "RouteTree(routes, mounted_routes?, compatibility_context?)"},
       "output_contract": {"routes": "Iterator[MatchableRoute]", "failure_packet": "RouteFlattenFailure(kind, route_ref?)"},

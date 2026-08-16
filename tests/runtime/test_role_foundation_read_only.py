@@ -1,0 +1,28 @@
+import runtime.role_foundation_field_trial as field_trial
+
+
+def test_read_only_case_uses_pipeline_semantic_quality(monkeypatch, tmp_path):
+    (tmp_path / "app.py").write_text("def normalize(value):\n    return value\n", encoding="utf-8")
+    semantic = {
+        "status": "ok",
+        "role_scores": {"project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.8},
+    }
+    monkeypatch.setattr(
+        field_trial,
+        "run_role_foundation_pipeline",
+        lambda **kwargs: {
+            "status": "ok",
+            "score": {"foundation_semantic_quality": semantic},
+            "artifacts": {
+                "project_map_report": {"artifact_type": "ProjectMapReport", "status": "ok"},
+                "architecture_decision": {"artifact_type": "ArchitectureDecisionRecord", "status": "ok"},
+                "technical_spec": {"artifact_type": "TechnicalSpec", "status": "ok"},
+            },
+            "safety": {"source_code_changes": False, "llm_invoked": False},
+        },
+    )
+
+    case = field_trial._run_case(root=tmp_path, project_dir=tmp_path, write=False)
+
+    assert case["semantic_quality"] == semantic
+    assert case["role_scores"] == semantic["role_scores"]

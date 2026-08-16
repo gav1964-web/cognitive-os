@@ -40,3 +40,34 @@ def test_dependency_readiness_resolves_absolute_import_from_src_layout(tmp_path:
 
     assert readiness["status"] == "ready"
     assert "sample_pkg.helper" in readiness["local_imports"]
+
+
+def test_dependency_readiness_ignores_type_checking_imports(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "entry.py").write_text(
+        "from typing import TYPE_CHECKING\n"
+        "if TYPE_CHECKING:\n"
+        "    import definitely_missing_cognitive_os_dep\n",
+        encoding="utf-8",
+    )
+
+    readiness = source_dependency_readiness(project, "entry.py")
+
+    assert readiness["status"] == "ready"
+    assert readiness["missing_external_modules"] == []
+
+
+def test_dependency_readiness_ignores_qualified_type_checking_imports(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "entry.py").write_text(
+        "import typing\n"
+        "if typing.TYPE_CHECKING:\n"
+        "    import definitely_missing_cognitive_os_dep\n",
+        encoding="utf-8",
+    )
+
+    readiness = source_dependency_readiness(project, "entry.py")
+
+    assert readiness["status"] == "ready"

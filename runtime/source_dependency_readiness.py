@@ -73,14 +73,35 @@ def _walk_imports(
 def _imported_modules(tree: ast.AST, root: Path, path: Path) -> list[str]:
     modules: list[str] = []
     package = _package_parts(root, path)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
+
+    class RuntimeImportVisitor(ast.NodeVisitor):
+        def visit_If(self, node: ast.If) -> None:
+            if _is_type_checking_test(node.test):
+                for child in node.orelse:
+                    self.visit(child)
+                return
+            self.generic_visit(node)
+
+        def visit_Import(self, node: ast.Import) -> None:
             modules.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
             module = _absolute_from_import(package, int(node.level or 0), str(node.module or ""))
             if module:
                 modules.append(module)
+
+    RuntimeImportVisitor().visit(tree)
     return modules
+
+
+def _is_type_checking_test(node: ast.AST) -> bool:
+    return bool(
+        isinstance(node, ast.Name) and node.id == "TYPE_CHECKING"
+        or isinstance(node, ast.Attribute)
+        and node.attr == "TYPE_CHECKING"
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "typing"
+    )
 
 
 def _package_parts(root: Path, path: Path) -> list[str]:

@@ -61,6 +61,14 @@ def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     assert first_spec["first_slice_reselection_request"]["status"] == "required"
     assert resolution["status"] == "selected"
     assert resolution["outcome"]["selected_targets"] == ["pkg/core.py:normalize"]
+    revised_slice = resolution["architecture_decision"]["first_slice_contract"]
+    assert all("pkg/adapter.py:convert_value" not in step for step in revised_slice["steps"])
+    assert "pkg/core.py:normalize" in revised_slice["steps"][0]
+    acceptance = resolution["architecture_decision"]["spec_writer_brief"]["acceptance_targets"]
+    assert acceptance == [
+        f"Reselected first slice verifies step {index}: {step}"
+        for index, step in enumerate(revised_slice["steps"], start=1)
+    ]
     assert second_spec["extraction_contract"]["candidate"] == "pkg/core.py:normalize"
     assert second_spec["first_slice_reselection_request"]["status"] == "not_required"
 

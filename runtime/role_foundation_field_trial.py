@@ -92,7 +92,9 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         write=write,
     )
     loaded_result = _result_with_loaded_artifacts(result)
-    semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
+    semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})
+    if not semantic_quality:
+        semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
     result["foundation_semantic_quality"] = semantic_quality
     role_scores = _role_scores({**result, "artifacts": loaded_result["artifacts"]})
     available_scores = [score for score in role_scores.values() if score is not None]
