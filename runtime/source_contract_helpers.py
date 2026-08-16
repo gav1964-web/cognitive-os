@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 
+from runtime.source_ast_scope import callable_scope_walk
+
 
 def local_type_factories(function: ast.AST) -> dict[str, str]:
     return {
@@ -30,7 +32,7 @@ def xml_call_shape(name: str) -> str:
 
 
 def yield_path_count(function: ast.AST | None) -> int:
-    return sum(isinstance(node, (ast.Yield, ast.YieldFrom)) for node in ast.walk(function)) if function else 0
+    return sum(isinstance(node, (ast.Yield, ast.YieldFrom)) for node in callable_scope_walk(function)) if function else 0
 
 
 def is_file_extension_policy(function: ast.AST | None) -> bool:
@@ -43,7 +45,7 @@ def is_file_extension_policy(function: ast.AST | None) -> bool:
         and ("rsplit" in text or "splitext" in text or ".suffix" in text)
         and "allowed" in text
         and (".lower()" in text or ".casefold()" in text)
-        and any(isinstance(node, ast.Return) and isinstance(node.value, (ast.BoolOp, ast.Compare)) for node in ast.walk(function))
+        and any(isinstance(node, ast.Return) and isinstance(node.value, (ast.BoolOp, ast.Compare)) for node in callable_scope_walk(function))
     )
 
 

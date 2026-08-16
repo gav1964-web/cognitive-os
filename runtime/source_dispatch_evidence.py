@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 
+from runtime.source_ast_scope import callable_scope_walk
+
 
 def is_receiver_request_dispatch(node: ast.AST) -> bool:
     if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Call):
@@ -23,4 +25,4 @@ def is_receiver_request_dispatch(node: ast.AST) -> bool:
 
 
 def has_receiver_request_dispatch(node: ast.AST) -> bool:
-    return any(is_receiver_request_dispatch(item) for item in ast.walk(node))
+    return any(is_receiver_request_dispatch(item) for item in callable_scope_walk(node))

@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from runtime.source_side_effect_inference import infer_ast_side_effects
+from runtime.source_ast_scope import callable_scope_walk
 
 
 _UNIT_OF_WORK_NAMES = {"con", "conn", "connection", "session", "db", "database", "unit_of_work", "uow"}
@@ -17,7 +18,7 @@ def observed_side_effects(function: ast.AST | None, args: list[dict[str, Any]]) 
         return []
     argument_names = {str(row.get("name") or "").lower() for row in args}
     effects = set(infer_ast_side_effects(function, ast.unparse(function)))
-    for node in ast.walk(function):
+    for node in callable_scope_walk(function):
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
             continue
         owner = _root_name(node.func.value).lower()

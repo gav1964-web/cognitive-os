@@ -182,6 +182,7 @@
       "edge_attr": "label",
       "environment": {"__fixture__": "hatch_environment_minimal"},
       "fuzzy": false,
+      "filename": "acceptance-output.tmp",
       "fn": {"__fixture__": "callable_noop"},
       "g": {"__fixture__": "networkx_graph_path"},
       "graph": {"__fixture__": "networkx_graph_path"},
@@ -257,6 +258,12 @@
     "fixture_fields": {
       "applicable_validators": "callable_items",
       "id_of": "callable_id_of"
+    },
+    "fixture_field_type_contains": {
+      "row": {
+        "mappinglike": "record_row_empty",
+        "protocollike": "record_row_empty"
+      }
     },
     "fixture_type_contains": {
       "applicablevalidators": "callable_items",

@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from runtime.source_ast_scope import callable_scope_walk
+
 
 DEFAULT_POLICY = Path(__file__).resolve().parents[1] / "config" / "source_side_effect_inference.json"
 
@@ -22,7 +24,7 @@ def load_source_side_effect_policy() -> dict[str, Any]:
 
 def infer_ast_side_effects(node: ast.AST, text: str) -> list[str]:
     policy = load_source_side_effect_policy()
-    call_nodes = [child for child in ast.walk(node) if isinstance(child, ast.Call)]
+    call_nodes = [child for child in callable_scope_walk(node) if isinstance(child, ast.Call)]
     calls = {_call_name(child.func).lower() for child in call_nodes}
     effects = {
         str(rule["id"])
@@ -31,7 +33,7 @@ def infer_ast_side_effects(node: ast.AST, text: str) -> list[str]:
     }
     memory = dict(policy.get("memory_state") or {})
     node_names = set(str(item) for item in memory.get("ast_nodes", []))
-    if any(type(child).__name__ in node_names for child in ast.walk(node)):
+    if any(type(child).__name__ in node_names for child in callable_scope_walk(node)):
         effects.add("memory_state")
     if _mutates_external_state(node):
         effects.add("memory_state")
@@ -84,12 +86,12 @@ def _call_name(node: ast.AST) -> str:
 def _mutates_external_state(node: ast.AST) -> bool:
     local_names = {
         target.id
-        for child in ast.walk(node)
+        for child in callable_scope_walk(node)
         if isinstance(child, (ast.Assign, ast.AnnAssign))
         for target in (child.targets if isinstance(child, ast.Assign) else [child.target])
         if isinstance(target, ast.Name)
     }
-    for child in ast.walk(node):
+    for child in callable_scope_walk(node):
         if not isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
             continue
         targets = child.targets if isinstance(child, ast.Assign) else [child.target]

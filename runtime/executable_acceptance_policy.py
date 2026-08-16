@@ -98,6 +98,10 @@ def _fixture_for(samples: dict[str, Any], field: str, lowered_type: str) -> str:
     fixtures = dict(samples.get("fixture_fields") or {})
     if field in fixtures:
         return str(fixtures[field])
+    field_types = dict(dict(samples.get("fixture_field_type_contains") or {}).get(field) or {})
+    for token, fixture in field_types.items():
+        if str(token) in lowered_type:
+            return str(fixture)
     for token, fixture in dict(samples.get("fixture_type_contains") or {}).items():
         if str(token) in lowered_type:
             return str(fixture)

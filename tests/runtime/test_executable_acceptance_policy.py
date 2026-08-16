@@ -49,8 +49,13 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert sample_value("", "inputs") == []
     assert sample_value("", "outputs") == []
     assert sample_value("", "trigger_mode") == "once"
+    assert sample_value("ProtocolLike", "row") == {"__fixture__": "record_row_empty"}
+    assert sample_value("int", "row") == 1
+    assert sample_value("PathLike", "filename") == "acceptance-output.tmp"
     assert sample_value("", "api_visibility") == "public"
     assert sample_value("", "cancels") == []
     assert sample_value("bool", "enabled") is True
     assert sample_value("bool", "enabled", signature_mode=True) is False
     assert materialize({"iterations": "sample", "digest_size": "sample"}) == {"iterations": 1, "digest_size": 8}
+    row = materialize({"__fixture__": "record_row_empty"})
+    assert row.data == {} and row.get("missing") is None

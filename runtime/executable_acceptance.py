@@ -342,6 +342,7 @@ def _materialize(value):
         if fixture == "dateutil_ymd": return type("YMD", (list,), {{"append": lambda self, value, label=None: list.append(self, value), "could_be_day": lambda self, value: True}})()
         if fixture == "pytest_source_minimal": return type("Source", (), {{"lines": ["x = 1"], "raw_lines": ["x = 1"], "__str__": lambda self: "\\n".join(self.lines)}})()
         if fixture == "networkx_graph_path": graph = __import__("networkx").Graph(); graph.add_edge("a", "b", label="edge"); graph.nodes["a"]["label"] = "a"; graph.nodes["b"]["label"] = "b"; return graph
+        if fixture == "record_row_empty": row = type("RecordRow", (dict,), {{}})(); row.data = {{}}; return row
         if fixture == "noop_condition": return type("NoopCondition", (), {{"__enter__": lambda self: self, "__exit__": lambda self, *args: False, "notify_all": lambda self: None}})()
         if fixture == "qdrant_collection_config": return _qdrant_collection_config()
         if fixture == "qdrant_deleted_false": return _np_array([False], dtype=bool)

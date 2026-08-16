@@ -93,6 +93,10 @@ def materialize(value: Any) -> Any:
             return type("Source", (), {"lines": ["x = 1"], "raw_lines": ["x = 1"], "__str__": _source_text})()
         if fixture == "networkx_graph_path":
             return _networkx_graph_path()
+        if fixture == "record_row_empty":
+            row = type("RecordRow", (dict,), {})()
+            row.data = {}
+            return row
         if fixture == "noop_condition":
             return _NoopCondition()
         if fixture == "qdrant_collection_config":

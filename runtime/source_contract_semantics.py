@@ -7,6 +7,7 @@ import textwrap
 from typing import Any
 
 from runtime.source_contract_helpers import binary_result_shape, is_file_extension_policy, local_type_factories, target_mutates_external_state, xml_call_shape, yield_path_count
+from runtime.source_ast_scope import callable_scope_walk
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
 from runtime.source_dispatch_evidence import has_receiver_request_dispatch, is_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
@@ -123,7 +124,7 @@ def structural_quality_adjustment(
 def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, source_complete: bool) -> tuple[str, str]:
     if annotation:
         has_value_return = function is not None and any(
-            isinstance(node, ast.Return) and node.value is not None for node in ast.walk(function)
+            isinstance(node, ast.Return) and node.value is not None for node in callable_scope_walk(function)
         )
         if annotation.lower() in {"none", "nonetype"} and not has_value_return:
             return "VoidSideEffect", "explicit_none_annotation"
@@ -140,15 +141,15 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
             **_assignment_shapes(function),
             **local_type_factories(function),
         }
-        yielded = [node for node in ast.walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
+        yielded = [node for node in callable_scope_walk(function) if isinstance(node, (ast.Yield, ast.YieldFrom))]
         if yielded:
             return "IteratorLike", "yield_expression"
-        shapes = [_expression_shape(node.value, assignments) for node in ast.walk(function) if isinstance(node, ast.Return) and node.value]
+        shapes = [_expression_shape(node.value, assignments) for node in callable_scope_walk(function) if isinstance(node, ast.Return) and node.value]
         shapes = [shape for shape in shapes if shape]
         if shapes:
             unique = sorted(set(shapes))
             return (unique[0] if len(unique) == 1 else f"Union[{', '.join(unique)}]"), "return_expression"
-        if source_complete and not any(isinstance(node, ast.Return) and node.value for node in ast.walk(function)):
+        if source_complete and not any(isinstance(node, ast.Return) and node.value for node in callable_scope_walk(function)):
             return "VoidSideEffect", "no_value_return"
     lowered = snippet.lower()
     documented = documented_output_shape(snippet)
@@ -161,7 +162,7 @@ def _output_shape(function: ast.AST | None, annotation: str, snippet: str, *, so
 
 def _assignment_shapes(function: ast.AST) -> dict[str, str]:
     shapes: dict[str, str] = {}
-    for node in ast.walk(function):
+    for node in callable_scope_walk(function):
         if isinstance(node, (ast.Assign, ast.AnnAssign)):
             value = node.value
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
@@ -251,13 +252,13 @@ def _partial_function_node(source: str) -> ast.FunctionDef | ast.AsyncFunctionDe
 
 
 def _return_path_count(function: ast.AST | None) -> int:
-    return sum(isinstance(node, ast.Return) for node in ast.walk(function)) if function is not None else 0
+    return sum(isinstance(node, ast.Return) for node in callable_scope_walk(function)) if function is not None else 0
 
 
 def _raise_names(function: ast.AST | None) -> list[str]:
     if function is None:
         return []
-    return sorted({_call_name(node.exc.func if isinstance(node.exc, ast.Call) else node.exc) for node in ast.walk(function) if isinstance(node, ast.Raise) and node.exc} - {""})
+    return sorted({_call_name(node.exc.func if isinstance(node.exc, ast.Call) else node.exc) for node in callable_scope_walk(function) if isinstance(node, ast.Raise) and node.exc} - {""})
 
 
 def _has_state_mutation(function: ast.AST | None) -> bool:
@@ -265,12 +266,12 @@ def _has_state_mutation(function: ast.AST | None) -> bool:
         return False
     local_names = {
         target.id
-        for node in ast.walk(function)
+        for node in callable_scope_walk(function)
         if isinstance(node, (ast.Assign, ast.AnnAssign))
         for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         if isinstance(target, ast.Name)
     }
-    for node in ast.walk(function):
+    for node in callable_scope_walk(function):
         if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Delete)):
             if isinstance(node, ast.Delete):
                 targets = node.targets
@@ -305,7 +306,7 @@ def _argument_constraint_types(function: ast.AST | None, names: list[str]) -> di
         return {}
     values: dict[str, set[object]] = {name: set() for name in names}
     optional: set[str] = set()
-    for node in ast.walk(function):
+    for node in callable_scope_walk(function):
         if not isinstance(node, ast.Compare) or not isinstance(node.left, ast.Name) or node.left.id not in values:
             continue
         name = node.left.id
@@ -327,7 +328,7 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
         return {}
     known = set(names)
     inferred: dict[str, str] = {}
-    for node in ast.walk(function):
+    for node in callable_scope_walk(function):
         if isinstance(node, ast.Delete):
             for target in node.targets:
                 if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name) and target.value.id in known:

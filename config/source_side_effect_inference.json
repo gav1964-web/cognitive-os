@@ -5,7 +5,7 @@
     {
       "id": "filesystem",
       "call_exact": [],
-      "call_contains": ["write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod"]
+      "call_contains": ["write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod", "savefig"]
     },
     {
       "id": "filesystem_read",

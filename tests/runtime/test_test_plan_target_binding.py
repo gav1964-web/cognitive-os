@@ -41,6 +41,33 @@ def test_executable_acceptance_preserves_legacy_unscoped_criteria():
     assert executable["obligations"][0]["source_criterion"] == "Returns normalized value"
 
 
+def test_void_file_writer_uses_record_and_bounded_output_fixtures():
+    target = "pkg/report.py:render"
+    plan = build_test_plan(
+        technical_spec={
+            "acceptance_criteria": [
+                {"id": "AC-001", "criterion": "Writes the report when data exists", "source": target},
+            ],
+        },
+        implementation_plan={
+            **_implementation_plan(target),
+            "contract_binding": {
+                "binding_status": "bound_to_extraction_contract",
+                "input_contract": {"row": "ProtocolLike", "filename": "PathLike"},
+                "output_contract": {"result": "VoidSideEffect"},
+            },
+        },
+    )
+
+    positive = plan["executable_acceptance"]["obligations"][0]
+    assert positive["given"] == {
+        "row": {"__fixture__": "record_row_empty"},
+        "filename": "acceptance-output.tmp",
+    }
+    assert positive["expect"] == {"completed": True}
+    assert positive["oracle"] == "call_completes_and_side_effect_boundary_is_declared"
+
+
 def _implementation_plan(target: str) -> dict:
     return {
         "artifact_type": "ImplementationPlan",
