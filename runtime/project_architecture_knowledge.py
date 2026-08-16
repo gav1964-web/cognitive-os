@@ -6,8 +6,6 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-
-
 KNOWLEDGE_DIR = Path(__file__).resolve().parents[1] / "knowledge" / "architecture_patterns"
 KNOWLEDGE_PATH = KNOWLEDGE_DIR / "project_archetypes.json"
 CAPABILITY_PATTERNS_PATH = KNOWLEDGE_DIR / "capability_patterns.json"
@@ -15,8 +13,6 @@ RISK_PATTERNS_PATH = KNOWLEDGE_DIR / "risk_patterns.json"
 PROJECT_LESSONS_PATH = KNOWLEDGE_DIR / "project_lessons.json"
 BACKLOG_PATH = KNOWLEDGE_DIR / "backlog.json"
 ROLE_QA_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "role_qa" / "synthetic_role_qa.json"
-
-
 @lru_cache(maxsize=1)
 def load_architecture_knowledge(path: str | None = None) -> dict[str, Any]:
     """Load declarative project architecture rules from the knowledge base."""
@@ -232,6 +228,7 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     reasons: list[str] = []
     framework_text = " ".join(str(item) for item in facts.get("frameworks", [])).lower()
     project_text = _project_text(facts)
+    source_text = _project_source_text(facts)
     project_name = _project_name(str(facts.get("root") or "")).lower()
     input_text = " ".join(str(item) for item in facts.get("inputs", [])).lower()
     domain_profile = dict(facts.get("domain_profile") or {})
@@ -272,16 +269,27 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
             score += 60 + len(found) * 10
             reasons.append("project name contains " + ", ".join(found[:3]))
 
+    required_sources = _strings(match.get("required_source_contains_any"))
+    source_evidence_matched = False
+    if required_sources:
+        found = [needle for needle in required_sources if needle.lower() in source_text]
+        if not found and not project_name_matched:
+            return 0, []
+        if found:
+            source_evidence_matched = True
+            score += 55 + len(found) * 5
+            reasons.append("source targets contain " + ", ".join(found[:3]))
+
     domain_kinds = _strings(match.get("domain_profile_kind") or match.get("domain_profile_kinds"))
     if domain_kinds:
         found = [needle for needle in domain_kinds if needle.lower() == domain_kind]
-        if not found and not project_name_matched:
+        if not found and not (project_name_matched or source_evidence_matched):
             return 0, []
         if found:
             domain_profile_matched = True
             score += 180 + len(found) * 10
             reasons.append("domain profile is " + ", ".join(found[:3]))
-    anchored = project_name_matched or domain_profile_matched
+    anchored = project_name_matched or domain_profile_matched or source_evidence_matched
 
     frameworks = _strings(match.get("framework_contains_any"))
     if frameworks:
@@ -351,6 +359,20 @@ def _project_text(facts: dict[str, Any]) -> str:
         + [str(facts.get("task") or "")]
     )
     return " ".join(str(item) for item in parts).lower()
+def _project_source_text(facts: dict[str, Any]) -> str:
+    runtime = dict(facts.get("runtime_extraction", {}))
+    parts = (
+        [_project_name(str(facts.get("root") or ""))]
+        + list(facts.get("frameworks", []))
+        + list(facts.get("central", []))
+        + list(facts.get("broad", []))
+        + list(facts.get("capabilities", []))
+        + list(facts.get("domain_anchors", []))
+        + list(facts.get("entrypoints", []))
+        + [_target(row) for row in runtime.get("process_boundary", [])]
+        + list(runtime.get("orchestrators", []))
+    )
+    return " ".join(str(item) for item in parts).lower()
 
 
 def _project_name(root: str) -> str:
@@ -358,8 +380,6 @@ def _project_name(root: str) -> str:
         return ""
     clean = root.replace("\\", "/").rstrip("/")
     return clean.rsplit("/", 1)[-1]
-
-
 def _target(item: Any) -> str:
     if isinstance(item, str):
         return item

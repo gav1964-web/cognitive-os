@@ -145,8 +145,9 @@
       "upper",
       "version"
     ],
-    "trivial_prefixes": [
-      "get_",
+      "trivial_prefixes": [
+        "get",
+        "get_",
       "has_",
       "is_",
       "to_",
@@ -565,6 +566,7 @@
         "validate"
       ],
       "prefixes": [
+        "get",
         "is_",
         "has_",
         "to_",

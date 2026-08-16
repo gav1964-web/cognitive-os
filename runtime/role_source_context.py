@@ -14,6 +14,7 @@ from .project_transitive_effects import project_transitive_effects
 from .python_source_files import is_python_source_file, iter_python_source_files
 from .python_parser_compatibility import parse_compatible_source
 from .source_dependency_readiness import source_dependency_readiness
+from .role_source_symbols import symbol_matches
 
 def build_source_context(
     *,
@@ -296,9 +297,16 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
         tree, _ = parse_compatible_source("\n".join(lines), path.as_posix())
     except SyntaxError:
         return None
-    matches = _symbol_matches(tree, symbol)
+    owner_class, separator, method_symbol = symbol.rpartition(".")
+    method_symbol = method_symbol if separator else symbol
+    matches = symbol_matches(tree, method_symbol, owner_class or None)
     for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == symbol:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and node.name == method_symbol
+            and matches
+            and int(getattr(node, "lineno", 0) or 0) == int(matches[0].get("line") or 0)
+        ):
             start = max(1, int(getattr(node, "lineno", 1)))
             end = min(len(lines), int(getattr(node, "end_lineno", start)))
             node_text = "\n".join(lines[start - 1 : end])
@@ -308,7 +316,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                           for item in getattr(node, "decorator_list", [])]
             result = {
                 "path": path.name,
-                "symbol": symbol,
+                "symbol": method_symbol,
                 "start_line": start,
                 "end_line": end,
                 "text": node_text[:900],
@@ -333,24 +341,6 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 result.update({"target_binding": "nested_function", "parent_function": matches[0].get("parent_name")})
             return result
     return None
-
-
-def _symbol_matches(tree: ast.AST, symbol: str) -> list[dict[str, Any]]:
-    matches: list[dict[str, Any]] = []
-    for parent in ast.walk(tree):
-        body = getattr(parent, "body", None)
-        if not isinstance(body, list):
-            continue
-        for node in body:
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) or node.name != symbol:
-                continue
-            row = {"kind": "function", "line": int(getattr(node, "lineno", 0) or 0)}
-            if isinstance(parent, ast.ClassDef):
-                row.update({"kind": "method", "class_name": parent.name})
-            elif isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                row.update({"kind": "nested_function", "parent_name": parent.name})
-            matches.append(row)
-    return matches
 
 
 def _ast_signature(node: ast.AST) -> dict[str, Any]:

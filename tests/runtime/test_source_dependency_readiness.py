@@ -42,6 +42,44 @@ def test_dependency_readiness_resolves_absolute_import_from_src_layout(tmp_path:
     assert "sample_pkg.helper" in readiness["local_imports"]
 
 
+def test_dependency_readiness_resolves_package_from_nested_manifest_root(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "mcp" / "tickdb_mcp"
+    package.mkdir(parents=True)
+    (project / "mcp" / "pyproject.toml").write_text("[project]\nname='tickdb-mcp'\n", encoding="utf-8")
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "helper.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (package / "entry.py").write_text("from tickdb_mcp.helper import VALUE\n", encoding="utf-8")
+
+    readiness = source_dependency_readiness(project, "mcp/tickdb_mcp/entry.py")
+
+    assert readiness["status"] == "ready"
+    assert "tickdb_mcp.helper" in readiness["local_imports"]
+
+
+def test_dependency_readiness_accepts_configured_python2_stdlib_aliases(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "entry.py").write_text("import ConfigParser\nimport urllib2\nimport urlparse\n", encoding="utf-8")
+
+    readiness = source_dependency_readiness(project, "entry.py")
+
+    assert readiness["status"] == "ready"
+
+
+def test_dependency_readiness_resolves_local_namespace_package(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "src" / "sample_pkg"
+    package.mkdir(parents=True)
+    (package / "helper.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (project / "entry.py").write_text("from src import sample_pkg\n", encoding="utf-8")
+
+    readiness = source_dependency_readiness(project, "entry.py")
+
+    assert readiness["status"] == "ready"
+    assert "src" in readiness["local_imports"]
+
+
 def test_dependency_readiness_ignores_type_checking_imports(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

@@ -32,7 +32,9 @@ def _readiness(root_text: str, relative_path: str, max_depth: int) -> dict[str, 
     local_modules: set[str] = set()
     visited: set[Path] = set()
     _walk_imports(root, start, max_depth, visited, local_modules, external)
-    missing = sorted(module for module in external if not _module_available(module))
+    policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
+    compat_stdlib = {str(item) for item in policy.get("stdlib_compat_modules", [])}
+    missing = sorted(module for module in external if module not in compat_stdlib and not _module_available(module))
     return {
         "status": "missing_external" if missing else "ready",
         "module": relative_path,
@@ -123,7 +125,7 @@ def _absolute_from_import(package: list[str], level: int, module: str) -> str:
 def _local_module_path(root: Path, module: str) -> Path | None:
     if not module:
         return None
-    for source_root in (root, root / "src"):
+    for source_root in _local_source_roots(root):
         base = source_root.joinpath(*module.split("."))
         module_file = base.with_suffix(".py")
         package_file = base / "__init__.py"
@@ -131,7 +133,23 @@ def _local_module_path(root: Path, module: str) -> Path | None:
             return module_file.resolve()
         if package_file.is_file():
             return package_file.resolve()
+        if base.is_dir() and any(base.rglob("*.py")):
+            return base.resolve()
     return None
+
+
+@lru_cache(maxsize=256)
+def _local_source_roots(root: Path) -> tuple[Path, ...]:
+    roots = [root, root / "src"]
+    manifest_names = ("pyproject.toml", "setup.cfg", "setup.py")
+    try:
+        children = [child for child in root.iterdir() if child.is_dir()]
+    except OSError:
+        children = []
+    for child in children:
+        if any((child / name).is_file() for name in manifest_names):
+            roots.extend((child, child / "src"))
+    return tuple(dict.fromkeys(roots))
 
 
 @lru_cache(maxsize=1024)

@@ -25,6 +25,31 @@ def test_domain_profile_uses_weighted_kb_project_name_and_text_markers():
     assert profile["evidence"]
 
 
+def test_domain_profile_does_not_treat_navigation_substrings_as_docs_generator():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/async_store", "frameworks": [], "entrypoints": ["store/client.py"], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "store/client.py",
+                    "text": "async def execute_command(): pass\ndef invalid_response(): pass\nnavigation_state = None\nrewrite = False",
+                }
+            ]
+        },
+        {
+            "files": [
+                {"path": "store/client.py", "functions": [{"name": "execute_command", "calls": ["read_response"]}]}
+            ],
+            "imports": ["asyncio"],
+        },
+        [],
+        set(),
+    )
+
+    assert profile["kind"] != "docs_site_generator"
+    assert profile["kind"] != "env_config_library"
+
+
 def test_domain_profile_does_not_confuse_container_agent_with_multi_agent_runtime():
     profile = infer_domain_profile(
         {"root": "F:/tmp/container_manager", "frameworks": ["FastAPI"], "entrypoints": ["backend/app.py"], "routes": 8},

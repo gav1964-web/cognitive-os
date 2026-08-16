@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .project_probe_env import declared_project_packages
+from .project_probe_env import declared_package_satisfies_module, declared_project_packages
 from .role_source_context import build_source_context
 from .spec_writer_target_binding import standalone_target_eligibility
 from .technical_spec_policy import load_technical_spec_policy
@@ -34,6 +34,14 @@ def reselect_architecture_first_slice(
         project_report=project_report,
         sources=sources,
     )
+    sources = _qualify_ambiguous_method_sources(sources, expanded_context)
+    missing_context = [source for source in sources if source not in expanded_context]
+    if missing_context:
+        expanded_context.update(build_source_context(
+            project_root=project_root,
+            project_report=project_report,
+            sources=missing_context,
+        ))
     ready = [source for source in sources if _environment_ready_callable(expanded_context.get(source))]
     declared = declared_project_packages(Path(project_root)) if project_root else set()
     eligible = [
@@ -109,6 +117,25 @@ def _row_sources(value: Any) -> list[str]:
     return sources
 
 
+def _qualify_ambiguous_method_sources(
+    sources: list[str], context: dict[str, dict[str, Any]]
+) -> list[str]:
+    qualified: list[str] = []
+    for source in sources:
+        snippet = dict(dict(context.get(source) or {}).get("snippet") or {})
+        if snippet.get("target_binding") != "ambiguous_method_symbol":
+            qualified.append(source)
+            continue
+        path, _, symbol = source.partition(":")
+        owners = [
+            str(row.get("class_name") or "")
+            for row in list(snippet.get("symbol_occurrences") or [])
+            if isinstance(row, dict) and row.get("kind") == "method" and row.get("class_name")
+        ]
+        qualified.extend(f"{path}:{owner}.{symbol}" for owner in owners)
+    return list(dict.fromkeys(qualified))
+
+
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in list(value or []) if isinstance(row, dict)]
 
@@ -119,7 +146,7 @@ def _environment_ready_callable(context: dict[str, Any] | None) -> bool:
     readiness = dict(row.get("dependency_readiness") or {})
     eligibility = standalone_target_eligibility({"target_binding": snippet.get("target_binding")})
     return bool(
-        row.get("node_kind") == "function"
+        _callable_source_context(row, snippet)
         and snippet.get("text")
         and readiness.get("status") == "ready"
         and eligibility.get("eligible")
@@ -136,19 +163,19 @@ def _declared_dependency_callable(
     row = dict(context or {})
     snippet = dict(row.get("snippet") or {})
     readiness = dict(row.get("dependency_readiness") or {})
-    missing = {_normalize_distribution(item) for item in readiness.get("missing_external_modules") or []}
+    missing = {str(item) for item in readiness.get("missing_external_modules") or []}
     eligibility = standalone_target_eligibility({"target_binding": snippet.get("target_binding")})
     return bool(
         missing
-        and missing <= declared_packages
-        and row.get("node_kind") == "function"
+        and all(declared_package_satisfies_module(item, declared_packages) for item in missing)
+        and _callable_source_context(row, snippet)
         and snippet.get("text")
         and eligibility.get("eligible")
     )
 
 
-def _normalize_distribution(value: Any) -> str:
-    return str(value).replace("_", "-").lower()
+def _callable_source_context(row: dict[str, Any], snippet: dict[str, Any]) -> bool:
+    return bool(row.get("node_kind") == "function" or snippet.get("target_binding") == "method_symbol")
 
 
 def _mark_manifest_declared_context(

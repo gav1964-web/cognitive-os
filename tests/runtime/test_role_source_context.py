@@ -36,6 +36,25 @@ def test_source_context_marks_ambiguous_method_symbol(tmp_path: Path):
     assert {row["class_name"] for row in snippet["symbol_occurrences"]} == {"Command", "Group"}
 
 
+def test_source_context_resolves_class_qualified_method_symbol(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "core.py").write_text(
+        "class Command:\n    def parse_args(self):\n        return 'command'\n\n"
+        "class Group:\n    def parse_args(self):\n        return 'group'\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(
+        project_root=str(project), project_report={}, sources=["core.py:Group.parse_args"]
+    )
+
+    snippet = context["core.py:Group.parse_args"]["snippet"]
+    assert snippet["target_binding"] == "method_symbol"
+    assert snippet["owner_class"] == "Group"
+    assert "return 'group'" in snippet["text"]
+
+
 def test_source_context_reads_extensionless_python_executable(tmp_path: Path):
     script = tmp_path / "protocol"
     script.write_text(

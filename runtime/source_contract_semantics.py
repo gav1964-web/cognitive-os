@@ -14,7 +14,6 @@ from runtime.source_effect_evidence import observed_side_effects
 
 _WEAK_TYPES = {"", "any", "typing.any", "object", "inferredinput", "inferredoutput", "dispatchedresult"}
 
-
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     precomputed = candidate.get("structural_contract")
     if isinstance(precomputed, dict) and precomputed:
@@ -202,7 +201,7 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
     if isinstance(node, ast.Call):
         if is_receiver_request_dispatch(node):
             return "DispatchedResult"
-        name = _call_name(node.func).lower()
+        raw_name = _call_name(node.func); name = raw_name.lower()
         if name == "isinstance":
             return "bool"
         if any(token in name for token in ("render", "request", "response", "redirect")):
@@ -228,6 +227,7 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         xml_shape = xml_call_shape(name)
         if xml_shape:
             return xml_shape
+        if raw_name.rsplit(".", 1)[-1][:1].isupper(): return f"ConstructedObject[{raw_name.rsplit('.', 1)[-1]}]"
         if name.endswith((".execute", ".executemany")):
             return "DatabaseResult"
     return ""

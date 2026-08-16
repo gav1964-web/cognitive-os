@@ -99,7 +99,6 @@ def test_architect_reports_exhausted_without_environment_ready_candidate(tmp_pat
     project_report = _project_report(tmp_path, include_ready=False)
     adr = _architecture_decision(tmp_path, project_report)
     spec = build_technical_spec(architecture_decision=adr)
-
     resolution = reselect_architecture_first_slice(
         architecture_decision=adr,
         technical_spec=spec,
@@ -142,6 +141,72 @@ def test_architect_can_reselect_callable_with_manifest_declared_dependency(tmp_p
     context = resolution["architecture_decision"]["source_context"]["pkg/adapter.py:convert_value"]
     assert context["dependency_readiness"]["status"] == "manifest_declared"
     assert context["dependency_readiness"]["executable_probe_required"] is True
+
+
+def test_architect_can_reselect_unique_method_with_declared_dependency(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\ndependencies = ["optional-sdk"]\n', encoding="utf-8"
+    )
+    (package / "adapter.py").write_text(
+        "import missing_sdk\n\ndef convert_value(value):\n    return missing_sdk.convert(value)\n",
+        encoding="utf-8",
+    )
+    (package / "client.py").write_text(
+        "import optional_sdk\n\nclass Client:\n"
+        "    def send(self, value: str) -> str:\n        return optional_sdk.convert(value)\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
+        {"path": "pkg/client.py", "name": "send"}
+    ]
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "selected"
+    assert "pkg/client.py:send" in resolution["outcome"]["selected_targets"]
+
+
+def test_architect_qualifies_ambiguous_methods_during_reselection(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "adapter.py").write_text(
+        "class JsonAdapter:\n    def transform(self, value):\n        return {'value': value}\n\n"
+        "class CsvAdapter:\n    def transform(self, value):\n        return [value]\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
+        {"path": "pkg/adapter.py", "name": "transform"}
+    ]
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+    spec["first_slice_reselection_request"] = {
+        "status": "required",
+        "trigger": "ambiguous_method_symbol",
+    }
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "selected"
+    assert resolution["outcome"]["selected_targets"] == [
+        "pkg/adapter.py:JsonAdapter.transform",
+        "pkg/adapter.py:CsvAdapter.transform",
+    ]
 
 
 def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monkeypatch):

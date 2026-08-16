@@ -309,7 +309,7 @@ def _work_plan_contract(brief: dict[str, Any], architecture_decision: dict[str, 
         "source": first_slice.get("source") or "ArchitectureDecisionRecord.first_slice_contract",
         "name": first_slice.get("name"),
         "goal": first_slice.get("goal"),
-        "targets": targets[:8],
+        "targets": targets[: max(1, int(FIRST_SLICE_SCOPE_POLICY.get("work_plan_target_limit") or 8))],
         "knowledge_rule": first_slice.get("knowledge_rule"),
         "obligations": obligations,
     }

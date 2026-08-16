@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -50,6 +51,7 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
     claimed = set(blacklist)
     for stratum in policy["strata"]:
         count = int(policy["projects_per_stratum"])
+        print(f"searching stratum={stratum['id']} needed={count}", file=sys.stderr, flush=True)
         candidates = _search_stratum(stratum, policy, excluded=claimed, needed=count)
         rows = [row for row in candidates if row["full_name"].lower() not in claimed and _eligible(row, policy)]
         if len(rows) < count:
@@ -58,6 +60,7 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
             row["stratum"] = str(stratum["id"])
             selected.append(row)
             claimed.add(row["full_name"].lower())
+        print(f"selected stratum={stratum['id']} count={count}", file=sys.stderr, flush=True)
     corpus.mkdir(parents=True, exist_ok=False)
     payload = {
         "artifact_type": "GitHubBlindCorpusSelection",
@@ -149,6 +152,11 @@ def _search_stratum(
                 row = _project_row(item)
                 by_name.setdefault(row["full_name"].lower(), row)
             eligible = [row for key, row in by_name.items() if key not in excluded and _eligible(row, policy)]
+            print(
+                f"search progress stratum={stratum.get('id', 'unknown')} page={page} eligible={len(eligible)}",
+                file=sys.stderr,
+                flush=True,
+            )
             if needed and len(eligible) >= needed:
                 return sorted(by_name.values(), key=lambda row: (-row["stars"], row["full_name"].lower()))
     return sorted(by_name.values(), key=lambda row: (-row["stars"], row["full_name"].lower()))
@@ -214,9 +222,12 @@ def _eligible(row: dict[str, Any], policy: dict[str, Any]) -> bool:
 
 def _clone_one(source_dir: Path, project: dict[str, Any], *, force: bool) -> dict[str, Any]:
     destination = source_dir / str(project["full_name"]).replace("/", "__")
-    if destination.exists() and not force and _checkout_ready(destination):
+    if destination.exists() and _checkout_ready(destination):
         return {"full_name": project["full_name"], "status": "ok", "path": destination.as_posix(), "reused": True}
     if destination.exists():
+        recovery = _export_compatible_tree(destination) if force else None
+        if recovery:
+            return {"full_name": project["full_name"], "status": "ok", "path": destination.as_posix(), **recovery}
         raise RuntimeError(f"refusing to remove existing clone automatically: {destination}")
     result = subprocess.run(
         ["git", "-c", "core.longpaths=true", "clone", "--depth", "1", "--filter=blob:none", str(project["clone_url"]), str(destination)],
@@ -226,13 +237,69 @@ def _clone_one(source_dir: Path, project: dict[str, Any], *, force: bool) -> dic
         errors="replace",
         timeout=180,
     )
-    return {
+    row = {
         "full_name": project["full_name"],
         "status": "ok" if result.returncode == 0 else "clone_failed",
         "path": destination.as_posix(),
         "returncode": result.returncode,
         "stderr_tail": result.stderr[-800:],
     }
+    if result.returncode != 0:
+        recovery = _export_compatible_tree(destination)
+        if recovery:
+            row.update(status="ok", **recovery)
+    return row
+
+
+def _export_compatible_tree(destination: Path) -> dict[str, Any] | None:
+    safe = f"safe.directory={destination.as_posix()}"
+    listing = subprocess.run(
+        ["git", "-c", safe, "-C", str(destination), "ls-tree", "-rz", "--name-only", "HEAD"],
+        capture_output=True,
+        timeout=30,
+    )
+    if listing.returncode != 0:
+        return None
+    exported = 0
+    omitted: list[str] = []
+    for raw_path in listing.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        relative = raw_path.decode("utf-8", errors="replace")
+        if not _windows_compatible_path(relative):
+            omitted.append(relative)
+            continue
+        blob = subprocess.run(
+            ["git", "-c", safe, "-C", str(destination), "show", f"HEAD:{relative}"],
+            capture_output=True,
+            timeout=30,
+        )
+        if blob.returncode != 0:
+            omitted.append(relative)
+            continue
+        target = destination / Path(relative)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(blob.stdout)
+        exported += 1
+    if not exported:
+        return None
+    return {
+        "checkout_recovery": "compatible_tree_export",
+        "exported_files": exported,
+        "omitted_paths": omitted,
+    }
+
+
+def _windows_compatible_path(relative: str) -> bool:
+    invalid = set('<>:"|?*')
+    reserved = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+    for part in relative.replace("\\", "/").split("/"):
+        stem = part.split(".", 1)[0].upper()
+        if not part or part.endswith((" ", ".")) or stem in reserved:
+            return False
+        if any(char in invalid or ord(char) < 32 for char in part):
+            return False
+    return True
 
 
 def _checkout_ready(destination: Path) -> bool:

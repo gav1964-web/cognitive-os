@@ -83,6 +83,11 @@ def declared_project_packages(project_dir: Path) -> set[str]:
     packages, _ = _declared_packages(project_dir)
     return packages
 
+
+def declared_package_satisfies_module(module: str, packages: set[str]) -> bool:
+    """Return whether a declared distribution provides the imported module."""
+    return _package_for_module(module, packages) in packages
+
 def _dependency_modules(behavior: dict[str, Any]) -> list[str]:
     result = []
     pattern = re.compile(r"No module named ['\"]([^'\"]+)['\"]")
@@ -162,9 +167,15 @@ def _requirement_files(project_dir: Path) -> list[Path]:
 
 
 def _pyproject_dependencies(project_dir: Path) -> set[str]:
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
-        return set()
+    packages = set()
+    paths = [project_dir / "pyproject.toml", *project_dir.glob("*/pyproject.toml")]
+    for path in paths:
+        if path.is_file():
+            packages.update(_pyproject_file_dependencies(path))
+    return packages
+
+
+def _pyproject_file_dependencies(path: Path) -> set[str]:
     packages = set()
     section = ""
     collecting = False
@@ -190,7 +201,7 @@ def _pyproject_dependencies(project_dir: Path) -> set[str]:
             continue
         if collecting:
             _add_dependency_strings(packages, line)
-            if "]" in line:
+            if line.startswith("]"):
                 collecting = False
     return packages
 

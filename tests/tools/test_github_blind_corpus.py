@@ -2,7 +2,16 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from tools.github_blind_corpus import _checkout_ready, _eligible, _project_row, _search_stratum, _search_with_gh, known_projects
+from tools.github_blind_corpus import (
+    _checkout_ready,
+    _eligible,
+    _export_compatible_tree,
+    _project_row,
+    _search_stratum,
+    _search_with_gh,
+    _windows_compatible_path,
+    known_projects,
+)
 
 
 def test_known_projects_reads_only_frozen_top_level_selections(tmp_path):
@@ -130,3 +139,26 @@ def test_checkout_ready_requires_clean_git_status(tmp_path):
     with patch("subprocess.run", return_value=completed) as run:
         assert _checkout_ready(tmp_path)
     assert run.call_args.args[0][-2:] == ["status", "--porcelain"]
+
+
+def test_windows_compatible_path_rejects_unrepresentable_segments():
+    assert _windows_compatible_path("src/client.py")
+    assert not _windows_compatible_path("tests/@user:host.db")
+    assert not _windows_compatible_path("docs/trailing. /readme.md")
+    assert not _windows_compatible_path("src/CON.txt")
+
+
+def test_compatible_tree_export_skips_invalid_windows_paths(tmp_path):
+    completed = lambda code=0, output=b"": type(
+        "Completed", (), {"returncode": code, "stdout": output, "stderr": b""}
+    )()
+    listing = completed(output=b"src/good.py\0tests/@user:host.db\0")
+    with patch("subprocess.run", side_effect=[listing, completed(output=b"print('ok')\n")]):
+        recovery = _export_compatible_tree(tmp_path)
+
+    assert (tmp_path / "src" / "good.py").read_text() == "print('ok')\n"
+    assert recovery == {
+        "checkout_recovery": "compatible_tree_export",
+        "exported_files": 1,
+        "omitted_paths": ["tests/@user:host.db"],
+    }

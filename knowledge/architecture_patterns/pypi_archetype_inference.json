@@ -17,7 +17,7 @@
     {
       "rule_id": "docs_site_generator",
       "label": "documentation/static site generator",
-      "signals": ["documentation", "markdown", "site", "mkdocs", "theme"],
+      "signals": ["documentation", "markdown", "site", "mkdocs", "static site"],
       "first_slice": "site_page_render_slice"
     },
     {

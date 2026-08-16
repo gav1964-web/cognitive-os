@@ -351,7 +351,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:8ebdf577dc11795ee636c3c40588c36df7b2b299100bd6358aaee1e4ac0b514d",
+      "version_hash": "sha256:22472b33bda499952af32d4d88059da2ecc194d43ed5cdabe38d5e55559fe684",
       "fallback_for": []
     },
     {

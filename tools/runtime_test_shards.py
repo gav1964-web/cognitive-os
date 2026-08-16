@@ -13,6 +13,9 @@ from typing import Any
 
 
 def main() -> int:
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--shards", type=int, default=4)
@@ -77,17 +80,19 @@ def _run_shard(root: Path, index: int, shard_count: int, tests: list[str]) -> di
         return {"shard": index, "status": "ok", "test_count": 0, "returncode": 0}
     base_temp = root / ".pytest-tmp" / f"runtime-shard-{index}"
     base_temp.mkdir(parents=True, exist_ok=True)
+    args_file = base_temp / "pytest-args.txt"
+    args_file.write_text("\n".join(tests) + "\n", encoding="utf-8")
     env = os.environ.copy()
     env.update({"TMP": str(base_temp), "TEMP": str(base_temp), "TMPDIR": str(base_temp)})
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", f"--basetemp={base_temp}", "-q", *tests],
+        [sys.executable, "-m", "pytest", f"--basetemp={base_temp}", "-q", f"@{args_file}"],
         cwd=str(root),
         env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=180,
+        timeout=240,
     )
     return {
         "shard": index,

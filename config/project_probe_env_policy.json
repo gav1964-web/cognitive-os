@@ -9,6 +9,7 @@
     "contourpy": "contourpy",
     "cycler": "cycler",
     "docstring-parser": "docstring_parser",
+    "djangorestframework": "rest_framework",
     "execnet": "execnet",
     "face": "face",
     "filelock": "filelock",

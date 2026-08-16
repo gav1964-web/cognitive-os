@@ -35,6 +35,18 @@ def test_pypi_archetype_rules_load_from_kb():
     assert rules[0]["rule_id"] == "schema_validation_library"
 
 
+def test_pypi_archetype_does_not_treat_terminal_theme_as_docs_site():
+    metadata = {
+        "package": "json-query-cli",
+        "summary": "Query JSON with Python syntax and terminal colors",
+        "keywords": "json query theme pygments",
+    }
+
+    result = infer_archetype_from_pypi(metadata)
+
+    assert result is None
+
+
 def test_pypi_candidate_is_staged_and_weak():
     candidate = pypi_candidate_from_metadata(
         {

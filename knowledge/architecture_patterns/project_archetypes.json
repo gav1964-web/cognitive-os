@@ -2540,6 +2540,7 @@
       "record_type": "project_archetype_rule",
       "priority": 97,
       "archetype": "structured_data_converter_library",
+      "architect_consumable": true,
       "label": "structured data conversion/validation library",
       "purpose_summary": "Convert between unstructured input data and structured Python objects while preserving validation, error, and customization contracts.",
       "match": {
@@ -2647,6 +2648,14 @@
         "project_name_contains_any": [
           "iniconfig",
           "configparser"
+        ],
+        "required_source_contains_any": [
+          "configparser",
+          "iniconfig",
+          ".ini",
+          "parse_config",
+          "parse_ini",
+          "section"
         ],
         "negative_contains_any": [
           "flask",
@@ -2854,11 +2863,20 @@
       "record_type": "project_archetype_rule",
       "priority": 97,
       "archetype": "async_database_access_library",
+      "architect_consumable": true,
       "label": "async database access abstraction library",
       "purpose_summary": "Provide an async database access abstraction over SQL/query compilation, backend connections, transactions, and driver result handling.",
       "match": {
         "project_name_contains_any": [
           "databases"
+        ],
+        "required_source_contains_any": [
+          "database",
+          "transaction",
+          "execute_command",
+          "redis",
+          "sqlalchemy",
+          "backend"
         ],
         "text_contains_any": [
           "asyncio",
@@ -4322,8 +4340,7 @@
           "dotenv",
           ".env",
           "find_dotenv",
-          "load_dotenv",
-          "rewrite"
+          "load_dotenv"
         ]
       },
       "diagnosis": {
@@ -6006,10 +6023,20 @@
       "record_type": "project_archetype_rule",
       "priority": 70,
       "archetype": "protocol_api_client",
+      "architect_consumable": true,
       "label": "protocol/API client library",
       "match": {
         "domain_profile_kind": [
           "protocol_api_client"
+        ],
+        "required_source_contains_any": [
+          "client.py:",
+          ":send",
+          ":login",
+          ":request",
+          ":transport",
+          ":execute_command",
+          "rest/"
         ],
         "text_contains_any": [
           "api client",
@@ -6408,8 +6435,6 @@
           "markdown",
           "documentation generator",
           "site_dir",
-          "nav",
-          "theme",
           "static site"
         ]
       },

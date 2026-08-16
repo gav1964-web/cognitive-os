@@ -2,6 +2,37 @@
   "schema_version": "contract_archetype_inference.v1",
   "archetypes": [
     {
+      "id": "text_tokenization_transform",
+      "priority": 112,
+      "symbols": ["tokenize", "_tokenize"],
+      "path_contains_any": ["tokenizer", "tokenization"],
+      "score_bonus": 24,
+      "ranking_bonus": 36,
+      "reason": "text tokenization is a bounded text-to-token-sequence transform",
+      "ranking_reason": "tokenization is a representative deterministic domain transform",
+      "contract_family": "text_tokenization_transform",
+      "input_contract": {"text": "TextInput(value, casing_policy?, unicode_policy?, vocabulary?)"},
+      "output_contract": {"tokens": "TokenSequence(values, unknown_tokens?, offsets?)", "failure_packet": "TokenizationFailure(kind, position?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "external_calls": "vocabulary and segmentation providers are fixture-backed when present"},
+      "validation_gates": ["empty, whitespace and punctuation inputs are covered", "Unicode normalization and casing policy are explicit", "unknown vocabulary and mixed-script behavior are deterministic"],
+      "failure_modes": ["invalid_text", "unsupported_character", "missing_vocabulary", "segmentation_failure"]
+    },
+    {
+      "id": "structured_schema_projection",
+      "priority": 111,
+      "symbols": ["create_schema", "_schema_gen", "generate_schema"],
+      "score_bonus": 22,
+      "ranking_bonus": 34,
+      "reason": "schema projection is a bounded structured-value to schema-artifact transform",
+      "ranking_reason": "schema projection represents the structured-data conversion boundary",
+      "contract_family": "structured_schema_projection",
+      "input_contract": {"value": "StructuredValue(object|array|scalar, path?, type_policy?)"},
+      "output_contract": {"schema": "SchemaProjection(entries, paths, value_types?)", "failure_packet": "SchemaProjectionFailure(kind, path?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "memory_state": "accumulated schema entries are reset or owned by one projection request"},
+      "validation_gates": ["nested objects and arrays are covered", "empty containers and invalid keys are explicit", "repeated calls do not leak prior projection state"],
+      "failure_modes": ["unsupported_value", "invalid_key", "recursive_value", "stale_projection_state"]
+    },
+    {
       "id": "proxy_flow_orchestration_boundary",
       "priority": 111,
       "symbols": ["proxy_loop", "raw_proxy_loop"],
@@ -3268,6 +3299,35 @@
         "configuration-sensitive behavior is fixture-backed"
       ],
       "failure_modes": ["parse_error", "missing_location", "config_error", "diagnostic_error"]
+    },
+    {
+      "id": "request_parameter_projection",
+      "priority": 111,
+      "symbols": ["get_params", "_get_params", "build_params", "request_params"],
+      "symbol_contains_any": ["request_params", "query_params"],
+      "path_contains_any": ["rest/", "client", "api", "request"],
+      "score_bonus": 18,
+      "ranking_bonus": 38,
+      "reason": "request parameter projection is a bounded caller-input to query mapping contract",
+      "contract_family": "request_parameter_projection",
+      "input_contract": {
+        "caller_values": "CallerArguments(mapping of named values)",
+        "projection_policy": "ParameterProjectionPolicy(allowed_names, omitted_values, aliases?)"
+      },
+      "output_contract": {
+        "query_params": "QueryParameterMapping(string keys to serializable values)",
+        "failure_packet": "ParameterProjectionFailure(kind, parameter?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "mutation_policy": "caller mappings are read-only and omitted values follow explicit policy"
+      },
+      "validation_gates": [
+        "allowed, omitted and unknown caller values are covered",
+        "aliases and serializable value shapes are explicit",
+        "the input mapping is not mutated"
+      ],
+      "failure_modes": ["unknown_parameter", "invalid_value_shape", "serialization_error"]
     }
   ]
 }
