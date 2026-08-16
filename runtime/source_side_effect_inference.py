@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from runtime.source_ast_scope import callable_scope_walk
+from runtime.source_contract_helpers import target_mutates_external_state
 
 
 DEFAULT_POLICY = Path(__file__).resolve().parents[1] / "config" / "source_side_effect_inference.json"
@@ -95,14 +96,6 @@ def _mutates_external_state(node: ast.AST) -> bool:
         if not isinstance(child, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
             continue
         targets = child.targets if isinstance(child, ast.Assign) else [child.target]
-        if any(_external_mutation_target(target, local_names) for target in targets):
+        if any(target_mutates_external_state(target, local_names) for target in targets):
             return True
-    return False
-
-
-def _external_mutation_target(target: ast.AST, local_names: set[str]) -> bool:
-    if isinstance(target, ast.Attribute):
-        return True
-    if isinstance(target, ast.Subscript):
-        return not isinstance(target.value, ast.Name) or target.value.id not in local_names
     return False

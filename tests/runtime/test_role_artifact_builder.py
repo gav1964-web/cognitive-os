@@ -39,7 +39,9 @@ def test_role_pipeline_phases_are_selected_from_config():
     build = configured_pipeline_phase("build")
     review = configured_pipeline_phase("review")
 
-    assert [step["role_id"] for step in build["steps"]] == ["architect", "spec_writer", "implementer", "tester"]
+    assert [step["role_id"] for step in build["steps"]] == [
+        "architect", "spec_writer", "implementer", "tester", "task_tree_builder"
+    ]
     assert [step["role_id"] for step in review["steps"]] == ["reviewer"]
 
 

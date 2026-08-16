@@ -17,7 +17,7 @@ def local_type_factories(function: ast.AST) -> dict[str, str]:
 
 def target_mutates_external_state(target: ast.AST, local_names: set[str]) -> bool:
     if isinstance(target, ast.Attribute):
-        return True
+        return not isinstance(target.value, ast.Name) or target.value.id not in local_names
     if isinstance(target, ast.Subscript):
         return not isinstance(target.value, ast.Name) or target.value.id not in local_names
     return False

@@ -35,7 +35,7 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
-    {"family_id": "route_tree_flatten_boundary", "all": [
+    {"family_id": "route_tree_flatten_boundary", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
       {"field": "output_type", "op": "starts_with_ci", "value": "iterator["},
       {"field": "usage.routes", "op": "equals", "value": "IterableLike"},
       {"field": "yield_paths", "op": "truthy"}

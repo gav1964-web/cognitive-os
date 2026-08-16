@@ -74,6 +74,14 @@ def is_fallback_product_target(source: str, policy: dict[str, Any] | None = None
     return any(str(token).lower() in normalized for token in list(row.get("fallback_product_path_tokens") or []))
 
 
+def implementation_policy_int(field_name: str, default: int, policy: dict[str, Any] | None = None) -> int:
+    row = dict((policy or load_role_source_policy()).get("implementation_target_policy") or {})
+    try:
+        return int(row.get(field_name))
+    except (TypeError, ValueError):
+        return default
+
+
 def scope_selection_policy(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     return dict((policy or load_role_source_policy()).get("scope_selection_policy") or {})
 

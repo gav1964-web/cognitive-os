@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "task_tree_builder",
+  "label": "Task Tree Builder",
+  "order": 55,
+  "consumes": ["TechnicalSpec", "ImplementationPlan", "TestPlan"],
+  "produces": ["ProgrammerTaskTree"],
+  "kb_filters": {"role_scope": ["task_tree_builder"]},
+  "policy": {"source_mutation": "forbidden", "llm_authority": "none"},
+  "questions": [
+    {"id": "target", "question": "Какой ограниченный target должен завершить task tree?", "answer": {"provider": "target"}, "evidence": ["minimal_extraction_plan.capabilities_to_extract"]},
+    {"id": "minimal_plan", "question": "Какой минимальный план определяет границы дерева?", "answer": {"provider": "helper", "name": "minimal_plan"}, "evidence": ["answers.6_runtime_extraction_readiness.minimal_extraction_plan"]},
+    {"id": "pure_prerequisites", "question": "Какие чистые преобразования можно выполнить первыми?", "answer": {"provider": "ctx", "path": ["capabilities", "pure_transforms"]}, "evidence": ["answers.3_capabilities.pure_transforms"]},
+    {"id": "broad_nodes", "question": "Какие широкие функции требуют декомпозиции?", "answer": {"provider": "ctx", "path": ["capabilities", "too_broad_functions"]}, "evidence": ["answers.3_capabilities.too_broad_functions"]},
+    {"id": "dataflows", "question": "Какие dataflow-зависимости задают порядок задач?", "answer": {"provider": "ctx", "path": ["readiness", "dataflows"]}, "evidence": ["answers.6_runtime_extraction_readiness.dataflows"]},
+    {"id": "process_boundaries", "question": "Какие process boundaries должны быть отдельными узлами?", "answer": {"provider": "ctx", "path": ["readiness", "process_boundary_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.process_boundary_candidates"]},
+    {"id": "idempotency", "question": "Какие узлы требуют явной idempotency policy?", "answer": {"provider": "ctx", "path": ["readiness", "idempotency_risks"]}, "evidence": ["answers.6_runtime_extraction_readiness.idempotency_risks"]},
+    {"id": "resume", "question": "Где нужны checkpoint и resume dependencies?", "answer": {"provider": "ctx", "path": ["readiness", "resume_reuse_plan"]}, "evidence": ["answers.6_runtime_extraction_readiness.resume_reuse_plan"]},
+    {"id": "acceptance", "question": "Какие contract tests должны быть привязаны к target?", "answer": {"provider": "helper", "name": "contract_tests", "args": ["$target"]}, "evidence": ["answers.4_contracts_data", "minimal_extraction_plan"]},
+    {"id": "fixtures", "question": "Какие fixtures ограничивают внешние зависимости узлов?", "answer": {"provider": "helper", "name": "fixtures"}, "evidence": ["project_insights.external_imports"]},
+    {"id": "stop_conditions", "question": "Какие blockers должны остановить выполнение дерева?", "answer": {"provider": "helper", "name": "implementation_blockers"}, "evidence": ["minimal_extraction_plan.blocked_by", "open_questions"], "confidence": "medium"},
+    {"id": "verification_order", "question": "В каком порядке проверять завершённые узлы?", "answer": {"provider": "helper", "name": "test_priority", "args": ["$target"]}, "evidence": ["runtime_commands", "risks"]}
+  ]
+}

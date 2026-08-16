@@ -166,6 +166,7 @@ def test_spec_writer_accepts_source_proven_route_iterator_in_middleware():
         "role": "architect",
         "goal": "Stabilize framework route compatibility",
         "chosen_option": {"id": "minimal_safe_extraction"},
+        "first_slice_contract": {"targets": [target]},
         "spec_writer_brief": {"scope": ["Prepare one spec."], "files_or_symbols": [target]},
         "traceability": [{"source": target, "requirement": "Capability requires TechnicalSpec."}],
         "source_context": {

@@ -99,7 +99,7 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
 
 def _score_plan(expected: dict[str, Any], actual: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
     quality = evaluate_test_plan(plan)
-    review_producer = producer_for_artifact_type("ReviewFindings")
+    next_producer = producer_for_artifact_type("ProgrammerTaskTree")
     checks = {
         "artifact_is_test_plan": actual.get("artifact_type") == "TestPlan" and actual.get("role") == "tester",
         "candidate_matches": actual.get("candidate") == expected.get("candidate"),
@@ -118,7 +118,7 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any], plan: dict[str
         "dependency_policy_matches": _dependency_policy_matches(expected, actual),
         "quality_gate_passed": quality["passed"] is True and not quality.get("blocking_warnings"),
         "no_forbidden_actions_observed": not actual.get("forbidden_actions_observed"),
-        "next_role_targets_reviewer": actual.get("next_role") == review_producer,
+        "next_role_targets_configured_producer": actual.get("next_role") == next_producer,
     }
     warnings = [name for name, ok in checks.items() if not ok]
     return {

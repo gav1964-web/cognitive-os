@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from runtime.source_target_policy import implementation_target_violation
+from runtime.source_target_policy import implementation_policy_int, implementation_target_violation
 
 def _greenfield_change_plan(
     technical_spec: dict[str, Any],
@@ -181,7 +181,8 @@ def _implementation_evidence_scope(technical_spec: dict[str, Any], handoff: dict
         source = str(dict(row or {}).get("source") or "")
         if ":" in source:
             _append_unique(scope, source)
-    return scope[:8]
+    limit = max(1, implementation_policy_int("implementation_evidence_scope_limit", 8))
+    return scope[:limit]
 
 def _append_unique(rows: list[str], value: str) -> None:
     if value and value not in rows:

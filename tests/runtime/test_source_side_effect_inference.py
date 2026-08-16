@@ -30,3 +30,9 @@ def test_redis_membership_lookup_is_network_effect():
     node = ast.parse("async def verify(pool, user):\n    return await pool.sismember('users', user)\n").body[0]
 
     assert infer_ast_side_effects(node, ast.unparse(node)) == ["network"]
+
+
+def test_local_object_attribute_update_is_not_memory_state_effect():
+    node = ast.parse("def build():\n    result = Result()\n    result.value = 1\n    return result\n").body[0]
+
+    assert "memory_state" not in infer_ast_side_effects(node, ast.unparse(node))
