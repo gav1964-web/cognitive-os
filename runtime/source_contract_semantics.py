@@ -294,9 +294,8 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
             name = node.func.value.id
             call_name = _call_name(node.func).lower()
             if (name == "self" and numerical_context) or call_name.startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow.")):
-                for arg in node.args:
-                    if isinstance(arg, ast.Name) and arg.id in known:
-                        inferred[arg.id] = "ArrayLike"
+                for arg_name in _argument_names(node.args, known):
+                    inferred[arg_name] = "ArrayLike"
             if node.func.attr in {"execute", "executemany"}:
                 for arg in node.args:
                     if isinstance(arg, ast.Name) and arg.id in known:
@@ -305,14 +304,13 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                 inferred[name] = "MappingLike"
             elif name in known and node.func.attr in {"startswith", "endswith", "strip", "split", "zfill", "replace"}:
                 inferred[name] = "str"
-            elif name in known and node.func.attr in {"astype", "reshape", "transpose", "swapaxes", "tobytes", "numpy"}:
+            elif name in known and node.func.attr in {"astype", "contiguous", "dim", "mean", "reshape", "sum", "transpose", "swapaxes", "tobytes", "numpy"}:
                 inferred[name] = "ArrayLike"
             elif name in known:
                 inferred.setdefault(name, "ProtocolLike")
         elif isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow.")):
-            for arg in node.args:
-                if isinstance(arg, ast.Name) and arg.id in known:
-                    inferred[arg.id] = "ArrayLike"
+            for arg_name in _argument_names(node.args, known):
+                inferred[arg_name] = "ArrayLike"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known and node.attr in {"shape", "dtype", "ndim"}:
             inferred[node.value.id] = "ArrayLike"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known:
@@ -359,6 +357,10 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
 
 def _format_argument_names(node: ast.AST, known: set[str]) -> set[str]:
     return {child.id for child in ast.walk(node) if isinstance(child, ast.Name) and child.id in known}
+
+
+def _argument_names(nodes: list[ast.AST], known: set[str]) -> set[str]:
+    return {child.id for node in nodes for child in ast.walk(node) if isinstance(child, ast.Name) and child.id in known}
 
 
 def _constraint_constants(node: ast.AST) -> set[object]:

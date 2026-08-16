@@ -62,6 +62,8 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
             return "str"
         if base in {"SequenceLike", "TupleLike"}:
             return "ItemLike"
+        if isinstance(node.slice, ast.Name) and assignments.get(node.slice.id) in {"KeyLike", "SequenceLike"}:
+            return "ItemLike"
     if isinstance(node, ast.BinOp):
         return binary_result_shape({expression_shape(value, assignments) for value in (node.left, node.right)})
     return _call_shape(node, assignments) if isinstance(node, ast.Call) else ""
@@ -78,6 +80,9 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if name.endswith(("dict", "to_dict", "kwargs")): return "MappingLike"
     owner, _, operation = name.rpartition(".")
     if operation == "alloc" or name == "alloc": return "AllocatedObjectLike"
+    if operation == "fit": return "TrainingHistoryLike"
+    if name == "getattr": return "AttributeValue"
+    if operation in ARRAY_CALL_SUFFIXES and assignments.get(owner.split(".", 1)[0]) == "ArrayLike": return "ArrayLike"
     if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")): return "EntityLike"
     if name.endswith(("list", "all")): return "SequenceLike"
     if name.endswith(("split", "rsplit", "splitlines")): return "SequenceLike"

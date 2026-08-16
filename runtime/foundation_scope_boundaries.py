@@ -9,7 +9,7 @@ from runtime.source_target_policy import scope_policy_int, scope_policy_list
 
 
 _EXCLUDED_DIRS = {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache"}
-_DJANGO_SCAFFOLD_FILES = {"asgi.py", "manage.py", "settings.py", "urls.py", "wsgi.py"}
+_DJANGO_SCAFFOLD_FILES = {"__init__.py", "asgi.py", "manage.py", "settings.py", "urls.py", "wsgi.py"}
 
 
 def incidental_polyglot_python_boundary(
@@ -29,7 +29,7 @@ def incidental_polyglot_python_boundary(
 def django_scaffold_without_owned_app(
     python_source_files: list[Path], root_package: str | None, *, has_manifest: bool
 ) -> bool:
-    if has_manifest or root_package or not python_source_files:
+    if not python_source_files:
         return False
     names = {path.name.lower() for path in python_source_files}
     return len(python_source_files) >= 3 and names <= _DJANGO_SCAFFOLD_FILES
@@ -42,6 +42,36 @@ def incidental_context_scripts(path: Path, python_source_files: list[Path], root
         return False
     roots = set(scope_policy_list("incidental_python_context_roots"))
     return bool(roots) and all(source.relative_to(path).parts[0].lower() in roots for source in python_source_files)
+
+
+def native_dominated_monorepo(native_files: list[Path], py_files: list[Path], root_package: str | None) -> bool:
+    minimum = scope_policy_int("native_monorepo_min_files", 500)
+    ratio = scope_policy_int("native_monorepo_files_per_python", 5)
+    return not root_package and len(native_files) >= minimum and len(native_files) >= max(1, len(py_files)) * ratio
+
+
+def fixture_only_python_corpus(path: Path, py_files: list[Path], root_package: str | None) -> bool:
+    if root_package or not py_files:
+        return False
+    markers = {"fixture", "fixtures", "test", "tests", "test-project", "test-resources", "testdata"}
+    return all(markers.intersection(part.lower() for part in source.relative_to(path).parts[:-1]) for source in py_files)
+
+
+def scripts_only_python_support(path: Path, py_files: list[Path], root_package: str | None) -> bool:
+    if root_package or not py_files or any((path / name).is_file() for name in ("pyproject.toml", "setup.py", "setup.cfg")):
+        return False
+    return all(source.relative_to(path).parts[0].lower() in {"script", "scripts", "tools"} for source in py_files)
+
+
+def documentation_deployment_demo(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
+    if root_package or not python_source_files or len(python_source_files) > 20:
+        return False
+    if any((path / name).is_file() for name in ("pyproject.toml", "setup.py", "setup.cfg")):
+        return False
+    readmes = [file for file in path.iterdir() if file.is_file() and file.name.lower().startswith("readme")]
+    infra = {"docker-compose.yml", "dockerfile", "stack.yml", ".gitlab-ci.yml"}
+    top_files = {file.name.lower() for file in path.iterdir() if file.is_file()}
+    return bool(readmes) and max(file.stat().st_size for file in readmes) >= 20_000 and len(top_files & infra) >= 2
 
 
 def _non_python_file_count(path: Path, *, stop_at: int) -> int:
