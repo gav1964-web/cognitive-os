@@ -27,6 +27,13 @@ def enrich_module_script_readiness(project_report: dict[str, Any]) -> dict[str, 
     plan["contracts_to_write"] = [row["first_contract"] for row in candidates]
     plan["blocked_by"] = []
     readiness["minimal_extraction_plan"] = plan
+    if len(list(readiness.get("data_lifecycle") or [])) < 3:
+        primary = candidates[0]["capability"]
+        readiness["data_lifecycle"] = [
+            {"stage": "input", "shape": "module inputs and environment", "evidence": primary},
+            {"stage": "execution", "shape": "top-level process boundary", "evidence": primary},
+            {"stage": "output", "shape": "declared artifacts and side effects", "evidence": primary},
+        ]
     boundaries = list(readiness.get("process_boundary_candidates") or [])
     readiness["process_boundary_candidates"] = [
         *[
@@ -52,8 +59,16 @@ def _eligible_report(project_report: dict[str, Any], policy: dict[str, Any]) -> 
     health = dict(project_report.get("source_health") or {})
     allowed_health = {str(item) for item in list(policy.get("allowed_source_health") or [])}
     allowed_shapes = {str(item) for item in list(policy.get("allowed_project_shapes") or [])}
+    status = str(health.get("status") or "")
+    compatibility_only_noise = bool(
+        status == "noisy"
+        and policy.get("allow_parser_compatibility_noise")
+        and int(health.get("parser_incompatibility_count") or 0) > 0
+        and int(health.get("syntax_error_count") or 0) == 0
+        and int(health.get("artifact_noise_signal_count") or 0) == 0
+    )
     return (
-        str(health.get("status") or "") in allowed_health
+        (status in allowed_health or compatibility_only_noise)
         and str(health.get("project_shape") or "") in allowed_shapes
         and int(health.get("inaccessible_count") or 0) == 0
     )
@@ -71,11 +86,12 @@ def _module_candidates(project_report: dict[str, Any], policy: dict[str, Any]) -
     root = Path(str(summary.get("root") or project_report.get("root") or ""))
     entrypoints = list(dict(project_report.get("answers") or {}).get("2_execution", {}).get("entrypoints") or [])
     entrypoints = entrypoints or list(summary.get("entrypoints") or [])
+    entrypoints = entrypoints or _active_core_sources(project_report)
     max_entries = max(1, int(policy.get("max_entrypoint_candidates") or 1))
-    if not root.is_dir() or not entrypoints or len(entrypoints) > max_entries:
+    if not root.is_dir() or not entrypoints:
         return []
     rows = []
-    for source in entrypoints:
+    for source in entrypoints[:max_entries]:
         normalized = str(source or "").replace("\\", "/")
         if not _safe_module_source(root, normalized):
             continue
@@ -89,6 +105,13 @@ def _module_candidates(project_report: dict[str, Any], policy: dict[str, Any]) -
         )
     limit = max(1, int(policy.get("candidate_limit") or 1))
     return rows[:limit]
+
+
+def _active_core_sources(project_report: dict[str, Any]) -> list[str]:
+    answers = dict(project_report.get("answers") or {})
+    readiness = dict(answers.get("6_runtime_extraction_readiness") or {})
+    strata = dict(readiness.get("source_strata") or {})
+    return [str(row.get("path") or "") for row in list(strata.get("active_core") or []) if isinstance(row, dict)]
 
 
 def _safe_module_source(root: Path, source: str) -> bool:

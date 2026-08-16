@@ -129,6 +129,8 @@ def _risk_record(
     category: str,
     target: object | None = None,
 ) -> dict[str, Any]:
+    if len(description.strip()) < 32:
+        description = f"{description.strip()}; architecture decision required for target `{target or category}`."
     return {
         "source": source,
         "severity": severity,

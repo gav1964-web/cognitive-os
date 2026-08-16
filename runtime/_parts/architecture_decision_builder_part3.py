@@ -226,6 +226,7 @@ def _important_runtime_sources(project_report: dict[str, Any]) -> list[str]:
             )
             if target:
                 rows.append(str(target))
+    rows.extend(str(row["path"]) for row in dict(readiness.get("source_strata") or {}).get("active_core", []) if isinstance(row, dict) and row.get("path"))
     for item in capabilities.get("pure_transforms", [])[:40]:
         if not isinstance(item, dict):
             continue
@@ -235,7 +236,6 @@ def _important_runtime_sources(project_report: dict[str, Any]) -> list[str]:
     root = Path(str(summary.get("root") or project_report.get("root") or ""))
     rows.extend(_provider_parser_sources(root))
     return rows
-
 def _callable_transform_fallback_candidates(answers: dict[str, Any]) -> list[str]:
     policy = CALLABLE_TRANSFORM_FALLBACK_POLICY
     if not policy.get("enabled"):

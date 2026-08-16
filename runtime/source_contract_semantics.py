@@ -336,6 +336,9 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
         elif isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id in known:
             inferred.setdefault(node.value.id, "ArrayLike" if isinstance(node.slice, ast.Tuple) else "IndexableLike")
         elif isinstance(node, ast.BinOp):
+            if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Constant) and isinstance(node.left.value, str):
+                for name in _format_argument_names(node.right, known):
+                    inferred.setdefault(name, "ScalarLike")
             for value in (node.left, node.right):
                 if isinstance(value, ast.Name) and value.id in known:
                     inferred.setdefault(value.id, "NumberLike")
@@ -352,6 +355,12 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                 if isinstance(arg, ast.Name) and arg.id in known:
                     inferred.setdefault(arg.id, "int")
     return inferred
+
+
+def _format_argument_names(node: ast.AST, known: set[str]) -> set[str]:
+    return {child.id for child in ast.walk(node) if isinstance(child, ast.Name) and child.id in known}
+
+
 def _constraint_constants(node: ast.AST) -> set[object]:
     if isinstance(node, ast.Constant):
         return {node.value}

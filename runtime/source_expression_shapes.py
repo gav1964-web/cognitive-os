@@ -77,6 +77,7 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if any(token in name for token in ("render", "request", "response", "redirect")): return "ResponseLike"
     if name.endswith(("dict", "to_dict", "kwargs")): return "MappingLike"
     owner, _, operation = name.rpartition(".")
+    if operation == "alloc" or name == "alloc": return "AllocatedObjectLike"
     if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")): return "EntityLike"
     if name.endswith(("list", "all")): return "SequenceLike"
     if name.endswith(("split", "rsplit", "splitlines")): return "SequenceLike"

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from runtime.source_target_policy import scope_policy_int
+from runtime.source_target_policy import scope_policy_int, scope_policy_list
 
 
 _EXCLUDED_DIRS = {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache"}
@@ -33,6 +33,15 @@ def django_scaffold_without_owned_app(
         return False
     names = {path.name.lower() for path in python_source_files}
     return len(python_source_files) >= 3 and names <= _DJANGO_SCAFFOLD_FILES
+
+
+def incidental_context_scripts(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
+    if root_package or not 1 <= len(python_source_files) <= 2:
+        return False
+    if any((path / name).is_file() for name in ("pyproject.toml", "setup.py", "setup.cfg")):
+        return False
+    roots = set(scope_policy_list("incidental_python_context_roots"))
+    return bool(roots) and all(source.relative_to(path).parts[0].lower() in roots for source in python_source_files)
 
 
 def _non_python_file_count(path: Path, *, stop_at: int) -> int:

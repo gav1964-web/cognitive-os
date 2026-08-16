@@ -157,7 +157,12 @@ def _plan_source_targets(plan: dict[str, Any]) -> list[str]:
     targets: list[str] = []
     for row in list(plan.get("capabilities_to_extract") or []):
         value = row.get("capability") if isinstance(row, dict) else row
-        targets.extend(str(item) for item in _literal_target_list(value) if ".py:" in str(item or ""))
+        targets.extend(
+            str(item)
+            for item in _literal_target_list(value)
+            if _implementation_source(str(item or ""))
+            or (is_python_source_ref(str(item or "")) and ":" not in str(item or ""))
+        )
     return targets
 
 

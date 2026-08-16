@@ -7,6 +7,7 @@ from typing import Any
 from .contract_archetype_inference import archetype_score_adjustments
 from .semantic_target_profiles import semantic_score_adjustments
 from .source_contract_semantics import structural_quality_adjustment
+from .source_contract_types import all_contract_shapes_concrete
 from .target_structural_families import structural_contract_family_rule
 from .target_quality_policy import policy_tokens, target_quality_section
 
@@ -120,7 +121,9 @@ def semantic_target_quality_report(
     reasons.extend(special_boundary["reasons"])
 
     suspicious = _suspicious_hits(path, symbol)
-    suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family)
+    suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family) or _proven_bounded_helper(
+        suspicious, reason_text, structural_evidence, input_contract, output_contract, side_effect_contract
+    )
     meta = [token for token in META_INFRASTRUCTURE_TOKENS if token in lowered]
     boundary = _runtime_boundary_hits(lowered, symbol)
     name_looks_trivial = _trivial_symbol(symbol)
@@ -311,6 +314,26 @@ def _profiled_suspicious_allowed(suspicious: list[str], symbol: str, profiled_co
     if suspicious == ["/utils/"]:
         return symbol in {"parse_shorthand", "verifycert", "verify_certificate", "validate_certificate"}
     return False
+
+
+def _proven_bounded_helper(
+    suspicious: list[str],
+    reason_text: str,
+    structural_evidence: dict[str, Any] | None,
+    input_contract: dict[str, Any] | None,
+    output_contract: dict[str, Any] | None,
+    side_effect_contract: dict[str, Any] | None,
+) -> bool:
+    structural = dict(structural_evidence or {})
+    return bool(
+        suspicious == ["/helpers"]
+        and "pure transform" in reason_text
+        and structural.get("source_body_complete")
+        and int(structural.get("argument_count") or 0) > 0
+        and not structural.get("state_mutation")
+        and not dict(side_effect_contract or {}).get("declared")
+        and all_contract_shapes_concrete(dict(input_contract or {}), dict(output_contract or {}))
+    )
 
 
 def _proven_bounded_policy(

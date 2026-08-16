@@ -4,7 +4,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from runtime.foundation_scope_boundaries import django_scaffold_without_owned_app, incidental_polyglot_python_boundary
+from runtime.foundation_scope_boundaries import (
+    django_scaffold_without_owned_app,
+    incidental_context_scripts,
+    incidental_polyglot_python_boundary,
+)
 from runtime.source_target_policy import scope_policy_int, scope_policy_list
 
 
@@ -137,6 +141,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _distributed_project_portfolio(path, py_files)
         or _incidental_python_support(path, python_source_files, root_package)
         or _incidental_python_automation(path, python_source_files, root_package)
+        or incidental_context_scripts(path, python_source_files, root_package)
         or incidental_polyglot_python_boundary(
             path, python_source_files, root_package, has_manifest=_has_project_manifest(path)
         )
