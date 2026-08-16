@@ -220,6 +220,7 @@ def _expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
             return "ItemLike"
         if name.endswith(("format", "replace", "strip", "zfill")):
             return "str"
+        if name.endswith(("unpad", "unpadding")): return "bytes"
         if name.startswith(("np.", "numpy.")) and name.endswith(("exp", "log", "log10", "log2")):
             return "ArrayLike"
         if name.endswith(("image.frombytes", "image.fromarray")):

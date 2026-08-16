@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -57,8 +58,8 @@ def prepare_probe_env(
                 "env_dir": env_dir.as_posix(),
             }
     already_installed = _installed_package_names(env_dir)
-    pending_packages = [item for item in packages if _normalize(item) not in already_installed]
-    pending_wheel = [item for item in wheel if _normalize(item) not in already_installed]
+    pending_packages = [item for item in packages if _requires_install(item, already_installed)]
+    pending_wheel = [item for item in wheel if _requires_install(item, already_installed)]
     pip = _pip_path(env_dir)
     try:
         installed = _install_probe_packages(
@@ -180,7 +181,15 @@ def _installed_package_names(env_dir: Path) -> set[str]:
 
 
 def _normalize(package: str) -> str:
-    return str(package).replace("_", "-").replace(".", "-").lower()
+    name = str(package).split("[", 1)[0]
+    name = name.split(";", 1)[0]
+    name = re.split(r"[<>=!~ ]", name, maxsplit=1)[0]
+    return name.replace("_", "-").replace(".", "-").lower()
+
+
+def _requires_install(requirement: str, installed: set[str]) -> bool:
+    constrained = any(token in str(requirement) for token in ("<", ">", "=", "!", "~"))
+    return constrained or _normalize(requirement) not in installed
 
 
 def _python_path(env_dir: Path) -> Path:

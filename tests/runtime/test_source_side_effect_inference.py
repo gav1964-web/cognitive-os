@@ -36,3 +36,17 @@ def test_local_object_attribute_update_is_not_memory_state_effect():
     node = ast.parse("def build():\n    result = Result()\n    result.value = 1\n    return result\n").body[0]
 
     assert "memory_state" not in infer_ast_side_effects(node, ast.unparse(node))
+
+
+def test_pandas_read_sql_is_a_database_read_contract_effect():
+    node = ast.parse(
+        "def load_table(query, engine):\n    return pd.read_sql(query, engine)\n"
+    ).body[0]
+
+    assert "database_read" in infer_ast_side_effects(node, ast.unparse(node))
+
+
+def test_terminal_renderer_method_is_an_observability_effect():
+    node = ast.parse("def render(qr):\n    qr.print_tty()\n").body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["observability"]

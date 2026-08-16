@@ -141,7 +141,11 @@ def run_isolated_dependency_probe(
             "stdout": target_probe.stdout[-1200:],
             "stderr": target_probe.stderr[-1200:],
         })
-    missing = _missing_module(str(result.get("stderr") or "")) if result["status"] == "failed" else ""
+    stderr = str(result.get("stderr") or "")
+    missing = _missing_module(stderr) if result["status"] == "failed" else ""
+    incompatible = _incompatible_requirement(stderr) if result["status"] == "failed" else None
+    if incompatible and not missing:
+        missing = incompatible[0].replace("-", "_")
     if missing:
         transitive_evidence = dict(
             dict(profile.get("manifest_evidence") or {}).get("approved_distribution_requirements") or {}
@@ -150,6 +154,8 @@ def run_isolated_dependency_probe(
             str(prepared["python"]),
             list(dict(profile.get("approval_request") or {}).get("requested_packages") or []),
         ))
+        if incompatible:
+            transitive_evidence["version_compatibility_error"] = [incompatible[1]]
         result["follow_up_profile"] = build_isolated_dependency_profile(
             project_root=profile.get("project_root"),
             target=str(profile.get("target") or ""),
@@ -199,6 +205,15 @@ def _missing_module(stderr: str) -> str:
     return str(match.group(1)).split(".", 1)[0] if match else ""
 
 
+def _incompatible_requirement(stderr: str) -> tuple[str, str] | None:
+    match = re.search(
+        r"installed ([A-Za-z0-9_.-]+) version \([^)]+\).*?requires ([0-9]+(?:\.[0-9]+)*)",
+        stderr,
+        flags=re.S | re.I,
+    )
+    return (match.group(1), f"{match.group(1)}=={match.group(2)}") if match else None
+
+
 def _target_module(target: str) -> str:
     path = str(target).split(":", 1)[0].replace("\\", "/").strip("/")
     return path[:-3].replace("/", ".") if path.endswith(".py") else ""
@@ -209,7 +224,9 @@ def _installed_requirement_evidence(python: str, packages: list[str]) -> dict[st
         "import importlib.metadata as m,json,sys;"
         "from pip._vendor.packaging.requirements import Requirement as R;"
         "active=lambda s:(R(s).marker is None or R(s).marker.evaluate({'extra':''}));"
-        "print(json.dumps({p:[s for s in (m.requires(p) or []) if active(s)] for p in sys.argv[1:]}))"
+        "names=set(sys.argv[1:]);"
+        "names.update(d.metadata['Name'] for d in m.distributions() if d.metadata['Name']);"
+        "print(json.dumps({p:[s for s in (m.requires(p) or []) if active(s)] for p in names}))"
     )
     probe = subprocess.run(
         [python, "-c", script, *packages], capture_output=True, text=True, timeout=30,

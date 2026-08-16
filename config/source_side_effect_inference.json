@@ -26,7 +26,7 @@
     },
     {
       "id": "database_read",
-      "call_contains": ["get_object_or_404", ".objects.", ".filter", ".order_by", ".select_related", ".prefetch_related"]
+      "call_contains": ["get_object_or_404", ".objects.", ".filter", ".order_by", ".select_related", ".prefetch_related", ".read_sql"]
     },
     {
       "id": "memory_state",
@@ -39,7 +39,7 @@
     {
       "id": "observability",
       "call_exact": ["print"],
-      "call_contains": ["cprint.", "logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", "sys.__excepthook__"]
+      "call_contains": ["cprint.", "logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", ".print_ascii", ".print_tty", "sys.__excepthook__"]
     },
     {
       "id": "external_runtime",

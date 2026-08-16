@@ -140,6 +140,15 @@
       "failure_modes": ["record_construction_error", "unit_of_work_rejected", "duplicate_record"],
       "reason": "AST proves a bounded unit-of-work append command"
     },
+    "subprocess_tuple_query_boundary": {
+      "input_contract": {"query_context": "SubprocessQueryContext"},
+      "output_contract": {"result": "TupleLike"},
+      "side_effect_policy": {"declared": ["subprocess"], "requires_validation_gate": true},
+      "validation_gates": ["subprocess exit and timeout behavior are explicit", "returned tuple positions have stable meanings"],
+      "failure_modes": ["subprocess_unavailable", "subprocess_timeout", "tuple_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded subprocess query returning a tuple contract"
+    },
     "decorated_web_route_boundary": {
       "input_contract": {"request": "WebRequest", "route_context": "RouteContext"},
       "output_contract": {"response": "WebResponseLike"},
@@ -189,12 +198,39 @@
       "validation_gates": ["empty and populated reads return stable mapping shapes", "database failures preserve query evidence"],
       "failure_modes": ["query_failure", "mapping_shape_mismatch", "record_not_found"]
     },
+    "tabular_database_query_boundary": {
+      "input_contract": {"query": "TabularDatabaseQuery", "connection": "DatabaseConnection"},
+      "output_contract": {"result": "DataFrame"},
+      "side_effect_policy": {"declared": ["database_read"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated queries return stable tabular schemas", "connection and query failures remain explicit"],
+      "failure_modes": ["connection_failure", "query_failure", "tabular_schema_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded database-to-tabular read contract"
+    },
+    "filesystem_typed_collection_loader": {
+      "input_contract": {"location": "FilesystemLocation"},
+      "output_contract": {"result": "List[DomainRecord]"},
+      "side_effect_policy": {"declared": ["filesystem_read"], "requires_validation_gate": true},
+      "validation_gates": ["missing, empty and populated locations return explicit collection shapes", "malformed records fail without returning partial state"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "collection_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a typed collection loader over a filesystem read boundary"
+    },
     "iterable_observability_report_command": {
       "input_contract": {"report_items": "IterableLike"},
       "output_contract": {"result": "VoidReportCommand"},
       "side_effect_policy": {"declared": ["observability"], "requires_validation_gate": true},
       "validation_gates": ["empty and populated iterables produce bounded output", "reporting does not mutate input items"],
       "failure_modes": ["invalid_report_item", "rendering_failure", "observability_sink_failure"]
+    },
+    "observability_render_command": {
+      "input_contract": {"render_input": "RenderInput"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["observability"], "requires_validation_gate": true},
+      "validation_gates": ["valid and malformed inputs have bounded render behavior", "rendering does not mutate the supplied input"],
+      "failure_modes": ["invalid_render_input", "rendering_failure", "observability_sink_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded command whose sole effect is observable rendering"
     },
     "multi_shape_prediction_boundary": {
       "input_contract": {"model_input": "PredictionInput", "options": "PredictionOptions"},

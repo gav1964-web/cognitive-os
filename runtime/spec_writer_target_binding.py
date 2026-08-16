@@ -29,6 +29,8 @@ def dependency_readiness_adjustment(candidate: dict[str, Any]) -> tuple[int, lis
     missing = [str(item) for item in list(readiness.get("missing_external_modules") or []) if item]
     if not policy.get("enabled", True) or not missing:
         return 0, []
+    if readiness.get("status") == "manifest_declared":
+        return 0, ["project manifest declares missing imports; isolated executable probe remains required"]
     each = int(policy.get("missing_external_penalty_each") or 0)
     maximum = int(policy.get("max_missing_external_penalty") or 0)
     penalty = min(maximum, each * len(missing))

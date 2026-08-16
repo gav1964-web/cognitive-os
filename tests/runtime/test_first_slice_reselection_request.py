@@ -35,6 +35,21 @@ def test_reselection_request_is_required_without_ready_function_alternative():
     assert request["authority"] == "architect_reselection_required_no_automatic_scope_expansion"
 
 
+def test_reselection_request_returns_semantic_block_to_architect():
+    request = build_first_slice_reselection_request(
+        {
+            "status": "blocked_no_safe_candidate",
+            "candidate": None,
+            "ranked_candidates": [{"source": "pkg/runtime.py:get_value", "score": 42}],
+        },
+        {"status": "not_required", "missing_modules": []},
+    )
+
+    assert request["status"] == "required"
+    assert request["trigger"] == "no_semantically_safe_candidate_in_approved_first_slice"
+    assert request["blocking_evidence"]["rejected_candidates"][0]["source"] == "pkg/runtime.py:get_value"
+
+
 def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()
@@ -71,6 +86,7 @@ def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     ]
     assert second_spec["extraction_contract"]["candidate"] == "pkg/core.py:normalize"
     assert second_spec["first_slice_reselection_request"]["status"] == "not_required"
+    assert resolution["architecture_decision"]["architecture_synthesis"]["project_profile"]["archetype"]
 
 
 def test_architect_reports_exhausted_without_environment_ready_candidate(tmp_path):
@@ -123,6 +139,9 @@ def test_architect_can_reselect_callable_with_manifest_declared_dependency(tmp_p
     assert resolution["outcome"]["environment_ready_candidate_count"] == 0
     assert resolution["outcome"]["declared_dependency_candidate_count"] == 1
     assert resolution["outcome"]["selected_targets"] == ["pkg/adapter.py:convert_value"]
+    context = resolution["architecture_decision"]["source_context"]["pkg/adapter.py:convert_value"]
+    assert context["dependency_readiness"]["status"] == "manifest_declared"
+    assert context["dependency_readiness"]["executable_probe_required"] is True
 
 
 def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monkeypatch):

@@ -2,9 +2,19 @@ import subprocess
 
 from runtime import isolated_dependency_probe
 from runtime.isolated_dependency_probe import (
+    _incompatible_requirement,
     run_isolated_dependency_probe,
     validate_dependency_probe_approval,
 )
+
+
+def test_incompatible_installed_version_becomes_exact_requirement():
+    stderr = (
+        "The installed pydantic-core version (2.48.0) is incompatible with the current "
+        "pydantic version, which requires 2.46.4."
+    )
+
+    assert _incompatible_requirement(stderr) == ("pydantic-core", "pydantic-core==2.46.4")
 from runtime.isolated_dependency_profile import build_isolated_dependency_profile
 
 
@@ -128,7 +138,7 @@ def test_failed_import_builds_new_approval_bound_profile(tmp_path, monkeypatch):
     assert result["status"] == "failed"
     assert follow_up["missing_modules"] == ["numpy"]
     assert follow_up["status"] == "ready_for_probe"
-    assert follow_up["install_plan"]["wheel_packages"] == ["numpy"]
+    assert follow_up["install_plan"]["wheel_packages"] == ["numpy>=1.26"]
     assert follow_up["manifest_evidence"]["approved_distribution_requirements"] == {
         "attrs": ["numpy>=1.26"]
     }
@@ -162,7 +172,7 @@ def test_target_import_builds_follow_up_from_approved_distribution(tmp_path, mon
     assert result["status"] == "failed"
     assert result["phase"] == "target_import_probe"
     assert result["target_module"] == "pkg.core"
-    assert result["follow_up_profile"]["install_plan"]["wheel_packages"] == ["scipy"]
+    assert result["follow_up_profile"]["install_plan"]["wheel_packages"] == ["scipy>=1.8"]
 
 
 def test_follow_up_preserves_prior_distribution_evidence(tmp_path, monkeypatch):
@@ -198,7 +208,7 @@ def test_follow_up_preserves_prior_distribution_evidence(tmp_path, monkeypatch):
 
     follow_up = result["follow_up_profile"]
     assert follow_up["status"] == "ready_for_probe"
-    assert follow_up["install_plan"]["wheel_packages"] == ["pillow"]
+    assert follow_up["install_plan"]["wheel_packages"] == ["pillow>=8"]
     assert set(follow_up["manifest_evidence"]["approved_distribution_requirements"]) == {
         "matplotlib", "packaging"
     }

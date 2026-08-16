@@ -31,11 +31,13 @@ def dependency_module_plan(
     *,
     install_hints: set[str] | None = None,
     additional_declared_packages: set[str] | None = None,
+    declared_requirements: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     missing = list(dict.fromkeys(str(item) for item in missing_modules if item))
     hints = set(install_hints or set())
     requirements, dependency_files = _declared_packages(project_dir)
     requirements.update(str(item).replace("_", "-").lower() for item in additional_declared_packages or set())
+    requirement_specs = dict(declared_requirements or {})
     candidates = []
     for module in missing:
         package = _package_for_module(module, requirements)
@@ -43,6 +45,7 @@ def dependency_module_plan(
             {
                 "module": module,
                 "package": package,
+                "install_requirement": requirement_specs.get(package, package),
                 "declared": package in requirements,
                 "install_hint": package in hints,
                 "installed": False,
@@ -129,13 +132,16 @@ def _declared_packages(project_dir: Path) -> tuple[set[str], list[str]]:
     pyproject = _pyproject_dependencies(project_dir)
     setup_cfg = _setup_cfg_dependencies(project_dir)
     setup_py = _setup_py_dependencies(project_dir)
+    packages = requirements | pyproject | setup_cfg | setup_py
+    for package in list(packages):
+        packages.update(PACKAGE_COMPANIONS.get(package, []))
     files = [path.as_posix() for path in _requirement_files(project_dir)]
     if (project_dir / "pyproject.toml").exists():
         files.append((project_dir / "pyproject.toml").as_posix())
     for name in ("setup.cfg", "setup.py"):
         if (project_dir / name).exists():
             files.append((project_dir / name).as_posix())
-    return requirements | pyproject | setup_cfg | setup_py, sorted(files)
+    return packages, sorted(files)
 
 
 def _requirements(project_dir: Path) -> set[str]:
@@ -172,9 +178,15 @@ def _pyproject_dependencies(project_dir: Path) -> set[str]:
             continue
         starts_dependencies = section == "project" and line.startswith("dependencies")
         optional_dependencies = section == "project.optional-dependencies" and "=" in line
+        poetry_dependency = section == "tool.poetry.dependencies" and "=" in line
         if starts_dependencies or optional_dependencies:
             collecting = "[" in line and "]" not in line
             _add_dependency_strings(packages, line)
+            continue
+        if poetry_dependency:
+            name = _package_name(line.split("=", 1)[0])
+            if name and name != "python":
+                packages.add(name)
             continue
         if collecting:
             _add_dependency_strings(packages, line)
@@ -285,20 +297,21 @@ def _install_plan(candidates: list[dict[str, Any]], requirements: set[str]) -> d
     wheel = []
     for row in candidates:
         package = str(row.get("package") or "")
+        install_requirement = str(row.get("install_requirement") or package)
         if row.get("installed"):
             continue
         risk = str(row.get("risk") or "")
         trusted = row.get("declared") or row.get("install_hint")
         if trusted and risk == "low" and package.replace("_", "-").lower() in LOW_RISK_ALLOWLIST:
-            allowed.append(package)
+            allowed.append(install_requirement)
         elif trusted and risk == "native" and package.replace("_", "-").lower() in WHEEL_ONLY_NATIVE_ALLOWLIST:
-            wheel.append(package)
+            wheel.append(install_requirement)
         elif trusted and risk == "native":
-            native.append(package)
+            native.append(install_requirement)
         elif trusted:
-            review.append(package)
+            review.append(install_requirement)
         else:
-            blocked.append(package)
+            blocked.append(install_requirement)
     return {
         "allowed_packages": sorted(set(allowed)),
         "wheel_packages": sorted(set(wheel)),

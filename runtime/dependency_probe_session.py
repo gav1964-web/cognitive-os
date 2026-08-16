@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .isolated_dependency_probe import run_isolated_dependency_probe
+from .dependency_probe_receipt import write_probe_receipt
 from .project_probe_env_policy import load_project_probe_env_policy
 
 
@@ -92,10 +93,12 @@ def run_dependency_probe_session(
             "phase": result.get("phase"),
         })
         if result.get("status") == "passed":
-            return _session_result(
+            completed = _session_result(
                 "passed", steps, None, validation,
                 verified_environment=dict(result.get("environment_result") or {}),
             )
+            completed["receipt"] = write_probe_receipt(workspace_root, initial_profile, completed)
+            return completed
         profile = dict(result.get("follow_up_profile") or {})
         if not profile:
             return _session_result("failed", steps, None, validation)

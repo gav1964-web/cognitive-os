@@ -64,9 +64,20 @@ def test_approved_distribution_metadata_can_declare_transitive_dependency(tmp_pa
     )
 
     assert profile["status"] == "ready_for_probe"
-    assert profile["install_plan"]["wheel_packages"] == ["numpy"]
+    assert profile["install_plan"]["wheel_packages"] == ["numpy>=1.21.6"]
     evidence = profile["manifest_evidence"]["approved_distribution_requirements"]
     assert evidence["ase"][0].startswith("numpy")
+
+
+def test_transitive_dependency_preserves_version_constraint(tmp_path):
+    profile = build_isolated_dependency_profile(
+        project_root=tmp_path,
+        target="pkg/adapter.py:convert",
+        missing_modules=["pydantic_core"],
+        transitive_evidence={"pydantic": ["pydantic-core==2.46.4"]},
+    )
+
+    assert profile["install_plan"]["review_packages"] == ["pydantic-core==2.46.4"]
 
 
 def test_dependency_boundary_embeds_manifest_backed_isolated_profile(tmp_path):

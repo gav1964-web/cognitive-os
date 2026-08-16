@@ -28,3 +28,63 @@ def test_blind_corpus_structures_are_profiled_without_project_names():
         )
         assert report["contract_archetype_ids"] == [family]
         assert report["score"] >= 97
+
+
+def test_data_access_loaders_are_profiled_from_structure():
+    cases = [
+        (
+            {
+                "inferred_output_type": "pd.DataFrame",
+                "observed_side_effects": ["database_read"],
+                "raises": [],
+            },
+            "tabular_database_query_boundary",
+        ),
+        (
+            {
+                "inferred_output_type": "List[Account]",
+                "observed_side_effects": ["filesystem_read"],
+                "raises": ["DomainError"],
+            },
+            "filesystem_typed_collection_loader",
+        ),
+    ]
+    for evidence, family in cases:
+        evidence.update({"source_body_complete": True, "state_mutation": False})
+        report = semantic_target_quality_report(
+            "src/storage.py:get_records",
+            ranked_candidates=["src/storage.py:get_records"],
+            source_evidence=["src/storage.py:get_records"],
+            structural_evidence=evidence,
+            input_contract={"location": "DataLocation"},
+            output_contract={"result": evidence["inferred_output_type"]},
+            side_effect_contract={"declared": evidence["observed_side_effects"]},
+        )
+        assert report["contract_archetype_ids"] == [family]
+        assert report["score"] >= 97
+
+
+def test_bounded_runtime_render_and_query_contracts_are_profiled():
+    cases = [
+        (
+            {"inferred_output_type": "TupleLike", "observed_side_effects": ["subprocess"]},
+            "subprocess_tuple_query_boundary",
+        ),
+        (
+            {"inferred_output_type": "VoidSideEffect", "observed_side_effects": ["observability"]},
+            "observability_render_command",
+        ),
+    ]
+    for evidence, family in cases:
+        evidence.update({"source_body_complete": True, "state_mutation": False})
+        report = semantic_target_quality_report(
+            "src/runtime.py:render_or_query",
+            ranked_candidates=["src/runtime.py:render_or_query"],
+            source_evidence=["src/runtime.py:render_or_query"],
+            structural_evidence=evidence,
+            input_contract={"value": "RuntimeQueryInput"},
+            output_contract={"result": evidence["inferred_output_type"]},
+            side_effect_contract={"declared": evidence["observed_side_effects"]},
+        )
+        assert report["contract_archetype_ids"] == [family]
+        assert report["score"] >= 97

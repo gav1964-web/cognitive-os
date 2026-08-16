@@ -35,6 +35,12 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "tabular_database_query_boundary", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "ends_with_ci", "value": "DataFrame"},
+      {"field": "observed_effects", "op": "contains", "value": "database_read"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "route_tree_flatten_boundary", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
       {"field": "output_type", "op": "starts_with_ci", "value": "iterator["},
       {"field": "usage.routes", "op": "equals", "value": "IterableLike"},
@@ -44,6 +50,12 @@
       {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
       {"field": "observed_effects", "op": "contains", "value": "database"},
       {"field": "source_body_complete", "op": "truthy"}
+    ]},
+    {"family_id": "subprocess_tuple_query_boundary", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "TupleLike"},
+      {"field": "observed_effects", "op": "contains", "value": "subprocess"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
     ]},
     {"family_id": "file_extension_admission_policy", "all": [
       {"field": "file_extension_policy", "op": "truthy"},
@@ -59,6 +71,13 @@
       {"field": "output_type", "op": "equals", "value": "ArrayLike"},
       {"field": "usage_types", "op": "contains", "value": "ArrayLike"},
       {"field": "observed_effects", "op": "contains", "value": "filesystem"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "filesystem_typed_collection_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "List["},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
+      {"field": "raises", "op": "truthy"},
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
@@ -126,6 +145,12 @@
     {"family_id": "iterable_observability_report_command", "all": [
       {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
       {"field": "usage_types", "op": "contains", "value": "IterableLike"},
+      {"field": "observed_effects", "op": "set_equals", "value": ["observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "observability_render_command", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
       {"field": "observed_effects", "op": "set_equals", "value": ["observability"]},
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}

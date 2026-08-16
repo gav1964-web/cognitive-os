@@ -6,6 +6,7 @@ from typing import Any
 
 from .technical_spec_policy import load_technical_spec_policy
 from .isolated_dependency_profile import build_isolated_dependency_profile
+from .dependency_probe_receipt import load_verified_probe_receipt
 
 
 def build_dependency_boundary_profile(
@@ -19,6 +20,23 @@ def build_dependency_boundary_profile(
             "status": "not_required",
             "target": extraction_contract.get("candidate"),
             "missing_modules": [],
+        }
+    if readiness.get("status") == "manifest_declared":
+        isolated = build_isolated_dependency_profile(
+            project_root=project_root,
+            target=str(extraction_contract.get("candidate") or ""),
+            missing_modules=missing,
+        )
+        receipt = load_verified_probe_receipt(isolated)
+        return {
+            "artifact_type": "DependencyBoundaryProfile",
+            "status": "probe_verified" if receipt else "declared_probe_required",
+            "target": extraction_contract.get("candidate"),
+            "missing_modules": missing,
+            "declaration_source": readiness.get("declaration_source"),
+            "isolated_environment_profile": isolated,
+            "probe_receipt": receipt,
+            "authority": "manifest_backed_static_contract_executable_probe_required",
         }
     policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
     profile = {

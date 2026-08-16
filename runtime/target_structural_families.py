@@ -11,7 +11,7 @@ from typing import Any
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "contract_families" / "structural_recognition.json"
 SUPPORTED_OPERATORS = {
     "equals", "falsy", "gte", "intersects", "contains", "contains_all",
-    "contains_count_at_least", "set_equals", "starts_with_ci", "subset_of", "truthy",
+    "contains_count_at_least", "ends_with_ci", "set_equals", "starts_with_ci", "subset_of", "truthy",
 }
 
 
@@ -96,6 +96,8 @@ def _matches(facts: dict[str, Any], condition: dict[str, Any]) -> bool:
         return _number(actual) >= _number(expected)
     if operator == "starts_with_ci":
         return str(actual).lower().startswith(str(expected).lower())
+    if operator == "ends_with_ci":
+        return str(actual).lower().endswith(str(expected).lower())
     actual_set = set(actual or [])
     expected_set = set(expected or [])
     if operator == "contains":

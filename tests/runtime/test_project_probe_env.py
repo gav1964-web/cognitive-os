@@ -41,6 +41,18 @@ def test_probe_env_readiness_maps_attr_module_to_attrs_package(tmp_path: Path):
     assert readiness["install_plan"]["allowed_packages"] == ["attrs"]
 
 
+def test_probe_env_readiness_expands_declared_metapackage_companion(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "requirements.txt").write_text("bs4\n", encoding="utf-8")
+    behavior = {"cases": [{"source": {"reason": "No module named 'bs4'"}}]}
+
+    readiness = probe_env_readiness(project, behavior)
+
+    assert readiness["install_candidates"][0]["package"] == "beautifulsoup4"
+    assert readiness["install_plan"]["allowed_packages"] == ["beautifulsoup4"]
+
+
 def test_probe_env_readiness_allows_declared_execnet(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
@@ -71,6 +83,21 @@ def test_probe_env_readiness_allows_declared_pytest(tmp_path: Path):
 
     assert readiness["install_candidates"][0]["declared"] is True
     assert readiness["install_plan"]["allowed_packages"] == ["pytest"]
+
+
+def test_probe_env_readiness_reads_poetry_dependencies(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text(
+        "[tool.poetry.dependencies]\npython = '^3.11'\nSQLAlchemy = '^2.0'\nrich = {version = '^13'}\n",
+        encoding="utf-8",
+    )
+    behavior = {"cases": [{"source": {"reason": "No module named 'sqlalchemy'"}}]}
+
+    readiness = probe_env_readiness(project, behavior)
+
+    assert readiness["install_candidates"][0]["declared"] is True
+    assert "python" not in readiness["declared_packages"]
 
 
 def test_probe_env_readiness_plans_declared_dependency_stubs(tmp_path: Path):

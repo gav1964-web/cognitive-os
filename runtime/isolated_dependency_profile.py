@@ -35,12 +35,18 @@ def build_isolated_dependency_profile(
             "authority": "diagnostic_only_no_install",
         }
     transitive_evidence = dict(transitive_evidence or {})
-    transitive_packages = {
-        _requirement_name(requirement)
+    transitive_requirements = {
+        _requirement_name(requirement): str(requirement)
         for requirements in transitive_evidence.values()
         for requirement in requirements
-    } - {""}
-    plan = dependency_module_plan(root, modules, additional_declared_packages=transitive_packages)
+        if _requirement_name(requirement)
+    }
+    plan = dependency_module_plan(
+        root,
+        modules,
+        additional_declared_packages=set(transitive_requirements),
+        declared_requirements=transitive_requirements,
+    )
     install_plan = dict(plan.get("install_plan") or {})
     status = _profile_status(install_plan)
     policy = dict(load_project_probe_env_policy()["isolated_dependency_profile"])

@@ -43,6 +43,7 @@ def reselect_architecture_first_slice(
         or _declared_dependency_callable(expanded_context.get(source), declared, policy)
     ]
     selected = eligible[: max(1, int(policy.get("selected_target_limit") or 8))]
+    _mark_manifest_declared_context(selected, expanded_context, declared, policy)
     evidence = {
         "artifact_type": "FirstSliceReselectionOutcome",
         "iteration": iteration,
@@ -63,6 +64,7 @@ def reselect_architecture_first_slice(
         }
     revised = _revised_architecture_decision(
         architecture_decision,
+        project_report=project_report,
         expanded_context=expanded_context,
         selected_targets=selected,
         outcome=evidence,
@@ -149,9 +151,30 @@ def _normalize_distribution(value: Any) -> str:
     return str(value).replace("_", "-").lower()
 
 
+def _mark_manifest_declared_context(
+    selected: list[str],
+    expanded_context: dict[str, dict[str, Any]],
+    declared_packages: set[str],
+    policy: dict[str, Any],
+) -> None:
+    for source in selected:
+        row = dict(expanded_context.get(source) or {})
+        if not _declared_dependency_callable(row, declared_packages, policy):
+            continue
+        readiness = dict(row.get("dependency_readiness") or {})
+        readiness.update({
+            "status": "manifest_declared",
+            "declaration_source": "project dependency manifests",
+            "executable_probe_required": True,
+        })
+        row["dependency_readiness"] = readiness
+        expanded_context[source] = row
+
+
 def _revised_architecture_decision(
     architecture_decision: dict[str, Any],
     *,
+    project_report: dict[str, Any],
     expanded_context: dict[str, dict[str, Any]],
     selected_targets: list[str],
     outcome: dict[str, Any],
@@ -182,7 +205,37 @@ def _revised_architecture_decision(
         "source_context": source_context,
         "spec_writer_brief": brief,
     })
+    if not dict(revised.get("architecture_synthesis") or {}):
+        revised["architecture_synthesis"] = _reselection_synthesis(project_report, selected_targets)
     return _attach_outcome(revised, outcome)
+
+
+def _reselection_synthesis(
+    project_report: dict[str, Any], selected_targets: list[str]
+) -> dict[str, Any]:
+    summary = dict(project_report.get("summary") or {})
+    scope = dict(dict(project_report.get("answers") or {}).get("1_scope") or {})
+    domain = dict(scope.get("domain_profile") or {})
+    archetype = str(domain.get("kind") or summary.get("project_shape") or "python_project")
+    return {
+        "artifact_type": "ProjectArchitectureSynthesis",
+        "source": "Architect.first_slice_reselection",
+        "synthesis_id": "reselection_source_backed_synthesis",
+        "confidence": 0.82,
+        "project_profile": {
+            "archetype": archetype,
+            "entrypoints": list(summary.get("entrypoints") or [])[:6],
+            "languages": list(summary.get("languages") or [])[:6],
+            "evidence": selected_targets[:8],
+            "domain_profile": domain,
+        },
+        "project_diagnosis": "Initial slice had no safe callable; Architect selected a source-backed expanded candidate window.",
+        "target_architecture_shape": [
+            "Keep the reselected callable boundary explicit.",
+            "Isolate declared external dependencies behind validation gates.",
+            "Preserve deferred targets outside the first writable scope.",
+        ],
+    }
 
 
 def _reselection_steps(target: str) -> list[str]:

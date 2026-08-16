@@ -5,6 +5,7 @@
     "amqp": "amqp",
     "atpublic": "public",
     "attrs": "attr",
+    "beautifulsoup4": "bs4",
     "contourpy": "contourpy",
     "cycler": "cycler",
     "docstring-parser": "docstring_parser",
@@ -83,6 +84,9 @@
     "ujson"
   ],
   "package_companions": {
+    "bs4": [
+      "beautifulsoup4"
+    ],
     "sanic-ext": [
       "pydantic"
     ]
@@ -94,6 +98,7 @@
     "astroid",
     "atpublic",
     "attrs",
+    "beautifulsoup4",
     "boltons",
     "botocore",
     "click",
