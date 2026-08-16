@@ -32,6 +32,7 @@
       {"type": "str", "contains_any": ["text", "message", "content"]},
       {"type": "MappingLike", "contains_any": ["headers", "options", "config", "data", "payload"]},
       {"type": "SequenceLike", "contains_any": ["items", "args"]},
+      {"type": "MeanFlowLike", "contains_any": ["meanflow", "mean_flow"]},
       {"type": "int", "contains_any": ["index", "count", "line"]}
     ],
     "payload_rules": [

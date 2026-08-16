@@ -144,7 +144,10 @@ def _candidate_argument_type(
     annotation = str(arg.get("annotation") or "")
     if annotation and annotation.lower() not in IGNORED_RETURN_ANNOTATIONS:
         return annotation
-    return documented.get(name) or constrained.get(name) or usage_types.get(name) or _contract_type_from_arg(name, annotation)
+    documented_type = str(documented.get(name) or "")
+    if documented_type.lower() in IGNORED_RETURN_ANNOTATIONS:
+        documented_type = ""
+    return documented_type or constrained.get(name) or usage_types.get(name) or _contract_type_from_arg(name, annotation)
 
 def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [

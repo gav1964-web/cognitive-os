@@ -114,6 +114,8 @@
     "cpp_runtime_core_min_files": 10,
     "incidental_python_automation_max_files": 20,
     "incidental_python_automation_roots": ["ansible", "contrib", "inventory", "library", "playbooks", "plugins", "roles", "scripts", "tools"],
+    "incidental_polyglot_python_max_files": 8,
+    "incidental_polyglot_non_python_min_files": 50,
     "path_score_roots": ["src", "lib", "package", "packages"],
     "path_score_root_bonus": 35,
     "path_score_project_name_bonus": 35,

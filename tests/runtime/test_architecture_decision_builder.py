@@ -3,13 +3,22 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from runtime.architecture_decision_builder import build_architecture_decision
+from runtime.architecture_decision_builder import _contract_targets, build_architecture_decision
 from runtime._parts.architecture_decision_builder_part3 import _provider_parser_sources
 
 
 def test_provider_parser_discovery_tolerates_unreadable_project_tree(tmp_path):
     with patch.object(Path, "rglob", side_effect=FileNotFoundError("vanished path")):
         assert _provider_parser_sources(tmp_path) == []
+
+
+def test_script_product_fallback_is_kept_as_contract_target():
+    source = "scripts/upgrade-config.py:render_config"
+    context = {source: {"signature": {"args": [{"name": "parsed"}]}, "side_effects": []}}
+
+    targets = _contract_targets([source], context)
+
+    assert [row["source"] for row in targets] == [source]
 
 
 def test_architecture_decision_does_not_handoff_test_only_sources_as_implementation_targets(tmp_path):

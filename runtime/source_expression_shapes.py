@@ -52,6 +52,16 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         return type(node.value).__name__
     if isinstance(node, ast.Attribute):
         return "AttributeValue"
+    if isinstance(node, ast.Subscript):
+        if isinstance(node.value, ast.Call) and _call_name(node.value.func).lower().endswith(
+            ("split", "rsplit", "splitlines")
+        ):
+            return "str"
+        base = expression_shape(node.value, assignments)
+        if base == "str":
+            return "str"
+        if base in {"SequenceLike", "TupleLike"}:
+            return "ItemLike"
     if isinstance(node, ast.BinOp):
         return binary_result_shape({expression_shape(value, assignments) for value in (node.left, node.right)})
     return _call_shape(node, assignments) if isinstance(node, ast.Call) else ""
@@ -61,17 +71,20 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if is_receiver_request_dispatch(node):
         return "DispatchedResult"
     raw_name = _call_name(node.func); name = raw_name.lower()
-    if name == "isinstance": return "bool"
+    if name in {"bool", "isinstance"}: return "bool"
+    if name == "len": return "int"
+    if name in {"float", "int", "str"}: return name
     if any(token in name for token in ("render", "request", "response", "redirect")): return "ResponseLike"
     if name.endswith(("dict", "to_dict", "kwargs")): return "MappingLike"
     owner, _, operation = name.rpartition(".")
     if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")): return "EntityLike"
     if name.endswith(("list", "all")): return "SequenceLike"
+    if name.endswith(("split", "rsplit", "splitlines")): return "SequenceLike"
     if name.startswith("self.") and any(expression_shape(arg, assignments) == "ArrayLike" for arg in node.args): return "ArrayLike"
     if name.endswith(("numpy", "array", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")): return "ArrayLike"
     if name.startswith(ARRAY_PREFIXES) and name.endswith(ARRAY_CALL_SUFFIXES): return "ArrayLike"
     if name.endswith(("_item", "from_json")): return "ItemLike"
-    if name.endswith(("format", "replace", "strip", "translate", "zfill")): return "str"
+    if name.endswith(("format", "join", "replace", "strip", "translate", "zfill")): return "str"
     if name.endswith(("unpad", "unpadding")): return "bytes"
     if name.endswith(("image.frombytes", "image.fromarray")): return "ImageLike"
     xml_shape = xml_call_shape(name)

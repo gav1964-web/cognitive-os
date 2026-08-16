@@ -119,6 +119,25 @@ def test_rest_api_sdk_does_not_match_async_database_without_database_sources():
     assert match["rule"]["architect_consumable"] is True
 
 
+def test_confident_bioinformatics_profile_beats_incidental_database_text():
+    facts = {
+        "root": "BEREN",
+        "domain_profile": {
+            "kind": "bioinformatics_sequence_toolkit",
+            "confidence": 0.63,
+            "evidence": ["matched FASTA and nucleotide markers"],
+        },
+        "inputs": ["FASTA records"],
+        "central": ["pipeline.py:database_setup", "pipeline.py:recover_contig_id"],
+        "capabilities": ["pipeline.py:recover_contig_id"],
+        "scenarios": ["Analyze nucleotide sequences and database-backed marker files."],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] == "bioinformatics_sequence_toolkit"
+
+
 def test_structured_converter_rule_is_architect_consumable():
     facts = {
         "root": "json_query_cli",

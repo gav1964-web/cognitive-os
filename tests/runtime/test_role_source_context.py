@@ -103,6 +103,29 @@ def test_source_context_marks_nested_function_parent(tmp_path: Path):
     assert snippet["parent_function"] == "outer"
 
 
+def test_source_context_finds_function_declared_in_top_level_else(tmp_path: Path):
+    source = tmp_path / "conditional.py"
+    source.write_text(
+        "if False:\n"
+        "    VALUE = 1\n"
+        "else:\n"
+        "    def normalize(value):\n"
+        "        return value.strip()\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(
+        project_root=str(tmp_path),
+        project_report={},
+        sources=["conditional.py:normalize"],
+        function_scoped_dependencies=True,
+    )
+
+    snippet = context["conditional.py:normalize"]["snippet"]
+    assert snippet["target_binding"] == "function_symbol"
+    assert snippet["structural_contract"]["inferred_output_type"] == "str"
+
+
 def test_source_context_builds_module_script_context(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

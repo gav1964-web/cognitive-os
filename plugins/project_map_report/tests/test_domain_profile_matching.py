@@ -355,3 +355,23 @@ def test_domain_profile_recognizes_neural_network_training_pipeline():
     )
     assert profile["kind"] == "neural_network_training_pipeline"
     assert "gradients and updated parameters" in profile["output_summary"]
+
+
+def test_domain_profile_recognizes_blender_animation_addon():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/animtoolbox", "frameworks": [], "entrypoints": [], "routes": 0},
+        {"files": [{"path": "README.md", "text": "Animation and rigging tools for Blender."}]},
+        {
+            "files": [
+                {
+                    "path": "BakeToCtrl.py",
+                    "functions": [{"name": "constraint_add", "calls": ["bpy.ops.pose.constraint_add"]}],
+                }
+            ]
+        },
+        [],
+        {"bpy"},
+    )
+
+    assert profile["kind"] == "blender_animation_addon"
+    assert len(profile["scenario_summary"]) >= 3

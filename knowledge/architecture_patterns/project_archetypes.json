@@ -7061,6 +7061,51 @@
       ]
     },
     {
+      "rule_id": "blender_animation_addon",
+      "record_type": "project_archetype_rule",
+      "priority": 88,
+      "archetype": "blender_animation_addon",
+      "architect_consumable": true,
+      "label": "Blender animation and rigging add-on",
+      "purpose_summary": "Provide Blender operators and panels for animation, rigging, controller generation, constraint management, and keyframe workflows.",
+      "match": {
+        "required_contains_any": ["bpy", "blender"],
+        "text_contains_any": ["animation", "armature", "bpy.props", "constraint", "fcurve", "keyframe", "pose", "rig"],
+        "min_score": 39
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "extraction", "process_boundary"],
+        "primary_target_prefer": ["constraint", "controller", "keyframe", "pose", "rig", "bake"],
+        "template": "{label} with Blender-owned state around {target}; operator inputs, scene mutations, context requirements, and undo/retry behavior need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Blender UI operators are separated from reusable animation and rigging decisions.",
+        "Scene, object, pose, and constraint mutations are explicit side-effect contracts.",
+        "Context-sensitive bpy calls are isolated behind Blender runtime adapters.",
+        "Undo, retry, missing selection, and invalid rig states are covered by acceptance tests."
+      ],
+      "first_slice": {
+        "name": "blender_animation_operation_slice",
+        "goal": "Stabilize one bounded Blender animation or rigging operation with explicit scene-state effects.",
+        "target_sources": ["domain_anchors", "extraction", "central"],
+        "targets_prefer": ["constraint", "controller", "keyframe", "pose", "rig", "bake"],
+        "steps": [
+          "Define selected object, rig, pose, and operation-option inputs.",
+          "Separate Blender context access from animation or rigging decisions.",
+          "Record scene and object mutations with undo and retry policy.",
+          "Verify valid selection, missing context, incompatible rig, and repeated execution cases."
+        ]
+      },
+      "scenario_summary": [
+        "Invoke a Blender panel or operator with selected scene objects and animation options.",
+        "Validate object, armature, pose, controller, and Blender context preconditions.",
+        "Create or update constraints, controls, keyframes, collections, or baked animation state.",
+        "Report completion or controlled errors while preserving undo-safe scene behavior."
+      ],
+      "input_summary": ["Blender context", "selected objects or armatures", "pose and animation settings", "operator properties"],
+      "output_summary": ["updated scene state", "constraints and controllers", "keyframes or baked animation", "operator status and errors"]
+    },
+    {
       "rule_id": "script_or_cli_tool",
       "record_type": "project_archetype_rule",
       "priority": 10,

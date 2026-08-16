@@ -190,7 +190,10 @@ def _declared_dependency_callable(
 
 
 def _callable_source_context(row: dict[str, Any], snippet: dict[str, Any]) -> bool:
-    return bool(row.get("node_kind") == "function" or snippet.get("target_binding") == "method_symbol")
+    return bool(
+        row.get("node_kind") == "function"
+        or snippet.get("target_binding") in {"function_symbol", "method_symbol"}
+    )
 
 
 def _mark_manifest_declared_context(

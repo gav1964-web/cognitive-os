@@ -233,6 +233,10 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
     input_text = " ".join(str(item) for item in facts.get("inputs", [])).lower()
     domain_profile = dict(facts.get("domain_profile") or {})
     domain_kind = str(domain_profile.get("kind") or "").lower()
+    rule_kind = str(rule.get("archetype") or rule.get("rule_id") or "").lower()
+    confident_domain_match = bool(rule_kind == domain_kind and domain_profile.get("evidence")) and float(domain_profile.get("confidence") or 0.0) >= 0.6
+    if confident_domain_match:
+        score += 160; reasons.append(f"confident domain profile is {domain_kind}")
 
     negative_domain_kinds = _strings(match.get("negative_domain_profile_kinds"))
     if negative_domain_kinds and domain_kind in {item.lower() for item in negative_domain_kinds}:
@@ -289,7 +293,7 @@ def _match_score(facts: dict[str, Any], rule: dict[str, Any]) -> tuple[int, list
             domain_profile_matched = True
             score += 180 + len(found) * 10
             reasons.append("domain profile is " + ", ".join(found[:3]))
-    anchored = project_name_matched or domain_profile_matched or source_evidence_matched
+    anchored = project_name_matched or domain_profile_matched or source_evidence_matched or confident_domain_match
 
     frameworks = _strings(match.get("framework_contains_any"))
     if frameworks:

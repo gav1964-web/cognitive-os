@@ -226,6 +226,48 @@ def test_scope_rejects_incidental_python_in_non_python_automation(tmp_path):
     assert result["reason_code"] == "no_python_owned_product_boundary"
 
 
+def test_scope_rejects_small_python_surface_in_large_infrastructure_repo(tmp_path):
+    for version in ("newton", "ocata", "pike", "queens"):
+        root = tmp_path / f"src-{version}"
+        root.mkdir()
+        (root / "keygen.py").write_text("import os\nprint(os.urandom(32))\n", encoding="utf-8")
+        for index in range(13):
+            (root / f"resource_{index}.yaml").write_text("kind: ConfigMap\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
+def test_scope_rejects_django_configuration_scaffold_without_owned_app(tmp_path):
+    project = tmp_path / "suite_project"
+    project.mkdir()
+    for name in ("manage.py", "settings.py", "urls.py", "wsgi.py"):
+        (project / name).write_text("import django\n", encoding="utf-8")
+
+    assert _primary_language_scope(tmp_path)["status"] == "out_of_scope"
+
+
+def test_scope_keeps_single_operational_script_among_data_files(tmp_path):
+    (tmp_path / "backup.py").write_text("import sys\nprint(sys.argv[1])\n", encoding="utf-8")
+    for index in range(60):
+        (tmp_path / f"record_{index}.json").write_text("{}\n", encoding="utf-8")
+
+    assert _primary_language_scope(tmp_path)["status"] == "in_scope"
+
+
+def test_scope_keeps_root_python_product_with_large_resource_tree(tmp_path):
+    for name in ("product.py", "batch.py", "database_setup.py"):
+        (tmp_path / name).write_text("def run():\n    return 1\n", encoding="utf-8")
+    resources = tmp_path / "resources"
+    resources.mkdir()
+    for index in range(60):
+        (resources / f"record_{index}.json").write_text("{}\n", encoding="utf-8")
+
+    assert _primary_language_scope(tmp_path)["status"] == "in_scope"
+
+
 def test_auto_scope_selects_standalone_python_project_in_monorepo(tmp_path):
     (tmp_path / "testing").mkdir()
     engine = tmp_path / "engine"

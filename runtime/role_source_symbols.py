@@ -11,10 +11,12 @@ def symbol_matches(
 ) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     for parent in ast.walk(tree):
-        body = getattr(parent, "body", None)
-        if not isinstance(body, list):
-            continue
-        for node in body:
+        statement_lists = [
+            value
+            for _field, value in ast.iter_fields(parent)
+            if isinstance(value, list) and any(isinstance(item, ast.stmt) for item in value)
+        ]
+        for node in [item for values in statement_lists for item in values]:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) or node.name != symbol:
                 continue
             row = {"kind": "function", "line": int(getattr(node, "lineno", 0) or 0)}

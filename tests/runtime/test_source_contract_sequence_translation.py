@@ -1,4 +1,5 @@
 from runtime.source_contract_semantics import infer_source_contract
+from runtime.technical_spec_builder import _input_contract_from_candidate
 
 
 def test_sequence_translate_return_is_a_concrete_string():
@@ -11,3 +12,48 @@ def test_sequence_translate_return_is_a_concrete_string():
 
     assert contract["inferred_output_type"] == "str"
     assert contract["output_inference_basis"] == "return_expression"
+
+
+def test_len_return_is_a_concrete_integer():
+    contract = infer_source_contract(
+        {
+            "signature": {"args": [{"name": "value", "annotation": ""}], "returns": ""},
+            "snippet": "def byte_length(value):\n    return len(value.encode('utf-8'))\n",
+        }
+    )
+
+    assert contract["inferred_output_type"] == "int"
+
+
+def test_generic_docstring_object_falls_back_to_named_contract_type():
+    contract = _input_contract_from_candidate(
+        {
+            "source": "equation.py:assemble",
+            "signature": {"args": [{"name": "meanFlow", "annotation": ""}]},
+            "snippet": "def assemble(meanFlow):\n    '''\n    meanFlow : object\n    '''\n    return 1\n",
+        }
+    )
+
+    assert contract == {"meanFlow": "MeanFlowLike"}
+
+
+def test_split_prefix_selection_returns_a_concrete_string():
+    contract = infer_source_contract(
+        {
+            "signature": {
+                "args": [{"name": "protein_id", "annotation": ""}, {"name": "known_ids", "annotation": ""}],
+                "returns": "",
+            },
+            "snippet": (
+                "def recover(protein_id, known_ids):\n"
+                "    parts = protein_id.split('_')\n"
+                "    for index in range(len(parts) - 1, 0, -1):\n"
+                "        candidate = '_'.join(parts[:index])\n"
+                "        if candidate in known_ids:\n"
+                "            return candidate\n"
+                "    return protein_id.rsplit('_', 1)[0]\n"
+            ),
+        }
+    )
+
+    assert contract["inferred_output_type"] == "str"
