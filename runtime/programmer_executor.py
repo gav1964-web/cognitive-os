@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from .programmer_candidate_flow import prepare_candidate_synthesis, prepare_repair_synthesis
-from .programmer_dependency_session import run_executor_dependency_session
+from .programmer_dependency_session import (
+    run_dependency_environment_verification,
+    run_executor_dependency_session,
+)
 from .programmer_patch_synthesizer import synthesize_patch_package
 from .programmer_patch_strategy import build_patch_strategy, llm_strategy_enabled
 from .programmer_task_tree import build_programmer_task_tree
@@ -125,6 +128,22 @@ def run_programmer_executor(
         dependency_session_path = _write_json(
             execution_dir / "dependency_probe_session_result.json", dependency_session,
         )
+        dependency_verification = run_dependency_environment_verification(
+            root=root,
+            project_dir=execution_project_dir,
+            source_project_dir=project_dir,
+            implementation_plan=implementation_plan,
+            test_plan=test_plan,
+            execution_dir=execution_dir,
+            session_result=dependency_session,
+            run_verification=run_verification,
+            max_commands=max_commands,
+        )
+        if dependency_verification:
+            test_result["dependency_environment_verification"] = dependency_verification
+            test_result["summary"]["dependency_environment_verification"] = dependency_verification.get("status")
+            if dependency_verification.get("status") != "ok":
+                test_result["status"] = "failed"
     rebind_request = dict(final_strategy.get("contract_rebind_request") or {})
     rebind_path = _write_json(execution_dir / "contract_rebind_request.json", rebind_request) if rebind_request else None
     patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot, synthesis, strategy, task_tree)

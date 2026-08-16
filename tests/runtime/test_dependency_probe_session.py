@@ -41,7 +41,11 @@ def test_session_delegates_exact_approvals_across_profiles(tmp_path, monkeypatch
         approvals.append(kwargs["approval"])
         if len(approvals) == 1:
             return {"status": "failed", "phase": "import_probe", "follow_up_profile": second}
-        return {"status": "passed", "phase": "complete"}
+        return {
+            "status": "passed",
+            "phase": "complete",
+            "environment_result": {"status": "prepared", "python": "env/python"},
+        }
 
     monkeypatch.setattr(dependency_probe_session, "run_isolated_dependency_probe", fake_run)
 
@@ -57,6 +61,7 @@ def test_session_delegates_exact_approvals_across_profiles(tmp_path, monkeypatch
     ]
     assert approvals[0]["delegated_by_session"] == approvals[1]["delegated_by_session"]
     assert approvals[0]["approved_packages"] == ["attrs"]
+    assert result["verified_environment"]["python"] == "env/python"
 
 
 def test_session_stops_at_approved_step_limit(tmp_path, monkeypatch):

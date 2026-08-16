@@ -23,8 +23,11 @@ def run_test_result(
     execution_dir: Path,
     run_verification: bool,
     max_commands: int,
+    python_executable: Path | None = None,
 ) -> dict[str, Any]:
-    command_results = _command_results(root, project_dir, implementation_plan, run_verification, max_commands)
+    command_results = _command_results(
+        root, project_dir, implementation_plan, run_verification, max_commands, python_executable,
+    )
     failed = [item for item in command_results if item.get("status") == "failed"]
     executed = [item for item in command_results if item.get("status") in {"passed", "failed"}]
     executable_acceptance = run_executable_acceptance(
@@ -32,6 +35,7 @@ def run_test_result(
         project_dir=project_dir,
         test_plan=test_plan,
         work_dir=execution_dir,
+        python_executable=python_executable,
     )
     if executable_acceptance.get("status") == "failed":
         failed.append({"status": "failed", "command": "executable_acceptance"})
@@ -54,6 +58,7 @@ def run_test_result(
         "executable_acceptance_result": executable_acceptance,
         "source_code_changes": False,
         "registry_changes": False,
+        "verification_python": python_executable.resolve().as_posix() if python_executable else None,
     }
 
 
@@ -63,6 +68,7 @@ def _command_results(
     implementation_plan: dict[str, Any],
     run_verification: bool,
     max_commands: int,
+    python_executable: Path | None,
 ) -> list[dict[str, Any]]:
     commands = [str(item) for item in implementation_plan.get("verification_commands", []) if item]
     results = [{"command": None, "status": "skipped", "reason": "run_verification=false"}] if not run_verification else [
@@ -77,7 +83,9 @@ def _command_results(
         if not command_allowed(command):
             results.append({"command": command, "status": "skipped", "reason": "not in executor allowlist"})
             continue
-        results.append(run_command(command, _command_cwd(command, root, project_dir)))
+        results.append(run_command(
+            command, _command_cwd(command, root, project_dir), python_executable=python_executable,
+        ))
     return results
 
 
@@ -110,12 +118,15 @@ def _run_project_scoped_verification(project_dir: Path, implementation_plan: dic
     }
 
 
-def run_command(command: str, cwd: Path) -> dict[str, Any]:
+def run_command(
+    command: str, cwd: Path, *, python_executable: Path | None = None,
+) -> dict[str, Any]:
     env = dict(os.environ)
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
+    effective_command = _bind_python(command, python_executable)
     result = subprocess.run(
-        command,
+        effective_command,
         cwd=str(cwd),
         shell=True,
         capture_output=True,
@@ -127,11 +138,19 @@ def run_command(command: str, cwd: Path) -> dict[str, Any]:
     )
     return {
         "command": command,
+        "effective_command": effective_command,
         "status": "passed" if result.returncode == 0 else "failed",
         "returncode": result.returncode,
         "stdout_tail": result.stdout[-2000:],
         "stderr_tail": result.stderr[-2000:],
     }
+
+
+def _bind_python(command: str, python_executable: Path | None) -> str:
+    if python_executable is None:
+        return command
+    _, separator, arguments = command.partition(" ")
+    return f'"{python_executable.resolve()}"{separator}{arguments}'
 
 
 def command_allowed(command: str) -> bool:

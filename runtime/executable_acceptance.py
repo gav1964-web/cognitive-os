@@ -1,16 +1,19 @@
 """Generate and run executable acceptance scaffolds from Tester obligations."""
 from __future__ import annotations
-import json, os, subprocess, sys
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from .executable_acceptance_support import harness_summary
+from .executable_acceptance_runner import run_acceptance_command
+from .executable_acceptance_environment import environment_harness_summary
 def run_executable_acceptance(
     *,
     root: Path,
     project_dir: Path,
     test_plan: dict[str, Any],
     work_dir: Path,
+    python_executable: Path | None = None,
 ) -> dict[str, Any]:
     executable = dict(test_plan.get("executable_acceptance", {}))
     obligations = [dict(item) for item in executable.get("obligations", []) if isinstance(item, dict)]
@@ -21,10 +24,22 @@ def run_executable_acceptance(
     tests_dir.mkdir(parents=True, exist_ok=True)
     test_path = tests_dir / "test_acceptance_generated.py"
     obligations_path.write_text(json.dumps(obligations, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    harness = harness_summary(project_dir, obligations)
+    harness = (
+        environment_harness_summary(
+            root=root,
+            project_dir=project_dir,
+            obligations_path=obligations_path,
+            python_executable=python_executable,
+        )
+        if python_executable else harness_summary(project_dir, obligations)
+    )
     test_path.write_text(_pytest_source(root, obligations_path, project_dir, harness), encoding="utf-8")
-    command = [sys.executable, "-m", "pytest", str(tests_dir.resolve()), "-q"]
-    command_result = _run_command(command, cwd=scaffold_dir)
+    command_result = run_acceptance_command(
+        python_executable=python_executable,
+        tests_dir=tests_dir,
+        test_path=test_path,
+        cwd=scaffold_dir,
+    )
     passed = command_result["returncode"] == 0
     result = {
         "artifact_type": "ExecutableAcceptanceResult",
@@ -40,6 +55,7 @@ def run_executable_acceptance(
             "generated_test_count": 1,
             "callable_harness_count": harness["callable_harness_count"],
             "signal_strength": harness["signal_strength"],
+            "environment_probe": harness.get("environment_probe"),
             "skipped_reason_counts": harness["skipped_reason_counts"],
             "skipped_targets": harness["skipped_targets"],
             "argument_mappings": harness.get("argument_mappings", {}),
@@ -378,23 +394,3 @@ def _assert_expected_shape(result, expect):
         assert result is not None; return
     if not isinstance(result, dict): assert any("failure" not in str(key).lower() for key in expect), "multi-field output contract expects dict result"; return
 '''
-def _run_command(command: list[str], *, cwd: Path) -> dict[str, Any]:
-    env = dict(os.environ)
-    env["PYTHONIOENCODING"], env["PYTHONUTF8"] = "utf-8", "1"
-    completed = subprocess.run(
-        command,
-        cwd=str(cwd),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env=env,
-        timeout=120,
-    )
-    return {
-        "command": command,
-        "returncode": completed.returncode,
-        "status": "passed" if completed.returncode == 0 else "failed",
-        "stdout_tail": completed.stdout[-2000:],
-        "stderr_tail": completed.stderr[-2000:],
-    }

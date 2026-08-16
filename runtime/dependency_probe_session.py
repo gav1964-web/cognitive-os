@@ -92,7 +92,10 @@ def run_dependency_probe_session(
             "phase": result.get("phase"),
         })
         if result.get("status") == "passed":
-            return _session_result("passed", steps, None, validation)
+            return _session_result(
+                "passed", steps, None, validation,
+                verified_environment=dict(result.get("environment_result") or {}),
+            )
         profile = dict(result.get("follow_up_profile") or {})
         if not profile:
             return _session_result("failed", steps, None, validation)
@@ -129,14 +132,18 @@ def _exact_approval(
 def _session_result(
     status: str, steps: list[dict[str, Any]], next_profile: dict[str, Any] | None,
     validation: dict[str, Any],
+    verified_environment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    result = {
         "artifact_type": "DependencyProbeSessionResult",
         "status": status,
         "session_validation": validation,
         "steps": steps,
         "next_profile": next_profile,
     }
+    if verified_environment:
+        result["verified_environment"] = verified_environment
+    return result
 
 
 def _same_path(left: object, right: object) -> bool:
