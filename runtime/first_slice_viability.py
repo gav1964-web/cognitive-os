@@ -1,0 +1,110 @@
+"""Interpret KB-backed first-slice viability rules."""
+
+from __future__ import annotations
+
+import json
+from functools import lru_cache
+from pathlib import Path
+from collections.abc import Mapping
+from typing import Any
+
+
+DEFAULT_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "architecture_patterns" / "first_slice_viability.json"
+
+
+@lru_cache(maxsize=1)
+def load_first_slice_viability(path: str | None = None) -> dict[str, Any]:
+    payload = json.loads((Path(path) if path else DEFAULT_PATH).read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "first_slice_viability.v1":
+        raise ValueError("first-slice viability KB must use schema_version first_slice_viability.v1")
+    if not isinstance(payload.get("rules"), list):
+        raise ValueError("first-slice viability KB must contain rules")
+    seen = set()
+    for rule in payload["rules"]:
+        rule_id = str(dict(rule or {}).get("rule_id") or "")
+        if not rule_id or rule_id in seen or not isinstance(dict(rule or {}).get("score_delta"), int):
+            raise ValueError("first-slice viability rules require unique ids and integer deltas")
+        seen.add(rule_id)
+        _validate_matchers(dict(dict(rule).get("match") or {}))
+    return payload
+
+
+def first_slice_viability(
+    source: str,
+    context: dict[str, Any] | None = None,
+    *,
+    knowledge_rule: str = "",
+) -> dict[str, Any]:
+    payload = load_first_slice_viability()
+    facts = _facts(source, context or {}, knowledge_rule)
+    score = 0
+    matched = []
+    for rule in payload["rules"]:
+        if not isinstance(rule, dict) or not _matches(dict(rule.get("match") or {}), facts):
+            continue
+        delta = int(rule.get("score_delta") or 0)
+        score += delta
+        matched.append({
+            "rule_id": str(rule.get("rule_id") or ""),
+            "score_delta": delta,
+            "reason": str(rule.get("reason") or ""),
+        })
+    minimum = int(payload.get("minimum_score") or 0)
+    matched_ids = {row["rule_id"] for row in matched}
+    reselection_required = any(
+        bool(rule.get("reselection_required"))
+        for rule in payload["rules"]
+        if isinstance(rule, dict) and str(rule.get("rule_id") or "") in matched_ids
+    )
+    return {
+        "status": "eligible" if score >= minimum else "deferred",
+        "reselection_required": reselection_required,
+        "score": score,
+        "minimum_score": minimum,
+        "matched_rules": matched,
+        "source": "knowledge/architecture_patterns/first_slice_viability.json",
+    }
+
+
+def _facts(source: str, context: dict[str, Any], knowledge_rule: str) -> dict[str, str]:
+    normalized = source.replace("\\", "/").lower()
+    path, _, symbol = normalized.partition(":")
+    symbol = symbol.split("(", 1)[0].rsplit(".", 1)[-1]
+    raw_snippet = context.get("snippet")
+    raw_readiness = context.get("dependency_readiness")
+    snippet = dict(raw_snippet) if isinstance(raw_snippet, Mapping) else {}
+    readiness = dict(raw_readiness) if isinstance(raw_readiness, Mapping) else {}
+    return {
+        "source": normalized,
+        "path": f"/{path}",
+        "symbol": symbol,
+        "knowledge_rule": knowledge_rule.lower(),
+        "target_binding": str(snippet.get("target_binding") or context.get("target_binding") or "").lower(),
+        "dependency_status": str(readiness.get("status") or "").lower(),
+    }
+
+
+def _matches(match: dict[str, Any], facts: dict[str, str]) -> bool:
+    checks = []
+    for key, values in match.items():
+        candidates = [str(value).lower() for value in list(values or [])]
+        if key.endswith("_contains_any"):
+            fact_name, operation = key[: -len("_contains_any")], "contains_any"
+        elif key.endswith("_in"):
+            fact_name, operation = key[:-3], "in"
+        else:
+            raise ValueError(f"unsupported first-slice viability matcher: {key}")
+        fact = facts.get(fact_name, "")
+        if operation == "in":
+            checks.append(fact in candidates)
+        elif operation == "contains_any":
+            checks.append(any(candidate in fact for candidate in candidates))
+    return bool(checks) and all(checks)
+
+
+def _validate_matchers(match: dict[str, Any]) -> None:
+    allowed_facts = {"source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status"}
+    for key, values in match.items():
+        suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""
+        if not suffix or key[: -len(suffix)] not in allowed_facts or not isinstance(values, list) or not values:
+            raise ValueError(f"invalid first-slice viability matcher: {key}")

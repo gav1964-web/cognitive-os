@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
 from .role_source_context import build_source_context
 from .spec_writer_target_binding import standalone_target_eligibility
@@ -53,7 +54,14 @@ def reselect_architecture_first_slice(
         if _environment_ready_callable(expanded_context.get(source))
         or _declared_dependency_callable(expanded_context.get(source), declared, policy)
     ]
-    selected = eligible[: max(1, int(policy.get("selected_target_limit") or 8))]
+    rejected_primary = _previous_primary_targets(architecture_decision)
+    eligible = [source for source in eligible if source not in rejected_primary]
+    selected, viability = _viable_candidates(
+        eligible,
+        expanded_context,
+        architecture_decision,
+        limit=max(1, int(policy.get("selected_target_limit") or 8)),
+    )
     _mark_manifest_declared_context(selected, expanded_context, declared, policy)
     evidence = {
         "artifact_type": "FirstSliceReselectionOutcome",
@@ -63,6 +71,8 @@ def reselect_architecture_first_slice(
         "expanded_candidate_count": len(sources),
         "environment_ready_candidate_count": len(ready),
         "declared_dependency_candidate_count": len(set(eligible) - set(ready)),
+        "viability_deferred_candidate_count": len(eligible) - len(viability),
+        "candidate_viability": viability,
         "selected_targets": selected,
         "authority": "architect",
         "source": "ProjectMapReport expanded candidate evidence",
@@ -118,7 +128,35 @@ def _domain_aligned_sources(
     tokens = [str(item).lower() for item in list(tokens_by_rule.get(knowledge_rule) or [])]
     if not tokens:
         return sources
-    return [source for source in sources if any(token in source.lower() for token in tokens)]
+    aligned = [source for source in sources if any(token in source.lower() for token in tokens)]
+    return aligned or sources
+
+
+def _previous_primary_targets(architecture_decision: dict[str, Any]) -> set[str]:
+    rejected = set()
+    for outcome in list(architecture_decision.get("first_slice_reselection_history") or []):
+        targets = list(dict(outcome or {}).get("selected_targets") or [])
+        if targets:
+            rejected.add(str(targets[0]))
+    return rejected
+
+
+def _viable_candidates(
+    sources: list[str],
+    context: dict[str, dict[str, Any]],
+    architecture_decision: dict[str, Any],
+    *,
+    limit: int,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    first_slice = dict(architecture_decision.get("first_slice_contract") or {})
+    knowledge_rule = str(first_slice.get("knowledge_rule") or "")
+    ranked = []
+    for index, source in enumerate(sources):
+        profile = first_slice_viability(source, context.get(source), knowledge_rule=knowledge_rule)
+        if profile["status"] == "eligible":
+            ranked.append({"target": source, "index": index, **profile})
+    ranked.sort(key=lambda row: (-int(row["score"]), int(row["index"])))
+    return [str(row["target"]) for row in ranked[:limit]], ranked
 
 
 def _row_sources(value: Any) -> list[str]:

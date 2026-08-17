@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase
+from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase, run_configured_role_prefix
 from .role_project_analysis import analyze_role_project
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
+from .technical_spec_policy import load_technical_spec_policy
 
 
 def stage_analyze(state: dict[str, Any]) -> None:
@@ -20,11 +21,13 @@ def stage_analyze(state: dict[str, Any]) -> None:
 
 
 def stage_build(state: dict[str, Any]) -> None:
-    artifacts = run_role_artifact_pipeline(
+    reselection = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
+    artifacts = run_configured_role_prefix(
         goal=state["goal"],
         project_report=state["project_report"],
         architect_advisory_config=state["architect_advisory_config"],
-        pipeline=configured_pipeline_phase("build"),
+        until_output_key="programmer_task_tree",
+        reselection_triggers={str(item) for item in reselection.get("production_triggers") or []},
     )
     state["artifacts"] = artifacts
     for key, artifact_type in (

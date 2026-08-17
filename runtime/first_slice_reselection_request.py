@@ -14,11 +14,13 @@ def build_first_slice_reselection_request(
     structural = dict(extraction_contract.get("structural_evidence") or {})
     source_unbound = bool(extraction_contract.get("candidate")) and structural.get("source_body_available") is False
     source_context_blocked = bool(dependency_profile.get("source_context_blockers"))
+    viability = dict(extraction_contract.get("first_slice_viability") or {})
+    viability_blocked = viability.get("reselection_required") is True
     ready = [
         row for row in list(dependency_profile.get("ranked_alternatives") or [])
         if isinstance(row, dict) and row.get("readiness_status") == "ready" and ":" in str(row.get("target") or "")
     ]
-    if not semantic_block and not source_unbound and not source_context_blocked and (
+    if not semantic_block and not source_unbound and not source_context_blocked and not viability_blocked and (
         dependency_profile.get("status") != "resolution_required" or ready
     ):
         return {
@@ -29,6 +31,7 @@ def build_first_slice_reselection_request(
     policy = dict(load_technical_spec_policy().get("dependency_readiness") or {})
     trigger = "no_semantically_safe_candidate_in_approved_first_slice" if semantic_block else (
         "source_body_not_bound_in_approved_first_slice" if source_unbound
+        else "low_first_slice_viability" if viability_blocked
         else "no_environment_ready_candidate_in_approved_first_slice"
     )
     return {
@@ -41,6 +44,7 @@ def build_first_slice_reselection_request(
             "ranked_alternatives": list(dependency_profile.get("ranked_alternatives") or []),
             "rejected_candidates": list(extraction_contract.get("ranked_candidates") or []),
             "structural_evidence": structural,
+            "first_slice_viability": viability,
         },
         "required_candidate_properties": list(policy.get("reselection_required_properties") or []),
         "authority": "architect_reselection_required_no_automatic_scope_expansion",

@@ -1,0 +1,123 @@
+{
+  "schema_version": "first_slice_viability.v1",
+  "minimum_score": 0,
+  "rules": [
+    {
+      "rule_id": "bounded_transform_boundary",
+      "score_delta": 45,
+      "match": {
+        "symbol_contains_any": ["parse", "normalize", "validate", "convert", "decode", "encode", "extract", "format", "resolve", "scan", "transform", "truncate"]
+      },
+      "reason": "bounded parser/normalizer/validator boundary is preferred for a first executable slice"
+    },
+    {
+      "rule_id": "read_or_mapping_boundary",
+      "score_delta": 24,
+      "match": {
+        "symbol_contains_any": ["load", "read", "list", "get_", "to_vec", "from_hex", "output_to"]
+      },
+      "reason": "read/mapping boundary usually permits fixture-backed execution"
+    },
+    {
+      "rule_id": "utility_path_boundary",
+      "score_delta": 16,
+      "match": {
+        "path_contains_any": ["/utils/", "/common/", "/modules_common/", "/parsers/", "/converters/"]
+      },
+      "reason": "support module exposes a smaller reusable boundary"
+    },
+    {
+      "rule_id": "ml_training_lifecycle",
+      "score_delta": -70,
+      "reselection_required": true,
+      "match": {
+        "symbol_in": ["fit", "forward", "predict", "train", "train_batch", "visualise"]
+      },
+      "reason": "model lifecycle requires framework state and is deferred behind a bounded data/shape contract"
+    },
+    {
+      "rule_id": "dataset_generation_lifecycle",
+      "score_delta": -45,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["gen_dataset", "gen_instance", "gen_rand_graph", "generate_machine", "training_data"]
+      },
+      "reason": "dataset generation lifecycle is deferred behind a deterministic mapping boundary"
+    },
+    {
+      "rule_id": "gui_lifecycle",
+      "score_delta": -80,
+      "reselection_required": true,
+      "match": {
+        "path_contains_any": ["/modules_gui/", "/start_gui.py", "/gui_"]
+      },
+      "reason": "GUI lifecycle depends on stateful widgets and is not a stable first executable slice"
+    },
+    {
+      "rule_id": "native_ffi_adapter",
+      "score_delta": -60,
+      "reselection_required": true,
+      "match": {
+        "path_contains_any": ["/bindings/python_cffi/", "/cffi/", "/ctypes/"]
+      },
+      "reason": "native FFI adapter requires a separate extension-boundary execution profile"
+    },
+    {
+      "rule_id": "persistence_mutation",
+      "score_delta": -55,
+      "match": {
+        "path_contains_any": ["/services.py", "/models.py", "/repository", "/repositories/"],
+        "symbol_contains_any": ["create", "delete", "register", "save", "update"]
+      },
+      "reason": "persistence mutation is deferred until a read/validation contract is executable"
+    },
+    {
+      "rule_id": "persistence_adapter_state",
+      "score_delta": -30,
+      "match": {
+        "path_contains_any": ["/services.py", "/models.py", "/repository", "/repositories/"]
+      },
+      "reason": "stateful persistence adapter is lower priority than a transport-independent contract"
+    },
+    {
+      "rule_id": "stateful_constructor_or_dunder",
+      "score_delta": -45,
+      "match": {
+        "symbol_in": ["__call__", "__getattr__", "__init__", "apply"]
+      },
+      "reason": "stateful constructor or protocol method is context rather than the first writable contract"
+    },
+    {
+      "rule_id": "filesystem_argument_coercion",
+      "score_delta": -55,
+      "match": {
+        "symbol_in": ["filepath", "path"]
+      },
+      "reason": "filesystem argument coercion is side-effect support, not a representative first slice"
+    },
+    {
+      "rule_id": "test_callable",
+      "score_delta": -80,
+      "match": {
+        "symbol_contains_any": ["test_"]
+      },
+      "reason": "test callable is verification context rather than a writable project boundary"
+    },
+    {
+      "rule_id": "context_only_tree",
+      "score_delta": -40,
+      "match": {
+        "path_contains_any": ["/examples/", "/scripts/", "/test/", "/tests/"]
+      },
+      "reason": "example, script, or test tree is context-only when active core candidates exist"
+    },
+    {
+      "rule_id": "unready_dependency_boundary",
+      "score_delta": -30,
+      "match": {
+        "dependency_status_in": ["missing_external", "source_context_required"]
+      },
+      "reason": "unresolved dependency boundary is lower priority than an environment-ready callable"
+    }
+  ]
+}

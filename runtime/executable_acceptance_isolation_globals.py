@@ -9,7 +9,11 @@ from typing import Any
 
 
 def isolated_global_nodes(tree: ast.Module, nodes: list[ast.AST], class_name: str) -> list[ast.stmt]:
-    top = {getattr(item, "name", ""): item for item in tree.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    top = {
+        getattr(item, "name", ""): item
+        for item in tree.body
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
     other = [item for item in tree.body if isinstance(item, (ast.Assign, ast.AnnAssign))]
     selected: list[ast.stmt] = []
     seen: set[str] = set()
@@ -18,14 +22,13 @@ def isolated_global_nodes(tree: ast.Module, nodes: list[ast.AST], class_name: st
     while changed:
         changed = False
         for item in [*top.values(), *other]:
-            names = {getattr(item, "name", "")} if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) else assigned_names(item)
+            names = {getattr(item, "name", "")} if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) else assigned_names(item)
             if names & loaded and not names <= seen:
-                copied = isolated_member(item)
-                selected.append(copied)
+                selected.append(item)
                 seen.update(names)
-                loaded.update(loaded_names(copied))
+                loaded.update(loaded_names(item))
                 changed = True
-    return selected
+    return [isolated_member(item) for item in tree.body if item in selected]
 
 
 def isolated_member(item: ast.AST) -> ast.AST:
@@ -46,6 +49,11 @@ def isolated_member(item: ast.AST) -> ast.AST:
             copied.args.vararg.annotation = None
         if copied.args.kwarg:
             copied.args.kwarg.annotation = None
+    elif isinstance(copied, ast.ClassDef):
+        copied.bases = []
+        copied.keywords = []
+        copied.decorator_list = []
+        copied.body = [isolated_member(node) for node in copied.body]
     return copied
 
 

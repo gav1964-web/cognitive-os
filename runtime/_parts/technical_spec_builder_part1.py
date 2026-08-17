@@ -4,6 +4,7 @@ from typing import Any
 from runtime.local_inference import LocalInferenceConfig
 from runtime.dependency_boundary_profile import build_dependency_boundary_profile
 from runtime.first_slice_reselection_request import build_first_slice_reselection_request
+from runtime.first_slice_viability import first_slice_viability
 from runtime.role_skill_common import now_iso
 
 def build_technical_spec(
@@ -18,11 +19,20 @@ def build_technical_spec(
     traceability = list(architecture_decision.get("traceability", []))
     source_context = dict(architecture_decision.get("source_context", {}))
     evidence = _source_evidence(brief, source_context)
+    first_slice = dict(brief.get("first_slice") or architecture_decision.get("first_slice_contract") or {})
     work_plan_contract = _work_plan_contract(brief, architecture_decision)
     acceptance = _acceptance_criteria(brief, traceability)
     preferred_targets = [] if work_plan_contract.get("source") == "TechnicalSpec.fallback_from_spec_writer_brief" else list(work_plan_contract.get("targets", []))
+    if first_slice.get("reselection_iteration"):
+        preferred_targets = preferred_targets[:1]
     extraction_contract = _extraction_contract(
         evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
+    )
+    candidate = str(extraction_contract.get("candidate") or "")
+    extraction_contract["first_slice_viability"] = first_slice_viability(
+        candidate,
+        source_context.get(candidate),
+        knowledge_rule=str(first_slice.get("knowledge_rule") or ""),
     )
     dependency_boundary_profile = build_dependency_boundary_profile(
         extraction_contract,

@@ -117,6 +117,8 @@ def materialize(value: Any) -> Any:
             return {"": _qdrant_deleted_false()}
         if fixture == "qdrant_dense_vectors":
             return {"": __import__("numpy").array([[1.0, 0.0]], dtype="float32")}
+        if fixture == "numpy_cube":
+            return __import__("numpy").array([[[0.0], [1.0]], [[0.0], [0.0]]], dtype="float32")
         if fixture == "asgi_request_no_accept":
             return type(
                 "Request",

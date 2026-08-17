@@ -12,6 +12,7 @@ from runtime.dependency_extraction_policy import load_dependency_extraction_poli
 from runtime.executable_acceptance_policy import load_executable_acceptance_policy
 from runtime.executor_solution_patterns import load_executor_solution_patterns
 from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+from runtime.first_slice_viability import load_first_slice_viability
 from runtime.interface_contracts import load_interface_contracts
 from runtime.greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from runtime.l4_decision_table import load_l4_decision_rules
@@ -65,6 +66,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             "load_external_config_catalogs",
             lambda: _load_catalogs(base),
         ),
+        _load_check("first_slice_viability_kb_integrity", lambda: load_first_slice_viability(str(base / "knowledge" / "architecture_patterns" / "first_slice_viability.json"))),
     ]
     catalogs = _load_catalogs(base)
     checks.extend(

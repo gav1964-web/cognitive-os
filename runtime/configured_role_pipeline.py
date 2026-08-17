@@ -15,6 +15,7 @@ def run_configured_role_prefix(
     project_report: dict[str, Any],
     until_artifact_type: str | None = None,
     until_output_key: str | None = None,
+    reselection_triggers: set[str] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Any]]:
     pipeline = configured_pipeline_prefix(
@@ -30,6 +31,7 @@ def run_configured_role_prefix(
         project_report=project_report,
         pipeline=pipeline,
         pipeline_kwargs=kwargs,
+        reselection_triggers=reselection_triggers,
     )
 
 
@@ -40,11 +42,15 @@ def _close_first_slice_reselection_loop(
     project_report: dict[str, Any],
     pipeline: dict[str, Any],
     pipeline_kwargs: dict[str, Any],
+    reselection_triggers: set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     from .architect_first_slice_reselection import reselect_architecture_first_slice
 
     policy = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
     if not policy.get("enabled", True):
+        return artifacts
+    initial_request = dict(artifact_by_type(artifacts, "TechnicalSpec").get("first_slice_reselection_request") or {})
+    if reselection_triggers is not None and str(initial_request.get("trigger") or "") not in reselection_triggers:
         return artifacts
     maximum = max(0, int(policy.get("max_iterations") or 0))
     user_transform = pipeline_kwargs.get("artifact_transform")

@@ -238,6 +238,38 @@ def test_source_isolation_uses_configured_path_bound_constructor(tmp_path):
     assert loaded["effect_module_stubs"] == ["configured:StaticFiles"]
 
 
+def test_source_isolation_keeps_required_module_level_class(tmp_path):
+    source = tmp_path / "scanner.py"
+    source.write_text(
+        "class Result:\n"
+        "    def __init__(self, value):\n        self.value = value\n"
+        "class Scanner:\n"
+        "    def scan(self, value):\n        return Result(value).value\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "scan")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]("ok") == "ok"
+
+
+def test_source_isolation_orders_global_assignment_dependencies(tmp_path):
+    source = tmp_path / "matcher.py"
+    source.write_text(
+        "left = 'a'\n"
+        "right = 'b'\n"
+        "combined = left + right\n"
+        "def match(value):\n    return value == combined\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "match")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]("ab") is True
+
+
 def test_source_isolation_does_not_leak_imported_modules_between_projects(tmp_path):
     first = tmp_path / "first" / "subject.py"
     second = tmp_path / "second" / "subject.py"
@@ -268,8 +300,11 @@ def test_general_boundary_samples_are_config_backed():
     event = materialize(sample_value("", "evt"))
     client = materialize(sample_value("", "gl"))
     inventory = materialize(sample_value("", "input_dictionary"))
+    cube = materialize(sample_value("", "input_array"))
 
     assert event.detail == {"module_name": "not_loaded"}
     assert client.groups.get("group").projects.list(all=True) == []
     assert len(inventory) == 3
     assert len(materialize({"input_dictionary": {}})["input_dictionary"]) == 3
+    assert cube.shape == (2, 2, 1)
+    assert sample_value("", "N") == 8
