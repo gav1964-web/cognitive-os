@@ -78,7 +78,7 @@ def run_executable_acceptance(
     result["result_path"] = result_path.as_posix()
     return result
 def _pytest_source(root: Path, obligations_path: Path, project_dir: Path, harness: dict[str, Any]) -> str:
-    runtime_root = root.resolve().as_posix()
+    runtime_root = Path(__file__).resolve().parents[1].as_posix()
     escaped = obligations_path.resolve().as_posix()
     project = project_dir.resolve().as_posix()
     harness_payload = json.dumps(harness, ensure_ascii=False, sort_keys=True)
@@ -306,71 +306,8 @@ def _callable_accepts_without_self(func):
     except (TypeError, ValueError): return False
     return not params or params[0] not in {{"self", "cls"}}
 def _materialize(value):
-    if isinstance(value, dict):
-        if value.get("template") == "sample" and "image" in value: value = {{**value, "template": [[1.0]], "pad_input": False, "mode": "constant", "constant_values": 0}}
-        if "image" in value and "template" in value: np = __import__("numpy"); value = {{**value, "image": np.array(value["image"], dtype="float32"), "template": np.array(value["template"], dtype="float32")}}
-        fixture = value.get("__fixture__")
-        if fixture == "callable_id_of": return lambda schema: schema.get("$id") if isinstance(schema, dict) else None
-        if fixture == "callable_items": return lambda schema: schema.items() if hasattr(schema, "items") else []
-        if fixture == "callable_identity": return lambda value, *args, **kwargs: value
-        if fixture == "callable_noop": return lambda *args, **kwargs: None
-        if fixture == "callable_float": return lambda value, *args, **kwargs: float(value)
-        if fixture == "callable_true": return lambda *args, **kwargs: True
-        if fixture == "callable_empty_list": return lambda *args, **kwargs: []
-        if fixture == "callable_empty_string": return lambda *args, **kwargs: ""
-        if fixture in {{"callable_batch_ids", "callable_column_names", "callable_ge_parameter_value", "callable_ge_validator"}}: return (lambda *args, **kwargs: ["batch-id"]) if fixture == "callable_batch_ids" else ((lambda *args, **kwargs: ["column"]) if fixture == "callable_column_names" else ((lambda *args, **kwargs: [] if kwargs.get("expected_return_type") is list else "sample") if fixture == "callable_ge_parameter_value" else (lambda *args, **kwargs: _materialize({{"__fixture__": "ge_validator"}}))))
-        if fixture in {{"callable_gradio_special_args", "callable_append_unique_suffix"}}: return (lambda *args, **kwargs: (None, None, None, [])) if fixture == "callable_gradio_special_args" else (lambda value, existing=None: value)
-        if fixture in {{"gradio_local_context", "gradio_block_function_class", "gradio_root_block"}}: return type("LocalContext", (), {{"renderable": type("ContextVar", (), {{"get": lambda self, default=None: default}})()}}) if fixture == "gradio_local_context" else (type("RootBlock", (), {{"current_page": "", "pages": []}})() if fixture == "gradio_root_block" else type("BlockFunction", (), {{"__init__": lambda self, fn=None, inputs=None, outputs=None, *args, **kwargs: (setattr(self, "fn", fn), setattr(self, "inputs", inputs), setattr(self, "outputs", outputs), self.__dict__.update(kwargs)) and None}}))
-        if fixture in {{"ge_validator", "ge_semantic_filter"}}: return type("Validator", (), {{"get_metric": lambda self, *args, **kwargs: ["column"]}})() if fixture == "ge_validator" else type("SemanticFilter", (), {{"table_column_name_to_inferred_semantic_domain_type_map": {{}}}})()
-        if fixture == "module_getattr_stub": return lambda name: type(str(name), (), {{}})
-        if fixture == "stub_class": return type("AcceptanceStub", (), {{"__init__": lambda self, *args, **kwargs: self.__dict__.update(kwargs), "model_dump_json": lambda self, *args, **kwargs: "{{}}"}})
-        if fixture == "stub_request_class": return type("JSONRPCRequest", (), {{"method": "", "params": {{}}, "id": "1"}})
-        if fixture == "jsonrpc_adapter": return type("Adapter", (), {{"validate_python": lambda self, value, **kwargs: value}})()
-        if fixture == "click_context_noop": return type("ClickContext", (), {{"invoke": lambda self, *args, **kwargs: None, "meta": {{}}, "call_on_close": lambda self, value: None}})()
-        if fixture in {{"logger_noop", "jupyter_busy_kernel_manager"}}: return type("Logger", (), {{"debug": lambda self, *args, **kwargs: None}})() if fixture == "logger_noop" else type("KernelManager", (), {{"execution_state": "busy"}})()
-        if fixture == "hatch_environment_minimal": return _hatch_environment_minimal()
-        if fixture == "optuna_study_empty": return type("Study", (), {{"get_trials": lambda self, *args, **kwargs: []}})()
-        if fixture == "datasette_minimal": return _datasette_minimal()
-        if fixture == "chroma_search_client": return type("ChromaSearchClient", (), {{"_search": _noop_chroma_search}})()
-        if fixture == "chroma_collection_model": return type("ChromaCollectionModel", (), {{"id": "collection-id", "tenant": "default_tenant", "database": "default_database"}})()
-        if fixture == "hatch_virtual_environment_class": return type("VirtualEnvironment", (), {{}})
-        if fixture == "configparser_flake8_empty": parser = __import__("configparser").RawConfigParser(); parser.add_section("flake8:local-plugins"); return parser
-        if fixture == "bytes_io_empty": return __import__("io").BytesIO(b"")
-        if fixture == "bytes_empty": return b""
-        if fixture == "dateutil_parserinfo_minimal": return type("Info", (), {{"hms": lambda self, value: None, "jump": lambda self, value: False, "ampm": lambda self, value: None, "month": lambda self, value: None}})()
-        if fixture == "dateutil_result": return type("Result", (), {{"hour": None, "minute": None, "second": None, "microsecond": None}})()
-        if fixture == "dateutil_ymd": return type("YMD", (list,), {{"append": lambda self, value, label=None: list.append(self, value), "could_be_day": lambda self, value: True}})()
-        if fixture == "pytest_source_minimal": return type("Source", (), {{"lines": ["x = 1"], "raw_lines": ["x = 1"], "__str__": lambda self: "\\n".join(self.lines)}})()
-        if fixture == "networkx_graph_path": graph = __import__("networkx").Graph(); graph.add_edge("a", "b", label="edge"); graph.nodes["a"]["label"] = "a"; graph.nodes["b"]["label"] = "b"; return graph
-        if fixture == "record_row_empty": row = type("RecordRow", (dict,), {{}})(); row.data = {{}}; return row
-        if fixture == "noop_condition": return type("NoopCondition", (), {{"__enter__": lambda self: self, "__exit__": lambda self, *args: False, "notify_all": lambda self: None}})()
-        if fixture == "qdrant_collection_config": return _qdrant_collection_config()
-        if fixture == "qdrant_deleted_false": return _np_array([False], dtype=bool)
-        if fixture == "qdrant_deleted_per_vector": return {{"": _np_array([False], dtype=bool)}}
-        if fixture == "qdrant_dense_vectors": return {{"": _np_array([[1.0, 0.0]], dtype="float32")}}
-        if fixture == "asgi_request_no_accept": return type("Request", (), {{"headers": {{}}, "receive": _asgi_receive_empty, "body": _asgi_body_empty}})()
-        if fixture in {{"asgi_receive_empty", "asgi_send_noop", "async_writer_noop"}}: return _asgi_receive_empty if fixture == "asgi_receive_empty" else (_asgi_send_noop if fixture == "asgi_send_noop" else type("Writer", (), {{"send": _asgi_send_noop}})())
-        if fixture == "pants_all_environment_targets": return {{"local": type("Target", (), {{"address": type("Address", (), {{"spec": "//:local"}})(), "has_field": lambda self, field: True, "__getitem__": lambda self, field: type("FieldValue", (), {{"value": type("ContainsAll", (), {{"__contains__": lambda self, item: True}})()}})()}})()}}
-        return {{key: _materialize(_field_sample(key, item)) for key, item in value.items()}}
-    if isinstance(value, list): return [_materialize(item) for item in value]
-    return value
-async def _noop_execute_write(*args, **kwargs): return None
-async def _noop_chroma_search(*args, **kwargs): return {{"ids": [], "documents": [], "metadatas": [], "scores": []}}
-async def _asgi_receive_empty(*args, **kwargs): return {{"type": "http.request", "body": b"", "more_body": False}}
-async def _asgi_body_empty(*args, **kwargs): return b"{{}}"
-async def _asgi_send_noop(*args, **kwargs): return None
-def _datasette_minimal(): database = type("Database", (), {{"execute_write": _noop_execute_write}})(); return type("Datasette", (), {{"get_internal_database": lambda self: database}})()
-def _hatch_environment_minimal():
-    module = types.ModuleType("hatch.env.virtual"); cls = type("VirtualEnvironment", (), {{}}); module.VirtualEnvironment = cls; sys.modules["hatch.env.virtual"] = module
-    parent = sys.modules.get("hatch.env")
-    if parent is not None: setattr(parent, "virtual", module)
-    return type("Environment", (cls,), {{"features": (), "dependency_groups": (), "dependencies": ("sample>=1",), "additional_dependencies": (), "skip_install": False, "use_uv": False, "root": Path(".")}})()
-def _np_array(value, dtype=None): return __import__("numpy").array(value, dtype=dtype)
-def _qdrant_collection_config():
-    try: distance = __import__("qdrant_client.http.models", fromlist=["Distance"]).Distance.COSINE
-    except ModuleNotFoundError: distance = "Cosine"
-    params = type("VectorParams", (), {{"distance": distance}})(); return type("CollectionConfig", (), {{"vectors": {{"": params}}, "sparse_vectors": None}})()
-def _field_sample(key, value): return {{"all_environment_targets": {{"__fixture__": "pants_all_environment_targets"}}, "ctx": {{"__fixture__": "click_context_noop"}}, "database": "data", "edge_attr": "label", "digest_size": 8, "fn": {{"__fixture__": "callable_noop"}}, "image": [[1.0, 2.0], [3.0, 4.0]], "inputs": [], "outputs": [], "include_initial_labels": False, "iterations": 1, "query_filter": None, "query_vector": [1.0, 0.0], "score_threshold": None, "searches": [], "sql": "select 1", "study": {{"__fixture__": "optuna_study_empty"}}, "targets": []}}.get(str(key), value) if isinstance(value, str) and value == "sample" else value
+    from runtime.executable_acceptance_materializers import materialize
+    return materialize(value)
 def _call_kwargs(target, given, include_defaults=True):
     data = dict(given or {{}})
     mapping = HARNESS_DATA.get("argument_mappings", {{}}).get(target, {{}})

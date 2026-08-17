@@ -10,13 +10,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from .executable_acceptance_ast_imports import loaded_names as _loaded_names
+from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
 from .executable_acceptance_isolation_globals import isolated_global_nodes
 from .executable_acceptance_effect_stubs import configured_effect_stubs
+from .executable_acceptance_method_fixtures import method_fixture_values
+from .python_parser_compatibility import parse_compatible_source
 
 
 def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
         functions = {
             node.name: node
             for node in tree.body
@@ -53,7 +57,7 @@ def load_source_isolated_callable(path: Path, symbol: str) -> dict[str, Any]:
 
 def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
         match = _unique_method_class(tree, symbol)
         if match is None:
             return {"callable": None, "reason": "target_not_callable"}
@@ -95,7 +99,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             func = member
         else:
             instance = object.__new__(cls)
-            attrs = _method_instance_attrs(class_node.name, symbol)
+            raw_attrs, attrs = method_fixture_values(class_node.name, symbol, body, selected)
             for key, value in attrs.items():
                 setattr(instance, key, value)
             func = getattr(instance, symbol, None)
@@ -103,7 +107,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             "callable": func,
             "reason": "" if callable(func) else "target_not_callable",
             "method": {"class_name": class_node.name, "method_name": symbol},
-            "method_instance_attributes": _raw_method_instance_attrs(class_node.name, symbol),
+            "method_instance_attributes": raw_attrs,
             "source_isolated": True,
             "source_isolated_method": True,
             "method_dependencies": sorted(method_names & selected),
@@ -126,25 +130,6 @@ def _isolated_function_names(functions: dict[str, ast.FunctionDef | ast.AsyncFun
     return selected
 
 
-def _needed_import_nodes_for_nodes(tree: ast.Module, nodes: list[ast.AST]) -> list[ast.stmt]:
-    loaded = {name for node in nodes for name in _loaded_names(node)}
-    imports: list[ast.stmt] = []
-    for node in tree.body:
-        if isinstance(node, ast.Import) and _import_bound_names(node) & loaded:
-            imports.append(copy.deepcopy(node))
-        elif isinstance(node, ast.ImportFrom) and _import_bound_names(node) & loaded:
-            imports.append(copy.deepcopy(node))
-    return imports
-
-
-def _loaded_names(node: ast.AST) -> set[str]:
-    return {item.id for item in ast.walk(node) if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Load)}
-
-
-def _import_bound_names(node: ast.Import | ast.ImportFrom) -> set[str]:
-    return {alias.asname or alias.name.split(".", 1)[0] for alias in node.names}
-
-
 def _strip_annotations(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> ast.FunctionDef | ast.AsyncFunctionDef:
     func_node.decorator_list = []
     func_node.returns = None
@@ -162,16 +147,6 @@ def _isolated_class_member(item: ast.AST) -> ast.AST:
     if isinstance(copied, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return _strip_annotations(copied)
     return copied
-
-
-def _raw_method_instance_attrs(class_name: str, symbol: str) -> dict[str, Any]:
-    from .executable_acceptance_policy import method_fixture_policy
-    return dict(dict(method_fixture_policy().get("instance_attribute_profiles") or {}).get(f"{class_name}.{symbol}") or {})
-
-
-def _method_instance_attrs(class_name: str, symbol: str) -> dict[str, Any]:
-    from .executable_acceptance_materializers import materialize
-    return {key: materialize(value) for key, value in _raw_method_instance_attrs(class_name, symbol).items()}
 
 
 def _unique_method_class(tree: ast.Module, symbol: str) -> tuple[ast.ClassDef, set[str]] | None:

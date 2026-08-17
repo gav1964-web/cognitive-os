@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import os
 import subprocess
 import sys
@@ -11,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
+from .python_parser_compatibility import parse_compatible_source
 
 
 def run_test_result(
@@ -102,15 +102,21 @@ def _run_project_scoped_verification(project_dir: Path, implementation_plan: dic
     if not files:
         return {"command": "project_scoped_py_compile", "status": "skipped", "reason": "no_python_expected_files"}
     failures = []
+    compatibility_modes = {}
     for file_name in files:
         try:
-            ast.parse((project_dir / file_name).read_text(encoding="utf-8"), filename=file_name)
+            _, mode = parse_compatible_source(
+                (project_dir / file_name).read_text(encoding="utf-8"), file_name
+            )
+            if mode:
+                compatibility_modes[file_name] = mode
         except SyntaxError as exc:
             failures.append(f"{file_name}:{exc.lineno}:{exc.msg}")
     return {
         "command": "project_scoped_syntax_check",
         "kind": "project_scoped_py_compile",
         "scope": files,
+        "compatibility_modes": compatibility_modes,
         "status": "failed" if failures else "passed",
         "returncode": 1 if failures else 0,
         "stdout_tail": "",

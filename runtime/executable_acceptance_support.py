@@ -12,6 +12,9 @@ from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
 from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy, sample_value, skipped_recovery_hint
+from .executable_acceptance_support_results import module_profile_attrs as _module_profile_attrs
+from .executable_acceptance_support_results import reason_counts as _reason_counts
+from .executable_acceptance_support_results import unsupported as _unsupported
 from .executable_acceptance_target_shape import ast_skip_reason
 
 ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
@@ -126,6 +129,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 )
             if not samples_ok:
                 cleanup_dependency_stubs(loaded)
+                isolated_support = _isolated_retry(path, symbol, target, obligations)
+                if isolated_support.get("supported"):
+                    return isolated_support
                 return _unsupported("positive_sample_execution_failed", detail)
             cleanup_dependency_stubs(loaded)
             return {
@@ -174,6 +180,10 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         )
     if not samples_ok:
         cleanup_dependency_stubs(loaded)
+        if not loaded.get("source_isolated"):
+            isolated_support = _isolated_retry(path, symbol, target, obligations)
+            if isolated_support.get("supported"):
+                return isolated_support
         if loaded.get("source_isolated") and loaded.get("fallback_reason"):
             return _unsupported(str(loaded["fallback_reason"]), str(loaded.get("fallback_detail") or ""))
         return _unsupported("positive_sample_execution_failed")
@@ -212,6 +222,13 @@ def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: l
     if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload"))):
         return _unsupported("positive_sample_execution_failed")
     return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": list(loaded.get("effect_module_stubs") or []), "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+
+
+def _isolated_retry(path: Path, symbol: str, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
+    isolated = load_source_isolated_callable(path, symbol)
+    if not callable(isolated.get("callable")):
+        return _unsupported(str(isolated.get("reason") or "target_not_callable"), str(isolated.get("detail") or ""))
+    return _source_isolated_support(isolated, target, obligations)
 
 
 def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -378,21 +395,3 @@ def _call_args_kwargs(func: object, payload: dict[str, Any]) -> tuple[list[Any],
             continue
         args.append(kwargs.pop(name))
     return args, kwargs
-
-def _module_profile_attrs(module_profiles: dict[str, list[str]]) -> dict[str, dict[str, Any]]:
-    profiles = dict(dependency_stub_policy().get("generated_module_profiles") or {})
-    names = {name for values in module_profiles.values() for name in values}
-    return {name: dict(dict(profiles.get(name) or {}).get("attrs") or {}) for name in names}
-
-
-def _unsupported(reason: str, detail: str = "") -> dict[str, Any]:
-    result: dict[str, Any] = {"supported": False, "strict_negative": False, "reason": reason}
-    if detail: result["detail"] = detail
-    return result
-
-
-def _reason_counts(skipped: list[dict[str, str]]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for item in skipped:
-        counts[item["reason"]] = counts.get(item["reason"], 0) + 1
-    return dict(sorted(counts.items()))

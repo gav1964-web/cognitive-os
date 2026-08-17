@@ -38,6 +38,27 @@ def test_programmer_score_requires_executable_callable_evidence():
     assert _programmer_score(result) == 6.67
 
 
+def test_programmer_score_counts_prepared_deterministic_patch(tmp_path):
+    package = tmp_path / "patch.json"
+    package.write_text(
+        '{"patch_synthesis":{"status":"prepared"},"patches":[{"file":"app.py"}]}',
+        encoding="utf-8",
+    )
+    result = {
+        "executor": {
+            "status": "ok", "source_code_changes": False, "patch_package_path": str(package),
+            "test_result": {
+                "commands": [{"status": "passed"}],
+                "executable_acceptance_result": {"status": "passed", "summary": {"signal_strength": "executable_callable", "skipped_targets": []}},
+                "executor_strategy": {"contract_alignment": {"status": "aligned"}, "deterministic_strategy": {"action": "verify_patch"}, "sandbox_patch_candidate": {"status": "not_available"}},
+                "programmer_task_tree": {"coverage": {"all_changes_traced": True, "unmapped_acceptance_ids": []}},
+            },
+        }
+    }
+
+    assert _programmer_score(result) == 10.0
+
+
 def test_report_publishes_role_minima_not_averages():
     cases = [
         {"project": "a", "role_scores": {role: 10.0 for role in ("implementer", "task_tree_builder", "programmer_executor", "tester", "reviewer")}, "project_min_score": 10.0, "safety": {}},

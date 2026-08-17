@@ -119,6 +119,7 @@ def _programmer_score(result: dict[str, Any]) -> float:
 
 def _programmer_evidence(result: dict[str, Any]) -> dict[str, Any]:
     executor = dict(result.get("executor", {}))
+    patch_package = _read_json(executor.get("patch_package_path"))
     test_result = dict(executor.get("test_result", {}))
     acceptance = dict(test_result.get("executable_acceptance_result", {}))
     summary = dict(acceptance.get("summary", {}))
@@ -126,6 +127,8 @@ def _programmer_evidence(result: dict[str, Any]) -> dict[str, Any]:
     deterministic = dict(strategy.get("deterministic_strategy", {}))
     alignment = dict(strategy.get("contract_alignment", {}))
     candidate = dict(strategy.get("sandbox_patch_candidate", {}))
+    synthesis = dict(patch_package.get("patch_synthesis", {}))
+    deterministic_candidate = synthesis.get("status") == "prepared" and bool(patch_package.get("patches"))
     task_tree = dict(test_result.get("programmer_task_tree", {}))
     coverage = dict(task_tree.get("coverage", {}))
     commands = [row for row in test_result.get("commands", []) if isinstance(row, dict)]
@@ -141,7 +144,8 @@ def _programmer_evidence(result: dict[str, Any]) -> dict[str, Any]:
         "task_tree_acceptance_mapped": not coverage.get("unmapped_acceptance_ids"),
         "contract_alignment": alignment.get("status") == "aligned",
         "strategy_is_actionable": deterministic.get("action") not in {None, "", "unknown"},
-        "sandbox_candidate_available": candidate.get("status") not in {None, "not_available", "none"},
+        "sandbox_candidate_available": deterministic_candidate
+        or candidate.get("status") not in {None, "not_available", "none"},
         "verifier_commands_have_no_failure": not any(row.get("status") == "failed" for row in commands),
     }
     return {
@@ -150,8 +154,19 @@ def _programmer_evidence(result: dict[str, Any]) -> dict[str, Any]:
         "skipped_target_count": len(skipped_targets),
         "strategy_action": deterministic.get("action"),
         "sandbox_candidate_status": candidate.get("status"),
+        "deterministic_patch_count": len(patch_package.get("patches", [])),
+        "patch_synthesis_status": synthesis.get("status"),
         "checks": checks,
     }
+
+
+def _read_json(path: object) -> dict[str, Any]:
+    if not path:
+        return {}
+    target = Path(str(path))
+    if not target.is_file():
+        return {}
+    return json.loads(target.read_text(encoding="utf-8"))
 
 
 def _report(cases: list[dict[str, Any]], target_score: float) -> dict[str, Any]:

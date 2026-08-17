@@ -27,6 +27,14 @@ def materialize(value: Any) -> Any:
             return lambda *args, **kwargs: []
         if fixture == "callable_empty_string":
             return lambda *args, **kwargs: ""
+        if fixture == "safe_method_attribute":
+            return _SafeMethodAttribute()
+        if fixture == "event_detail_envelope":
+            return type("Event", (), {"detail": {"module_name": "not_loaded"}})()
+        if fixture == "resource_collection_client":
+            return _resource_collection_client()
+        if fixture == "multinode_host_inventory":
+            return _multinode_host_inventory()
         if fixture == "callable_batch_ids":
             return lambda *args, **kwargs: ["batch-id"]
         if fixture == "callable_column_names":
@@ -108,7 +116,17 @@ def materialize(value: Any) -> Any:
         if fixture == "qdrant_dense_vectors":
             return {"": __import__("numpy").array([[1.0, 0.0]], dtype="float32")}
         if fixture == "asgi_request_no_accept":
-            return type("Request", (), {"headers": {}, "receive": _asgi_receive_empty, "body": _asgi_body_empty})()
+            return type(
+                "Request",
+                (),
+                {
+                    "method": "GET",
+                    "POST": {},
+                    "headers": {},
+                    "receive": _asgi_receive_empty,
+                    "body": _asgi_body_empty,
+                },
+            )()
         if fixture == "asgi_receive_empty":
             return _asgi_receive_empty
         if fixture == "asgi_send_noop":
@@ -154,10 +172,14 @@ def _domain_coerced_payload(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def _coerced_field_value(field_name: str, value: Any) -> Any:
-    if not isinstance(value, str) or value != "sample":
+    placeholder = value == "sample" if isinstance(value, str) else isinstance(value, (dict, list)) and not value
+    if not placeholder:
         return value
     replacement = sample_value("", field_name)
-    return replacement if replacement != "sample" else value
+    configured = replacement != "sample" if isinstance(replacement, str) else not (
+        isinstance(replacement, (dict, list)) and not replacement
+    )
+    return replacement if configured else value
 
 
 def _source_text(self: Any) -> str:
@@ -224,6 +246,24 @@ def _chroma_search_client() -> Any:
     return type("ChromaSearchClient", (), {"_search": _noop_chroma_search})()
 
 
+def _resource_collection_client() -> Any:
+    projects = type("Projects", (), {"list": lambda self, *args, **kwargs: []})()
+    group = type("Group", (), {"projects": projects})()
+    groups = type("Groups", (), {"get": lambda self, group_id: group})()
+    return type("ResourceClient", (), {"groups": groups})()
+
+
+def _multinode_host_inventory() -> dict[str, dict[str, str]]:
+    return {
+        f"node-{index}": {
+            "public": f"192.0.2.{index}",
+            "internal": f"10.0.0.{index}",
+            "data": f"10.1.0.{index}",
+        }
+        for index in range(1, 4)
+    }
+
+
 def _qdrant_collection_config() -> Any:
     try:
         distance = __import__("qdrant_client.http.models", fromlist=["Distance"]).Distance.COSINE
@@ -258,6 +298,34 @@ class _NoopCondition:
 
     def notify_all(self) -> None:
         return None
+
+
+class _SafeMethodAttribute:
+    def __init__(self, operation: str = "") -> None:
+        self.operation = operation
+
+    def __call__(self, *args: Any, **kwargs: Any) -> "_SafeMethodAttribute":
+        if self.operation in {"read", "recv", "receive"}:
+            return None
+        return self
+
+    def __getattr__(self, name: str) -> "_SafeMethodAttribute":
+        return _SafeMethodAttribute(name)
+
+    def __getitem__(self, key: Any) -> "_SafeMethodAttribute":
+        return self
+
+    def __iter__(self):
+        return iter(())
+
+    def __bool__(self) -> bool:
+        return False
+
+    def __await__(self):
+        async def completed() -> "_SafeMethodAttribute":
+            return self
+
+        return completed().__await__()
 
 
 class _ContainsAll:
