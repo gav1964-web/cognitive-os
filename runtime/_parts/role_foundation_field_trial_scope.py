@@ -141,6 +141,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _incidental_python_automation(path, python_source_files, root_package)
         or scope_boundaries.incidental_context_scripts(path, python_source_files, root_package)
         or scope_boundaries.native_dominated_monorepo(native_files, py_files, root_package)
+        or scope_boundaries.native_binding_support_only(path, python_source_files, native_files, root_package)
         or scope_boundaries.foreign_language_dominated_monorepo(foreign_files, py_files, root_package)
         or scope_boundaries.fixture_only_python_corpus(path, py_files, root_package)
         or scope_boundaries.scripts_only_python_support(path, py_files, root_package)

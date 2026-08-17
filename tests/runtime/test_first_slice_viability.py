@@ -32,6 +32,48 @@ def test_viability_accepts_plain_text_snippet_context():
     assert result["status"] in {"eligible", "deferred"}
 
 
+def test_instance_and_static_methods_remain_eligible_for_ranked_selection():
+    method = first_slice_viability(
+        "utils/config.py:load",
+        {"snippet": {"target_binding": "method_symbol", "owner_class": "Config", "text": "def load(self): return self.path"}},
+    )
+    static = first_slice_viability(
+        "utils/config.py:load",
+        {"snippet": {"target_binding": "method_symbol", "owner_class": "Config", "decorators": ["staticmethod"]}},
+    )
+
+    assert method["status"] == "eligible"
+    assert method["reselection_required"] is False
+    assert static["status"] == "eligible"
+
+
+def test_stateful_method_effects_remain_deferred():
+    result = first_slice_viability(
+        "utils/config.py:load",
+        {
+            "snippet": {"target_binding": "method_symbol", "owner_class": "Config"},
+            "side_effects": ["memory_state"],
+        },
+    )
+
+    assert result["score"] < 0
+    assert any(row["rule_id"] == "stateful_method_effects" for row in result["matched_rules"])
+
+
+def test_runtime_callback_requires_fixture_before_selection():
+    result = first_slice_viability("main.py:sub_cb")
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+
+
+def test_vendored_tooling_is_not_a_project_owned_first_slice():
+    result = first_slice_viability("ext_tools/makeheaders/makeheaders.py:export")
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+
+
 def test_architect_reselection_uses_kb_viability_order():
     sources = [
         "model/network.py:train",
@@ -47,6 +89,49 @@ def test_architect_reselection_uses_kb_viability_order():
 
     assert selected == ["dataset/io.py:normalize_batch", "dataset/io.py:get_batch"]
     assert [row["score"] for row in evidence] == [45, 24]
+
+
+def test_architect_reselection_prefers_environment_ready_over_manifest_candidate():
+    sources = ["pkg/heavy.py:normalize", "pkg/core.py:get_value"]
+    context = {
+        sources[0]: {
+            "node_kind": "function",
+            "snippet": {"text": "def normalize(value): ...", "target_binding": "function_symbol"},
+            "dependency_readiness": {"status": "missing_external"},
+        },
+        sources[1]: {
+            "node_kind": "function",
+            "snippet": {"text": "def get_value(value): ...", "target_binding": "function_symbol"},
+            "dependency_readiness": {"status": "ready"},
+        },
+    }
+
+    selected, evidence = _viable_candidates(sources, context, {}, limit=8)
+
+    assert selected == ["pkg/core.py:get_value", "pkg/heavy.py:normalize"]
+    assert evidence[0]["environment_ready"] is True
+    assert evidence[1]["environment_ready"] is False
+
+
+def test_architect_reselection_prefers_standalone_callable_over_instance_method():
+    sources = ["pkg/model.py:extract", "pkg/data.py:create_set"]
+    context = {
+        sources[0]: {
+            "node_kind": "function",
+            "snippet": {"text": "def extract(self, value): return value", "target_binding": "method_symbol"},
+            "dependency_readiness": {"status": "ready"},
+        },
+        sources[1]: {
+            "node_kind": "function",
+            "snippet": {"text": "def create_set(value): return value", "target_binding": "function_symbol"},
+            "dependency_readiness": {"status": "ready"},
+        },
+    }
+
+    selected, evidence = _viable_candidates(sources, context, {}, limit=8)
+
+    assert selected == ["pkg/data.py:create_set", "pkg/model.py:extract"]
+    assert evidence[0]["receiver_independent"] is True
 
 
 def test_architect_reselection_remembers_rejected_primary_targets():

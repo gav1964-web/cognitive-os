@@ -214,6 +214,26 @@ def test_scope_rejects_cpp_core_with_python_grpc_test_support(tmp_path):
     assert result["primary_language"] == "C++"
 
 
+def test_scope_rejects_native_core_with_binding_and_vendored_python_only(tmp_path):
+    for root in ("bindings", "ext_tools"):
+        directory = tmp_path / root
+        directory.mkdir()
+        for index in range(3):
+            (directory / f"helper_{index}.py").write_text("def run(): return 1\n", encoding="utf-8")
+    native = tmp_path / "src"
+    native.mkdir()
+    for index in range(20):
+        (native / f"core_{index}.c").write_text("int run(void) { return 1; }\n", encoding="utf-8")
+    model = tmp_path / "framework" / "model.py"
+    model.parent.mkdir()
+    model.write_text("class Schema:\n    value: str\n", encoding="utf-8")
+
+    result = _primary_language_scope(tmp_path)
+
+    assert result["status"] == "out_of_scope"
+    assert result["reason_code"] == "no_python_owned_product_boundary"
+
+
 def test_scope_rejects_incidental_python_in_non_python_automation(tmp_path):
     lesson = tmp_path / "ansible" / "40-container-example"
     lesson.mkdir(parents=True)

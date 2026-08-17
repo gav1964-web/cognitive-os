@@ -81,6 +81,14 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "sequence_array_translation_boundary", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "union["},
+      {"field": "output_union_members", "op": "contains_all", "value": ["ArrayLike", "SequenceLike"]},
+      {"field": "usage_types", "op": "intersects", "value": ["IterableLike", "SequenceLike"]},
+      {"field": "declared_effects", "op": "set_equals", "value": []},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "filesystem_typed_collection_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
       {"field": "output_type", "op": "starts_with_ci", "value": "List["},
       {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
@@ -159,6 +167,13 @@
     {"family_id": "observability_render_command", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
       {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
       {"field": "observed_effects", "op": "set_equals", "value": ["observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "filesystem_read_observability_command", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "PathLike"},
+      {"field": "observed_effects", "op": "contains_all", "value": ["filesystem_read", "observability"]},
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},

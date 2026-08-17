@@ -88,3 +88,37 @@ def test_bounded_runtime_render_and_query_contracts_are_profiled():
         )
         assert report["contract_archetype_ids"] == [family]
         assert report["score"] >= 97
+
+
+def test_sequence_translation_and_filesystem_report_are_profiled_from_structure():
+    cases = [
+        (
+            {
+                "inferred_output_type": "Union[ArrayLike, SequenceLike]",
+                "argument_usage_types": {"values": "IterableLike"},
+                "observed_side_effects": [],
+            },
+            "sequence_array_translation_boundary",
+        ),
+        (
+            {
+                "inferred_output_type": "VoidSideEffect",
+                "argument_usage_types": {"path": "PathLike"},
+                "observed_side_effects": ["filesystem_read", "observability"],
+            },
+            "filesystem_read_observability_command",
+        ),
+    ]
+    for evidence, family in cases:
+        evidence.update({"source_body_complete": True, "state_mutation": False})
+        report = semantic_target_quality_report(
+            "src/domain.py:operate",
+            ranked_candidates=["src/domain.py:operate"],
+            source_evidence=["src/domain.py:operate"],
+            structural_evidence=evidence,
+            input_contract={"value": next(iter(evidence["argument_usage_types"].values()))},
+            output_contract={"result": evidence["inferred_output_type"]},
+            side_effect_contract={"declared": evidence["observed_side_effects"]},
+        )
+        assert report["contract_archetype_ids"] == [family]
+        assert report["score"] >= 97

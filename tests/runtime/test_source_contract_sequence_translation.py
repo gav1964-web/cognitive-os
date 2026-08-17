@@ -57,3 +57,19 @@ def test_split_prefix_selection_returns_a_concrete_string():
     )
 
     assert contract["inferred_output_type"] == "str"
+
+
+def test_formatted_argument_and_static_method_have_concrete_receiver_free_contract():
+    candidate = {
+        "source": "notify.py:format_message",
+        "decorators": ["staticmethod"],
+        "owner_class": "Notifier",
+        "signature": {"args": [{"name": "message", "annotation": ""}]},
+        "snippet": "@staticmethod\ndef format_message(message):\n    return f'Message: {message}'",
+    }
+
+    evidence = infer_source_contract(candidate)
+    contract = _input_contract_from_candidate(candidate)
+
+    assert evidence["argument_usage_types"]["message"] == "str"
+    assert contract == {"message": "str"}

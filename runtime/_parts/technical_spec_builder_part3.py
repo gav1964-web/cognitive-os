@@ -122,7 +122,8 @@ def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     documented = dict(semantic.get("docstring_argument_types") or {})
     constrained = dict(semantic.get("argument_constraint_types") or {})
     usage_types = dict(semantic.get("argument_usage_types") or {})
-    owner = str(semantic.get("owner_class") or "")
+    decorators = {str(value).lower().rsplit(".", 1)[-1] for value in semantic.get("decorators") or []}
+    owner = "" if decorators & {"staticmethod", "classmethod"} else str(semantic.get("owner_class") or "")
     args = _contract_args(signature)
     if args:
         contract = {
@@ -147,7 +148,7 @@ def _candidate_argument_type(
     documented_type = str(documented.get(name) or "")
     if documented_type.lower() in IGNORED_RETURN_ANNOTATIONS:
         documented_type = ""
-    return documented_type or constrained.get(name) or usage_types.get(name) or _contract_type_from_arg(name, annotation)
+    return documented_type or usage_types.get(name) or constrained.get(name) or _contract_type_from_arg(name, annotation)
 
 def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [

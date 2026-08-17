@@ -301,6 +301,9 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                 for arg in node.args:
                     if isinstance(arg, ast.Name) and arg.id in known:
                         inferred[arg.id] = "SQLLike"
+            if node.func.attr in {"verify", "verify_password", "check_password", "hash"}:
+                for arg_name in _argument_names(node.args, known):
+                    inferred[arg_name] = "str"
             if name in known and node.func.attr in {"items", "keys", "values", "get", "update", "pop", "setdefault"}:
                 inferred[name] = "MappingLike"
             elif name in known and node.func.attr in {"startswith", "endswith", "strip", "split", "zfill", "replace"}:
@@ -312,6 +315,11 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
         elif isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow.")):
             for arg_name in _argument_names(node.args, known):
                 inferred[arg_name] = "ArrayLike"
+        elif isinstance(node, ast.Call) and _call_name(node.func).lower().endswith((".verify", ".verify_password", ".check_password", ".hash")):
+            for arg_name in _argument_names(node.args, known):
+                inferred[arg_name] = "str"
+        elif isinstance(node, ast.FormattedValue) and isinstance(node.value, ast.Name) and node.value.id in known:
+            inferred[node.value.id] = "str"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known and node.attr in {"shape", "dtype", "ndim"}:
             inferred[node.value.id] = "ArrayLike"
         elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in known:

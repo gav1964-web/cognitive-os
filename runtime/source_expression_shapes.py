@@ -60,6 +60,8 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         base = expression_shape(node.value, assignments)
         if base == "str":
             return "str"
+        if base == "ArrayLike":
+            return "ArrayLike"
         if base in {"SequenceLike", "TupleLike"}:
             return "ItemLike"
         if isinstance(node.slice, ast.Name) and assignments.get(node.slice.id) in {"KeyLike", "SequenceLike"}:
@@ -73,12 +75,13 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if is_receiver_request_dispatch(node):
         return "DispatchedResult"
     raw_name = _call_name(node.func); name = raw_name.lower()
+    owner, _, operation = name.rpartition(".")
     if name in {"bool", "isinstance"}: return "bool"
+    if operation == "verify" or name.endswith(("verify_password", "check_password")): return "bool"
     if name == "len": return "int"
     if name in {"float", "int", "str"}: return name
     if any(token in name for token in ("render", "request", "response", "redirect")): return "ResponseLike"
     if name.endswith(("dict", "to_dict", "kwargs")): return "MappingLike"
-    owner, _, operation = name.rpartition(".")
     if operation == "alloc" or name == "alloc": return "AllocatedObjectLike"
     if operation == "fit": return "TrainingHistoryLike"
     if name == "getattr": return "AttributeValue"

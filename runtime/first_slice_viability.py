@@ -74,6 +74,8 @@ def _facts(source: str, context: dict[str, Any], knowledge_rule: str) -> dict[st
     raw_readiness = context.get("dependency_readiness")
     snippet = dict(raw_snippet) if isinstance(raw_snippet, Mapping) else {}
     readiness = dict(raw_readiness) if isinstance(raw_readiness, Mapping) else {}
+    decorators = list(snippet.get("decorators") or context.get("decorators") or [])
+    side_effects = list(context.get("contract_side_effects") or context.get("side_effects") or snippet.get("side_effects") or [])
     return {
         "source": normalized,
         "path": f"/{path}",
@@ -81,6 +83,10 @@ def _facts(source: str, context: dict[str, Any], knowledge_rule: str) -> dict[st
         "knowledge_rule": knowledge_rule.lower(),
         "target_binding": str(snippet.get("target_binding") or context.get("target_binding") or "").lower(),
         "dependency_status": str(readiness.get("status") or "").lower(),
+        "decorators": " ".join(str(item).lower() for item in decorators),
+        "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
+        "snippet_text": str(snippet.get("text") or "").lower(),
+        "side_effects": " ".join(str(item).lower() for item in side_effects),
     }
 
 
@@ -103,7 +109,10 @@ def _matches(match: dict[str, Any], facts: dict[str, str]) -> bool:
 
 
 def _validate_matchers(match: dict[str, Any]) -> None:
-    allowed_facts = {"source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status"}
+    allowed_facts = {
+        "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
+        "decorators", "owner_class", "snippet_text", "side_effects",
+    }
     for key, values in match.items():
         suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""
         if not suffix or key[: -len(suffix)] not in allowed_facts or not isinstance(values, list) or not values:

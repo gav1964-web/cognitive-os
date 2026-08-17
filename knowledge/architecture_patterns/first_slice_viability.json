@@ -19,12 +19,49 @@
       "reason": "read/mapping boundary usually permits fixture-backed execution"
     },
     {
+      "rule_id": "instance_method_receiver",
+      "score_delta": 0,
+      "match": {
+        "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
+        "snippet_text_contains_any": ["self."]
+      },
+      "reason": "method reads receiver state and ranks below an equivalent receiver-independent callable"
+    },
+    {
+      "rule_id": "static_method_boundary",
+      "score_delta": 0,
+      "match": {
+        "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
+        "decorators_contains_any": ["staticmethod", "classmethod"]
+      },
+      "reason": "static or class method exposes an explicit receiver-independent boundary"
+    },
+    {
+      "rule_id": "stateful_method_effects",
+      "score_delta": -45,
+      "reselection_required": true,
+      "match": {
+        "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
+        "side_effects_contains_any": ["memory_state", "filesystem", "network", "subprocess"]
+      },
+      "reason": "stateful method effects require a fixture or process boundary before executable handoff"
+    },
+    {
       "rule_id": "utility_path_boundary",
       "score_delta": 16,
       "match": {
         "path_contains_any": ["/utils/", "/common/", "/modules_common/", "/parsers/", "/converters/"]
       },
       "reason": "support module exposes a smaller reusable boundary"
+    },
+    {
+      "rule_id": "runtime_callback_boundary",
+      "score_delta": -55,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["_cb", "callback"]
+      },
+      "reason": "callback requires an event or runtime fixture before executable handoff"
     },
     {
       "rule_id": "ml_training_lifecycle",
@@ -110,6 +147,15 @@
         "path_contains_any": ["/examples/", "/scripts/", "/test/", "/tests/"]
       },
       "reason": "example, script, or test tree is context-only when active core candidates exist"
+    },
+    {
+      "rule_id": "vendored_tooling_tree",
+      "score_delta": -80,
+      "reselection_required": true,
+      "match": {
+        "path_contains_any": ["/ext_tools/", "/third_party/", "/vendor/", "/vendored/"]
+      },
+      "reason": "vendored or external tooling is context rather than a project-owned first writable slice"
     },
     {
       "rule_id": "unready_dependency_boundary",

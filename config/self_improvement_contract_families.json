@@ -90,6 +90,14 @@
       "failure_modes": ["invalid_array_shape", "unsupported_dtype", "non_finite_input", "numerical_failure"],
       "reason": "AST proves a side-effect-free numerical array transformation"
     },
+    "sequence_array_translation_boundary": {
+      "input_contract": {"values": "IterableLike", "options": "TranslationOptions?"},
+      "output_contract": {"result": "Union[ArrayLike, SequenceLike]"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "translation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["sequence and array modes have explicit output shapes", "empty and malformed values are covered", "inputs are not mutated"],
+      "failure_modes": ["unsupported_value", "translation_failure", "output_shape_mismatch"],
+      "reason": "AST proves a side-effect-free sequence or array translation"
+    },
     "object_mapping_projection": {
       "input_contract": {"source": "ProtocolLike"},
       "output_contract": {"result": "MappingLike"},
@@ -239,6 +247,15 @@
       "failure_modes": ["invalid_render_input", "rendering_failure", "observability_sink_failure"],
       "benign_runtime_boundary": true,
       "reason": "AST proves a bounded command whose sole effect is observable rendering"
+    },
+    "filesystem_read_observability_command": {
+      "input_contract": {"location": "PathLike"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["filesystem_read", "observability"], "requires_validation_gate": true},
+      "validation_gates": ["missing, empty and populated files have bounded output", "reporting does not mutate the source"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "observability_sink_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a read-only filesystem reporting boundary"
     },
     "multi_shape_prediction_boundary": {
       "input_contract": {"model_input": "PredictionInput", "options": "PredictionOptions"},

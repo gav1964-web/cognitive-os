@@ -152,10 +152,26 @@ def _viable_candidates(
     knowledge_rule = str(first_slice.get("knowledge_rule") or "")
     ranked = []
     for index, source in enumerate(sources):
-        profile = first_slice_viability(source, context.get(source), knowledge_rule=knowledge_rule)
+        source_context = context.get(source)
+        profile = first_slice_viability(source, source_context, knowledge_rule=knowledge_rule)
         if profile["status"] == "eligible":
-            ranked.append({"target": source, "index": index, **profile})
-    ranked.sort(key=lambda row: (-int(row["score"]), int(row["index"])))
+            snippet = dict(dict(source_context or {}).get("snippet") or {})
+            ranked.append({
+                "target": source,
+                "index": index,
+                "environment_ready": _environment_ready_callable(source_context),
+                "receiver_independent": (
+                    snippet.get("target_binding") == "function_symbol"
+                    or bool({"staticmethod", "classmethod"} & set(snippet.get("decorators") or []))
+                ),
+                **profile,
+            })
+    ranked.sort(key=lambda row: (
+        -int(bool(row["environment_ready"])),
+        -int(bool(row["receiver_independent"])),
+        -int(row["score"]),
+        int(row["index"]),
+    ))
     return [str(row["target"]) for row in ranked[:limit]], ranked
 
 

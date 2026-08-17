@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import ast
 from pathlib import Path
 
 from runtime.source_target_policy import scope_policy_int, scope_policy_list
@@ -48,6 +49,33 @@ def native_dominated_monorepo(native_files: list[Path], py_files: list[Path], ro
     minimum = scope_policy_int("native_monorepo_min_files", 500)
     ratio = scope_policy_int("native_monorepo_files_per_python", 5)
     return not root_package and len(native_files) >= minimum and len(native_files) >= max(1, len(py_files)) * ratio
+
+
+def native_binding_support_only(
+    path: Path, python_source_files: list[Path], native_files: list[Path], root_package: str | None
+) -> bool:
+    if root_package or not python_source_files or not native_files:
+        return False
+    roots = set(scope_policy_list("native_binding_support_roots"))
+    if not roots:
+        return False
+    owned_sources = [
+        source for source in python_source_files
+        if source.relative_to(path).parts[0].lower() not in roots
+    ]
+    if any(_has_python_callable(source) for source in owned_sources):
+        return False
+    minimum = scope_policy_int("native_binding_core_min_files", 20)
+    ratio = scope_policy_int("native_binding_files_per_python", 2)
+    return len(native_files) >= max(minimum, len(python_source_files) * ratio)
+
+
+def _has_python_callable(path: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+    except (OSError, SyntaxError):
+        return False
+    return any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) for node in ast.walk(tree))
 
 
 def foreign_language_dominated_monorepo(
