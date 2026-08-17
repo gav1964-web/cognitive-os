@@ -18,6 +18,8 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
     cpp_files = _files_with_suffixes(path, {".cc", ".cpp", ".cxx", ".hpp"})
     cython_files = _files_with_suffixes(path, {".pyx", ".pxd"})
     native_files = [*rust_files, *c_files, *cpp_files]
+    foreign_extensions = set(scope_policy_list("foreign_language_source_extensions"))
+    foreign_files = _files_with_suffixes(path, foreign_extensions) if foreign_extensions else []
     python_source_files = [file for file in py_files if _python_role_source_file(file.relative_to(path))]
     root_package = _root_python_package(path)
     has_root_python_source = bool(root_package or (path / "src").is_dir() or (path / "app").is_dir())
@@ -139,6 +141,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or _incidental_python_automation(path, python_source_files, root_package)
         or scope_boundaries.incidental_context_scripts(path, python_source_files, root_package)
         or scope_boundaries.native_dominated_monorepo(native_files, py_files, root_package)
+        or scope_boundaries.foreign_language_dominated_monorepo(foreign_files, py_files, root_package)
         or scope_boundaries.fixture_only_python_corpus(path, py_files, root_package)
         or scope_boundaries.scripts_only_python_support(path, py_files, root_package)
         or scope_boundaries.documentation_deployment_demo(path, python_source_files, root_package)

@@ -2,6 +2,23 @@
   "schema_version": "contract_archetype_inference.v1",
   "archetypes": [
     {
+      "id": "hamiltonian_trajectory_integration",
+      "priority": 113,
+      "symbols": ["solve_trajectory", "integrate_trajectory", "leapfrog_trajectory"],
+      "symbol_contains_any": ["trajectory"],
+      "path_contains_any": ["hmc", "hamilton", "trajectory"],
+      "score_bonus": 18,
+      "ranking_bonus": 30,
+      "reason": "Hamiltonian trajectory integration is a bounded state-and-integrator to trajectory-result contract",
+      "ranking_reason": "trajectory integration is a representative scientific compute boundary",
+      "contract_family": "hamiltonian_trajectory_integration",
+      "input_contract": {"state": "HamiltonianState(position, momentum?, tensor_shape, dtype, device?)", "integration_policy": "TrajectoryPolicy(step_count, step_size, integrator, projection?, history?)"},
+      "output_contract": {"trajectory_result": "TrajectoryResult(final_state, energy_delta?, history?, diagnostics?)", "failure_packet": "TrajectoryFailure(kind, step?, state_shape?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "mutation_policy": "caller-owned state mutation and history collection are explicit"},
+      "validation_gates": ["state tensor shape, dtype and device are explicit", "step count, step size and integrator are validated", "energy drift and projection failures preserve diagnostics"],
+      "failure_modes": ["invalid_state_shape", "unsupported_integrator", "non_finite_energy", "projection_failure"]
+    },
+    {
       "id": "text_tokenization_transform",
       "priority": 112,
       "symbols": ["tokenize", "_tokenize"],

@@ -50,6 +50,14 @@ def native_dominated_monorepo(native_files: list[Path], py_files: list[Path], ro
     return not root_package and len(native_files) >= minimum and len(native_files) >= max(1, len(py_files)) * ratio
 
 
+def foreign_language_dominated_monorepo(
+    foreign_files: list[Path], py_files: list[Path], root_package: str | None
+) -> bool:
+    minimum = scope_policy_int("foreign_monorepo_min_files", 500)
+    ratio = scope_policy_int("foreign_monorepo_files_per_python", 8)
+    return not root_package and len(foreign_files) >= minimum and len(foreign_files) >= max(1, len(py_files)) * ratio
+
+
 def fixture_only_python_corpus(path: Path, py_files: list[Path], root_package: str | None) -> bool:
     if root_package or not py_files:
         return False
@@ -69,9 +77,17 @@ def documentation_deployment_demo(path: Path, python_source_files: list[Path], r
     if any((path / name).is_file() for name in ("pyproject.toml", "setup.py", "setup.cfg")):
         return False
     readmes = [file for file in path.iterdir() if file.is_file() and file.name.lower().startswith("readme")]
-    infra = {"docker-compose.yml", "dockerfile", "stack.yml", ".gitlab-ci.yml"}
+    infra = set(scope_policy_list("deployment_template_infra_files")) or {
+        "docker-compose.yml", "dockerfile", "stack.yml"
+    }
     top_files = {file.name.lower() for file in path.iterdir() if file.is_file()}
-    return bool(readmes) and max(file.stat().st_size for file in readmes) >= 20_000 and len(top_files & infra) >= 2
+    if not readmes or not top_files.intersection(infra):
+        return False
+    if max(file.stat().st_size for file in readmes) >= 20_000 and len(top_files & infra) >= 2:
+        return True
+    markers = [item.lower() for item in scope_policy_list("deployment_template_markers")]
+    text = "\n".join(file.read_text(encoding="utf-8", errors="ignore")[:40_000] for file in readmes).lower()
+    return bool(markers) and any(marker in text for marker in markers)
 
 
 def _non_python_file_count(path: Path, *, stop_at: int) -> int:

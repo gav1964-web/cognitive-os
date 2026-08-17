@@ -45,6 +45,76 @@
   },
   "records": [
     {
+      "rule_id": "binary_structured_data_codec",
+      "record_type": "project_archetype_rule",
+      "priority": 108,
+      "archetype": "binary_structured_data_codec",
+      "architect_consumable": true,
+      "label": "binary structured-data codec library",
+      "purpose_summary": "Encode structured values into a language-neutral binary format and decode streams back into typed values while preserving extensions and malformed-input diagnostics.",
+      "match": {
+        "text_contains_any": ["binary structured data", "binary format", "encode", "decode", "extension", "serialized data"],
+        "required_contains_all": ["binary", "encode", "decode"],
+        "min_score": 45
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "extraction", "bottlenecks"],
+        "primary_target_prefer": ["encode", "decode", "load", "save", "extension"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is binary encode/decode around {target}, where stream ownership, extension dispatch, limits, and malformed payloads need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Binary stream IO is separated from value encoding and decoding.",
+        "Extension registration and dispatch are explicit policy boundaries.",
+        "Depth, size, type, and malformed-input failures are typed and reproducible.",
+        "Cross-language fixtures verify stable round trips and compatibility."
+      ],
+      "first_slice": {
+        "name": "binary_codec_round_trip_slice",
+        "goal": "Stabilize one value-to-bytes-to-value round trip with malformed-input coverage.",
+        "target_sources": ["domain_anchors", "central", "extraction", "bottlenecks"],
+        "targets_prefer": ["encode", "decode", "load", "save", "extension"],
+        "steps": [
+          "Define encoded value, stream, extension, and failure contracts.",
+          "Separate byte transport from value codec dispatch.",
+          "Make depth, size, unsupported type, and malformed payload errors explicit.",
+          "Verify primitive, nested, extension, truncated, and cross-language fixtures."
+        ]
+      },
+      "scenario_summary": ["Encode structured values into binary streams.", "Decode binary streams into structured values.", "Register and apply extension codecs.", "Reject malformed, truncated, oversized, or unsupported payloads."],
+      "input_summary": ["structured values", "binary streams", "codec and extension policy", "depth and size limits"],
+      "output_summary": ["encoded bytes", "decoded values", "extension results", "typed codec failures"]
+    },
+    {
+      "rule_id": "computer_vision_tracking_application",
+      "record_type": "project_archetype_rule",
+      "priority": 107,
+      "archetype": "computer_vision_tracking_application",
+      "architect_consumable": true,
+      "label": "computer-vision detection and tracking application",
+      "purpose_summary": "Read image or video frames, detect and track objects, update crossing or lifecycle state, and emit annotated frames and aggregate observations.",
+      "match": {
+        "text_contains_any": ["opencv", "videocapture", "findcontours", "backgroundsubtractor", "boundingrect", "object tracking", "vehicle detection"],
+        "required_contains_any": ["videocapture", "findcontours", "backgroundsubtractor", "object tracking"],
+        "min_score": 36
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "broad", "extraction", "bottlenecks"],
+        "primary_target_prefer": ["detect", "track", "updatecoords", "going_up", "going_down", "frame"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is frame-to-observation flow around {target}, where image shape, detection thresholds, tracker state, and output timing need explicit contracts."
+      },
+      "target_architecture_shape": ["Frame acquisition is separated from detection, tracking, and rendering.", "Image shape, color, threshold, and coordinate conventions are explicit.", "Tracker lifecycle and crossing-count state transitions are deterministic.", "Video and UI adapters are replaceable by tiny fixture frames in tests."],
+      "first_slice": {
+        "name": "frame_detection_tracking_slice",
+        "goal": "Stabilize one fixture frame through detection and tracker-state update.",
+        "target_sources": ["central", "broad", "extraction", "bottlenecks"],
+        "targets_prefer": ["detect", "track", "updatecoords", "going_up", "going_down"],
+        "steps": ["Define Frame, Detection, TrackState, and Observation contracts.", "Separate frame IO and rendering from pure detection/tracking decisions.", "Make coordinate, threshold, and lifecycle rules explicit.", "Verify empty frame, one object, crossing, occlusion, and end-of-stream cases."]
+      },
+      "scenario_summary": ["Read frames from a video or camera source.", "Detect candidate objects and derive bounding boxes or centroids.", "Update object tracks and crossing/lifecycle state.", "Emit annotated frames and aggregate object counts."],
+      "input_summary": ["video or camera frames", "image dimensions and color format", "detection thresholds", "tracker and crossing policy"],
+      "output_summary": ["object detections", "updated tracks", "crossing counts", "annotated frames", "decode or tracking failures"]
+    },
+    {
       "rule_id": "semantic_release_version_planning",
       "record_type": "project_archetype_rule",
       "priority": 112,
