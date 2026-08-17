@@ -293,7 +293,7 @@ def positive_samples_execute(
                     result = asyncio.run(result)
                 if not _positive_result_matches_expect(result, dict(row.get("expect") or {})):
                     return False
-        except Exception:
+        except (Exception, SystemExit):
             return False
     return True
 

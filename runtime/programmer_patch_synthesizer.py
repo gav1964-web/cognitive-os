@@ -17,6 +17,7 @@ from .patch_synthesis_policy import (
 )
 from .programmer_contract_transform_patch import contract_transform_patch
 from .programmer_literal_stub_patch import literal_return_patch, notimplemented_return_patch
+from .python_parser_compatibility import parse_compatible_source
 
 NO_PATCH = {"status": "skipped", "reason": "no_supported_patch_pattern", "patches": []}
 
@@ -221,7 +222,7 @@ def _guard_evidence(contract_keys: list[str], signature_keys: list[str], guard_k
 
 def _required_signature_keys(source: str, function_name: str, recipe: dict[str, Any]) -> list[str]:
     try:
-        tree = ast.parse(source)
+        tree, _ = parse_compatible_source(source, "<patch-source>")
     except SyntaxError:
         return []
     function = _find_patchable_function(tree, function_name)
@@ -280,7 +281,10 @@ def _remove_tree(path: Path) -> None:
 
 
 def _guard_required_keys(source: str, function_name: str, required_keys: list[str]) -> list[str]:
-    tree = ast.parse(source)
+    try:
+        tree, _ = parse_compatible_source(source, "<patch-source>")
+    except SyntaxError:
+        return []
     function = _find_patchable_function(tree, function_name)
     if function is None:
         return []
@@ -298,7 +302,10 @@ def _defaulted_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> s
 
 
 def _patch_required_input_guard(source: str, function_name: str, required_keys: list[str], recipe: dict[str, Any]) -> str:
-    tree = ast.parse(source)
+    try:
+        tree, _ = parse_compatible_source(source, "<patch-source>")
+    except SyntaxError:
+        return source
     function = _find_patchable_function(tree, function_name)
     if function is None:
         return source

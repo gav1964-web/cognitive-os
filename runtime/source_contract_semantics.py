@@ -13,6 +13,7 @@ from runtime.source_contract_docstrings import documented_output_shape, docstrin
 from runtime.source_dispatch_evidence import has_receiver_request_dispatch
 from runtime.source_effect_evidence import observed_side_effects
 from runtime.source_expression_shapes import assignment_shapes, expression_shape
+from runtime.python_parser_compatibility import parse_compatible_source
 
 def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
     precomputed = candidate.get("structural_contract")
@@ -168,7 +169,7 @@ def _function_node(snippet: str) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef
         return None, False
     source = textwrap.dedent(snippet)
     try:
-        tree = ast.parse(source)
+        tree, _ = parse_compatible_source(source, "<candidate-snippet>")
     except SyntaxError:
         return _partial_function_node(source), False
     return next((node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))), None), True

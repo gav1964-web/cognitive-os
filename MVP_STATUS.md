@@ -1,7 +1,7 @@
 # MVP_STATUS.md
 **Baseline snapshot: Cognitive OS foundation and Local Automation MVP target**
 
-Updated after the July 29, 2026 strict three-role foundation hardening pass.
+Updated after the August 17, 2026 GitLab iteration 11 and downstream minimum field trial.
 
 ## Current Verdict
 
@@ -66,6 +66,16 @@ Latest MVP readiness command: `python tools/role_mvp_readiness.py --root .`. Gen
 | Reviewer | `unchanged; downstream context` | `1.0` |
 
 These `1.0` values are MVP-readiness pass signals, not 9.5 excellence scores. The stricter gate is `tools/role_foundation_excellence.py`. Its scoring is now worst-case based: a role score is capped by the weakest project/case floor, so one `8.5` project makes the role score `8.5` even if the average is higher. Aggregate averages remain diagnostics only.
+
+Latest independent GitLab iteration 11 used 40 previously unseen projects across five strata. The blind Foundation baseline produced role minima Project Analyzer `9.7`, Architect `8.33`, SpecWriter `6.47`. After generalized parser and contract-family treatment, the same corpus produced `9.7 / 9.7 / 9.8` over 30 Python-owned projects; 10 projects were explicitly out of scope. This treatment result is diagnostic and still requires confirmation on a new blind corpus.
+
+The new downstream command is:
+
+```bash
+python tools/role_pipeline_min_field_trial.py --root . --projects-dir <corpus>/src --foundation-report <foundation-report.json> --target-score 9.7 --write
+```
+
+On the 30 iteration-11 Python-owned projects it produced raw role minima: Implementer `10.0`, Task Tree Builder `10.0`, Programmer Executor `5.83`, Tester `10.0`, Reviewer `8.33`. These raw `10.0` values mean all currently configured gates passed and expose that those rubrics are not yet discriminating enough; they are not excellence claims. Programmer Executor produced executable-callable evidence on `8/30`, meta-only evidence on `22/30`, completed successfully on `14/30`, and produced no sandbox candidate on `30/30`. The next downstream hardening priority is therefore executable fixture/profile coverage and bounded sandbox candidate synthesis, followed by stricter Implementer, Task Tree, and Tester quality rubrics.
 
 Latest strict scorer runs after switching to worst-case methodology:
 

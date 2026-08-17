@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.metadata as importlib_metadata
 import importlib.util
@@ -14,9 +15,14 @@ from typing import Any
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_materializers import materialize
 from .executable_acceptance_policy import dependency_stub_policy
-
+from .python_parser_compatibility import parse_compatible_source
 
 def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path: Path) -> dict[str, Any]:
+    if _has_unbounded_top_level_loop(path):
+        isolated = load_source_isolated_callable(path, symbol)
+        if not isolated.get("reason"):
+            isolated["source_isolated"] = True
+            return isolated
     module_name = module_name_from_path(path_text)
     if module_name:
         try:
@@ -58,6 +64,19 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
             failure = import_failure(exc)
             return {"callable": None, "reason": failure["reason"], "detail": failure["detail"]}
     return _load_callable_from_file(path, symbol, project_dir)
+
+
+def _has_unbounded_top_level_loop(path: Path) -> bool:
+    try:
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
+    except (OSError, UnicodeError, SyntaxError):
+        return False
+    return any(
+        isinstance(node, ast.While)
+        and isinstance(node.test, ast.Constant)
+        and node.test.value is True
+        for node in tree.body
+    )
 
 
 def import_failure(exc: Exception) -> dict[str, str]:

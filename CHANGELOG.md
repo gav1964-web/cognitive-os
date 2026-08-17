@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a minimum-based downstream field trial for Implementer, Task Tree Builder, Programmer Executor, Tester, and Reviewer, including executable-callable, skipped-target, strategy, sandbox-candidate, and verifier evidence.
+- Hardened executable acceptance against project-owned `SystemExit` and unguarded top-level infinite loops; hazardous modules now fail a sample or use source isolation instead of terminating or hanging the corpus run.
+- Reused the shared Python compatibility parser in source-contract analysis and patch synthesis, preserving Python 2 callable evidence without mutating analyzed source.
+- Completed GitLab blind iteration 11 on 40 unseen projects: blind Foundation floor `6.47`, post-treatment role minima `9.7 / 9.7 / 9.8`, with 30 Python-owned projects and 10 controlled out-of-scope projects.
 - Added seeded L4.5 generated corpus support (`--generated-corpus-size`, `--seed`) and verified a deterministic 200-case field trial.
 - Added PromptBoundaryClassification, expanded the L4.5 semantic benchmark to 22 cases, added deterministic-vs-model comparison reports, and ran a live `GigaChat-Pro` propose-only trial with replay-backed results.
 - Added the L4/L4.5 semantic-loop toolkit: `SemanticEvidencePack`, `SemanticProposalReplay`, `L4DecisionTable`, L4.5 model quality modes, deterministic semantic benchmark and acceptance gate.
