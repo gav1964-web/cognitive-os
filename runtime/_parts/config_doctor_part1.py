@@ -36,12 +36,14 @@ from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.self_improvement_profile_families import load_contract_families
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.source_target_policy import load_role_source_policy
+from runtime.spec_writer_ranking_kb import assert_no_knowledge_leakage, load_spec_writer_ranking_kb
 from runtime.system_knowledge_ir_backlog import load_ir_backlog_policy
 from runtime.stage2_template_routes import load_stage2_template_routes
 from runtime.target_quality_policy import load_target_quality_policy
 from runtime.technical_spec_policy import load_technical_spec_policy
 from runtime.target_structural_families import load_structural_family_rules
 from runtime.web_extraction_profiles import load_web_extraction_profiles
+from plugins.project_map_report.src.language_scope import load_language_scope_policy
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -67,6 +69,9 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
             lambda: _load_catalogs(base),
         ),
         _load_check("first_slice_viability_kb_integrity", lambda: load_first_slice_viability(str(base / "knowledge" / "architecture_patterns" / "first_slice_viability.json"))),
+        _load_check("spec_writer_ranking_kb_integrity", lambda: load_spec_writer_ranking_kb(str(base / "knowledge" / "role_knowledge" / "spec_writer_ranking.json"))),
+        _load_check("spec_writer_knowledge_leakage", lambda: assert_no_knowledge_leakage(base)),
+        _load_check("language_scope_kb_integrity", lambda: load_language_scope_policy(str(base / "knowledge" / "architecture_patterns" / "language_scope.json"))),
     ]
     catalogs = _load_catalogs(base)
     checks.extend(

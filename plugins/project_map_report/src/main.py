@@ -6,6 +6,7 @@ from typing import Any
 
 from .answers import build_answers, inline_value
 from .core_paths import is_core_path
+from .language_scope import language_scope
 from .source_health import source_health as build_source_health
 
 
@@ -20,6 +21,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     runtime_commands = dict(payload["runtime_commands"])  # type: ignore[index]
     source_health = build_source_health(tree, stack, files, python_structure, runtime_commands)
     security_health = _security_health(files)
+    analysis_scope = language_scope(stack)
     summary = {
         "root": tree.get("root"),
         "file_count": dict(tree.get("counts", {})).get("files", 0),
@@ -31,11 +33,13 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "entrypoints": _entrypoints(stack, python_structure),
         "routes": len(python_structure.get("routes", [])),
         "read_files": [item.get("path") for item in files.get("files", [])],
+        "analysis_scope": analysis_scope,
     }
     risks = _risks(tree, stack, files, python_structure, runtime_commands, source_health)
     answers = build_answers(summary, risks, stack, files, python_structure, runtime_commands)
     answers["0_source_health"] = source_health
     answers["0_security_health"] = security_health
+    answers["0_analysis_scope"] = analysis_scope
     human_summary = _human_summary(summary, answers, source_health, security_health)
     evidence_summary = _evidence_summary(summary, answers, source_health, security_health, python_structure)
     markdown = _markdown(summary, risks, stack, python_structure, runtime_commands, answers, source_health, security_health, human_summary, evidence_summary)
@@ -99,6 +103,18 @@ def _risks(
     source_health: dict[str, Any],
 ) -> list[dict[str, str]]:
     risks: list[dict[str, str]] = []
+    analysis_scope = language_scope(stack)
+    if analysis_scope["status"] == "limited":
+        risks.append(
+            {
+                "code": "cross_language_scope_limited",
+                "severity": "high",
+                "detail": (
+                    f"{analysis_scope['primary_language']} dominates; Python findings describe only "
+                    f"{analysis_scope['analyzed_boundary']}"
+                ),
+            }
+        )
     if source_health["status"] != "clean":
         risks.append(
             {
@@ -216,11 +232,19 @@ def _human_summary(
             scenarios = [f"Execute primary flow: {' -> '.join(str(item) for item in path[:4])}"]
         elif summary.get("entrypoints"):
             scenarios = [f"Run detected entrypoint `{summary['entrypoints'][0]}` and inspect produced outputs."]
+    analysis_scope = dict(summary.get("analysis_scope") or {})
     next_step = "write ArchitectureDecisionRecord for the safest source-backed capability"
+    purpose = scope.get("main_task") or f"Analyze project at {summary.get('root')} and identify its runtime boundaries."
+    if analysis_scope.get("status") == "limited":
+        purpose = (
+            f"Partial Python boundary analysis only; {analysis_scope.get('primary_language')} is the dominant "
+            "implementation language."
+        )
+        next_step = "select a dominant-language workspace and run a language-aware architecture analyzer"
     if plan.get("blocked_by"):
         next_step = "stop implementation handoff until Project Analyzer has a safe Python candidate"
     return {
-        "purpose": scope.get("main_task") or f"Analyze project at {summary.get('root')} and identify its runtime boundaries.",
+        "purpose": purpose,
         "main_scenarios": scenarios[:5],
         "inputs": list(scope.get("inputs", []) or [])[:8],
         "outputs": list(scope.get("outputs", []) or [])[:8],
@@ -258,13 +282,21 @@ def _evidence_summary(
         confidence -= 0.1
     if not python_structure.get("files"):
         confidence -= 0.2
+    analysis_scope = dict(summary.get("analysis_scope") or {})
+    limits = [
+        "static analysis cannot prove dynamically imported entrypoints",
+        "absence of evidence is not evidence of absence for generated/runtime code",
+    ]
+    if analysis_scope.get("status") == "limited":
+        confidence -= 0.25
+        limits.append(
+            f"{analysis_scope.get('primary_language')} dominates; findings cover only "
+            f"{analysis_scope.get('analyzed_boundary')}"
+        )
     return {
         "source_refs": sorted(dict.fromkeys(refs)),
         "confidence": round(max(0.2, confidence), 2),
-        "limits": [
-            "static analysis cannot prove dynamically imported entrypoints",
-            "absence of evidence is not evidence of absence for generated/runtime code",
-        ],
+        "limits": limits,
     }
 
 
@@ -286,6 +318,8 @@ def _markdown(
         f"Root: `{summary['root']}`",
         f"Files: `{summary['file_count']}`, directories: `{summary['directory_count']}`",
         f"Project shape: `{source_health['project_shape']}`, source health: `{source_health['status']}`",
+        f"Analysis scope: `{dict(summary.get('analysis_scope') or {}).get('status', 'full')}`; "
+        f"primary language: `{dict(summary.get('analysis_scope') or {}).get('primary_language', 'Python')}`",
         f"Frameworks: {', '.join(summary['frameworks']) or 'none detected'}",
         f"Entrypoints: {', '.join(summary['entrypoints']) or 'none detected'}",
         "",

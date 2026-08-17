@@ -1,0 +1,24 @@
+{
+  "schema_version": "language_scope.v1",
+  "python_labels": ["Python", ".py"],
+  "implementation_languages": {
+    "TypeScript": [".ts", ".tsx"],
+    "JavaScript": ["JavaScript", ".js", ".mjs", ".cjs"],
+    "Python": ["Python", ".py"],
+    "Rust": ["Rust", ".rs"],
+    "C/C++": ["C", "C++", ".c", ".cc", ".cpp", ".cxx"]
+  },
+  "foreign_dominance": {
+    "minimum_files": 20,
+    "ratio_over_python": 2
+  },
+  "limited_scope": {
+    "status": "limited",
+    "reason_code": "foreign_language_dominated_project",
+    "analyzed_boundary": "python_subproject_only"
+  },
+  "provenance": {
+    "source": "cross-boundary project analysis and Foundation Python-owned boundary policy",
+    "change_policy": "change thresholds only with mixed-language corpus evidence"
+  }
+}

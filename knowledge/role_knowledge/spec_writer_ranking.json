@@ -1,0 +1,90 @@
+{
+  "schema_version": "spec_writer_ranking.v1",
+  "owner_role": "spec_writer",
+  "candidate_kind_scores": {
+    "pure_transform": {"score": 40, "reason": "pure transform candidate"},
+    "bounded_policy": {"score": 55, "reason": "bounded reproducible policy decision"},
+    "central_flow_node": {"score": 45, "reason": "central flow node with subsystem-level evidence"},
+    "broad_function": {"score": 38, "reason": "broad function can anchor a meaningful first slice"},
+    "default": {"score": 5, "reason": "available source evidence"}
+  },
+  "candidate_level_scores": {
+    "bounded_policy": 18,
+    "core_flow": 12,
+    "boundary": 8,
+    "broad_split": 5,
+    "preferred_anchor": 4,
+    "helper_transform": 2
+  },
+  "adjustments": {
+    "candidate.central_flow": {"score": 20, "reason": "central flow evidence available"},
+    "candidate.mixed_responsibilities": {"score": 12, "reason": "mixed-responsibility evidence available"},
+    "candidate.process_boundary": {"score": 8, "reason": "process-boundary evidence available"},
+    "candidate.project_score": {"score": 1, "reason": "ProjectMapReport candidate score available"},
+    "candidate.property": {"score": -90, "reason": "property accessor is state evidence, not a meaningful first slice"},
+    "candidate.no_side_effects": {"score": 25, "reason": "no declared side effects"},
+    "candidate.side_effects": {"score": -20, "reason": "declared side effects require tighter isolation"},
+    "candidate.input_contract": {"score": 10, "reason": "input contract can be inferred from signature"},
+    "candidate.output_contract": {"score": 10, "reason": "output contract can be inferred from signature"},
+    "candidate.snippet": {"score": 5, "reason": "snippet available for source-backed review"},
+    "candidate.pass_only": {"score": -120, "reason": "pass-only callable has no implementation contract"},
+    "candidate.class": {"score": -80, "reason": "class declaration is context, not an executable callable contract"},
+    "candidate.unresolved_names": {"score": -70, "reason": "snippet references unresolved names: {names}"},
+    "candidate.ambiguous_method": {"score": -48, "reason": "method symbol is ambiguous across classes and needs class-qualified target binding"},
+    "candidate.callers": {"score": 5, "reason": "caller context available"},
+    "candidate.idempotency_claim": {"score": -10, "reason": "idempotency risk claim present"},
+    "candidate.side_effect_claim": {"score": -10, "reason": "side-effect risk claim present"},
+    "name.deterministic_shape": {"score": 16, "reason": "deterministic parser/normalizer/validator shape"},
+    "name.trivial_helper": {"score": -30, "reason": "small helper is less representative than a flow-level capability"},
+    "name.liveness_probe": {"score": -35, "reason": "health/status/ping probe is liveness evidence, not first reusable domain contract"},
+    "name.bootstrap_support": {"score": -55, "reason": "CLI/bootstrap support helper is evidence, not first architectural slice"},
+    "name.project_support": {"score": -55, "reason": "release/build/publish support surface is evidence, not product-domain core"},
+    "name.low_value": {"score": -45, "reason": "constructor/logging/config helper is evidence, not first implementation target"},
+    "name.mutation": {"score": -35, "reason": "write/update/delete operation is side-effect evidence, not first reusable contract"},
+    "name.memory_state": {"score": -35, "reason": "explicit memory/global state mutation"},
+    "name.framework_boundary": {"score": -35, "reason": "framework request/response boundary, not first reusable core contract"},
+    "name.handler_boundary": {"score": -20, "reason": "handler/middleware boundary is less reusable than a core helper"},
+    "profile.executable": {"score": 18, "reason": "matches executable contract profile {profile_id}"},
+    "readiness.shape": {"score": 10, "reason": "first executable slice has parser/normalizer/builder shape"},
+    "readiness.inputs": {"score": 4, "reason": "inputs look materializable by executable acceptance fixtures"},
+    "readiness.runtime_boundary": {"score": -28, "reason": "runtime object boundary is weaker as first executable contract"},
+    "repair.control_surface": {"score": 18, "reason": "source belongs to LLM auto-repair control surface"},
+    "repair.llm_hypothesis": {"score": 44, "reason": "LLM hypothesis boundary is central to repair-attempt contract"},
+    "repair.module_validation": {"score": 38, "reason": "module contract checker is a strong validation boundary"},
+    "repair.goal_to_spec": {"score": 30, "reason": "goal-to-spec transform is a useful planning contract boundary"},
+    "repair.orchestration": {"score": 22, "reason": "repair orchestration loop is representative but needs bounded subcontracts"},
+    "repair.generated_output": {"score": -70, "reason": "generated project output is evidence, not first source transformation target"},
+    "operational.api_runtime": {"score": -25, "reason": "API/runtime boundary should not outrank core capability candidates"},
+    "operational.dispatcher": {"score": -40, "reason": "request dispatcher boundary is evidence, not first reusable core contract"},
+    "operational.control": {"score": -25, "reason": "operational control function is less reusable as first extraction"},
+    "operational.lifecycle": {"score": -30, "reason": "operational lifecycle/mutation wrapper needs a narrower contract target"},
+    "operational.environment": {"score": -15, "reason": "runtime environment coupling needs later isolation review"},
+    "operational.data_shape": {"score": 10, "reason": "bounded data-shaping helper is a better extraction target"},
+    "domain.query": {"score": 28, "reason": "query/condition contract is a strong database first-slice target"},
+    "domain.query_module": {"score": 18, "reason": "database query module is closer to reusable contract boundary"},
+    "domain.weak_accessor": {"score": -18, "reason": "generic accessor is weaker than query/condition contract"},
+    "domain.storage": {"score": -18, "reason": "storage adapter is persistence evidence, not first domain contract"},
+    "domain.middleware": {"score": -12, "reason": "middleware adapter is operational evidence, not first domain contract"},
+    "domain.core": {"score": 26, "reason": "source text belongs to product-domain core"},
+    "representative.flow": {"score": 28, "reason": "representative domain flow/lifecycle slice"},
+    "representative.utility": {"score": -24, "reason": "domain utility/helper is less representative than lifecycle flow"},
+    "representative.path": {"score": 12, "reason": "source path belongs to representative domain subsystem"},
+    "representative.utility_path": {"score": -12, "reason": "source path looks like utility/support surface"},
+    "representative.ad_hoc": {"score": -30, "reason": "ad-hoc evaluator is less stable than generation/postprocessing contract"}
+  },
+  "formula": {"project_score_cap": 100, "project_score_divisor": 20},
+  "knowledge_leakage_audit": {
+    "paths": [
+      "runtime/role_spec_writer_ranking.py",
+      "runtime/_parts/technical_spec_builder_part4.py"
+    ],
+    "forbidden_patterns": [
+      "score\\s*[+\\-]=\\s*-?[0-9]+",
+      "score\\s*=\\s*score\\s*[+\\-]\\s*[0-9]+"
+    ]
+  },
+  "provenance": {
+    "source": "field-trial failures and source-backed contract ranking",
+    "change_policy": "adjust only with regression tests and blind-corpus evidence"
+  }
+}

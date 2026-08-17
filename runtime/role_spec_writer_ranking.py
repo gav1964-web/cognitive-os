@@ -7,6 +7,7 @@ from typing import Any
 from .contract_archetype_inference import archetype_ranking_adjustments
 from .contract_transform_contract_profiles import contract_profile_hint
 from .semantic_target_profiles import semantic_ranking_adjustments
+from .spec_writer_ranking_kb import adjustment, apply_rule, candidate_level_score
 from .target_quality_policy import nested_policy_tokens, policy_tokens, target_quality_section
 
 
@@ -105,8 +106,7 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     score = 0
     reasons: list[str] = []
     if any(token in lowered for token in DETERMINISTIC_SHAPE_TOKENS):
-        score += 16
-        reasons.append("deterministic parser/normalizer/validator shape")
+        score = apply_rule(score, reasons, "name.deterministic_shape")
     domain_score, domain_reasons = _domain_contract_score(lowered)
     score += domain_score
     reasons.extend(domain_reasons)
@@ -123,32 +123,23 @@ def name_and_contract_score(source: str, signature: dict[str, Any], side_effects
     score += readiness_score
     reasons.extend(readiness_reasons)
     if _is_trivial_helper_source(lowered):
-        score -= 30
-        reasons.append("small helper is less representative than a flow-level capability")
+        score = apply_rule(score, reasons, "name.trivial_helper")
     if _is_liveness_probe_source(lowered):
-        score -= 35
-        reasons.append("health/status/ping probe is liveness evidence, not first reusable domain contract")
+        score = apply_rule(score, reasons, "name.liveness_probe")
     if _is_bootstrap_support_source(lowered):
-        score -= 55
-        reasons.append("CLI/bootstrap support helper is evidence, not first architectural slice")
+        score = apply_rule(score, reasons, "name.bootstrap_support")
     if _is_project_support_surface(lowered):
-        score -= 55
-        reasons.append("release/build/publish support surface is evidence, not product-domain core")
+        score = apply_rule(score, reasons, "name.project_support")
     if _is_low_value_first_slice_source(lowered):
-        score -= 45
-        reasons.append("constructor/logging/config helper is evidence, not first implementation target")
+        score = apply_rule(score, reasons, "name.low_value")
     if _is_mutation_like_first_slice_source(lowered):
-        score -= 35
-        reasons.append("write/update/delete operation is side-effect evidence, not first reusable contract")
+        score = apply_rule(score, reasons, "name.mutation")
     if "memory_state" in side_effects:
-        score -= 35
-        reasons.append("explicit memory/global state mutation")
+        score = apply_rule(score, reasons, "name.memory_state")
     if any(token in text for token in FRAMEWORK_BOUNDARY_TOKENS):
-        score -= 35
-        reasons.append("framework request/response boundary, not first reusable core contract")
+        score = apply_rule(score, reasons, "name.framework_boundary")
     if any(token in lowered for token in HANDLER_BOUNDARY_TOKENS):
-        score -= 20
-        reasons.append("handler/middleware boundary is less reusable than a core helper")
+        score = apply_rule(score, reasons, "name.handler_boundary")
     return score, reasons
 
 
@@ -165,7 +156,8 @@ def _contract_profile_score(source: str, signature: dict[str, Any], side_effects
     if not hint:
         return 0, []
     profile = dict(hint.get("contract_profile") or {})
-    return 18, [f"matches executable contract profile {profile.get('id')}"]
+    delta, reason = adjustment("profile.executable", profile_id=profile.get("id"))
+    return delta, [reason]
 
 
 def _executable_readiness_score(lowered_source: str, signature: dict[str, Any], side_effects: list[str]) -> tuple[int, list[str]]:
@@ -182,16 +174,13 @@ def _executable_readiness_score(lowered_source: str, signature: dict[str, Any], 
     score = 0
     reasons: list[str] = []
     if any(token in symbol for token in EXEC_READY_SYMBOL_TOKENS):
-        score += 10
-        reasons.append("first executable slice has parser/normalizer/builder shape")
+        score = apply_rule(score, reasons, "readiness.shape")
     if args and all(any(token in str(arg.get("annotation") or "").lower() for token in EXEC_READY_SIMPLE_ANNOTATIONS) for arg in args):
-        score += 4
-        reasons.append("inputs look materializable by executable acceptance fixtures")
+        score = apply_rule(score, reasons, "readiness.inputs")
     if any(token in symbol or token in annotations for token in EXEC_READY_HARD_SYMBOL_TOKENS) or any(
         token in path for token in EXEC_READY_HARD_PATH_TOKENS
     ):
-        score -= 28
-        reasons.append("runtime object boundary is weaker as first executable contract")
+        score = apply_rule(score, reasons, "readiness.runtime_boundary")
     return score, reasons
 
 
@@ -202,35 +191,22 @@ def _repair_loop_contract_score(lowered_source: str) -> tuple[int, list[str]]:
     score = 0
     reasons: list[str] = []
     if any(token in text for token in REPAIR_CONTROL_SURFACE_PATH_TOKENS):
-        score += 18
-        reasons.append("source belongs to LLM auto-repair control surface")
+        score = apply_rule(score, reasons, "repair.control_surface")
     if symbol in REPAIR_LLM_HYPOTHESIS_SYMBOLS:
-        score += 44
-        reasons.append("LLM hypothesis boundary is central to repair-attempt contract")
+        score = apply_rule(score, reasons, "repair.llm_hypothesis")
     if symbol in REPAIR_MODULE_VALIDATION_SYMBOLS:
-        score += 38
-        reasons.append("module contract checker is a strong validation boundary")
+        score = apply_rule(score, reasons, "repair.module_validation")
     if symbol in REPAIR_GOAL_TO_SPEC_SYMBOLS:
-        score += 30
-        reasons.append("goal-to-spec transform is a useful planning contract boundary")
+        score = apply_rule(score, reasons, "repair.goal_to_spec")
     if symbol in REPAIR_ORCHESTRATION_SYMBOLS:
-        score += 22
-        reasons.append("repair orchestration loop is representative but needs bounded subcontracts")
+        score = apply_rule(score, reasons, "repair.orchestration")
     if any(token in path for token in REPAIR_GENERATED_PATH_TOKENS):
-        score -= 70
-        reasons.append("generated project output is evidence, not first source transformation target")
+        score = apply_rule(score, reasons, "repair.generated_output")
     return score, reasons
 
 
 def candidate_level_bonus(level: str) -> int:
-    return {
-        "bounded_policy": 18,
-        "core_flow": 12,
-        "boundary": 8,
-        "broad_split": 5,
-        "preferred_anchor": 4,
-        "helper_transform": 2,
-    }.get(level, 0)
+    return candidate_level_score(level)
 
 
 def structural_contract_score(evidence: dict[str, Any]) -> tuple[int, list[str]]:
@@ -261,23 +237,17 @@ def operational_boundary_score(source: str, signature: dict[str, Any], claims: l
     score = 0
     reasons: list[str] = []
     if path.endswith(OPERATIONAL_API_PATH_SUFFIXES) or symbol in OPERATIONAL_API_RUNTIME_SYMBOLS:
-        score -= 25
-        reasons.append("API/runtime boundary should not outrank core capability candidates")
+        score = apply_rule(score, reasons, "operational.api_runtime")
     if symbol in OPERATIONAL_DISPATCHER_SYMBOLS:
-        score -= 40
-        reasons.append("request dispatcher boundary is evidence, not first reusable core contract")
+        score = apply_rule(score, reasons, "operational.dispatcher")
     if any(token in symbol for token in OPERATIONAL_CONTROL_SYMBOL_CONTAINS_ANY):
-        score -= 25
-        reasons.append("operational control function is less reusable as first extraction")
+        score = apply_rule(score, reasons, "operational.control")
     if symbol in OPERATIONAL_LIFECYCLE_SYMBOLS or symbol.endswith(OPERATIONAL_LIFECYCLE_SUFFIXES):
-        score -= 30
-        reasons.append("operational lifecycle/mutation wrapper needs a narrower contract target")
+        score = apply_rule(score, reasons, "operational.lifecycle")
     if any(token in text for token in OPERATIONAL_ENVIRONMENT_COUPLING_TOKENS):
-        score -= 15
-        reasons.append("runtime environment coupling needs later isolation review")
+        score = apply_rule(score, reasons, "operational.environment")
     if any(token in symbol for token in OPERATIONAL_DATA_SHAPE_SYMBOL_TOKENS):
-        score += 10
-        reasons.append("bounded data-shaping helper is a better extraction target")
+        score = apply_rule(score, reasons, "operational.data_shape")
     return score, reasons
 
 
@@ -292,23 +262,17 @@ def _domain_contract_score(lowered_source: str) -> tuple[int, list[str]]:
         or (query_path and symbol == "evaluate")
         or any(token in symbol for token in DOMAIN_QUERY_SYMBOL_CONTAINS_ANY)
     ):
-        score += 28
-        reasons.append("query/condition contract is a strong database first-slice target")
+        score = apply_rule(score, reasons, "domain.query")
     if DOMAIN_QUERY_MODULE_PATH_TOKEN in path and symbol not in DOMAIN_QUERY_MODULE_EXCLUDED_SYMBOLS:
-        score += 18
-        reasons.append("database query module is closer to reusable contract boundary")
+        score = apply_rule(score, reasons, "domain.query_module")
     if symbol in DOMAIN_WEAK_ACCESSOR_SYMBOLS:
-        score -= 18
-        reasons.append("generic accessor is weaker than query/condition contract")
+        score = apply_rule(score, reasons, "domain.weak_accessor")
     if any(token in path for token in DOMAIN_STORAGE_PATH_TOKENS):
-        score -= 18
-        reasons.append("storage adapter is persistence evidence, not first domain contract")
+        score = apply_rule(score, reasons, "domain.storage")
     if any(token in path for token in DOMAIN_MIDDLEWARE_PATH_TOKENS):
-        score -= 12
-        reasons.append("middleware adapter is operational evidence, not first domain contract")
+        score = apply_rule(score, reasons, "domain.middleware")
     if any(token in lowered_source for token in DOMAIN_CORE_TEXT_TOKENS):
-        score += 26
-        reasons.append("source text belongs to product-domain core")
+        score = apply_rule(score, reasons, "domain.core")
     return score, reasons
 
 
@@ -319,17 +283,13 @@ def _representative_slice_score(lowered_source: str) -> tuple[int, list[str]]:
     score = 0
     reasons: list[str] = []
     if any(token in text for token in REPRESENTATIVE_FLOW_TOKENS):
-        score += 28
-        reasons.append("representative domain flow/lifecycle slice")
+        score = apply_rule(score, reasons, "representative.flow")
     if any(token in text for token in REPRESENTATIVE_UTILITY_TOKENS):
-        score -= 24
-        reasons.append("domain utility/helper is less representative than lifecycle flow")
+        score = apply_rule(score, reasons, "representative.utility")
     if any(token in path for token in REPRESENTATIVE_PATH_TOKENS):
-        score += 12
-        reasons.append("source path belongs to representative domain subsystem")
+        score = apply_rule(score, reasons, "representative.path")
     if any(token in path for token in REPRESENTATIVE_UTILITY_PATH_TOKENS):
-        score -= 12
-        reasons.append("source path looks like utility/support surface")
+        score = apply_rule(score, reasons, "representative.utility_path")
     profile_adjustments = semantic_ranking_adjustments(f"{path}:{symbol}")
     if profile_adjustments.get("profile_ids"):
         archetype_adjustments = {"score_delta": 0, "reasons": [], "profile_ids": []}
@@ -340,8 +300,7 @@ def _representative_slice_score(lowered_source: str) -> tuple[int, list[str]]:
     reasons.extend(profile_adjustments["reasons"])
     reasons.extend(archetype_adjustments["reasons"])
     if symbol in AD_HOC_EVALUATOR_SYMBOLS and any(token in path for token in AD_HOC_EVALUATOR_PATH_TOKENS):
-        score -= 30
-        reasons.append("ad-hoc evaluator is less stable than generation/postprocessing contract")
+        score = apply_rule(score, reasons, "representative.ad_hoc")
     return score, reasons
 
 

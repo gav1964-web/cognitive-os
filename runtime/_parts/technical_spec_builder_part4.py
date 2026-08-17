@@ -14,6 +14,7 @@ from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.spec_writer_target_binding import dependency_readiness_adjustment, standalone_target_eligibility
+from runtime.spec_writer_ranking_kb import apply_rule, candidate_kind_adjustment, project_candidate_score
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
 from runtime._parts.technical_spec_builder_part3 import _input_contract_from_candidate, _output_contract_from_candidate
@@ -66,75 +67,49 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         eligibility = standalone_target_eligibility(candidate)
         dependency_score, dependency_reasons = dependency_readiness_adjustment(candidate); score += dependency_score; reasons.extend(dependency_reasons)
 
-        if kind == "pure_transform":
-            score += 40
-            reasons.append("pure transform candidate")
-        elif kind == "bounded_policy":
-            score += 55
-            reasons.append("bounded reproducible policy decision")
-        elif kind == "central_flow_node":
-            score += 45
-            reasons.append("central flow node with subsystem-level evidence")
-        elif kind == "broad_function":
-            score += 38
-            reasons.append("broad function can anchor a meaningful first slice")
-        else:
-            score += 5
-            reasons.append("available source evidence")
+        kind_score, kind_reason = candidate_kind_adjustment(kind)
+        score += kind_score
+        reasons.append(kind_reason)
 
         if candidate.get("central_flow_node"):
-            score += 20
-            reasons.append("central flow evidence available")
+            score = apply_rule(score, reasons, "candidate.central_flow")
         if candidate.get("mixed_responsibilities"):
-            score += 12
-            reasons.append("mixed-responsibility evidence available")
+            score = apply_rule(score, reasons, "candidate.mixed_responsibilities")
         if candidate.get("process_boundary_reasons"):
-            score += 8
-            reasons.append("process-boundary evidence available")
+            score = apply_rule(score, reasons, "candidate.process_boundary")
         if candidate.get("candidate_level"):
             score += _candidate_level_bonus(str(candidate.get("candidate_level")))
             reasons.append(f"ProjectMapReport ranked as {candidate.get('candidate_level')}")
         if candidate.get("candidate_score") is not None:
-            score += min(int(candidate.get("candidate_score") or 0), 100) // 20
+            score += project_candidate_score(candidate.get("candidate_score"))
             reasons.append("ProjectMapReport candidate score available")
         if "property" in decorators:
-            score -= 90
-            reasons.append("property accessor is state evidence, not a meaningful first slice")
+            score = apply_rule(score, reasons, "candidate.property")
 
         if not side_effects:
-            score += 25
-            reasons.append("no declared side effects")
+            score = apply_rule(score, reasons, "candidate.no_side_effects")
         else:
-            score -= 20
-            reasons.append("declared side effects require tighter isolation")
+            score = apply_rule(score, reasons, "candidate.side_effects")
 
         if signature.get("args"):
-            score += 10
-            reasons.append("input contract can be inferred from signature")
+            score = apply_rule(score, reasons, "candidate.input_contract")
         if signature.get("returns"):
-            score += 10
-            reasons.append("output contract can be inferred from signature")
+            score = apply_rule(score, reasons, "candidate.output_contract")
         if candidate.get("snippet"):
-            score += 5
-            reasons.append("snippet available for source-backed review")
+            score = apply_rule(score, reasons, "candidate.snippet")
         if _pass_only_snippet(candidate.get("snippet")):
-            score -= 120
-            reasons.append("pass-only callable has no implementation contract")
+            score = apply_rule(score, reasons, "candidate.pass_only")
         if candidate.get("node_kind") == "class" or _class_declaration_snippet(candidate.get("snippet")):
-            score -= 80
-            reasons.append("class declaration is context, not an executable callable contract")
+            score = apply_rule(score, reasons, "candidate.class")
         unresolved_names = _high_confidence_unresolved_snippet_names(candidate)
         if unresolved_names:
-            score -= 70
-            reasons.append("snippet references unresolved names: " + ", ".join(unresolved_names[:6]))
+            score = apply_rule(score, reasons, "candidate.unresolved_names", names=", ".join(unresolved_names[:6]))
         if candidate.get("target_binding") == "ambiguous_method_symbol":
-            score -= 48
-            reasons.append("method symbol is ambiguous across classes and needs class-qualified target binding")
+            score = apply_rule(score, reasons, "candidate.ambiguous_method")
         if not eligibility["eligible"]:
             reasons.append(str(eligibility["reason"]))
         if candidate.get("callers"):
-            score += 5
-            reasons.append("caller context available")
+            score = apply_rule(score, reasons, "candidate.callers")
         name_score, name_reasons = _name_and_contract_score(str(candidate.get("source") or ""), signature, side_effects)
         score += name_score
         reasons.extend(name_reasons)
@@ -142,11 +117,9 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         score += structural_score
         reasons.extend(structural_reasons)
         if any("idempotency" in claim.lower() for claim in claims):
-            score -= 10
-            reasons.append("idempotency risk claim present")
+            score = apply_rule(score, reasons, "candidate.idempotency_claim")
         if any("side effect" in claim.lower() for claim in claims):
-            score -= 10
-            reasons.append("side-effect risk claim present")
+            score = apply_rule(score, reasons, "candidate.side_effect_claim")
         policy_score, policy_reasons = _operational_boundary_score(str(candidate.get("source") or ""), signature, claims)
         score += policy_score
         reasons.extend(policy_reasons)
