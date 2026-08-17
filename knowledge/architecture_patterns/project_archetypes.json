@@ -45,6 +45,36 @@
   },
   "records": [
     {
+      "rule_id": "har_recording_proxy_cli",
+      "record_type": "project_archetype_rule",
+      "priority": 110,
+      "archetype": "har_recording_proxy_cli",
+      "architect_consumable": true,
+      "label": "HAR-recording proxy CLI",
+      "purpose_summary": "Start and stop an HTTP proxy recorder, map CLI options into proxy configuration, and persist captured traffic as HAR artifacts.",
+      "match": {
+        "domain_profile_kind": ["har_recording_proxy_cli"],
+        "text_contains_any": ["har recorder", "record web traffic", "mitmproxy", "mitmdump", "hardump", "start recording"],
+        "min_score": 36
+      },
+      "diagnosis": {
+        "primary_sources": ["process_boundary", "central", "broad", "orchestrators", "bottlenecks"],
+        "primary_target_prefer": ["runproxy", "start", "stop", "addarg", "addflag"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is recorder lifecycle around {target}, where proxy options, process state, PID ownership, HAR output, and shutdown failures need explicit contracts."
+      },
+      "target_architecture_shape": ["CLI option parsing is separated from proxy argument construction.", "Proxy runtime startup and shutdown are isolated behind a process adapter.", "PID and HAR artifact ownership, cleanup, and partial-failure behavior are explicit.", "Default verification uses fake proxy/process adapters and temporary output paths."],
+      "first_slice": {
+        "name": "proxy_recorder_lifecycle_slice",
+        "goal": "Stabilize one recorder start/stop path from options to HAR artifact or typed failure.",
+        "target_sources": ["process_boundary", "central", "broad", "orchestrators", "extraction"],
+        "targets_prefer": ["runproxy", "start", "stop", "addarg", "addflag"],
+        "steps": ["Define RecorderRequest, ProxyArguments, ProcessState, and HarArtifact contracts.", "Separate option projection, PID storage, proxy execution, and cleanup.", "Make foreground/background and timeout behavior explicit.", "Verify valid start, bind failure, partial HAR output, stop, and stale PID cases with fakes."]
+      },
+      "scenario_summary": ["Build proxy-recorder arguments from CLI options.", "Start traffic recording in foreground or background mode.", "Persist captured requests and responses as a HAR artifact.", "Stop the recorder and remove stale PID state."],
+      "input_summary": ["CLI recorder options", "listen endpoint and proxy mode", "host and certificate filters", "PID and HAR output paths"],
+      "output_summary": ["HAR traffic artifact", "recorder process state", "PID lifecycle result", "typed startup, recording, or shutdown failures"]
+    },
+    {
       "rule_id": "binary_structured_data_codec",
       "record_type": "project_archetype_rule",
       "priority": 108,
