@@ -29,6 +29,8 @@ def materialize(value: Any) -> Any:
             return lambda *args, **kwargs: ""
         if fixture == "safe_method_attribute":
             return _SafeMethodAttribute()
+        if fixture == "safe_symbolic_attribute":
+            return _SafeSymbolicAttribute()
         if fixture == "event_detail_envelope":
             return type("Event", (), {"detail": {"module_name": "not_loaded"}})()
         if fixture == "resource_collection_client":
@@ -326,6 +328,25 @@ class _SafeMethodAttribute:
             return self
 
         return completed().__await__()
+
+
+class _SafeSymbolicAttribute(_SafeMethodAttribute):
+    def __call__(self, *args: Any, **kwargs: Any) -> "_SafeSymbolicAttribute":
+        return self
+
+    def __getattr__(self, name: str) -> "_SafeSymbolicAttribute":
+        return self
+
+    def __mul__(self, other: Any) -> "_SafeSymbolicAttribute":
+        return self
+
+    __rmul__ = __mul__
+    __add__ = __mul__
+    __radd__ = __mul__
+    __sub__ = __mul__
+    __rsub__ = __mul__
+    __truediv__ = __mul__
+    __rtruediv__ = __mul__
 
 
 class _ContainsAll:

@@ -11,10 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance_ast_imports import loaded_names as _loaded_names
+from .executable_acceptance_ast_imports import needed_class_members
 from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
-from .executable_acceptance_isolation_globals import isolated_global_nodes
+from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes
 from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_method_fixtures import method_fixture_values
+from .executable_acceptance_resource_io import read_only_open_for
 from .python_parser_compatibility import parse_compatible_source
 
 
@@ -37,10 +39,12 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         namespace: dict[str, Any] = _namespace_for(path)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = symbol in set(method_fixture_policy().get("local_import_stub_functions") or [])
-        with _source_import_path(path), _fresh_local_package(namespace):
+        with _source_import_path(path), _fresh_local_package(namespace), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+        configured_stubs = install_configured_global_fixtures(nodes, namespace)
+        wildcard_stubs = install_unresolved_wildcard_names(tree, nodes, namespace)
         func = namespace.get(symbol)
-        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "effect_module_stubs": effect_stubs}
+        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]], "wildcard_import_stubs": wildcard_stubs}
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
 
@@ -52,7 +56,7 @@ def load_source_isolated_callable(path: Path, symbol: str) -> dict[str, Any]:
     method = load_source_isolated_method(path, symbol)
     if not method.get("reason"):
         return method
-    return loaded
+    return method if method.get("detail") else loaded
 
 
 def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
@@ -68,15 +72,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         selected = _isolated_method_names(methods, symbol)
-        body = [
-            _isolated_class_member(item)
-            for item in class_node.body
-            if (
-                isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and item.name in selected
-            )
-            or isinstance(item, (ast.Assign, ast.AnnAssign))
-        ]
+        body = [_isolated_class_member(item) for item in needed_class_members(class_node, selected)]
         globals_body = isolated_global_nodes(tree, body, class_node.name)
         isolated_class = ast.ClassDef(
             name=class_node.name,
@@ -91,15 +87,17 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         namespace: dict[str, Any] = _namespace_for(path)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = f"{class_node.name}.{symbol}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
-        with _source_import_path(path), _fresh_local_package(namespace):
+        with _source_import_path(path), _fresh_local_package(namespace), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+        configured_stubs = install_configured_global_fixtures(body, namespace)
+        wildcard_stubs = install_unresolved_wildcard_names(tree, body, namespace)
         cls = namespace[class_node.name]
         member = getattr(cls, symbol, None)
+        raw_attrs, attrs = method_fixture_values(class_node.name, symbol, body, selected)
         if callable(member) and _callable_accepts_without_self(member):
             func = member
         else:
             instance = object.__new__(cls)
-            raw_attrs, attrs = method_fixture_values(class_node.name, symbol, body, selected)
             for key, value in attrs.items():
                 setattr(instance, key, value)
             func = getattr(instance, symbol, None)
@@ -111,7 +109,8 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             "source_isolated": True,
             "source_isolated_method": True,
             "method_dependencies": sorted(method_names & selected),
-            "effect_module_stubs": effect_stubs,
+            "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]],
+            "wildcard_import_stubs": wildcard_stubs,
         }
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
@@ -262,7 +261,11 @@ def _install_lazy_loader_stub() -> None:
 
 def _namespace_for(path: Path) -> dict[str, Any]:
     package = _package_name(path)
-    return {"__name__": f"{package}.__acceptance_isolated__" if package else "__acceptance_isolated__", "__package__": package}
+    return {
+        "__name__": f"{package}.__acceptance_isolated__" if package else "__acceptance_isolated__",
+        "__package__": package,
+        "open": read_only_open_for(path),
+    }
 
 
 def _package_name(path: Path) -> str:
@@ -287,6 +290,24 @@ def _fresh_local_package(namespace: dict[str, Any]):
         sys.modules.update(saved)
 
 
+@contextmanager
+def _fresh_probe_stub_modules():
+    names = [
+        name
+        for name, module in list(sys.modules.items())
+        if module.__class__.__name__ == "_StubModule"
+        and module.__class__.__module__.endswith("executable_acceptance_loading")
+    ]
+    saved = {name: sys.modules.pop(name) for name in names}
+    baseline = set(sys.modules)
+    try:
+        yield
+    finally:
+        for name in [name for name in list(sys.modules) if name not in baseline]:
+            sys.modules.pop(name, None)
+        sys.modules.update(saved)
+
+
 def _install_stub_module(name: str) -> None:
     parts = name.split(".")
     for index in range(1, len(parts) + 1):
@@ -294,6 +315,7 @@ def _install_stub_module(name: str) -> None:
         if module_name not in sys.modules:
             module = types.ModuleType(module_name)
             module.__path__ = []
+            module.__all__ = []
             module.__getattr__ = lambda attr, prefix=module_name: _StubObject(f"{prefix}.{attr}")
             if module_name == "lazy_loader":
                 module.attach_stub = lambda *args, **kwargs: (lambda name: _StubObject(f"lazy_loader.{name}"), lambda: [], [])

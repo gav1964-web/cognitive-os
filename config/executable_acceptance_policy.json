@@ -70,7 +70,7 @@
     "enabled": true,
     "safe_uninitialized_instance": true,
     "default_constructor_first": true,
-    "local_import_stub_functions": ["determine_local_workspace_environment"],
+    "local_import_stub_functions": ["create_application", "determine_local_workspace_environment"],
     "local_import_stub_methods": ["BlocksConfig.set_event_trigger", "StreamableHTTPServerTransport._handle_post_request"],
     "instance_attribute_profiles": {
       "WsgiToAsgiInstance.build_environ": {
@@ -142,6 +142,9 @@
     }
   },
   "source_isolation_policy": {
+    "global_symbol_fixtures": {
+      "StaticFiles": {"__fixture__": "safe_symbolic_attribute"}
+    },
     "effect_module_stubs": {
       "socket": {
         "attributes": {

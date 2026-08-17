@@ -62,7 +62,10 @@ def method_fixture_policy() -> dict[str, Any]:
 
 def source_isolation_policy() -> dict[str, Any]:
     policy = dict(_policy().get("source_isolation_policy") or {})
-    return {"effect_module_stubs": dict(policy.get("effect_module_stubs") or {})}
+    return {
+        "effect_module_stubs": dict(policy.get("effect_module_stubs") or {}),
+        "global_symbol_fixtures": dict(policy.get("global_symbol_fixtures") or {}),
+    }
 
 
 def skipped_recovery_hint(reason: str) -> str:

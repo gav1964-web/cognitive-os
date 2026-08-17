@@ -1,3 +1,5 @@
+import sys
+
 from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.executable_acceptance_loading import load_supported_callable
 from runtime.executable_acceptance_materializers import materialize
@@ -131,6 +133,133 @@ def test_source_isolation_keeps_required_guarded_import(tmp_path):
 
     assert loaded["reason"] == ""
     assert loaded["callable"]("sample") is None
+
+
+def test_source_isolated_staticmethod_initializes_fixture_evidence(tmp_path):
+    source = tmp_path / "subject.py"
+    source.write_text(
+        "class Subject:\n"
+        "    @staticmethod\n"
+        "    def generate(value):\n"
+        "        return value.upper()\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "generate")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]("ok") == "OK"
+    assert loaded["method_instance_attributes"] == {}
+
+
+def test_source_isolated_method_ignores_unrelated_class_assignment(tmp_path):
+    source = tmp_path / "settings.py"
+    source.write_text(
+        "from missing_framework import incompatible_factory\n\n"
+        "class Settings:\n"
+        "    unrelated = incompatible_factory(regex='legacy')\n"
+        "    def normalize(self, value):\n"
+        "        return value.strip()\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "normalize")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"](" ok ") == "ok"
+
+
+def test_source_isolation_resolves_relative_resource_read_only(tmp_path):
+    source = tmp_path / "helpers" / "email.py"
+    source.parent.mkdir()
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "email.txt").write_text("hello {{ name }}", encoding="utf-8")
+    source.write_text(
+        "def render(name):\n"
+        "    with open('templates/email.txt') as stream:\n"
+        "        return stream.read().replace('{{ name }}', name)\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "render")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]("Ada") == "hello Ada"
+
+
+def test_source_isolation_uses_conservative_external_probe_flags(tmp_path):
+    source = tmp_path / "feature.py"
+    source.write_text(
+        "import unavailable_environment\n"
+        "ENABLED, PLATFORM, ROOT = unavailable_environment.probe()\n"
+        "def enabled():\n"
+        "    return ENABLED\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "enabled")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]() is False
+
+
+def test_source_isolation_materializes_unresolved_wildcard_names(tmp_path):
+    source = tmp_path / "scene.py"
+    source.write_text(
+        "from missing_visuals import *\n"
+        "class Scene:\n"
+        "    def construct(self):\n"
+        "        plane = NumberPlane()\n"
+        "        self.play(Create(plane))\n",
+        encoding="utf-8",
+    )
+
+    load_supported_callable(tmp_path, "scene.py", "construct", source)
+    loaded = load_source_isolated_callable(source, "construct")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]() is None
+    assert loaded["wildcard_import_stubs"] == ["Create", "NumberPlane"]
+
+
+def test_source_isolation_uses_configured_path_bound_constructor(tmp_path):
+    source = tmp_path / "app.py"
+    source.write_text(
+        "from starlette.staticfiles import StaticFiles\n"
+        "def build_static():\n"
+        "    return StaticFiles(directory='missing-static')\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "build_static")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]() is not None
+    assert loaded["effect_module_stubs"] == ["configured:StaticFiles"]
+
+
+def test_source_isolation_does_not_leak_imported_modules_between_projects(tmp_path):
+    first = tmp_path / "first" / "subject.py"
+    second = tmp_path / "second" / "subject.py"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_text(
+        "import acceptance_probe_dependency\n"
+        "def value():\n    return acceptance_probe_dependency.missing\n",
+        encoding="utf-8",
+    )
+    second.write_text(
+        "def value():\n    return 'clean'\n",
+        encoding="utf-8",
+    )
+
+    first_loaded = load_source_isolated_callable(first, "value")
+    second_loaded = load_source_isolated_callable(second, "value")
+
+    assert first_loaded["reason"] == ""
+    assert first_loaded["callable"]() is not None
+    assert second_loaded["callable"]() == "clean"
+    assert "acceptance_probe_dependency" not in sys.modules
 
 
 def test_general_boundary_samples_are_config_backed():

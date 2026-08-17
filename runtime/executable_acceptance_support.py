@@ -154,12 +154,11 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         cleanup_dependency_stubs(loaded)
         return _unsupported(ast_skip_reason(path, symbol), str(method.get("detail") or ""))
     if loaded.get("reason"):
+        cleanup_dependency_stubs(loaded)
         if str(loaded["reason"]) in {"import_failed_missing_module", "import_failed_runtime_error"}:
             isolated = load_source_isolated_callable(path, symbol)
             if callable(isolated.get("callable")):
-                cleanup_dependency_stubs(loaded)
                 return _source_isolated_support(isolated, target, obligations)
-        cleanup_dependency_stubs(loaded)
         return _unsupported(str(loaded["reason"]), str(loaded.get("detail") or ""))
     if not callable(func):
         cleanup_dependency_stubs(loaded)
@@ -198,7 +197,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         "dependency_stubs": list(loaded.get("dependency_stubs") or []),
         "dependency_metadata_profiles": list(loaded.get("dependency_metadata_profiles") or []),
         "dependency_module_profiles": list(loaded.get("dependency_module_profiles") or []),
-        "effect_module_stubs": list(loaded.get("effect_module_stubs") or []),
+        "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]],
         "argument_mapping": binding["mapping"],
         "argument_defaults": binding["defaults"],
         "drop_surplus_payload": bool(binding.get("drop_surplus_payload")),
@@ -221,7 +220,7 @@ def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: l
     binding = positive_case_binding(func, target, obligations)
     if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload"))):
         return _unsupported("positive_sample_execution_failed")
-    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": list(loaded.get("effect_module_stubs") or []), "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
 
 def _isolated_retry(path: Path, symbol: str, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:

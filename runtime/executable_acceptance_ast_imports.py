@@ -10,7 +10,8 @@ def needed_import_nodes(tree: ast.Module, nodes: list[ast.AST]) -> list[ast.stmt
     loaded = {name for node in nodes for name in loaded_names(node)}
     imports: list[ast.stmt] = []
     for node in _module_scope_nodes(tree.body):
-        if isinstance(node, (ast.Import, ast.ImportFrom)) and _bound_names(node) & loaded:
+        wildcard = isinstance(node, ast.ImportFrom) and any(alias.name == "*" for alias in node.names)
+        if isinstance(node, (ast.Import, ast.ImportFrom)) and (wildcard or _bound_names(node) & loaded):
             imports.append(copy.deepcopy(node))
     return imports
 
@@ -21,6 +22,22 @@ def loaded_names(node: ast.AST) -> set[str]:
         for item in ast.walk(node)
         if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Load)
     }
+
+
+def needed_class_members(class_node: ast.ClassDef, selected: set[str]) -> list[ast.AST]:
+    methods = [
+        node
+        for node in class_node.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in selected
+    ]
+    loaded = {name for node in methods for name in loaded_names(node)}
+    members: list[ast.AST] = []
+    for node in class_node.body:
+        if node in methods:
+            members.append(copy.deepcopy(node))
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)) and _assigned_names(node) & loaded:
+            members.append(copy.deepcopy(node))
+    return members
 
 
 def _module_scope_nodes(nodes: list[ast.stmt]):
@@ -38,3 +55,8 @@ def _module_scope_nodes(nodes: list[ast.stmt]):
 
 def _bound_names(node: ast.Import | ast.ImportFrom) -> set[str]:
     return {alias.asname or alias.name.split(".", 1)[0] for alias in node.names}
+
+
+def _assigned_names(node: ast.Assign | ast.AnnAssign) -> set[str]:
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    return {target.id for target in targets if isinstance(target, ast.Name)}
