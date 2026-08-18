@@ -58,6 +58,7 @@ def test_executor_repairs_only_safe_diff_application_failures(monkeypatch):
     monkeypatch.setenv("COGNITIVE_OS_EXECUTOR_USE_L45_LLM", "1")
 
     assert _repair_needed({}, {"status": "blocked", "reason": "diff_apply_failed"}) is True
+    assert _repair_needed({}, {"status": "blocked", "reason": "blocked_invalid_candidate"}) is True
     assert _repair_needed({}, {"status": "blocked", "reason": "target_outside_sandbox"}) is False
     assert _repair_needed({}, {"status": "not_applied", "reason": "blocked_invalid_candidate"}) is False
 

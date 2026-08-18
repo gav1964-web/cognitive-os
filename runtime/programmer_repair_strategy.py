@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .programmer_change_targets import collect_change_targets
+from .programmer_composite_retry import retry_composite_payload
 from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
 from .programmer_source_location import source_location
 
@@ -21,6 +23,7 @@ def build_patch_repair_strategy(
 ) -> dict[str, Any]:
     target = _target(implementation_plan)
     location = source_location(project_dir, target)
+    change_targets = collect_change_targets(project_dir, implementation_plan, target)
     evidence = {
         "target": target,
         "source_excerpt": location["excerpt"],
@@ -32,6 +35,7 @@ def build_patch_repair_strategy(
         "acceptance_obligations": list(
             dict((test_plan or {}).get("executable_acceptance") or {}).get("obligations") or []
         )[:8],
+        "change_targets": change_targets,
     }
     proposal = {
         "artifact_type": "PatchRepairProposal",
@@ -47,11 +51,23 @@ def build_patch_repair_strategy(
 
 
 def _llm_repair(evidence: dict[str, Any]) -> dict[str, Any]:
+    config = LocalInferenceConfig.from_l45_env()
+    messages = _messages(evidence)
     try:
-        payload = call_json_chat(_messages(evidence), config=LocalInferenceConfig.from_l45_env())
+        payload = call_json_chat(messages, config=config)
     except LocalInferenceError as exc:
         return {"status": "unavailable", "reason": str(exc)[:240]}
     normalized = _normalize(payload)
+    retry = retry_composite_payload(
+        evidence=evidence,
+        normalized=normalized,
+        initial_payload=payload,
+        messages=messages,
+        config=config,
+        caller=call_json_chat,
+    )
+    if retry is not None:
+        normalized = _normalize(retry)
     normalized["status"] = "proposed"
     normalized["authority"] = "single_repair_hypothesis_only"
     return normalized
@@ -72,14 +88,26 @@ def _messages(evidence: dict[str, Any]) -> list[dict[str, str]]:
             "verification_hint": "rerun exact acceptance oracle",
         },
     }
+    if len(list(evidence.get("change_targets") or [])) > 1:
+        recipe = schema["patch_recipe_hypothesis"]
+        recipe["edit_format"] = "replace_functions"
+        recipe.pop("replacement_source", None)
+        recipe["edits"] = [
+            {
+                "target_symbol": "one exact target from change_targets",
+                "replacement_source": "one complete corrected function with its existing signature",
+            }
+        ]
     return [
         {
             "role": "system",
             "content": (
                 "Return one JSON object only, without markdown. Propose one minimal repair for the same target using "
                 f"every field in this schema: {json.dumps(schema, ensure_ascii=False)}. Prefer edit_format "
-                "replace_function and a complete replacement_source with the exact existing signature; do not duplicate "
-                "it as diff. Optional fallback diff lines may be an array or one newline-delimited string. Paths must be relative a/ and b/ paths, hunk context "
+                "replace_function and a complete replacement_source with the exact existing signature. For multiple "
+                "change_targets, return replace_functions with a complete edits item for every target, preserving already "
+                "passing behavior. Each replacement_source contains one function and no imports. Do not duplicate it as "
+                "diff. Optional fallback diff lines may be an array or one newline-delimited string. Paths must be relative a/ and b/ paths, hunk context "
                 "must match source_excerpt exactly, source_start_line must determine the first hunk location, and the "
                 "change must satisfy every acceptance_obligation while addressing verifier evidence. Do not suggest "
                 "source-project writes, registry edits, installs, or broad refactors. Respect runtime types visible in "
@@ -108,12 +136,15 @@ def _normalize(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _sandbox_candidate(proposal: dict[str, Any], target: str, evidence: dict[str, Any]) -> dict[str, Any]:
     llm = dict(proposal.get("llm_strategy") or {})
+    changes = [dict(item) for item in list(evidence.get("change_targets") or [])]
     return build_candidate_contract(
         llm=llm,
         target=target,
         source_excerpt=str(evidence.get("source_excerpt") or ""),
         authority="validated_repair_shape_only_not_applied",
         unavailable_reason="no_repair_patch_recipe_hypothesis",
+        allowed_targets=[str(item.get("target") or "") for item in changes],
+        source_excerpts={str(item.get("target") or ""): str(item.get("source_excerpt") or "") for item in changes},
     )
 
 

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio, inspect, io, sys
-from contextlib import redirect_stderr, redirect_stdout
+import inspect, sys
 from pathlib import Path
 from typing import Any
 
 from .executable_acceptance_loading import cleanup_dependency_stubs, import_path, install_dependency_profile_modules, load_supported_callable
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
-from .executable_acceptance_materializers import materialize
+from .executable_acceptance_samples import positive_samples_execute
 from .executable_acceptance_policy import dependency_stub_policy, sample_value, skipped_recovery_hint
 from .executable_acceptance_support_results import module_profile_attrs as _module_profile_attrs
 from .executable_acceptance_support_results import reason_counts as _reason_counts
@@ -117,6 +116,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             if not binding["accepted"]:
                 cleanup_dependency_stubs(loaded)
                 return _unsupported("positive_signature_mismatch", detail)
+            diagnostics: list[str] = []
             with import_path(project_dir):
                 samples_ok = _positive_samples_execute_with_profiles(
                     func,
@@ -126,6 +126,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                     dict(binding["defaults"]),
                     bool(binding.get("drop_surplus_payload")),
                     list(loaded.get("dependency_module_profiles") or []),
+                    diagnostics,
                 )
             if not samples_ok:
                 cleanup_dependency_stubs(loaded)
@@ -167,6 +168,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     if not binding["accepted"]:
         cleanup_dependency_stubs(loaded)
         return _unsupported("positive_signature_mismatch")
+    diagnostics = []
     with import_path(project_dir):
         samples_ok = _positive_samples_execute_with_profiles(
             func,
@@ -176,6 +178,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             dict(binding["defaults"]),
             bool(binding.get("drop_surplus_payload")),
             list(loaded.get("dependency_module_profiles") or []),
+            diagnostics,
         )
     if not samples_ok:
         cleanup_dependency_stubs(loaded)
@@ -185,7 +188,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 return isolated_support
         if loaded.get("source_isolated") and loaded.get("fallback_reason"):
             return _unsupported(str(loaded["fallback_reason"]), str(loaded.get("fallback_detail") or ""))
-        return _unsupported("positive_sample_execution_failed")
+        return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
     cleanup_dependency_stubs(loaded)
     return {
         "supported": True,
@@ -205,11 +208,11 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
 
 
 def _positive_samples_execute_with_profiles(
-    func: object, target: str, obligations: list[dict[str, Any]], mapping: dict[str, str], defaults: dict[str, Any], drop: bool, profiles: list[str]
+    func: object, target: str, obligations: list[dict[str, Any]], mapping: dict[str, str], defaults: dict[str, Any], drop: bool, profiles: list[str], diagnostics: list[str] | None = None
 ) -> bool:
     created = install_dependency_profile_modules(profiles)
     try:
-        return positive_samples_execute(func, target, obligations, mapping, defaults, drop)
+        return positive_samples_execute(func, target, obligations, mapping, defaults, drop, diagnostics)
     finally:
         for name in reversed(created):
             sys.modules.pop(str(name), None)
@@ -218,8 +221,9 @@ def _positive_samples_execute_with_profiles(
 def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
     func = loaded["callable"]
     binding = positive_case_binding(func, target, obligations)
-    if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload"))):
-        return _unsupported("positive_sample_execution_failed")
+    diagnostics: list[str] = []
+    if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload")), diagnostics):
+        return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
     return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
 
@@ -279,70 +283,6 @@ def signature_needs_negative_case(func: object, target: str, obligations: list[d
     return False
 
 
-def positive_samples_execute(
-    func: object,
-    target: str,
-    obligations: list[dict[str, Any]],
-    mapping: dict[str, str] | None = None,
-    defaults: dict[str, Any] | None = None,
-    drop_surplus_payload: bool = False,
-) -> bool:
-    seen: set[str] = set()
-    for row in obligations:
-        if row.get("target") != target or row.get("kind") != "positive_contract_case":
-            continue
-        marker = repr((row.get("given", {}), row.get("expect", {})))
-        if marker in seen:
-            continue
-        seen.add(marker)
-        try:
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                given = _mapped_given(dict(row.get("given", {})), mapping or {}, drop_surplus_payload)
-                payload = {**dict(defaults or {}), **given}
-                args, kwargs = _call_args_kwargs(func, materialize(payload))
-                try: asyncio.get_event_loop()
-                except RuntimeError: asyncio.set_event_loop(asyncio.new_event_loop())
-                result = func(*args, **kwargs)
-                if isinstance(result, asyncio.Future) and result.done():
-                    result = result.result()
-                elif inspect.isawaitable(result):
-                    result = asyncio.run(result)
-                if not _positive_result_matches_expect(result, dict(row.get("expect") or {})):
-                    return False
-        except (Exception, SystemExit):
-            return False
-    return True
-
-
-def _positive_result_matches_expect(result: Any, expect: dict[str, Any]) -> bool:
-    if expect == {"completed": True}:
-        return result is None or result is True or isinstance(result, dict)
-    if any(key in expect for key in ("return_value", "equals", "result_value")):
-        return result == expect[next(key for key in ("return_value", "equals", "result_value") if key in expect)]
-    if set(expect) == {"result"}:
-        return _matches_declared_result(result, str(expect.get("result") or ""))
-    return True
-
-
-def _matches_declared_result(result: Any, declared: str) -> bool:
-    if isinstance(result, dict) and "result" in result:
-        return _matches_declared_result(result["result"], declared)
-    normalized = declared.lower()
-    if normalized in {"str", "string"}:
-        return isinstance(result, str)
-    if normalized in {"int", "integer"}:
-        return isinstance(result, int) and not isinstance(result, bool)
-    if normalized in {"bool", "boolean"}:
-        return isinstance(result, bool)
-    if normalized in {"list", "array", "sequence"}:
-        return isinstance(result, list)
-    if normalized in {"dict", "mapping", "object"}:
-        return isinstance(result, dict)
-    if normalized in {"any", "inferredoutput", "inferred_output"}:
-        return True
-    if normalized in {"none", "null", "void"}:
-        return result is None
-    return result is not None
 def _adapt_given_to_signature(signature: inspect.Signature, given: dict[str, Any]) -> dict[str, str] | None:
     params = [name for name, param in signature.parameters.items() if param.kind in ACCEPTED_PARAM_KINDS]
     if not params:
@@ -374,23 +314,3 @@ def _missing_required_samples(signature: inspect.Signature, mapping: dict[str, s
 
 def _signature_sample_value(name: str, annotation: str) -> Any:
     return sample_value(annotation, name, signature_mode=True)
-
-def _mapped_given(given: dict[str, Any], mapping: dict[str, str], drop_surplus_payload: bool = False) -> dict[str, Any]:
-    if drop_surplus_payload:
-        return {}
-    if not mapping:
-        return given
-    return {actual: given[source] for actual, source in mapping.items() if source in given}
-
-def _call_args_kwargs(func: object, payload: dict[str, Any]) -> tuple[list[Any], dict[str, Any]]:
-    try:
-        signature = inspect.signature(func)
-    except (TypeError, ValueError):
-        return [], payload
-    args: list[Any] = []
-    kwargs = dict(payload)
-    for name, param in signature.parameters.items():
-        if param.kind != inspect.Parameter.POSITIONAL_ONLY or name not in kwargs:
-            continue
-        args.append(kwargs.pop(name))
-    return args, kwargs

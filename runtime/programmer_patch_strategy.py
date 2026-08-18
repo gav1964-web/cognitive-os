@@ -15,6 +15,7 @@ from .dependency_probe_session import build_dependency_probe_session_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
 from .programmer_change_targets import collect_change_targets
+from .programmer_composite_retry import retry_composite_payload
 from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
 from .programmer_source_location import source_location
 
@@ -174,11 +175,23 @@ def _strategy(action: str, reason: str, *, confidence: float) -> dict[str, Any]:
 
 
 def _llm_strategy(evidence: dict[str, Any], deterministic: dict[str, Any]) -> dict[str, Any]:
+    config = LocalInferenceConfig.from_l45_env()
+    messages = _messages(evidence, deterministic)
     try:
-        proposal = call_json_chat(_messages(evidence, deterministic), config=LocalInferenceConfig.from_l45_env())
+        proposal = call_json_chat(messages, config=config)
     except LocalInferenceError as exc:
         return {"status": "unavailable", "reason": str(exc)[:240]}
     normalized = _normalize_llm_payload(proposal)
+    retry = retry_composite_payload(
+        evidence=evidence,
+        normalized=normalized,
+        initial_payload=proposal,
+        messages=messages,
+        config=config,
+        caller=call_json_chat,
+    )
+    if retry is not None:
+        normalized = _normalize_llm_payload(retry)
     normalized["status"] = "proposed"
     normalized["authority"] = "hypothesis_only"
     return normalized
@@ -221,6 +234,7 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
                 "replace_function with the complete target function in replacement_source and the exact existing "
                 "signature. When change_targets contains multiple entries, use replace_functions and one edits item "
                 "per required target; every target must come from change_targets. Do not duplicate structured edits as diff. "
+                "Each replacement_source must contain exactly one function and no imports or module-level statements. "
                 "This path is AST-validated. An optional fallback unified diff must use "
                 "relative a/ and b/ paths, reference only the exact target, and match source_excerpt lines exactly. "
                 "Use source_start_line for the first hunk location and satisfy every acceptance_obligation. "

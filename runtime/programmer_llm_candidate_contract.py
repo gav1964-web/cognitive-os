@@ -69,12 +69,12 @@ def candidate_errors(
 ) -> list[str]:
     errors: list[str] = []
     path_text = target.split(":", 1)[0]
-    if recipe.get("target_symbol") != target:
+    edits = [dict(item) for item in list(recipe.get("edits") or []) if isinstance(item, dict)]
+    if not edits and recipe.get("target_symbol") != target:
         errors.append("target_symbol_mismatch")
     if not str(recipe.get("recipe_type") or ""):
         errors.append("missing_recipe_type")
     replacement = str(recipe.get("replacement_source") or "")
-    edits = [dict(item) for item in list(recipe.get("edits") or []) if isinstance(item, dict)]
     diff = [str(item) for item in list(recipe.get("diff") or [])]
     if edits:
         errors.extend(_composite_errors(edits, allowed_targets or [target], source_excerpts or {}))
@@ -104,6 +104,8 @@ def _composite_errors(
     targets = [str(item.get("target_symbol") or "") for item in edits]
     if len(targets) != len(set(targets)):
         errors.append("duplicate_edit_target")
+    if set(targets) != set(allowed_targets):
+        errors.append("incomplete_composite_target_set")
     for edit_target, edit in zip(targets, edits):
         if edit_target not in allowed_targets:
             errors.append("edit_target_outside_change_plan")

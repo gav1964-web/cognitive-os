@@ -16,6 +16,7 @@ from .programmer_dependency_session import (
 from .programmer_patch_synthesizer import synthesize_patch_package
 from .programmer_patch_strategy import build_patch_strategy, llm_strategy_enabled
 from .programmer_task_tree import build_programmer_task_tree
+from .programmer_acceptance_gate import enforce_prepared_patch_acceptance, repair_needed
 from .programmer_verification import run_test_result
 
 
@@ -83,12 +84,12 @@ def run_programmer_executor(
         run_verification=run_verification,
         max_commands=max_commands,
     )
-    _enforce_prepared_patch_callable_acceptance(test_result, synthesis)
+    enforce_prepared_patch_acceptance(test_result, synthesis, implementation_plan)
     test_result["programmer_task_tree"] = task_tree
     test_result["sandbox_candidate_attempt"] = candidate_attempt
     repair_strategy: dict[str, Any] = {}
     repair_attempt = {"status": "not_attempted", "reason": "first_verification_not_failed_or_candidate_not_applied"}
-    if _repair_needed(test_result, candidate_attempt):
+    if _repair_needed(test_result, candidate_attempt, implementation_plan):
         synthesis, execution_project_dir, repair_strategy, repair_attempt = prepare_repair_synthesis(
             execution_dir=execution_dir,
             project_dir=execution_project_dir,
@@ -107,7 +108,7 @@ def run_programmer_executor(
                 run_verification=run_verification,
                 max_commands=max_commands,
             )
-            _enforce_prepared_patch_callable_acceptance(test_result, synthesis)
+            enforce_prepared_patch_acceptance(test_result, synthesis, implementation_plan)
             test_result["programmer_task_tree"] = task_tree
             test_result["sandbox_candidate_attempt"] = candidate_attempt
     test_result["sandbox_candidate_repair_attempt"] = repair_attempt
@@ -353,23 +354,17 @@ def _blocked_contract_rows(test_plan: dict[str, Any]) -> list[Any]:
     return [row for row in list(test_plan.get("contract_test_matrix", [])) if dict(row).get("direction") == "blocked_handoff"]
 
 
-def _repair_needed(test_result: dict[str, Any], candidate_attempt: dict[str, Any]) -> bool:
-    if not llm_strategy_enabled():
-        return False
-    if candidate_attempt.get("status") == "blocked":
-        return candidate_attempt.get("reason") in {"diff_apply_failed", "diff_noop"}
-    if candidate_attempt.get("status") != "applied_in_sandbox":
-        return False
-    acceptance = dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {})
-    return test_result.get("status") == "failed" or acceptance.get("signal_strength") != "executable_callable"
-
-
-def _enforce_prepared_patch_callable_acceptance(test_result: dict[str, Any], synthesis: dict[str, Any]) -> None:
-    acceptance = dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {})
-    if synthesis.get("status") == "prepared" and acceptance.get("signal_strength") != "executable_callable":
-        test_result["status"] = "failed"
-        test_result["summary"]["failed"] = int(test_result["summary"].get("failed") or 0) + 1
-        test_result["summary"]["prepared_patch_acceptance_gate"] = "failed_non_callable_acceptance"
+def _repair_needed(
+    test_result: dict[str, Any],
+    candidate_attempt: dict[str, Any],
+    implementation_plan: dict[str, Any] | None = None,
+) -> bool:
+    return repair_needed(
+        test_result,
+        candidate_attempt,
+        implementation_plan,
+        llm_enabled=llm_strategy_enabled,
+    )
 
 
 def _expected_files(implementation_plan: dict[str, Any]) -> list[str]:

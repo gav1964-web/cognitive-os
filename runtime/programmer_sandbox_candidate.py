@@ -20,6 +20,12 @@ def apply_sandbox_patch_candidate(
 ) -> dict[str, Any]:
     candidate = dict(strategy.get("sandbox_patch_candidate") or {})
     if candidate.get("status") != "candidate_ready_for_sandbox_attempt":
+        if candidate.get("status") == "blocked_invalid_candidate":
+            return {
+                "status": "blocked",
+                "reason": "blocked_invalid_candidate",
+                "errors": list(candidate.get("errors") or []),
+            }
         return {"status": "not_applied", "reason": str(candidate.get("status") or "candidate_not_ready")}
     target = _target_symbol(implementation_plan)
     path_text = target.split(":", 1)[0]

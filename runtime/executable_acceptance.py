@@ -54,6 +54,7 @@ def run_executable_acceptance(
             "acceptance_ids": sorted({str(item.get("acceptance_id")) for item in obligations if item.get("acceptance_id")}),
             "generated_test_count": 1,
             "callable_harness_count": harness["callable_harness_count"],
+            "callable_targets": harness.get("callable_targets", []),
             "signal_strength": harness["signal_strength"],
             "environment_probe": harness.get("environment_probe"),
             "skipped_reason_counts": harness["skipped_reason_counts"],
