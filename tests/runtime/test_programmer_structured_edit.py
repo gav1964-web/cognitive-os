@@ -23,6 +23,18 @@ def test_structured_replacement_preserves_method_indentation():
     assert "    def resolve(self, value):\n        return value.strip()" in str(patched)
 
 
+def test_structured_replacement_resolves_qualified_method():
+    original = "class First:\n    def render(self, value):\n        return value\n\nclass Second:\n    def render(self, value):\n        return str(value)\n"
+    replacement = "def render(self, value):\n    return value.upper()"
+
+    patched, reason = apply_structured_replacement(original, "module.py:First.render", replacement)
+
+    assert reason == "structured_function_replacement_applied"
+    assert patched is not None
+    assert "return value.upper()" in patched
+    assert "return str(value)" in patched
+
+
 def test_structured_replacement_rejects_signature_and_name_drift():
     source = "def resolve(value):\n    return value\n"
 
