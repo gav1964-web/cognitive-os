@@ -32,6 +32,8 @@ def main() -> int:
         label=args.label,
         write=args.write,
     )
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "ok" else 2
 
