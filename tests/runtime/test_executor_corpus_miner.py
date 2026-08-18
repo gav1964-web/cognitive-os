@@ -67,3 +67,30 @@ def test_executor_corpus_miner_stages_case_level_solution_candidate(tmp_path: Pa
     assert candidate["record_type"] == "executor_solution_pattern_candidate"
     assert candidate["evidence"]["solution_pattern_ids"] == ["executor_pattern_signature_fallback_review"]
     assert "def normalize" in candidate["source_excerpt"]
+
+
+def test_executor_corpus_miner_reads_full_chain_nested_acceptance(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "core.py").write_text("def parse(value):\n    return value\n", encoding="utf-8")
+    report = {
+        "cases": [
+            {
+                "project": "nested-demo",
+                "project_dir": project.as_posix(),
+                "executor": {
+                    "acceptance_signal": "meta_only",
+                    "acceptance_skipped_targets": [
+                        {"target": "core.py:parse", "reason": "positive_sample_execution_failed"}
+                    ],
+                },
+            }
+        ]
+    }
+    path = tmp_path / "report.json"
+    path.write_text(json.dumps(report), encoding="utf-8")
+
+    mined = mine_executor_corpus([path])
+
+    assert mined["summary"]["candidate_count"] == 1
+    assert mined["candidates"][0]["evidence"]["acceptance_signal"] == "meta_only"

@@ -19,12 +19,15 @@ from runtime.role_project_analysis import analyze_role_project
 from runtime.source_target_policy import is_context_only_implementation_target
 from tools.github_full_chain_scoring import (
     CONTROLLED_BLOCK_SCORE,
+    META_ONLY_SCORE_CAP,
     bounded_quality_score,
     is_controlled_block,
+    executor_evidence_ready,
     quality_score as _quality_score,
     selected_target_quality,
     summary as _summary,
 )
+from tools.github_full_chain_checkpoint import run_case_batch
 
 
 READY_THRESHOLD = 0.92
@@ -38,6 +41,7 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--run-executor", action="store_true")
     parser.add_argument("--run-verification", action="store_true")
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     projects_dir = Path(args.projects_dir)
@@ -49,6 +53,9 @@ def main() -> int:
         label=args.label,
         run_executor=args.run_executor,
         run_verification=args.run_verification,
+        checkpoint_path=root / "artifacts" / "field_trials" / f"{args.label}_checkpoint.json",
+        resume=args.resume,
+        progress=True,
     )
     if args.write:
         report.update(write_report(root, report, args.label))
@@ -63,12 +70,19 @@ def run_probe(
     label: str,
     run_executor: bool = False,
     run_verification: bool = False,
+    checkpoint_path: Path | None = None,
+    resume: bool = False,
+    progress: bool = False,
 ) -> dict[str, Any]:
-    cases = [
-        _run_case(project_dir, root=root, run_executor=run_executor, run_verification=run_verification)
-        for project_dir in sorted(projects_dir.iterdir())
-        if (project_dir / ".git").exists()
-    ]
+    cases = run_case_batch(
+        projects_dir=projects_dir,
+        runner=lambda project: _run_case(
+            project, root=root, run_executor=run_executor, run_verification=run_verification
+        ),
+        checkpoint_path=checkpoint_path,
+        resume=resume,
+        progress=progress,
+    )
     scored = [case for case in cases if case["status"] != "out_of_scope"]
     worst_case = min((float(case["quality_score"]) for case in scored), default=0.0)
     ready_by_worst_case = bool(scored) and worst_case >= READY_THRESHOLD and not any(case["status"] == "needs_review" for case in scored)
@@ -151,7 +165,10 @@ def _run_case(
     checks = _chain_checks(adr, spec, plan, test_plan, review, target_chain, forbidden, executor, run_executor)
     target_quality = selected_target_quality(spec, project_dir.name)
     quality = bounded_quality_score(checks, target_quality)
-    status = "ok" if quality >= READY_THRESHOLD and not forbidden else "needs_review"
+    executor_ready = not run_executor or executor_evidence_ready(executor)
+    if run_executor and not executor_ready:
+        quality = min(quality, META_ONLY_SCORE_CAP)
+    status = "ok" if quality >= READY_THRESHOLD and not forbidden and executor_ready else "needs_review"
     if is_controlled_block(spec, plan, forbidden):
         status = "blocked_ok"
         quality = CONTROLLED_BLOCK_SCORE
@@ -240,6 +257,7 @@ def _chain_checks(
                 _check("patch_package_prepared", executor.get("patch_package_status") == "prepared"),
                 _check("test_result_ok", executor.get("test_result_status") == "ok"),
                 _check("executable_acceptance_passed", executor.get("executable_acceptance") == "passed"),
+                _check("executable_acceptance_callable", executor_evidence_ready(executor)),
                 _check("executor_kept_source_clean", executor.get("source_code_changes") is False),
             ]
         )

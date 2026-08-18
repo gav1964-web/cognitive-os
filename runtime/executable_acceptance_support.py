@@ -133,7 +133,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 isolated_support = _isolated_retry(path, symbol, target, obligations)
                 if isolated_support.get("supported"):
                     return isolated_support
-                return _unsupported("positive_sample_execution_failed", detail)
+                return _unsupported(
+                    "positive_sample_execution_failed", diagnostics[0] if diagnostics else detail
+                )
             cleanup_dependency_stubs(loaded)
             return {
                 "supported": True,

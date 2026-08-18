@@ -12,7 +12,7 @@ from typing import Any
 
 def mine_executor_corpus(report_paths: list[Path], *, max_candidates: int = 30) -> dict[str, Any]:
     cases = [case for path in report_paths for case in _load_cases(path)]
-    candidates = [_candidate(case, skipped) for case in cases for skipped in list(case.get("acceptance_skipped_targets") or [])]
+    candidates = [_candidate(case, skipped) for case in cases for skipped in _skipped_targets(case)]
     candidates.extend(_case_candidate(case) for case in cases)
     candidates = [row for row in candidates if row]
     candidates.sort(key=lambda row: (row["priority"], row["project"], row["target"]))
@@ -60,6 +60,7 @@ def _load_cases(path: Path) -> list[dict[str, Any]]:
 def _candidate(case: dict[str, Any], skipped: dict[str, Any]) -> dict[str, Any] | None:
     reason = str(skipped.get("reason") or "")
     target = str(skipped.get("target") or "")
+    executor = dict(case.get("executor") or {})
     project_dir = Path(str(case.get("project_dir") or ""))
     if not reason or not target:
         return None
@@ -78,7 +79,7 @@ def _candidate(case: dict[str, Any], skipped: dict[str, Any]) -> dict[str, Any] 
         "source_excerpt": _source_excerpt(source_path, target),
         "upstream_test_refs": upstream_tests,
         "evidence": {
-            "acceptance_signal": case.get("acceptance_signal"),
+            "acceptance_signal": case.get("acceptance_signal") or executor.get("acceptance_signal"),
             "boundary_track": case.get("boundary_track"),
             "playbook_ids": list(case.get("executor_playbook_ids") or []),
             "source_project_modified": bool(case.get("source_code_changes")),
@@ -89,6 +90,13 @@ def _candidate(case: dict[str, Any], skipped: dict[str, Any]) -> dict[str, Any] 
             "required_next_evidence": ["local_regression_test", "blind_trial_delta", "config_doctor_ok"],
         },
     }
+
+
+def _skipped_targets(case: dict[str, Any]) -> list[dict[str, Any]]:
+    direct = case.get("acceptance_skipped_targets")
+    nested = dict(case.get("executor") or {}).get("acceptance_skipped_targets")
+    source = direct if direct is not None else nested
+    return [dict(item) for item in list(source or []) if isinstance(item, dict)]
 
 
 def _case_candidate(case: dict[str, Any]) -> dict[str, Any] | None:

@@ -1,5 +1,6 @@
 import sys
 import json
+import subprocess
 from pathlib import Path
 
 from runtime.executable_acceptance_environment import environment_harness_summary
@@ -60,3 +61,22 @@ def test_environment_harness_uses_approved_python(tmp_path):
     assert summary["environment_probe"]["status"] == "passed"
     assert summary["callable_harness_count"] == 1
     assert summary["signal_strength"] == "executable_callable"
+
+
+def test_acceptance_timeout_is_a_structured_failure(tmp_path, monkeypatch):
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], 120, output="partial", stderr="too slow")
+
+    monkeypatch.setattr("runtime.executable_acceptance_runner.subprocess.run", timeout)
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    test_path = tests_dir / "test_generated.py"
+    test_path.write_text("def test_slow():\n    pass\n", encoding="utf-8")
+
+    result = run_acceptance_command(
+        python_executable=None, tests_dir=tests_dir, test_path=test_path, cwd=tmp_path
+    )
+
+    assert result["status"] == "timed_out"
+    assert result["timeout_seconds"] == 120
+    assert result["stderr_tail"] == "too slow"

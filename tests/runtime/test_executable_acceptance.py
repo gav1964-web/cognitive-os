@@ -272,7 +272,7 @@ def test_executable_acceptance_reports_method_sample_execution_failure(tmp_path:
     assert result["status"] == "passed"
     assert result["summary"]["signal_strength"] == "meta_only"
     assert result["summary"]["skipped_reason_counts"] == {"positive_sample_execution_failed": 1}
-    assert result["summary"]["skipped_targets"][0]["detail"] == "Parser.parse"
+    assert result["summary"]["skipped_targets"][0]["detail"] == "TypeError: string indices must be integers"
     assert "sample_values" in result["summary"]["skipped_targets"][0]["recovery"]
 
 

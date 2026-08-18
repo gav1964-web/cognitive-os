@@ -43,10 +43,20 @@ def run_acceptance_command(
 def _run_command(command: list[str], *, cwd: Path) -> dict[str, Any]:
     env = dict(os.environ)
     env["PYTHONIOENCODING"], env["PYTHONUTF8"] = "utf-8", "1"
-    completed = subprocess.run(
-        command, cwd=str(cwd), capture_output=True, text=True, encoding="utf-8",
-        errors="replace", env=env, timeout=120,
-    )
+    try:
+        completed = subprocess.run(
+            command, cwd=str(cwd), capture_output=True, text=True, encoding="utf-8",
+            errors="replace", env=env, timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "command": command,
+            "returncode": None,
+            "status": "timed_out",
+            "timeout_seconds": 120,
+            "stdout_tail": _tail(exc.stdout),
+            "stderr_tail": _tail(exc.stderr),
+        }
     return {
         "command": command,
         "returncode": completed.returncode,
@@ -54,3 +64,9 @@ def _run_command(command: list[str], *, cwd: Path) -> dict[str, Any]:
         "stdout_tail": completed.stdout[-2000:],
         "stderr_tail": completed.stderr[-2000:],
     }
+
+
+def _tail(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="replace")
+    return str(value or "")[-2000:]

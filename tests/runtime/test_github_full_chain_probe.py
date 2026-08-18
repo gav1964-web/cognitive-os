@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from tools.github_full_chain_probe import _quality_score, _run_case, run_probe
-from tools.github_full_chain_scoring import bounded_quality_score, is_controlled_block
+from tools.github_full_chain_scoring import (
+    bounded_quality_score,
+    executor_evidence_ready,
+    is_controlled_block,
+    selected_target_quality,
+)
 
 
 def test_github_full_chain_probe_marks_rust_workspace_out_of_scope(tmp_path):
@@ -62,3 +67,47 @@ def test_github_full_chain_recognizes_explicit_controlled_block():
 
     assert is_controlled_block(spec, plan, []) is True
     assert is_controlled_block(spec, plan, ["tests/test_api.py:run"]) is False
+
+
+def test_full_chain_target_quality_preserves_spec_structural_evidence():
+    target = "pkg/formatting.py:render_name"
+    spec = {
+        "extraction_contract": {
+            "candidate": target,
+            "ranked_candidates": [{"source": target}],
+            "selection_reason": "pure transform",
+            "structural_evidence": {
+                "source_body_complete": True,
+                "argument_count": 1,
+                "explicit_return_annotation": "str",
+                "return_paths": 1,
+                "observed_side_effects": [],
+            },
+            "input_contract": {"name": "str"},
+            "output_contract": {"result": "str"},
+            "side_effects": {"declared": []},
+        },
+        "source_evidence": [{"source": target}],
+    }
+
+    quality = selected_target_quality(spec, "sample-project")
+
+    assert quality["structural_evidence"]["source_body_complete"] is True
+    assert quality["score"] > 76
+
+
+def test_meta_only_acceptance_is_not_executable_evidence():
+    meta = {
+        "executor_status": "ok",
+        "executable_acceptance": "passed",
+        "acceptance_signal": "meta_only",
+        "callable_harness_count": 0,
+    }
+    callable_result = {
+        **meta,
+        "acceptance_signal": "executable_callable",
+        "callable_harness_count": 1,
+    }
+
+    assert executor_evidence_ready(meta) is False
+    assert executor_evidence_ready(callable_result) is True
