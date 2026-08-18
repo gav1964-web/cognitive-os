@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .programmer_patch_synthesizer import _copy_project
+from .programmer_structured_edit import apply_structured_replacement
 
 
 def apply_sandbox_patch_candidate(
@@ -26,6 +27,7 @@ def apply_sandbox_patch_candidate(
         return {"status": "blocked", "reason": "target_not_in_expected_files"}
     recipe = dict(dict(strategy.get("llm_strategy") or {}).get("patch_recipe_hypothesis") or {})
     diff_lines = [str(item) for item in list(recipe.get("diff") or [])]
+    replacement = str(recipe.get("replacement_source") or "")
     sandbox_project = execution_dir / sandbox_name / "project"
     _copy_project(project_dir, sandbox_project)
     source = (sandbox_project / path_text).resolve()
@@ -36,15 +38,19 @@ def apply_sandbox_patch_candidate(
     if not source.is_file():
         return {"status": "blocked", "reason": "target_file_missing_in_sandbox"}
     original = source.read_text(encoding="utf-8")
-    patched = _apply_unified_diff(original, diff_lines)
+    if replacement:
+        patched, apply_reason = apply_structured_replacement(original, target, replacement)
+    else:
+        patched = _apply_unified_diff(original, diff_lines)
+        apply_reason = "diff_apply_failed" if patched is None else "llm_patch_candidate_applied_in_sandbox"
     if patched is None:
-        return {"status": "blocked", "reason": "diff_apply_failed", "sandbox_project": sandbox_project.as_posix()}
+        return {"status": "blocked", "reason": apply_reason or "diff_apply_failed", "sandbox_project": sandbox_project.as_posix()}
     if patched == original:
         return {"status": "blocked", "reason": "diff_noop", "sandbox_project": sandbox_project.as_posix()}
     source.write_text(patched, encoding="utf-8")
     return {
         "status": "applied_in_sandbox",
-        "reason": "llm_patch_candidate_applied_in_sandbox",
+        "reason": apply_reason,
         "sandbox_project": sandbox_project.as_posix(),
         "patches": [
             {

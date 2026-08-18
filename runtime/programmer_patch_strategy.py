@@ -14,6 +14,7 @@ from .contract_rebind_request import build_contract_rebind_request
 from .dependency_probe_session import build_dependency_probe_session_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
+from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
 from .programmer_source_location import source_location
 
 def llm_strategy_enabled() -> bool:
@@ -189,15 +190,9 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
         "patch_recipe_hypothesis": {
             "recipe_type": "descriptive_recipe_id",
             "target_symbol": "relative/path.py:function_name",
+            "edit_format": "replace_function",
+            "replacement_source": "def function_name(existing_signature):\n    return corrected_result",
             "summary": "behavior change",
-            "diff": [
-                "--- a/relative/path.py",
-                "+++ b/relative/path.py",
-                "@@ -1,2 +1,2 @@",
-                " unchanged context",
-                "-old exact line",
-                "+new exact line",
-            ],
             "verification_hint": "bounded verification",
         },
     }
@@ -208,12 +203,14 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
                 "Return one JSON object only, without markdown. Propose a sandbox patch strategy, not code execution. "
                 "Allowed actions: verify_patch, propose_patch_recipe, request_fixture_profile, "
                 "request_contract_rebind, block_for_review. When action is propose_patch_recipe, every field in this "
-                f"example schema is required: {json.dumps(schema, ensure_ascii=False)}. The unified diff must use "
+                f"example schema is required: {json.dumps(schema, ensure_ascii=False)}. Prefer edit_format "
+                "replace_function with the complete target function in replacement_source and the exact existing "
+                "signature; do not duplicate it as diff. This path is AST-validated. An optional fallback unified diff must use "
                 "relative a/ and b/ paths, reference only the exact target, and match source_excerpt lines exactly. "
                 "Use source_start_line for the first hunk location and satisfy every acceptance_obligation. "
                 "Respect types and globals visible in source_context. Mentally execute every given input and confirm "
-                "the proposed code equals its expected output before returning the diff. Preserve already-correct cases. "
-                "A diff is an untrusted proposal and will be applied only in an isolated verifier sandbox."
+                "the proposed code equals its expected output before returning. Preserve already-correct cases. "
+                "Every edit is an untrusted proposal applied only in an isolated verifier sandbox."
             ),
         },
         {
@@ -237,7 +234,7 @@ def _normalize_llm_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "reason": str(payload.get("reason") or "")[:500],
         "risk": str(payload.get("risk") or "unreviewed_llm_hypothesis")[:500],
         "expected_files": [str(item) for item in list(payload.get("expected_files") or [])[:5]],
-        "patch_recipe_hypothesis": _patch_recipe_hypothesis(payload),
+        "patch_recipe_hypothesis": normalize_recipe(payload),
     }
 
 
@@ -255,53 +252,15 @@ def _llm_not_requested() -> dict[str, str]:
     return {"status": "not_requested", "reason": "COGNITIVE_OS_EXECUTOR_USE_L45_LLM is not enabled"}
 
 
-def _patch_recipe_hypothesis(payload: dict[str, Any]) -> dict[str, Any]:
-    recipe = payload.get("patch_recipe_hypothesis") or payload.get("patch_recipe") or {}
-    recipe = recipe if isinstance(recipe, dict) else {}
-    diff = recipe.get("diff") or payload.get("diff") or []
-    diff_lines = diff.splitlines() if isinstance(diff, str) else list(diff)
-    return {
-        "recipe_type": str(recipe.get("recipe_type") or "")[:80],
-        "target_symbol": str(recipe.get("target_symbol") or payload.get("target_symbol") or "")[:240],
-        "summary": str(recipe.get("summary") or "")[:500],
-        "diff": [str(item)[:1000] for item in diff_lines[:80]],
-        "verification_hint": str(recipe.get("verification_hint") or "")[:500],
-    }
-
-
 def _sandbox_candidate(proposal: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
     llm = dict(proposal.get("llm_strategy") or {})
-    recipe = dict(llm.get("patch_recipe_hypothesis") or {})
-    if llm.get("status") != "proposed" or llm.get("action") != "propose_patch_recipe":
-        return {"status": "not_available", "reason": "no_llm_patch_recipe_hypothesis"}
-    errors = _candidate_errors(recipe, evidence)
-    return {
-        "artifact_type": "SandboxPatchCandidate",
-        "status": "blocked_invalid_candidate" if errors else "candidate_ready_for_sandbox_attempt",
-        "authority": "validated_shape_only_not_applied",
-        "errors": errors,
-        "target": str(evidence.get("target") or ""),
-        "recipe_type": recipe.get("recipe_type"),
-        "diff_line_count": len(list(recipe.get("diff") or [])),
-    }
-
-
-def _candidate_errors(recipe: dict[str, Any], evidence: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    target = str(evidence.get("target") or "")
-    path_text = target.split(":", 1)[0]
-    if recipe.get("target_symbol") and recipe.get("target_symbol") != target:
-        errors.append("target_symbol_mismatch")
-    if not str(recipe.get("recipe_type") or ""):
-        errors.append("missing_recipe_type")
-    diff = [str(item) for item in list(recipe.get("diff") or [])]
-    if not diff:
-        errors.append("missing_diff")
-    if path_text and diff and not any(path_text in line for line in diff[:10]):
-        errors.append("diff_does_not_reference_target_file")
-    if any(line.startswith(("--- /", "+++ /")) for line in diff):
-        errors.append("absolute_diff_path_forbidden")
-    return errors
+    return build_candidate_contract(
+        llm=llm,
+        target=str(evidence.get("target") or ""),
+        source_excerpt=str(evidence.get("source_excerpt") or ""),
+        authority="validated_shape_only_not_applied",
+        unavailable_reason="no_llm_patch_recipe_hypothesis",
+    )
 
 
 def _synthesis_summary(synthesis: dict[str, Any]) -> dict[str, Any]:

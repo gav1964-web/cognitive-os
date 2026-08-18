@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from runtime.programmer_executor import _repair_needed
-from runtime.programmer_patch_strategy import _patch_recipe_hypothesis
+from runtime.programmer_llm_candidate_contract import normalize_recipe
 from runtime.programmer_repair_strategy import _normalize
 from runtime.programmer_source_location import source_location
 
@@ -35,7 +35,7 @@ def test_llm_diff_normalizers_accept_newline_delimited_string():
         },
     }
 
-    assert _patch_recipe_hypothesis(payload)["diff"] == diff.splitlines()
+    assert normalize_recipe(payload)["diff"] == diff.splitlines()
     assert _normalize(payload)["patch_recipe_hypothesis"]["diff"] == diff.splitlines()
 
 

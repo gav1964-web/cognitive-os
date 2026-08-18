@@ -113,6 +113,7 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
     llm = dict(strategy.get("llm_strategy") or {})
     attempt = dict(patch.get("sandbox_candidate_attempt") or {})
     repair = dict(patch.get("sandbox_candidate_repair_attempt") or {})
+    candidate = dict(strategy.get("sandbox_patch_candidate") or {})
     acceptance = dict(test_result.get("executable_acceptance_result") or {})
     checks = {
         "llm_proposed": llm.get("status") == "proposed",
@@ -138,6 +139,9 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
         "llm_reason": llm.get("reason"),
         "candidate_status": attempt.get("status"),
         "candidate_reason": attempt.get("reason"),
+        "candidate_edit_format": candidate.get("edit_format"),
+        "candidate_errors": list(candidate.get("errors") or []),
+        "replacement_line_count": candidate.get("replacement_line_count", 0),
         "repair_status": repair.get("status"),
         "executor_status": result.get("status"),
         "acceptance_summary": acceptance.get("summary"),
