@@ -8,13 +8,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .programmer_candidate_flow import prepare_candidate_synthesis, prepare_repair_synthesis
+from .programmer_candidate_flow import prepare_candidate_synthesis
 from .programmer_dependency_session import (
     run_dependency_environment_verification,
     run_executor_dependency_session,
 )
 from .programmer_patch_synthesizer import synthesize_patch_package
 from .programmer_patch_strategy import build_patch_strategy, llm_strategy_enabled
+from .programmer_repair_loop import run_bounded_repairs
 from .programmer_task_tree import build_programmer_task_tree
 from .programmer_acceptance_gate import enforce_prepared_patch_acceptance, repair_needed
 from .programmer_verification import run_test_result
@@ -87,33 +88,27 @@ def run_programmer_executor(
     enforce_prepared_patch_acceptance(test_result, synthesis, implementation_plan)
     test_result["programmer_task_tree"] = task_tree
     test_result["sandbox_candidate_attempt"] = candidate_attempt
-    repair_strategy: dict[str, Any] = {}
-    repair_attempt = {"status": "not_attempted", "reason": "first_verification_not_failed_or_candidate_not_applied"}
-    if _repair_needed(test_result, candidate_attempt, implementation_plan):
-        synthesis, execution_project_dir, repair_strategy, repair_attempt = prepare_repair_synthesis(
-            execution_dir=execution_dir,
-            project_dir=execution_project_dir,
-            implementation_plan=implementation_plan,
-            test_plan=test_plan,
-            test_result=test_result,
-        )
-        if repair_attempt.get("status") == "applied_in_sandbox":
-            test_result = run_test_result(
-                root=root,
-                project_dir=execution_project_dir,
-                source_project_dir=project_dir,
-                implementation_plan=implementation_plan,
-                test_plan=test_plan,
-                execution_dir=execution_dir,
-                run_verification=run_verification,
-                max_commands=max_commands,
-            )
-            enforce_prepared_patch_acceptance(test_result, synthesis, implementation_plan)
-            test_result["programmer_task_tree"] = task_tree
-            test_result["sandbox_candidate_attempt"] = candidate_attempt
+    repair = run_bounded_repairs(
+        root=root, source_project_dir=project_dir, execution_project_dir=execution_project_dir,
+        execution_dir=execution_dir, implementation_plan=implementation_plan, test_plan=test_plan,
+        test_result=test_result, synthesis=synthesis, candidate_attempt=candidate_attempt,
+        run_verification=run_verification, max_commands=max_commands, should_repair=_repair_needed,
+    )
+    synthesis = dict(repair["synthesis"])
+    execution_project_dir = Path(repair["execution_project_dir"])
+    test_result = dict(repair["test_result"])
+    repair_strategies = list(repair["repair_strategies"])
+    repair_attempts = list(repair["repair_attempts"])
+    repair_attempt = repair_attempts[-1] if repair_attempts else {
+        "status": "not_attempted", "reason": "first_verification_not_failed_or_candidate_not_applied"
+    }
+    test_result["programmer_task_tree"] = task_tree
+    test_result["sandbox_candidate_attempt"] = candidate_attempt
     test_result["sandbox_candidate_repair_attempt"] = repair_attempt
-    if repair_strategy:
-        test_result["executor_repair_strategy"] = repair_strategy
+    test_result["sandbox_candidate_repair_attempts"] = repair_attempts
+    if repair_strategies:
+        test_result["executor_repair_strategy"] = repair_strategies[-1]
+        test_result["executor_repair_strategies"] = repair_strategies
     final_strategy = build_patch_strategy(
         project_dir=execution_project_dir,
         technical_spec=technical_spec,
@@ -154,8 +149,10 @@ def run_programmer_executor(
     patch_package = _patch_package(project_dir, technical_spec, implementation_plan, test_plan, snapshot, synthesis, strategy, task_tree)
     patch_package["sandbox_candidate_attempt"] = candidate_attempt
     patch_package["sandbox_candidate_repair_attempt"] = repair_attempt
-    if repair_strategy:
-        patch_package["executor_repair_strategy"] = repair_strategy
+    patch_package["sandbox_candidate_repair_attempts"] = repair_attempts
+    if repair_strategies:
+        patch_package["executor_repair_strategy"] = repair_strategies[-1]
+        patch_package["executor_repair_strategies"] = repair_strategies
     patch_path = _write_json(execution_dir / "patch_package.json", patch_package)
     test_result["patch_package_path"] = patch_path.as_posix()
     test_result["task_tree_path"] = task_tree_path.as_posix()

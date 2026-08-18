@@ -114,7 +114,9 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
         "llm_proposed": llm.get("status") == "proposed",
         "recipe_proposed": llm.get("action") == "propose_patch_recipe",
         "candidate_applied": attempt.get("status") == "applied_in_sandbox" or repair.get("status") == "applied_in_sandbox",
-        "composite_edit_count": _applied_edit_count(candidate, attempt, repair_candidate, repair) == len(edits),
+        "composite_edit_count": _applied_targets(patch, strategy, attempt) == {
+            str(item.get("target") or "") for item in edits
+        },
         "executor_ok": result.get("status") == "ok",
         "acceptance_callable": int(acceptance_summary.get("callable_harness_count") or 0) >= len(edits),
         "acceptance_passed": acceptance.get("status") == "passed",
@@ -138,6 +140,7 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
         "candidate_errors": list(candidate.get("errors") or []),
         "candidate_edit_count": candidate.get("edit_count", 0),
         "repair_edit_count": repair_candidate.get("edit_count", 0),
+        "repair_attempt_count": len(list(patch.get("sandbox_candidate_repair_attempts") or [])),
         "repair_status": repair.get("status"),
         "executor_status": result.get("status"),
         "acceptance_summary": acceptance_summary,
@@ -229,17 +232,22 @@ def _read(path_value: Any) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
-def _applied_edit_count(
-    candidate: dict[str, Any],
-    attempt: dict[str, Any],
-    repair_candidate: dict[str, Any],
-    repair: dict[str, Any],
-) -> int:
-    if repair.get("status") == "applied_in_sandbox":
-        return int(repair_candidate.get("edit_count") or 0)
-    if attempt.get("status") == "applied_in_sandbox":
-        return int(candidate.get("edit_count") or 0)
-    return 0
+def _applied_targets(
+    patch: dict[str, Any], initial_strategy: dict[str, Any], initial_attempt: dict[str, Any]
+) -> set[str]:
+    strategies = [initial_strategy, *list(patch.get("executor_repair_strategies") or [])]
+    attempts = [initial_attempt, *list(patch.get("sandbox_candidate_repair_attempts") or [])]
+    targets: set[str] = set()
+    for strategy, attempt in zip(strategies, attempts):
+        if dict(attempt).get("status") != "applied_in_sandbox":
+            continue
+        recipe = dict(dict(strategy).get("llm_strategy") or {}).get("patch_recipe_hypothesis") or {}
+        edits = [dict(item) for item in list(dict(recipe).get("edits") or []) if isinstance(item, dict)]
+        if edits:
+            targets.update(str(item.get("target_symbol") or "") for item in edits)
+        elif recipe.get("target_symbol"):
+            targets.add(str(recipe["target_symbol"]))
+    return targets - {""}
 
 
 if __name__ == "__main__":

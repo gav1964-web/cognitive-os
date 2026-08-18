@@ -5,6 +5,7 @@ from pathlib import Path
 from runtime.programmer_acceptance_gate import acceptance_covers_plan, enforce_prepared_patch_acceptance
 from runtime.programmer_patch_strategy import build_patch_strategy
 from runtime.programmer_repair_strategy import build_patch_repair_strategy
+from tools.programmer_l45_composite_trial import _applied_targets
 
 
 def test_patch_strategy_builds_valid_composite_candidate_from_change_plan(tmp_path: Path, monkeypatch):
@@ -98,6 +99,22 @@ def test_prepared_patch_gate_distinguishes_coverage_from_non_callable():
     assert non_callable["summary"]["prepared_patch_acceptance_gate"] == "failed_non_callable_acceptance"
 
 
+def test_composite_metric_accumulates_targets_across_repairs():
+    initial = {"llm_strategy": {"patch_recipe_hypothesis": {"edits": [
+        {"target_symbol": "main.py:run"}, {"target_symbol": "helper.py:value"}
+    ]}}}
+    repair = {"llm_strategy": {"patch_recipe_hypothesis": {"edits": [
+        {"target_symbol": "helper.py:value"}
+    ]}}}
+    patch = {
+        "executor_repair_strategies": [repair],
+        "sandbox_candidate_repair_attempts": [{"status": "applied_in_sandbox"}],
+    }
+    assert _applied_targets(patch, initial, {"status": "applied_in_sandbox"}) == {
+        "main.py:run", "helper.py:value"
+    }
+
+
 def test_repair_strategy_preserves_composite_target_set(tmp_path: Path, monkeypatch):
     project = tmp_path / "project"
     project.mkdir()
@@ -131,3 +148,43 @@ def test_repair_strategy_preserves_composite_target_set(tmp_path: Path, monkeypa
     candidate = proposal["sandbox_patch_candidate"]
     assert candidate["status"] == "candidate_ready_for_sandbox_attempt"
     assert candidate["edit_count"] == 2
+
+
+def test_repair_strategy_targets_only_failed_composite_function(tmp_path: Path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "main.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+    (project / "helper.py").write_text("def value():\n    return 1\n", encoding="utf-8")
+    payload = {
+        "action": "propose_patch_recipe",
+        "patch_recipe_hypothesis": {
+            "recipe_type": "targeted_repair",
+            "target_symbol": "helper.py:value",
+            "edit_format": "replace_functions",
+            "edits": [{"target_symbol": "helper.py:value", "replacement_source": "def value():\n    return 2"}],
+        },
+    }
+    monkeypatch.setattr("runtime.programmer_repair_strategy.call_json_chat", lambda messages, config=None: payload)
+    proposal = build_patch_repair_strategy(
+        project_dir=project,
+        implementation_plan={
+            "patch_intent": {"target_symbol": "main.py:run"},
+            "expected_files": ["main.py", "helper.py"],
+            "change_plan": [{"target": "main.py:run"}, {"target": "helper.py:value"}],
+        },
+        test_plan={"executable_acceptance": {"obligations": [{"target": "helper.py:value"}]}},
+        test_result={
+            "status": "failed",
+            "executable_acceptance_result": {
+                "summary": {
+                    "skipped_targets": [
+                        {"target": "helper.py:value", "reason": "positive_sample_execution_failed"}
+                    ]
+                }
+            },
+        },
+    )
+    candidate = proposal["sandbox_patch_candidate"]
+    assert candidate["status"] == "candidate_ready_for_sandbox_attempt"
+    assert candidate["target"] == "helper.py:value"
+    assert candidate["edit_count"] == 1

@@ -1,4 +1,4 @@
-"""Single-attempt repair proposals for failed sandbox candidate verification."""
+"""Targeted repair proposals for failed sandbox candidate verification."""
 
 from __future__ import annotations
 
@@ -21,9 +21,16 @@ def build_patch_repair_strategy(
     test_plan: dict[str, Any] | None = None,
     test_result: dict[str, Any],
 ) -> dict[str, Any]:
-    target = _target(implementation_plan)
+    primary = _target(implementation_plan)
+    change_targets = collect_change_targets(project_dir, implementation_plan, primary)
+    failed_targets = _failed_targets(test_result)
+    if failed_targets:
+        change_targets = [item for item in change_targets if item.get("target") in failed_targets]
+    target = str(change_targets[0].get("target") or primary) if change_targets else primary
     location = source_location(project_dir, target)
-    change_targets = collect_change_targets(project_dir, implementation_plan, target)
+    obligations = list(dict((test_plan or {}).get("executable_acceptance") or {}).get("obligations") or [])
+    if failed_targets:
+        obligations = [item for item in obligations if item.get("target") in failed_targets]
     evidence = {
         "target": target,
         "source_excerpt": location["excerpt"],
@@ -32,9 +39,7 @@ def build_patch_repair_strategy(
         "source_context_start_line": location["context_start_line"],
         "verification_failure": _failure_summary(test_result),
         "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
-        "acceptance_obligations": list(
-            dict((test_plan or {}).get("executable_acceptance") or {}).get("obligations") or []
-        )[:8],
+        "acceptance_obligations": obligations[:8],
         "change_targets": change_targets,
     }
     proposal = {
@@ -163,3 +168,12 @@ def _failure_summary(test_result: dict[str, Any]) -> dict[str, Any]:
 def _target(implementation_plan: dict[str, Any]) -> str:
     intent = dict(implementation_plan.get("patch_intent") or {})
     return str(intent.get("target_symbol") or dict(implementation_plan.get("implementation_target") or {}).get("candidate") or "")
+
+
+def _failed_targets(test_result: dict[str, Any]) -> set[str]:
+    summary = dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {})
+    return {
+        str(item.get("target") or "")
+        for item in list(summary.get("skipped_targets") or [])
+        if isinstance(item, dict) and item.get("reason") == "positive_sample_execution_failed"
+    } - {""}

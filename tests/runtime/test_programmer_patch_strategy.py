@@ -292,7 +292,7 @@ def test_programmer_executor_runs_valid_llm_candidate_in_sandbox(tmp_path: Path,
     assert test_result["sandbox_candidate_repair_attempt"]["status"] == "not_attempted"
 
 
-def test_programmer_executor_repairs_failed_llm_candidate_once(tmp_path: Path, monkeypatch):
+def test_programmer_executor_repairs_failed_llm_candidate_twice(tmp_path: Path, monkeypatch):
     project = tmp_path / "project"
     project.mkdir()
     (project / "main.py").write_text("def status():\n    return 'old'\n", encoding="utf-8")
@@ -303,10 +303,15 @@ def test_programmer_executor_repairs_failed_llm_candidate_once(tmp_path: Path, m
         if calls["count"] == 1:
             replacement = "1"
             reason = "bad first candidate"
+            removed = "-    return 'old'"
+        elif calls["count"] == 2:
+            replacement = "2"
+            reason = "bad first repair"
+            removed = "-    return 1"
         else:
             replacement = "'new'"
             reason = "repair return type"
-        removed = "-    return 'old'" if calls["count"] == 1 else "-    return 1"
+            removed = "-    return 2"
         return {
             "action": "propose_patch_recipe",
             "reason": reason,
@@ -372,5 +377,6 @@ def test_programmer_executor_repairs_failed_llm_candidate_once(tmp_path: Path, m
     assert result["status"] == "ok"
     assert patch["sandbox_candidate_repair_attempt"]["status"] == "applied_in_sandbox"
     assert test_result["sandbox_candidate_repair_attempt"]["status"] == "applied_in_sandbox"
+    assert len(test_result["sandbox_candidate_repair_attempts"]) == 2
     assert "return 'new'" in sandbox_main.read_text(encoding="utf-8")
     assert "return 'old'" in (project / "main.py").read_text(encoding="utf-8")

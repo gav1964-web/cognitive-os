@@ -36,6 +36,7 @@ def prepare_repair_synthesis(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
     test_result: dict[str, Any],
+    sandbox_name: str = "llm_repair_sandbox",
 ) -> tuple[dict[str, Any], Path, dict[str, Any], dict[str, Any]]:
     strategy = build_patch_repair_strategy(
         project_dir=project_dir,
@@ -48,7 +49,7 @@ def prepare_repair_synthesis(
         project_dir=project_dir,
         implementation_plan=implementation_plan,
         strategy=strategy,
-        sandbox_name="llm_repair_sandbox",
+        sandbox_name=sandbox_name,
     )
     synthesis = _candidate_synthesis(attempt) if attempt.get("status") == "applied_in_sandbox" else {}
     return synthesis, Path(str(synthesis.get("sandbox_project") or project_dir)), strategy, attempt
