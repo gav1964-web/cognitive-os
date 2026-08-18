@@ -60,6 +60,57 @@ def test_stateful_method_effects_remain_deferred():
     assert any(row["rule_id"] == "stateful_method_effects" for row in result["matched_rules"])
 
 
+def test_unknown_parameter_object_protocol_requires_reselection():
+    result = first_slice_viability(
+        "orders.py:trigger",
+        {
+            "snippet": {
+                "target_binding": "function_symbol",
+                "text": "def trigger(order):\n    return order.set_strategy('trigger')",
+            }
+        },
+    )
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+    assert any(
+        row["rule_id"] == "unmaterialized_object_protocol_input"
+        for row in result["matched_rules"]
+    )
+
+
+def test_common_scalar_protocol_remains_materializable():
+    result = first_slice_viability(
+        "text.py:normalize",
+        {
+            "snippet": {
+                "target_binding": "function_symbol",
+                "text": "def normalize(value):\n    return value.strip().lower()",
+            }
+        },
+    )
+
+    assert result["status"] == "eligible"
+    assert result["reselection_required"] is False
+
+
+def test_analyzer_protocol_usage_survives_truncated_snippet():
+    result = first_slice_viability(
+        "metrics.py:build_payload",
+        {
+            "snippet": {
+                "text": "def build_payload(config):\n    if config.metrics:\n        ...",
+                "structural_contract": {
+                    "argument_usage_types": {"config": "ProtocolLike"}
+                },
+            }
+        },
+    )
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+
+
 def test_runtime_callback_requires_fixture_before_selection():
     result = first_slice_viability("main.py:sub_cb")
 

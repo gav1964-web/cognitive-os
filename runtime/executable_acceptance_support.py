@@ -15,6 +15,7 @@ from .executable_acceptance_support_results import module_profile_attrs as _modu
 from .executable_acceptance_support_results import reason_counts as _reason_counts
 from .executable_acceptance_support_results import unsupported as _unsupported
 from .executable_acceptance_target_shape import ast_skip_reason
+from .executable_acceptance_contract_inference import infer_argument_samples
 
 ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 
@@ -27,6 +28,8 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
     method_attrs: dict[str, dict[str, Any]] = {}
     argument_mappings: dict[str, dict[str, str]] = {}
     argument_defaults: dict[str, dict[str, Any]] = {}
+    argument_overrides: dict[str, dict[str, Any]] = {}
+    sample_evidence: dict[str, dict[str, Any]] = {}
     dropped_payload: list[str] = []
     isolated: list[str] = []
     dependency_stubs: dict[str, list[str]] = {}
@@ -48,6 +51,10 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
                 argument_mappings[target] = dict(support["argument_mapping"])
             if support.get("argument_defaults"):
                 argument_defaults[target] = dict(support["argument_defaults"])
+            if support.get("argument_overrides"):
+                argument_overrides[target] = dict(support["argument_overrides"])
+            if support.get("argument_sample_evidence"):
+                sample_evidence[target] = dict(support["argument_sample_evidence"])
             if support.get("drop_surplus_payload"):
                 dropped_payload.append(target)
             if support.get("source_isolated"):
@@ -79,6 +86,8 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
         "method_instance_attributes": method_attrs,
         "argument_mappings": argument_mappings,
         "argument_defaults": argument_defaults,
+        "argument_overrides": argument_overrides,
+        "argument_sample_evidence": sample_evidence,
         "dropped_surplus_payload_targets": dropped_payload,
         "source_isolated_targets": isolated,
         "dependency_stub_targets": dependency_stubs,
@@ -104,6 +113,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported("target_outside_project")
     if not path.is_file():
         return _unsupported("target_file_missing")
+    inferred = infer_argument_samples(path, symbol)
     with import_path(project_dir):
         loaded = load_supported_callable(project_dir, path_text, symbol, path)
     func = loaded.get("callable")
@@ -112,7 +122,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         if callable(method.get("callable")):
             func = method["callable"]
             detail = method_detail(method)
-            binding = positive_case_binding(func, target, obligations)
+            binding = positive_case_binding(func, target, obligations, inferred)
             if not binding["accepted"]:
                 cleanup_dependency_stubs(loaded)
                 return _unsupported("positive_signature_mismatch", detail)
@@ -127,6 +137,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                     bool(binding.get("drop_surplus_payload")),
                     list(loaded.get("dependency_module_profiles") or []),
                     diagnostics,
+                    dict(binding["overrides"]),
                 )
             if not samples_ok:
                 cleanup_dependency_stubs(loaded)
@@ -148,6 +159,8 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 "dependency_module_profiles": list(loaded.get("dependency_module_profiles") or []),
                 "argument_mapping": binding["mapping"],
                 "argument_defaults": binding["defaults"],
+                "argument_overrides": binding["overrides"],
+                "argument_sample_evidence": binding["evidence"],
                 "drop_surplus_payload": bool(binding.get("drop_surplus_payload")),
             }
         isolated = load_source_isolated_callable(path, symbol)
@@ -158,7 +171,11 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported(ast_skip_reason(path, symbol), str(method.get("detail") or ""))
     if loaded.get("reason"):
         cleanup_dependency_stubs(loaded)
-        if str(loaded["reason"]) in {"import_failed_missing_module", "import_failed_runtime_error"}:
+        if str(loaded["reason"]) in {
+            "import_failed_import_error",
+            "import_failed_missing_module",
+            "import_failed_runtime_error",
+        }:
             isolated = load_source_isolated_callable(path, symbol)
             if callable(isolated.get("callable")):
                 return _source_isolated_support(isolated, target, obligations)
@@ -166,7 +183,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     if not callable(func):
         cleanup_dependency_stubs(loaded)
         return _unsupported(ast_skip_reason(path, symbol))
-    binding = positive_case_binding(func, target, obligations)
+    binding = positive_case_binding(func, target, obligations, inferred)
     if not binding["accepted"]:
         cleanup_dependency_stubs(loaded)
         return _unsupported("positive_signature_mismatch")
@@ -181,6 +198,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             bool(binding.get("drop_surplus_payload")),
             list(loaded.get("dependency_module_profiles") or []),
             diagnostics,
+            dict(binding["overrides"]),
         )
     if not samples_ok:
         cleanup_dependency_stubs(loaded)
@@ -205,16 +223,18 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]],
         "argument_mapping": binding["mapping"],
         "argument_defaults": binding["defaults"],
+        "argument_overrides": binding["overrides"],
+        "argument_sample_evidence": binding["evidence"],
         "drop_surplus_payload": bool(binding.get("drop_surplus_payload")),
     }
 
 
 def _positive_samples_execute_with_profiles(
-    func: object, target: str, obligations: list[dict[str, Any]], mapping: dict[str, str], defaults: dict[str, Any], drop: bool, profiles: list[str], diagnostics: list[str] | None = None
+    func: object, target: str, obligations: list[dict[str, Any]], mapping: dict[str, str], defaults: dict[str, Any], drop: bool, profiles: list[str], diagnostics: list[str] | None = None, overrides: dict[str, Any] | None = None
 ) -> bool:
     created = install_dependency_profile_modules(profiles)
     try:
-        return positive_samples_execute(func, target, obligations, mapping, defaults, drop, diagnostics)
+        return positive_samples_execute(func, target, obligations, mapping, defaults, drop, diagnostics, overrides)
     finally:
         for name in reversed(created):
             sys.modules.pop(str(name), None)
@@ -222,11 +242,13 @@ def _positive_samples_execute_with_profiles(
 
 def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
     func = loaded["callable"]
-    binding = positive_case_binding(func, target, obligations)
+    path = Path(str(loaded.get("source_path") or ""))
+    inferred = infer_argument_samples(path, target.partition(":")[2]) if path.is_file() else {}
+    binding = positive_case_binding(func, target, obligations, inferred)
     diagnostics: list[str] = []
-    if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload")), diagnostics):
+    if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload")), diagnostics, dict(binding["overrides"])):
         return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
-    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "argument_overrides": binding["overrides"], "argument_sample_evidence": binding["evidence"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
 
 def _isolated_retry(path: Path, symbol: str, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -236,11 +258,11 @@ def _isolated_retry(path: Path, symbol: str, target: str, obligations: list[dict
     return _source_isolated_support(isolated, target, obligations)
 
 
-def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
+def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]], inferred: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     try:
         signature = inspect.signature(func)
     except (TypeError, ValueError):
-        return {"accepted": False, "mapping": {}, "defaults": {}, "drop_surplus_payload": False}
+        return {"accepted": False, "mapping": {}, "defaults": {}, "overrides": {}, "evidence": {}, "drop_surplus_payload": False}
     mapping: dict[str, str] = {}
     defaults: dict[str, Any] = {}
     drop_surplus = False
@@ -254,11 +276,13 @@ def positive_case_binding(func: object, target: str, obligations: list[dict[str,
         except TypeError:
             adapted = _adapt_given_to_signature(signature, given)
             if adapted is None:
-                return {"accepted": False, "mapping": {}, "defaults": {}, "drop_surplus_payload": False}
+                return {"accepted": False, "mapping": {}, "defaults": {}, "overrides": {}, "evidence": {}, "drop_surplus_payload": False}
             drop_surplus = drop_surplus or (not adapted and bool(given))
             mapping.update({actual: source for actual, source in adapted.items()})
         defaults.update(_missing_required_samples(signature, mapping))
-    return {"accepted": True, "mapping": mapping, "defaults": defaults, "drop_surplus_payload": drop_surplus}
+    evidence = {name: dict(row) for name, row in dict(inferred or {}).items() if name in signature.parameters}
+    overrides = {name: row["value"] for name, row in evidence.items()}
+    return {"accepted": True, "mapping": mapping, "defaults": defaults, "overrides": overrides, "evidence": evidence, "drop_surplus_payload": drop_surplus}
 
 
 def signature_needs_negative_case(func: object, target: str, obligations: list[dict[str, Any]]) -> bool:

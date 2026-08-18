@@ -61,6 +61,8 @@ def run_executable_acceptance(
             "skipped_targets": harness["skipped_targets"],
             "argument_mappings": harness.get("argument_mappings", {}),
             "argument_defaults": harness.get("argument_defaults", {}),
+            "argument_overrides": harness.get("argument_overrides", {}),
+            "argument_sample_evidence": harness.get("argument_sample_evidence", {}),
             "method_instance_attributes": harness.get("method_instance_attributes", {}),
             "dropped_surplus_payload_targets": harness.get("dropped_surplus_payload_targets", []),
             "source_isolated_targets": harness.get("source_isolated_targets", []),
@@ -314,7 +316,9 @@ def _call_kwargs(target, given, include_defaults=True):
     mapping = HARNESS_DATA.get("argument_mappings", {{}}).get(target, {{}})
     if target in HARNESS_DATA.get("dropped_surplus_payload_targets", []): data = {{}}
     if mapping: data = {{actual: data[source] for actual, source in mapping.items() if source in data}}
-    if include_defaults: data = {{**HARNESS_DATA.get("argument_defaults", {{}}).get(target, {{}}), **data}}
+    if include_defaults:
+        data = {{**HARNESS_DATA.get("argument_defaults", {{}}).get(target, {{}}), **data}}
+        data.update(HARNESS_DATA.get("argument_overrides", {{}}).get(target, {{}}))
     return _materialize(data)
 def _module_name(path_text):
     parts = Path(path_text).with_suffix("").parts

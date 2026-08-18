@@ -1,6 +1,12 @@
 {
   "schema_version": "first_slice_viability.v1",
   "minimum_score": 0,
+  "materializable_parameter_attributes": [
+    "append", "casefold", "decode", "encode", "endswith", "format", "get",
+    "items", "join", "keys", "lower", "lstrip", "partition", "removeprefix",
+    "removesuffix", "replace", "rsplit", "rstrip", "split", "startswith",
+    "strip", "upper", "values"
+  ],
   "rules": [
     {
       "rule_id": "bounded_transform_boundary",
@@ -35,6 +41,15 @@
         "decorators_contains_any": ["staticmethod", "classmethod"]
       },
       "reason": "static or class method exposes an explicit receiver-independent boundary"
+    },
+    {
+      "rule_id": "unmaterialized_object_protocol_input",
+      "score_delta": -70,
+      "reselection_required": true,
+      "match": {
+        "input_complexity_in": ["object_protocol"]
+      },
+      "reason": "input requires an unknown object protocol and must be replaced or explicitly fixture-bound before executable handoff"
     },
     {
       "rule_id": "stateful_method_effects",

@@ -19,6 +19,7 @@ def positive_samples_execute(
     defaults: dict[str, Any] | None = None,
     drop_surplus_payload: bool = False,
     diagnostics: list[str] | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> bool:
     seen: set[str] = set()
     for row in obligations:
@@ -31,7 +32,7 @@ def positive_samples_execute(
         try:
             with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
                 given = _mapped_given(dict(row.get("given", {})), mapping or {}, drop_surplus_payload)
-                payload = {**dict(defaults or {}), **given}
+                payload = {**dict(defaults or {}), **given, **dict(overrides or {})}
                 args, kwargs = _call_args_kwargs(func, materialize(payload))
                 try:
                     asyncio.get_event_loop()

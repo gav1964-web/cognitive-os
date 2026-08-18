@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -36,7 +37,7 @@ def first_slice_viability(
     knowledge_rule: str = "",
 ) -> dict[str, Any]:
     payload = load_first_slice_viability()
-    facts = _facts(source, context or {}, knowledge_rule)
+    facts = _facts(source, context or {}, knowledge_rule, payload)
     score = 0
     matched = []
     for rule in payload["rules"]:
@@ -66,7 +67,12 @@ def first_slice_viability(
     }
 
 
-def _facts(source: str, context: dict[str, Any], knowledge_rule: str) -> dict[str, str]:
+def _facts(
+    source: str,
+    context: dict[str, Any],
+    knowledge_rule: str,
+    payload: dict[str, Any],
+) -> dict[str, str]:
     normalized = source.replace("\\", "/").lower()
     path, _, symbol = normalized.partition(":")
     symbol = symbol.split("(", 1)[0].rsplit(".", 1)[-1]
@@ -87,7 +93,48 @@ def _facts(source: str, context: dict[str, Any], knowledge_rule: str) -> dict[st
         "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
         "snippet_text": str(snippet.get("text") or "").lower(),
         "side_effects": " ".join(str(item).lower() for item in side_effects),
+        "input_complexity": _input_complexity_fact(snippet, payload),
     }
+
+
+def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> str:
+    structural = dict(snippet.get("structural_contract") or {})
+    usage_types = {str(value) for value in dict(structural.get("argument_usage_types") or {}).values()}
+    if "ProtocolLike" in usage_types:
+        return "object_protocol"
+    return _input_complexity(
+        str(snippet.get("text") or ""),
+        {str(item) for item in payload.get("materializable_parameter_attributes") or []},
+    )
+
+
+def _input_complexity(snippet: str, materializable_attributes: set[str]) -> str:
+    if not snippet or "..." in snippet:
+        return "unknown"
+    try:
+        tree = ast.parse(snippet)
+    except (SyntaxError, ValueError):
+        return "unknown"
+    function = next(
+        (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))),
+        None,
+    )
+    if function is None:
+        return "unknown"
+    parameters = {
+        arg.arg
+        for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+        if arg.arg not in {"self", "cls"}
+    }
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Attribute) or node.attr in materializable_attributes:
+            continue
+        root = node.value
+        while isinstance(root, (ast.Attribute, ast.Subscript)):
+            root = root.value
+        if isinstance(root, ast.Name) and root.id in parameters:
+            return "object_protocol"
+    return "scalar_or_structural"
 
 
 def _matches(match: dict[str, Any], facts: dict[str, str]) -> bool:
@@ -112,6 +159,7 @@ def _validate_matchers(match: dict[str, Any]) -> None:
     allowed_facts = {
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
         "decorators", "owner_class", "snippet_text", "side_effects",
+        "input_complexity",
     }
     for key, values in match.items():
         suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""

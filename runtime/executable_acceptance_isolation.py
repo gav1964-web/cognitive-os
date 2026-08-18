@@ -47,7 +47,7 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         func = namespace.get(symbol)
         if callable(func):
             func = with_runtime_effect_stubs(func, set(effect_stubs))
-        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]], "wildcard_import_stubs": wildcard_stubs}
+        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "source_path": str(path), "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]], "wildcard_import_stubs": wildcard_stubs}
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
 
@@ -113,6 +113,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             "method_instance_attributes": raw_attrs,
             "source_isolated": True,
             "source_isolated_method": True,
+            "source_path": str(path),
             "method_dependencies": sorted(method_names & selected),
             "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]],
             "wildcard_import_stubs": wildcard_stubs,
