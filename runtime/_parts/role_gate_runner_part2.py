@@ -81,6 +81,11 @@ def _verification_commands_allowlisted(artifact: dict[str, Any], artifacts: dict
 def _plan_has_patch_intent(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return dict(artifact.get("patch_intent", {})).get("artifact_type") == "PatchIntent", "PatchIntent is present"
 
+def _plan_delta_propagated(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    delta = dict(artifact.get("implementation_delta") or {})
+    intent_delta = dict(dict(artifact.get("patch_intent") or {}).get("implementation_delta") or {})
+    return bool(delta and intent_delta == delta), "ImplementationDelta is preserved in PatchIntent"
+
 def _executor_handoff_present(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(artifact.get("executor_handoff")), "executor handoff is present"
 

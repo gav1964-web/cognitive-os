@@ -247,3 +247,11 @@ def _traceability_table_present(artifact: dict[str, Any], artifacts: dict[str, d
 def _implementation_handoff_typed(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return bool(dict(artifact.get("implementation_handoff", {})).get("recommended_role")), "implementation handoff names next producer"
 
+def _implementation_delta_evidence_bound(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    delta = dict(artifact.get("implementation_delta") or {})
+    valid_status = delta.get("status") in {
+        "ready", "semantic_synthesis_required", "verification_only", "blocked_no_safe_candidate",
+    }
+    has_authority = delta.get("authority") == "source_and_user_evidence_only"
+    return bool(delta.get("artifact_type") == "ImplementationDelta" and valid_status and has_authority), "ImplementationDelta has bounded status and evidence authority"
+

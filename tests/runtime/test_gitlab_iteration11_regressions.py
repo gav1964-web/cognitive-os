@@ -169,6 +169,55 @@ def test_source_isolated_method_ignores_unrelated_class_assignment(tmp_path):
     assert loaded["callable"](" ok ") == "ok"
 
 
+def test_source_isolated_staticmethod_keeps_referenced_class_attribute(tmp_path):
+    source = tmp_path / "hashing.py"
+    source.write_text(
+        "from passlib.context import CryptContext\n\n"
+        "class Hasher:\n"
+        "    pwd_context = CryptContext(schemes=['bcrypt'])\n"
+        "    @staticmethod\n"
+        "    def verify_password(plain, encoded):\n"
+        "        return Hasher.pwd_context.verify(plain, encoded)\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "verify_password")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]("plain", "encoded") is True
+
+
+def test_source_isolated_callable_stubs_function_local_effect_import(tmp_path):
+    source = tmp_path / "clock.py"
+    source.write_text(
+        "def sync_clock():\n"
+        "    from ntptime import settime\n"
+        "    settime()\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "sync_clock")
+
+    assert loaded["callable"]() is None
+    assert loaded["effect_module_stubs"] == ["ntptime"]
+
+
+def test_source_isolated_callable_stubs_context_managed_effect_client(tmp_path):
+    source = tmp_path / "mail.py"
+    source.write_text(
+        "import smtplib\n"
+        "def send(message):\n"
+        "    with smtplib.SMTP('example.test', 25) as client:\n"
+        "        client.sendmail('from', 'to', message)\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "send")
+
+    assert loaded["callable"]("hello") is None
+    assert loaded["effect_module_stubs"] == ["smtplib"]
+
+
 def test_source_isolation_resolves_relative_resource_read_only(tmp_path):
     source = tmp_path / "helpers" / "email.py"
     source.parent.mkdir()

@@ -28,6 +28,24 @@
       "input_kind": "list[hashable]",
       "output_kind": "list",
       "expression_template": "list(dict.fromkeys({arg}))"
-    }
+    },
+    {"id": "titlecase_dict_keys", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{k.title(): v for k, v in {arg}.items()}"},
+    {"id": "xml_escape", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('&', '&amp;').replace('\\\"', '&quot;').replace(\"'\", '&apos;').replace('<', '&lt;').replace('>', '&gt;')"},
+    {"id": "truthy_string", "input_kind": "string", "output_kind": "boolean", "expression_template": "{arg}.lower() in ('yes', 'true', 't', '1')"},
+    {"id": "drop_none_values", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{k: v for k, v in {arg}.items() if v is not None}"},
+    {"id": "append_suffix", "input_kind": "string", "output_kind": "string", "expression_template": "'{}_suffix'.format({arg})"},
+    {"id": "append_upper_suffix", "input_kind": "string", "output_kind": "string", "expression_template": "'{}_SUFFIX'.format({arg})"},
+    {"id": "slash_to_dot", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('/', '.')"},
+    {"id": "dot_to_slash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('.', '/')"},
+    {"id": "starts_with_con1", "input_kind": "string", "output_kind": "boolean", "expression_template": "{arg}.startswith('CON.1')"},
+    {"id": "prefix_before_underscore", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.split('_')[0]"},
+    {"id": "file_extension", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.split('.')[-1]"},
+    {"id": "lower_replace_dash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.lower().replace('-', '_')"},
+    {"id": "escape_backslash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('\\\\', '\\\\\\\\')"},
+    {"id": "sanitize_class_name", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace(' ', '_').replace('.', '_')"},
+    {"id": "split_slash", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.split('/')"},
+    {"id": "lower_split_words", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.lower().split()"},
+    {"id": "lib_name", "input_kind": "integer", "output_kind": "string", "expression_template": "'lib_' + str({arg})"},
+    {"id": "values_choice_mapping", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{value: value for value in {arg}.values()}"}
   ]
 }

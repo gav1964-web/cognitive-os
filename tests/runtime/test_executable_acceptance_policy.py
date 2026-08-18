@@ -28,6 +28,7 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert "StreamableHTTPServerTransport._handle_post_request" in method_fixture_policy()["local_import_stub_methods"]
     assert "gradio.helpers" in dependency_stub_policy()["generated_module_profiles"]
     assert "great_expectations.util" in dependency_stub_policy()["generated_module_profiles"]
+    assert "passlib.context" in dependency_stub_policy()["generated_module_profiles"]
     assert "WsgiToAsgiInstance.build_environ" in method_fixture_policy()["instance_attribute_profiles"]
     assert "DataProfilerColumnDomainBuilder._get_domains" in method_fixture_policy()["instance_attribute_profiles"]
     assert "socket" in source_isolation_policy()["effect_module_stubs"]
@@ -59,3 +60,11 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert materialize({"iterations": "sample", "digest_size": "sample"}) == {"iterations": 1, "digest_size": 8}
     row = materialize({"__fixture__": "record_row_empty"})
     assert row.data == {} and row.get("missing") is None
+
+
+def test_crypt_context_fixture_preserves_password_helper_return_shapes():
+    context_class = materialize({"__fixture__": "crypt_context_class"})
+    context = context_class(schemes=["bcrypt"], deprecated="auto")
+
+    assert context.verify("plain", "encoded") is True
+    assert isinstance(context.hash("plain"), str)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import ast
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -14,7 +14,7 @@ from .contract_rebind_request import build_contract_rebind_request
 from .dependency_probe_session import build_dependency_probe_session_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
-
+from .programmer_source_location import source_location
 
 def llm_strategy_enabled() -> bool:
     return os.environ.get("COGNITIVE_OS_EXECUTOR_USE_L45_LLM", "").lower() in {"1", "true", "yes", "on"}
@@ -31,15 +31,23 @@ def build_patch_strategy(
     use_l45_llm: bool = False,
 ) -> dict[str, Any]:
     target = _target(implementation_plan)
+    location = source_location(project_dir, target)
     evidence = {
         "target": target,
-        "source_excerpt": _source_excerpt(project_dir, target),
+        "source_excerpt": location["excerpt"],
+        "source_start_line": location["start_line"],
+        "source_context": location["context"],
+        "source_context_start_line": location["context_start_line"],
         "contract": dict(dict(implementation_plan.get("contract_binding") or {}).get("input_contract") or {}),
+        "acceptance_obligations": list(
+            dict(test_plan.get("executable_acceptance") or {}).get("obligations") or []
+        )[:8],
         "patch_synthesis": _synthesis_summary(synthesis),
         "acceptance_summary": dict(acceptance_summary or {}),
         "contract_alignment": _contract_alignment(target, test_plan),
         "dependency_boundary_profile": dict(implementation_plan.get("dependency_boundary_profile") or {}),
         "first_slice_reselection_request": dict(implementation_plan.get("first_slice_reselection_request") or {}),
+        "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
     }
     quality = _patch_quality(synthesis)
     pattern_context = _pattern_context(acceptance_summary, synthesis, quality)
@@ -55,6 +63,7 @@ def build_patch_strategy(
         "contract_alignment": evidence["contract_alignment"],
         "dependency_boundary_profile": evidence["dependency_boundary_profile"],
         "first_slice_reselection_request": evidence["first_slice_reselection_request"],
+        "implementation_delta": evidence["implementation_delta"],
         "deterministic_strategy": deterministic,
         "patch_quality": quality,
         "executor_playbooks": playbooks,
@@ -94,6 +103,9 @@ def _deterministic_strategy(evidence: dict[str, Any]) -> dict[str, Any]:
     dependency_profile = dict(evidence.get("dependency_boundary_profile") or {})
     isolated_profile = dict(dependency_profile.get("isolated_environment_profile") or {})
     reselection = dict(evidence.get("first_slice_reselection_request") or {})
+    delta = dict(evidence.get("implementation_delta") or {})
+    if delta.get("status") == "verification_only":
+        return _strategy("verify_existing_behavior", "no_evidence_backed_behavior_change", confidence=0.98)
     if alignment.get("status") == "target_drift":
         reason = (
             "test_plan_target_drift"
@@ -169,18 +181,48 @@ def _llm_strategy(evidence: dict[str, Any], deterministic: dict[str, Any]) -> di
 
 
 def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[dict[str, str]]:
+    schema = {
+        "action": "propose_patch_recipe",
+        "reason": "short evidence-based reason",
+        "risk": "short residual risk",
+        "expected_files": ["relative/path.py"],
+        "patch_recipe_hypothesis": {
+            "recipe_type": "descriptive_recipe_id",
+            "target_symbol": "relative/path.py:function_name",
+            "summary": "behavior change",
+            "diff": [
+                "--- a/relative/path.py",
+                "+++ b/relative/path.py",
+                "@@ -1,2 +1,2 @@",
+                " unchanged context",
+                "-old exact line",
+                "+new exact line",
+            ],
+            "verification_hint": "bounded verification",
+        },
+    }
     return [
         {
             "role": "system",
             "content": (
-                "Return JSON only. Propose a sandbox patch strategy, not code execution. "
+                "Return one JSON object only, without markdown. Propose a sandbox patch strategy, not code execution. "
                 "Allowed actions: verify_patch, propose_patch_recipe, request_fixture_profile, "
-                "request_contract_rebind, block_for_review."
+                "request_contract_rebind, block_for_review. When action is propose_patch_recipe, every field in this "
+                f"example schema is required: {json.dumps(schema, ensure_ascii=False)}. The unified diff must use "
+                "relative a/ and b/ paths, reference only the exact target, and match source_excerpt lines exactly. "
+                "Use source_start_line for the first hunk location and satisfy every acceptance_obligation. "
+                "Respect types and globals visible in source_context. Mentally execute every given input and confirm "
+                "the proposed code equals its expected output before returning the diff. Preserve already-correct cases. "
+                "A diff is an untrusted proposal and will be applied only in an isolated verifier sandbox."
             ),
         },
         {
             "role": "user",
-            "content": str({"evidence": evidence, "deterministic_strategy": deterministic})[:12000],
+            "content": json.dumps(
+                {"evidence": evidence, "deterministic_strategy": deterministic},
+                ensure_ascii=False,
+                sort_keys=True,
+            )[:12000],
         },
     ]
 
@@ -216,11 +258,13 @@ def _llm_not_requested() -> dict[str, str]:
 def _patch_recipe_hypothesis(payload: dict[str, Any]) -> dict[str, Any]:
     recipe = payload.get("patch_recipe_hypothesis") or payload.get("patch_recipe") or {}
     recipe = recipe if isinstance(recipe, dict) else {}
+    diff = recipe.get("diff") or payload.get("diff") or []
+    diff_lines = diff.splitlines() if isinstance(diff, str) else list(diff)
     return {
         "recipe_type": str(recipe.get("recipe_type") or "")[:80],
         "target_symbol": str(recipe.get("target_symbol") or payload.get("target_symbol") or "")[:240],
         "summary": str(recipe.get("summary") or "")[:500],
-        "diff": [str(item)[:1000] for item in list(recipe.get("diff") or payload.get("diff") or [])[:80]],
+        "diff": [str(item)[:1000] for item in diff_lines[:80]],
         "verification_hint": str(recipe.get("verification_hint") or "")[:500],
     }
 
@@ -328,7 +372,6 @@ def _contract_alignment(target: str, test_plan: dict[str, Any]) -> dict[str, Any
         "candidate_targets": [],
     }
 
-
 def _patch_quality(synthesis: dict[str, Any]) -> dict[str, Any]:
     if synthesis.get("status") == "skipped":
         return {"level": "verified_no_patch", "review_required": False, "evidence_sources": []}
@@ -355,23 +398,3 @@ def _patch_quality(synthesis: dict[str, Any]) -> dict[str, Any]:
 def _target(implementation_plan: dict[str, Any]) -> str:
     intent = dict(implementation_plan.get("patch_intent") or {})
     return str(intent.get("target_symbol") or dict(implementation_plan.get("implementation_target") or {}).get("candidate") or "")
-
-
-def _source_excerpt(project_dir: Path, target: str) -> str:
-    path_text, _, symbol = target.partition(":")
-    path = (project_dir / path_text).resolve()
-    try:
-        path.relative_to(project_dir.resolve())
-    except ValueError:
-        return ""
-    if not path.is_file():
-        return ""
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except Exception:
-        return path.read_text(encoding="utf-8", errors="replace")[:4000]
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == symbol:
-            lines = path.read_text(encoding="utf-8").splitlines()
-            return "\n".join(lines[node.lineno - 1 : (node.end_lineno or node.lineno)])[:4000]
-    return ""

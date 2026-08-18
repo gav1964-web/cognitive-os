@@ -38,7 +38,25 @@
         "first_item",
         "last_item",
         "sorted_list",
-        "unique_preserve_order"
+        "unique_preserve_order",
+        "titlecase_dict_keys",
+        "xml_escape",
+        "truthy_string",
+        "drop_none_values",
+        "append_suffix",
+        "append_upper_suffix",
+        "slash_to_dot",
+        "dot_to_slash",
+        "starts_with_con1",
+        "prefix_before_underscore",
+        "file_extension",
+        "lower_replace_dash",
+        "escape_backslash",
+        "sanitize_class_name",
+        "split_slash",
+        "lower_split_words",
+        "lib_name",
+        "values_choice_mapping"
       ]
     },
     "required_input_guard": {

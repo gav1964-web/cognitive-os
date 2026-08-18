@@ -126,6 +126,7 @@
     "incidental_python_automation_max_files": 20,
     "incidental_python_automation_roots": ["ansible", "contrib", "inventory", "library", "playbooks", "plugins", "roles", "scripts", "tools"],
     "incidental_python_context_roots": ["integration", "integrations"],
+    "curriculum_exercise_path_parts": ["exercise", "exercises", "exercice", "exercices"],
     "incidental_polyglot_python_max_files": 8,
     "incidental_polyglot_non_python_min_files": 50,
     "path_score_roots": ["src", "lib", "package", "packages"],

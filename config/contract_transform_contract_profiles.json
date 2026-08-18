@@ -9,6 +9,7 @@
     {
       "id": "normalize_string",
       "operator_id": "strip_lower",
+      "trial_symbol": "normalize_value",
       "name_tokens": ["normalize", "canonicalize", "clean"],
       "input_field_candidates": ["value", "text", "name", "key"],
       "input_types": ["str", "string"],
@@ -20,6 +21,7 @@
     {
       "id": "strip_string",
       "operator_id": "strip",
+      "trial_symbol": "trim_value",
       "name_tokens": ["strip", "trim"],
       "input_field_candidates": ["value", "text", "name"],
       "input_types": ["str", "string"],
@@ -31,6 +33,7 @@
     {
       "id": "upper_string",
       "operator_id": "strip_upper",
+      "trial_symbol": "uppercase_value",
       "name_tokens": ["upper", "uppercase"],
       "input_field_candidates": ["value", "text", "name"],
       "input_types": ["str", "string"],
@@ -42,6 +45,7 @@
     {
       "id": "csv_items",
       "operator_id": "comma_split_strip_nonempty",
+      "trial_symbol": "parse_items",
       "name_tokens": ["parse_items", "split_items", "items", "csv"],
       "input_field_candidates": ["value", "text", "items", "csv"],
       "input_types": ["str", "string"],
@@ -53,6 +57,7 @@
     {
       "id": "sum_numbers",
       "operator_id": "sum_numbers",
+      "trial_symbol": "total_values",
       "name_tokens": ["sum", "total"],
       "input_field_candidates": ["values", "items", "numbers"],
       "input_types": ["list", "list[int]", "list[number]", "sequence"],
@@ -64,6 +69,7 @@
     {
       "id": "count_sequence",
       "operator_id": "len_sequence",
+      "trial_symbol": "count_values",
       "name_tokens": ["count", "len", "length", "size"],
       "input_field_candidates": ["values", "items", "sequence"],
       "input_types": ["list", "sequence", "tuple"],
@@ -75,6 +81,7 @@
     {
       "id": "first_item",
       "operator_id": "first_item",
+      "trial_symbol": "first_item",
       "name_tokens": ["first", "head"],
       "input_field_candidates": ["values", "items", "sequence"],
       "input_types": ["list", "sequence", "tuple"],
@@ -86,6 +93,7 @@
     {
       "id": "last_item",
       "operator_id": "last_item",
+      "trial_symbol": "last_item",
       "name_tokens": ["last", "tail"],
       "input_field_candidates": ["values", "items", "sequence"],
       "input_types": ["list", "sequence", "tuple"],
@@ -97,6 +105,7 @@
     {
       "id": "sorted_list",
       "operator_id": "sorted_list",
+      "trial_symbol": "sort_items",
       "name_tokens": ["sort", "sorted"],
       "input_field_candidates": ["values", "items", "sequence"],
       "input_types": ["list", "sequence", "tuple"],
@@ -108,6 +117,7 @@
     {
       "id": "unique_list",
       "operator_id": "unique_preserve_order",
+      "trial_symbol": "unique_items",
       "name_tokens": ["unique", "dedupe", "distinct"],
       "input_field_candidates": ["values", "items", "sequence"],
       "input_types": ["list", "sequence", "tuple"],
@@ -115,6 +125,24 @@
       "sample_input": ["a", "b", "a"],
       "expected_output": ["a", "b"],
       "expect_key": "return_value"
-    }
+    },
+    {"id": "titlecase_mapping", "operator_id": "titlecase_dict_keys", "trial_symbol": "titlecase_keys", "name_tokens": ["titlecase"], "input_field_candidates": ["values", "mapping"], "input_types": ["dict", "mapping"], "output_types": ["dict", "mapping"], "sample_input": {"first_name": "Ada"}, "expected_output": {"First_Name": "Ada"}, "expect_key": "return_value"},
+    {"id": "xml_escape_string", "operator_id": "xml_escape", "trial_symbol": "xml_escape", "name_tokens": ["xml_escape"], "input_field_candidates": ["value", "text"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "<a>&", "expected_output": "&lt;a&gt;&amp;", "expect_key": "return_value"},
+    {"id": "truthy_string", "operator_id": "truthy_string", "trial_symbol": "str_to_bool", "name_tokens": ["str_to_bool"], "input_field_candidates": ["value", "text"], "input_types": ["str", "string"], "output_types": ["bool", "boolean"], "sample_input": "YES", "expected_output": true, "expect_key": "return_value"},
+    {"id": "present_mapping", "operator_id": "drop_none_values", "trial_symbol": "present_values", "name_tokens": ["present_values"], "input_field_candidates": ["values", "mapping"], "input_types": ["dict", "mapping"], "output_types": ["dict", "mapping"], "sample_input": {"a": 1, "b": null}, "expected_output": {"a": 1}, "expect_key": "return_value"},
+    {"id": "append_suffix", "operator_id": "append_suffix", "trial_symbol": "append_suffix", "name_tokens": ["append_suffix"], "input_field_candidates": ["value", "text"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "name", "expected_output": "name_suffix", "expect_key": "return_value"},
+    {"id": "append_upper_suffix", "operator_id": "append_upper_suffix", "trial_symbol": "append_upper_suffix", "name_tokens": ["append_upper_suffix"], "input_field_candidates": ["value", "text"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "name", "expected_output": "name_SUFFIX", "expect_key": "return_value"},
+    {"id": "slash_to_dot", "operator_id": "slash_to_dot", "trial_symbol": "path_to_dots", "name_tokens": ["path_to_dots"], "input_field_candidates": ["path", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "a/b", "expected_output": "a.b", "expect_key": "return_value"},
+    {"id": "dot_to_slash", "operator_id": "dot_to_slash", "trial_symbol": "dots_to_path", "name_tokens": ["dots_to_path"], "input_field_candidates": ["path", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "a.b", "expected_output": "a/b", "expect_key": "return_value"},
+    {"id": "con1_prefix", "operator_id": "starts_with_con1", "trial_symbol": "is_con1", "name_tokens": ["is_con1"], "input_field_candidates": ["text", "value"], "input_types": ["str", "string"], "output_types": ["bool", "boolean"], "sample_input": "CON.1.2", "expected_output": true, "expect_key": "return_value"},
+    {"id": "underscore_prefix", "operator_id": "prefix_before_underscore", "trial_symbol": "prefix_before_underscore", "name_tokens": ["prefix_before_underscore"], "input_field_candidates": ["name", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "abc_def", "expected_output": "abc", "expect_key": "return_value"},
+    {"id": "file_extension", "operator_id": "file_extension", "trial_symbol": "file_extension", "name_tokens": ["file_extension"], "input_field_candidates": ["path", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "a.tar.gz", "expected_output": "gz", "expect_key": "return_value"},
+    {"id": "normalized_option_name", "operator_id": "lower_replace_dash", "trial_symbol": "normalize_option_name", "name_tokens": ["normalize"], "input_field_candidates": ["name", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "Hello-World", "expected_output": "hello_world", "expect_key": "return_value"},
+    {"id": "escaped_backslash", "operator_id": "escape_backslash", "trial_symbol": "escape_backslash", "name_tokens": ["escape_backslash"], "input_field_candidates": ["value", "text"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "a\\b", "expected_output": "a\\\\b", "expect_key": "return_value"},
+    {"id": "class_name", "operator_id": "sanitize_class_name", "trial_symbol": "sanitize_class_name", "name_tokens": ["sanitize_class_name"], "input_field_candidates": ["name", "value"], "input_types": ["str", "string"], "output_types": ["str", "string"], "sample_input": "A B.C", "expected_output": "A_B_C", "expect_key": "return_value"},
+    {"id": "slash_parts", "operator_id": "split_slash", "trial_symbol": "split_path", "name_tokens": ["split_path"], "input_field_candidates": ["path", "value"], "input_types": ["str", "string"], "output_types": ["list", "list[str]"], "sample_input": "a/b", "expected_output": ["a", "b"], "expect_key": "return_value"},
+    {"id": "lower_words", "operator_id": "lower_split_words", "trial_symbol": "analyze_words", "name_tokens": ["analyze_words"], "input_field_candidates": ["text", "value"], "input_types": ["str", "string"], "output_types": ["list", "list[str]"], "sample_input": "Hello World", "expected_output": ["hello", "world"], "expect_key": "return_value"},
+    {"id": "library_name", "operator_id": "lib_name", "trial_symbol": "library_name", "name_tokens": ["library_name"], "input_field_candidates": ["value", "number"], "input_types": ["int", "integer"], "output_types": ["str", "string"], "sample_input": 3, "expected_output": "lib_3", "expect_key": "return_value"},
+    {"id": "choice_mapping", "operator_id": "values_choice_mapping", "trial_symbol": "choice_mapping", "name_tokens": ["choice_mapping"], "input_field_candidates": ["values", "mapping"], "input_types": ["dict", "mapping"], "output_types": ["dict", "mapping"], "sample_input": {"a": "x", "b": "y"}, "expected_output": {"x": "x", "y": "y"}, "expect_key": "return_value"}
   ]
 }

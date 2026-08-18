@@ -34,11 +34,13 @@ def prepare_repair_synthesis(
     execution_dir: Path,
     project_dir: Path,
     implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any],
     test_result: dict[str, Any],
 ) -> tuple[dict[str, Any], Path, dict[str, Any], dict[str, Any]]:
     strategy = build_patch_repair_strategy(
         project_dir=project_dir,
         implementation_plan=implementation_plan,
+        test_plan=test_plan,
         test_result=test_result,
     )
     attempt = apply_sandbox_patch_candidate(

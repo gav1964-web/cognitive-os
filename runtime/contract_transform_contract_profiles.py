@@ -27,13 +27,17 @@ def profile_positive_case(
     input_contract: dict[str, Any],
     output_contract: dict[str, Any],
     catalog: dict[str, Any] | None = None,
+    profile_id: str | None = None,
 ) -> dict[str, Any] | None:
     if _is_void_output(output_contract):
         return None
     payload = catalog or load_contract_transform_contract_profiles()
     target_tokens = _target_tokens(target)
     for profile in [dict(row) for row in list(payload.get("profiles") or [])]:
-        if not _matches_name(profile, target_tokens):
+        exact_profile = bool(profile_id and profile.get("id") == profile_id)
+        if profile_id and not exact_profile:
+            continue
+        if not exact_profile and not _matches_name(profile, target_tokens):
             continue
         field_name = _select_input_field(profile, input_contract)
         if not field_name or not _matches_output_type(profile, output_contract):
@@ -76,6 +80,14 @@ def contract_profile_hint(
                 "source": "contract_transform_contract_profiles",
             },
         }
+    return None
+
+
+def contract_profile_for_operator(operator_id: str, catalog: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    payload = catalog or load_contract_transform_contract_profiles()
+    for row in list(payload.get("profiles") or []):
+        if isinstance(row, dict) and str(row.get("operator_id") or "") == operator_id:
+            return dict(row)
     return None
 
 

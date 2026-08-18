@@ -52,5 +52,11 @@ class _NoopObject:
     def __getattr__(self, name: str) -> "_NoopObject":
         return _NoopObject(f"{self.label}.{name}")
 
+    def __enter__(self) -> "_NoopObject":
+        return self
+
+    def __exit__(self, *args: Any) -> bool:
+        return False
+
     def __bool__(self) -> bool:
         return False

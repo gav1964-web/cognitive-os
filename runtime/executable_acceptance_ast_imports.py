@@ -31,11 +31,19 @@ def needed_class_members(class_node: ast.ClassDef, selected: set[str]) -> list[a
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in selected
     ]
     loaded = {name for node in methods for name in loaded_names(node)}
+    class_attributes = {
+        item.attr
+        for method in methods
+        for item in ast.walk(method)
+        if isinstance(item, ast.Attribute)
+        and isinstance(item.value, ast.Name)
+        and item.value.id in {class_node.name, "cls"}
+    }
     members: list[ast.AST] = []
     for node in class_node.body:
         if node in methods:
             members.append(copy.deepcopy(node))
-        elif isinstance(node, (ast.Assign, ast.AnnAssign)) and _assigned_names(node) & loaded:
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)) and _assigned_names(node) & (loaded | class_attributes):
             members.append(copy.deepcopy(node))
     return members
 

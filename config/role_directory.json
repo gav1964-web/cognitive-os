@@ -131,7 +131,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["missing_adr", "unverifiable_acceptance", "scope_not_bounded"],
-      "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed"],
+      "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed", "implementation_delta_evidence_bound"],
       "artifact_builder": {"builder_id": "technical_spec_v1", "callable": "runtime.technical_spec_builder:build_technical_spec", "artifact_type": "TechnicalSpec", "kwargs": {"role_id": "spec_writer", "next_role_id": "implementer"}}
     },
     "implementer": {
@@ -152,7 +152,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["source_edit_without_approval", "dependency_policy_violation", "unbounded_patch_scope"],
-      "quality_criteria": ["plan_has_patch_intent", "executor_handoff_present", "rollback_policy_present"],
+      "quality_criteria": ["plan_has_patch_intent", "plan_delta_propagated", "executor_handoff_present", "rollback_policy_present"],
       "artifact_builder": {"builder_id": "implementation_plan_v1", "callable": "runtime.implementation_plan_builder:build_implementation_plan", "artifact_type": "ImplementationPlan", "kwargs": {"role_id": "implementer", "next_role_id": "tester"}}
     },
     "tester": {

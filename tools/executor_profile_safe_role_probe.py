@@ -13,9 +13,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.architecture_decision_policy import load_architecture_decision_policy
-from runtime.contract_transform_contract_profiles import contract_profile_hint
+from runtime.contract_transform_contract_profiles import contract_profile_for_operator, contract_profile_hint
+from runtime.contract_transform_mutation import identity_mutation_source, observed_operator
 from runtime.implementation_plan_builder import build_implementation_plan
 from runtime.programmer_executor import run_programmer_executor
+from runtime.programmer_transformation_trial_quality import evaluate_transformation_case, transformation_summary
 from runtime.project_benchmark import analyze_project
 from runtime.technical_spec_builder import build_technical_spec
 from runtime.test_plan_builder import build_test_plan
@@ -58,7 +60,7 @@ def run_profile_safe_role_probe(
     rows = _discover_rows(projects_dir, limit=limit, max_per_project=max_per_project)
     work_root = root / "artifacts" / "executor_profile_safe_role_probe" / _stamp()
     cases = [_run_case_safe(root, work_root, row) for row in rows]
-    summary = _summary(cases)
+    summary = transformation_summary(cases)
     return {
         "artifact_type": "ExecutorProfileSafeRoleProbe",
         "status": "ok" if cases and summary["accepted"] == len(cases) else "needs_review",
@@ -73,6 +75,8 @@ def run_profile_safe_role_probe(
 
 def _run_case(root: Path, work_root: Path, row: dict[str, Any]) -> dict[str, Any]:
     project_dir = _case_project(work_root, row)
+    source_path = project_dir / "main.py"
+    source_before = source_path.read_text(encoding="utf-8")
     target = f"main.py:{row['symbol']}"
     spec = build_technical_spec(architecture_decision=_adr(target, row))
     plan = build_implementation_plan(technical_spec=spec)
@@ -86,18 +90,22 @@ def _run_case(root: Path, work_root: Path, row: dict[str, Any]) -> dict[str, Any
         run_verification=True,
     )
     patch = _read_json(result.get("patch_package_path"))
-    synthesis = dict(patch.get("patch_synthesis") or {})
-    patch_row = dict((list(patch.get("patches") or [{}])[0] or {}))
-    profile = dict(dict(spec.get("extraction_contract") or {}).get("contract_profile") or {})
+    test_result = _read_json(result.get("test_result_path"))
+    quality = evaluate_transformation_case(
+        expected_profile=str(row["profile_id"]),
+        expected_operator=str(row["operator_id"]),
+        source_before=source_before,
+        source_after=source_path.read_text(encoding="utf-8"),
+        technical_spec=spec,
+        result=result,
+        patch_package=patch,
+        test_result=test_result,
+    )
     return {
         "project": row["project"],
         "source_target": row["source_target"],
-        "status": "ok" if result.get("status") == "ok" and profile.get("id") == row["profile_id"] else "needs_review",
+        **quality,
         "executor_status": result.get("status"),
-        "profile_id": profile.get("id"),
-        "operator_id": profile.get("operator_id"),
-        "patch_reason": synthesis.get("reason"),
-        "patch_transform": patch_row.get("transform"),
         "source_code_changes": bool(result.get("source_code_changes")),
     }
 
@@ -113,6 +121,7 @@ def _run_case_safe(root: Path, work_root: Path, row: dict[str, Any]) -> dict[str
             "executor_status": "failed",
             "profile_id": row.get("profile_id"),
             "operator_id": row.get("operator_id"),
+            "score": 0.0,
             "patch_reason": "probe_exception",
             "error": f"{type(exc).__name__}: {str(exc)[:240]}",
             "source_code_changes": False,
@@ -122,10 +131,12 @@ def _run_case_safe(root: Path, work_root: Path, row: dict[str, Any]) -> dict[str
 def _discover_rows(projects_dir: Path, *, limit: int, max_per_project: int) -> list[dict[str, Any]]:
     allowed = _pathless_allowed_profiles()
     mapped = _discover_project_map_rows(projects_dir, allowed=allowed, limit=limit, max_per_project=max_per_project)
-    if mapped:
-        return mapped
-    rows: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = list(mapped)
+    seen = {str(row.get("source_target")) for row in rows}
     per_project: dict[str, int] = {}
+    for row in rows:
+        project = str(row.get("project") or "")
+        per_project[project] = per_project.get(project, 0) + 1
     for path in sorted(projects_dir.rglob("*.py")):
         if len(rows) >= limit:
             break
@@ -134,9 +145,10 @@ def _discover_rows(projects_dir: Path, *, limit: int, max_per_project: int) -> l
             continue
         for row in _path_rows(projects_dir, path, allowed):
             project = str(row["project"])
-            if per_project.get(project, 0) >= max_per_project:
+            if row["source_target"] in seen or per_project.get(project, 0) >= max_per_project:
                 continue
             rows.append(row)
+            seen.add(str(row["source_target"]))
             per_project[project] = per_project.get(project, 0) + 1
             if len(rows) >= limit:
                 break
@@ -208,34 +220,67 @@ def _path_rows(projects_dir: Path, path: Path, allowed: set[str]) -> list[dict[s
     except SyntaxError:
         return []
     rel = path.relative_to(projects_dir).as_posix()
-    return [row for node in tree.body if (row := _node_row(node, rel, allowed))]
+    return [row for node in ast.walk(tree) if (row := _node_row(node, rel, allowed))]
 
 
 def _node_row(node: ast.AST, rel: str, allowed: set[str]) -> dict[str, Any] | None:
     if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or node.decorator_list:
         return None
     body = [item for item in node.body if not _doc_expr(item)]
-    if len(body) != 1 or not isinstance(body[0], ast.Return) or not isinstance(body[0].value, ast.Name):
+    if len(body) != 1 or not isinstance(body[0], ast.Return):
         return None
-    arg = body[0].value.id
-    if not _single_required_arg(node, arg):
+    arg = node.args.args[0].arg if len(node.args.args) == 1 else ""
+    if not _single_arg_shape(node, arg):
         return None
-    target = f"{rel}:{node.name}"
-    hint = contract_profile_hint(target=target, input_contract={arg: _annotation(node)}, output_contract={"result": _returns(node)})
-    profile = dict((hint or {}).get("contract_profile") or {})
-    if str(profile.get("id") or "") not in allowed:
+    project, _, project_rel = rel.partition("/")
+    current_operator = observed_operator(node, arg)
+    identity = isinstance(body[0].value, ast.Name) and body[0].value.id == arg
+    if identity and not _single_required_arg(node, arg):
         return None
-    clone = ast.fix_missing_locations(_clean_function(node))
+    symbol = node.name
+    arg_type = _annotation(node)
+    return_type = _returns(node)
+    if identity:
+        target = f"{project_rel or rel}:{symbol}"
+        hint = contract_profile_hint(
+            target=target, input_contract={arg: arg_type}, output_contract={"result": return_type}
+        )
+        profile = dict((hint or {}).get("contract_profile") or {})
+    else:
+        profile_record = dict(contract_profile_for_operator(str(current_operator or "")) or {})
+        symbol = str(profile_record.get("trial_symbol") or "")
+        input_types = [str(item) for item in list(profile_record.get("input_types") or []) if item]
+        output_types = [str(item) for item in list(profile_record.get("output_types") or []) if item]
+        arg_type = input_types[0] if input_types else "InferredInput"
+        return_type = output_types[0] if output_types else "InferredOutput"
+        profile = {
+            "id": profile_record.get("id"),
+            "operator_id": profile_record.get("operator_id"),
+        }
+        target = f"{project_rel or rel}:{symbol}"
+    profile_id = str(profile.get("id") or "")
+    if not symbol or not profile_id:
+        return None
+    if identity and profile_id not in allowed:
+        return None
+    if not identity and current_operator != str(profile.get("operator_id") or ""):
+        return None
+    source = (
+        ast.unparse(ast.fix_missing_locations(_clean_function(node)))
+        if identity else identity_mutation_source(node, arg, function_name=symbol)
+    )
     return {
-        "project": rel.split("/", 1)[0],
+        "project": project,
         "source_target": target,
-        "symbol": node.name,
+        "symbol": symbol,
         "arg": arg,
-        "arg_type": _annotation(node),
-        "return_type": _returns(node),
-        "source": ast.unparse(clone),
-        "profile_id": str(profile.get("id") or ""),
+        "arg_type": arg_type,
+        "return_type": return_type,
+        "source": source,
+        "profile_id": profile_id,
         "operator_id": str(profile.get("operator_id") or ""),
+        "mutation_source": "existing_identity" if identity else "real_operator_replaced_with_identity",
+        "oracle_operator_id": current_operator,
     }
 
 
@@ -250,9 +295,17 @@ def _adr(target: str, row: dict[str, Any]) -> dict[str, Any]:
     return {
         "artifact_type": "ArchitectureDecisionRecord",
         "role": "architect",
-        "goal": "Probe profile-safe role chain",
+        "goal": f"Implement verified {row['operator_id']} transform in the profile-safe role chain",
         "chosen_option": {"id": "minimal_safe_extraction"},
-        "spec_writer_brief": {"scope": ["Prepare profile-safe transform."], "files_or_symbols": [target]},
+        "spec_writer_brief": {
+            "scope": ["Prepare profile-safe transform."],
+            "files_or_symbols": [target],
+            "requested_contract_profile": {
+                "id": row["profile_id"],
+                "operator_id": row["operator_id"],
+                "evidence": row["source_target"],
+            },
+        },
         "traceability": [{"source": target, "requirement": "Capability candidate requires TechnicalSpec."}],
         "source_context": {
             target: {
@@ -275,6 +328,14 @@ def _single_required_arg(node: ast.FunctionDef | ast.AsyncFunctionDef, arg: str)
     if args.vararg or args.kwarg or args.kwonlyargs or args.posonlyargs:
         return False
     return len(args.args) == 1 and args.args[0].arg == arg and not args.defaults
+
+
+def _single_arg_shape(node: ast.FunctionDef | ast.AsyncFunctionDef, arg: str) -> bool:
+    args = node.args
+    return bool(
+        arg and not args.vararg and not args.kwarg and not args.kwonlyargs
+        and not args.posonlyargs and len(args.args) == 1 and args.args[0].arg == arg
+    )
 
 
 def _clean_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> ast.FunctionDef | ast.AsyncFunctionDef:
@@ -305,18 +366,6 @@ def _excluded(rel: str, name: str) -> bool:
     return name.startswith("test_") or name.endswith("_test.py") or any(token in low for token in tokens)
 
 
-def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
-    return {
-        "accepted": sum(case["status"] == "ok" for case in cases),
-        "needs_review": sum(case["status"] == "needs_review" for case in cases),
-        "profiles": _counts(case.get("profile_id") for case in cases),
-        "operators": _counts(case.get("operator_id") for case in cases),
-        "patch_reasons": _counts(case.get("patch_reason") for case in cases),
-        "patch_transforms": _counts(case.get("patch_transform") for case in cases),
-        "source_code_changes": sum(bool(case.get("source_code_changes")) for case in cases),
-    }
-
-
 def write_report(root: Path, report: dict[str, Any], label: str) -> dict[str, str]:
     out_dir = root / "artifacts" / "field_trials"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -330,14 +379,6 @@ def _read_json(path: Any) -> dict[str, Any]:
         return json.loads(Path(path).read_text(encoding="utf-8")) if path else {}
     except Exception:
         return {}
-
-
-def _counts(values: Any) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for value in values:
-        if value:
-            counts[str(value)] = counts.get(str(value), 0) + 1
-    return dict(sorted(counts.items()))
 
 
 def _stamp() -> str:

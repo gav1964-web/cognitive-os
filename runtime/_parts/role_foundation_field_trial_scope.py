@@ -145,6 +145,7 @@ def _primary_language_scope(path: Path) -> dict[str, Any]:
         or scope_boundaries.foreign_language_dominated_monorepo(foreign_files, py_files, root_package)
         or scope_boundaries.fixture_only_python_corpus(path, py_files, root_package)
         or scope_boundaries.scripts_only_python_support(path, py_files, root_package)
+        or scope_boundaries.curriculum_exercise_corpus(path, py_files, root_package)
         or scope_boundaries.documentation_deployment_demo(path, python_source_files, root_package)
         or scope_boundaries.incidental_polyglot_python_boundary(
             path, python_source_files, root_package, has_manifest=_has_project_manifest(path)

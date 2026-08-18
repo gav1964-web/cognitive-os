@@ -2,25 +2,35 @@
 
 from __future__ import annotations
 
-import ast
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .programmer_source_location import source_location
 
 
 def build_patch_repair_strategy(
     *,
     project_dir: Path,
     implementation_plan: dict[str, Any],
+    test_plan: dict[str, Any] | None = None,
     test_result: dict[str, Any],
 ) -> dict[str, Any]:
     target = _target(implementation_plan)
+    location = source_location(project_dir, target)
     evidence = {
         "target": target,
-        "source_excerpt": _source_excerpt(project_dir, target),
+        "source_excerpt": location["excerpt"],
+        "source_start_line": location["start_line"],
+        "source_context": location["context"],
+        "source_context_start_line": location["context_start_line"],
         "verification_failure": _failure_summary(test_result),
+        "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
+        "acceptance_obligations": list(
+            dict((test_plan or {}).get("executable_acceptance") or {}).get("obligations") or []
+        )[:8],
     }
     proposal = {
         "artifact_type": "PatchRepairProposal",
@@ -47,15 +57,45 @@ def _llm_repair(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 def _messages(evidence: dict[str, Any]) -> list[dict[str, str]]:
+    target = str(evidence.get("target") or "relative/path.py:function_name")
+    path_text = target.split(":", 1)[0]
+    schema = {
+        "action": "propose_patch_recipe",
+        "reason": "repair reason grounded in verifier evidence",
+        "risk": "residual risk",
+        "patch_recipe_hypothesis": {
+            "recipe_type": "minimal_semantic_repair",
+            "target_symbol": target,
+            "summary": "minimal repair",
+            "diff": [
+                f"--- a/{path_text}",
+                f"+++ b/{path_text}",
+                "@@ -1,2 +1,2 @@",
+                " exact context",
+                "-exact old line",
+                "+exact new line",
+            ],
+            "verification_hint": "rerun exact acceptance oracle",
+        },
+    }
     return [
         {
             "role": "system",
             "content": (
-                "Return JSON only. Propose one minimal unified diff repair for the same target. "
-                "Do not suggest source-project writes, registry edits, dependency installs, or broad refactors."
+                "Return one JSON object only, without markdown. Propose one minimal unified diff repair for the same "
+                f"target using every field in this schema: {json.dumps(schema, ensure_ascii=False)}. Diff lines may "
+                "be an array or one newline-delimited string. Paths must be relative a/ and b/ paths, hunk context "
+                "must match source_excerpt exactly, source_start_line must determine the first hunk location, and the "
+                "change must satisfy every acceptance_obligation while addressing verifier evidence. Do not suggest "
+                "source-project writes, registry edits, installs, or broad refactors. Respect runtime types visible in "
+                "source_context. Mentally execute every given input and verify exact equality with each expected output; "
+                "preserve cases that already pass and check boolean polarity explicitly."
             ),
         },
-        {"role": "user", "content": str({"repair_evidence": evidence})[:12000]},
+        {
+            "role": "user",
+            "content": json.dumps({"repair_evidence": evidence}, ensure_ascii=False, sort_keys=True)[:12000],
+        },
     ]
 
 
@@ -64,6 +104,8 @@ def _normalize(payload: dict[str, Any]) -> dict[str, Any]:
     if action != "propose_patch_recipe":
         action = "block_for_review"
     recipe = dict(payload.get("patch_recipe_hypothesis") or payload.get("patch_recipe") or {})
+    diff = recipe.get("diff") or payload.get("diff") or []
+    diff_lines = diff.splitlines() if isinstance(diff, str) else list(diff)
     return {
         "action": action,
         "reason": str(payload.get("reason") or "")[:500],
@@ -72,7 +114,7 @@ def _normalize(payload: dict[str, Any]) -> dict[str, Any]:
             "recipe_type": str(recipe.get("recipe_type") or "")[:80],
             "target_symbol": str(recipe.get("target_symbol") or payload.get("target_symbol") or "")[:240],
             "summary": str(recipe.get("summary") or "")[:500],
-            "diff": [str(item)[:1000] for item in list(recipe.get("diff") or payload.get("diff") or [])[:80]],
+            "diff": [str(item)[:1000] for item in diff_lines[:80]],
             "verification_hint": str(recipe.get("verification_hint") or "")[:500],
         },
     }
@@ -120,30 +162,10 @@ def _failure_summary(test_result: dict[str, Any]) -> dict[str, Any]:
         "failed_commands": failed_commands[:2],
         "executable_status": executable.get("status"),
         "executable_stdout_tail": str(dict(executable.get("command") or {}).get("stdout_tail") or "")[-3000:],
+        "executable_summary": dict(executable.get("summary") or {}),
     }
 
 
 def _target(implementation_plan: dict[str, Any]) -> str:
     intent = dict(implementation_plan.get("patch_intent") or {})
     return str(intent.get("target_symbol") or dict(implementation_plan.get("implementation_target") or {}).get("candidate") or "")
-
-
-def _source_excerpt(project_dir: Path, target: str) -> str:
-    path_text, _, symbol = target.partition(":")
-    path = (project_dir / path_text).resolve()
-    try:
-        path.relative_to(project_dir.resolve())
-    except ValueError:
-        return ""
-    if not path.is_file():
-        return ""
-    source = path.read_text(encoding="utf-8", errors="replace")
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return source[:4000]
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == symbol:
-            lines = source.splitlines()
-            return "\n".join(lines[node.lineno - 1 : (node.end_lineno or node.lineno)])[:4000]
-    return source[:4000]

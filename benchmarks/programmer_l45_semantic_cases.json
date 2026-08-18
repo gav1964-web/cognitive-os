@@ -1,0 +1,230 @@
+{
+  "schema_version": "programmer_l45_semantic_cases.v1",
+  "source_root": "artifacts/gitlab_blind_iteration_12_40_20260817/src",
+  "cases": [
+    {
+      "id": "uniqorn_boolean_space_code",
+      "project": "auj.lode__UNIQORN",
+      "provenance": "source/functions.py:SpaceString",
+      "provenance_ast_sha256": "e416793a315de5e08ddb44c9f2476a9e5a63c3fac6ab70648a1a7121502f0cb5",
+      "target": "main.py:SpaceString",
+      "statement": "Repair SpaceString so boolean True maps to 'K' and False maps to 'X'. Preserve the function signature.",
+      "source": "def SpaceString(selector):\n    if selector is True:\n        return 'X'\n    return 'K'\n",
+      "examples": [
+        {"given": {"selector": true}, "expected": "K"},
+        {"given": {"selector": false}, "expected": "X"}
+      ]
+    },
+    {
+      "id": "web_framework_truthy_parser",
+      "project": "BDmitryQA__web-automation-framework",
+      "provenance": "src/global_configs.py:str_to_bool",
+      "provenance_ast_sha256": "7ee137ca4e678a6d3eb55d7fc42098b6b369dc6edd561a00fc941fbab413ab68",
+      "target": "main.py:str_to_bool",
+      "statement": "Repair str_to_bool so yes, true, t, and 1 are accepted case-insensitively; other strings are false.",
+      "source": "def str_to_bool(string):\n    return string.lower() == 'yes'\n",
+      "examples": [
+        {"given": {"string": "TRUE"}, "expected": true},
+        {"given": {"string": "t"}, "expected": true},
+        {"given": {"string": "0"}, "expected": false}
+      ]
+    },
+    {
+      "id": "browser_patch_number_sort",
+      "project": "dothq__browser-desktop",
+      "provenance": "scripts/patchtool.py:sort_patches",
+      "provenance_ast_sha256": "b4716946c85541e4d6510327fcdffae28542ca622ccf32f620527f47143ce0ab",
+      "target": "main.py:sort_patches",
+      "statement": "Repair sort_patches to return the integer prefix before the first dash after removing exclamation marks.",
+      "source": "def sort_patches(el):\n    num = el.split('-')[-1].replace('!', '')\n    return int(num)\n",
+      "examples": [
+        {"given": {"el": "!12-fix.patch"}, "expected": 12},
+        {"given": {"el": "3-feature.patch"}, "expected": 3}
+      ]
+    },
+    {
+      "id": "server_human_size_binary_units",
+      "project": "hzxie__infinite-servers",
+      "provenance": "scripts/agent.py:get_humanize_filesize",
+      "provenance_ast_sha256": "2409b1d1290aba63a968339300657cd0e30660fda45f8d57d2e3e2a06605dcd1",
+      "target": "main.py:get_humanize_filesize",
+      "statement": "Repair get_humanize_filesize to use binary 1024-byte units and preserve the established formatting, including zero as '0 B'.",
+      "source": "def get_humanize_filesize(nbytes):\n    if nbytes == 0:\n        return '0 B'\n    units = ['B', 'K', 'M', 'G', 'T']\n    size = ''\n    while int(nbytes) > 0 and units:\n        size = '%g' % round(nbytes, 1 if nbytes < 10 else 0) + ' ' + units.pop(0)\n        nbytes = nbytes / 1000\n    return size\n",
+      "examples": [
+        {"given": {"nbytes": 0}, "expected": "0 B"},
+        {"given": {"nbytes": 1024}, "expected": "1 K"},
+        {"given": {"nbytes": 1048576}, "expected": "1 M"}
+      ]
+    },
+    {
+      "id": "server_nvsmi_active_flag",
+      "project": "hzxie__infinite-servers",
+      "provenance": "scripts/agent.py:nvsmi_flag",
+      "provenance_ast_sha256": "68917e7437986f592ff41f329f4ea1ae9165895e27ea0ee6ae7cc9bf9aa6ca3c",
+      "target": "main.py:nvsmi_flag",
+      "statement": "Repair nvsmi_flag: blank or bracket-prefixed cells return None; otherwise return whether the trimmed value equals active case-insensitively.",
+      "source": "def nvsmi_flag(cell):\n    cell = cell.strip()\n    if cell == '' or cell[0] == '[':\n        return False\n    return cell == 'active'\n",
+      "examples": [
+        {"given": {"cell": " [N/A]"}, "expected": null},
+        {"given": {"cell": "ACTIVE"}, "expected": true},
+        {"given": {"cell": "disabled"}, "expected": false}
+      ]
+    },
+    {
+      "id": "compiler_running_minimum",
+      "project": "ones-ai__nest-compiler",
+      "provenance": "utils/autotuning/xgboost_rank.py:update_pred_min_data",
+      "provenance_ast_sha256": "0f0b5c2c202f6c6f2f01f6270cee63eed09a5f700e46c6fa342fef93ba51d669",
+      "target": "main.py:update_pred_min_data",
+      "statement": "Repair update_pred_min_data to append a running minimum: append pred_min for an empty list or when it is lower than the last value; otherwise repeat the last value.",
+      "source": "def update_pred_min_data(pred_min, values):\n    values.append(pred_min)\n    return values\n",
+      "examples": [
+        {"given": {"pred_min": 4, "values": []}, "expected": [4]},
+        {"given": {"pred_min": 3, "values": [5]}, "expected": [5, 3]},
+        {"given": {"pred_min": 7, "values": [5]}, "expected": [5, 5]}
+      ]
+    },
+    {
+      "id": "portmod_initial_message_guard",
+      "project": "portmod__portmod",
+      "provenance": "portmod/_cli/inquisitor.py:check_initial_message",
+      "provenance_ast_sha256": "a709d2aa6f1286bc8af6ed36aaad1f829072380695c575884c8ff3cf721a0f03",
+      "target": "main.py:check_initial_message",
+      "statement": "Repair check_initial_message: it is true only for a non-empty initial message whose stripped text differs from message and which does not start with 'fixup!'. Return a boolean.",
+      "source": "def check_initial_message(message, initial_message):\n    return bool(initial_message and initial_message.strip() != message)\n",
+      "examples": [
+        {"given": {"message": "subject", "initial_message": "fixup! subject"}, "expected": false},
+        {"given": {"message": "subject", "initial_message": "other"}, "expected": true},
+        {"given": {"message": "subject", "initial_message": " subject "}, "expected": false}
+      ]
+    },
+    {
+      "id": "launcher_pretty_size_binary_units",
+      "project": "re-volt__rvgl-launcher",
+      "provenance": "rv_launcher/helpers.py:pretty_size",
+      "provenance_ast_sha256": "1001f390921f28a99fb83e7afc04d2a180150e4a15bd772970c4108ae084370c",
+      "target": "main.py:pretty_size",
+      "statement": "Repair pretty_size to scale by 1024 and emit one decimal followed by the binary unit prefix and suffix.",
+      "source": "def pretty_size(size, suffix='B'):\n    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:\n        if abs(size) < 1000.0:\n            return f'{size:3.1f}{unit}{suffix}'\n        size /= 1000.0\n    return f'{size:.1f}Yi{suffix}'\n",
+      "examples": [
+        {"given": {"size": 1024, "suffix": "B"}, "expected": "1.0KiB"},
+        {"given": {"size": 1536, "suffix": "B"}, "expected": "1.5KiB"}
+      ]
+    },
+    {
+      "id": "flare_parameter_version_mapping",
+      "project": "cresset__flare-python-pyflare",
+      "provenance": "_internal/cmdutil.py:map_versions_to_parameter_files",
+      "provenance_ast_sha256": "6f4cc33c703b6f934e718775040bf039803c6ea07f3f08cd3434bf5ebb316f02",
+      "fixture_relation": "adapted_return_shape",
+      "target": "main.py:map_versions_to_parameter_files",
+      "statement": "Repair map_versions_to_parameter_files to recognize complete three-component semantic versions in openff_unconstrained-<version>.offxml filenames and return a version-to-file mapping; ignore unrelated files.",
+      "source": "import re\n\ndef map_versions_to_parameter_files(parameter_files):\n    result = {}\n    pattern = re.compile(r'^.*openff_unconstrained-(\\d+\\.\\d+).offxml.*$', re.IGNORECASE)\n    for parameter_file in parameter_files:\n        match = pattern.match(parameter_file)\n        if match:\n            result[match.group(1)] = parameter_file\n    return result\n",
+      "examples": [
+        {"given": {"parameter_files": ["openff_unconstrained-2.1.3.offxml", "other.txt"]}, "expected": {"2.1.3": "openff_unconstrained-2.1.3.offxml"}},
+        {"given": {"parameter_files": ["X-OPENFF_UNCONSTRAINED-1.0.0.OFFXML.bak"]}, "expected": {"1.0.0": "X-OPENFF_UNCONSTRAINED-1.0.0.OFFXML.bak"}}
+      ]
+    },
+    {
+      "id": "slpkg_alias_resolution",
+      "project": "dslackw__slpkg",
+      "provenance": "shell_completion.py:_resolve_command",
+      "provenance_ast_sha256": "01c4ec3a97fcb4fe91fa339d75a92fca46d387f61a531088ed355ad8057027aa",
+      "fixture_relation": "mutation_with_local_globals",
+      "target": "main.py:_resolve_command",
+      "statement": "Repair _resolve_command to skip option words, return canonical commands directly, map aliases through _ALIASES, and return an empty string if none is present.",
+      "source": "COMMAND_FLAGS = {'install', 'remove'}\n_ALIASES = {'i': 'install', 'rm': 'remove'}\n\ndef _resolve_command(args):\n    for word in args[1:]:\n        if not word.startswith('-'):\n            if word in COMMAND_FLAGS:\n                return word\n            if word in _ALIASES:\n                return word\n    return ''\n",
+      "examples": [
+        {"given": {"args": ["slpkg", "--quiet", "i"]}, "expected": "install"},
+        {"given": {"args": ["slpkg", "remove"]}, "expected": "remove"},
+        {"given": {"args": ["slpkg", "--help"]}, "expected": ""}
+      ]
+    },
+    {
+      "id": "review_anchor_inclusive_range",
+      "project": "ebrocas__pfa_revue_de_code",
+      "provenance": "src/anchor.py:anchor_is_at_line",
+      "provenance_ast_sha256": "60e31bbbe43364468a747d1df8573e458260f073965acae21c981d320d36fe08",
+      "fixture_relation": "adapted_domain_object_to_lines",
+      "target": "main.py:anchor_is_at_line",
+      "statement": "Repair anchor_is_at_line so the two-element lines range is inclusive at both boundaries.",
+      "source": "def anchor_is_at_line(lines, line):\n    first_line, last_line = lines\n    return first_line < line < last_line\n",
+      "examples": [
+        {"given": {"lines": [10, 20], "line": 10}, "expected": true},
+        {"given": {"lines": [10, 20], "line": 20}, "expected": true},
+        {"given": {"lines": [10, 20], "line": 21}, "expected": false}
+      ]
+    },
+    {
+      "id": "compound_minimal_mapping",
+      "project": "equilibrator__equilibrator-assets",
+      "provenance": "src/equilibrator_assets/compounds.py:create_compound_object",
+      "provenance_ast_sha256": "f6e12ca2dd910db30d8150623191d0c3775d6c01771a62ae6e0ec8d66a09f719",
+      "fixture_relation": "adapted_namedtuple_to_mapping",
+      "target": "main.py:create_compound_object",
+      "statement": "Repair create_compound_object to return exactly mnx_id, inchi_key, inchi, smiles, and mass from the input mapping, preserving values including null.",
+      "source": "def create_compound_object(row):\n    return {'mnx_id': row['mnx_id'], 'inchi_key': row['inchi_key'], 'inchi': row['inchi'], 'smiles': row['smiles']}\n",
+      "examples": [
+        {"given": {"row": {"mnx_id": "MNX1", "inchi_key": "KEY", "inchi": "I", "smiles": "C", "mass": 12.5}}, "expected": {"mnx_id": "MNX1", "inchi_key": "KEY", "inchi": "I", "smiles": "C", "mass": 12.5}},
+        {"given": {"row": {"mnx_id": "MNX2", "inchi_key": null, "inchi": null, "smiles": null, "mass": 0}}, "expected": {"mnx_id": "MNX2", "inchi_key": null, "inchi": null, "smiles": null, "mass": 0}}
+      ]
+    },
+    {
+      "id": "dashboard_form_class_name",
+      "project": "albertosanmartinmartinez__django-dashboards",
+      "provenance": "django_dashboards_app/views.py:get_form_class_name",
+      "provenance_ast_sha256": "e098b522c9e622158c01556475d75a23fbc3b7f880681c767cbac326b8a8ecd3",
+      "fixture_relation": "adapted_instance_attribute_to_argument",
+      "target": "main.py:get_form_class_name",
+      "statement": "Repair get_form_class_name to produce Base<ModelName>Form without changing case or adding separators.",
+      "source": "def get_form_class_name(model_name):\n    return f'{model_name}Form'\n",
+      "examples": [
+        {"given": {"model_name": "Book"}, "expected": "BaseBookForm"},
+        {"given": {"model_name": "user_profile"}, "expected": "Baseuser_profileForm"}
+      ]
+    },
+    {
+      "id": "features_missing_dependency_detection",
+      "project": "francesco-calcavecchia__features_factory",
+      "provenance": "src/features_factory/dependencies_error.py:has_missing_dependencies",
+      "provenance_ast_sha256": "6e5feaa5f7ee33ae2f060750724aff2accf235fcd13dd67dda5deca1969882ac",
+      "fixture_relation": "adapted_instance_mapping_to_argument",
+      "target": "main.py:has_missing_dependencies",
+      "statement": "Repair has_missing_dependencies to return true only when the total number of dependency entries across all mapping values is greater than zero.",
+      "source": "def has_missing_dependencies(dependencies):\n    return bool(dependencies)\n",
+      "examples": [
+        {"given": {"dependencies": {"feature_a": [], "feature_b": []}}, "expected": false},
+        {"given": {"dependencies": {"feature_a": ["numpy"], "feature_b": []}}, "expected": true},
+        {"given": {"dependencies": {}}, "expected": false}
+      ]
+    },
+    {
+      "id": "apt_version_pinned_command",
+      "project": "coala__package_manager",
+      "provenance": "dependency_management/requirements/AptRequirement.py:install_command",
+      "provenance_ast_sha256": "c5b89a0ef377c62d83fcae69463ceb9d0c8b0d7d13085158d3829099897f3da7",
+      "fixture_relation": "adapted_instance_attributes_to_arguments",
+      "target": "main.py:install_command",
+      "statement": "Repair install_command to return apt-get install --yes followed by package=version when version is non-empty, otherwise package alone.",
+      "source": "def install_command(package, version):\n    return ['apt-get', 'install', '--yes', package]\n",
+      "examples": [
+        {"given": {"package": "curl", "version": "8.1"}, "expected": ["apt-get", "install", "--yes", "curl=8.1"]},
+        {"given": {"package": "curl", "version": ""}, "expected": ["apt-get", "install", "--yes", "curl"]}
+      ]
+    },
+    {
+      "id": "olympic_medal_name_mapping",
+      "project": "caupetit__machine-learning-algorithms",
+      "provenance": "pandas_42AI_bootcamp.py:output_format",
+      "provenance_ast_sha256": "b96a8cde637d8e5a2cdfff8b6dcea62de88841c7df2f38818745763f4612c2c9",
+      "fixture_relation": "adapted_dataframe_to_mapping",
+      "target": "main.py:output_format",
+      "statement": "Repair output_format to map Gold, Silver, and Bronze source keys to G, S, and B, using zero for missing medals and ignoring unrelated keys.",
+      "source": "def output_format(data):\n    format_map = {'G': 'Gold', 'S': 'Silver'}\n    return {key: data.get(source) for key, source in format_map.items()}\n",
+      "examples": [
+        {"given": {"data": {"Gold": 3, "Silver": 2, "Bronze": 1, "Total": 6}}, "expected": {"G": 3, "S": 2, "B": 1}},
+        {"given": {"data": {"Gold": 1}}, "expected": {"G": 1, "S": 0, "B": 0}}
+      ]
+    }
+  ]
+}

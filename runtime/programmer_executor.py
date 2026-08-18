@@ -90,7 +90,11 @@ def run_programmer_executor(
     repair_attempt = {"status": "not_attempted", "reason": "first_verification_not_failed_or_candidate_not_applied"}
     if _repair_needed(test_result, candidate_attempt):
         synthesis, execution_project_dir, repair_strategy, repair_attempt = prepare_repair_synthesis(
-            execution_dir=execution_dir, project_dir=execution_project_dir, implementation_plan=implementation_plan, test_result=test_result
+            execution_dir=execution_dir,
+            project_dir=execution_project_dir,
+            implementation_plan=implementation_plan,
+            test_plan=test_plan,
+            test_result=test_result,
         )
         if repair_attempt.get("status") == "applied_in_sandbox":
             test_result = run_test_result(
@@ -350,7 +354,11 @@ def _blocked_contract_rows(test_plan: dict[str, Any]) -> list[Any]:
 
 
 def _repair_needed(test_result: dict[str, Any], candidate_attempt: dict[str, Any]) -> bool:
-    if candidate_attempt.get("status") != "applied_in_sandbox" or not llm_strategy_enabled():
+    if not llm_strategy_enabled():
+        return False
+    if candidate_attempt.get("status") == "blocked":
+        return candidate_attempt.get("reason") in {"diff_apply_failed", "diff_noop"}
+    if candidate_attempt.get("status") != "applied_in_sandbox":
         return False
     acceptance = dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {})
     return test_result.get("status") == "failed" or acceptance.get("signal_strength") != "executable_callable"

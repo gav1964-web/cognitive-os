@@ -19,7 +19,9 @@ def contract_transform_patch(
     contract = _single_arg_contract(test_plan, target, recipe)
     if contract is None:
         return None
-    transform = _matching_transform(contract["input"], contract["expected"], recipe)
+    transform = _matching_transform(
+        contract["input"], contract["expected"], recipe, declared_operator=contract.get("operator_id")
+    )
     if transform is None:
         return None
     tree = ast.parse(source)
@@ -63,12 +65,29 @@ def _single_arg_contract(test_plan: dict[str, Any], target: str, recipe: dict[st
         for key in expect_keys:
             expected = expect.get(key)
             if _sample_is_safe(expected):
-                return {"arg": str(arg), "input": value, "expected": expected}
+                profile = dict(row.get("contract_profile") or {})
+                return {
+                    "arg": str(arg),
+                    "input": value,
+                    "expected": expected,
+                    "operator_id": str(profile.get("operator_id") or ""),
+                }
     return None
 
 
-def _matching_transform(value: Any, expected: Any, recipe: dict[str, Any]) -> dict[str, str] | None:
-    for record in operator_records(recipe):
+def _matching_transform(
+    value: Any,
+    expected: Any,
+    recipe: dict[str, Any],
+    *,
+    declared_operator: object = None,
+) -> dict[str, str] | None:
+    records = operator_records(recipe)
+    declared = str(declared_operator or "")
+    for record in records:
+        if declared and record.get("id") == declared and value != expected:
+            return {"id": declared, "expression_template": str(record.get("expression_template") or "")}
+    for record in records:
         transform_id = str(record.get("id") or "")
         if _apply_transform(transform_id, value) == expected and value != expected:
             return {"id": transform_id, "expression_template": str(record.get("expression_template") or "")}

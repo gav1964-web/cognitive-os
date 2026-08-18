@@ -5,6 +5,8 @@ from runtime.local_inference import LocalInferenceConfig
 from runtime.dependency_boundary_profile import build_dependency_boundary_profile
 from runtime.first_slice_reselection_request import build_first_slice_reselection_request
 from runtime.first_slice_viability import first_slice_viability
+from runtime.implementation_delta import build_implementation_delta
+from runtime.requested_contract_profile import bind_requested_contract_profile
 from runtime.role_skill_common import now_iso
 
 def build_technical_spec(
@@ -28,6 +30,7 @@ def build_technical_spec(
     extraction_contract = _extraction_contract(
         evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
     )
+    extraction_contract = bind_requested_contract_profile(architecture_decision, extraction_contract)
     candidate = str(extraction_contract.get("candidate") or "")
     extraction_contract["first_slice_viability"] = first_slice_viability(
         candidate,
@@ -44,9 +47,11 @@ def build_technical_spec(
     acceptance = _ensure_candidate_acceptance(acceptance, extraction_contract)
     acceptance = _ensure_contract_family_acceptance(acceptance, extraction_contract)
     interface_contracts = _interface_contracts(brief, evidence, extraction_contract)
+    implementation_delta = build_implementation_delta(architecture_decision, extraction_contract, acceptance)
     implementation_handoff = {
         "recommended_role": next_role_id,
         "expected_output": "ImplementationPlan",
+        "mode": implementation_delta.get("status"),
         "patch_scope": _handoff_patch_scope(
             brief,
             work_plan_contract,
@@ -78,6 +83,7 @@ def build_technical_spec(
         "first_slice_reselection_request": first_slice_reselection_request,
         "spec_writer_advisory": extraction_contract.get("candidate_advisory", {}),
         "work_plan_contract": work_plan_contract,
+        "implementation_delta": implementation_delta,
         "interface_contracts": interface_contracts,
         "data_lifecycle": _data_lifecycle(brief, architecture_decision),
         "state_and_replay_policy": _state_and_replay_policy(brief, architecture_decision),

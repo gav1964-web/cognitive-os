@@ -29,7 +29,12 @@
     "TechnicalSpec": {
       "producer": "spec_writer",
       "consumers": ["implementer", "tester", "reviewer"],
-      "required_fields": ["artifact_type", "requirements", "source_evidence", "extraction_contract", "work_plan_contract", "interface_contracts", "acceptance_criteria", "traceability_table"]
+      "required_fields": ["artifact_type", "requirements", "source_evidence", "extraction_contract", "work_plan_contract", "implementation_delta", "interface_contracts", "acceptance_criteria", "traceability_table"]
+    },
+    "ImplementationDelta": {
+      "producer": "spec_writer",
+      "consumers": ["implementer", "programmer_executor", "tester", "reviewer"],
+      "required_fields": ["artifact_type", "status", "target", "intent", "reason", "evidence", "acceptance_ids", "authority"]
     },
     "SystemKnowledgeIR": {
       "producer": "system_knowledge_compiler",
@@ -39,7 +44,7 @@
     "ImplementationPlan": {
       "producer": "implementer",
       "consumers": ["programmer_executor", "tester", "reviewer"],
-      "required_fields": ["artifact_type", "patch_scope", "expected_files", "verification_commands", "rollback_plan"]
+      "required_fields": ["artifact_type", "implementation_delta", "patch_scope", "expected_files", "verification_commands", "rollback_plan"]
     },
     "TestPlan": {
       "producer": "tester",

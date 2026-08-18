@@ -13,6 +13,7 @@ from typing import Any
 from .executable_acceptance_ast_imports import loaded_names as _loaded_names
 from .executable_acceptance_ast_imports import needed_class_members
 from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
+from .executable_acceptance_callable_context import with_runtime_effect_stubs
 from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes
 from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_method_fixtures import method_fixture_values
@@ -44,6 +45,8 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         configured_stubs = install_configured_global_fixtures(nodes, namespace)
         wildcard_stubs = install_unresolved_wildcard_names(tree, nodes, namespace)
         func = namespace.get(symbol)
+        if callable(func):
+            func = with_runtime_effect_stubs(func, set(effect_stubs))
         return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]], "wildcard_import_stubs": wildcard_stubs}
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
@@ -101,6 +104,8 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             for key, value in attrs.items():
                 setattr(instance, key, value)
             func = getattr(instance, symbol, None)
+        if callable(func):
+            func = with_runtime_effect_stubs(func, set(effect_stubs))
         return {
             "callable": func,
             "reason": "" if callable(func) else "target_not_callable",

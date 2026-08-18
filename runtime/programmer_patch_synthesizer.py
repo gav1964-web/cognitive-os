@@ -29,6 +29,21 @@ def synthesize_patch_package(
     implementation_plan: dict[str, Any],
     test_plan: dict[str, Any],
 ) -> dict[str, Any]:
+    delta = dict(implementation_plan.get("implementation_delta") or {})
+    if delta.get("status") == "verification_only":
+        return {
+            "status": "verification_only",
+            "reason": "no_evidence_backed_behavior_change",
+            "patches": [],
+            "implementation_delta": delta,
+        }
+    if delta.get("status") == "semantic_synthesis_required":
+        return {
+            "status": "skipped",
+            "reason": "semantic_delta_requires_patch_hypothesis",
+            "patches": [],
+            "implementation_delta": delta,
+        }
     target = _target_symbol(implementation_plan)
     if not target:
         return dict(NO_PATCH)

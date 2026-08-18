@@ -236,7 +236,13 @@ def _executable_acceptance(
     input_contract = dict(contract_binding.get("input_contract", {}))
     output_contract = dict(contract_binding.get("output_contract", {}))
     obligations = []
-    profile_case = profile_positive_case(target=target, input_contract=input_contract, output_contract=output_contract)
+    bound_profile = dict(contract_binding.get("contract_profile") or {})
+    profile_case = profile_positive_case(
+        target=target,
+        input_contract=input_contract,
+        output_contract=output_contract,
+        profile_id=str(bound_profile.get("id") or "") or None,
+    )
     for index, item in enumerate(acceptance[:10], start=1):
         acceptance_id = str(item.get("id") or f"AC-{index:03d}")
         obligation = {

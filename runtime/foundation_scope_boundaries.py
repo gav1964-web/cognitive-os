@@ -99,6 +99,16 @@ def scripts_only_python_support(path: Path, py_files: list[Path], root_package: 
     return all(source.relative_to(path).parts[0].lower() in {"script", "scripts", "tools"} for source in py_files)
 
 
+def curriculum_exercise_corpus(path: Path, py_files: list[Path], root_package: str | None) -> bool:
+    if root_package or not py_files:
+        return False
+    markers = set(scope_policy_list("curriculum_exercise_path_parts"))
+    return bool(markers) and all(
+        markers.intersection(part.lower() for part in source.relative_to(path).parts[:-1])
+        for source in py_files
+    )
+
+
 def documentation_deployment_demo(path: Path, python_source_files: list[Path], root_package: str | None) -> bool:
     if root_package or not python_source_files or len(python_source_files) > 20:
         return False

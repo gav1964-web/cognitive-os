@@ -48,6 +48,18 @@ def test_contract_transform_profiles_load_and_select_normalize_case():
     assert case["operator_id"] == "strip_lower"
 
 
+def test_bound_profile_takes_precedence_over_broader_name_match():
+    case = profile_positive_case(
+        target="main.py:normalize_option_name",
+        input_contract={"name": "str"},
+        output_contract={"result": "str"},
+        profile_id="normalized_option_name",
+    )
+
+    assert case
+    assert case["operator_id"] == "lower_replace_dash"
+
+
 def test_contract_profile_hint_enriches_inferred_signature_contract():
     hint = contract_profile_hint(
         target="main.py:normalize_name",
@@ -154,7 +166,7 @@ def _adr_for_normalize_name() -> dict[str, object]:
     return {
         "artifact_type": "ArchitectureDecisionRecord",
         "role": "architect",
-        "goal": "Prepare deterministic transform contract",
+        "goal": "Implement deterministic transform contract",
         "chosen_option": {"id": "minimal_safe_extraction"},
         "spec_writer_brief": {
             "scope": ["Prepare normalize_name for implementation."],

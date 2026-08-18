@@ -12,6 +12,7 @@ def build_implementation_blueprint(
     change_plan: list[dict[str, Any]],
     quality_gates: list[dict[str, Any]],
     acceptance: list[dict[str, Any]],
+    implementation_delta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidate = target.get("candidate")
     if not candidate:
@@ -21,12 +22,14 @@ def build_implementation_blueprint(
             "target": None,
             "reason": target.get("selection_reason") or "no source-backed implementation target",
         }
+    delta = dict(implementation_delta or {})
     return {
         "artifact_type": "ImplementationBlueprint",
         "status": "ready",
         "target": candidate,
         "language": "python",
-        "operation": "modify_existing_symbol_or_extract_adjacent_helper",
+        "operation": dict(delta.get("intent") or {}).get("kind") or "unspecified_change",
+        "implementation_delta": delta,
         "source_contract": {
             "input_contract": binding.get("input_contract", {}),
             "output_contract": binding.get("output_contract", {}),
@@ -50,15 +53,19 @@ def build_implementation_blueprint(
 def build_patch_intent(
     *,
     target: dict[str, Any],
+    implementation_delta: dict[str, Any] | None = None,
     writable_scope: list[str],
     expected_files: list[str],
     verification_commands: list[str],
 ) -> dict[str, Any]:
     candidate = target.get("candidate")
+    delta = dict(implementation_delta or {})
+    delta_status = str(delta.get("status") or "ready")
     return {
         "artifact_type": "PatchIntent",
         "mode": "sandbox_first",
-        "status": "ready" if candidate else "blocked_no_safe_candidate",
+        "status": delta_status if candidate else "blocked_no_safe_candidate",
+        "implementation_delta": delta,
         "target_symbol": candidate,
         "allowed_files": expected_files,
         "allowed_write_scope": writable_scope,

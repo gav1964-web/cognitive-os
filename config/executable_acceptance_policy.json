@@ -48,6 +48,7 @@
           "mcp_types.methods": {"attrs": {"__all__": [], "__getattr__": {"__fixture__": "module_getattr_stub"}}},
           "mcp_types.version": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "LATEST_PROTOCOL_VERSION", "is_version_at_least"], "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "LATEST_PROTOCOL_VERSION": "2025-06-18", "is_version_at_least": {"__fixture__": "callable_true"}}},
           "pants.engine.internals.native_engine": {"attrs": {"__getattr__": {"__fixture__": "module_getattr_stub"}, "EngineError": {"__fixture__": "stub_class"}, "ProcessExecutionEnvironment": {"__fixture__": "stub_class"}}},
+          "passlib.context": {"attrs": {"CryptContext": {"__fixture__": "crypt_context_class"}}},
           "semantic_version": {"attrs": {"__all__": ["Version", "SimpleSpec"], "Version": {"__fixture__": "stub_class"}, "SimpleSpec": {"__fixture__": "stub_class"}}},
           "traitlets.config.loader": {"attrs": {"Config": {"__fixture__": "stub_class"}, "ConfigFileNotFound": {"__fixture__": "stub_class"}}},
           "tox.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
@@ -145,8 +146,14 @@
     "global_symbol_fixtures": {
       "StaticFiles": {"__fixture__": "safe_symbolic_attribute"}
     },
-    "effect_module_stubs": {
-      "socket": {
+      "effect_module_stubs": {
+        "ntptime": {
+          "attributes": {"settime": {"__fixture__": "callable_object_noop"}}
+        },
+        "smtplib": {
+          "attributes": {"SMTP": {"__fixture__": "callable_object_noop"}}
+        },
+        "socket": {
         "attributes": {
           "AF_INET": 2,
           "SHUT_RDWR": 2,

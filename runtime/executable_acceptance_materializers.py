@@ -85,6 +85,8 @@ def materialize(value: Any) -> Any:
             return type("ChromaCollectionModel", (), {"id": "collection-id", "tenant": "default_tenant", "database": "default_database"})()
         if fixture == "hatch_virtual_environment_class":
             return type("VirtualEnvironment", (), {})
+        if fixture == "crypt_context_class":
+            return type("CryptContext", (), {"__init__": _stub_init, "verify": _verify_secret, "hash": _hash_secret})
         if fixture == "configparser_flake8_empty":
             parser = __import__("configparser").RawConfigParser()
             parser.add_section("flake8:local-plugins")
@@ -147,6 +149,14 @@ def materialize(value: Any) -> Any:
 
 def _stub_init(self: Any, *args: Any, **kwargs: Any) -> None:
     self.__dict__.update(kwargs)
+
+
+def _verify_secret(self: Any, plain: Any, encoded: Any, *args: Any, **kwargs: Any) -> bool:
+    return bool(plain) and bool(encoded)
+
+
+def _hash_secret(self: Any, value: Any, *args: Any, **kwargs: Any) -> str:
+    return f"acceptance-hash:{value}"
 
 
 def _gradio_block_function_init(self: Any, fn: Any = None, inputs: Any = None, outputs: Any = None, *args: Any, **kwargs: Any) -> None:

@@ -26,6 +26,7 @@ def build_implementation_plan(
     acceptance = list(technical_spec.get("acceptance_criteria", []))
     handoff = dict(technical_spec.get("implementation_handoff", {}))
     extraction_contract = dict(technical_spec.get("extraction_contract", {}))
+    implementation_delta = dict(technical_spec.get("implementation_delta") or {})
     evidence_scope = _implementation_evidence_scope(technical_spec, handoff)
     target = _implementation_target(extraction_contract, evidence_scope)
     patch_scope = _bounded_patch_scope(evidence_scope, target)
@@ -37,6 +38,7 @@ def build_implementation_plan(
     verification_commands = _verification_commands()
     patch_intent = build_patch_intent(
         target=target,
+        implementation_delta=implementation_delta,
         writable_scope=writable_scope,
         expected_files=expected_files,
         verification_commands=verification_commands,
@@ -52,6 +54,7 @@ def build_implementation_plan(
             "chosen_architecture_option": technical_spec.get("chosen_architecture_option"),
         },
         "implementation_target": target,
+        "implementation_delta": implementation_delta,
         "contract_binding": binding,
         "patch_scope": patch_scope,
         "evidence_scope": evidence_scope,
@@ -66,6 +69,7 @@ def build_implementation_plan(
             change_plan=change_plan,
             quality_gates=quality_gates,
             acceptance=acceptance,
+            implementation_delta=implementation_delta,
         ),
         "patch_intent": patch_intent,
         "executor_handoff": build_executor_handoff(patch_intent=patch_intent),
@@ -112,8 +116,25 @@ def _build_greenfield_implementation_plan(
     change_plan = _greenfield_change_plan(technical_spec, target, expected_files)
     quality_gates = _greenfield_quality_gates(technical_spec, expected_files)
     verification_commands = ["python -m compileall -b .", "python -m pytest tests -q"]
+    implementation_delta = {
+        "artifact_type": "ImplementationDelta",
+        "status": "ready",
+        "target": target["candidate"],
+        "intent": {
+            "kind": "create_greenfield_project",
+            "statement": "Create the isolated package defined by ProductTechnicalSpec.",
+        },
+        "reason": "ProductTechnicalSpec is an explicit user-authorized creation contract.",
+        "evidence": [{"source": "ProductTechnicalSpec.primary_contract"}],
+        "acceptance_ids": [
+            str(row.get("id")) for row in list(technical_spec.get("acceptance_criteria") or []) if row.get("id")
+        ][:12],
+        "authority": "source_and_user_evidence_only",
+        "apply_source_default": False,
+    }
     patch_intent = build_patch_intent(
         target=target,
+        implementation_delta=implementation_delta,
         writable_scope=writable_scope,
         expected_files=expected_files,
         verification_commands=verification_commands,
@@ -124,6 +145,7 @@ def _build_greenfield_implementation_plan(
         change_plan=change_plan,
         quality_gates=quality_gates,
         acceptance=list(technical_spec.get("acceptance_criteria", [])),
+        implementation_delta=implementation_delta,
     )
     blueprint["operation"] = "create_isolated_greenfield_package_from_product_spec"
     blueprint["project_case"] = case_name
@@ -140,6 +162,7 @@ def _build_greenfield_implementation_plan(
             "chosen_architecture_option": technical_spec.get("chosen_architecture_option"),
         },
         "implementation_target": target,
+        "implementation_delta": implementation_delta,
         "contract_binding": binding,
         "patch_scope": patch_scope,
         "evidence_scope": _greenfield_evidence_scope(technical_spec),
