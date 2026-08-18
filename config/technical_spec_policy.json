@@ -118,6 +118,16 @@
   "first_slice_reselection": {
     "enabled": true,
     "production_triggers": ["low_first_slice_viability"],
+    "execution_feedback_enabled": true,
+    "execution_feedback_max_iterations": 2,
+    "execution_rejection_reasons": [
+      "import_failed_import_error",
+      "import_failed_missing_module",
+      "import_failed_runtime_error",
+      "method_target_needs_instance_fixture",
+      "positive_sample_execution_failed",
+      "positive_signature_mismatch"
+    ],
     "allow_declared_dependency_candidates": true,
   "max_iterations": 3,
     "expanded_candidate_limit": 64,

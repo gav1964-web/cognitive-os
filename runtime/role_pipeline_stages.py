@@ -13,6 +13,12 @@ from .role_project_analysis import analyze_role_project
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 from .technical_spec_policy import load_technical_spec_policy
+from .architect_first_slice_reselection import reselect_architecture_first_slice
+from .executable_reselection import (
+    build_execution_reselection_request,
+    feedback_iteration_limit,
+    record_rejected_target,
+)
 
 
 def stage_analyze(state: dict[str, Any]) -> None:
@@ -29,6 +35,12 @@ def stage_build(state: dict[str, Any]) -> None:
         until_output_key="programmer_task_tree",
         reselection_triggers={str(item) for item in reselection.get("production_triggers") or []},
     )
+    _bind_build_artifacts(state, artifacts)
+
+
+def _bind_build_artifacts(
+    state: dict[str, Any], artifacts: dict[str, dict[str, Any]]
+) -> None:
     state["artifacts"] = artifacts
     for key, artifact_type in (
         ("adr", "ArchitectureDecisionRecord"),
@@ -44,9 +56,78 @@ def stage_build(state: dict[str, Any]) -> None:
 
 
 def stage_after_build(state: dict[str, Any]) -> None:
+    _run_executor_stage(state)
+    _close_execution_reselection_loop(state)
+
+
+def _run_executor_stage(state: dict[str, Any]) -> None:
     executor = run_lifecycle_phase("after_build", context=state["lifecycle_context"])["executor"]
     state["executor"] = executor
     state["test_result"] = dict(executor.get("test_result", {})) if executor.get("test_result") else None
+
+
+def _close_execution_reselection_loop(state: dict[str, Any]) -> None:
+    history: list[dict[str, Any]] = []
+    for iteration in range(1, feedback_iteration_limit() + 1):
+        request = build_execution_reselection_request(state["executor"], state["spec"])
+        if request.get("status") != "required":
+            break
+        rejected = record_rejected_target(state["adr"], request, iteration=iteration)
+        spec_with_request = dict(state["spec"])
+        spec_with_request["first_slice_reselection_request"] = {
+            **request,
+            "status": "required",
+        }
+        resolution = reselect_architecture_first_slice(
+            architecture_decision=rejected,
+            technical_spec=spec_with_request,
+            project_report=state["project_report"],
+            iteration=iteration,
+        )
+        event = {
+            "iteration": iteration,
+            "rejected_target": request.get("current_target"),
+            "blocking_evidence": request.get("blocking_evidence"),
+            "resolution_status": resolution.get("status"),
+            "selected_targets": list(dict(resolution.get("outcome") or {}).get("selected_targets") or []),
+        }
+        history.append(event)
+        if resolution.get("status") != "selected":
+            break
+        artifacts = run_configured_role_prefix(
+            goal=state["goal"],
+            project_report=state["project_report"],
+            architect_advisory_config=state["architect_advisory_config"],
+            until_output_key="programmer_task_tree",
+            artifact_transform=_replace_architecture_decision(
+                dict(resolution.get("architecture_decision") or rejected)
+            ),
+        )
+        _bind_build_artifacts(state, artifacts)
+        _run_executor_stage(state)
+    if history:
+        pending = build_execution_reselection_request(state["executor"], state["spec"])
+        feedback_status = "iteration_limit" if pending.get("status") == "required" else "resolved"
+        state["execution_reselection_history"] = history
+        state["executor"]["execution_reselection_history"] = history
+        state["executor"]["execution_reselection_status"] = feedback_status
+        if feedback_status == "iteration_limit":
+            state["executor"]["status"] = "needs_review"
+            if state.get("test_result"):
+                state["test_result"]["status"] = "failed"
+                summary = state["test_result"].setdefault("summary", {})
+                summary["execution_reselection"] = "iteration_limit"
+                state["executor"]["test_result"] = state["test_result"]
+        for artifact in state["artifacts"].values():
+            artifact["execution_reselection_history"] = history
+            artifact["execution_reselection_status"] = feedback_status
+
+
+def _replace_architecture_decision(revised: dict[str, Any]):
+    def transform(artifact: dict[str, Any]) -> dict[str, Any]:
+        return revised if artifact.get("artifact_type") == "ArchitectureDecisionRecord" else artifact
+
+    return transform
 
 
 def stage_review(state: dict[str, Any]) -> None:

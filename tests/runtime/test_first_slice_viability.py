@@ -111,6 +111,25 @@ def test_analyzer_protocol_usage_survives_truncated_snippet():
     assert result["reselection_required"] is True
 
 
+def test_declared_domain_model_remains_valid_architecture_target():
+    result = first_slice_viability(
+        "main.py:price_item",
+        {
+            "snippet": {
+                "signature": {
+                    "args": [{"name": "req", "annotation": "ItemRequest"}]
+                },
+                "structural_contract": {
+                    "argument_usage_types": {"req": "ProtocolLike"}
+                },
+            }
+        },
+    )
+
+    assert result["status"] == "eligible"
+    assert result["reselection_required"] is False
+
+
 def test_runtime_callback_requires_fixture_before_selection():
     result = first_slice_viability("main.py:sub_cb")
 

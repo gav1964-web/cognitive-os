@@ -99,8 +99,17 @@ def _facts(
 
 def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> str:
     structural = dict(snippet.get("structural_contract") or {})
-    usage_types = {str(value) for value in dict(structural.get("argument_usage_types") or {}).values()}
-    if "ProtocolLike" in usage_types:
+    usage = {str(name): str(value) for name, value in dict(structural.get("argument_usage_types") or {}).items()}
+    protocol_names = {name for name, value in usage.items() if value == "ProtocolLike"}
+    if protocol_names:
+        signature = dict(snippet.get("signature") or {})
+        annotations = {
+            str(row.get("name")): str(row.get("annotation") or "").strip()
+            for row in signature.get("args") or []
+            if isinstance(row, dict) and row.get("name")
+        }
+        if all(annotations.get(name) for name in protocol_names):
+            return "declared_protocol"
         return "object_protocol"
     return _input_complexity(
         str(snippet.get("text") or ""),

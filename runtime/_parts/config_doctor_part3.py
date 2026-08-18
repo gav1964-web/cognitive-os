@@ -90,6 +90,18 @@ def _check_technical_spec_policy(catalogs: dict[str, Any]) -> _Check:
     shape = dict(policy.get("architecture_shape_score") or {})
     if not shape.get("positive_source_tokens") or not shape.get("negative_source_tokens"):
         check.errors.append("technical_spec_policy_missing:architecture_shape_score.tokens")
+    reselection = dict(policy.get("first_slice_reselection") or {})
+    for field_name in (
+        "execution_feedback_enabled",
+        "execution_feedback_max_iterations",
+        "execution_rejection_reasons",
+    ):
+        if field_name not in reselection:
+            check.errors.append(f"technical_spec_policy_missing:first_slice_reselection.{field_name}")
+    if int(reselection.get("execution_feedback_max_iterations") or 0) < 1:
+        check.errors.append("technical_spec_policy_invalid:first_slice_reselection.execution_feedback_max_iterations")
+    if not reselection.get("execution_rejection_reasons"):
+        check.errors.append("technical_spec_policy_invalid:first_slice_reselection.execution_rejection_reasons")
     return check
 
 
