@@ -31,7 +31,17 @@ def load_function_invocation_patterns(path: str | Path | None = None) -> dict[st
             raise ValueError(f"Invocation pattern lacks independent-project evidence: {row.get('id')}")
         if int(evidence.get("observations") or 0) < min_observations:
             raise ValueError(f"Invocation pattern lacks observation evidence: {row.get('id')}")
+    extraction = dict(payload.get("upstream_test_extraction") or {})
+    if extraction.get("enabled") is not True or int(extraction.get("max_files") or 0) <= 0:
+        raise ValueError("Invocation pattern upstream extraction policy is invalid")
+    if not extraction.get("allowed_value_shapes") or not extraction.get("forbidden_value_shapes"):
+        raise ValueError("Invocation pattern upstream extraction shapes are missing")
     return payload
+
+
+def upstream_test_extraction_policy(catalog: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = catalog or load_function_invocation_patterns()
+    return dict(payload.get("upstream_test_extraction") or {})
 
 
 def match_invocation_pattern(

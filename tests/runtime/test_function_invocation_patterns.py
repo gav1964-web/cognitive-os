@@ -1,7 +1,11 @@
 from pathlib import Path
 
 from runtime.function_invocation_miner import mine_function_invocations
-from runtime.function_invocation_patterns import load_function_invocation_patterns, match_invocation_pattern
+from runtime.function_invocation_patterns import (
+    load_function_invocation_patterns,
+    match_invocation_pattern,
+    upstream_test_extraction_policy,
+)
 
 
 def test_invocation_kb_is_anonymized_and_selects_declared_model():
@@ -11,6 +15,9 @@ def test_invocation_kb_is_anonymized_and_selects_declared_model():
     match = match_invocation_pattern({"request": "CreateUserRequest"}, {"result": "User"}, catalog)
     assert match["id"] == "declared_local_model_contract"
     assert match["construction"] == "signature_annotation_keyword_constructor"
+    extraction = upstream_test_extraction_policy(catalog)
+    assert extraction["qualified_call_requires_exact_module_import"] is True
+    assert "arbitrary_expression" in extraction["forbidden_value_shapes"]
 
 
 def test_miner_promotes_only_repeated_anonymized_shapes(tmp_path: Path):

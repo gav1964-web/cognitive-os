@@ -113,7 +113,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported("target_outside_project")
     if not path.is_file():
         return _unsupported("target_file_missing")
-    inferred = infer_argument_samples(path, symbol)
+    inferred = infer_argument_samples(path, symbol, project_root=project_dir)
     with import_path(project_dir):
         loaded = load_supported_callable(project_dir, path_text, symbol, path)
     func = loaded.get("callable")
@@ -141,7 +141,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 )
             if not samples_ok:
                 cleanup_dependency_stubs(loaded)
-                isolated_support = _isolated_retry(path, symbol, target, obligations)
+                isolated_support = _isolated_retry(path, symbol, target, obligations, inferred)
                 if isolated_support.get("supported"):
                     return isolated_support
                 return _unsupported(
@@ -166,7 +166,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         isolated = load_source_isolated_callable(path, symbol)
         if callable(isolated.get("callable")):
             cleanup_dependency_stubs(loaded)
-            return _source_isolated_support(isolated, target, obligations)
+            return _source_isolated_support(isolated, target, obligations, inferred)
         cleanup_dependency_stubs(loaded)
         return _unsupported(ast_skip_reason(path, symbol), str(method.get("detail") or ""))
     if loaded.get("reason"):
@@ -178,7 +178,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         }:
             isolated = load_source_isolated_callable(path, symbol)
             if callable(isolated.get("callable")):
-                return _source_isolated_support(isolated, target, obligations)
+                return _source_isolated_support(isolated, target, obligations, inferred)
         return _unsupported(str(loaded["reason"]), str(loaded.get("detail") or ""))
     if not callable(func):
         cleanup_dependency_stubs(loaded)
@@ -203,7 +203,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     if not samples_ok:
         cleanup_dependency_stubs(loaded)
         if not loaded.get("source_isolated"):
-            isolated_support = _isolated_retry(path, symbol, target, obligations)
+            isolated_support = _isolated_retry(path, symbol, target, obligations, inferred)
             if isolated_support.get("supported"):
                 return isolated_support
         if loaded.get("source_isolated") and loaded.get("fallback_reason"):
@@ -240,22 +240,33 @@ def _positive_samples_execute_with_profiles(
             sys.modules.pop(str(name), None)
 
 
-def _source_isolated_support(loaded: dict[str, Any], target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
+def _source_isolated_support(
+    loaded: dict[str, Any],
+    target: str,
+    obligations: list[dict[str, Any]],
+    inferred: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     func = loaded["callable"]
     path = Path(str(loaded.get("source_path") or ""))
-    inferred = infer_argument_samples(path, target.partition(":")[2]) if path.is_file() else {}
-    binding = positive_case_binding(func, target, obligations, inferred)
+    source_inferred = inferred or (infer_argument_samples(path, target.partition(":")[2]) if path.is_file() else {})
+    binding = positive_case_binding(func, target, obligations, source_inferred)
     diagnostics: list[str] = []
     if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload")), diagnostics, dict(binding["overrides"])):
         return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
     return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "argument_overrides": binding["overrides"], "argument_sample_evidence": binding["evidence"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
 
-def _isolated_retry(path: Path, symbol: str, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
+def _isolated_retry(
+    path: Path,
+    symbol: str,
+    target: str,
+    obligations: list[dict[str, Any]],
+    inferred: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     isolated = load_source_isolated_callable(path, symbol)
     if not callable(isolated.get("callable")):
         return _unsupported(str(isolated.get("reason") or "target_not_callable"), str(isolated.get("detail") or ""))
-    return _source_isolated_support(isolated, target, obligations)
+    return _source_isolated_support(isolated, target, obligations, inferred)
 
 
 def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]], inferred: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:

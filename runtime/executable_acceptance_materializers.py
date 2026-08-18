@@ -65,6 +65,9 @@ def materialize(value: Any) -> Any:
             return type("AcceptanceStub", (), {"__init__": _stub_init, "model_dump_json": lambda self, *args, **kwargs: "{}"})
         if fixture == "stub_request_class":
             return type("JSONRPCRequest", (), {"method": "", "params": {}, "id": "1"})
+        if fixture == "declared_model":
+            fields = {str(key): materialize(item) for key, item in dict(value.get("fields") or {}).items()}
+            return type(str(value.get("type") or "AcceptanceModel"), (), fields)()
         if fixture == "jsonrpc_adapter":
             return type("Adapter", (), {"validate_python": lambda self, value, **kwargs: value})()
         if fixture == "click_context_noop":

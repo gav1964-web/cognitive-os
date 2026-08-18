@@ -8,6 +8,14 @@
     "store_project_names": false,
     "store_source_code": false
   },
+  "upstream_test_extraction": {
+    "enabled": true,
+    "max_files": 500,
+    "candidate_priority": 120,
+    "qualified_call_requires_exact_module_import": true,
+    "allowed_value_shapes": ["literal", "collection", "mapping", "keyword_only_constructor"],
+    "forbidden_value_shapes": ["arbitrary_expression", "factory_call", "positional_constructor"]
+  },
   "patterns": [
     {
       "id": "keyword_scalar_contract",
