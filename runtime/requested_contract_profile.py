@@ -46,6 +46,7 @@ def bind_requested_contract_profile(
             "id": profile_id,
             "operator_id": operator_id,
             "source": "contract_transform_contract_profiles",
+            "oracle_authority": "explicit_architect_request",
         },
         "requested_profile_binding": {
             "status": "verified",

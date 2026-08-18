@@ -207,6 +207,7 @@ def _extraction_contract(
         input_contract=signature_input_contract,
         output_contract=signature_output_contract,
         side_effects=contract_side_effects,
+        source_snippet=str(candidate.get("snippet") or ""),
     )
     signature_input_contract = dict(enriched_contract.get("input_contract") or signature_input_contract)
     signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)

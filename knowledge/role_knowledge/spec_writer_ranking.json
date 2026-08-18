@@ -44,7 +44,7 @@
     "name.memory_state": {"score": -35, "reason": "explicit memory/global state mutation"},
     "name.framework_boundary": {"score": -35, "reason": "framework request/response boundary, not first reusable core contract"},
     "name.handler_boundary": {"score": -20, "reason": "handler/middleware boundary is less reusable than a core helper"},
-    "profile.executable": {"score": 18, "reason": "matches executable contract profile {profile_id}"},
+    "profile.executable": {"score": 3, "reason": "name suggests non-authoritative contract profile {profile_id}"},
     "readiness.shape": {"score": 10, "reason": "first executable slice has parser/normalizer/builder shape"},
     "readiness.inputs": {"score": 4, "reason": "inputs look materializable by executable acceptance fixtures"},
     "readiness.runtime_boundary": {"score": -28, "reason": "runtime object boundary is weaker as first executable contract"},

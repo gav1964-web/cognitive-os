@@ -11,11 +11,13 @@ from runtime.contract_transform_contract_profiles import (
 from runtime.implementation_plan_builder import build_implementation_plan
 from runtime.programmer_executor import run_programmer_executor
 from runtime.role_spec_writer_ranking import name_and_contract_score
+from runtime.spec_writer_ranking_kb import load_spec_writer_ranking_kb
 from runtime.technical_spec_builder import build_technical_spec
 from runtime.test_plan_builder import build_test_plan
+from runtime.technical_spec_contract_enrichment import enrich_signature_contract
 
 
-def _implementation_plan(target: str) -> dict[str, object]:
+def _implementation_plan(target: str, *, oracle_authority: str = "") -> dict[str, object]:
     return {
         "artifact_type": "ImplementationPlan",
         "role": "implementer",
@@ -29,6 +31,11 @@ def _implementation_plan(target: str) -> dict[str, object]:
             "binding_status": "bound_to_extraction_contract",
             "input_contract": {"name": "str"},
             "output_contract": {"result": "str"},
+            "contract_profile": {
+                "id": "normalize_string",
+                "operator_id": "strip_lower",
+                "oracle_authority": oracle_authority,
+            },
         },
     }
 
@@ -73,27 +80,74 @@ def test_contract_profile_hint_enriches_inferred_signature_contract():
     assert hint["contract_profile"]["operator_id"] == "strip_lower"
 
 
-def test_spec_writer_ranking_rewards_safe_contract_profile_candidate():
+def test_source_observed_operator_authorizes_literal_oracle():
+    enriched = enrich_signature_contract(
+        target="main.py:normalize_name",
+        input_contract={"name": "str"},
+        output_contract={"result": "str"},
+        source_snippet="def normalize_name(name):\n    return name.strip().lower()",
+    )
+
+    assert enriched["contract_profile"]["oracle_authority"] == "source_observed_operator"
+    plan = _implementation_plan("main.py:normalize_name")
+    plan["contract_binding"]["contract_profile"] = enriched["contract_profile"]
+    test_plan = build_test_plan(
+        technical_spec={"acceptance_criteria": [{"id": "AC-001", "criterion": "normalizes"}]},
+        implementation_plan=plan,
+    )
+    assert test_plan["executable_acceptance"]["obligations"][0]["expect"] == {"return_value": "sample"}
+
+
+def test_nonmatching_normalize_implementation_keeps_name_hint_non_authoritative():
+    enriched = enrich_signature_contract(
+        target="auth.py:_normalize_api_key",
+        input_contract={"api_key": "str"},
+        output_contract={"result": "str"},
+        source_snippet=(
+            "def _normalize_api_key(api_key):\n"
+            "    return api_key if '@' in api_key else f'{api_key}@AMER.OAUTHAP'"
+        ),
+    )
+
+    assert enriched["contract_profile"]["oracle_authority"] == "name_hint_only"
+
+
+def test_spec_writer_ranking_treats_name_profile_as_weak_hint():
     score, reasons = name_and_contract_score(
         "main.py:normalize_name",
         {"args": [{"name": "name", "annotation": ""}], "returns": ""},
         [],
     )
 
-    assert score >= 18
-    assert any("matches executable contract profile normalize_string" in reason for reason in reasons)
+    assert score
+    assert load_spec_writer_ranking_kb()["adjustments"]["profile.executable"]["score"] == 3
+    assert any("non-authoritative contract profile normalize_string" in reason for reason in reasons)
 
 
-def test_test_plan_builder_uses_contract_transform_profile_for_positive_case():
+def test_test_plan_builder_does_not_treat_name_hint_as_literal_oracle():
     plan = build_test_plan(
         technical_spec={"acceptance_criteria": [{"id": "AC-001", "criterion": "name is normalized"}]},
         implementation_plan=_implementation_plan("main.py:normalize_name"),
     )
 
     obligation = plan["executable_acceptance"]["obligations"][0]
+    assert obligation["given"] == {"name": "value"}
+    assert obligation["expect"] == {"result": "str"}
+    assert "contract_profile" not in obligation
+    assert obligation["invocation_pattern"]["id"] == "keyword_scalar_contract"
+
+
+def test_explicit_architect_profile_authorizes_literal_oracle():
+    plan = build_test_plan(
+        technical_spec={"acceptance_criteria": [{"id": "AC-001", "criterion": "name is normalized"}]},
+        implementation_plan=_implementation_plan(
+            "main.py:normalize_name", oracle_authority="explicit_architect_request"
+        ),
+    )
+
+    obligation = plan["executable_acceptance"]["obligations"][0]
     assert obligation["given"] == {"name": " Sample "}
     assert obligation["expect"] == {"return_value": "sample"}
-    assert obligation["contract_profile"]["operator_id"] == "strip_lower"
 
 
 def test_role_builders_carry_transform_profile_into_executable_test_plan():
@@ -105,12 +159,13 @@ def test_role_builders_carry_transform_profile_into_executable_test_plan():
     assert spec["extraction_contract"]["input_contract"] == {"name": "str"}
     assert spec["extraction_contract"]["output_contract"] == {"result": "str"}
     assert plan["contract_binding"]["contract_profile"]["operator_id"] == "strip_lower"
+    assert spec["extraction_contract"]["contract_profile"]["oracle_authority"] == "name_hint_only"
     obligation = test_plan["executable_acceptance"]["obligations"][0]
-    assert obligation["given"] == {"name": " Sample "}
-    assert obligation["expect"] == {"return_value": "sample"}
+    assert obligation["given"] == {"name": "value"}
+    assert obligation["expect"] == {"result": "str"}
 
 
-def test_executor_uses_role_produced_profiled_test_plan(tmp_path: Path):
+def test_executor_does_not_invent_transform_from_name_only(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
     (project / "main.py").write_text("def normalize_name(name):\n    return name\n", encoding="utf-8")
@@ -130,15 +185,16 @@ def test_executor_uses_role_produced_profiled_test_plan(tmp_path: Path):
     patch = json.loads(Path(result["patch_package_path"]).read_text(encoding="utf-8"))
     source = (Path(patch["patch_synthesis"]["sandbox_project"]) / "main.py").read_text(encoding="utf-8")
     assert result["status"] == "ok"
-    assert patch["patches"][0]["transform"] == "strip_lower"
-    assert "return name.strip().lower()" in source
+    assert "return name.strip().lower()" not in source
 
 
 def test_executor_uses_profiled_test_plan_to_synthesize_transform(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
     (project / "main.py").write_text("def normalize_name(name):\n    return name\n", encoding="utf-8")
-    implementation_plan = _implementation_plan("main.py:normalize_name")
+    implementation_plan = _implementation_plan(
+        "main.py:normalize_name", oracle_authority="explicit_architect_request"
+    )
     test_plan = build_test_plan(
         technical_spec={"acceptance_criteria": [{"id": "AC-001", "criterion": "name is normalized"}]},
         implementation_plan=implementation_plan,

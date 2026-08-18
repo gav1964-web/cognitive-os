@@ -13,6 +13,7 @@ from runtime.executable_acceptance_policy import load_executable_acceptance_poli
 from runtime.executor_solution_patterns import load_executor_solution_patterns
 from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from runtime.first_slice_viability import load_first_slice_viability
+from runtime.function_invocation_patterns import load_function_invocation_patterns
 from runtime.interface_contracts import load_interface_contracts
 from runtime.greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from runtime.l4_decision_table import load_l4_decision_rules
@@ -72,6 +73,7 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
         _load_check("spec_writer_ranking_kb_integrity", lambda: load_spec_writer_ranking_kb(str(base / "knowledge" / "role_knowledge" / "spec_writer_ranking.json"))),
         _load_check("spec_writer_knowledge_leakage", lambda: assert_no_knowledge_leakage(base)),
         _load_check("language_scope_kb_integrity", lambda: load_language_scope_policy(str(base / "knowledge" / "architecture_patterns" / "language_scope.json"))),
+        _load_check("function_invocation_patterns_kb_integrity", lambda: load_function_invocation_patterns(base / "knowledge" / "role_knowledge" / "function_invocation_patterns.json")),
     ]
     catalogs = _load_catalogs(base)
     checks.extend(

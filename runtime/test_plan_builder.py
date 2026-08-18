@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .contract_transform_contract_profiles import profile_positive_case
+from .function_invocation_patterns import match_invocation_pattern
 from .executable_acceptance_policy import external_call_tokens, sample_value
 from .role_skill_common import now_iso
 
@@ -237,12 +238,16 @@ def _executable_acceptance(
     output_contract = dict(contract_binding.get("output_contract", {}))
     obligations = []
     bound_profile = dict(contract_binding.get("contract_profile") or {})
-    profile_case = profile_positive_case(
-        target=target,
-        input_contract=input_contract,
-        output_contract=output_contract,
-        profile_id=str(bound_profile.get("id") or "") or None,
-    )
+    oracle_authority = str(bound_profile.get("oracle_authority") or "")
+    profile_case = None
+    if oracle_authority in {"source_observed_operator", "explicit_architect_request"}:
+        profile_case = profile_positive_case(
+            target=target,
+            input_contract=input_contract,
+            output_contract=output_contract,
+            profile_id=str(bound_profile.get("id") or "") or None,
+        )
+    invocation_pattern = match_invocation_pattern(input_contract, output_contract)
     for index, item in enumerate(acceptance[:10], start=1):
         acceptance_id = str(item.get("id") or f"AC-{index:03d}")
         obligation = {
@@ -254,6 +259,7 @@ def _executable_acceptance(
             "expect": _expected_shape(output_contract),
             "oracle": _positive_oracle(output_contract),
             "source_criterion": item.get("criterion"),
+            "invocation_pattern": invocation_pattern,
         }
         if profile_case:
             obligation.update(

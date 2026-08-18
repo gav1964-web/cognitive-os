@@ -23,6 +23,7 @@ def test_config_doctor_passes_current_catalogs():
     assert any(check["code"] == "executable_acceptance_source_isolation_integrity" for check in report["checks"])
     assert any(check["code"] == "contract_transform_operators_integrity" for check in report["checks"])
     assert any(check["code"] == "contract_transform_contract_profiles_integrity" for check in report["checks"])
+    assert any(check["code"] == "function_invocation_patterns_kb_integrity" for check in report["checks"])
     assert any(check["code"] == "dependency_extraction_policy_integrity" for check in report["checks"])
     assert any(check["code"] == "patch_synthesis_policy_integrity" for check in report["checks"])
     assert any(check["code"] == "programmer_executor_playbooks_integrity" for check in report["checks"])
