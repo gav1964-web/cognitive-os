@@ -136,6 +136,41 @@ def test_sandbox_candidate_blocks_batch_target_outside_change_plan(tmp_path: Pat
     assert result["reason"] == "edit_target_outside_plan"
 
 
+def test_single_repair_candidate_can_target_secondary_planned_function(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "main.py").write_text(
+        "def primary():\n    return 1\n\ndef secondary():\n    return 1\n", encoding="utf-8"
+    )
+    result = apply_sandbox_patch_candidate(
+        execution_dir=tmp_path / "exec",
+        project_dir=project,
+        implementation_plan={
+            "patch_intent": {"target_symbol": "main.py:primary"},
+            "expected_files": ["main.py"],
+            "change_plan": [{"target": "main.py:primary"}, {"target": "main.py:secondary"}],
+        },
+        strategy={
+            "sandbox_patch_candidate": {
+                "status": "candidate_ready_for_sandbox_attempt",
+                "target": "main.py:secondary",
+            },
+            "llm_strategy": {
+                "patch_recipe_hypothesis": {
+                    "recipe_type": "repair",
+                    "target_symbol": "main.py:secondary",
+                    "replacement_source": "def secondary():\n    return 2",
+                }
+            },
+        },
+    )
+
+    sandbox = Path(result["sandbox_project"])
+    assert result["status"] == "applied_in_sandbox"
+    assert "def primary():\n    return 1" in (sandbox / "main.py").read_text(encoding="utf-8")
+    assert "def secondary():\n    return 2" in (sandbox / "main.py").read_text(encoding="utf-8")
+
+
 def _batch_plan() -> dict:
     return {
         "patch_intent": {"target_symbol": "main.py:run"},

@@ -27,8 +27,10 @@ def apply_sandbox_patch_candidate(
                 "errors": list(candidate.get("errors") or []),
             }
         return {"status": "not_applied", "reason": str(candidate.get("status") or "candidate_not_ready")}
-    target = _target_symbol(implementation_plan)
+    target = str(candidate.get("target") or _target_symbol(implementation_plan))
     path_text = target.split(":", 1)[0]
+    if target not in _allowed_targets(implementation_plan):
+        return {"status": "blocked", "reason": "target_not_in_change_plan"}
     if not target or path_text not in _expected_files(implementation_plan):
         return {"status": "blocked", "reason": "target_not_in_expected_files"}
     recipe = dict(dict(strategy.get("llm_strategy") or {}).get("patch_recipe_hypothesis") or {})

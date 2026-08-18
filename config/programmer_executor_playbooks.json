@@ -69,6 +69,46 @@
       "safe_next_step": "rebind to the enclosing callable or provide explicit closure inputs",
       "required_gates": ["enclosing_callable_identified", "contract_binding_updated", "source_project_unchanged"],
       "confidence": 0.82
+    },
+    {
+      "id": "executor_playbook_duplicate_delimiter_repair",
+      "label": "Observed output duplicates a delimiter present once in the expected value",
+      "match": {"verifier_failure_class": "duplicate_delimiter"},
+      "action": "repair_boundary_normalization",
+      "safe_next_step": "trace the join boundary and normalize delimiters contributed by both adjacent fragments",
+      "repair_guidance": "Identify the repeated delimiter in the observed value. At a join, remove that delimiter from the right edge of the left fragment and the left edge of the right fragment, then insert exactly one delimiter. One-sided rstrip-only normalization is insufficient. Preserve internal delimiters and prove the exact counterexample.",
+      "required_gates": ["exact_counterexample_replayed", "already_passing_cases_preserved", "executable_acceptance_passed"],
+      "confidence": 0.86
+    },
+    {
+      "id": "executor_playbook_boundary_noise_repair",
+      "label": "Observed text wraps the expected value in non-alphanumeric boundary noise",
+      "match": {"verifier_failure_class": "boundary_noise"},
+      "action": "repair_output_boundary_normalization",
+      "safe_next_step": "normalize allowed separators and trim rejected punctuation only at final output boundaries",
+      "repair_guidance": "Trace how punctuation and separators are mapped, collapsed, and trimmed. Preserve meaningful internal separators, but remove disallowed leading and trailing boundary characters after normalization. Replay the exact observed wrapper and already passing cases.",
+      "required_gates": ["exact_counterexample_replayed", "internal_separators_preserved", "executable_acceptance_passed"],
+      "confidence": 0.82
+    },
+    {
+      "id": "executor_playbook_numeric_component_loss_repair",
+      "label": "Observed numeric sequence replaces an expected nonzero component with zero",
+      "match": {"verifier_failure_class": "numeric_component_loss"},
+      "action": "repair_numeric_token_extraction",
+      "safe_next_step": "trace token boundaries before numeric conversion and preserve numeric components across mixed separators",
+      "repair_guidance": "Extract numeric components across every contract-visible separator before defaulting missing values. Do not merge adjacent components or replace a present numeric token with zero. Preserve component order and replay exact mixed text-number inputs.",
+      "required_gates": ["exact_counterexample_replayed", "component_order_preserved", "executable_acceptance_passed"],
+      "confidence": 0.8
+    },
+    {
+      "id": "executor_playbook_separator_structure_repair",
+      "label": "Expected and observed text share content but differ in separator structure",
+      "match": {"verifier_failure_class": "separator_structure_mismatch"},
+      "action": "repair_separator_structure",
+      "safe_next_step": "preserve contract-visible internal separators while trimming boundary noise",
+      "repair_guidance": "Compare the exact expected and observed strings. Preserve the expected internal separator sequence and positions; change only the normalization step that removed, merged, or moved those separators, then trim rejected boundary punctuation separately.",
+      "required_gates": ["exact_counterexample_replayed", "expected_separator_structure_preserved", "executable_acceptance_passed"],
+      "confidence": 0.84
     }
   ]
 }

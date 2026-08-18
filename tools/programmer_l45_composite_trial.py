@@ -23,6 +23,7 @@ def main() -> int:
     parser.add_argument("--cases", default="benchmarks/programmer_l45_composite_cases.json")
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--label", default="programmer_l45_composite")
+    parser.add_argument("--case", action="append", default=[])
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     report = run_trial(
@@ -31,6 +32,8 @@ def main() -> int:
         limit=args.limit,
         label=args.label,
         write=args.write,
+        case_ids=args.case,
+        progress=True,
     )
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
@@ -38,12 +41,19 @@ def main() -> int:
     return 0 if report["status"] == "ok" else 2
 
 
-def run_trial(*, root: Path, cases_path: Path, limit: int, label: str, write: bool) -> dict[str, Any]:
+def run_trial(
+    *, root: Path, cases_path: Path, limit: int, label: str, write: bool,
+    case_ids: list[str] | None = None, progress: bool = False,
+) -> dict[str, Any]:
     source = cases_path if cases_path.is_absolute() else root / cases_path
     payload = json.loads(source.read_text(encoding="utf-8"))
     if payload.get("schema_version") != "programmer_l45_composite_cases.v1":
         raise ValueError("unsupported composite trial schema")
-    cases = [dict(item) for item in list(payload.get("cases") or [])[:limit]]
+    cases = [dict(item) for item in list(payload.get("cases") or [])]
+    if case_ids:
+        selected = set(case_ids)
+        cases = [case for case in cases if str(case.get("id") or "") in selected]
+    cases = cases[:limit]
     provenance_root = root / str(payload.get("source_root") or "")
     for case in cases:
         case["provenance_status"] = _verify_provenance(provenance_root, case)
@@ -52,7 +62,11 @@ def run_trial(*, root: Path, cases_path: Path, limit: int, label: str, write: bo
     previous = os.environ.get("COGNITIVE_OS_EXECUTOR_USE_L45_LLM")
     os.environ["COGNITIVE_OS_EXECUTOR_USE_L45_LLM"] = "1"
     try:
-        rows = [_run_case(root, work_root, case) for case in cases]
+        rows = []
+        for index, case in enumerate(cases, 1):
+            if progress:
+                print(f"[{index}/{len(cases)}] {case.get('id')}", file=sys.stderr, flush=True)
+            rows.append(_run_case(root, work_root, case))
     finally:
         if previous is None:
             os.environ.pop("COGNITIVE_OS_EXECUTOR_USE_L45_LLM", None)
@@ -109,7 +123,9 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
     attempt = dict(patch.get("sandbox_candidate_attempt") or {})
     repair = dict(patch.get("sandbox_candidate_repair_attempt") or {})
     candidate = dict(strategy.get("sandbox_patch_candidate") or {})
-    repair_candidate = dict(dict(patch.get("executor_repair_strategy") or {}).get("sandbox_patch_candidate") or {})
+    repair_strategy = dict(patch.get("executor_repair_strategy") or {})
+    repair_llm = dict(repair_strategy.get("llm_strategy") or {})
+    repair_candidate = dict(repair_strategy.get("sandbox_patch_candidate") or {})
     acceptance = dict(test_result.get("executable_acceptance_result") or {})
     acceptance_summary = dict(acceptance.get("summary") or {})
     checks = {
@@ -137,6 +153,7 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
         "checks": checks,
         "llm_action": llm.get("action"),
         "llm_reason": llm.get("reason"),
+        "llm_schema_retry": dict(llm.get("schema_retry") or {}),
         "candidate_status": attempt.get("status"),
         "candidate_reason": attempt.get("reason"),
         "candidate_errors": list(candidate.get("errors") or []),
@@ -144,6 +161,11 @@ def _run_case(root: Path, work_root: Path, case: dict[str, Any]) -> dict[str, An
         "repair_edit_count": repair_candidate.get("edit_count", 0),
         "repair_attempt_count": len(list(patch.get("sandbox_candidate_repair_attempts") or [])),
         "repair_status": repair.get("status"),
+        "repair_reason": repair.get("reason"),
+        "repair_candidate_errors": list(repair_candidate.get("errors") or []),
+        "repair_llm_action": repair_llm.get("action"),
+        "repair_llm_reason": repair_llm.get("reason"),
+        "repair_playbooks": list(repair_strategy.get("repair_playbooks") or []),
         "executor_status": result.get("status"),
         "acceptance_summary": acceptance_summary,
     }

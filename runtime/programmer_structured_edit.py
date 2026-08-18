@@ -26,6 +26,8 @@ def replacement_shape_errors(replacement: str, target: str, source_excerpt: str)
         errors.append("replacement_signature_mismatch")
     if proposed.decorator_list:
         errors.append("replacement_decorators_forbidden")
+    if ast.dump(proposed, include_attributes=False) == ast.dump(current, include_attributes=False):
+        errors.append("replacement_semantic_noop")
     return errors
 
 

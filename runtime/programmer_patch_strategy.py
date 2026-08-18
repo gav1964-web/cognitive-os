@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +15,8 @@ from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
 from .programmer_change_targets import collect_change_targets
 from .programmer_composite_retry import retry_composite_payload
+from .programmer_contract_alignment import contract_alignment
+from .bounded_prompt_json import bounded_prompt_json
 from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
 from .programmer_source_location import source_location
 
@@ -48,7 +49,11 @@ def build_patch_strategy(
         )[:8],
         "patch_synthesis": _synthesis_summary(synthesis),
         "acceptance_summary": dict(acceptance_summary or {}),
-        "contract_alignment": _contract_alignment(target, test_plan),
+        "contract_alignment": contract_alignment(
+            target,
+            test_plan,
+            allowed_targets=[str(item.get("target") or "") for item in change_targets],
+        ),
         "dependency_boundary_profile": dict(implementation_plan.get("dependency_boundary_profile") or {}),
         "first_slice_reselection_request": dict(implementation_plan.get("first_slice_reselection_request") or {}),
         "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
@@ -182,6 +187,7 @@ def _llm_strategy(evidence: dict[str, Any], deterministic: dict[str, Any]) -> di
     except LocalInferenceError as exc:
         return {"status": "unavailable", "reason": str(exc)[:240]}
     normalized = _normalize_llm_payload(proposal)
+    retry_diagnostics: dict[str, Any] = {}
     retry = retry_composite_payload(
         evidence=evidence,
         normalized=normalized,
@@ -189,9 +195,11 @@ def _llm_strategy(evidence: dict[str, Any], deterministic: dict[str, Any]) -> di
         messages=messages,
         config=config,
         caller=call_json_chat,
+        diagnostics=retry_diagnostics,
     )
     if retry is not None:
         normalized = _normalize_llm_payload(retry)
+    normalized["schema_retry"] = retry_diagnostics
     normalized["status"] = "proposed"
     normalized["authority"] = "hypothesis_only"
     return normalized
@@ -245,11 +253,9 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
         },
         {
             "role": "user",
-            "content": json.dumps(
-                {"evidence": evidence, "deterministic_strategy": deterministic},
-                ensure_ascii=False,
-                sort_keys=True,
-            )[:12000],
+            "content": bounded_prompt_json(
+                {"evidence": evidence, "deterministic_strategy": deterministic}
+            ),
         },
     ]
 
@@ -318,51 +324,6 @@ def _pattern_context(
         "patch_quality_review_required": bool(quality.get("review_required")),
     }
 
-
-def _contract_alignment(target: str, test_plan: dict[str, Any]) -> dict[str, Any]:
-    obligations = list(dict(test_plan.get("executable_acceptance") or {}).get("obligations") or [])
-    target_mismatches = sorted(
-        {
-            str(item.get("target") or "")
-            for item in obligations
-            if isinstance(item, dict) and item.get("target") and str(item.get("target")) != target
-        }
-    )
-    criterion_refs = [
-        (str(item.get("source_criterion") or ""), ref)
-        for item in obligations
-        if isinstance(item, dict)
-        for ref in set(re.findall(r"[\w./-]+\.py:[A-Za-z_]\w*", str(item.get("source_criterion") or "")))
-    ]
-    refs = sorted({ref for _, ref in criterion_refs})
-    mismatches = [ref for ref in refs if target and ref != target]
-    direct = sorted(
-        {
-            ref
-            for criterion, ref in criterion_refs
-            if ref != target and "selected extraction_contract" in criterion.lower()
-        }
-    )
-    counts = {ref: sum(1 for _, candidate in criterion_refs if candidate == ref) for ref in mismatches}
-    repeated = sorted(ref for ref, count in counts.items() if count >= 2)
-    candidates = list(dict.fromkeys(target_mismatches + direct + repeated))[:5]
-    if target_mismatches or direct or repeated:
-        reason = "obligation_target_mismatch" if target_mismatches else "authoritative_source_criterion_mismatch"
-        return {
-            "status": "target_drift",
-            "reason": reason,
-            "target": target,
-            "mismatched_targets": target_mismatches[:5],
-            "source_refs": mismatches[:5],
-            "candidate_targets": candidates,
-        }
-    return {
-        "status": "aligned",
-        "target": target,
-        "mismatched_targets": [],
-        "source_refs": mismatches[:5],
-        "candidate_targets": [],
-    }
 
 def _patch_quality(synthesis: dict[str, Any]) -> dict[str, Any]:
     if synthesis.get("status") == "skipped":

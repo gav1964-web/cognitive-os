@@ -24,7 +24,7 @@ def run_bounded_repairs(
     run_verification: bool,
     max_commands: int,
     should_repair: Callable[[dict[str, Any], dict[str, Any], dict[str, Any]], bool],
-    max_attempts: int = 2,
+    max_attempts: int = 3,
 ) -> dict[str, Any]:
     strategies: list[dict[str, Any]] = []
     attempts: list[dict[str, Any]] = []

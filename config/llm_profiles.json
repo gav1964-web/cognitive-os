@@ -6,7 +6,7 @@
       "model": "deepseek/deepseek-chat",
       "model_tier": "Deepseek Chat",
       "provider_label": "external_l45_intent_resolver",
-      "response_format": false,
+      "response_format": true,
       "timeout_seconds": 60
     },
     "local_l35": {

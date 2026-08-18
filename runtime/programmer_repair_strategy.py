@@ -10,7 +10,9 @@ from typing import Any
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
 from .programmer_change_targets import collect_change_targets
 from .programmer_composite_retry import retry_composite_payload
+from .bounded_prompt_json import bounded_prompt_json
 from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
+from .programmer_repair_playbooks import repair_recipe_errors, select_repair_playbooks
 from .programmer_source_location import source_location
 
 
@@ -31,13 +33,15 @@ def build_patch_repair_strategy(
     obligations = list(dict((test_plan or {}).get("executable_acceptance") or {}).get("obligations") or [])
     if failed_targets:
         obligations = [item for item in obligations if item.get("target") in failed_targets]
+    failure = _failure_summary(test_result)
     evidence = {
         "target": target,
         "source_excerpt": location["excerpt"],
         "source_start_line": location["start_line"],
         "source_context": location["context"],
         "source_context_start_line": location["context_start_line"],
-        "verification_failure": _failure_summary(test_result),
+        "verification_failure": failure,
+        "repair_playbooks": select_repair_playbooks(test_result),
         "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
         "acceptance_obligations": obligations[:8],
         "change_targets": change_targets,
@@ -48,6 +52,7 @@ def build_patch_repair_strategy(
         "created_at": datetime.now(timezone.utc).isoformat(),
         "authority": "single_repair_hypothesis_only",
         "target": target,
+        "repair_playbooks": list(evidence.get("repair_playbooks") or []),
         "llm_strategy": _llm_repair(evidence),
         "required_verifier_gates": ["sandbox_only", "writable_scope_only", "executable_acceptance_passed"],
     }
@@ -63,6 +68,7 @@ def _llm_repair(evidence: dict[str, Any]) -> dict[str, Any]:
     except LocalInferenceError as exc:
         return {"status": "unavailable", "reason": str(exc)[:240]}
     normalized = _normalize(payload)
+    retry_diagnostics: dict[str, Any] = {}
     retry = retry_composite_payload(
         evidence=evidence,
         normalized=normalized,
@@ -70,9 +76,11 @@ def _llm_repair(evidence: dict[str, Any]) -> dict[str, Any]:
         messages=messages,
         config=config,
         caller=call_json_chat,
+        diagnostics=retry_diagnostics,
     )
     if retry is not None:
         normalized = _normalize(retry)
+    normalized["schema_retry"] = retry_diagnostics
     normalized["status"] = "proposed"
     normalized["authority"] = "single_repair_hypothesis_only"
     return normalized
@@ -80,6 +88,7 @@ def _llm_repair(evidence: dict[str, Any]) -> dict[str, Any]:
 
 def _messages(evidence: dict[str, Any]) -> list[dict[str, str]]:
     target = str(evidence.get("target") or "relative/path.py:function_name")
+    playbook_guidance = bounded_prompt_json(evidence.get("repair_playbooks") or [], max_chars=2500)
     schema = {
         "action": "propose_patch_recipe",
         "reason": "repair reason grounded in verifier evidence",
@@ -117,12 +126,17 @@ def _messages(evidence: dict[str, Any]) -> list[dict[str, str]]:
                 "change must satisfy every acceptance_obligation while addressing verifier evidence. Do not suggest "
                 "source-project writes, registry edits, installs, or broad refactors. Respect runtime types visible in "
                 "source_context. Mentally execute every given input and verify exact equality with each expected output; "
-                "preserve cases that already pass and check boolean polarity explicitly."
+                "preserve cases that already pass and check boolean polarity explicitly. The replacement must differ "
+                "from the current source_excerpt and change the expression that explains the observed expected-versus-got "
+                "mismatch. Never repeat a replacement that has already failed verification; if no evidence-backed code "
+                "change remains, return block_for_review instead of a no-op recipe. Treat repair_playbooks as advisory "
+                "counterexample hypotheses: apply their repair_guidance only when it explains the verifier evidence, "
+                "and satisfy their required_gates. Selected verifier-derived playbooks: " + playbook_guidance
             ),
         },
         {
             "role": "user",
-            "content": json.dumps({"repair_evidence": evidence}, ensure_ascii=False, sort_keys=True)[:12000],
+            "content": bounded_prompt_json({"repair_evidence": evidence}),
         },
     ]
 
@@ -142,7 +156,7 @@ def _normalize(payload: dict[str, Any]) -> dict[str, Any]:
 def _sandbox_candidate(proposal: dict[str, Any], target: str, evidence: dict[str, Any]) -> dict[str, Any]:
     llm = dict(proposal.get("llm_strategy") or {})
     changes = [dict(item) for item in list(evidence.get("change_targets") or [])]
-    return build_candidate_contract(
+    candidate = build_candidate_contract(
         llm=llm,
         target=target,
         source_excerpt=str(evidence.get("source_excerpt") or ""),
@@ -151,6 +165,13 @@ def _sandbox_candidate(proposal: dict[str, Any], target: str, evidence: dict[str
         allowed_targets=[str(item.get("target") or "") for item in changes],
         source_excerpts={str(item.get("target") or ""): str(item.get("source_excerpt") or "") for item in changes},
     )
+    policy_errors = repair_recipe_errors(
+        dict(llm.get("patch_recipe_hypothesis") or {}), list(evidence.get("repair_playbooks") or [])
+    )
+    if policy_errors:
+        candidate["errors"] = list(dict.fromkeys([*list(candidate.get("errors") or []), *policy_errors]))
+        candidate["status"] = "blocked_invalid_candidate"
+    return candidate
 
 
 def _failure_summary(test_result: dict[str, Any]) -> dict[str, Any]:

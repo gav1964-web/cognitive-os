@@ -188,3 +188,44 @@ def test_repair_strategy_targets_only_failed_composite_function(tmp_path: Path, 
     assert candidate["status"] == "candidate_ready_for_sandbox_attempt"
     assert candidate["target"] == "helper.py:value"
     assert candidate["edit_count"] == 1
+
+
+def test_patch_strategy_accepts_all_declared_composite_targets(tmp_path: Path):
+    from runtime.programmer_patch_strategy import build_patch_strategy
+
+    (tmp_path / "main.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "helper.py").write_text("def build():\n    return 2\n", encoding="utf-8")
+    proposal = build_patch_strategy(
+        project_dir=tmp_path,
+        technical_spec={},
+        implementation_plan={
+            "implementation_target": {"candidate": "main.py:run"},
+            "expected_files": ["main.py", "helper.py"],
+            "change_plan": [{"target": "main.py:run"}, {"target": "helper.py:build"}],
+        },
+        test_plan={
+            "executable_acceptance": {
+                "obligations": [{"target": "main.py:run"}, {"target": "helper.py:build"}]
+            }
+        },
+        synthesis={"status": "blocked", "reason": "semantic_synthesis_required"},
+    )
+
+    assert proposal["contract_alignment"]["status"] == "aligned"
+    assert proposal["deterministic_strategy"]["action"] != "request_implementation_plan_contract_rebind"
+
+
+def test_repair_prompt_forbids_repeating_failed_source():
+    from runtime.programmer_repair_strategy import _messages
+
+    messages = _messages(
+        {
+            "target": "main.py:run",
+            "source_excerpt": "def run():\n    return 1",
+            "change_targets": [],
+        }
+    )
+
+    prompt = messages[0]["content"]
+    assert "must differ from the current source_excerpt" in prompt
+    assert "Never repeat a replacement that has already failed verification" in prompt
