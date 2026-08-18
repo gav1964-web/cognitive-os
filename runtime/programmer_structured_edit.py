@@ -6,6 +6,8 @@ import ast
 import textwrap
 from typing import Any
 
+from .programmer_python_symbols import qualified_function_matches
+
 
 def replacement_shape_errors(replacement: str, target: str, source_excerpt: str) -> list[str]:
     if not replacement.strip():
@@ -33,7 +35,7 @@ def apply_structured_replacement(original: str, target: str, replacement: str) -
     except SyntaxError:
         return None, "target_file_syntax_error"
     qualified_symbol = target.partition(":")[2]
-    matches = _qualified_function_matches(tree, qualified_symbol)
+    matches = qualified_function_matches(tree, qualified_symbol)
     if len(matches) != 1:
         return None, "structured_target_not_unique"
     node = matches[0]
@@ -62,35 +64,3 @@ def _single_function(source: str) -> tuple[ast.FunctionDef | ast.AsyncFunctionDe
     if len(tree.body) != 1 or not isinstance(tree.body[0], (ast.FunctionDef, ast.AsyncFunctionDef)):
         return None, "replacement_must_be_single_function"
     return tree.body[0], ""
-
-
-def _qualified_function_matches(
-    tree: ast.AST, qualified_symbol: str
-) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
-    matches: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
-
-    class QualifiedVisitor(ast.NodeVisitor):
-        def __init__(self) -> None:
-            self.path: list[str] = []
-
-        def visit_ClassDef(self, node: ast.ClassDef) -> None:
-            self.path.append(node.name)
-            self.generic_visit(node)
-            self.path.pop()
-
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-            self._visit_function(node)
-
-        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-            self._visit_function(node)
-
-        def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-            self.path.append(node.name)
-            path = ".".join(self.path)
-            if path == qualified_symbol or ("." not in qualified_symbol and node.name == qualified_symbol):
-                matches.append(node)
-            self.generic_visit(node)
-            self.path.pop()
-
-    QualifiedVisitor().visit(tree)
-    return matches

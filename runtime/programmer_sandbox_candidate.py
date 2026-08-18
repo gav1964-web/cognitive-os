@@ -28,8 +28,11 @@ def apply_sandbox_patch_candidate(
     recipe = dict(dict(strategy.get("llm_strategy") or {}).get("patch_recipe_hypothesis") or {})
     diff_lines = [str(item) for item in list(recipe.get("diff") or [])]
     replacement = str(recipe.get("replacement_source") or "")
+    edits = [dict(item) for item in list(recipe.get("edits") or []) if isinstance(item, dict)]
     sandbox_project = execution_dir / sandbox_name / "project"
     _copy_project(project_dir, sandbox_project)
+    if edits:
+        return _apply_structured_edit_batch(sandbox_project, implementation_plan, recipe, edits)
     source = (sandbox_project / path_text).resolve()
     try:
         source.relative_to(sandbox_project.resolve())
@@ -69,6 +72,74 @@ def apply_sandbox_patch_candidate(
                 ),
             }
         ],
+    }
+
+
+def _apply_structured_edit_batch(
+    sandbox_project: Path,
+    implementation_plan: dict[str, Any],
+    recipe: dict[str, Any],
+    edits: list[dict[str, Any]],
+) -> dict[str, Any]:
+    expected = set(_expected_files(implementation_plan))
+    allowed_targets = set(_allowed_targets(implementation_plan))
+    originals: dict[str, str] = {}
+    patched_sources: dict[str, str] = {}
+    for edit in edits:
+        target = str(edit.get("target_symbol") or "")
+        path_text = target.split(":", 1)[0]
+        if not target or target not in allowed_targets:
+            return _batch_blocked(sandbox_project, "edit_target_outside_plan")
+        if path_text not in expected:
+            return _batch_blocked(sandbox_project, "edit_target_not_in_expected_files")
+        source = (sandbox_project / path_text).resolve()
+        try:
+            source.relative_to(sandbox_project.resolve())
+        except ValueError:
+            return _batch_blocked(sandbox_project, "edit_target_outside_sandbox")
+        if not source.is_file():
+            return _batch_blocked(sandbox_project, "edit_target_file_missing")
+        original = originals.setdefault(path_text, source.read_text(encoding="utf-8"))
+        current = patched_sources.get(path_text, original)
+        patched, reason = apply_structured_replacement(
+            current, target, str(edit.get("replacement_source") or "")
+        )
+        if patched is None:
+            return _batch_blocked(sandbox_project, reason)
+        patched_sources[path_text] = patched
+    if not patched_sources or all(patched_sources[path] == originals[path] for path in patched_sources):
+        return _batch_blocked(sandbox_project, "structured_batch_noop")
+    patches = []
+    for path_text, patched in patched_sources.items():
+        (sandbox_project / path_text).write_text(patched, encoding="utf-8")
+        patches.append(_patch_operation(path_text, originals[path_text], patched, recipe))
+    return {
+        "status": "applied_in_sandbox",
+        "reason": "structured_function_batch_applied",
+        "sandbox_project": sandbox_project.as_posix(),
+        "patches": patches,
+    }
+
+
+def _batch_blocked(sandbox_project: Path, reason: str) -> dict[str, Any]:
+    return {"status": "blocked", "reason": reason, "sandbox_project": sandbox_project.as_posix()}
+
+
+def _patch_operation(path_text: str, original: str, patched: str, recipe: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "artifact_type": "PatchOperation",
+        "kind": str(recipe.get("recipe_type") or "llm_patch_recipe"),
+        "target": path_text,
+        "file": path_text,
+        "diff": list(
+            difflib.unified_diff(
+                original.splitlines(),
+                patched.splitlines(),
+                fromfile=f"a/{path_text}",
+                tofile=f"b/{path_text}",
+                lineterm="",
+            )
+        ),
     }
 
 
@@ -130,3 +201,15 @@ def _target_symbol(implementation_plan: dict[str, Any]) -> str:
 
 def _expected_files(implementation_plan: dict[str, Any]) -> list[str]:
     return [str(item).split(":", 1)[0] for item in implementation_plan.get("expected_files", []) if item]
+
+
+def _allowed_targets(implementation_plan: dict[str, Any]) -> list[str]:
+    targets = [_target_symbol(implementation_plan)]
+    targets.extend(
+        str(item.get("target") or "")
+        for item in list(
+            implementation_plan.get("change_plan") or implementation_plan.get("implementation_steps") or []
+        )
+        if isinstance(item, dict)
+    )
+    return [target for target in dict.fromkeys(targets) if target]

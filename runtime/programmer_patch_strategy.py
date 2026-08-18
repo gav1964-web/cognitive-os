@@ -14,6 +14,7 @@ from .contract_rebind_request import build_contract_rebind_request
 from .dependency_probe_session import build_dependency_probe_session_request
 from .executor_solution_patterns import select_solution_patterns
 from .programmer_executor_playbooks import select_executor_playbooks
+from .programmer_change_targets import collect_change_targets
 from .programmer_llm_candidate_contract import build_candidate_contract, normalize_recipe
 from .programmer_source_location import source_location
 
@@ -33,6 +34,7 @@ def build_patch_strategy(
 ) -> dict[str, Any]:
     target = _target(implementation_plan)
     location = source_location(project_dir, target)
+    change_targets = collect_change_targets(project_dir, implementation_plan, target)
     evidence = {
         "target": target,
         "source_excerpt": location["excerpt"],
@@ -49,6 +51,7 @@ def build_patch_strategy(
         "dependency_boundary_profile": dict(implementation_plan.get("dependency_boundary_profile") or {}),
         "first_slice_reselection_request": dict(implementation_plan.get("first_slice_reselection_request") or {}),
         "implementation_delta": dict(implementation_plan.get("implementation_delta") or {}),
+        "change_targets": change_targets,
     }
     quality = _patch_quality(synthesis)
     pattern_context = _pattern_context(acceptance_summary, synthesis, quality)
@@ -196,6 +199,17 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
             "verification_hint": "bounded verification",
         },
     }
+    if len(list(evidence.get("change_targets") or [])) > 1:
+        recipe = schema["patch_recipe_hypothesis"]
+        recipe["edit_format"] = "replace_functions"
+        recipe.pop("replacement_source", None)
+        recipe["edits"] = [
+            {
+                "target_symbol": "relative/path.py:qualified_function",
+                "replacement_source": "complete function with exact existing signature",
+                "summary": "bounded behavior change",
+            }
+        ]
     return [
         {
             "role": "system",
@@ -205,7 +219,9 @@ def _messages(evidence: dict[str, Any], deterministic: dict[str, Any]) -> list[d
                 "request_contract_rebind, block_for_review. When action is propose_patch_recipe, every field in this "
                 f"example schema is required: {json.dumps(schema, ensure_ascii=False)}. Prefer edit_format "
                 "replace_function with the complete target function in replacement_source and the exact existing "
-                "signature; do not duplicate it as diff. This path is AST-validated. An optional fallback unified diff must use "
+                "signature. When change_targets contains multiple entries, use replace_functions and one edits item "
+                "per required target; every target must come from change_targets. Do not duplicate structured edits as diff. "
+                "This path is AST-validated. An optional fallback unified diff must use "
                 "relative a/ and b/ paths, reference only the exact target, and match source_excerpt lines exactly. "
                 "Use source_start_line for the first hunk location and satisfy every acceptance_obligation. "
                 "Respect types and globals visible in source_context. Mentally execute every given input and confirm "
@@ -254,12 +270,15 @@ def _llm_not_requested() -> dict[str, str]:
 
 def _sandbox_candidate(proposal: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
     llm = dict(proposal.get("llm_strategy") or {})
+    changes = [dict(item) for item in list(evidence.get("change_targets") or [])]
     return build_candidate_contract(
         llm=llm,
         target=str(evidence.get("target") or ""),
         source_excerpt=str(evidence.get("source_excerpt") or ""),
         authority="validated_shape_only_not_applied",
         unavailable_reason="no_llm_patch_recipe_hypothesis",
+        allowed_targets=[str(item.get("target") or "") for item in changes],
+        source_excerpts={str(item.get("target") or ""): str(item.get("source_excerpt") or "") for item in changes},
     )
 
 
