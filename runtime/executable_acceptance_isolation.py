@@ -18,6 +18,7 @@ from .executable_acceptance_isolation_globals import install_configured_global_f
 from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_method_fixtures import method_fixture_values
 from .executable_acceptance_method_selection import unique_method_class
+from .executable_acceptance_package_shells import fresh_local_package
 from .executable_acceptance_resource_io import read_only_open_for
 from .python_parser_compatibility import parse_compatible_source
 
@@ -41,7 +42,7 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         namespace: dict[str, Any] = _namespace_for(path)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = symbol in set(method_fixture_policy().get("local_import_stub_functions") or [])
-        with _source_import_path(path), _fresh_local_package(namespace), _fresh_probe_stub_modules():
+        with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         configured_stubs = install_configured_global_fixtures(nodes, namespace)
         wildcard_stubs = install_unresolved_wildcard_names(tree, nodes, namespace)
@@ -95,7 +96,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         namespace: dict[str, Any] = _namespace_for(path)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = f"{class_node.name}.{method_name}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
-        with _source_import_path(path), _fresh_local_package(namespace), _fresh_probe_stub_modules():
+        with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         configured_stubs = install_configured_global_fixtures(body, namespace)
         wildcard_stubs = install_unresolved_wildcard_names(tree, body, namespace)
@@ -277,19 +278,6 @@ def _package_name(path: Path) -> str:
         names.append(parent.name)
         parent = parent.parent
     return ".".join(reversed(names))
-
-
-@contextmanager
-def _fresh_local_package(namespace: dict[str, Any]):
-    top = str(namespace.get("__package__") or "").split(".", 1)[0]
-    names = [name for name in list(sys.modules) if top and (name == top or name.startswith(f"{top}."))]
-    saved = {name: sys.modules.pop(name) for name in names}
-    try:
-        yield
-    finally:
-        for name in [name for name in list(sys.modules) if top and (name == top or name.startswith(f"{top}."))]:
-            sys.modules.pop(name, None)
-        sys.modules.update(saved)
 
 
 @contextmanager

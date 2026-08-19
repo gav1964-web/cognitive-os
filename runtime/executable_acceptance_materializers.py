@@ -115,6 +115,9 @@ def materialize(value: Any) -> Any:
         if fixture == "readable_temp_path":
             from .executable_acceptance_path_fixtures import readable_temp_path
             return readable_temp_path()
+        if fixture == "python_module_path":
+            from .executable_acceptance_path_fixtures import python_module_path
+            return python_module_path(dict(value.get("fields") or {}))
         if fixture == "noop_condition":
             return _NoopCondition()
         if fixture == "qdrant_collection_config":

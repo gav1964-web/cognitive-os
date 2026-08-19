@@ -372,7 +372,7 @@ def _install_stub_module(name: str) -> list[str]:
 class _StubModule(types.ModuleType):
     def __init__(self, name: str):
         super().__init__(name)
-        self.__path__ = []
+        self.__path__, self.__all__ = [], []
 
     def __getattr__(self, name: str) -> Any:
         value = _StubObject(f"{self.__name__}.{name}")

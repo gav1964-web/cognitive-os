@@ -115,7 +115,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported("target_outside_project")
     if not path.is_file():
         return _unsupported("target_file_missing")
-    inferred = infer_argument_samples(path, callable_symbol, project_root=project_dir)
+    inferred = infer_argument_samples(path, symbol, project_root=project_dir)
     with import_path(project_dir):
         loaded = load_supported_callable(project_dir, path_text, callable_symbol, path)
     func = loaded.get("callable")
@@ -296,9 +296,29 @@ def positive_case_binding(func: object, target: str, obligations: list[dict[str,
             drop_surplus = drop_surplus or (not adapted and bool(given))
             mapping.update({actual: source for actual, source in adapted.items()})
         defaults.update(_missing_required_samples(signature, mapping))
-    evidence = {name: dict(row) for name, row in dict(inferred or {}).items() if name in signature.parameters}
+    accepts_keywords = any(
+        param.kind == inspect.Parameter.VAR_KEYWORD
+        for param in signature.parameters.values()
+    )
+    evidence = {
+        name: dict(row)
+        for name, row in dict(inferred or {}).items()
+        if (name in signature.parameters or accepts_keywords)
+        and not _weaker_than_configured_fixture(name, row, defaults)
+    }
     overrides = {name: row["value"] for name, row in evidence.items()}
     return {"accepted": True, "mapping": mapping, "defaults": defaults, "overrides": overrides, "evidence": evidence, "drop_surplus_payload": drop_surplus}
+
+
+def _weaker_than_configured_fixture(
+    name: str, inferred: dict[str, Any], defaults: dict[str, Any]
+) -> bool:
+    configured = defaults.get(name)
+    return (
+        inferred.get("source") == "ast_parameter_attributes"
+        and isinstance(configured, dict)
+        and bool(configured.get("__fixture__"))
+    )
 
 
 def signature_needs_negative_case(func: object, target: str, obligations: list[dict[str, Any]]) -> bool:

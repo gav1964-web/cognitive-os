@@ -11,7 +11,7 @@ def needed_import_nodes(tree: ast.Module, nodes: list[ast.AST]) -> list[ast.stmt
     imports: list[ast.stmt] = []
     for node in _module_scope_nodes(tree.body):
         wildcard = isinstance(node, ast.ImportFrom) and any(alias.name == "*" for alias in node.names)
-        if isinstance(node, (ast.Import, ast.ImportFrom)) and (wildcard or _bound_names(node) & loaded):
+        if isinstance(node, (ast.Import, ast.ImportFrom)) and not wildcard and _bound_names(node) & loaded:
             imports.append(copy.deepcopy(node))
     return imports
 

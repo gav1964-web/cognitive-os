@@ -42,7 +42,7 @@ def positive_samples_execute(
                 if isinstance(result, asyncio.Future) and result.done():
                     result = result.result()
                 elif inspect.isawaitable(result):
-                    result = asyncio.run(result)
+                    result = asyncio.run(_await_result(result))
                 expect = dict(row.get("expect") or {})
                 if not _positive_result_matches_expect(result, expect):
                     _record(diagnostics, f"expected={expect!r}; got={result!r}")
@@ -51,6 +51,10 @@ def positive_samples_execute(
             _record(diagnostics, f"{type(exc).__name__}: {str(exc)}")
             return False
     return True
+
+
+async def _await_result(value: Any) -> Any:
+    return await value
 
 
 def _record(diagnostics: list[str] | None, value: str) -> None:

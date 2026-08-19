@@ -337,6 +337,11 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 result["symbol_occurrences"] = matches[:8]
                 if all(item.get("kind") == "method" for item in matches):
                     result["target_binding"] = "ambiguous_method_symbol"
+            elif matches and matches[0].get("kind") == "nested_method":
+                result.update({
+                    "target_binding": "nested_method",
+                    "owner_class": matches[0].get("class_name"),
+                    "parent_function": matches[0].get("parent_name")})
             elif matches and matches[0].get("kind") == "method":
                 result["target_binding"] = "method_symbol"
                 result["owner_class"] = matches[0].get("class_name")
@@ -375,12 +380,6 @@ def _annotation(node: ast.AST | None) -> str:
 
 def _source(row: dict[str, Any]) -> str:
     return f"{row.get('path')}:{row.get('name')}"
-
-
-def _signature(row: dict[str, Any]) -> dict[str, Any]:
-    return {"args": row.get("args", []), "returns": row.get("returns")}
-
-
 def _merge(target: dict[str, dict[str, Any]], source: str, value: dict[str, Any]) -> None:
     if not source or source == "None":
         return

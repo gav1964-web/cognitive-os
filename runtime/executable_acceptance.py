@@ -165,7 +165,7 @@ def test_simple_python_targets_reject_missing_required_input():
         func = _load_function(target)
         try:
             _run_callable(func, _call_kwargs(target, row.get("given", {{}}), include_defaults=False))
-        except (TypeError, ValueError):
+        except (KeyError, TypeError, ValueError):
             continue
         raise AssertionError(f"{{target}} accepted malformed input")
 def _run_callable(func, kwargs):
@@ -174,8 +174,10 @@ def _run_callable(func, kwargs):
     except RuntimeError: asyncio.set_event_loop(asyncio.new_event_loop())
     result = func(*args, **call_kwargs)
     if isinstance(result, asyncio.Future) and result.done(): return result.result()
-    if inspect.isawaitable(result): return asyncio.run(result)
+    if inspect.isawaitable(result): return asyncio.run(_await_result(result))
     return result
+async def _await_result(value):
+    return await value
 def _call_args_kwargs(func, payload):
     try:
         signature = inspect.signature(func)
@@ -266,6 +268,7 @@ class _StubModule(types.ModuleType):
     def __init__(self, name):
         super().__init__(name)
         self.__path__ = []
+        self.__all__ = []
 
     def __getattr__(self, name):
         value = _StubObject(f"{{self.__name__}}.{{name}}")

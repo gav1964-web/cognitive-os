@@ -33,6 +33,20 @@ def test_spec_writer_blocks_when_only_candidate_requires_closure():
     assert contract["blocked_by"] == ["nested_function_requires_closure"]
 
 
+def test_spec_writer_rejects_method_of_function_local_class():
+    spec = _run_spec_writer(
+        ["factory.py:value", "factory.py:normalize"],
+        {
+            "factory.py:value": _context("value", target_binding="nested_method"),
+            "factory.py:normalize": _context("normalize"),
+        },
+    )
+
+    contract = spec["extraction_contract"]
+    assert contract["candidate"] == "factory.py:normalize"
+    assert contract["binding_rejections"][0]["reason_code"] == "nested_method_requires_closure"
+
+
 def test_spec_writer_blocks_ambiguous_method_without_class_owner():
     spec = _run_spec_writer(
         ["widgets.py:show_line"],
