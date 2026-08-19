@@ -251,8 +251,8 @@ def test_architect_qualifies_ambiguous_methods_during_reselection(tmp_path):
 
     assert resolution["status"] == "selected"
     assert resolution["outcome"]["selected_targets"] == [
-        "pkg/adapter.py:JsonAdapter.transform",
         "pkg/adapter.py:CsvAdapter.transform",
+        "pkg/adapter.py:JsonAdapter.transform",
     ]
 
 

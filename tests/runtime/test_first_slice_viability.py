@@ -47,6 +47,21 @@ def test_receiver_state_method_is_deferred_but_static_method_remains_eligible():
     assert static["status"] == "eligible"
 
 
+def test_super_delegating_instance_method_still_requires_receiver_fixture():
+    result = first_slice_viability(
+        "pkg/widgets.py:PasswordEntry.show_line",
+        {
+            "snippet": {
+                "text": "def show_line(self, value): return super().show_line(value)",
+                "target_binding": "method_symbol",
+            }
+        },
+    )
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+
+
 def test_runtime_lifecycle_and_cli_boundaries_require_cheaper_slice():
     lifecycle = first_slice_viability("runtime/worker.py:execute")
     cli = first_slice_viability("pkg/cli/base.py:list_templates")
@@ -237,12 +252,12 @@ def test_architect_reselection_prefers_environment_ready_over_manifest_candidate
     assert evidence[1]["environment_ready"] is False
 
 
-def test_architect_reselection_prefers_standalone_callable_over_instance_method():
+def test_architect_reselection_excludes_instance_method_that_requires_fixture():
     sources = ["pkg/model.py:extract", "pkg/data.py:create_set"]
     context = {
         sources[0]: {
             "node_kind": "function",
-            "snippet": {"text": "def extract(self, value): return value", "target_binding": "method_symbol"},
+            "snippet": {"text": "def extract(self, value): return self.value + value", "target_binding": "method_symbol"},
             "dependency_readiness": {"status": "ready"},
         },
         sources[1]: {
@@ -254,8 +269,57 @@ def test_architect_reselection_prefers_standalone_callable_over_instance_method(
 
     selected, evidence = _viable_candidates(sources, context, {}, limit=8)
 
-    assert selected == ["pkg/data.py:create_set", "pkg/model.py:extract"]
+    assert selected == ["pkg/data.py:create_set"]
+    assert [row["target"] for row in evidence] == ["pkg/data.py:create_set"]
     assert evidence[0]["receiver_independent"] is True
+
+
+def test_architect_reselection_prefers_complete_contract_over_accessor():
+    sources = ["pkg/fields.py:get_attribute", "pkg/fields.py:parse_data"]
+    context = {
+        sources[0]: {
+            "node_kind": "function",
+            "snippet": {
+                "text": "def get_attribute(instance): return instance.value",
+                "target_binding": "function_symbol",
+                "signature": {"args": [{"name": "instance"}]},
+                "structural_contract": {
+                    "source_body_complete": True,
+                    "argument_usage_types": {"instance": "ProtocolLike"},
+                    "inferred_output_type": "AttributeValue",
+                },
+            },
+            "dependency_readiness": {"status": "ready"},
+        },
+        sources[1]: {
+            "node_kind": "function",
+            "snippet": {
+                "text": "def parse_data(data): return dict(data)",
+                "target_binding": "function_symbol",
+                "signature": {"args": [{"name": "data", "annotation": "MappingLike"}]},
+                "structural_contract": {
+                    "source_body_complete": True,
+                    "argument_usage_types": {"data": "MappingLike"},
+                    "inferred_output_type": "MappingLike",
+                },
+            },
+            "dependency_readiness": {"status": "ready"},
+        },
+    }
+
+    selected, evidence = _viable_candidates(sources, context, {}, limit=8)
+
+    assert selected == ["pkg/fields.py:parse_data"]
+    assert evidence[0]["semantic_score"] == 100
+
+
+def test_static_dependency_tree_requires_project_owned_reselection():
+    result = first_slice_viability(
+        "pkg/_static_dependencies/ethereum/utils/module_loading.py:import_string"
+    )
+
+    assert result["reselection_required"] is True
+    assert any(row["rule_id"] == "vendored_tooling_tree" for row in result["matched_rules"])
 
 
 def test_architect_reselection_remembers_rejected_primary_targets():
@@ -316,5 +380,8 @@ def test_production_build_stage_runs_configured_reselection_loop(monkeypatch, tm
     pipeline_stages.stage_build(state)
 
     assert calls[0]["until_output_key"] == "programmer_task_tree"
-    assert calls[0]["reselection_triggers"] == {"low_first_slice_viability"}
+    assert calls[0]["reselection_triggers"] == {
+        "low_first_slice_viability",
+        "first_slice_semantic_quality_below_threshold",
+    }
     assert state["spec"] is artifacts["technical_spec"]

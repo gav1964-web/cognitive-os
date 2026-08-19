@@ -72,3 +72,14 @@ def test_terminal_renderer_method_is_an_observability_effect():
     node = ast.parse("def render(qr):\n    qr.print_tty()\n").body[0]
 
     assert infer_ast_side_effects(node, ast.unparse(node)) == ["observability"]
+
+
+def test_raw_descriptor_io_and_select_are_external_runtime_effects():
+    node = ast.parse(
+        "def terminal_round_trip(payload):\n"
+        "    os.write(1, payload)\n"
+        "    select.select([0], [], [], 0.2)\n"
+        "    return os.read(0, 32)\n"
+    ).body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["external_runtime"]

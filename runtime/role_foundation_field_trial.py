@@ -11,6 +11,11 @@ from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from ._parts.role_foundation_field_trial_scope import _child_python_projects, _has_project_manifest, _is_python_project, _primary_language_scope
 from .role_foundation_pipeline import run_role_foundation_pipeline
+from .role_foundation_trial_status import (
+    case_status as _case_status,
+    spec_writer_blocked_no_safe_candidate as _spec_writer_blocked_no_safe_candidate,
+    unresolved_reselection as _unresolved_reselection,
+)
 
 
 DEFAULT_GOAL = "Produce ADR and TechnicalSpec for first safe transformation"
@@ -96,12 +101,13 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
     if not semantic_quality:
         semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
     result["foundation_semantic_quality"] = semantic_quality
-    role_scores = _role_scores({**result, "artifacts": loaded_result["artifacts"]})
+    scored_result = {**result, "artifacts": loaded_result["artifacts"]}
+    role_scores = _role_scores(scored_result)
     available_scores = [score for score in role_scores.values() if score is not None]
     return {
         "project": project_dir.name,
         "project_dir": project_dir.as_posix(),
-        "status": _case_status(result),
+        "status": _case_status(scored_result),
         "pipeline_status": result.get("status"),
         "blocker": result.get("blocker"),
         "role_scores": role_scores,
@@ -144,6 +150,8 @@ def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
 
     architect_all_scores = [*architect_scores, architect_semantic]
     spec_all_scores = [*spec_scores, spec_semantic]
+    if _unresolved_reselection(result):
+        spec_all_scores.append(5.0)
     return _apply_role_score_caps({
         "project_analyzer": _min_optional(project_score, project_semantic),
         "architect": _min_optional(*architect_all_scores),
@@ -312,22 +320,6 @@ def _case_readiness_score(case: dict[str, Any]) -> float:
     if case.get("status") == "blocked_ok":
         return 7.0
     return round(min(5.0, float(case.get("project_min_score") or 0.0)), 2)
-
-
-def _case_status(result: dict[str, Any]) -> str:
-    if result.get("status") == "ok":
-        return "ok"
-    if result.get("status") == "blocked" and _spec_writer_blocked_no_safe_candidate(result):
-        return "blocked_ok"
-    if result.get("status") == "blocked" and result.get("blocker") == "scope_selection_required":
-        return "blocked_ok"
-    if result.get("status") == "blocked" and result.get("blocker") == "no_safe_python_candidate":
-        return "blocked_ok"
-    return "needs_review"
-
-
-def _spec_writer_blocked_no_safe_candidate(result: dict[str, Any]) -> bool:
-    return dict(result.get("spec_writer_red_team") or {}).get("handoff_verdict") == "blocked_no_safe_candidate"
 
 
 def _warnings(result: dict[str, Any]) -> list[str]:

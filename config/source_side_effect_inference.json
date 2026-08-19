@@ -47,6 +47,7 @@
     },
     {
       "id": "external_runtime",
+      "call_exact": ["os.read", "os.write", "select.select"],
       "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys"]
     }
   ],

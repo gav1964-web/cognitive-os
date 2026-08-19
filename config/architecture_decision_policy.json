@@ -30,6 +30,7 @@
       "/examples/",
       "/end_to_end_tests/",
       "end_to_end_tests/",
+      "/_static_dependencies/",
       "/_vendor/",
       "/third_party/",
       "/vendor/",
@@ -43,6 +44,7 @@
       "/tests/",
       "/tools/",
       "/__pycache__/",
+      "example_",
       "gunicorn_conf.py",
       "conftest.py",
       "setup.py"

@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .architect_candidate_quality import contract_quality
 from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
 from .role_source_context import build_source_context
+from .source_target_policy import is_context_only_implementation_target
 from .spec_writer_target_binding import standalone_target_eligibility
 from .technical_spec_policy import load_technical_spec_policy
 
@@ -116,7 +118,11 @@ def _expanded_candidate_sources(
         sources.extend(_row_sources(plan.get("capabilities_to_extract")))
     sources.extend(str(item) for item in dict(architecture_decision.get("source_context") or {}))
     limit = max(1, int(policy.get("expanded_candidate_limit") or 64))
-    return list(dict.fromkeys(source for source in sources if ".py:" in source))[:limit]
+    return list(dict.fromkeys(
+        source
+        for source in sources
+        if ".py:" in source and not is_context_only_implementation_target(source)
+    ))[:limit]
 
 
 def _domain_aligned_sources(
@@ -154,7 +160,7 @@ def _viable_candidates(
     for index, source in enumerate(sources):
         source_context = context.get(source)
         profile = first_slice_viability(source, source_context, knowledge_rule=knowledge_rule)
-        if profile["status"] == "eligible":
+        if profile["status"] == "eligible" and not profile.get("reselection_required"):
             snippet = dict(dict(source_context or {}).get("snippet") or {})
             ranked.append({
                 "target": source,
@@ -164,11 +170,14 @@ def _viable_candidates(
                     snippet.get("target_binding") == "function_symbol"
                     or bool({"staticmethod", "classmethod"} & set(snippet.get("decorators") or []))
                 ),
+                **contract_quality(source, source_context, sources),
                 **profile,
             })
     ranked.sort(key=lambda row: (
         -int(bool(row["environment_ready"])),
         -int(bool(row["receiver_independent"])),
+        -int(row["semantic_score"]),
+        -int(row["contract_shape_score"]),
         -int(row["score"]),
         str(row["target"]),
         int(row["index"]),

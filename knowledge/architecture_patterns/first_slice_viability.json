@@ -29,8 +29,7 @@
       "score_delta": -45,
       "reselection_required": true,
       "match": {
-        "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
-        "snippet_text_contains_any": ["self."]
+        "receiver_kind_in": ["instance"]
       },
       "reason": "method reads receiver state and requires an explicit receiver fixture before executable handoff"
     },
@@ -148,9 +147,9 @@
       "score_delta": -65,
       "reselection_required": true,
       "match": {
-        "side_effects_contains_any": ["network", "subprocess"]
+        "side_effects_contains_any": ["network", "subprocess", "external_runtime"]
       },
-      "reason": "network or subprocess effect requires an adapter fixture and is deferred behind a pure contract"
+      "reason": "network, subprocess, or external runtime I/O requires an adapter fixture and is deferred behind a pure contract"
     },
     {
       "rule_id": "ml_training_lifecycle",
@@ -243,7 +242,7 @@
       "score_delta": -80,
       "reselection_required": true,
       "match": {
-        "path_contains_any": ["/ext_tools/", "/third_party/", "/_vendor/", "/vendor/", "/vendored/"]
+        "path_contains_any": ["/ext_tools/", "/third_party/", "/_static_dependencies/", "/_vendor/", "/vendor/", "/vendored/"]
       },
       "reason": "vendored or external tooling is context rather than a project-owned first writable slice"
     },

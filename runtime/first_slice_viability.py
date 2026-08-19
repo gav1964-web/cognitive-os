@@ -85,21 +85,35 @@ def _facts(
     }
     readiness = dict(raw_readiness) if isinstance(raw_readiness, Mapping) else {}
     decorators = list(snippet.get("decorators") or context.get("decorators") or [])
+    target_binding = str(snippet.get("target_binding") or context.get("target_binding") or "").lower()
+    decorator_text = " ".join(str(item).lower() for item in decorators)
+    snippet_text = str(snippet.get("text") or "").lower()
     side_effects = list(context.get("contract_side_effects") or context.get("side_effects") or snippet.get("side_effects") or [])
     return {
         "source": normalized,
         "path": f"/{path}",
         "symbol": symbol,
         "knowledge_rule": knowledge_rule.lower(),
-        "target_binding": str(snippet.get("target_binding") or context.get("target_binding") or "").lower(),
+        "target_binding": target_binding,
+        "receiver_kind": _receiver_kind(target_binding, decorator_text, snippet_text),
         "dependency_status": str(readiness.get("status") or "").lower(),
-        "decorators": " ".join(str(item).lower() for item in decorators),
+        "decorators": decorator_text,
         "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
-        "snippet_text": str(snippet.get("text") or "").lower(),
+        "snippet_text": snippet_text,
         "side_effects": " ".join(str(item).lower() for item in side_effects),
         "calls": " ".join(str(item).lower() for item in list(context.get("unresolved_calls") or [])),
         "input_complexity": _input_complexity_fact(snippet, payload),
     }
+
+
+def _receiver_kind(target_binding: str, decorators: str, snippet_text: str) -> str:
+    if target_binding not in {"method_symbol", "ambiguous_method_symbol"}:
+        return "none"
+    if "staticmethod" in decorators or "classmethod" in decorators:
+        return "independent"
+    if "self." in snippet_text or "super(" in snippet_text:
+        return "instance"
+    return "stateless_instance"
 
 
 def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> str:
@@ -172,7 +186,7 @@ def _matches(match: dict[str, Any], facts: dict[str, str]) -> bool:
 def _validate_matchers(match: dict[str, Any]) -> None:
     allowed_facts = {
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
-        "decorators", "owner_class", "snippet_text", "side_effects", "calls",
+        "decorators", "owner_class", "snippet_text", "side_effects", "calls", "receiver_kind",
         "input_complexity",
     }
     for key, values in match.items():
