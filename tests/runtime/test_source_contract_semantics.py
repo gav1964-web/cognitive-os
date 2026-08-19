@@ -397,4 +397,4 @@ def test_read_only_session_and_local_append_do_not_prove_database_write():
     })
 
     assert query["observed_side_effects"] == []
-    assert local["observed_side_effects"] == []
+    assert local["observed_side_effects"] == ["memory_state"]

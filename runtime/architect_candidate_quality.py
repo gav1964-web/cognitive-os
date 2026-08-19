@@ -24,6 +24,7 @@ def contract_quality(
         source,
         ranked_candidates=[source, *[item for item in candidate_sources if item != source]],
         source_evidence=candidate_sources,
+        selection_reason=str(context.get("kind") or "").replace("_", " "),
         structural_evidence=structural,
         input_contract=inputs,
         output_contract={"result": output_type},

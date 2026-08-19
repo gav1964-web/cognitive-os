@@ -37,16 +37,28 @@ def _project_nodes(root: Path, *, max_files: int) -> dict[str, dict[str, Any]]:
             relative = path.relative_to(root).as_posix()
         except (OSError, SyntaxError, ValueError):
             continue
-        for node in ast.walk(tree):
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            source = f"{relative}:{node.name}"
+        for qualified_name, node in _module_callables(tree):
+            source = f"{relative}:{qualified_name}"
             nodes[source] = {
                 "symbol": node.name,
                 "calls": _called_symbols(node),
                 "effects": set(infer_ast_side_effects(node, _node_text(text, node))),
             }
     return nodes
+
+
+def _module_callables(tree: ast.Module) -> list[tuple[str, ast.FunctionDef | ast.AsyncFunctionDef]]:
+    callables = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            callables.append((node.name, node))
+        elif isinstance(node, ast.ClassDef):
+            callables.extend(
+                (f"{node.name}.{item.name}", item)
+                for item in node.body
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+            )
+    return callables
 
 
 def _node_text(source: str, node: ast.AST) -> str:
@@ -99,6 +111,13 @@ def _called_symbols(node: ast.AST) -> set[str]:
     for child in ast.walk(node):
         if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
             symbols.add(child.func.id)
+        elif (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and isinstance(child.func.value, ast.Name)
+            and child.func.value.id in {"self", "cls"}
+        ):
+            symbols.add(child.func.attr)
     return symbols
 
 

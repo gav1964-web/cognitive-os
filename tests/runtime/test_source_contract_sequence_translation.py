@@ -10,6 +10,33 @@ def test_fstring_accumulator_proves_string_output():
     assert evidence["inferred_output_type"] == "str"
 
 
+def test_google_style_returns_section_proves_documented_output():
+    evidence = infer_source_contract({
+        "snippet": (
+            "def adapt(value):\n"
+            "    \"\"\"Adapt a value.\n\nReturns:\n    Layer or model with metadata.\"\"\"\n"
+            "    return _adapt(value)"
+        ),
+    })
+
+    assert evidence["inferred_output_type"] == "Layer or model with metadata"
+    assert evidence["output_inference_basis"] == "docstring_return_contract"
+
+
+def test_mutating_contract_does_not_receive_side_effect_free_bonus():
+    from runtime.source_contract_semantics import structural_quality_adjustment
+
+    score, reasons = structural_quality_adjustment(
+        {"source_body_complete": True, "state_mutation": True, "inferred_output_type": "MappingLike"},
+        input_contract={"value": "MappingLike"},
+        output_contract={"result": "MappingLike"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert score < 20
+    assert "complete source proves a bounded side-effect-free transform" not in reasons
+
+
 def test_sequence_translate_return_is_a_concrete_string():
     contract = infer_source_contract(
         {

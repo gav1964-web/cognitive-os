@@ -371,3 +371,17 @@ def test_response_ordering_and_cached_analysis_structures_are_bounded_families()
     assert ordering["score"] >= 97
     assert cached["contract_archetype_ids"] == ["cached_analysis_transform"]
     assert cached["score"] >= 97
+
+
+def test_non_implementation_and_example_targets_are_not_strong_first_slices():
+    abstract = semantic_target_quality_report(
+        "pkg/hooks.py:Hook.process",
+        structural_evidence={"source_body_complete": True, "decorators": ["abstractmethod"]},
+    )
+    example = semantic_target_quality_report(
+        "pkg/progress.py:example1",
+        structural_evidence={"source_body_complete": True},
+    )
+
+    assert abstract["status"] != "strong"
+    assert example["status"] != "strong"

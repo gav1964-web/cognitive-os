@@ -13,6 +13,7 @@
     },
     {
       "id": "filesystem_write",
+      "call_exact": ["json.dump", "joblib.dump", "pickle.dump", "sf.write", "soundfile.write", "shutil.copy", "shutil.copy2", "shutil.move"],
       "call_contains": ["to_csv", "to_parquet", "to_excel", "to_feather", "to_pickle"]
     },
     {
@@ -48,11 +49,12 @@
     {
       "id": "external_runtime",
       "call_exact": ["os.read", "os.write", "select.select"],
-      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys"]
+      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys", "self.goto", "self.wr", "self.attr_color", "self.attr_reset", ".addstr", ".refresh"]
     }
   ],
   "memory_state": {
     "ast_nodes": ["Global", "Nonlocal"],
+    "argument_mutation_calls": ["add", "append", "clear", "discard", "extend", "insert", "pop", "remove", "setdefault", "update"],
     "text_contains": ["threading.lock", "with incident_lock", "with import_lock"]
   }
 }

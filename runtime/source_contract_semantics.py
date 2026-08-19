@@ -116,7 +116,7 @@ def structural_quality_adjustment(
     if output_types & void_outputs and set(declared_effects) & mutating_effects and evidence.get("source_body_complete"):
         score += 3
         reasons.append("state transition boundary is structurally proven")
-    if not declared_effects and all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):
+    if not declared_effects and not evidence.get("state_mutation") and all_contract_shapes_concrete(inputs, outputs) and evidence.get("source_body_complete"):
         score += 3
         reasons.append("complete source proves a bounded side-effect-free transform")
     return score, reasons

@@ -53,3 +53,17 @@ def test_project_effects_do_not_depend_on_ast_unparse(monkeypatch, tmp_path):
     report = project_transitive_effects(tmp_path)
 
     assert report["service.py:publish"] == {}
+
+
+def test_project_effects_preserve_class_qualified_methods_and_self_calls(tmp_path):
+    (tmp_path / "widget.py").write_text(
+        "class Widget:\n"
+        "    def move(self):\n        self.position = 1\n"
+        "    def handle(self):\n        self.move()\n",
+        encoding="utf-8",
+    )
+
+    report = project_transitive_effects(tmp_path)
+
+    assert report["widget.py:Widget.handle"]["transitive_side_effects"] == ["memory_state"]
+    assert "widget.py:Widget.move" in report["widget.py:Widget.handle"]["contract_slice_sources"]

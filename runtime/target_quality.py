@@ -36,6 +36,7 @@ GENERIC_UNPROFILED_PATH_TOKENS = policy_tokens(TARGET_QUALITY_POLICY, "generic_u
 GENERIC_UNPROFILED_SCORE_CAP = int(policy_tokens(TARGET_QUALITY_POLICY, "generic_unprofiled_score_cap")[0])
 UNPROFILED_STRONG_SCORE_CAP = int(policy_tokens(TARGET_QUALITY_POLICY, "unprofiled_strong_score_cap")[0])
 UNPROFILED_STRONG_PATH_TOKENS = policy_tokens(TARGET_QUALITY_POLICY, "unprofiled_strong_path_tokens")
+NON_IMPLEMENTATION_DECORATORS = set(policy_tokens(TARGET_QUALITY_POLICY, "non_implementation_decorators"))
 
 
 def semantic_target_quality_report(
@@ -128,6 +129,8 @@ def semantic_target_quality_report(
     boundary = _runtime_boundary_hits(lowered, symbol)
     name_looks_trivial = _trivial_symbol(symbol)
     structurally_nontrivial = _structurally_nontrivial(structural_evidence)
+    decorators = {str(item).lower() for item in dict(structural_evidence or {}).get("decorators", [])}
+    non_implementation = sorted(decorators & NON_IMPLEMENTATION_DECORATORS)
     trivial = name_looks_trivial and not structurally_nontrivial
     bootstrap = _bootstrap_support_symbol(path, symbol)
     if suspicious and not suspicious_allowed:
@@ -155,6 +158,9 @@ def semantic_target_quality_report(
     if bootstrap and not profiled_contract_family:
         score -= 45
         reasons.append("CLI/bootstrap support helper is weak as first architectural slice")
+    if non_implementation:
+        score -= 45
+        reasons.append("declarative interface contract has no executable implementation: " + ", ".join(non_implementation))
     reasons.extend(profile_adjustments["penalty_reasons"])
     if _generic_unprofiled_candidate(path, symbol) and not profiled_contract_family:
         if score > GENERIC_UNPROFILED_SCORE_CAP:
@@ -174,8 +180,9 @@ def semantic_target_quality_report(
     liveness_probe = _liveness_probe_symbol(symbol)
     disqualifying_trivial = trivial and not profiled_contract_family
     disqualifying_bootstrap = bootstrap and not profiled_contract_family
+    disqualifying_non_implementation = bool(non_implementation)
     effective_suspicious = [] if suspicious_allowed else suspicious
-    if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
+    if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
         status = "strong"
     elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
         status = "acceptable"

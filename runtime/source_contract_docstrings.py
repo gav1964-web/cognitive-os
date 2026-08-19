@@ -20,10 +20,10 @@ def docstring_argument_types(snippet: str, names: list[str]) -> dict[str, str]:
 
 
 def documented_output_shape(snippet: str) -> str:
-    match = re.search(r"(?is)\breturns?\s*\n\s*-*\s*\n?\s*([A-Za-z_][A-Za-z0-9_.\[\], :]+)", snippet)
+    match = re.search(r"(?is)\breturns?\s*:?\s*\n\s*-*\s*\n?\s*([A-Za-z_][A-Za-z0-9_.\[\], :]+)", snippet)
     if not match:
         return ""
-    documented = match.group(1).strip()
+    documented = match.group(1).strip().rstrip(".")
     if ":" in documented:
         documented = documented.split(":", 1)[1].strip()
     lowered = documented.lower()

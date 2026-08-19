@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 
 from runtime.source_side_effect_inference import infer_ast_side_effects
+from runtime.source_effect_evidence import observed_side_effects
 
 
 def test_generated_sdk_call_api_is_a_network_effect():
@@ -59,6 +60,23 @@ def test_dataframe_file_transform_declares_read_and_write_effects():
     assert "filesystem_write" in effects
 
 
+def test_media_and_serialization_sinks_declare_filesystem_write():
+    node = ast.parse(
+        "def persist(values, source, target):\n"
+        "    sf.write(target, values, 44100)\n"
+        "    shutil.copy2(source, target)\n"
+        "    pickle.dump(values, target)\n"
+    ).body[0]
+
+    assert "filesystem_write" in infer_ast_side_effects(node, ast.unparse(node))
+
+
+def test_mutating_argument_collection_is_memory_state_effect():
+    node = ast.parse("def collect(values, item):\n    values.append(item)\n    return values\n").body[0]
+
+    assert "memory_state" in observed_side_effects(node, [{"name": "values"}, {"name": "item"}])
+
+
 def test_element_tree_parse_declares_filesystem_read_effect():
     node = ast.parse(
         "def read_tokens(filename):\n"
@@ -81,5 +99,11 @@ def test_raw_descriptor_io_and_select_are_external_runtime_effects():
         "    select.select([0], [], [], 0.2)\n"
         "    return os.read(0, 32)\n"
     ).body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["external_runtime"]
+
+
+def test_terminal_widget_render_calls_are_external_runtime_effects():
+    node = ast.parse("def redraw(self):\n    self.goto(0, 0)\n    self.wr('ready')\n").body[0]
 
     assert infer_ast_side_effects(node, ast.unparse(node)) == ["external_runtime"]

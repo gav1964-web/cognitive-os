@@ -1,4 +1,5 @@
 from runtime.architect_first_slice_reselection import _domain_aligned_sources, _expanded_candidate_sources, _viable_candidates
+from runtime.architect_candidate_quality import contract_quality
 
 
 def test_scientific_reselection_excludes_unrelated_operational_support():
@@ -63,3 +64,22 @@ def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold(
 
     assert viable and viable[0]["semantic_score"] < 97
     assert selected == []
+
+
+def test_architect_quality_preserves_analyzer_pure_transform_evidence():
+    source = "pkg/math.py:normalize"
+    context = {
+        "kind": "pure_transform",
+        "snippet": {
+            "signature": {"args": [{"name": "value", "annotation": "str"}]},
+            "structural_contract": {
+                "source_body_complete": True,
+                "inferred_output_type": "str",
+                "state_mutation": False,
+            },
+        },
+    }
+
+    quality = contract_quality(source, context, [source])
+
+    assert quality["semantic_score"] >= 97

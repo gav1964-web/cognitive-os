@@ -34,7 +34,8 @@
       "layout",
       "json_schema",
       "python_type",
-      "helper"
+      "helper",
+      "example"
     ],
     "representative_tokens": [
       "archive",
@@ -222,6 +223,7 @@
     "generic_unprofiled_score_cap": [
       "84"
     ],
+    "non_implementation_decorators": ["abstractmethod"],
     "unprofiled_strong_score_cap": [
       "84"
     ],
