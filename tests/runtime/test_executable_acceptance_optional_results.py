@@ -20,3 +20,20 @@ def test_executable_acceptance_allows_none_for_optional_result(tmp_path: Path):
 
     assert result["status"] == "passed"
     assert result["summary"]["signal_strength"] == "executable_callable"
+
+
+def test_generated_oracle_allows_none_for_union_result(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text("def lookup(value):\n    return None\n", encoding="utf-8")
+    plan = _plan("module.py:lookup", {"value": "sample"}, malformed=True)
+    plan["executable_acceptance"]["obligations"][0]["expect"] = {
+        "result": "Union[NoneType, ScalarLike]"
+    }
+
+    result = run_executable_acceptance(
+        root=tmp_path, project_dir=project, test_plan=plan, work_dir=tmp_path / "work"
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"

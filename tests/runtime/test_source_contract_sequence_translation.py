@@ -73,3 +73,24 @@ def test_formatted_argument_and_static_method_have_concrete_receiver_free_contra
 
     assert evidence["argument_usage_types"]["message"] == "str"
     assert contract == {"message": "str"}
+
+
+def test_nested_snippet_signature_remains_authoritative_for_contract_type():
+    contract = _input_contract_from_candidate(
+        {
+            "source": "platform.py:normalize_machine",
+            "snippet": {
+                "text": "def normalize_machine(machine=None):\n    return (machine or default()).strip()",
+                "signature": {
+                    "args": [{"name": "machine", "annotation": "str | None"}],
+                    "returns": "str",
+                },
+            },
+            "structural_contract": {
+                "argument_usage_types": {"machine": "bool"},
+                "argument_constraint_types": {"machine": "NoneType"},
+            },
+        }
+    )
+
+    assert contract == {"machine": "str | None"}

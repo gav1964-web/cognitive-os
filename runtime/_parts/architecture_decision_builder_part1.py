@@ -55,6 +55,7 @@ def build_architecture_decision(
         project_root=str(summary.get("root") or project_report.get("root") or ""),
         project_report=project_report,
         sources=_dedupe_strings(context_sources)[:36],
+        function_scoped_dependencies=True,
     )
     artifact = {
         "artifact_type": "ArchitectureDecisionRecord",

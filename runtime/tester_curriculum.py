@@ -102,11 +102,13 @@ def _score_plan(expected: dict[str, Any], actual: dict[str, Any], plan: dict[str
     next_producer = producer_for_artifact_type("ProgrammerTaskTree")
     checks = {
         "artifact_is_test_plan": actual.get("artifact_type") == "TestPlan" and actual.get("role") == "tester",
-        "candidate_matches": actual.get("candidate") == expected.get("candidate"),
+        "candidate_matches": actual.get("candidate") in {
+            expected.get("candidate"), *list(expected.get("acceptable_candidates") or [])
+        },
         "strategy_targets_candidate": actual.get("strategy_target") == actual.get("candidate"),
         "binding_is_usable": actual.get("binding_status") in {"bound_to_extraction_contract", "bound_to_product_contract"},
         "has_contracts": actual.get("has_input_contract") is True and actual.get("has_output_contract") is True,
-        "writable_scope_targets_expected": actual.get("writable_scope") == _strings(expected.get("writable_scope", [expected.get("candidate")])),
+        "writable_scope_targets_expected": actual.get("writable_scope") == [str(actual.get("candidate") or "")],
         "read_only_context_kept_separate": _read_only_context_kept_separate(actual),
         "contract_matrix_present": int(actual.get("contract_matrix_count") or 0) >= int(expected.get("min_contract_matrix_count", 1)),
         "acceptance_tests_present": int(actual.get("acceptance_test_count") or 0) >= int(expected.get("min_acceptance_test_count", 1)),

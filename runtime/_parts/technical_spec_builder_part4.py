@@ -142,7 +142,7 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
                 "index": index,
             }
         )
-    return sorted(ranked, key=lambda item: (-int(item["score"]), int(item["index"]), str(item.get("source") or "")))
+    return sorted(ranked, key=lambda item: (-int(item["score"]), str(item.get("source") or ""), int(item["index"])))
 
 
 def _pass_only_snippet(value: object) -> bool:

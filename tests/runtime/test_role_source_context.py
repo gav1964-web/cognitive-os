@@ -256,3 +256,22 @@ def test_source_context_records_unknown_global_without_automatic_block(tmp_path:
 
     assert row["snippet"]["unresolved_runtime_names"] == ["injected_framework_adapter"]
     assert row["dependency_readiness"]["status"] == "ready"
+
+
+def test_source_context_preserves_positional_only_and_keyword_only_annotations(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "factory.py").write_text(
+        "def build(value: str, /, *, arity: int = 1):\n    return value * arity\n",
+        encoding="utf-8",
+    )
+
+    row = build_source_context(
+        project_root=str(project), project_report={}, sources=["factory.py:build"]
+    )["factory.py:build"]
+
+    assert row["signature"] == {
+        "args": [{"name": "value", "annotation": "str"}],
+        "kwonlyargs": [{"name": "arity", "annotation": "int"}],
+        "returns": "",
+    }

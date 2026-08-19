@@ -19,6 +19,7 @@ def load_method_callable(path: Path, symbol: str, module: object | None) -> dict
     if not match or module is None:
         return {"callable": None, "detail": "method_match_missing_or_module_unloaded"}
     class_name = match["class_name"]
+    symbol = match["method_name"]
     cls = getattr(module, class_name, None)
     if cls is None:
         return {"callable": None, "detail": f"{class_name}.{symbol}: class_not_loaded"}
@@ -72,12 +73,17 @@ def _unique_method_match(path: Path, symbol: str) -> dict[str, str] | None:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except Exception:
         return None
+    owner, separator, method_name = symbol.partition(".")
+    method_name = method_name if separator else owner
+    expected_owner = owner if separator else ""
     matches = []
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
+            if expected_owner and node.name != expected_owner:
+                continue
             matches.extend(
-                {"class_name": node.name, "method_name": symbol}
+                {"class_name": node.name, "method_name": method_name}
                 for item in node.body
-                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == symbol
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == method_name
             )
     return matches[0] if len(matches) == 1 else None

@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from runtime.role_artifact_quality import evaluate_technical_spec
-from runtime.role_foundation_field_trial import _apply_role_score_caps, _primary_language_scope, _report, _role_scores, discover_python_projects
+from runtime.role_foundation_field_trial import _apply_role_score_caps, _case_status, _primary_language_scope, _report, _role_scores, discover_python_projects
 
 
 def test_field_trial_report_uses_project_and_role_minimums():

@@ -93,6 +93,16 @@ def test_stateful_method_effects_remain_deferred():
     assert any(row["rule_id"] == "stateful_method_effects" for row in result["matched_rules"])
 
 
+def test_stateful_free_function_requires_explicit_state_fixture():
+    result = first_slice_viability(
+        "runtime/cache.py:load_rows",
+        {"side_effects": ["memory_state"]},
+    )
+
+    assert result["reselection_required"] is True
+    assert any(row["rule_id"] == "stateful_runtime_function" for row in result["matched_rules"])
+
+
 def test_unknown_parameter_object_protocol_requires_reselection():
     result = first_slice_viability(
         "orders.py:trigger",
@@ -175,6 +185,17 @@ def test_vendored_tooling_is_not_a_project_owned_first_slice():
 
     assert result["status"] == "deferred"
     assert result["reselection_required"] is True
+
+    private_vendor = first_slice_viability("package/_vendor/dataclasses.py:_get_field")
+    assert private_vendor["status"] == "deferred"
+
+
+def test_network_effect_and_private_hook_require_adapter_slice():
+    network = first_slice_viability("client/api.py:add_photo", {"side_effects": ["network"]})
+    hook = first_slice_viability("spinner.py:_hook")
+
+    assert network["reselection_required"] is True
+    assert hook["reselection_required"] is True
 
 
 def test_architect_reselection_uses_kb_viability_order():

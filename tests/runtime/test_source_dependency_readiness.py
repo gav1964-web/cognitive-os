@@ -127,3 +127,19 @@ def test_function_readiness_ignores_unused_module_dependency(tmp_path: Path):
     assert normalize["status"] == "ready"
     assert normalize["analysis"] == "function_scoped_static_import_graph"
     assert remote["missing_external_modules"] == ["definitely_missing_cognitive_os_dep"]
+
+
+def test_function_readiness_detects_import_inside_selected_callable(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "entry.py").write_text(
+        "def select_backend():\n"
+        "    from definitely_missing_cognitive_os_dep import backend\n"
+        "    return backend\n",
+        encoding="utf-8",
+    )
+
+    readiness = source_dependency_readiness(project, "entry.py", "select_backend")
+
+    assert readiness["status"] == "missing_external"
+    assert readiness["missing_external_modules"] == ["definitely_missing_cognitive_os_dep"]

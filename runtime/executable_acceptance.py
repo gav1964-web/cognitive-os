@@ -205,7 +205,7 @@ def _load_function(target):
         try:
             module = importlib.import_module(module_name)
             if method:
-                return _load_method(module, method, symbol, target)
+                return _load_method(module, method, method.get("method_name", symbol), target)
             func = getattr(module, symbol)
             assert callable(func), f"target is not callable: {{target}}"
             return func
@@ -223,7 +223,7 @@ def _load_function(target):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     if method:
-        return _load_method(module, method, symbol, target)
+        return _load_method(module, method, method.get("method_name", symbol), target)
     func = getattr(module, symbol)
     assert callable(func), f"target is not callable: {{target}}"
     return func
@@ -332,8 +332,10 @@ def _assert_expected_shape(result, expect):
     if expect == {{"completed": True}}: assert result is None or result is True or isinstance(result, dict); return
     if any(key in expect for key in ("return_value", "equals", "result_value")): assert result == expect[next(key for key in ("return_value", "equals", "result_value") if key in expect)]; return
     if set(expect) == {{"result"}}:
-        if str(expect.get("result") or "").lower() in {{"any", "inferredoutput", "inferred_output"}}: return
-        if str(expect.get("result") or "").lower() in {{"none", "null", "void"}}: assert result is None; return
+        declared = str(expect.get("result") or "").lower().replace(" ", "")
+        if declared in {{"any", "inferredoutput", "inferred_output"}}: return
+        if declared in {{"none", "null", "void"}}: assert result is None; return
+        if result is None and ("optional[" in declared or "nonetype" in declared or "|none" in declared): return
         assert result is not None; return
     if not isinstance(result, dict): assert any("failure" not in str(key).lower() for key in expect), "multi-field output contract expects dict result"; return
 '''

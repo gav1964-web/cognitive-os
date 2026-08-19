@@ -117,7 +117,9 @@ def _output_contract_from_signature(signature: dict[str, Any], fallback: object)
 
 def _input_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     source = str(candidate.get("source") or "")
-    signature = dict(candidate.get("signature", {}) or {})
+    snippet = candidate.get("snippet")
+    nested_signature = dict(snippet.get("signature") or {}) if isinstance(snippet, dict) else {}
+    signature = dict(candidate.get("signature") or nested_signature)
     semantic = infer_source_contract(candidate)
     documented = dict(semantic.get("docstring_argument_types") or {})
     constrained = dict(semantic.get("argument_constraint_types") or {})
@@ -160,6 +162,12 @@ def _contract_args(signature: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _output_contract_from_candidate(candidate: dict[str, Any]) -> dict[str, str]:
     semantic = infer_source_contract(candidate)
+    snippet = candidate.get("snippet")
+    nested_signature = dict(snippet.get("signature") or {}) if isinstance(snippet, dict) else {}
+    signature = dict(candidate.get("signature") or nested_signature)
+    returns = str(signature.get("returns") or "").strip()
+    if returns and returns.lower() not in IGNORED_RETURN_ANNOTATIONS:
+        return {"result": returns}
     inferred = str(semantic.get("inferred_output_type") or "").strip()
     source = str(candidate.get("source") or "")
     policy_inferred = _inferred_result_type(source, str(candidate.get("snippet") or ""))

@@ -114,7 +114,18 @@ def _modules_used_by_symbol(tree: ast.Module, symbol: str) -> set[str] | None:
         child.id for node in selected for child in ast.walk(node)
         if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
     }
-    return {module for name, module in imports.items() if name in loaded} | wildcard_modules
+    scoped_imports = {
+        alias.name
+        for node in selected for child in ast.walk(node)
+        if isinstance(child, ast.Import)
+        for alias in child.names
+    }
+    scoped_imports.update(
+        child.module
+        for node in selected for child in ast.walk(node)
+        if isinstance(child, ast.ImportFrom) and not child.level and child.module
+    )
+    return {module for name, module in imports.items() if name in loaded} | wildcard_modules | scoped_imports
 
 
 def _walk_imports(

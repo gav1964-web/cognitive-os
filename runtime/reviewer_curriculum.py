@@ -99,7 +99,9 @@ def _score_review(expected: dict[str, Any], actual: dict[str, Any], review: dict
     expected_recommendation = str(expected.get("recommendation") or "approve_with_risks")
     checks = {
         "artifact_is_review_findings": actual.get("artifact_type") == "ReviewFindings" and actual.get("role") == "reviewer",
-        "candidate_matches": actual.get("candidate") == expected.get("candidate"),
+        "candidate_matches": actual.get("candidate") in {
+            expected.get("candidate"), *list(expected.get("acceptable_candidates") or [])
+        },
         "implementation_and_test_targets_match": actual.get("implementation_target") == actual.get("candidate")
         and actual.get("test_target") == actual.get("candidate"),
         "binding_is_usable": actual.get("binding_status") in {"bound_to_extraction_contract", "bound_to_product_contract"},

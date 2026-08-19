@@ -39,6 +39,20 @@ def test_infers_datetime_string_from_strptime_format(tmp_path: Path):
     }
 
 
+def test_infers_minimal_mapping_from_direct_literal_key_reads(tmp_path: Path):
+    path = _source(
+        tmp_path,
+        "def build(data):\n    return len(data['Ability']) + len(data['Unit'])\n",
+    )
+
+    assert infer_argument_samples(path, "build") == {
+        "data": {
+            "value": {"Ability": [], "Unit": []},
+            "source": "ast_required_mapping_keys",
+        }
+    }
+
+
 def test_infers_anonymized_literal_from_upstream_test_call(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

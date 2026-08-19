@@ -335,7 +335,7 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
         elif isinstance(node, ast.Call) and _call_name(node.func) in {"isinstance", "echo_prompt"}:
             for arg in node.args[:1]:
                 if isinstance(arg, ast.Name) and arg.id in known:
-                    inferred[arg.id] = "ArrayLike" if _call_name(node.func) == "isinstance" else "str"
+                    inferred[arg.id] = _isinstance_type(node) if _call_name(node.func) == "isinstance" else "str"
         elif isinstance(node, (ast.For, ast.comprehension)) and isinstance(node.iter, ast.Name) and node.iter.id in known:
             inferred.setdefault(node.iter.id, "IterableLike")
         elif isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Name) and node.slice.id in known:
@@ -350,9 +350,10 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
                 if isinstance(value, ast.Name) and value.id in known:
                     inferred.setdefault(value.id, "NumberLike")
         elif isinstance(node, ast.BoolOp):
-            for value in node.values:
-                if isinstance(value, ast.Name) and value.id in known:
-                    inferred.setdefault(value.id, "bool")
+            if all(isinstance(value, ast.Name) for value in node.values):
+                for value in node.values:
+                    if value.id in known:
+                        inferred.setdefault(value.id, "bool")
         elif isinstance(node, ast.Compare):
             for value in (node.left, *node.comparators):
                 if isinstance(value, ast.Name) and value.id in known:
@@ -370,6 +371,13 @@ def _format_argument_names(node: ast.AST, known: set[str]) -> set[str]:
 
 def _argument_names(nodes: list[ast.AST], known: set[str]) -> set[str]:
     return {child.id for node in nodes for child in ast.walk(node) if isinstance(child, ast.Name) and child.id in known}
+
+
+def _isinstance_type(node: ast.Call) -> str:
+    if len(node.args) < 2:
+        return "ProtocolLike"
+    declared = _call_name(node.args[1]).rsplit(".", 1)[-1]
+    return declared if declared in {"bool", "bytes", "dict", "float", "int", "list", "str", "tuple"} else "ProtocolLike"
 
 
 def _constraint_constants(node: ast.AST) -> set[object]:

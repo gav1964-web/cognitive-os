@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from runtime._parts.technical_spec_builder_part3 import _input_contract_from_signature
-from runtime.source_target_policy import load_role_source_policy
+from runtime.source_target_policy import is_context_only_implementation_target, load_role_source_policy
 from runtime.technical_spec_builder import build_technical_spec
 from runtime.technical_spec_policy import load_technical_spec_policy
 
@@ -16,6 +16,7 @@ def test_technical_spec_policy_loads_required_sections():
     assert policy["snippet_analysis"]["allowed_external_names"]
     assert policy["contract_type_inference"]["argument_rules"]
     assert policy["semantic_rerank"]["scan_limit"] >= 2
+    assert is_context_only_implementation_target("python/pkg/_vendor/dataclasses.py:_get_field")
 
 
 def test_technical_spec_policy_drives_contract_type_inference_and_source_scope():

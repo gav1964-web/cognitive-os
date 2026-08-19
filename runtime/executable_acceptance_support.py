@@ -104,8 +104,10 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
 
 def callable_target_support(project_dir: Path, target: str, obligations: list[dict[str, Any]]) -> dict[str, Any]:
     path_text, separator, symbol = target.partition(":")
-    if separator != ":" or not path_text.endswith(".py") or not symbol or "." in symbol:
+    symbol_parts = symbol.split(".")
+    if separator != ":" or not path_text.endswith(".py") or not symbol or len(symbol_parts) > 2:
         return _unsupported("unsupported_target_format")
+    callable_symbol = symbol_parts[-1]
     path = (project_dir / path_text).resolve()
     try:
         path.relative_to(project_dir.resolve())
@@ -113,9 +115,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         return _unsupported("target_outside_project")
     if not path.is_file():
         return _unsupported("target_file_missing")
-    inferred = infer_argument_samples(path, symbol, project_root=project_dir)
+    inferred = infer_argument_samples(path, callable_symbol, project_root=project_dir)
     with import_path(project_dir):
-        loaded = load_supported_callable(project_dir, path_text, symbol, path)
+        loaded = load_supported_callable(project_dir, path_text, callable_symbol, path)
     func = loaded.get("callable")
     if loaded.get("reason") == "target_not_callable":
         method = load_method_callable(path, symbol, loaded.get("module"))
@@ -125,6 +127,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             binding = positive_case_binding(func, target, obligations, inferred)
             if not binding["accepted"]:
                 cleanup_dependency_stubs(loaded)
+                isolated_support = _isolated_retry(path, symbol, target, obligations, inferred)
+                if isolated_support.get("supported"):
+                    return isolated_support
                 return _unsupported("positive_signature_mismatch", detail)
             diagnostics: list[str] = []
             with import_path(project_dir):

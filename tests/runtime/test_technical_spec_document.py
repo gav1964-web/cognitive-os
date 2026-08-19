@@ -4,7 +4,7 @@ from runtime.technical_spec_document import render_technical_spec_document
 from runtime.technical_spec_builder import _extraction_contract, _rank_extraction_candidates
 
 
-def test_property_accessor_is_ranked_below_behavioral_candidate() -> None:
+def test_network_flow_is_deferred_below_local_property_context() -> None:
     ranked = _rank_extraction_candidates(
         [
             {"source": "entities.py:run_id", "kind": "pure_transform", "decorators": ["property"], "side_effects": []},
@@ -12,8 +12,8 @@ def test_property_accessor_is_ranked_below_behavioral_candidate() -> None:
         ]
     )
 
-    assert ranked[0]["source"] == "client.py:log_run"
-    assert "property accessor" in " ".join(ranked[1]["reasons"])
+    assert ranked[0]["source"] == "entities.py:run_id"
+    assert "external_effect_boundary" in " ".join(ranked[1]["reasons"])
 
 
 def test_pass_only_hook_is_ranked_below_behavioral_candidate() -> None:

@@ -119,20 +119,28 @@ def _actual_plan(plan: dict[str, Any]) -> dict[str, Any]:
 def _score_plan(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
     plan_producer = producer_for_artifact_type("ImplementationPlan")
     test_producer = producer_for_artifact_type("TestPlan")
+    candidate = str(actual.get("candidate") or "")
+    reference_candidate = str(expected.get("candidate") or "")
+    alternatives = {str(item) for item in expected.get("acceptable_candidates") or []}
+    selected_alternative = candidate in alternatives and candidate != reference_candidate
+    expected_evidence = [candidate] if selected_alternative else expected.get("evidence_scope", expected.get("patch_scope", []))
+    expected_files = [candidate.split(":", 1)[0]] if selected_alternative else expected.get("expected_files", [])
     checks = {
         "artifact_is_implementation_plan": actual.get("artifact_type") == "ImplementationPlan" and actual.get("role") == plan_producer,
-        "candidate_matches": actual.get("candidate") == expected.get("candidate"),
+        "candidate_matches": actual.get("candidate") in {
+            expected.get("candidate"), *list(expected.get("acceptable_candidates") or [])
+        },
         "binding_targets_candidate": actual.get("binding_candidate") == actual.get("candidate"),
         "bound_to_extraction_contract": actual.get("binding_status") == "bound_to_extraction_contract",
         "has_input_contract": actual.get("has_input_contract") is True,
         "has_output_contract": actual.get("has_output_contract") is True,
         "patch_scope_is_bounded_to_candidate_file": _patch_scope_is_bounded(actual),
         "required_evidence_scope_covered": _expected_covered(
-            expected.get("evidence_scope", expected.get("patch_scope", [])),
+            expected_evidence,
             actual.get("evidence_scope", []),
         ),
-        "writable_scope_targets_candidate": actual.get("writable_scope") == _strings(expected.get("writable_scope", [expected.get("candidate")])),
-        "required_expected_files_covered": _expected_covered(expected.get("expected_files", []), actual.get("expected_files", [])),
+        "writable_scope_targets_candidate": actual.get("writable_scope") == [candidate],
+        "required_expected_files_covered": _expected_covered(expected_files, actual.get("expected_files", [])),
         "rollback_files_cover_expected_files": _expected_covered(actual.get("expected_files", []), actual.get("rollback_files", [])),
         "verification_commands_covered": _verification_commands_acceptable(
             expected.get("verification_commands", []),

@@ -24,3 +24,12 @@ def test_incomplete_binding_preserves_source_signature():
     )
 
     assert contract == signature
+
+
+def test_concrete_source_annotation_wins_over_single_field_domain_guess():
+    contract = reconcile_input_contract(
+        {"machine": "str | None"},
+        {"value": "bool"},
+    )
+
+    assert contract == {"machine": "str | None"}

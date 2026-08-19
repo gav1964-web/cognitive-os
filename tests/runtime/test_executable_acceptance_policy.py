@@ -61,6 +61,10 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert sample_value("", "cancels") == []
     assert sample_value("bool", "enabled") is True
     assert sample_value("bool", "enabled", signature_mode=True) is False
+    assert sample_value("bytes", "payload") == {"__fixture__": "bytes_empty"}
+    assert sample_value("IndexableLike", "data") == {}
+    assert sample_value("", "function") == {"__fixture__": "callable_identity"}
+    assert sample_value("", "arity") == 1
     assert materialize({"iterations": "sample", "digest_size": "sample"}) == {"iterations": 1, "digest_size": 8}
     row = materialize({"__fixture__": "record_row_empty"})
     assert row.data == {} and row.get("missing") is None

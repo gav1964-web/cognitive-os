@@ -351,11 +351,15 @@ def _ast_signature(node: ast.AST) -> dict[str, Any]:
     if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return {}
     args = []
-    for arg in node.args.args:
+    for arg in [*node.args.posonlyargs, *node.args.args]:
         if arg.arg in {"self", "cls"}:
             continue
         args.append({"name": arg.arg, "annotation": _annotation(arg.annotation)})
-    return {"args": args, "returns": _annotation(node.returns)}
+    kwonlyargs = [
+        {"name": arg.arg, "annotation": _annotation(arg.annotation)}
+        for arg in node.args.kwonlyargs
+    ]
+    return {"args": args, "kwonlyargs": kwonlyargs, "returns": _annotation(node.returns)}
 
 
 def _annotation(node: ast.AST | None) -> str:

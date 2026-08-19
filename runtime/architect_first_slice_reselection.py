@@ -170,6 +170,7 @@ def _viable_candidates(
         -int(bool(row["environment_ready"])),
         -int(bool(row["receiver_independent"])),
         -int(row["score"]),
+        str(row["target"]),
         int(row["index"]),
     ))
     return [str(row["target"]) for row in ranked[:limit]], ranked

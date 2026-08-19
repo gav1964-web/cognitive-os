@@ -108,6 +108,16 @@
       "reason": "stateful method effects require a fixture or process boundary before executable handoff"
     },
     {
+      "rule_id": "stateful_runtime_function",
+      "score_delta": -55,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["fill_buffer", "load_batch", "load_rows"],
+        "side_effects_contains_any": ["memory_state"]
+      },
+      "reason": "stateful data-loading lifecycle requires an explicit state fixture before executable handoff"
+    },
+    {
       "rule_id": "utility_path_boundary",
       "score_delta": 16,
       "match": {
@@ -123,6 +133,24 @@
         "symbol_contains_any": ["_cb", "callback"]
       },
       "reason": "callback requires an event or runtime fixture before executable handoff"
+    },
+    {
+      "rule_id": "private_runtime_hook",
+      "score_delta": -55,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["_hook", "hook_", "run_with_reloader"]
+      },
+      "reason": "private hook or reload-loop callback requires runtime orchestration rather than a first contract slice"
+    },
+    {
+      "rule_id": "external_effect_boundary",
+      "score_delta": -65,
+      "reselection_required": true,
+      "match": {
+        "side_effects_contains_any": ["network", "subprocess"]
+      },
+      "reason": "network or subprocess effect requires an adapter fixture and is deferred behind a pure contract"
     },
     {
       "rule_id": "ml_training_lifecycle",
@@ -215,7 +243,7 @@
       "score_delta": -80,
       "reselection_required": true,
       "match": {
-        "path_contains_any": ["/ext_tools/", "/third_party/", "/vendor/", "/vendored/"]
+        "path_contains_any": ["/ext_tools/", "/third_party/", "/_vendor/", "/vendor/", "/vendored/"]
       },
       "reason": "vendored or external tooling is context rather than a project-owned first writable slice"
     },

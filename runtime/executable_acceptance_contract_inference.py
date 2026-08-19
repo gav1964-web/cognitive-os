@@ -32,6 +32,7 @@ def infer_argument_samples(
         _collect_conversion(item, parameters, candidates)
         _collect_strptime(item, parameters, candidates)
         _collect_comparison(item, parameters, candidates)
+    _collect_required_mapping_keys(node, parameters, candidates)
     if project_root and project_root.is_dir():
         _collect_upstream_test_calls(project_root, path, symbol, node, candidates)
     return {
@@ -107,6 +108,19 @@ def _collect_comparison(
         value = next((item for item in constants if _safe_scalar(item)), None)
         if value is not None:
             candidates[name].append((70, _comparison_sample(value), "ast_comparison_literal"))
+
+
+def _collect_required_mapping_keys(node: ast.AST, parameters: set[str], candidates: dict[str, list[tuple[int, Any, str]]]) -> None:
+    keys: dict[str, set[str]] = {name: set() for name in parameters}
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Subscript) or not isinstance(item.value, ast.Name):
+            continue
+        key = _literal(item.slice)
+        if item.value.id in parameters and isinstance(key, str):
+            keys[item.value.id].add(key)
+    for name, required in keys.items():
+        if required:
+            candidates[name].append((90, {key: [] for key in sorted(required)}, "ast_required_mapping_keys"))
 
 
 def _direct_parameter(node: ast.AST, parameters: set[str]) -> str:

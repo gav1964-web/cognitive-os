@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from runtime.source_contract_types import concrete_type
+
 
 def reconcile_input_contract(
     signature: dict[str, str], domain: dict[str, Any], bindings: dict[str, Any] | None = None
@@ -18,12 +20,15 @@ def reconcile_input_contract(
     signature_keys = list(signature)
     domain_keys = list(domain)
     if signature_keys == domain_keys:
-        return {key: str(domain.get(key) or signature[key]) for key in signature_keys}
+        return {
+            key: _prefer_source_type(signature[key], domain.get(key))
+            for key in signature_keys
+        }
     if signature_keys == ["call_context"] and "call_context" in domain:
         return _strings(domain)
     if len(signature_keys) == len(domain_keys):
         return {
-            signature_key: str(domain.get(domain_key) or signature[signature_key])
+            signature_key: _prefer_source_type(signature[signature_key], domain.get(domain_key))
             for signature_key, domain_key in zip(signature_keys, domain_keys)
         }
     if {"consensus_input", "failure_evidence"} & set(map(str, domain)):
@@ -51,3 +56,8 @@ def _bound_contract(signature: dict[str, str], domain: dict[str, Any], bindings:
 
 def _strings(value: dict[str, Any]) -> dict[str, str]:
     return {str(key): str(item) for key, item in value.items()}
+
+
+def _prefer_source_type(source_type: Any, domain_type: Any) -> str:
+    source = str(source_type or "")
+    return source if concrete_type(source) else str(domain_type or source)

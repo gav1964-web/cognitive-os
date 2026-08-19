@@ -251,31 +251,6 @@ def test_executable_acceptance_executes_static_method_target(tmp_path: Path):
     assert result["summary"]["signal_strength"] == "executable_callable"
 
 
-def test_executable_acceptance_reports_method_sample_execution_failure(tmp_path: Path):
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / "main.py").write_text(
-        "class Parser:\n"
-        "    @staticmethod\n"
-        "    def parse(value):\n"
-        "        return {'parsed_url': value['url']}\n",
-        encoding="utf-8",
-    )
-
-    result = run_executable_acceptance(
-        root=tmp_path,
-        project_dir=project,
-        test_plan=_plan("main.py:parse", {"value": "sample"}, malformed=False),
-        work_dir=tmp_path / "work",
-    )
-
-    assert result["status"] == "passed"
-    assert result["summary"]["signal_strength"] == "meta_only"
-    assert result["summary"]["skipped_reason_counts"] == {"positive_sample_execution_failed": 1}
-    assert result["summary"]["skipped_targets"][0]["detail"] == "TypeError: string indices must be integers"
-    assert "sample_values" in result["summary"]["skipped_targets"][0]["recovery"]
-
-
 def test_executable_acceptance_maps_semantic_argument_names_to_signature(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

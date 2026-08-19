@@ -17,6 +17,7 @@ from .executable_acceptance_callable_context import with_runtime_effect_stubs
 from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes
 from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_method_fixtures import method_fixture_values
+from .executable_acceptance_method_selection import unique_method_class
 from .executable_acceptance_resource_io import read_only_open_for
 from .python_parser_compatibility import parse_compatible_source
 
@@ -65,16 +66,20 @@ def load_source_isolated_callable(path: Path, symbol: str) -> dict[str, Any]:
 def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
     try:
         tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
-        match = _unique_method_class(tree, symbol)
+        match = unique_method_class(tree, symbol)
         if match is None:
             return {"callable": None, "reason": "target_not_callable"}
+        _, separator, method_name = symbol.partition(".")
+        method_name = method_name if separator else symbol
         class_node, method_names = match
         methods = {
             node.name: node
             for node in class_node.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
-        selected = _isolated_method_names(methods, symbol)
+        selected = _isolated_method_names(methods, method_name)
+        if "__init__" in methods:
+            selected.add("__init__")
         body = [_isolated_class_member(item) for item in needed_class_members(class_node, selected)]
         globals_body = isolated_global_nodes(tree, body, class_node.name)
         isolated_class = ast.ClassDef(
@@ -89,27 +94,27 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         ast.fix_missing_locations(module)
         namespace: dict[str, Any] = _namespace_for(path)
         from .executable_acceptance_policy import method_fixture_policy
-        local_stubs = f"{class_node.name}.{symbol}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
+        local_stubs = f"{class_node.name}.{method_name}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
         with _source_import_path(path), _fresh_local_package(namespace), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         configured_stubs = install_configured_global_fixtures(body, namespace)
         wildcard_stubs = install_unresolved_wildcard_names(tree, body, namespace)
         cls = namespace[class_node.name]
-        member = getattr(cls, symbol, None)
-        raw_attrs, attrs = method_fixture_values(class_node.name, symbol, body, selected)
+        member = getattr(cls, method_name, None)
+        raw_attrs, attrs = method_fixture_values(class_node.name, method_name, body, selected)
         if callable(member) and _callable_accepts_without_self(member):
             func = member
         else:
             instance = object.__new__(cls)
             for key, value in attrs.items():
                 setattr(instance, key, value)
-            func = getattr(instance, symbol, None)
+            func = getattr(instance, method_name, None)
         if callable(func):
             func = with_runtime_effect_stubs(func, set(effect_stubs))
         return {
             "callable": func,
             "reason": "" if callable(func) else "target_not_callable",
-            "method": {"class_name": class_node.name, "method_name": symbol},
+            "method": {"class_name": class_node.name, "method_name": method_name},
             "method_instance_attributes": raw_attrs,
             "source_isolated": True,
             "source_isolated_method": True,
@@ -150,23 +155,14 @@ def _strip_annotations(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> ast
 def _isolated_class_member(item: ast.AST) -> ast.AST:
     copied = copy.deepcopy(item)
     if isinstance(copied, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return _strip_annotations(copied)
+        binding_decorators = [
+            decorator
+            for decorator in copied.decorator_list
+            if isinstance(decorator, ast.Name) and decorator.id in {"classmethod", "staticmethod"}
+        ]
+        copied = _strip_annotations(copied)
+        copied.decorator_list = binding_decorators
     return copied
-
-
-def _unique_method_class(tree: ast.Module, symbol: str) -> tuple[ast.ClassDef, set[str]] | None:
-    matches: list[tuple[ast.ClassDef, set[str]]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
-        method_names = {
-            item.name
-            for item in node.body
-            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
-        }
-        if symbol in method_names:
-            matches.append((node, method_names))
-    return matches[0] if len(matches) == 1 else None
 
 
 def _isolated_method_names(functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef], symbol: str) -> set[str]:

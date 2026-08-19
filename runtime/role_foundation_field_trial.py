@@ -317,7 +317,7 @@ def _case_readiness_score(case: dict[str, Any]) -> float:
 def _case_status(result: dict[str, Any]) -> str:
     if result.get("status") == "ok":
         return "ok"
-    if _spec_writer_blocked_no_safe_candidate(result):
+    if result.get("status") == "blocked" and _spec_writer_blocked_no_safe_candidate(result):
         return "blocked_ok"
     if result.get("status") == "blocked" and result.get("blocker") == "scope_selection_required":
         return "blocked_ok"

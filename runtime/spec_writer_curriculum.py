@@ -86,11 +86,17 @@ def _actual_spec(spec: dict[str, Any]) -> dict[str, Any]:
 def _score_spec(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
     spec_producer = producer_for_artifact_type("TechnicalSpec")
     plan_producer = producer_for_artifact_type("ImplementationPlan")
+    candidate = str(actual.get("candidate") or "")
+    reference_candidate = str(expected.get("candidate") or "")
+    alternatives = {str(item) for item in expected.get("acceptable_candidates") or []}
+    expected_ranked = [candidate] if candidate in alternatives and candidate != reference_candidate else expected.get("ranked_candidates", [])
     checks = {
         "artifact_is_technical_spec": actual.get("artifact_type") == "TechnicalSpec" and actual.get("role") == spec_producer,
-        "candidate_matches": actual.get("candidate") == expected.get("candidate"),
+        "candidate_matches": actual.get("candidate") in {
+            expected.get("candidate"), *list(expected.get("acceptable_candidates") or [])
+        },
         "candidate_ranked_first": actual.get("ranked_first") == actual.get("candidate"),
-        "required_ranked_candidates_covered": _expected_covered(expected.get("ranked_candidates", []), actual.get("ranked_candidates", [])),
+        "required_ranked_candidates_covered": _expected_covered(expected_ranked, actual.get("ranked_candidates", [])),
         "required_source_evidence_covered": _expected_covered(expected.get("source_evidence", []), actual.get("source_evidence", [])),
         "required_acceptance_sources_covered": _expected_covered(expected.get("acceptance_sources", []), actual.get("acceptance_sources", [])),
         "required_non_goals_covered": _expected_covered(expected.get("required_non_goals", []), actual.get("non_goals", [])),
