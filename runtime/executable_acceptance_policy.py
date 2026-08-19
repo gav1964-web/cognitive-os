@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "config" / "executable_acceptance_policy.json"
+_OVERRIDE: ContextVar[dict[str, Any] | None] = ContextVar("executable_acceptance_policy_override", default=None)
 
 
 def load_executable_acceptance_policy(path: str | Path | None = None) -> dict[str, Any]:
@@ -18,9 +21,28 @@ def load_executable_acceptance_policy(path: str | Path | None = None) -> dict[st
     return payload
 
 
-@lru_cache(maxsize=1)
 def _policy() -> dict[str, Any]:
+    return _OVERRIDE.get() or _cached_policy()
+
+
+@lru_cache(maxsize=1)
+def _cached_policy() -> dict[str, Any]:
     return load_executable_acceptance_policy()
+
+
+def clear_executable_acceptance_policy_cache() -> None:
+    _cached_policy.cache_clear()
+
+
+@contextmanager
+def temporary_executable_acceptance_policy(policy: dict[str, Any]):
+    if policy.get("schema_version") != "executable_acceptance_policy.v1":
+        raise ValueError("Unsupported temporary executable acceptance policy schema")
+    token = _OVERRIDE.set(policy)
+    try:
+        yield
+    finally:
+        _OVERRIDE.reset(token)
 
 
 def external_call_tokens() -> tuple[str, ...]:
@@ -66,6 +88,10 @@ def source_isolation_policy() -> dict[str, Any]:
         "effect_module_stubs": dict(policy.get("effect_module_stubs") or {}),
         "global_symbol_fixtures": dict(policy.get("global_symbol_fixtures") or {}),
     }
+
+
+def structural_sample_policy() -> dict[str, Any]:
+    return _clone(dict(_policy().get("structural_sample_policy") or {}))
 
 
 def skipped_recovery_hint(reason: str) -> str:

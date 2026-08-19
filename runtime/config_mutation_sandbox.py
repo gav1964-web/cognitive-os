@@ -60,16 +60,13 @@ def validate_config_mutation(
     if proposal.get("artifact_type") != "ConfigMutationProposal":
         report["validation"] = {"status": "failed", "errors": ["artifact_type_must_be_ConfigMutationProposal"]}
         return report
-    if operation != "replace_file":
-        report["validation"] = {"status": "failed", "errors": ["only_replace_file_is_supported"]}
-        return report
     if target not in VALIDATORS:
         report["validation"] = {"status": "failed", "errors": [f"unsupported_target:{target}"]}
         return report
     target_path = (base / target).resolve()
     before = target_path.read_bytes() if target_path.is_file() else b""
     try:
-        content = proposal["content"]
+        content = materialize_config_mutation(base, proposal)
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as handle:
             json.dump(content, handle, ensure_ascii=False, indent=2, sort_keys=True)
             temp_path = Path(handle.name)
@@ -90,3 +87,42 @@ def validate_config_mutation(
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         report["report_path"] = out.as_posix()
     return report
+
+
+def materialize_config_mutation(root: Path, proposal: dict[str, Any]) -> dict[str, Any]:
+    target = str(proposal.get("target") or "").replace("\\", "/")
+    target_path = root.resolve() / target
+    operation = str(proposal.get("operation") or "")
+    if operation == "replace_file":
+        content = proposal.get("content")
+        if not isinstance(content, dict):
+            raise ValueError("replace_file content must be an object")
+        return content
+    if operation != "merge_object":
+        raise ValueError("operation must be replace_file or merge_object")
+    content = json.loads(target_path.read_text(encoding="utf-8"))
+    pointer = str(proposal.get("path") or "")
+    patch = proposal.get("content")
+    if not pointer.startswith("/") or not isinstance(patch, dict):
+        raise ValueError("merge_object requires an object content and absolute JSON path")
+    target_object = _resolve_object(content, pointer)
+    _deep_merge(target_object, patch)
+    return content
+
+
+def _resolve_object(payload: dict[str, Any], pointer: str) -> dict[str, Any]:
+    current: Any = payload
+    for raw in pointer.strip("/").split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if not isinstance(current, dict) or not isinstance(current.get(token), dict):
+            raise ValueError(f"JSON path does not identify an object: {pointer}")
+        current = current[token]
+    return current
+
+
+def _deep_merge(target: dict[str, Any], patch: dict[str, Any]) -> None:
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _deep_merge(target[key], value)
+        else:
+            target[key] = value

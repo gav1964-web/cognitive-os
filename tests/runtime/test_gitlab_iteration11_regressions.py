@@ -1,7 +1,7 @@
 import sys
 
 from runtime.contract_archetype_inference import contract_archetype_for_target
-from runtime.executable_acceptance_loading import load_supported_callable
+from runtime.executable_acceptance_loading import import_path, load_supported_callable
 from runtime.executable_acceptance_materializers import materialize
 from runtime.executable_acceptance_policy import sample_value
 from runtime.executable_acceptance_isolation import load_source_isolated_callable
@@ -84,6 +84,21 @@ def test_cli_system_exit_becomes_failed_sample_not_process_exit():
     ]
 
     assert positive_samples_execute(parse_options, "cli.py:parse_options", obligations) is False
+
+
+def test_top_level_system_exit_becomes_import_failure_not_process_exit(tmp_path):
+    source = tmp_path / "app.py"
+    source.write_text(
+        "import sys\ndef handler():\n    return 'ok'\nsys.exit(0)\n",
+        encoding="utf-8",
+    )
+
+    with import_path(tmp_path):
+        loaded = load_supported_callable(tmp_path, "app.py", "handler", source)
+
+    assert loaded["callable"] is None
+    assert loaded["reason"] == "import_failed_runtime_error"
+    assert loaded["detail"] == "0"
 
 
 def test_python2_function_can_run_through_source_isolation(tmp_path):

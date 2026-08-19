@@ -5,6 +5,28 @@ from typing import Any
 from runtime._parts.config_doctor_part1 import _Check
 
 
+def _check_structural_sample_policy(policy: dict[str, Any], check: _Check) -> None:
+    structural = dict(policy.get("structural_sample_policy") or {})
+    fields = (
+        "priorities", "conversion_samples", "numeric_sequence_calls", "attribute_samples",
+        "length_constraint_samples",
+        "unpack_samples",
+        "format_samples", "format_pattern", "module_attribute_calls", "collection_difference_method",
+    )
+    for field_name in fields:
+        if not structural.get(field_name):
+            check.errors.append(f"executable_acceptance_policy_missing:structural_sample_policy.{field_name}")
+    required = {
+        "allowed_collection_domain", "comparison_literal", "conversion", "importable_module_path",
+        "keyword_payload", "length_constraint", "numeric_arithmetic", "numeric_sequence",
+        "parameter_attributes", "parameter_unpack", "required_mapping_keys", "split_unpack",
+        "strptime_format", "validation_format_hint",
+    }
+    priorities = dict(structural.get("priorities") or {})
+    for name in sorted(required - priorities.keys()):
+        check.errors.append(f"executable_acceptance_policy_missing:structural_sample_policy.priorities.{name}")
+
+
 def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _Check:
     check = _Check("executable_acceptance_source_isolation_integrity")
     policy = dict(catalogs["executable_acceptance_policy"])

@@ -54,6 +54,23 @@ def test_confident_but_non_actionable_diagnosis_escalates_to_teacher():
     assert result["model_trace"]["tier"] == "external_teacher"
 
 
+def test_invalid_local_config_proposal_escalates_to_teacher():
+    local = _diagnosis(0.95)
+    local["proposed_knowledge"] = {"config_mutation_proposal": {
+        "artifact_type": "ConfigMutationProposal",
+        "target_config": "executable_acceptance_policy.json",
+        "operation": "merge_object",
+        "path": "/structural_sample_policy",
+        "content": {"project.py:handler": {"input_contract": "string"}},
+    }}
+    teacher = _diagnosis(0.9)
+    with patch("runtime.self_improvement_analysis.call_json_chat", side_effect=[local, teacher]) as mocked:
+        result = diagnose_training_failure({}, local_config=_config("local"), teacher_config=_config("teacher"))
+
+    assert mocked.call_count == 2
+    assert result["model_trace"]["tier"] == "external_teacher"
+
+
 def test_score_manipulation_hypothesis_is_rejected():
     response = _diagnosis(0.9)
     response["hypothesis"] = "Apply a score boost and recalibrate the threshold."

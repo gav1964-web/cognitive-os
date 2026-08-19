@@ -86,6 +86,7 @@ def _check_executable_acceptance_policy(catalogs: dict[str, Any]) -> _Check:
     policy = dict(catalogs["executable_acceptance_policy"])
     dependency = dict(policy.get("dependency_policy") or {})
     samples = dict(policy.get("sample_values") or {})
+    _check_structural_sample_policy(policy, check)
     if not dependency.get("external_call_tokens"):
         check.errors.append("executable_acceptance_policy_missing:dependency_policy.external_call_tokens")
     stubs = dict(dependency.get("controlled_stubs") or {})

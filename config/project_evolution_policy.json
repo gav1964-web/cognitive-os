@@ -29,7 +29,17 @@
     "teacher_profile": "external_l45_intent_resolver",
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
-    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "temporary_semantic_profile", "model_tier", "staged_kb_candidate"],
+    "mutable_config_paths": {
+      "config/executable_acceptance_policy.json": ["/structural_sample_policy"]
+    },
+    "promotion": {
+      "require_shadow_improvement": true,
+      "require_no_role_regression": true,
+      "require_all_regression_cases_ok": true,
+      "minimum_regression_cases": 1,
+      "minimum_score_delta": 0.01
+    },
+    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "temporary_semantic_profile", "model_tier", "staged_kb_candidate", "config_mutation_proposal"],
     "forbidden_changes": ["evaluation_policy", "score_threshold", "role_score_caps", "source_project", "active_kb_without_promotion"],
     "success_rule": "target_reached_or_score_improved_without_role_regression"
   },

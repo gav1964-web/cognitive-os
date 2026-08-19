@@ -6,16 +6,33 @@ from pathlib import Path
 from runtime.executable_acceptance_policy import (
     dependency_stub_policy,
     external_call_tokens,
+    load_executable_acceptance_policy,
     method_fixture_policy,
     source_isolation_policy,
     sample_value,
     skipped_recovery_hint,
+    structural_sample_policy,
+    temporary_executable_acceptance_policy,
 )
 from runtime.executable_acceptance_materializers import materialize
 
 
 def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs():
     assert "provider" in external_call_tokens()
+    structural = structural_sample_policy()
+    assert structural["priorities"]["importable_module_path"] == 110
+    assert "asarray" in structural["numeric_sequence_calls"]
+
+
+def test_temporary_policy_is_scoped_and_restored():
+    original = structural_sample_policy()
+    candidate = load_executable_acceptance_policy()
+    candidate["structural_sample_policy"]["maximum_inferred_length"] = 7
+
+    with temporary_executable_acceptance_policy(candidate):
+        assert structural_sample_policy()["maximum_inferred_length"] == 7
+
+    assert structural_sample_policy() == original
     assert dependency_stub_policy()["max_missing_modules"] == 6
     assert "stevedore" in dependency_stub_policy()["pre_stub_modules"]
     assert "mro_entries" in dependency_stub_policy()["stub_object_features"]

@@ -10,15 +10,16 @@ from pathlib import Path
 from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
+from .foundation_executable_evidence import collect_foundation_executable_evidence
 from .local_inference import LocalInferenceConfig
 from .project_evolution_policy import load_project_evolution_policy
 from .role_foundation_field_trial import (
     DEFAULT_GOAL,
     _case_status,
     _result_with_loaded_artifacts,
-    _role_scores,
     _warnings,
 )
+from .role_foundation_feedback_scores import role_score_evaluation
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .self_improvement_analysis import diagnose_training_failure
 from .self_improvement_experience import stage_training_experience
@@ -33,6 +34,8 @@ def train_on_project(
     target_score: float | None = None,
     local_config: LocalInferenceConfig | None = None,
     teacher_config: LocalInferenceConfig | None = None,
+    regression_projects: list[Path] | None = None,
+    promote_config: bool = False,
     write: bool = True,
 ) -> dict[str, Any]:
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
@@ -46,6 +49,9 @@ def train_on_project(
     failure_packet = _failure_packet(baseline, target)
     diagnosis = diagnose_training_failure(failure_packet, local_config=local, teacher_config=teacher)
     diagnosis = _validate_recommended_source(diagnosis, baseline)
+    config_evolution = _run_config_evolution(
+        root, project_dir, failure_packet, diagnosis, regression_projects or [], promote=promote_config
+    )
     selected = teacher if dict(diagnosis.get("model_trace") or {}).get("tier") == "external_teacher" else local
     sources = challenger_sources(
         diagnosis,
@@ -76,10 +82,31 @@ def train_on_project(
     report["outcome"] = outcome
     report["training_attempts"] = attempts
     report["trial_conclusion"] = conclusion
+    report["config_evolution"] = config_evolution
     report["knowledge_candidate_path"] = candidate_path.as_posix() if candidate_path else None
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
+
+
+def _run_config_evolution(
+    root: Path,
+    project_dir: Path,
+    failure_packet: dict[str, Any],
+    diagnosis: dict[str, Any],
+    regression_projects: list[Path],
+    *,
+    promote: bool,
+) -> dict[str, Any] | None:
+    from .self_improvement_evolution_runner import evolve_diagnosed_foundation_policy
+
+    return evolve_diagnosed_foundation_policy(
+        root=root, project_dir=project_dir,
+        failure_packet=failure_packet,
+        diagnosis=diagnosis,
+        regression_projects=regression_projects,
+        promote=promote,
+    )
 
 
 def _run_contract_profile_attempt(
@@ -163,12 +190,23 @@ def _evaluate(
     loaded = _result_with_loaded_artifacts(result)
     semantic = evaluate_foundation_semantic_quality(loaded)
     result["foundation_semantic_quality"] = semantic
-    scores = _role_scores({**result, "artifacts": loaded["artifacts"]})
+    downstream = {}
+    if result.get("status") == "ok":
+        downstream = collect_foundation_executable_evidence(
+            root=root, project_dir=project_dir,
+            technical_spec=dict(loaded["artifacts"].get("technical_spec") or {}),
+        )
+        result["downstream_evidence"] = downstream
+    scored = {**result, "artifacts": loaded["artifacts"]}
+    evaluation = role_score_evaluation(scored)
+    scores = dict(evaluation["role_scores"])
     available = [float(value) for value in scores.values() if value is not None]
     return {
-        "status": _case_status(result),
+        "status": _case_status(scored),
         "project_min_score": round(min(available), 2) if available else 0.0,
         "role_scores": scores,
+        "local_role_scores": evaluation["local_role_scores"],
+        "downstream_evidence": downstream,
         "selected_extraction_candidate": result.get("selected_extraction_candidate"),
         "selected_candidate_quality": result.get("selected_candidate_quality", {}),
         "warnings": _warnings(result),
@@ -186,6 +224,7 @@ def _failure_packet(case: dict[str, Any], target: float) -> dict[str, Any]:
         "selected_candidate": case.get("selected_extraction_candidate"),
         "candidate_quality": _compact_candidate_quality(case.get("selected_candidate_quality", {})),
         "warnings": case.get("warnings", [])[:12],
+        "downstream_evidence": case.get("downstream_evidence", {}),
         "artifact_paths": {key: dict(value or {}).get("path") for key, value in case.get("artifacts", {}).items()},
         "artifact_evidence": _artifact_evidence(case.get("artifacts", {})),
     }

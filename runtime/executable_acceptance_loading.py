@@ -45,7 +45,7 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
                         "dependency_metadata_profiles": loaded.get("dependency_metadata_profiles", []),
                         "dependency_module_profiles": loaded.get("dependency_module_profiles", []),
                     }
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             _remove_new_modules(locals().get("before_modules", set()))
             if len(Path(path_text).parts) > 1:
                 loaded = _load_callable_from_file(path, symbol, project_dir)
@@ -190,7 +190,7 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprof
             "dependency_metadata_profiles": metadata_used,
             "dependency_module_profiles": profile_modules,
         }
-    except Exception as exc:
+    except (Exception, SystemExit) as exc:
         missing = str(getattr(exc, "name", "") or "")
         policy = dependency_stub_policy()
         if _can_profile_module(missing, policy, list(preprofiled or [])):

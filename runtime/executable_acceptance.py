@@ -217,7 +217,7 @@ def _load_function(target):
                 return _load_function(target)
             if len(Path(path_text).parts) > 1:
                 return _load_source_isolated_function(path, symbol, target)
-        except Exception:
+        except (Exception, SystemExit):
             if len(Path(path_text).parts) > 1:
                 return _load_source_isolated_function(path, symbol, target)
     spec = importlib.util.spec_from_file_location("acceptance_target", path)

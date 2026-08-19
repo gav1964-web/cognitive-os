@@ -1,5 +1,55 @@
 {
   "schema_version": "executable_acceptance_policy.v1",
+  "structural_sample_policy": {
+    "priorities": {
+      "allowed_collection_domain": 105,
+      "comparison_literal": 70,
+      "conversion": 80,
+      "importable_module_path": 110,
+      "keyword_payload": 95,
+      "length_constraint": 88,
+      "numeric_arithmetic": 92,
+      "numeric_sequence": 85,
+      "parameter_unpack": 96,
+      "parameter_attributes": 87,
+      "required_mapping_keys": 90,
+      "strptime_format": 100,
+      "split_unpack": 108,
+      "validation_format_hint": 98
+    },
+    "conversion_samples": {"float": "1.0", "int": "1"},
+    "numeric_sequence_calls": ["absolute", "array", "asarray", "flipud"],
+    "numeric_sequence_sample": [0.0, 1.0],
+    "numeric_arithmetic_sample": 1,
+    "maximum_inferred_length": 32,
+    "length_constraint_samples": {
+      "default_element": 0,
+      "string_element": "0"
+    },
+    "unpack_samples": {
+      "element": 1.0,
+      "maximum_items": 16,
+      "split_methods": ["rsplit", "split"],
+      "split_part": "sample"
+    },
+    "attribute_samples": {
+      "boolean_names": ["disabled", "enabled", "nullable"],
+      "boolean_prefixes": ["has_", "is_"],
+      "integer_names": ["count", "index", "length", "size"],
+      "boolean_value": false,
+      "integer_value": 0,
+      "default": "sample"
+    },
+    "format_samples": {
+      "HH:MM:SS": "04:05:06",
+      "YYYY-MM-DD": "2024-02-03",
+      "YYYY-MM-DDTHH:MM:SS": "2024-02-03T04:05:06",
+      "YYYY/MM/DD": "2024/02/03"
+    },
+    "format_pattern": "FORMAT(?: OF|:)?\\s+([A-Z][A-Z0-9_./:-]{2,})",
+    "module_attribute_calls": ["getattr", "hasattr"],
+    "collection_difference_method": "difference"
+  },
   "dependency_policy": {
     "controlled_stubs": {
       "enabled": true,

@@ -36,6 +36,9 @@ def load_project_evolution_policy(path: str | None = None) -> dict[str, Any]:
             raise ProjectEvolutionPolicyError(f"project evolution policy missing {field_name}")
     if not isinstance(payload.get("status_threshold"), (int, float)):
         raise ProjectEvolutionPolicyError("project evolution policy requires numeric status_threshold")
+    self_improvement = dict(payload.get("self_improvement") or {})
+    if not self_improvement.get("mutable_config_paths") or not self_improvement.get("promotion"):
+        raise ProjectEvolutionPolicyError("self improvement requires mutable_config_paths and promotion")
     return payload
 
 

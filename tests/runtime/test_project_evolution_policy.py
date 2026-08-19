@@ -17,6 +17,9 @@ def test_project_evolution_policy_loads_current_catalog() -> None:
     assert policy["self_improvement"]["local_diagnostician_profile"] == "local_l35"
     assert policy["self_improvement"]["max_temporary_profile_attempts"] == 1
     assert "temporary_semantic_profile" in policy["self_improvement"]["allowed_parameter_changes"]
+    assert policy["self_improvement"]["mutable_config_paths"]["config/executable_acceptance_policy.json"] == [
+        "/structural_sample_policy"
+    ]
     assert "meta_only_is_not_callable" in policy["evolution_rules"]
     assert "role_score_9_5" in policy["promotion_gates"]
 

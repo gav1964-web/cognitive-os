@@ -1,3 +1,4 @@
+from runtime.executable_acceptance_contract_inference import infer_argument_samples
 from runtime.executable_acceptance_isolation import load_source_isolated_callable
 from runtime.executable_acceptance_support import positive_samples_execute
 
@@ -39,3 +40,47 @@ def test_source_isolated_method_infers_mapping_receiver_attribute(tmp_path):
     assert loaded["reason"] == ""
     assert loaded["callable"]("missing") is None
     assert loaded["method_instance_attributes"] == {"_widgets": {}}
+
+
+def test_infers_delimited_string_from_split_unpack(tmp_path):
+    path = tmp_path / "module.py"
+    path.write_text(
+        "def extract(filename):\n"
+        "    stem, extension = filename.removeprefix('backup-').split('_', 1)\n"
+        "    return stem, extension\n",
+        encoding="utf-8",
+    )
+
+    assert infer_argument_samples(path, "extract") == {
+        "filename": {"value": "sample_sample", "source": "ast_split_unpack"}
+    }
+
+
+def test_infers_sequence_shape_from_parameter_unpack(tmp_path):
+    path = tmp_path / "module.py"
+    path.write_text(
+        "def ratio(source_size, target_size):\n"
+        "    sh, sw = source_size\n"
+        "    th, tw = target_size\n"
+        "    return sh / th, sw / tw\n",
+        encoding="utf-8",
+    )
+
+    assert infer_argument_samples(path, "ratio") == {
+        "source_size": {"value": [1.0, 1.0], "source": "ast_parameter_unpack"},
+        "target_size": {"value": [1.0, 1.0], "source": "ast_parameter_unpack"},
+    }
+
+
+def test_string_formatting_does_not_override_literal_domain(tmp_path):
+    path = tmp_path / "module.py"
+    path.write_text(
+        "def choose(mode):\n"
+        "    if mode == 'longest': return 1\n"
+        "    raise ValueError('unknown mode %r' % mode)\n",
+        encoding="utf-8",
+    )
+
+    assert infer_argument_samples(path, "choose") == {
+        "mode": {"value": "longest", "source": "ast_comparison_literal"}
+    }

@@ -100,3 +100,20 @@ def test_config_mutation_sandbox_blocks_invalid_config(tmp_path: Path):
 
     assert report["status"] == "blocked"
     assert report["validation"]["status"] == "failed"
+
+
+def test_config_mutation_sandbox_validates_object_merge(tmp_path: Path):
+    proposal = {
+        "artifact_type": "ConfigMutationProposal",
+        "target": "config/executable_acceptance_policy.json",
+        "operation": "merge_object",
+        "path": "/structural_sample_policy",
+        "content": {"maximum_inferred_length": 24},
+    }
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+
+    report = validate_config_mutation(root=ROOT, proposal_path=proposal_path)
+
+    assert report["status"] == "passed"
+    assert report["target_modified"] is False

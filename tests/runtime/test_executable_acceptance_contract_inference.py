@@ -95,6 +95,20 @@ def test_infers_sequence_shape_from_length_constraint(tmp_path: Path):
     }
 
 
+def test_infers_string_sequence_when_index_is_compared_to_string(tmp_path: Path):
+    path = _source(
+        tmp_path,
+        "def normalize(value):\n"
+        "    if value[0] == '#': value = value[1:]\n"
+        "    assert len(value) == 3\n"
+        "    return value\n",
+    )
+
+    assert infer_argument_samples(path, "normalize") == {
+        "value": {"value": "000", "source": "ast_length_constraint"}
+    }
+
+
 def test_infers_numeric_sequence_from_array_operation(tmp_path: Path):
     path = _source(tmp_path, "def energy(samples):\n    return np.absolute(samples)\n")
 

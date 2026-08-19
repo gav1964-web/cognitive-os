@@ -7,21 +7,34 @@ import re
 from datetime import datetime
 from typing import Any
 
+from .executable_acceptance_policy import structural_sample_policy
+
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
+
+
+def _settings() -> dict[str, Any]:
+    return structural_sample_policy()
+
+
+def _priority(name: str) -> int:
+    return int(dict(_settings().get("priorities") or {})[name])
 
 
 def collect_structural_samples(
     tree: ast.Module, node: FunctionNode, parameters: set[str], candidates: Candidates
 ) -> None:
+    string_sequences = _string_sequence_parameters(node, parameters)
     for item in ast.walk(node):
         _conversion(item, parameters, candidates)
         _strptime(item, parameters, candidates)
         _comparison(item, parameters, candidates)
         _numeric_sequence(item, parameters, candidates)
         _numeric_arithmetic(item, parameters, candidates)
-        _length_constraint(item, parameters, candidates)
+        _length_constraint(item, parameters, candidates, string_sequences)
     _required_mapping_keys(node, parameters, candidates)
+    _parameter_unpack_samples(node, parameters, candidates)
+    _split_unpack_samples(node, parameters, candidates)
     _keyword_payload_keys(node, candidates)
     _validation_format_hints(node, parameters, candidates)
     _parameter_attributes(node, parameters, candidates)
@@ -33,9 +46,9 @@ def _conversion(node: ast.AST, parameters: set[str], candidates: Candidates) -> 
     if not isinstance(node, ast.Call) or not node.args or not isinstance(node.func, ast.Name):
         return
     name = _direct_parameter(node.args[0], parameters)
-    samples = {"float": "1.0", "int": "1"}
+    samples = dict(_settings().get("conversion_samples") or {})
     if name and node.func.id in samples:
-        candidates[name].append((80, samples[node.func.id], f"ast_conversion:{node.func.id}"))
+        candidates[name].append((_priority("conversion"), samples[node.func.id], f"ast_conversion:{node.func.id}"))
 
 
 def _strptime(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
@@ -51,7 +64,7 @@ def _strptime(node: ast.AST, parameters: set[str], candidates: Candidates) -> No
         value = datetime(2024, 2, 3, 4, 5, 6).strftime(format_value)
     except (TypeError, ValueError):
         return
-    candidates[name].append((100, value, "ast_strptime_format"))
+    candidates[name].append((_priority("strptime_format"), value, "ast_strptime_format"))
 
 
 def _comparison(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
@@ -63,7 +76,7 @@ def _comparison(node: ast.AST, parameters: set[str], candidates: Candidates) -> 
         constants = [_literal(item) for offset, item in enumerate(expressions) if offset != index]
         value = next((item for item in constants if _safe_scalar(item)), None)
         if name and value is not None:
-            candidates[name].append((70, _comparison_sample(value), "ast_comparison_literal"))
+            candidates[name].append((_priority("comparison_literal"), _comparison_sample(value), "ast_comparison_literal"))
 
 
 def _numeric_sequence(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
@@ -71,20 +84,25 @@ def _numeric_sequence(node: ast.AST, parameters: set[str], candidates: Candidate
         return
     name = _direct_parameter(node.args[0], parameters)
     called = node.func.attr if isinstance(node.func, ast.Attribute) else ""
-    if name and called in {"absolute", "array", "asarray", "flipud"}:
-        candidates[name].append((85, [0.0, 1.0], f"ast_numeric_sequence:{called}"))
+    policy = _settings()
+    if name and called in set(policy.get("numeric_sequence_calls") or []):
+        candidates[name].append((_priority("numeric_sequence"), policy["numeric_sequence_sample"], f"ast_numeric_sequence:{called}"))
 
 
 def _numeric_arithmetic(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
     if not isinstance(node, ast.BinOp):
         return
+    if isinstance(node.op, ast.Mod) and any(isinstance(_literal(value), str) for value in (node.left, node.right)):
+        return
     for expression in (node.left, node.right):
         name = _direct_parameter(expression, parameters)
         if name:
-            candidates[name].append((92, 1, "ast_numeric_arithmetic"))
+            candidates[name].append((_priority("numeric_arithmetic"), _settings()["numeric_arithmetic_sample"], "ast_numeric_arithmetic"))
 
 
-def _length_constraint(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
+def _length_constraint(
+    node: ast.AST, parameters: set[str], candidates: Candidates, string_sequences: set[str]
+) -> None:
     if not isinstance(node, ast.Compare):
         return
     expressions = [node.left, *node.comparators]
@@ -93,15 +111,80 @@ def _length_constraint(node: ast.AST, parameters: set[str], candidates: Candidat
         sizes = [
             _literal(item) for offset, item in enumerate(expressions) if offset != index
         ]
-        size = next((value for value in sizes if isinstance(value, int) and 0 <= value <= 32), None)
+        maximum = int(_settings().get("maximum_inferred_length") or 0)
+        size = next((value for value in sizes if isinstance(value, int) and 0 <= value <= maximum), None)
         if name and size is not None:
-            candidates[name].append((88, [0] * size, "ast_length_constraint"))
+            samples = dict(_settings().get("length_constraint_samples") or {})
+            element = samples.get("string_element") if name in string_sequences else samples.get("default_element")
+            value = str(element) * size if name in string_sequences else [element] * size
+            candidates[name].append((_priority("length_constraint"), value, "ast_length_constraint"))
+
+
+def _string_sequence_parameters(node: FunctionNode, parameters: set[str]) -> set[str]:
+    result: set[str] = set()
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Compare):
+            continue
+        expressions = [item.left, *item.comparators]
+        if not any(isinstance(_literal(expression), str) for expression in expressions):
+            continue
+        for expression in expressions:
+            value = expression.value if isinstance(expression, ast.Subscript) else expression
+            name = _direct_parameter(value, parameters)
+            if name:
+                result.add(name)
+    return result
 
 
 def _length_parameter(node: ast.AST, parameters: set[str]) -> str:
     if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
         return ""
     return _direct_parameter(node.args[0], parameters) if node.func.id == "len" and len(node.args) == 1 else ""
+
+
+def _parameter_unpack_samples(node: FunctionNode, parameters: set[str], candidates: Candidates) -> None:
+    policy = dict(_settings().get("unpack_samples") or {})
+    maximum = int(policy.get("maximum_items") or 0)
+    for item in ast.walk(node):
+        if not isinstance(item, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = item.targets if isinstance(item, ast.Assign) else [item.target]
+        name = _direct_parameter(item.value, parameters)
+        count = max((_unpack_count(target) for target in targets), default=0)
+        if name and 1 < count <= maximum:
+            sample = [policy.get("element")] * count
+            candidates[name].append((_priority("parameter_unpack"), sample, "ast_parameter_unpack"))
+
+
+def _split_unpack_samples(node: FunctionNode, parameters: set[str], candidates: Candidates) -> None:
+    policy = dict(_settings().get("unpack_samples") or {})
+    methods = set(policy.get("split_methods") or [])
+    maximum = int(policy.get("maximum_items") or 0)
+    for item in ast.walk(node):
+        if not isinstance(item, (ast.Assign, ast.AnnAssign)) or not isinstance(item.value, ast.Call):
+            continue
+        call = item.value
+        if not isinstance(call.func, ast.Attribute) or call.func.attr not in methods or not call.args:
+            continue
+        targets = item.targets if isinstance(item, ast.Assign) else [item.target]
+        count = max((_unpack_count(target) for target in targets), default=0)
+        name = _root_parameter(call.func.value, parameters)
+        delimiter = _literal(call.args[0])
+        if name and isinstance(delimiter, str) and delimiter and 1 < count <= maximum:
+            part = str(policy.get("split_part") or "sample")
+            candidates[name].append((_priority("split_unpack"), delimiter.join([part] * count), "ast_split_unpack"))
+
+
+def _root_parameter(node: ast.AST, parameters: set[str]) -> str:
+    if name := _direct_parameter(node, parameters):
+        return name
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return _root_parameter(node.func.value, parameters)
+    return ""
+
+
+def _unpack_count(node: ast.AST) -> int:
+    return len(node.elts) if isinstance(node, (ast.Tuple, ast.List)) else 0
 
 
 def _required_mapping_keys(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
@@ -114,7 +197,7 @@ def _required_mapping_keys(node: ast.AST, parameters: set[str], candidates: Cand
             keys[item.value.id].add(key)
     for name, required in keys.items():
         if required:
-            candidates[name].append((90, {key: [] for key in sorted(required)}, "ast_required_mapping_keys"))
+            candidates[name].append((_priority("required_mapping_keys"), {key: [] for key in sorted(required)}, "ast_required_mapping_keys"))
 
 
 def _keyword_payload_keys(node: FunctionNode, candidates: Candidates) -> None:
@@ -126,7 +209,7 @@ def _keyword_payload_keys(node: FunctionNode, candidates: Candidates) -> None:
             continue
         key = _literal(item.slice)
         if item.value.id == kwargs_name and isinstance(key, str):
-            candidates.setdefault(key, []).append((95, key, "ast_required_keyword_payload"))
+            candidates.setdefault(key, []).append((_priority("keyword_payload"), key, "ast_required_keyword_payload"))
 
 
 def _validation_format_hints(
@@ -147,7 +230,7 @@ def _validation_format_hints(
         sample = next((value for message in messages for value in [_format_hint(message)] if value), "")
         for name in names:
             if sample:
-                candidates[name].append((98, sample, "ast_validation_format_hint"))
+                candidates[name].append((_priority("validation_format_hint"), sample, "ast_validation_format_hint"))
 
 
 def _parameter_attributes(node: FunctionNode, parameters: set[str], candidates: Candidates) -> None:
@@ -167,7 +250,7 @@ def _parameter_attributes(node: FunctionNode, parameters: set[str], candidates: 
                 fields[item.value.id].add(item.attr)
     for name, names in fields.items():
         if names:
-            candidates[name].append((87, {
+            candidates[name].append((_priority("parameter_attributes"), {
                 "__fixture__": "declared_model",
                 "type": "AcceptanceInput",
                 "fields": {field: _attribute_sample(field) for field in sorted(names)},
@@ -175,9 +258,13 @@ def _parameter_attributes(node: FunctionNode, parameters: set[str], candidates: 
 
 
 def _attribute_sample(name: str) -> Any:
-    if name.startswith(("is_", "has_")) or name in {"nullable", "enabled", "disabled"}:
-        return False
-    return 0 if name in {"index", "count", "size", "length"} else "sample"
+    policy = dict(_settings().get("attribute_samples") or {})
+    prefixes = tuple(str(item) for item in policy.get("boolean_prefixes") or [])
+    if name.startswith(prefixes) or name in set(policy.get("boolean_names") or []):
+        return policy.get("boolean_value")
+    if name in set(policy.get("integer_names") or []):
+        return policy.get("integer_value")
+    return policy.get("default")
 
 
 def _importable_module_paths(
@@ -189,7 +276,7 @@ def _importable_module_paths(
         for item in ast.walk(node)
         if isinstance(item, ast.Call)
         and isinstance(item.func, ast.Name)
-        and item.func.id in {"getattr", "hasattr"}
+        and item.func.id in set(_settings().get("module_attribute_calls") or [])
         and len(item.args) >= 2
         for value in [_literal(item.args[1])]
         if isinstance(value, str)
@@ -204,7 +291,7 @@ def _importable_module_paths(
             name = aliases.get(item.args[1].id, "")
         if name:
             value = {"__fixture__": "python_module_path", "fields": {attr: {} for attr in sorted(required_attrs)}}
-            candidates[name].append((110, value, "ast_importable_module_path"))
+            candidates[name].append((_priority("importable_module_path"), value, "ast_importable_module_path"))
 
 
 def _parameter_aliases(node: FunctionNode, parameters: set[str]) -> dict[str, str]:
@@ -230,7 +317,8 @@ def _allowed_collection_domains(
     for item in ast.walk(node):
         if not isinstance(item, ast.Call) or not isinstance(item.func, ast.Attribute):
             continue
-        if item.func.attr != "difference" or not item.args or not isinstance(item.args[0], ast.Name):
+        method = str(_settings().get("collection_difference_method") or "")
+        if item.func.attr != method or not item.args or not isinstance(item.args[0], ast.Name):
             continue
         receiver = item.func.value
         if not isinstance(receiver, ast.Call) or not receiver.args:
@@ -238,7 +326,7 @@ def _allowed_collection_domains(
         name = _direct_parameter(receiver.args[0], parameters)
         allowed = constants.get(item.args[0].id, [])
         if name and allowed:
-            candidates[name].append((105, [allowed[0]], "ast_allowed_collection_domain"))
+            candidates[name].append((_priority("allowed_collection_domain"), [allowed[0]], "ast_allowed_collection_domain"))
 
 
 def _module_literal_collections(tree: ast.Module) -> dict[str, list[Any]]:
@@ -258,16 +346,12 @@ def _module_literal_collections(tree: ast.Module) -> dict[str, list[Any]]:
 
 def _format_hint(message: str) -> str:
     normalized = message.upper()
-    replacements = {
-        "YYYY-MM-DDTHH:MM:SS": "2024-02-03T04:05:06",
-        "YYYY-MM-DD": "2024-02-03",
-        "YYYY/MM/DD": "2024/02/03",
-        "HH:MM:SS": "04:05:06",
-    }
+    policy = _settings()
+    replacements = dict(policy.get("format_samples") or {})
     for marker, sample in replacements.items():
         if marker in normalized:
             return sample
-    match = re.search(r"FORMAT(?: OF|:)?\s+([A-Z][A-Z0-9_./:-]{2,})", normalized)
+    match = re.search(str(policy.get("format_pattern") or r"$^"), normalized)
     return match.group(1).lower() if match else ""
 
 

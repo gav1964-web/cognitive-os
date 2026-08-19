@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .executable_acceptance_policy import structural_sample_policy
 from .project_evolution_policy import load_project_evolution_policy
 
 
@@ -73,6 +74,7 @@ def _normalize(response: dict[str, Any]) -> dict[str, Any]:
     proposed = dict(proposed_value) if isinstance(proposed_value, dict) else {}
     recommended_source = str(response.get("recommended_source") or "")
     policy_violations = _policy_violations(f"{diagnosis} {hypothesis} {json.dumps(proposed, ensure_ascii=False)}")
+    policy_violations.extend(_proposal_violations(proposed.get("config_mutation_proposal")))
     status = "ok" if diagnosis and hypothesis and roles and not policy_violations else "failed"
     return {
         "status": status,
@@ -89,16 +91,24 @@ def _normalize(response: dict[str, Any]) -> dict[str, Any]:
 
 
 def _messages(packet: dict[str, Any]) -> list[dict[str, str]]:
+    mutable_keys = ", ".join(sorted(structural_sample_policy()))
     system = (
         "You diagnose a failed Cognitive OS role trial and propose a reusable improvement. Return JSON only. "
         "Do not change evaluation thresholds, score caps, source projects, or active KB. "
         "Diagnose role quality and target selection; transport/context errors are escalation metadata, not the project failure. "
+        "When downstream_evidence contains an execution error, explain that concrete contract mismatch and make the "
+        "smallest reusable proposal that can change its measured outcome. "
         "Use only supplied evidence. Prefer general KB/config learning over project-specific rules. "
         "Return failure_class, diagnosis, hypothesis, confidence (0..1), target_roles, parameter_changes, "
         "recommended_source, and proposed_knowledge. recommended_source must exactly match one supplied ranked source "
         "and must differ from selected_candidate; use empty when no stronger source exists. Compare candidate reasons, "
         "domain relevance, side effects, and contract shape. target_roles: project_analyzer, architect, spec_writer. "
-        "parameter_changes: architect_advisory, spec_writer_advisory, model_tier, staged_kb_candidate."
+        "parameter_changes: architect_advisory, spec_writer_advisory, model_tier, staged_kb_candidate, "
+        "config_mutation_proposal. A config proposal is optional and must be nested under proposed_knowledge as "
+        "config_mutation_proposal with artifact_type ConfigMutationProposal, target "
+        "config/executable_acceptance_policy.json, operation merge_object, path /structural_sample_policy, and "
+        "a small reusable content object. Never propose score, evaluator, or project-specific changes."
+        f" Mutable content top-level keys are limited to: {mutable_keys}."
     )
     return [
         {"role": "system", "content": system},
@@ -117,3 +127,25 @@ def _policy_violations(text: str) -> list[str]:
         "evaluation_change": ("change evaluation", "modify evaluator", "weaken gate"),
     }
     return [code for code, tokens in forbidden.items() if any(token in lowered for token in tokens)]
+
+
+def _proposal_violations(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, dict):
+        return ["config_proposal_must_be_object"]
+    expected = {
+        "artifact_type": "ConfigMutationProposal",
+        "target": "config/executable_acceptance_policy.json",
+        "operation": "merge_object",
+        "path": "/structural_sample_policy",
+    }
+    errors = [f"config_proposal_invalid_{key}" for key, expected_value in expected.items()
+              if value.get(key) != expected_value]
+    content = value.get("content")
+    if not isinstance(content, dict) or not content:
+        return [*errors, "config_proposal_content_required"]
+    allowed = set(structural_sample_policy())
+    if set(content) - allowed:
+        errors.append("config_proposal_unknown_or_project_specific_keys")
+    return errors
