@@ -25,4 +25,11 @@ def test_read_only_case_uses_pipeline_semantic_quality(monkeypatch, tmp_path):
     case = field_trial._run_case(root=tmp_path, project_dir=tmp_path, write=False)
 
     assert case["semantic_quality"] == semantic
-    assert case["role_scores"] == semantic["role_scores"]
+    assert case["local_role_scores"] == semantic["role_scores"]
+    assert case["role_scores"] == {
+        "project_analyzer": 9.2,
+        "architect": 9.0,
+        "spec_writer": 8.8,
+    }
+    assert len(case["score_adjustments"]) == 3
+    assert case["acceptance_signal"] == "not_measured"

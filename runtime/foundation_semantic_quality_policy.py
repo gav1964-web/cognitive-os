@@ -31,6 +31,7 @@ def load_foundation_semantic_quality_policy(path: str | None = None) -> dict[str
         "spec_writer",
         "source_reference",
         "side_effect_policy",
+        "feedback_scoring",
     ):
         if not isinstance(payload.get(section_name), dict) or not payload.get(section_name):
             raise FoundationSemanticQualityPolicyError(f"foundation semantic quality policy missing section {section_name}")
@@ -43,4 +44,11 @@ def load_foundation_semantic_quality_policy(path: str | None = None) -> dict[str
     source_ref = dict(payload["source_reference"])
     if not source_ref.get("tokens") and not source_ref.get("suffixes"):
         raise FoundationSemanticQualityPolicyError("source_reference requires tokens or suffixes")
+    feedback = dict(payload["feedback_scoring"])
+    required_feedback = {
+        "unverified_handoff_caps", "meta_only_caps", "terminal_reselection_caps",
+        "no_expanded_candidates_caps", "executable_confirmation_signals",
+    }
+    if not required_feedback <= set(feedback):
+        raise FoundationSemanticQualityPolicyError("feedback_scoring is incomplete")
     return payload

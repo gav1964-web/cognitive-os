@@ -389,7 +389,7 @@ def _check_foundation_semantic_quality_policy(catalogs: dict[str, Any]) -> _Chec
         "architect",
         "spec_writer",
         "source_reference",
-        "side_effect_policy",
+        "side_effect_policy", "feedback_scoring",
     ):
         if not isinstance(policy.get(section_name), dict) or not policy.get(section_name):
             check.errors.append(f"foundation_semantic_quality_policy_missing:{section_name}")

@@ -6,6 +6,28 @@
     "architect": 9.7,
     "spec_writer": 9.8
   },
+  "feedback_scoring": {
+    "unverified_handoff_caps": {
+      "project_analyzer": 9.2,
+      "architect": 9.0,
+      "spec_writer": 8.8
+    },
+    "meta_only_caps": {
+      "architect": 8.5,
+      "spec_writer": 7.5
+    },
+    "terminal_reselection_caps": {
+      "project_analyzer": 8.8,
+      "architect": 7.2,
+      "spec_writer": 5.0
+    },
+    "iteration_limit_architect_cap": 6.5,
+    "no_expanded_candidates_caps": {
+      "project_analyzer": 7.5,
+      "architect": 6.5
+    },
+    "executable_confirmation_signals": ["executable_callable", "effect_stubbed_callable"]
+  },
   "specific_text": {
     "min_length": 32,
     "generic_phrases": [

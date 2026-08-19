@@ -11,10 +11,13 @@ from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from ._parts.role_foundation_field_trial_scope import _child_python_projects, _has_project_manifest, _is_python_project, _primary_language_scope
 from .role_foundation_pipeline import run_role_foundation_pipeline
+from .role_foundation_feedback_scores import (
+    apply_role_score_caps as _apply_role_score_caps,
+    role_score_evaluation,
+    role_scores as _role_scores,
+)
 from .role_foundation_trial_status import (
     case_status as _case_status,
-    spec_writer_blocked_no_safe_candidate as _spec_writer_blocked_no_safe_candidate,
-    unresolved_reselection as _unresolved_reselection,
 )
 
 
@@ -102,7 +105,8 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
     result["foundation_semantic_quality"] = semantic_quality
     scored_result = {**result, "artifacts": loaded_result["artifacts"]}
-    role_scores = _role_scores(scored_result)
+    score_evaluation = role_score_evaluation(scored_result)
+    role_scores = dict(score_evaluation["role_scores"])
     available_scores = [score for score in role_scores.values() if score is not None]
     return {
         "project": project_dir.name,
@@ -111,6 +115,9 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         "pipeline_status": result.get("status"),
         "blocker": result.get("blocker"),
         "role_scores": role_scores,
+        "local_role_scores": score_evaluation["local_role_scores"],
+        "score_adjustments": score_evaluation["adjustments"],
+        "acceptance_signal": score_evaluation["acceptance_signal"],
         "semantic_quality": semantic_quality,
         "project_min_score": round(min(available_scores), 2) if available_scores else 0.0,
         "selected_extraction_candidate": result.get("selected_extraction_candidate"),
@@ -120,50 +127,6 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         "safety": result.get("safety", {}),
         "artifacts": result.get("artifacts", {}),
         "human_documents": result.get("human_documents", {}),
-    }
-
-
-def _role_scores(result: dict[str, Any]) -> dict[str, float | None]:
-    score = dict(result.get("score") or {})
-    quality = dict(score.get("quality") or {})
-    quality_results = dict(quality.get("results") or {})
-    project_score = _quality_score(quality_results, "project_map_report")
-    if result.get("blocker") in {"scope_selection_required", "no_safe_python_candidate"}:
-        project_score = project_score if project_score is not None else _ten_point(score.get("artifact_score"))
-        return _apply_role_score_caps({"project_analyzer": project_score, "architect": None, "spec_writer": None})
-
-    architect_quality = _quality_score(quality_results, "adr")
-    architect_red = _ten_point(dict(result.get("architect_red_team") or {}).get("score"))
-    architect_scores = [value for value in (architect_quality, architect_red) if value is not None]
-
-    spec_quality = _quality_score(quality_results, "technical_spec")
-    spec_red = _ten_point(dict(result.get("spec_writer_red_team") or {}).get("score"))
-    semantic = _semantic_candidate_score(result)
-    foundation_semantic = dict(result.get("foundation_semantic_quality") or {})
-    semantic_role_scores = dict(foundation_semantic.get("role_scores") or {})
-    project_semantic = _number_or_none(semantic_role_scores.get("project_analyzer"))
-    architect_semantic = _number_or_none(semantic_role_scores.get("architect"))
-    spec_semantic = _number_or_none(semantic_role_scores.get("spec_writer"))
-    spec_scores = [value for value in (spec_quality, spec_red, semantic) if value is not None]
-    if _spec_writer_blocked_no_safe_candidate(result):
-        spec_scores = [10.0]
-
-    architect_all_scores = [*architect_scores, architect_semantic]
-    spec_all_scores = [*spec_scores, spec_semantic]
-    if _unresolved_reselection(result):
-        spec_all_scores.append(5.0)
-    return _apply_role_score_caps({
-        "project_analyzer": _min_optional(project_score, project_semantic),
-        "architect": _min_optional(*architect_all_scores),
-        "spec_writer": _min_optional(*spec_all_scores),
-    })
-
-
-def _apply_role_score_caps(scores: dict[str, float | None]) -> dict[str, float | None]:
-    caps = dict(load_foundation_semantic_quality_policy().get("role_score_caps") or {})
-    return {
-        role: min(float(value), float(caps[role])) if value is not None and role in caps else value
-        for role, value in scores.items()
     }
 
 
@@ -189,6 +152,13 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
         role: _min_available([dict(case.get("role_scores") or {}).get(role) for case in scored_cases])
         for role in ("project_analyzer", "architect", "spec_writer")
     }
+    local_role_mins = {
+        role: _min_available([
+            dict(case.get("local_role_scores") or case.get("role_scores") or {}).get(role)
+            for case in scored_cases
+        ])
+        for role in ("project_analyzer", "architect", "spec_writer")
+    }
     project_mins = [float(case.get("project_min_score") or 0.0) for case in scored_cases]
     readiness_scores = [_case_readiness_score(case) for case in scored_cases]
     below_target = [
@@ -197,6 +167,7 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
             "project_min_score": case["project_min_score"],
             "readiness_score": _case_readiness_score(case),
             "role_scores": case["role_scores"],
+            "local_role_scores": case.get("local_role_scores", case["role_scores"]),
             "status": case["status"],
             "warnings": case["warnings"][:8],
         }
@@ -225,6 +196,7 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
             "readiness_min_score": readiness_min,
             "readiness_avg_score": round(sum(readiness_scores) / len(readiness_scores), 2) if readiness_scores else 0.0,
             "role_min_scores": role_mins,
+            "local_role_min_scores": local_role_mins,
             "ok": sum(1 for case in cases if case["status"] == "ok"),
             "blocked_ok": sum(1 for case in cases if case["status"] == "blocked_ok"),
             "needs_review": sum(1 for case in cases if case["status"] == "needs_review"),
@@ -241,6 +213,7 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
         "below_target": below_target,
         "invariants": {
             "score_policy": "raw minimums diagnose a corpus; calibrated readiness gates promotion claims",
+            "feedback_policy": "published role scores include downstream evidence caps; local scores remain diagnostic",
             "published_role_score_caps": published_caps,
             "controlled_block_readiness_score": 7.0,
             "out_of_scope_projects_are_reported_but_not_scored_for_python_roles": True,
@@ -331,50 +304,6 @@ def _warnings(result: dict[str, Any]) -> list[str]:
         warnings.extend(str(row.get("code") or row) for row in payload.get("warnings", []) if row)
     return sorted(dict.fromkeys(warnings))
 
-
-def _quality_score(quality_results: dict[str, Any], key: str) -> float | None:
-    row = quality_results.get(key)
-    if not isinstance(row, dict):
-        return None
-    return _ten_point(row.get("score"))
-
-
-def _semantic_score(value: object) -> float | None:
-    if not isinstance(value, dict):
-        return None
-    score = value.get("score")
-    if score is None:
-        return None
-    return round(max(0.0, min(10.0, float(score) / 10.0)), 2)
-
-
-def _semantic_candidate_score(result: dict[str, Any]) -> float | None:
-    semantic = _semantic_score(result.get("selected_candidate_quality"))
-    spec = dict(dict(result.get("artifacts") or {}).get("technical_spec") or {})
-    contract = dict(spec.get("extraction_contract") or {})
-    review = dict(contract.get("semantic_review") or {})
-    checks = dict(review.get("checks") or {})
-    if review.get("status") == "approved_with_constraints" and checks and all(checks.values()):
-        policy = load_foundation_semantic_quality_policy()
-        floor = float(dict(policy.get("spec_writer") or {}).get("semantic_review_floor_score") or 9.2)
-        semantic = max(semantic or 0.0, floor)
-    return semantic
-
-
-def _number_or_none(value: object) -> float | None:
-    if value is None:
-        return None
-    return round(float(value), 2)
-
-
-def _min_optional(*values: float | None) -> float | None:
-    available = [float(value) for value in values if value is not None]
-    return round(min(available), 2) if available else None
-
-def _ten_point(value: object) -> float | None:
-    if value is None:
-        return None
-    return round(max(0.0, min(10.0, float(value) * 10.0)), 2)
 
 def _min_available(values: list[float | None]) -> float:
     available = [float(value) for value in values if value is not None]

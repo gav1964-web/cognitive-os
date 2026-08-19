@@ -15,6 +15,7 @@ def test_field_trial_report_uses_project_and_role_minimums():
                 "status": "ok",
                 "project_min_score": 9.8,
                 "role_scores": {"project_analyzer": 10.0, "architect": 9.8, "spec_writer": 9.9},
+                "local_role_scores": {"project_analyzer": 10.0, "architect": 9.9, "spec_writer": 10.0},
                 "warnings": [],
                 "safety": {},
             },
@@ -23,6 +24,7 @@ def test_field_trial_report_uses_project_and_role_minimums():
                 "status": "ok",
                 "project_min_score": 8.4,
                 "role_scores": {"project_analyzer": 9.7, "architect": 8.4, "spec_writer": 9.5},
+                "local_role_scores": {"project_analyzer": 9.8, "architect": 9.6, "spec_writer": 9.7},
                 "warnings": ["architect_red_team_passed"],
                 "safety": {},
             },
@@ -33,6 +35,7 @@ def test_field_trial_report_uses_project_and_role_minimums():
     assert report["status"] == "needs_work"
     assert report["summary"]["project_min_score"] == 8.4
     assert report["summary"]["role_min_scores"]["architect"] == 8.4
+    assert report["summary"]["local_role_min_scores"] == {"project_analyzer": 9.8, "architect": 9.6, "spec_writer": 9.7}
     assert report["below_target"][0]["project"] == "weak"
 
 
@@ -112,19 +115,19 @@ def test_role_scores_use_semantic_review_floor_for_constrained_spec_handoff():
         }
     )
 
-    assert scores["spec_writer"] == 9.2
+    assert scores["spec_writer"] == 8.8
 
 
 def test_role_scores_do_not_score_downstream_roles_for_scope_selection_block():
     scores = _role_scores({"blocker": "scope_selection_required", "score": {"artifact_score": 1.0}})
 
-    assert scores == {"project_analyzer": 9.7, "architect": None, "spec_writer": None}
+    assert scores == {"project_analyzer": 9.2, "architect": None, "spec_writer": None}
 
 
 def test_role_scores_do_not_score_downstream_roles_without_safe_python_candidate():
     scores = _role_scores({"blocker": "no_safe_python_candidate", "score": {"artifact_score": 0.94}})
 
-    assert scores == {"project_analyzer": 9.4, "architect": None, "spec_writer": None}
+    assert scores == {"project_analyzer": 9.2, "architect": None, "spec_writer": None}
 
 
 def test_published_role_scores_apply_conservative_caps():
