@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import ast
+import builtins
 import json
+import textwrap
 from functools import lru_cache
 from pathlib import Path
 from collections.abc import Mapping
@@ -60,6 +62,8 @@ def first_slice_viability(
     return {
         "status": "eligible" if score >= minimum else "deferred",
         "reselection_required": reselection_required,
+        "receiver_fixture_status": facts["receiver_fixture_status"],
+        "runtime_call_scope": facts["runtime_call_scope"],
         "score": score,
         "minimum_score": minimum,
         "matched_rules": matched,
@@ -88,14 +92,21 @@ def _facts(
     target_binding = str(snippet.get("target_binding") or context.get("target_binding") or "").lower()
     decorator_text = " ".join(str(item).lower() for item in decorators)
     snippet_text = str(snippet.get("text") or "").lower()
+    runtime_call_scope = _runtime_call_scope(snippet_text)
     side_effects = list(context.get("contract_side_effects") or context.get("side_effects") or snippet.get("side_effects") or [])
+    receiver_kind = _receiver_kind(target_binding, decorator_text, snippet_text)
+    structural = dict(snippet.get("structural_contract") or {})
     return {
         "source": normalized,
         "path": f"/{path}",
         "symbol": symbol,
         "knowledge_rule": knowledge_rule.lower(),
         "target_binding": target_binding,
-        "receiver_kind": _receiver_kind(target_binding, decorator_text, snippet_text),
+        "receiver_kind": receiver_kind,
+        "receiver_fixture_status": _receiver_fixture_status(
+            receiver_kind, target_binding, snippet_text, structural, runtime_call_scope
+        ),
+        "runtime_call_scope": runtime_call_scope,
         "dependency_status": str(readiness.get("status") or "").lower(),
         "decorators": decorator_text,
         "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
@@ -114,6 +125,64 @@ def _receiver_kind(target_binding: str, decorators: str, snippet_text: str) -> s
     if "self." in snippet_text or "super(" in snippet_text:
         return "instance"
     return "stateless_instance"
+
+
+def _receiver_fixture_status(
+    receiver_kind: str,
+    target_binding: str,
+    snippet_text: str,
+    structural: dict[str, Any],
+    runtime_call_scope: str,
+) -> str:
+    if receiver_kind != "instance":
+        return "not_required"
+    if target_binding == "ambiguous_method_symbol":
+        return "ambiguous_owner"
+    if "super(" in snippet_text:
+        return "unsupported_inheritance"
+    if structural.get("source_body_complete") is not True:
+        return "source_incomplete"
+    if structural.get("state_mutation") is True:
+        return "state_mutation"
+    if runtime_call_scope == "external_global":
+        return "runtime_dependency"
+    return "source_isolated_ready"
+
+
+def _runtime_call_scope(snippet_text: str) -> str:
+    try:
+        tree = ast.parse(textwrap.dedent(snippet_text))
+    except (SyntaxError, ValueError):
+        return "unknown"
+    builtin_names = set(dir(builtins))
+    function = next(
+        (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))),
+        None,
+    )
+    parameters = {
+        arg.arg
+        for arg in [
+            *list(function.args.posonlyargs if function else []),
+            *list(function.args.args if function else []),
+            *list(function.args.kwonlyargs if function else []),
+        ]
+    }
+    local_names = {
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+    }
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        root = node.func
+        while isinstance(root, ast.Attribute):
+            root = root.value
+        if isinstance(root, ast.Name) and root.id not in (
+            {"self", "cls"} | builtin_names | parameters | local_names
+        ):
+            return "external_global"
+    return "receiver_or_builtin"
 
 
 def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> str:
@@ -187,7 +256,7 @@ def _validate_matchers(match: dict[str, Any]) -> None:
     allowed_facts = {
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
         "decorators", "owner_class", "snippet_text", "side_effects", "calls", "receiver_kind",
-        "input_complexity",
+        "input_complexity", "receiver_fixture_status", "runtime_call_scope",
     }
     for key, values in match.items():
         suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""

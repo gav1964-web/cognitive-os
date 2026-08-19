@@ -29,9 +29,30 @@
       "score_delta": -45,
       "reselection_required": true,
       "match": {
-        "receiver_kind_in": ["instance"]
+        "receiver_kind_in": ["instance"],
+        "receiver_fixture_status_in": ["ambiguous_owner", "runtime_dependency", "source_incomplete", "unsupported_inheritance", "state_mutation"]
       },
-      "reason": "method reads receiver state and requires an explicit receiver fixture before executable handoff"
+      "reason": "method receiver cannot yet be materialized safely from complete source evidence"
+    },
+    {
+      "rule_id": "source_isolated_receiver_fixture",
+      "score_delta": 12,
+      "match": {
+        "receiver_kind_in": ["instance"],
+        "receiver_fixture_status_in": ["source_isolated_ready"]
+      },
+      "reason": "complete read-only receiver state can be materialized by the source-isolated method harness"
+    },
+    {
+      "rule_id": "method_runtime_global_dependency",
+      "score_delta": -55,
+      "reselection_required": true,
+      "match": {
+        "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
+        "dependency_status_in": ["ready"],
+        "runtime_call_scope_in": ["external_global", "unknown"]
+      },
+      "reason": "method delegates to an unresolved module or framework runtime and requires a specialized fixture boundary"
     },
     {
       "rule_id": "static_method_boundary",

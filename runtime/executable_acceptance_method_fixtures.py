@@ -21,8 +21,7 @@ def method_fixture_values(
         )
         or {}
     )
-    assigned = _self_attributes(nodes, ast.Store)
-    for name in sorted(_self_attributes(nodes, ast.Load) - assigned - methods):
+    for name in sorted(_self_attributes(nodes, ast.Load) - methods):
         raw.setdefault(name, {"__fixture__": "safe_method_attribute"})
     return raw, {key: materialize(value) for key, value in raw.items()}
 

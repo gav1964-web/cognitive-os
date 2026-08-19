@@ -119,6 +119,27 @@ def test_source_isolated_method_infers_safe_read_only_instance_attribute(tmp_pat
     }
 
 
+def test_source_isolated_method_materializes_attributes_assigned_by_unrun_init(tmp_path):
+    source = tmp_path / "widget.py"
+    source.write_text(
+        "class Widget:\n"
+        "    def __init__(self):\n"
+        "        self.disabled = False\n"
+        "        self.label = 'ready'\n"
+        "    def render(self):\n"
+        "        if self.disabled:\n"
+        "            return ''\n"
+        "        return self.label.upper()\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "Widget.render")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]() is not None
+    assert set(loaded["method_instance_attributes"]) == {"disabled", "label"}
+
+
 def test_source_isolation_keeps_required_guarded_import(tmp_path):
     source = tmp_path / "callback.py"
     source.write_text(

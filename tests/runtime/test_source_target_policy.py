@@ -45,3 +45,8 @@ def test_role_source_policy_blocks_integration_test_variants():
         "integration_tests/models/dummy.py:run",
     ):
         assert implementation_target_violation(target)["status"] == "blocked_no_safe_candidate"
+
+
+def test_example_file_token_does_not_exclude_product_package_name():
+    assert implementation_target_violation("example_menu.py:main")["status"] == "blocked_no_safe_candidate"
+    assert implementation_target_violation("example_domain/services.py:get_book")["status"] == "allowed"

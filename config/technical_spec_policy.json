@@ -74,12 +74,14 @@
     "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
   },
   "target_binding_policy": {
-    "blocked_standalone_bindings": ["nested_function"],
+    "blocked_standalone_bindings": ["nested_function", "ambiguous_method_symbol"],
     "blocked_reason_codes": {
-      "nested_function": "nested_function_requires_closure"
+      "nested_function": "nested_function_requires_closure",
+      "ambiguous_method_symbol": "ambiguous_method_requires_class_binding"
     },
     "blocked_reasons": {
-      "nested_function": "nested function depends on enclosing closure state and is not a standalone extraction target"
+      "nested_function": "nested function depends on enclosing closure state and is not a standalone extraction target",
+      "ambiguous_method_symbol": "method name has multiple class owners and requires a class-qualified target"
     }
   },
   "dependency_readiness": {

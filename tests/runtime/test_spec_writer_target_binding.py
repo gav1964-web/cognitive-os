@@ -33,6 +33,18 @@ def test_spec_writer_blocks_when_only_candidate_requires_closure():
     assert contract["blocked_by"] == ["nested_function_requires_closure"]
 
 
+def test_spec_writer_blocks_ambiguous_method_without_class_owner():
+    spec = _run_spec_writer(
+        ["widgets.py:show_line"],
+        {"widgets.py:show_line": _context("show_line", target_binding="ambiguous_method_symbol")},
+    )
+
+    contract = spec["extraction_contract"]
+    assert contract["status"] == "blocked_no_safe_candidate"
+    assert contract["candidate"] is None
+    assert contract["blocked_by"] == ["ambiguous_method_requires_class_binding"]
+
+
 def _context(symbol: str, *, target_binding: str = "") -> dict:
     row = {
         "kind": "pure_transform",

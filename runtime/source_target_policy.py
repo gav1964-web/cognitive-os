@@ -100,6 +100,11 @@ def scope_policy_int(field_name: str, default: int, policy: dict[str, Any] | Non
 
 def _matched_tokens(source: str, row: dict[str, Any]) -> list[str]:
     normalized = "/" + source.replace("\\", "/").lower()
-    tokens = [str(item).lower() for item in list(row.get("context_only_path_tokens") or [])]
-    tokens.extend(str(item).lower() for item in list(row.get("context_only_file_tokens") or []))
-    return [token for token in tokens if token and token in normalized]
+    source_path = normalized.partition(":")[0]
+    basename = source_path.rsplit("/", 1)[-1]
+    path_tokens = [str(item).lower() for item in list(row.get("context_only_path_tokens") or [])]
+    file_tokens = [str(item).lower() for item in list(row.get("context_only_file_tokens") or [])]
+    return [
+        *[token for token in path_tokens if token and token in normalized],
+        *[token for token in file_tokens if token and token in basename],
+    ]

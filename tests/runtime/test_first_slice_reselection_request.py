@@ -190,7 +190,7 @@ def test_architect_can_reselect_callable_with_manifest_declared_dependency(tmp_p
     assert context["dependency_readiness"]["executable_probe_required"] is True
 
 
-def test_architect_can_reselect_unique_method_with_declared_dependency(tmp_path):
+def test_architect_defers_runtime_method_even_with_declared_dependency(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()
     (tmp_path / "pyproject.toml").write_text(
@@ -219,8 +219,9 @@ def test_architect_can_reselect_unique_method_with_declared_dependency(tmp_path)
         iteration=1,
     )
 
-    assert resolution["status"] == "selected"
-    assert "pkg/client.py:send" in resolution["outcome"]["selected_targets"]
+    assert resolution["status"] == "exhausted"
+    assert resolution["outcome"]["viability_deferred_candidate_count"] == 1
+    assert resolution["outcome"]["selected_targets"] == []
 
 
 def test_architect_qualifies_ambiguous_methods_during_reselection(tmp_path):

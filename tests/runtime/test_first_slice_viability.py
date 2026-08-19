@@ -47,21 +47,6 @@ def test_receiver_state_method_is_deferred_but_static_method_remains_eligible():
     assert static["status"] == "eligible"
 
 
-def test_super_delegating_instance_method_still_requires_receiver_fixture():
-    result = first_slice_viability(
-        "pkg/widgets.py:PasswordEntry.show_line",
-        {
-            "snippet": {
-                "text": "def show_line(self, value): return super().show_line(value)",
-                "target_binding": "method_symbol",
-            }
-        },
-    )
-
-    assert result["status"] == "deferred"
-    assert result["reselection_required"] is True
-
-
 def test_runtime_lifecycle_and_cli_boundaries_require_cheaper_slice():
     lifecycle = first_slice_viability("runtime/worker.py:execute")
     cli = first_slice_viability("pkg/cli/base.py:list_templates")

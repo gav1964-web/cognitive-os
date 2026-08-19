@@ -44,7 +44,6 @@
       "/tests/",
       "/tools/",
       "/__pycache__/",
-      "example_",
       "gunicorn_conf.py",
       "conftest.py",
       "setup.py"
