@@ -17,6 +17,8 @@ from .source_dependency_readiness import source_dependency_readiness
 from .role_source_symbols import symbol_matches
 from .module_script_contract import module_script_contract
 from .source_standalone_dependencies import blocking_runtime_names, standalone_dependency_facts
+from .source_target_policy import implementation_policy_int
+
 
 def build_source_context(
     *,
@@ -311,6 +313,7 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
             start = max(1, int(getattr(node, "lineno", 1)))
             end = min(len(lines), int(getattr(node, "end_lineno", start)))
             node_text = "\n".join(lines[start - 1 : end])
+            snippet_limit = max(900, implementation_policy_int("source_snippet_max_chars", 4000))
             side_effects = infer_transitive_side_effects(tree, node)
             direct_effects = infer_ast_side_effects(node, node_text)
             decorators = [_call_name(item.func if isinstance(item, ast.Call) else item)
@@ -320,15 +323,14 @@ def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
                 "symbol": method_symbol,
                 "start_line": start,
                 "end_line": end,
-                "text": node_text[:900],
+                "text": node_text[:snippet_limit],
+                "text_truncated": len(node_text) > snippet_limit,
                 "signature": _ast_signature(node),
                 "decorators": decorators,
                 "side_effects": side_effects["effects"],
                 "selection_side_effects": selection_side_effects(direct_effects),
                 "side_effect_chains": side_effects["chains"],
-                "structural_contract": infer_source_contract(
-                    {"signature": _ast_signature(node), "snippet": node_text, "decorators": decorators}
-                ),
+                "structural_contract": infer_source_contract({"signature": _ast_signature(node), "snippet": node_text, "decorators": decorators}),
                 **standalone_dependency_facts(tree, node),
             }
             if len(matches) > 1:

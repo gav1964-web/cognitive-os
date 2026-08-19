@@ -33,3 +33,40 @@ def test_read_only_case_uses_pipeline_semantic_quality(monkeypatch, tmp_path):
     }
     assert len(case["score_adjustments"]) == 3
     assert case["acceptance_signal"] == "not_measured"
+
+
+def test_read_only_case_inspects_in_memory_artifacts(monkeypatch, tmp_path):
+    (tmp_path / "app.py").write_text("def normalize(value):\n    return value\n", encoding="utf-8")
+    request = {
+        "status": "required",
+        "terminal": True,
+        "resolution_status": "exhausted",
+        "outcome": {
+            "status": "exhausted",
+            "authority": "architect",
+            "expanded_candidate_count": 4,
+            "environment_ready_candidate_count": 3,
+            "candidate_viability": [],
+            "semantic_qualified_candidate_count": 0,
+            "selected_targets": [],
+        },
+    }
+    pipeline_kwargs = {}
+
+    def fake_pipeline(**kwargs):
+        pipeline_kwargs.update(kwargs)
+        return {
+            "status": "ok",
+            "score": {"foundation_semantic_quality": {"role_scores": {}}},
+            "artifacts": {"technical_spec": {"path": None}},
+            "artifact_contents": {
+                "technical_spec": {"first_slice_reselection_request": request},
+            },
+        }
+
+    monkeypatch.setattr(field_trial, "run_role_foundation_pipeline", fake_pipeline)
+
+    case = field_trial._run_case(root=tmp_path, project_dir=tmp_path, write=False)
+
+    assert pipeline_kwargs["include_artifact_contents"] is True
+    assert case["status"] == "blocked_ok"

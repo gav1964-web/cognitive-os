@@ -32,6 +32,7 @@ def run_role_foundation_pipeline(
     active_root: str | Path | None = None,
     architect_advisory_config: LocalInferenceConfig | None = None,
     spec_writer_advisory_config: LocalInferenceConfig | None = None,
+    include_artifact_contents: bool = False,
     _auto_scope_depth: int = 0,
     _active_root_is_auto: bool = False,
     _auto_scope_current_root_confirmed: bool = False,
@@ -79,6 +80,7 @@ def run_role_foundation_pipeline(
                 active_root=selected_root,
                 architect_advisory_config=architect_advisory_config,
                 spec_writer_advisory_config=spec_writer_advisory_config,
+                include_artifact_contents=include_artifact_contents,
                 _auto_scope_depth=_auto_scope_depth + 1,
                 _active_root_is_auto=True,
                 _auto_scope_current_root_confirmed=selected_root == analysis_project_dir,
@@ -115,6 +117,8 @@ def run_role_foundation_pipeline(
         }
         if write:
             result["report_path"] = write_role_foundation_report(root, result).as_posix()
+        if include_artifact_contents:
+            result["artifact_contents"] = artifacts
         return result
     if _no_safe_python_candidate(project_map_report):
         artifacts = {"project_map_report": project_artifact}
@@ -148,6 +152,8 @@ def run_role_foundation_pipeline(
         }
         if write:
             result["report_path"] = write_role_foundation_report(root, result).as_posix()
+        if include_artifact_contents:
+            result["artifact_contents"] = artifacts
         return result
     artifact_transform = None
     if _evaluation_target:
@@ -177,7 +183,7 @@ def run_role_foundation_pipeline(
     architect_red_team = red_team_architecture_decision(adr, project_artifact)
     spec_red_team = red_team_technical_spec(spec, adr)
     selected_candidate = _selected_extraction_candidate(spec)
-    selected_candidate_quality = _selected_candidate_quality(spec, analysis_project_dir)
+    selected_candidate_quality = _selected_candidate_quality(spec)
     result = {
         "status": "ok" if score["passed"] else "failed",
         "kind": "role_foundation_pipeline",
@@ -207,6 +213,8 @@ def run_role_foundation_pipeline(
     }
     if write:
         result["report_path"] = write_role_foundation_report(root, result).as_posix()
+    if include_artifact_contents:
+        result["artifact_contents"] = artifacts
     return result
 
 
@@ -218,7 +226,7 @@ def _no_safe_python_candidate(project_map_report: dict[str, Any]) -> bool:
     blockers = [blocked] if isinstance(blocked, str) else list(blocked)
     return "no_safe_python_candidate" in {str(item) for item in blockers}
 
-def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict[str, Any]:
+def _selected_candidate_quality(spec: dict[str, Any]) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract", {}) or {})
     quality = dict(contract.get("semantic_quality", {}) or {})
     target = str(contract.get("candidate") or quality.get("target") or "")
@@ -230,7 +238,6 @@ def _selected_candidate_quality(spec: dict[str, Any], project_dir: Path) -> dict
         target,
         ranked_candidates=ranked,
         source_evidence=evidence,
-        context_evidence=[project_dir.name],
         selection_reason=str(contract.get("selection_reason") or ""),
         structural_evidence=dict(contract.get("structural_evidence") or {}),
         input_contract=dict(contract.get("input_contract") or {}),

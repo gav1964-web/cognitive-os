@@ -376,6 +376,8 @@ def _check_role_source_policy(catalogs: dict[str, Any]) -> _Check:
         check.errors.append(f"role_source_policy_missing_context_token:{token}")
     if "context_only_implementation_target" not in section.get("blocked_by", []):
         check.errors.append("role_source_policy_missing_blocker:context_only_implementation_target")
+    if int(section.get("source_snippet_max_chars") or 0) < 900:
+        check.errors.append("role_source_policy_invalid:source_snippet_max_chars")
     scope = dict(policy.get("scope_selection_policy") or {})
     for field_name in (
         "candidate_excluded_dirs",

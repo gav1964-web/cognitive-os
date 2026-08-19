@@ -1,4 +1,4 @@
-from runtime.architect_first_slice_reselection import _domain_aligned_sources, _expanded_candidate_sources
+from runtime.architect_first_slice_reselection import _domain_aligned_sources, _expanded_candidate_sources, _viable_candidates
 
 
 def test_scientific_reselection_excludes_unrelated_operational_support():
@@ -42,3 +42,24 @@ def test_expanded_reselection_excludes_root_example_scripts():
     policy = {"candidate_sources": ["pure_transforms"], "expanded_candidate_limit": 8}
 
     assert _expanded_candidate_sources(report, {}, policy) == ["pkg/core.py:normalize"]
+
+
+def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold():
+    source = "pkg/core.py:transform"
+    context = {
+        source: {
+            "node_kind": "function",
+            "snippet": {
+                "text": "def transform(value): return value",
+                "target_binding": "function_symbol",
+                "signature": {"args": [{"name": "value"}]},
+                "structural_contract": {"source_body_complete": True, "inferred_output_type": "InferredOutput"},
+            },
+            "dependency_readiness": {"status": "ready"},
+        }
+    }
+
+    selected, viable = _viable_candidates([source], context, {}, limit=8, minimum_semantic_score=97)
+
+    assert viable and viable[0]["semantic_score"] < 97
+    assert selected == []

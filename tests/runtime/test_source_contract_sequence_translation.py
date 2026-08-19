@@ -2,6 +2,14 @@ from runtime.source_contract_semantics import infer_source_contract
 from runtime.technical_spec_builder import _input_contract_from_candidate
 
 
+def test_fstring_accumulator_proves_string_output():
+    evidence = infer_source_contract(
+        {"snippet": "def build(item):\n    result = f'value={item}'\n    result += '!'\n    return result"}
+    )
+
+    assert evidence["inferred_output_type"] == "str"
+
+
 def test_sequence_translate_return_is_a_concrete_string():
     contract = infer_source_contract(
         {

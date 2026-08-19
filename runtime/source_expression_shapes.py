@@ -36,6 +36,8 @@ def assignment_shapes(function: ast.AST, initial: dict[str, str] | None = None) 
 
 def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
     literals = {ast.Dict: "MappingLike", ast.List: "SequenceLike", ast.ListComp: "SequenceLike", ast.Tuple: "TupleLike", ast.Set: "SetLike"}
+    if isinstance(node, ast.JoinedStr):
+        return "str"
     if type(node) in literals:
         return literals[type(node)]
     if isinstance(node, ast.Name):

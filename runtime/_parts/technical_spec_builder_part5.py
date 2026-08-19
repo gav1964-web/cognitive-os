@@ -1,9 +1,26 @@
 from __future__ import annotations
 
 from typing import Any
+from runtime.source_contract_types import all_contract_shapes_concrete
 from runtime.technical_spec_policy import load_technical_spec_policy
 
 TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
+
+
+def _semantic_contract_proven(contract: dict[str, Any], quality: dict[str, Any]) -> bool:
+    structural = dict(contract.get("structural_evidence") or {})
+    effects = dict(contract.get("side_effects") or {})
+    minimum = int(dict(TECHNICAL_SPEC_POLICY.get("first_slice_reselection") or {}).get("minimum_semantic_score") or 100)
+    return bool(
+        int(quality.get("score") or 0) >= minimum
+        and structural.get("source_body_complete") is True
+        and structural.get("state_mutation") is not True
+        and all_contract_shapes_concrete(
+            dict(contract.get("input_contract") or {}), dict(contract.get("output_contract") or {})
+        )
+        and not list(effects.get("declared") or [])
+    )
+
 
 def _spec_traceability(
     traceability: list[dict[str, Any]],

@@ -316,8 +316,9 @@ def test_spec_writer_demotes_ambiguous_method_symbol_without_class_binding():
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
 
     assert spec["extraction_contract"]["candidate"] == "src/click/parser.py:_unpack_args"
-    assert ranked["src/click/parser.py:_unpack_args"]["score"] > ranked["src/click/core.py:parse_args"]["score"]
-    assert "ambiguous across classes" in " ".join(ranked["src/click/core.py:parse_args"]["reasons"])
+    assert "src/click/core.py:parse_args" not in ranked
+    assert spec["extraction_contract"]["binding_rejections"][0]["reason_code"] == "ambiguous_method_requires_class_binding"
+    assert "requires a class-qualified target" in spec["extraction_contract"]["binding_rejections"][0]["reason"]
 
 
 def test_spec_writer_keeps_executable_ready_target_over_lower_scored_method():

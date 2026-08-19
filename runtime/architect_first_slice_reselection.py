@@ -63,6 +63,7 @@ def reselect_architecture_first_slice(
         expanded_context,
         architecture_decision,
         limit=max(1, int(policy.get("selected_target_limit") or 8)),
+        minimum_semantic_score=int(dict(request.get("blocking_evidence") or {}).get("minimum_semantic_score") or 0),
     )
     _mark_manifest_declared_context(selected, expanded_context, declared, policy)
     evidence = {
@@ -74,6 +75,7 @@ def reselect_architecture_first_slice(
         "environment_ready_candidate_count": len(ready),
         "declared_dependency_candidate_count": len(set(eligible) - set(ready)),
         "viability_deferred_candidate_count": len(eligible) - len(viability),
+        "semantic_qualified_candidate_count": len(selected),
         "candidate_viability": viability,
         "selected_targets": selected,
         "authority": "architect",
@@ -153,6 +155,7 @@ def _viable_candidates(
     architecture_decision: dict[str, Any],
     *,
     limit: int,
+    minimum_semantic_score: int = 0,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     first_slice = dict(architecture_decision.get("first_slice_contract") or {})
     knowledge_rule = str(first_slice.get("knowledge_rule") or "")
@@ -182,7 +185,25 @@ def _viable_candidates(
         str(row["target"]),
         int(row["index"]),
     ))
-    return [str(row["target"]) for row in ranked[:limit]], ranked
+    qualified = [
+        row for row in ranked
+        if _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)
+    ]
+    return [str(row["target"]) for row in qualified[:limit]], ranked
+
+
+def _semantic_threshold_satisfied(
+    candidate: dict[str, Any], source_context: dict[str, Any] | None, minimum: int
+) -> bool:
+    if int(candidate.get("semantic_score") or 0) >= minimum:
+        return True
+    snippet = dict(dict(source_context or {}).get("snippet") or {})
+    structural = dict(snippet.get("structural_contract") or {})
+    explicit_return = str(structural.get("explicit_return_annotation") or "").strip().lower()
+    return bool(
+        explicit_return not in {"", "any", "typing.any", "object", "none", "nonetype"}
+        and int(structural.get("typed_argument_count") or 0) >= int(structural.get("argument_count") or 0)
+    )
 
 
 def _row_sources(value: Any) -> list[str]:

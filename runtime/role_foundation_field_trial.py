@@ -98,6 +98,7 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         project_dir=project_dir,
         goal=f"{DEFAULT_GOAL} in {project_dir.name}",
         write=write,
+        include_artifact_contents=True,
     )
     loaded_result = _result_with_loaded_artifacts(result)
     semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})
@@ -131,8 +132,12 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
 
 
 def _result_with_loaded_artifacts(result: dict[str, Any]) -> dict[str, Any]:
+    in_memory = dict(result.get("artifact_contents") or {})
     loaded = {}
     for key, value in dict(result.get("artifacts") or {}).items():
+        if key in in_memory:
+            loaded[key] = in_memory[key]
+            continue
         row = dict(value or {})
         path = row.get("path")
         if path:

@@ -272,7 +272,8 @@ def _extraction_contract(
     weak_semantic_status = str(quality.get("status") or "") in {"poor", "suspicious"}
     runtime_boundary_needs_review = "runtime/api boundary target needs semantic review" in quality_reasons
     explicitly_too_broad = "too broad for direct implementer handoff" in quality_reasons
-    if not contract.get("contract_family") and (weak_semantic_status or runtime_boundary_needs_review or explicitly_too_broad):
+    proven_contract = _semantic_contract_proven(contract, quality)
+    if not contract.get("contract_family") and not proven_contract and (weak_semantic_status or runtime_boundary_needs_review or explicitly_too_broad):
         review = _semantic_review_override(contract, quality, preferred_targets or [])
         if review.get("status") == "approved_with_constraints":
             contract["semantic_review"] = review

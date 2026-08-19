@@ -31,6 +31,22 @@ def test_terminal_reselection_is_not_reported_as_ready_handoff():
     assert _case_status(result) == "needs_review"
 
 
+def test_evidence_bound_exhaustion_is_a_controlled_block():
+    result = {
+        "status": "ok",
+        "artifacts": {"technical_spec": {"first_slice_reselection_request": {
+            "status": "required", "terminal": True, "resolution_status": "exhausted",
+            "outcome": {
+                "status": "exhausted", "authority": "architect", "expanded_candidate_count": 12,
+                "environment_ready_candidate_count": 7, "candidate_viability": [],
+                "semantic_qualified_candidate_count": 0, "selected_targets": [],
+            },
+        }}},
+    }
+
+    assert _case_status(result) == "blocked_ok"
+
+
 def test_terminal_reselection_caps_spec_writer_score():
     result = {
         "score": {"quality": {"results": {"technical_spec": {"score": 100}}}},

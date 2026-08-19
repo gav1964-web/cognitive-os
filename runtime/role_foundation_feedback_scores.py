@@ -6,6 +6,7 @@ from typing import Any
 
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .role_foundation_trial_status import (
+    evidence_bound_exhaustion,
     spec_writer_blocked_no_safe_candidate,
     unresolved_reselection,
 )
@@ -82,7 +83,7 @@ def _feedback_caps(result: dict[str, Any]) -> list[tuple[str, float, str]]:
         rows.extend(_cap_rows(policy.get("unverified_handoff_caps"), "no executable downstream confirmation"))
     if signal == "meta_only":
         rows.extend(_cap_rows(policy.get("meta_only_caps"), "downstream acceptance produced meta_only evidence"))
-    if not unresolved_reselection(result):
+    if not unresolved_reselection(result) or evidence_bound_exhaustion(result):
         return rows
     rows.extend(_cap_rows(policy.get("terminal_reselection_caps"), "terminal first-slice reselection"))
     request = _reselection_request(result)

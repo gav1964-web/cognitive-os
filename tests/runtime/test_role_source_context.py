@@ -88,6 +88,25 @@ def test_source_context_marks_unique_method_symbol_owner(tmp_path: Path):
     assert snippet["structural_contract"]["source_body_complete"] is True
 
 
+def test_source_context_infers_contract_from_complete_body_beyond_snippet_prefix(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    padding = "".join(f"    value += 'part-{index}'\n" for index in range(220))
+    (project / "builder.py").write_text(
+        "def build_text():\n    value = 'start'\n" + padding + "    return value\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(
+        project_root=str(project), project_report={}, sources=["builder.py:build_text"]
+    )
+
+    snippet = context["builder.py:build_text"]["snippet"]
+    assert snippet["text_truncated"] is True
+    assert snippet["structural_contract"]["inferred_output_type"] == "str"
+    assert snippet["structural_contract"]["source_body_complete"] is True
+
+
 def test_source_context_marks_nested_function_parent(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()

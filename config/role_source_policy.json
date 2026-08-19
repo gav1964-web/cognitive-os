@@ -3,6 +3,7 @@
   "status": "active",
   "implementation_target_policy": {
     "implementation_evidence_scope_limit": 12,
+    "source_snippet_max_chars": 4000,
     "context_only_path_tokens": [
       "/.github/",
       "/bench/",

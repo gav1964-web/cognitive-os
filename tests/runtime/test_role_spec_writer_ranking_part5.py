@@ -299,3 +299,34 @@ def test_spec_writer_prefers_promise_error_contract_over_subclasshook():
     assert spec["extraction_contract"]["candidate"] == "vine/promises.py:throw"
     ranked = {row["source"]: row for row in spec["extraction_contract"]["ranked_candidates"]}
     assert "generic introspection/debug helper" in " ".join(ranked["vine/abstract.py:__subclasshook__"]["reasons"])
+
+
+def test_source_proven_pure_request_builder_survives_generic_runtime_name_review():
+    target = "client.py:build_curl_request"
+    adr = {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "role": "architect",
+        "goal": "Specify a bounded request-to-text transform.",
+        "chosen_option": {"id": "minimal_safe_extraction"},
+        "spec_writer_brief": {
+            "scope": ["Specify one request-to-text transform."],
+            "files_or_symbols": [target],
+            "first_slice": {"targets": [target], "steps": ["Verify the text contract."]},
+        },
+        "traceability": [{"source": target, "requirement": "Build deterministic command text."}],
+        "source_context": {
+            target: {
+                "kind": "pure_transform",
+                "signature": {"args": [{"name": "request"}]},
+                "snippet": {
+                    "text": "def build_curl_request(request):\n    result = f\"curl {request['url']}\"\n    return result"
+                },
+            }
+        },
+    }
+
+    contract = _run_spec_writer(adr)["extraction_contract"]
+
+    assert contract["candidate"] == target
+    assert contract["semantic_quality"]["score"] >= 97
+    assert contract.get("status") != "blocked_no_safe_candidate"
