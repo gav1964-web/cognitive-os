@@ -31,6 +31,7 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--target-score", type=float, default=9.2)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--executable-acceptance", action="store_true")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -46,6 +47,7 @@ def main() -> int:
         limit=args.limit,
         write=args.write,
         target_score=args.target_score,
+        executable_acceptance=args.executable_acceptance,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "ok" else 1

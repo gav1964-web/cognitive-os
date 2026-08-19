@@ -9,6 +9,7 @@ from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
+from .foundation_executable_evidence import collect_foundation_executable_evidence
 from ._parts.role_foundation_field_trial_scope import _child_python_projects, _has_project_manifest, _is_python_project, _primary_language_scope
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .role_foundation_feedback_scores import (
@@ -31,11 +32,18 @@ def run_role_foundation_field_trial(
     limit: int = 0,
     write: bool = False,
     target_score: float = 9.2,
+    executable_acceptance: bool = False,
 ) -> dict[str, Any]:
     projects = discover_python_projects(project_roots)
     if limit > 0:
         projects = projects[:limit]
-    cases = [_run_case(root=root, project_dir=project, write=write) for project in projects]
+    cases = [
+        _run_case(
+            root=root, project_dir=project, write=write,
+            executable_acceptance=executable_acceptance,
+        )
+        for project in projects
+    ]
     report = _report(cases, target_score=target_score)
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
@@ -73,7 +81,9 @@ def discover_python_projects(roots: list[Path]) -> list[Path]:
     return sorted(dict.fromkeys(projects), key=lambda path: path.as_posix().lower())
 
 
-def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
+def _run_case(
+    *, root: Path, project_dir: Path, write: bool, executable_acceptance: bool = False
+) -> dict[str, Any]:
     primary_scope = _primary_language_scope(project_dir)
     if primary_scope["status"] == "out_of_scope":
         return {
@@ -101,6 +111,14 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         include_artifact_contents=True,
     )
     loaded_result = _result_with_loaded_artifacts(result)
+    downstream_evidence = {}
+    if executable_acceptance and result.get("status") == "ok":
+        downstream_evidence = collect_foundation_executable_evidence(
+            root=root,
+            project_dir=project_dir,
+            technical_spec=dict(loaded_result["artifacts"].get("technical_spec") or {}),
+        )
+        result["downstream_evidence"] = downstream_evidence
     semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})
     if not semantic_quality:
         semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
@@ -119,6 +137,7 @@ def _run_case(*, root: Path, project_dir: Path, write: bool) -> dict[str, Any]:
         "local_role_scores": score_evaluation["local_role_scores"],
         "score_adjustments": score_evaluation["adjustments"],
         "acceptance_signal": score_evaluation["acceptance_signal"],
+        "downstream_evidence": downstream_evidence,
         "semantic_quality": semantic_quality,
         "project_min_score": round(min(available_scores), 2) if available_scores else 0.0,
         "selected_extraction_candidate": result.get("selected_extraction_candidate"),
@@ -211,6 +230,21 @@ def _report(cases: list[dict[str, Any]], *, target_score: float) -> dict[str, An
             "controlled_block_rate": _ratio(sum(1 for case in scored_cases if case["status"] == "blocked_ok"), len(scored_cases)),
             "out_of_scope_rate": _ratio(sum(1 for case in cases if case["status"] == "out_of_scope"), len(cases)),
             "below_target_count": len(below_target),
+            "executable_callable": sum(
+                1 for case in scored_cases if case.get("acceptance_signal") == "executable_callable"
+            ),
+            "acceptance_meta_only": sum(
+                1 for case in scored_cases if case.get("acceptance_signal") == "meta_only"
+            ),
+            "acceptance_failed": sum(
+                1 for case in scored_cases
+                if dict(case.get("downstream_evidence") or {}).get("status") == "failed"
+            ),
+            "acceptance_not_measured": sum(
+                1 for case in scored_cases
+                if case.get("acceptance_signal") == "not_measured"
+                and dict(case.get("downstream_evidence") or {}).get("status") != "failed"
+            ),
             "llm_invoked": sum(1 for case in cases if dict(case.get("safety") or {}).get("llm_invoked") is True),
             "source_code_changes": sum(1 for case in cases if dict(case.get("safety") or {}).get("source_code_changes") is True),
         },

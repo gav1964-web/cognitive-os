@@ -382,6 +382,13 @@ def test_non_implementation_and_example_targets_are_not_strong_first_slices():
         "pkg/progress.py:example1",
         structural_evidence={"source_body_complete": True},
     )
+    stub = semantic_target_quality_report(
+        "pkg/hooks.py:Hook.value",
+        structural_evidence={
+            "source_body_complete": True, "raises": ["NotImplementedError"], "return_paths": 0,
+        },
+    )
 
     assert abstract["status"] != "strong"
     assert example["status"] != "strong"
+    assert stub["status"] != "strong"

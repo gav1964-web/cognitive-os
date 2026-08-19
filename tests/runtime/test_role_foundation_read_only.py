@@ -70,3 +70,24 @@ def test_read_only_case_inspects_in_memory_artifacts(monkeypatch, tmp_path):
 
     assert pipeline_kwargs["include_artifact_contents"] is True
     assert case["status"] == "blocked_ok"
+
+
+def test_opt_in_acceptance_lifts_unverified_score_caps(monkeypatch, tmp_path):
+    (tmp_path / "app.py").write_text("def normalize(value):\n    return value\n", encoding="utf-8")
+    semantic = {"role_scores": {"project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.8}}
+    monkeypatch.setattr(field_trial, "run_role_foundation_pipeline", lambda **kwargs: {
+        "status": "ok",
+        "score": {"foundation_semantic_quality": semantic},
+        "artifacts": {"technical_spec": {"path": None}},
+        "artifact_contents": {"technical_spec": {"artifact_type": "TechnicalSpec"}},
+    })
+    monkeypatch.setattr(field_trial, "collect_foundation_executable_evidence", lambda **kwargs: {
+        "status": "passed", "acceptance_signal": "executable_callable",
+    })
+
+    case = field_trial._run_case(
+        root=tmp_path, project_dir=tmp_path, write=False, executable_acceptance=True
+    )
+
+    assert case["acceptance_signal"] == "executable_callable"
+    assert case["role_scores"] == semantic["role_scores"]

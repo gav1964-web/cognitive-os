@@ -131,6 +131,10 @@ def semantic_target_quality_report(
     structurally_nontrivial = _structurally_nontrivial(structural_evidence)
     decorators = {str(item).lower() for item in dict(structural_evidence or {}).get("decorators", [])}
     non_implementation = sorted(decorators & NON_IMPLEMENTATION_DECORATORS)
+    not_implemented_stub = bool(
+        "NotImplementedError" in list(dict(structural_evidence or {}).get("raises") or [])
+        and int(dict(structural_evidence or {}).get("return_paths") or 0) == 0
+    )
     trivial = name_looks_trivial and not structurally_nontrivial
     bootstrap = _bootstrap_support_symbol(path, symbol)
     if suspicious and not suspicious_allowed:
@@ -158,9 +162,10 @@ def semantic_target_quality_report(
     if bootstrap and not profiled_contract_family:
         score -= 45
         reasons.append("CLI/bootstrap support helper is weak as first architectural slice")
-    if non_implementation:
+    if non_implementation or not_implemented_stub:
         score -= 45
-        reasons.append("declarative interface contract has no executable implementation: " + ", ".join(non_implementation))
+        marker = ", ".join(non_implementation) if non_implementation else "NotImplementedError-only body"
+        reasons.append("declarative interface contract has no executable implementation: " + marker)
     reasons.extend(profile_adjustments["penalty_reasons"])
     if _generic_unprofiled_candidate(path, symbol) and not profiled_contract_family:
         if score > GENERIC_UNPROFILED_SCORE_CAP:
@@ -180,7 +185,7 @@ def semantic_target_quality_report(
     liveness_probe = _liveness_probe_symbol(symbol)
     disqualifying_trivial = trivial and not profiled_contract_family
     disqualifying_bootstrap = bootstrap and not profiled_contract_family
-    disqualifying_non_implementation = bool(non_implementation)
+    disqualifying_non_implementation = bool(non_implementation or not_implemented_stub)
     effective_suspicious = [] if suspicious_allowed else suspicious
     if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
         status = "strong"
