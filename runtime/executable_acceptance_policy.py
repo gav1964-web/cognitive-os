@@ -86,6 +86,9 @@ def source_isolation_policy() -> dict[str, Any]:
     policy = dict(_policy().get("source_isolation_policy") or {})
     return {
         "effect_module_stubs": dict(policy.get("effect_module_stubs") or {}),
+        "framework_contexts": _clone(dict(policy.get("framework_contexts") or {})),
+        "global_factory_fixtures": dict(policy.get("global_factory_fixtures") or {}),
+        "local_import_factory_fixtures": _clone(dict(policy.get("local_import_factory_fixtures") or {})),
         "global_symbol_fixtures": dict(policy.get("global_symbol_fixtures") or {}),
     }
 

@@ -14,10 +14,12 @@ from .executable_acceptance_ast_imports import loaded_names as _loaded_names
 from .executable_acceptance_ast_imports import needed_class_members
 from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
 from .executable_acceptance_callable_context import with_runtime_effect_stubs
-from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes
+from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes, replace_configured_global_factories
 from .executable_acceptance_effect_stubs import configured_effect_stubs
+from .executable_acceptance_framework_context import preload_framework_modules, with_framework_context
 from .executable_acceptance_method_fixtures import method_fixture_values
 from .executable_acceptance_method_selection import unique_method_class
+from .executable_acceptance_local_imports import replace_local_import_factories
 from .executable_acceptance_package_shells import fresh_local_package
 from .executable_acceptance_resource_io import read_only_open_for
 from .python_parser_compatibility import parse_compatible_source
@@ -36,12 +38,17 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         names = _isolated_function_names(functions, symbol)
         nodes = [_strip_annotations(copy.deepcopy(functions[name])) for name in functions if name in names]
         globals_body = isolated_global_nodes(tree, nodes, "")
+        globals_body, factory_bindings = replace_configured_global_factories(globals_body)
         imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *nodes])
+        imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, nodes)
         module = ast.Module(body=[*imports, *globals_body, *nodes], type_ignores=[])
         ast.fix_missing_locations(module)
         namespace: dict[str, Any] = _namespace_for(path)
+        namespace.update(factory_bindings)
+        namespace.update(local_factory_bindings)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = symbol in set(method_fixture_policy().get("local_import_stub_functions") or [])
+        preload_framework_modules(_imported_module_names(module))
         with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         configured_stubs = install_configured_global_fixtures(nodes, namespace)
@@ -49,7 +56,8 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         func = namespace.get(symbol)
         if callable(func):
             func = with_runtime_effect_stubs(func, set(effect_stubs))
-        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "source_path": str(path), "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]], "wildcard_import_stubs": wildcard_stubs}
+            func = with_framework_context(func, path)
+        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "source_path": str(path), "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs], *[f"local_factory:{name}" for name in local_factory_stubs]], "wildcard_import_stubs": wildcard_stubs}
     except Exception as exc:
         return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
 
@@ -83,6 +91,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             selected.add("__init__")
         body = [_isolated_class_member(item) for item in needed_class_members(class_node, selected)]
         globals_body = isolated_global_nodes(tree, body, class_node.name)
+        globals_body, factory_bindings = replace_configured_global_factories(globals_body)
         isolated_class = ast.ClassDef(
             name=class_node.name,
             bases=[],
@@ -91,11 +100,15 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             decorator_list=[],
         )
         imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *body])
+        imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, body)
         module = ast.Module(body=[*imports, *globals_body, isolated_class], type_ignores=[])
         ast.fix_missing_locations(module)
         namespace: dict[str, Any] = _namespace_for(path)
+        namespace.update(factory_bindings)
+        namespace.update(local_factory_bindings)
         from .executable_acceptance_policy import method_fixture_policy
         local_stubs = f"{class_node.name}.{method_name}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
+        preload_framework_modules(_imported_module_names(module))
         with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
             effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
         configured_stubs = install_configured_global_fixtures(body, namespace)
@@ -112,6 +125,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             func = getattr(instance, method_name, None)
         if callable(func):
             func = with_runtime_effect_stubs(func, set(effect_stubs))
+            func = with_framework_context(func, path)
         return {
             "callable": func,
             "reason": "" if callable(func) else "target_not_callable",
@@ -121,7 +135,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             "source_isolated_method": True,
             "source_path": str(path),
             "method_dependencies": sorted(method_names & selected),
-            "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs]],
+            "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs], *[f"local_factory:{name}" for name in local_factory_stubs]],
             "wildcard_import_stubs": wildcard_stubs,
         }
     except Exception as exc:

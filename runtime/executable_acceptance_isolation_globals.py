@@ -57,6 +57,28 @@ def isolated_member(item: ast.AST) -> ast.AST:
     return copied
 
 
+def replace_configured_global_factories(
+    nodes: list[ast.stmt],
+) -> tuple[list[ast.stmt], dict[str, Any]]:
+    from .executable_acceptance_materializers import materialize
+    from .executable_acceptance_policy import source_isolation_policy
+
+    factories = dict(source_isolation_policy().get("global_factory_fixtures") or {})
+    bindings: dict[str, Any] = {}
+    for index, node in enumerate(nodes):
+        value = node.value if isinstance(node, (ast.Assign, ast.AnnAssign)) else None
+        if not isinstance(value, ast.Call):
+            continue
+        factory = value.func.attr if isinstance(value.func, ast.Attribute) else value.func.id if isinstance(value.func, ast.Name) else ""
+        fixture = str(factories.get(factory) or "")
+        if not fixture:
+            continue
+        binding = f"__acceptance_global_factory_{index}"
+        node.value = ast.Name(id=binding, ctx=ast.Load())
+        bindings[binding] = materialize({"__fixture__": fixture})
+    return nodes, bindings
+
+
 def _unpack_target_count(targets: list[ast.expr]) -> int:
     if len(targets) != 1 or not isinstance(targets[0], (ast.Tuple, ast.List)):
         return 0

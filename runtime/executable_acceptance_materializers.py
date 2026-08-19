@@ -341,6 +341,9 @@ class _SafeMethodAttribute:
     def __iter__(self):
         return iter(())
 
+    def __next__(self):
+        raise StopIteration
+
     def __bool__(self) -> bool:
         return False
 

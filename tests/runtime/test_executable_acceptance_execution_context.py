@@ -25,3 +25,26 @@ def test_executable_acceptance_isolates_argparse_from_pytest_arguments(tmp_path:
 
     assert result["status"] == "passed"
     assert result["summary"]["signal_strength"] == "executable_callable"
+
+
+def test_executable_acceptance_supplies_declared_flask_application_context(tmp_path: Path):
+    project = tmp_path / "project"
+    templates = project / "templates"
+    templates.mkdir(parents=True)
+    (templates / "index.html").write_text("Hello {{ name }}", encoding="utf-8")
+    (project / "app.py").write_text(
+        "from flask import render_template\n\n"
+        "def index():\n"
+        "    return render_template('index.html', name='World')\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("app.py:index", {}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"

@@ -345,7 +345,7 @@ def _assert_expected_shape(result, expect):
         declared = str(expect.get("result") or "").lower().replace(" ", "")
         if declared in {{"any", "inferredoutput", "inferred_output"}}: return
         if declared in {{"none", "null", "void"}}: assert result is None; return
-        if result is None and ("optional[" in declared or "nonetype" in declared or "|none" in declared): return
+        if result is None and (declared == "optional" or "optional[" in declared or "nonetype" in declared or "|none" in declared): return
         assert result is not None; return
     if not isinstance(result, dict): assert any("failure" not in str(key).lower() for key in expect), "multi-field output contract expects dict result"; return
 '''

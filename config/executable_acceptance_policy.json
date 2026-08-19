@@ -205,6 +205,24 @@
     }
   },
   "source_isolation_policy": {
+    "global_factory_fixtures": {
+      "Client": "safe_symbolic_attribute"
+    },
+    "local_import_factory_fixtures": {
+      "enabled": true,
+      "fixture": "safe_symbolic_attribute",
+      "maximum_symbols": 2
+    },
+    "framework_contexts": {
+      "flask_application": {
+        "trigger_modules": ["flask.helpers", "flask.templating"],
+        "factory_module": "flask",
+        "factory_name": "Flask",
+        "context_method": "test_request_context",
+        "source_root": "parent",
+        "template_folder": "templates"
+      }
+    },
     "global_symbol_fixtures": {
       "StaticFiles": {"__fixture__": "safe_symbolic_attribute"}
     },
