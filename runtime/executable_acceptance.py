@@ -70,6 +70,7 @@ def run_executable_acceptance(
             "dependency_metadata_profile_targets": harness.get("dependency_metadata_profile_targets", {}),
             "dependency_module_profile_targets": harness.get("dependency_module_profile_targets", {}),
             "effect_module_stub_targets": harness.get("effect_module_stub_targets", {}),
+            "resolved_target_paths": harness.get("resolved_target_paths", {}),
             "passed": passed,
         },
         "command": command_result,
@@ -172,10 +173,15 @@ def _run_callable(func, kwargs):
     args, call_kwargs = _call_args_kwargs(func, kwargs)
     try: asyncio.get_event_loop()
     except RuntimeError: asyncio.set_event_loop(asyncio.new_event_loop())
-    result = func(*args, **call_kwargs)
-    if isinstance(result, asyncio.Future) and result.done(): return result.result()
-    if inspect.isawaitable(result): return asyncio.run(_await_result(result))
-    return result
+    original_argv = list(sys.argv)
+    context = HARNESS_DATA.get("execution_context", {{}})
+    if context.get("isolate_process_arguments"): sys.argv[:] = [context.get("program_name") or "acceptance-probe"]
+    try:
+        result = func(*args, **call_kwargs)
+        if isinstance(result, asyncio.Future) and result.done(): return result.result()
+        if inspect.isawaitable(result): return asyncio.run(_await_result(result))
+        return result
+    finally: sys.argv[:] = original_argv
 async def _await_result(value):
     return await value
 def _call_args_kwargs(func, payload):
@@ -192,6 +198,7 @@ def _call_args_kwargs(func, payload):
 def _load_function(target):
     path_text, _, symbol = target.partition(":")
     assert path_text.endswith(".py") and symbol, f"unsupported callable target: {{target}}"
+    path_text = HARNESS_DATA.get("resolved_target_paths", {{}}).get(target, path_text)
     path = (PROJECT_DIR / path_text).resolve()
     assert PROJECT_DIR.resolve() in path.parents or path == PROJECT_DIR.resolve()
     module_name = _module_name(path_text)

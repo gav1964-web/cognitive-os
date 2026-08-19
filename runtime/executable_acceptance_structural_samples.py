@@ -34,6 +34,7 @@ def collect_structural_samples(
         _length_constraint(item, parameters, candidates, string_sequences)
     _required_mapping_keys(node, parameters, candidates)
     _parameter_unpack_samples(node, parameters, candidates)
+    _parameter_callable_samples(node, parameters, candidates)
     _split_unpack_samples(node, parameters, candidates)
     _keyword_payload_keys(node, candidates)
     _validation_format_hints(node, parameters, candidates)
@@ -154,6 +155,22 @@ def _parameter_unpack_samples(node: FunctionNode, parameters: set[str], candidat
         if name and 1 < count <= maximum:
             sample = [policy.get("element")] * count
             candidates[name].append((_priority("parameter_unpack"), sample, "ast_parameter_unpack"))
+
+
+def _parameter_callable_samples(
+    node: FunctionNode, parameters: set[str], candidates: Candidates
+) -> None:
+    fixture = str(_settings().get("parameter_callable_fixture") or "")
+    if not fixture:
+        return
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Call):
+            continue
+        name = _direct_parameter(item.func, parameters)
+        if name:
+            candidates[name].append(
+                (_priority("parameter_callable"), {"__fixture__": fixture}, "ast_parameter_callable")
+            )
 
 
 def _split_unpack_samples(node: FunctionNode, parameters: set[str], candidates: Candidates) -> None:

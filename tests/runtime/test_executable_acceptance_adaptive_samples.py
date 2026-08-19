@@ -3,6 +3,34 @@ from runtime.executable_acceptance_isolation import load_source_isolated_callabl
 from runtime.executable_acceptance_support import positive_samples_execute
 
 
+def test_infers_callable_fixture_when_parameter_is_invoked(tmp_path):
+    source = tmp_path / "formatter.py"
+    source.write_text(
+        "def format_text(text, transform=None):\n"
+        "    return transform(text, strict=True) if transform else text\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "format_text")
+
+    assert inferred["transform"] == {
+        "value": {"__fixture__": "callable_identity"},
+        "source": "ast_parameter_callable",
+    }
+
+
+def test_infers_empty_collection_for_sorted_parameter(tmp_path):
+    source = tmp_path / "ordering.py"
+    source.write_text(
+        "def order(items):\n    return sorted(items, key=lambda item: item.rank)\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "order")
+
+    assert inferred["items"] == {"value": [], "source": "ast_conversion:sorted"}
+
+
 def test_positive_sample_executes_generic_awaitable():
     class AwaitableResult:
         def __await__(self):

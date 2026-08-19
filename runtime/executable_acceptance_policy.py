@@ -94,6 +94,24 @@ def structural_sample_policy() -> dict[str, Any]:
     return _clone(dict(_policy().get("structural_sample_policy") or {}))
 
 
+def target_path_resolution_policy() -> dict[str, Any]:
+    policy = dict(_policy().get("target_path_resolution") or {})
+    return {
+        "enabled": bool(policy.get("enabled")),
+        "max_candidate_files": max(1, int(policy.get("max_candidate_files") or 1)),
+        "max_unique_matches": max(1, int(policy.get("max_unique_matches") or 1)),
+        "ignored_directories": tuple(str(item) for item in policy.get("ignored_directories", []) if item),
+    }
+
+
+def execution_context_policy() -> dict[str, Any]:
+    policy = dict(_policy().get("execution_context") or {})
+    return {
+        "isolate_process_arguments": bool(policy.get("isolate_process_arguments")),
+        "program_name": str(policy.get("program_name") or "acceptance-probe"),
+    }
+
+
 def skipped_recovery_hint(reason: str) -> str:
     recovery = dict(_policy().get("skipped_recovery") or {})
     return str(recovery.get(reason) or "")

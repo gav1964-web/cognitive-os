@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import inspect
 import io
-from contextlib import redirect_stderr, redirect_stdout
+import sys
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import Any
 
 from .executable_acceptance_materializers import materialize
+from .executable_acceptance_policy import execution_context_policy
 
 
 def positive_samples_execute(
@@ -38,7 +40,8 @@ def positive_samples_execute(
                     asyncio.get_event_loop()
                 except RuntimeError:
                     asyncio.set_event_loop(asyncio.new_event_loop())
-                result = func(*args, **kwargs)
+                with _isolated_process_arguments():
+                    result = func(*args, **kwargs)
                 if isinstance(result, asyncio.Future) and result.done():
                     result = result.result()
                 elif inspect.isawaitable(result):
@@ -51,6 +54,20 @@ def positive_samples_execute(
             _record(diagnostics, f"{type(exc).__name__}: {str(exc)}")
             return False
     return True
+
+
+@contextmanager
+def _isolated_process_arguments():
+    policy = execution_context_policy()
+    if not policy["isolate_process_arguments"]:
+        yield
+        return
+    original = list(sys.argv)
+    sys.argv[:] = [policy["program_name"]]
+    try:
+        yield
+    finally:
+        sys.argv[:] = original
 
 
 async def _await_result(value: Any) -> Any:

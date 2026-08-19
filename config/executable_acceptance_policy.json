@@ -1,5 +1,15 @@
 {
   "schema_version": "executable_acceptance_policy.v1",
+  "target_path_resolution": {
+    "enabled": true,
+    "max_candidate_files": 2000,
+    "max_unique_matches": 1,
+    "ignored_directories": [".git", ".tox", ".venv", "build", "dist", "node_modules", "site-packages", "venv"]
+  },
+  "execution_context": {
+    "isolate_process_arguments": true,
+    "program_name": "acceptance-probe"
+  },
   "structural_sample_policy": {
     "priorities": {
       "allowed_collection_domain": 105,
@@ -10,6 +20,7 @@
       "length_constraint": 88,
       "numeric_arithmetic": 92,
       "numeric_sequence": 85,
+      "parameter_callable": 112,
       "parameter_unpack": 96,
       "parameter_attributes": 87,
       "required_mapping_keys": 90,
@@ -17,10 +28,11 @@
       "split_unpack": 108,
       "validation_format_hint": 98
     },
-    "conversion_samples": {"float": "1.0", "int": "1"},
+    "conversion_samples": {"float": "1.0", "int": "1", "sorted": []},
     "numeric_sequence_calls": ["absolute", "array", "asarray", "flipud"],
     "numeric_sequence_sample": [0.0, 1.0],
     "numeric_arithmetic_sample": 1,
+    "parameter_callable_fixture": "callable_identity",
     "maximum_inferred_length": 32,
     "length_constraint_samples": {
       "default_element": 0,

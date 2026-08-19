@@ -10,11 +10,12 @@ from .executable_acceptance_loading import cleanup_dependency_stubs, import_path
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
 from .executable_acceptance_samples import positive_samples_execute
-from .executable_acceptance_policy import dependency_stub_policy, sample_value, skipped_recovery_hint
+from .executable_acceptance_policy import dependency_stub_policy, execution_context_policy, sample_value, skipped_recovery_hint
 from .executable_acceptance_support_results import module_profile_attrs as _module_profile_attrs
 from .executable_acceptance_support_results import reason_counts as _reason_counts
 from .executable_acceptance_support_results import unsupported as _unsupported
 from .executable_acceptance_target_shape import ast_skip_reason
+from .executable_acceptance_target_resolution import resolve_target_path
 from .executable_acceptance_contract_inference import infer_argument_samples
 
 ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
@@ -36,10 +37,14 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
     metadata_profiles: dict[str, list[str]] = {}
     module_profiles: dict[str, list[str]] = {}
     effect_stubs: dict[str, list[str]] = {}
+    resolved_paths: dict[str, str] = {}
     for row in obligations:
         target = str(row.get("target") or "")
         if not target or target in targets or any(item["target"] == target for item in skipped):
             continue
+        resolution = resolve_target_path(project_dir, target.partition(":")[0])
+        if not resolution["reason"] and resolution["path_text"] != target.partition(":")[0]:
+            resolved_paths[target] = str(resolution["path_text"])
         support = callable_target_support(project_dir, target, obligations)
         if support["supported"]:
             targets.append(target)
@@ -67,6 +72,8 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
                 module_profiles[target] = list(support["dependency_module_profiles"])
             if support.get("effect_module_stubs"):
                 effect_stubs[target] = list(support["effect_module_stubs"])
+            if support.get("resolved_path_text"):
+                resolved_paths[target] = str(support["resolved_path_text"])
             if support["strict_negative"]:
                 strict_negative.append(target)
         else:
@@ -79,6 +86,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
             skipped.append(item)
     return {
         "version": "executable_acceptance_harness_v0.4",
+        "execution_context": execution_context_policy(),
         "signal_strength": "executable_callable" if targets else "meta_only",
         "callable_harness_count": len(targets),
         "callable_targets": targets,
@@ -95,6 +103,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
         "dependency_module_profile_targets": module_profiles,
         "dependency_module_profile_attrs": _module_profile_attrs(module_profiles),
         "effect_module_stub_targets": effect_stubs,
+        "resolved_target_paths": resolved_paths,
         "strict_negative_targets": strict_negative,
         "meta_checked_targets": [item["target"] for item in skipped],
         "skipped_targets": skipped,
@@ -108,13 +117,11 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     if separator != ":" or not path_text.endswith(".py") or not symbol or len(symbol_parts) > 2:
         return _unsupported("unsupported_target_format")
     callable_symbol = symbol_parts[-1]
-    path = (project_dir / path_text).resolve()
-    try:
-        path.relative_to(project_dir.resolve())
-    except ValueError:
-        return _unsupported("target_outside_project")
-    if not path.is_file():
-        return _unsupported("target_file_missing")
+    resolution = resolve_target_path(project_dir, path_text)
+    if resolution["reason"]:
+        return _unsupported(str(resolution["reason"]), str(resolution.get("detail") or ""))
+    path = Path(resolution["path"])
+    path_text = str(resolution["path_text"])
     inferred = infer_argument_samples(path, symbol, project_root=project_dir)
     with import_path(project_dir):
         loaded = load_supported_callable(project_dir, path_text, callable_symbol, path)
@@ -167,6 +174,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                 "argument_overrides": binding["overrides"],
                 "argument_sample_evidence": binding["evidence"],
                 "drop_surplus_payload": bool(binding.get("drop_surplus_payload")),
+                "resolved_path_text": path_text,
             }
         isolated = load_source_isolated_callable(path, symbol)
         if callable(isolated.get("callable")):
@@ -300,11 +308,20 @@ def positive_case_binding(func: object, target: str, obligations: list[dict[str,
         param.kind == inspect.Parameter.VAR_KEYWORD
         for param in signature.parameters.values()
     )
+    configured = dict(defaults)
+    for row in obligations:
+        if row.get("target") != target or row.get("kind") != "positive_contract_case":
+            continue
+        configured.update({
+            name: value
+            for name, value in dict(row.get("given") or {}).items()
+            if isinstance(value, dict) and value.get("__fixture__")
+        })
     evidence = {
         name: dict(row)
         for name, row in dict(inferred or {}).items()
         if (name in signature.parameters or accepts_keywords)
-        and not _weaker_than_configured_fixture(name, row, defaults)
+        and not _weaker_than_configured_fixture(name, row, configured)
     }
     overrides = {name: row["value"] for name, row in evidence.items()}
     return {"accepted": True, "mapping": mapping, "defaults": defaults, "overrides": overrides, "evidence": evidence, "drop_surplus_payload": drop_surplus}
@@ -314,10 +331,12 @@ def _weaker_than_configured_fixture(
     name: str, inferred: dict[str, Any], defaults: dict[str, Any]
 ) -> bool:
     configured = defaults.get(name)
+    inferred_value = inferred.get("value")
     return (
-        inferred.get("source") == "ast_parameter_attributes"
-        and isinstance(configured, dict)
+        isinstance(configured, dict)
         and bool(configured.get("__fixture__"))
+        and isinstance(inferred_value, dict)
+        and bool(inferred_value.get("__fixture__"))
     )
 
 
