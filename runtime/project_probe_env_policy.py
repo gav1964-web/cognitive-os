@@ -29,6 +29,7 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
         "package_companions",
         "low_risk_allowlist",
         "internal_probe_stubs",
+        "field_trial",
         "verified_wheel_fallback",
         "isolated_dependency_profile",
     ):
@@ -40,7 +41,10 @@ def load_project_probe_env_policy(path: str | None = None) -> dict[str, Any]:
     if not wheel <= native:
         raise ValueError("wheel_only_native_allowlist must be a subset of native_or_compiled")
     isolated = dict(payload["isolated_dependency_profile"])
+    field_trial = dict(payload["field_trial"])
     fallback = dict(payload["verified_wheel_fallback"])
+    if int(field_trial.get("case_timeout_seconds") or 0) <= 0:
+        raise ValueError("field trial case timeout must be positive")
     for field_name in ("metadata_url_template", "trusted_file_hosts", "cache_dir_name", "download_timeout_seconds"):
         if not fallback.get(field_name):
             raise ValueError(f"verified wheel fallback policy requires: {field_name}")

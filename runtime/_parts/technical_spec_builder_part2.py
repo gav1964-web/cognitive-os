@@ -124,6 +124,7 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
                 "decorators": context.get("decorators") or snippet.get("decorators", []),
                 "callers": context.get("callers", []),
                 "callees": context.get("callees", []),
+                "unresolved_calls": context.get("unresolved_calls", []),
                 "side_effects": context.get("side_effects", []),
                 "contract_side_effects": context.get("contract_side_effects", context.get("side_effects", [])),
                 "claims": context.get("claims", []),

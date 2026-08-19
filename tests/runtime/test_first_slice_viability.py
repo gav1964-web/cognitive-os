@@ -32,7 +32,7 @@ def test_viability_accepts_plain_text_snippet_context():
     assert result["status"] in {"eligible", "deferred"}
 
 
-def test_instance_and_static_methods_remain_eligible_for_ranked_selection():
+def test_receiver_state_method_is_deferred_but_static_method_remains_eligible():
     method = first_slice_viability(
         "utils/config.py:load",
         {"snippet": {"target_binding": "method_symbol", "owner_class": "Config", "text": "def load(self): return self.path"}},
@@ -42,9 +42,42 @@ def test_instance_and_static_methods_remain_eligible_for_ranked_selection():
         {"snippet": {"target_binding": "method_symbol", "owner_class": "Config", "decorators": ["staticmethod"]}},
     )
 
-    assert method["status"] == "eligible"
-    assert method["reselection_required"] is False
+    assert method["status"] == "deferred"
+    assert method["reselection_required"] is True
     assert static["status"] == "eligible"
+
+
+def test_runtime_lifecycle_and_cli_boundaries_require_cheaper_slice():
+    lifecycle = first_slice_viability("runtime/worker.py:execute")
+    cli = first_slice_viability("pkg/cli/base.py:list_templates")
+    training = first_slice_viability("models/network.py:train_model")
+
+    assert lifecycle["reselection_required"] is True
+    assert cli["reselection_required"] is True
+    assert training["reselection_required"] is True
+
+
+def test_runtime_decorator_factory_requires_event_loop_fixture():
+    result = first_slice_viability(
+        "runtime/slots.py:async_slot",
+        {
+            "snippet": {"text": "def async_slot(): ..."},
+            "unresolved_calls": ["asyncio.create_task", "background_tasks.add"],
+        },
+    )
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
+
+
+def test_dynamic_backend_selector_requires_installed_provider():
+    result = first_slice_viability(
+        "runtime/backend.py:select_backend",
+        {"unresolved_calls": ["importlib.import_module", "os.getenv"]},
+    )
+
+    assert result["status"] == "deferred"
+    assert result["reselection_required"] is True
 
 
 def test_stateful_method_effects_remain_deferred():

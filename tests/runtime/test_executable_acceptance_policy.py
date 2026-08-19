@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import gc
+from pathlib import Path
+
 from runtime.executable_acceptance_policy import (
     dependency_stub_policy,
     external_call_tokens,
@@ -53,6 +56,7 @@ def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs
     assert sample_value("ProtocolLike", "row") == {"__fixture__": "record_row_empty"}
     assert sample_value("int", "row") == 1
     assert sample_value("PathLike", "filename") == "acceptance-output.tmp"
+    assert sample_value("PathLike", "image_path") == {"__fixture__": "readable_temp_path"}
     assert sample_value("", "api_visibility") == "public"
     assert sample_value("", "cancels") == []
     assert sample_value("bool", "enabled") is True
@@ -68,3 +72,13 @@ def test_crypt_context_fixture_preserves_password_helper_return_shapes():
 
     assert context.verify("plain", "encoded") is True
     assert isinstance(context.hash("plain"), str)
+
+
+def test_readable_temp_path_fixture_is_ephemeral():
+    fixture = materialize(sample_value("PathLike", "image_path"))
+    path = Path(fixture)
+
+    assert path.read_bytes() == b"sample"
+    del fixture
+    gc.collect()
+    assert not path.exists()

@@ -112,6 +112,9 @@ def materialize(value: Any) -> Any:
             row = type("RecordRow", (dict,), {})()
             row.data = {}
             return row
+        if fixture == "readable_temp_path":
+            from .executable_acceptance_path_fixtures import readable_temp_path
+            return readable_temp_path()
         if fixture == "noop_condition":
             return _NoopCondition()
         if fixture == "qdrant_collection_config":

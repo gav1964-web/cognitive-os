@@ -28,6 +28,9 @@ from tools.github_full_chain_scoring import (
     summary as _summary,
 )
 from tools.github_full_chain_checkpoint import run_case_batch
+from tools.github_full_chain_case_runner import run_case_with_timeout
+from tools.github_full_chain_report import markdown
+from runtime.project_probe_env_policy import load_project_probe_env_policy
 
 
 READY_THRESHOLD = 0.92
@@ -42,11 +45,13 @@ def main() -> int:
     parser.add_argument("--run-executor", action="store_true")
     parser.add_argument("--run-verification", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--case-timeout-seconds", type=int)
     args = parser.parse_args()
     root = Path(args.root).resolve()
     projects_dir = Path(args.projects_dir)
     if not projects_dir.is_absolute():
         projects_dir = root / projects_dir
+    probe_policy = dict(load_project_probe_env_policy().get("field_trial") or {})
     report = run_probe(
         root=root,
         projects_dir=projects_dir.resolve(),
@@ -56,6 +61,8 @@ def main() -> int:
         checkpoint_path=root / "artifacts" / "field_trials" / f"{args.label}_checkpoint.json",
         resume=args.resume,
         progress=True,
+        case_timeout_seconds=int(args.case_timeout_seconds or probe_policy.get("case_timeout_seconds") or 180),
+        termination_grace_seconds=int(probe_policy.get("termination_grace_seconds") or 5),
     )
     if args.write:
         report.update(write_report(root, report, args.label))
@@ -73,10 +80,15 @@ def run_probe(
     checkpoint_path: Path | None = None,
     resume: bool = False,
     progress: bool = False,
+    case_timeout_seconds: int = 0,
+    termination_grace_seconds: int = 5,
 ) -> dict[str, Any]:
     cases = run_case_batch(
         projects_dir=projects_dir,
-        runner=lambda project: _run_case(
+        runner=lambda project: run_case_with_timeout(
+            project, root=root, run_executor=run_executor, run_verification=run_verification,
+            timeout_seconds=case_timeout_seconds, termination_grace_seconds=termination_grace_seconds,
+        ) if case_timeout_seconds else _run_case(
             project, root=root, run_executor=run_executor, run_verification=run_verification
         ),
         checkpoint_path=checkpoint_path,
@@ -210,7 +222,7 @@ def write_report(root: Path, report: dict[str, Any], label: str) -> dict[str, st
     json_path = report_dir / f"{label}_{stamp}.json"
     md_path = report_dir / f"{label}_{stamp}.md"
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    md_path.write_text(_markdown(report), encoding="utf-8")
+    md_path.write_text(markdown(report), encoding="utf-8")
     return {"report_path": json_path.as_posix(), "markdown_path": md_path.as_posix()}
 
 
@@ -381,15 +393,6 @@ def _git_porcelain(project_dir: Path) -> str:
 
 def _check(code: str, passed: bool) -> dict[str, Any]:
     return {"code": code, "passed": bool(passed)}
-
-
-def _markdown(report: dict[str, Any]) -> str:
-    summary = report["summary"]
-    lines = [f"# {report['milestone']}", "", f"Generated: `{report['generated_at']}`", f"Projects: `{report['project_count']}`", f"Worst case: `{summary['worst_case_score']}`", f"Ready by worst case: `{summary['ready_by_worst_case']}`", f"Needs review: `{summary['needs_review']}`", "", "## Cases"]
-    for case in report["cases"]:
-        failed = ", ".join(item["code"] for item in case["failed_checks"]) or "none"
-        lines.extend([f"### {case['project']}", f"- status: `{case['status']}`", f"- quality: `{case['quality_score']}`", f"- targets: `{case['target_chain']}`", f"- executor: `{case.get('executor', {})}`", f"- failed checks: `{failed}`", ""])
-    return "\n".join(lines)
 
 
 if __name__ == "__main__":

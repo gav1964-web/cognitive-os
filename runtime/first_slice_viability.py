@@ -78,7 +78,11 @@ def _facts(
     symbol = symbol.split("(", 1)[0].rsplit(".", 1)[-1]
     raw_snippet = context.get("snippet")
     raw_readiness = context.get("dependency_readiness")
-    snippet = dict(raw_snippet) if isinstance(raw_snippet, Mapping) else {}
+    snippet = dict(raw_snippet) if isinstance(raw_snippet, Mapping) else {
+        "text": str(raw_snippet or ""),
+        "target_binding": context.get("target_binding"),
+        "structural_contract": context.get("structural_contract"),
+    }
     readiness = dict(raw_readiness) if isinstance(raw_readiness, Mapping) else {}
     decorators = list(snippet.get("decorators") or context.get("decorators") or [])
     side_effects = list(context.get("contract_side_effects") or context.get("side_effects") or snippet.get("side_effects") or [])
@@ -93,6 +97,7 @@ def _facts(
         "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
         "snippet_text": str(snippet.get("text") or "").lower(),
         "side_effects": " ".join(str(item).lower() for item in side_effects),
+        "calls": " ".join(str(item).lower() for item in list(context.get("unresolved_calls") or [])),
         "input_complexity": _input_complexity_fact(snippet, payload),
     }
 
@@ -167,7 +172,7 @@ def _matches(match: dict[str, Any], facts: dict[str, str]) -> bool:
 def _validate_matchers(match: dict[str, Any]) -> None:
     allowed_facts = {
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
-        "decorators", "owner_class", "snippet_text", "side_effects",
+        "decorators", "owner_class", "snippet_text", "side_effects", "calls",
         "input_complexity",
     }
     for key, values in match.items():

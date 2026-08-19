@@ -157,6 +157,10 @@
     "static_http_route_fallback",
     "static_shape_fallback"
   ],
+  "field_trial": {
+    "case_timeout_seconds": 180,
+    "termination_grace_seconds": 5
+  },
   "verified_wheel_fallback": {
     "enabled": true,
     "metadata_url_template": "https://pypi.org/pypi/{package}/json",

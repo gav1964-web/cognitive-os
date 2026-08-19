@@ -13,7 +13,7 @@ from runtime.role_spec_writer_ranking import (
 from runtime.role_skill_common import now_iso
 from runtime.semantic_target_profiles import contract_for_target
 from runtime.source_contract_semantics import infer_source_contract
-from runtime.spec_writer_target_binding import dependency_readiness_adjustment, standalone_target_eligibility
+from runtime.spec_writer_target_binding import dependency_readiness_adjustment, execution_cost_adjustment, standalone_target_eligibility
 from runtime.spec_writer_ranking_kb import apply_rule, candidate_kind_adjustment, project_candidate_score
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
@@ -66,6 +66,7 @@ def _rank_extraction_candidates(evidence: list[dict[str, Any]]) -> list[dict[str
         decorators = {str(item).lower().rsplit(".", 1)[-1] for item in candidate.get("decorators", []) or []}
         eligibility = standalone_target_eligibility(candidate)
         dependency_score, dependency_reasons = dependency_readiness_adjustment(candidate); score += dependency_score; reasons.extend(dependency_reasons)
+        execution_score, execution_reasons = execution_cost_adjustment(candidate); score += execution_score; reasons.extend(execution_reasons)
 
         kind_score, kind_reason = candidate_kind_adjustment(kind)
         score += kind_score

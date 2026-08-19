@@ -287,7 +287,7 @@
       "id_of": "callable_id_of",
       "source": "pytest_source_minimal"
     },
-    "type_contains": {
+      "type_contains": {
       "array": [],
       "bool": true,
       "dict": {},
@@ -296,7 +296,8 @@
       "int": 1,
       "iterable": [],
       "list": [],
-      "number": 1,
+        "number": 1,
+        "pathlike": {"__fixture__": "readable_temp_path"},
       "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
       "sequence": [],
       "tuple": [],

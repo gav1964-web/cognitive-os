@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .first_slice_viability import first_slice_viability
 from .technical_spec_policy import load_technical_spec_policy
 
 
@@ -36,6 +37,15 @@ def dependency_readiness_adjustment(candidate: dict[str, Any]) -> tuple[int, lis
     penalty = min(maximum, each * len(missing))
     prefix = str(policy.get("reason_prefix") or "runtime environment misses external imports")
     return -penalty, [f"{prefix}: {', '.join(missing[:6])}"]
+
+
+def execution_cost_adjustment(candidate: dict[str, Any]) -> tuple[int, list[str]]:
+    profile = first_slice_viability(str(candidate.get("source") or ""), candidate)
+    if not profile.get("reselection_required"):
+        return 0, []
+    score = min(int(profile.get("score") or 0), -45)
+    rules = [str(row.get("rule_id") or "") for row in list(profile.get("matched_rules") or [])]
+    return score, [f"execution cost requires reselection: {', '.join(rule for rule in rules if rule)}"]
 
 
 def promote_environment_ready_candidate(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:

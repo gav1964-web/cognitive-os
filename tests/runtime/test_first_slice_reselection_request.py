@@ -3,7 +3,7 @@ import runtime.configured_role_pipeline as configured_pipeline
 from runtime.architect_first_slice_reselection import reselect_architecture_first_slice
 from runtime.first_slice_reselection_request import build_first_slice_reselection_request
 from runtime.role_source_context import build_source_context
-from runtime.spec_writer_target_binding import promote_environment_ready_candidate
+from runtime.spec_writer_target_binding import execution_cost_adjustment, promote_environment_ready_candidate
 from runtime.technical_spec_builder import build_technical_spec
 
 
@@ -24,6 +24,29 @@ def test_environment_ready_candidate_does_not_replace_stronger_semantic_contract
     ranked = promote_environment_ready_candidate([missing, ready])
 
     assert ranked[0]["source"] == "pkg/domain.py:normalize"
+
+
+def test_spec_writer_execution_cost_penalizes_lifecycle_before_selection():
+    score, reasons = execution_cost_adjustment({
+        "source": "pkg/cli/base.py:list_templates",
+        "snippet": "def list_templates(config): return config.templates",
+        "target_binding": "function_symbol",
+    })
+
+    assert score <= -45
+    assert any("cli_runtime_boundary" in reason for reason in reasons)
+
+
+def test_spec_writer_execution_cost_penalizes_runtime_decorator_factory():
+    score, reasons = execution_cost_adjustment({
+        "source": "runtime/slots.py:async_slot",
+        "kind": "function",
+        "snippet": "def async_slot(): ...",
+        "unresolved_calls": ["asyncio.create_task"],
+    })
+
+    assert score <= -45
+    assert any("runtime_decorator_factory" in reason for reason in reasons)
 
 
 def test_reselection_request_is_required_without_ready_function_alternative():

@@ -26,21 +26,67 @@
     },
     {
       "rule_id": "instance_method_receiver",
-      "score_delta": 0,
+      "score_delta": -45,
+      "reselection_required": true,
       "match": {
         "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
         "snippet_text_contains_any": ["self."]
       },
-      "reason": "method reads receiver state and ranks below an equivalent receiver-independent callable"
+      "reason": "method reads receiver state and requires an explicit receiver fixture before executable handoff"
     },
     {
       "rule_id": "static_method_boundary",
-      "score_delta": 0,
+      "score_delta": 15,
       "match": {
         "target_binding_in": ["method_symbol", "ambiguous_method_symbol"],
         "decorators_contains_any": ["staticmethod", "classmethod"]
       },
       "reason": "static or class method exposes an explicit receiver-independent boundary"
+    },
+    {
+      "rule_id": "runtime_lifecycle_boundary",
+      "score_delta": -70,
+      "reselection_required": true,
+      "match": {
+        "symbol_in": ["execute", "launch", "retry", "_kill_process", "kill_process", "shutdown", "terminate"]
+      },
+      "reason": "runtime lifecycle entrypoint requires environment orchestration rather than first-slice execution"
+    },
+    {
+      "rule_id": "runtime_decorator_factory",
+      "score_delta": -70,
+      "reselection_required": true,
+      "match": {
+        "calls_contains_any": ["asyncio.create_task", "background_tasks.add", "add_done_callback"]
+      },
+      "reason": "runtime task scheduling requires an event-loop fixture rather than a first executable slice"
+    },
+    {
+      "rule_id": "runtime_resource_boundary",
+      "score_delta": -70,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["create_connection", "handler", "pretrained", "train_model"]
+      },
+      "reason": "resource, training, or dispatch boundary has high execution cost and requires a cheaper contract slice"
+    },
+    {
+      "rule_id": "dynamic_backend_selector",
+      "score_delta": -60,
+      "reselection_required": true,
+      "match": {
+        "calls_contains_any": ["importlib.import_module", "import_module"]
+      },
+      "reason": "dynamic optional-backend selection depends on installed runtime providers and requires a provider-independent slice"
+    },
+    {
+      "rule_id": "cli_runtime_boundary",
+      "score_delta": -50,
+      "reselection_required": true,
+      "match": {
+        "path_contains_any": ["/cli/", "/commands/"]
+      },
+      "reason": "CLI command surface depends on process configuration and is deferred behind reusable core logic"
     },
     {
       "rule_id": "unmaterialized_object_protocol_input",
@@ -83,7 +129,7 @@
       "score_delta": -70,
       "reselection_required": true,
       "match": {
-        "symbol_in": ["fit", "forward", "predict", "train", "train_batch", "visualise"]
+        "symbol_in": ["fit", "forward", "predict", "train", "train_batch", "train_model", "visualise"]
       },
       "reason": "model lifecycle requires framework state and is deferred behind a bounded data/shape contract"
     },
@@ -133,9 +179,10 @@
     },
     {
       "rule_id": "stateful_constructor_or_dunder",
-      "score_delta": -45,
+      "score_delta": -80,
+      "reselection_required": true,
       "match": {
-        "symbol_in": ["__call__", "__getattr__", "__init__", "apply"]
+        "symbol_in": ["__call__", "__getattr__", "__getstate__", "__init__", "apply"]
       },
       "reason": "stateful constructor or protocol method is context rather than the first writable contract"
     },
