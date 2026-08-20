@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance_loading import cleanup_dependency_stubs, import_path, install_dependency_profile_modules, load_supported_callable
+from .executable_acceptance_module_path import package_import_target
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
 from .executable_acceptance_samples import positive_samples_execute
@@ -37,7 +38,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
     metadata_profiles: dict[str, list[str]] = {}
     module_profiles: dict[str, list[str]] = {}
     effect_stubs: dict[str, list[str]] = {}
-    resolved_paths: dict[str, str] = {}
+    resolved_paths: dict[str, str] = {}; target_imports: dict[str, dict[str, str]] = {}
     for row in obligations:
         target = str(row.get("target") or "")
         if not target or target in targets or any(item["target"] == target for item in skipped):
@@ -47,6 +48,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
             resolved_paths[target] = str(resolution["path_text"])
         support = callable_target_support(project_dir, target, obligations)
         if support["supported"]:
+            module_name, import_root = package_import_target(Path(resolution["path"])); target_imports[target] = {"module": module_name, "root": str(import_root)} if module_name and import_root else {}
             targets.append(target)
             if support.get("method"):
                 methods[target] = dict(support["method"])
@@ -104,6 +106,7 @@ def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dic
         "dependency_module_profile_attrs": _module_profile_attrs(module_profiles),
         "effect_module_stub_targets": effect_stubs,
         "resolved_target_paths": resolved_paths,
+        "target_imports": {key: value for key, value in target_imports.items() if value},
         "strict_negative_targets": strict_negative,
         "meta_checked_targets": [item["target"] for item in skipped],
         "skipped_targets": skipped,
@@ -123,7 +126,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     path = Path(resolution["path"])
     path_text = str(resolution["path_text"])
     inferred = infer_argument_samples(path, symbol, project_root=project_dir)
-    with import_path(project_dir):
+    with import_path(project_dir, path):
         loaded = load_supported_callable(project_dir, path_text, callable_symbol, path)
     func = loaded.get("callable")
     if loaded.get("reason") == "target_not_callable":
@@ -139,7 +142,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
                     return isolated_support
                 return _unsupported("positive_signature_mismatch", detail)
             diagnostics: list[str] = []
-            with import_path(project_dir):
+            with import_path(project_dir, path):
                 samples_ok = _positive_samples_execute_with_profiles(
                     func,
                     target,
@@ -201,7 +204,7 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
         cleanup_dependency_stubs(loaded)
         return _unsupported("positive_signature_mismatch")
     diagnostics = []
-    with import_path(project_dir):
+    with import_path(project_dir, path):
         samples_ok = _positive_samples_execute_with_profiles(
             func,
             target,

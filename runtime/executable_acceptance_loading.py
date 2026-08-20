@@ -14,6 +14,7 @@ from typing import Any
 
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_materializers import materialize
+from .executable_acceptance_module_path import module_name_from_path, package_import_root
 from .executable_acceptance_policy import dependency_stub_policy
 from .python_parser_compatibility import parse_compatible_source
 
@@ -23,7 +24,7 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
         if not isolated.get("reason"):
             isolated["source_isolated"] = True
             return isolated
-    module_name = module_name_from_path(path_text)
+    module_name = module_name_from_path(path_text, path)
     if module_name:
         try:
             with fresh_import(module_name):
@@ -87,17 +88,6 @@ def import_failure(exc: Exception) -> dict[str, str]:
     return {"reason": "import_failed_runtime_error", "detail": _exception_detail(exc)}
 
 
-def module_name_from_path(path_text: str) -> str:
-    parts = Path(path_text).with_suffix("").parts
-    if parts and parts[0] == "src":
-        parts = parts[1:]
-    if not parts:
-        return ""
-    if parts[-1] == "__init__":
-        parts = parts[:-1]
-    return ".".join(parts)
-
-
 @contextmanager
 def fresh_import(module_name: str):
     top = module_name.split(".", 1)[0]
@@ -112,12 +102,15 @@ def fresh_import(module_name: str):
 
 
 @contextmanager
-def import_path(project_dir: Path):
+def import_path(project_dir: Path, target_path: Path | None = None):
     entries = [str(project_dir)]
     if (project_dir / "src").is_dir():
         entries.insert(0, str(project_dir / "src"))
     if (project_dir / "src" / "python").is_dir():
         entries.insert(0, str(project_dir / "src" / "python"))
+    target_root = package_import_root(target_path)
+    if target_root and str(target_root) not in entries:
+        entries.insert(0, str(target_root))
     for entry in reversed(entries):
         sys.path.insert(0, entry)
     try:

@@ -107,6 +107,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 if (PROJECT_DIR / "src").is_dir():
     sys.path.insert(0, str(PROJECT_DIR / "src"))
 if (PROJECT_DIR / "src" / "python").is_dir(): sys.path.insert(0, str(PROJECT_DIR / "src" / "python"))
+for profile in HARNESS_DATA.get("target_imports", {{}}).values(): sys.path.insert(0, profile["root"])
 def _rows():
     return json.loads(OBLIGATIONS.read_text(encoding="utf-8"))
 def test_obligations_are_present_and_typed():
@@ -201,7 +202,7 @@ def _load_function(target):
     path_text = HARNESS_DATA.get("resolved_target_paths", {{}}).get(target, path_text)
     path = (PROJECT_DIR / path_text).resolve()
     assert PROJECT_DIR.resolve() in path.parents or path == PROJECT_DIR.resolve()
-    module_name = _module_name(path_text)
+    module_name = HARNESS_DATA.get("target_imports", {{}}).get(target, {{}}).get("module") or _module_name(path_text)
     method = HARNESS_DATA.get("method_targets", {{}}).get(target)
     if target in HARNESS_DATA.get("source_isolated_targets", []):
         return _load_source_isolated_function(path, symbol, target)
