@@ -54,4 +54,18 @@ def test_unified_entry_runs_prompt_to_product_fastapi_search(tmp_path: Path):
     assert report["route_decision"]["pipeline"] == "prompt_to_product"
     assert report["route_decision"]["stage2_case"] == "web_research_summarizer_fastapi"
     assert report["pipeline_result"]["status"] == "ok"
+    assert report["llm_gateway"]["status"] == "not_configured"
     assert report["invariants"]["single_entrypoint_used"] is True
+
+
+def test_unified_entry_blocks_when_configured_gateway_fails(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        "runtime.cognitive_os_entry.ensure_llm_gateway",
+        lambda root: {"status": "failed", "error": "gateway unavailable"},
+    )
+
+    report = run_cognitive_os(root=tmp_path, prompt="Спроектируй CLI для обработки CSV")
+
+    assert report["status"] == "blocked"
+    assert report["pipeline_result"]["error"] == "gateway unavailable"
+    assert report["llm_gateway"]["status"] == "failed"

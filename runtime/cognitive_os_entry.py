@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .greenfield_role_pipeline import run_greenfield_role_pipeline
+from .llm_gateway_bootstrap import ensure_llm_gateway
 from .prompt_adequacy import evaluate_prompt_adequacy
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .stage2_template_routes import select_stage2_case
@@ -54,10 +55,17 @@ def run_cognitive_os(
 ) -> dict[str, Any]:
     root = root.resolve()
     decision = decide_entry_route(root=root, prompt=prompt, project_dir=project_dir, mode=mode)
+    gateway = ensure_llm_gateway(root)
+    if gateway["status"] == "failed":
+        result = {"status": "blocked", "error": gateway.get("error", "LLM gateway unavailable")}
+        return _entry_report(prompt, decision, result, write=write, root=root, gateway=gateway)
     pipeline = decision["pipeline"]
     if pipeline == "project_foundation_analysis":
         if project_dir is None:
-            return _entry_report(prompt, decision, {"status": "blocked", "error": "project_dir is required"}, write=write, root=root)
+            return _entry_report(
+                prompt, decision, {"status": "blocked", "error": "project_dir is required"},
+                write=write, root=root, gateway=gateway,
+            )
         result = run_role_foundation_pipeline(root=root, project_dir=project_dir.resolve(), goal=prompt, write=write)
     elif pipeline == "prompt_to_product":
         result = build_verified_system_package(
@@ -78,7 +86,7 @@ def run_cognitive_os(
         )
     else:
         result = _clarification_result(prompt, decision)
-    return _entry_report(prompt, decision, result, write=write, root=root)
+    return _entry_report(prompt, decision, result, write=write, root=root, gateway=gateway)
 
 
 def decide_entry_route(*, root: Path, prompt: str, project_dir: Path | None = None, mode: str = "auto") -> dict[str, Any]:
@@ -150,7 +158,10 @@ def _clarification_result(prompt: str, decision: dict[str, Any]) -> dict[str, An
     }
 
 
-def _entry_report(prompt: str, decision: dict[str, Any], result: dict[str, Any], *, write: bool, root: Path) -> dict[str, Any]:
+def _entry_report(
+    prompt: str, decision: dict[str, Any], result: dict[str, Any], *,
+    write: bool, root: Path, gateway: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     report = {
         "artifact_type": "CognitiveOSEntryRunReport",
         "status": "ok" if result.get("status") in {"ok", "needs_clarification", "needs_improvement"} else "blocked",
@@ -158,10 +169,12 @@ def _entry_report(prompt: str, decision: dict[str, Any], result: dict[str, Any],
         "prompt": prompt,
         "route_decision": decision,
         "pipeline_result": result,
+        "llm_gateway": dict(gateway or {"status": "not_checked"}),
         "invariants": {
             "single_entrypoint_used": True,
             "route_selected_by_config": True,
             "direct_user_source_modification": False,
+            "llm_gateway_bootstrap_recorded": True,
         },
     }
     if write:
