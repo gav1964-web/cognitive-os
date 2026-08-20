@@ -50,6 +50,17 @@ def test_challengers_skip_candidates_that_cannot_change_measured_outcome():
     assert result == ["service.py:normalize"]
 
 
+def test_challengers_allow_callable_read_only_context_but_not_module_script():
+    packet = {"artifact_evidence": {"technical_spec": {"ranked_candidates": [
+        {"source": "data.py:paths", "kind": "function", "reasons": ["read-only context candidate retained"]},
+        {"source": "settings.py", "kind": "module_script", "reasons": ["read-only context candidate retained"]},
+    ]}}}
+
+    result = challenger_sources({}, packet, current_source="app.py:failed", limit=3)
+
+    assert result == ["data.py:paths"]
+
+
 def test_best_attempt_uses_measured_minimum_not_llm_claim():
     baseline = {"project_min_score": 8.4, "role_scores": {"a": 9.7, "b": 8.4}}
     attempts = [

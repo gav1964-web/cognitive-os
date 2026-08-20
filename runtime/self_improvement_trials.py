@@ -39,9 +39,11 @@ def _candidate_trial_blockers(candidate: dict[str, Any]) -> list[str]:
         "write_operation": "write/update/delete operation is side-effect evidence",
         "runtime_dependency": "runtime environment misses external imports",
         "execution_cost": "execution cost requires reselection",
-        "read_only_context": "read-only context candidate retained",
     }
-    return [code for code, token in blockers.items() if token in text]
+    result = [code for code, token in blockers.items() if token in text]
+    if "read-only context candidate retained" in text and candidate.get("kind") == "module_script":
+        result.append("read_only_context")
+    return result
 
 
 def best_attempt(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> dict[str, Any]:

@@ -248,3 +248,48 @@ def test_no_viable_candidate_is_staged_as_portable_capability_gap(tmp_path):
     assert payload["record_type"] == "foundation_capability_gap"
     assert payload["proposed_record"]["gap_id"] == "target_selection:no_viable_executable_candidate"
     assert "private_project" not in payload["proposed_record"]["gap_id"]
+
+
+def test_confirmed_reselection_stages_portable_selection_contrast(tmp_path):
+    before = {
+        "project_min_score": 8.8,
+        "selected_candidate_quality": {
+            "target": "private/download.py:download",
+            "status": "acceptable",
+            "structural_evidence": {"argument_count": 1, "return_paths": 0},
+        },
+        "downstream_evidence": {"status": "failed", "reason": "no executable contract"},
+    }
+    after = {
+        "project_min_score": 9.7,
+        "selected_candidate_quality": {
+            "target": "private/data.py:paths",
+            "status": "strong",
+            "contract_archetype_ids": ["bounded_transform"],
+            "structural_evidence": {
+                "argument_count": 2,
+                "typed_argument_count": 2,
+                "return_paths": 1,
+                "output_inference_basis": "return_annotation",
+                "observed_side_effects": [],
+            },
+        },
+        "downstream_evidence": {"status": "passed", "acceptance_signal": "executable_callable"},
+    }
+    path = stage_training_experience(
+        tmp_path,
+        tmp_path / "private_project",
+        {"failure_class": "target_selection", "target_roles": ["architect", "spec_writer"]},
+        before,
+        after,
+        {"status": "candidate_improvement_confirmed"},
+        [{"parameter_changes": {"spec_writer_candidate_preference": "private/data.py:paths"}}],
+        {"recommended_change_type": "none"},
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    proposed = payload["proposed_record"]
+    assert payload["record_type"] == "foundation_selection_contrast"
+    assert proposed["contrast_id"] == "target_selection:measured_candidate_reselection"
+    assert proposed["successful_contract"]["acceptance_signal"] == "executable_callable"
+    assert "private/" not in json.dumps(proposed)

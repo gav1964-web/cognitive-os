@@ -20,6 +20,7 @@ def stage_training_experience(
 ) -> Path:
     confirmed = outcome["status"] == "candidate_improvement_confirmed"
     profile = _confirmed_profile(attempts, outcome)
+    selection_contrast = _selection_contrast(before, after, diagnosis, attempts, outcome)
     if profile:
         proposed = generalized_profile_record(profile)
         proposed["training_summary"] = {
@@ -27,6 +28,8 @@ def stage_training_experience(
             "target_search_exhausted": bool(conclusion.get("target_search_exhausted")),
             "temporary_profile_score_delta": dict(conclusion.get("semantic_profile_trial") or {}).get("score_delta"),
         }
+    elif selection_contrast:
+        proposed = selection_contrast
     else:
         proposed = dict(diagnosis.get("proposed_knowledge") or {})
         proposed.update({"failure_class": diagnosis.get("failure_class"), "hypothesis": diagnosis.get("hypothesis")})
@@ -41,6 +44,7 @@ def stage_training_experience(
     candidate = build_kb_candidate(
         record_type=(
             "semantic_contract_profile_template" if profile else
+            "foundation_selection_contrast" if selection_contrast else
             "foundation_capability_gap" if capability_gap else "role_training_experience"
         ),
         proposed_record=proposed,
@@ -55,6 +59,53 @@ def stage_training_experience(
     candidate["training_outcome"] = outcome
     candidate["parameter_trials"] = [dict(row.get("parameter_changes") or {}) for row in attempts]
     return write_kb_candidate(candidate, root=root)
+
+
+def _selection_contrast(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    diagnosis: dict[str, Any],
+    attempts: list[dict[str, Any]],
+    outcome: dict[str, Any],
+) -> dict[str, Any]:
+    if outcome.get("status") != "candidate_improvement_confirmed":
+        return {}
+    preferences = [
+        dict(row.get("parameter_changes") or {}).get("spec_writer_candidate_preference")
+        for row in attempts
+    ]
+    if not any(preferences):
+        return {}
+    failure_class = str(diagnosis.get("failure_class") or "foundation_selection")
+    return {
+        "contrast_id": f"{failure_class}:measured_candidate_reselection",
+        "label": "Measured first-slice candidate reselection",
+        "role_scope": list(diagnosis.get("target_roles") or ["architect", "spec_writer"]),
+        "failed_contract": _portable_contract(before),
+        "successful_contract": _portable_contract(after),
+        "policy_hypothesis": "prefer candidates whose executable acceptance is independently measured",
+        "activation_policy": "require independent confirmed cases before policy promotion",
+        "numeric_bonus_from_training": False,
+    }
+
+
+def _portable_contract(case: dict[str, Any]) -> dict[str, Any]:
+    quality = dict(case.get("selected_candidate_quality") or {})
+    structural = dict(quality.get("structural_evidence") or {})
+    downstream = dict(case.get("downstream_evidence") or {})
+    return {
+        "semantic_status": quality.get("status"),
+        "contract_archetype_ids": list(quality.get("contract_archetype_ids") or []),
+        "argument_count": structural.get("argument_count"),
+        "typed_argument_count": structural.get("typed_argument_count"),
+        "return_paths": structural.get("return_paths"),
+        "output_inference_basis": structural.get("output_inference_basis"),
+        "state_mutation": bool(structural.get("state_mutation")),
+        "observed_side_effects": list(structural.get("observed_side_effects") or []),
+        "acceptance_signal": downstream.get("acceptance_signal"),
+        "acceptance_status": downstream.get("status"),
+        "acceptance_reason": downstream.get("reason"),
+    }
 
 
 def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:
