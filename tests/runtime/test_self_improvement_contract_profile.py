@@ -71,6 +71,17 @@ def test_rejects_read_only_api_query_as_external_command(tmp_path):
     assert synthesize_contract_profile(tmp_path, "client.py:matches") is None
 
 
+def test_rejects_private_transport_wrapper_as_external_command(tmp_path):
+    (tmp_path / "client.py").write_text(
+        "class Client:\n"
+        "    def _post(self, path, data):\n"
+        "        return self._request('post', path, data=data)\n",
+        encoding="utf-8",
+    )
+
+    assert synthesize_contract_profile(tmp_path, "client.py:_post") is None
+
+
 def test_synthesizes_stateful_recursive_xml_serializer_profile(tmp_path):
     (tmp_path / "serializer.py").write_text(
         "class Serializer:\n"

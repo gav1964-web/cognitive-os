@@ -110,6 +110,7 @@ def _external_api_command_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef)
     )
     command_args = [arg.arg for arg in node.args.args if arg.arg not in {"self", "cls"}]
     return {
+        "public_command": not node.name.startswith("_"),
         "instance_transport": bool(node.args.args and node.args.args[0].arg == "self"),
         "command_inputs": bool(command_args),
         "write_transport": bool(transport_calls),
