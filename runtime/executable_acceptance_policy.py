@@ -58,6 +58,9 @@ def dependency_stub_policy() -> dict[str, Any]:
     return {
         "enabled": bool(stubs.get("enabled")),
         "max_missing_modules": int(stubs.get("max_missing_modules") or 0),
+        "max_namespace_modules_per_dependency": int(
+            stubs.get("max_namespace_modules_per_dependency") or 1
+        ),
         "pre_stub_modules": tuple(str(item) for item in stubs.get("pre_stub_modules", []) if item),
         "stub_external_missing_modules": bool(stubs.get("stub_external_missing_modules")),
         "stub_object_features": tuple(str(item) for item in stubs.get("stub_object_features", []) if item),

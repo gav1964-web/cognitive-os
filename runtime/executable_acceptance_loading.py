@@ -16,6 +16,8 @@ from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_materializers import materialize
 from .executable_acceptance_module_path import module_name_from_path, package_import_root
 from .executable_acceptance_policy import dependency_stub_policy
+from .executable_acceptance_stub_budget import can_stub_missing as _can_stub_missing
+from .executable_acceptance_stub_budget import stub_attempt_budget
 from .python_parser_compatibility import parse_compatible_source
 
 def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path: Path) -> dict[str, Any]:
@@ -129,7 +131,7 @@ def _import_module_with_optional_stubs(project_dir: Path, module_name: str) -> d
     profile_modules: list[str] = []
     policy = dependency_stub_policy()
     created_modules.extend(_preinstall_profile_modules(project_dir, module_name, policy, profile_modules))
-    attempts = max(1, int(policy.get("max_missing_modules") or 0) + 1)
+    attempts = stub_attempt_budget(policy)
     with _dependency_metadata_context(policy) as metadata_used:
         for _ in range(attempts):
             try:
@@ -144,6 +146,7 @@ def _import_module_with_optional_stubs(project_dir: Path, module_name: str) -> d
                     raise
                 created_modules.extend(_install_stub_module(missing))
                 stubbed.append(missing)
+                _clear_import_tree(module_name)
         return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
 
 
@@ -157,7 +160,7 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprof
         created_modules: list[str] = []
         profile_modules: list[str] = list(preprofiled or [])
         policy = dependency_stub_policy()
-        attempts = max(1, int(policy.get("max_missing_modules") or 0) + 1)
+        attempts = stub_attempt_budget(policy)
         with _dependency_metadata_context(policy) as metadata_used:
             for _ in range(attempts):
                 try:
@@ -193,20 +196,17 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprof
         return {"callable": None, "reason": failure["reason"], "detail": failure["detail"]}
 
 
-def _can_stub_missing(project_dir: Path, missing: str, policy: dict[str, Any], stubbed: list[str]) -> bool:
-    if not policy.get("enabled") or not policy.get("stub_external_missing_modules") or not missing:
-        return False
-    if missing in stubbed or len(stubbed) >= int(policy.get("max_missing_modules") or 0):
-        return False
-    top = missing.split(".", 1)[0]
-    return not (project_dir / top).exists() and not (project_dir / "src" / top).exists()
-
-
 def _can_profile_module(missing: str, policy: dict[str, Any], profiled: list[str]) -> bool:
     if not policy.get("generated_module_profiles_enabled") or not missing or missing in profiled:
         return False
     profiles = dict(policy.get("generated_module_profiles") or {})
     return missing in profiles
+
+
+def _clear_import_tree(module_name: str) -> None:
+    top = module_name.split(".", 1)[0]
+    for name in [key for key in list(sys.modules) if key == top or key.startswith(f"{top}.")]:
+        sys.modules.pop(name, None)
 
 
 def _preinstall_profile_modules(project_dir: Path, module_name: str, policy: dict[str, Any], profiled: list[str]) -> list[str]:

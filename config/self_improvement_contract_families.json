@@ -232,6 +232,15 @@
       "benign_runtime_boundary": true,
       "reason": "AST proves a typed collection loader over a filesystem read boundary"
     },
+    "filesystem_typed_object_loader": {
+      "input_contract": {"location": "FilesystemLocation", "adapter": "ProtocolLike"},
+      "output_contract": {"result": "TypedDomainObject"},
+      "side_effect_policy": {"declared": ["filesystem_read"], "requires_validation_gate": true},
+      "validation_gates": ["valid delimited input returns the declared object shape", "missing and malformed input fail without partial state"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "object_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a typed object loader over a fixture-isolated filesystem and adapter boundary"
+    },
     "iterable_observability_report_command": {
       "input_contract": {"report_items": "IterableLike"},
       "output_contract": {"result": "VoidReportCommand"},

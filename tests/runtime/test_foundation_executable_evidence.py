@@ -64,6 +64,16 @@ def test_foundation_evidence_rejects_unprofiled_direct_observability():
     assert result["reason"] == "side_effectful_target"
 
 
+def test_foundation_evidence_allows_profiled_typed_object_loader():
+    result = evidence._eligibility(_spec(
+        effects=["filesystem_read"],
+        observed_effects=["filesystem_read"],
+        archetypes=["filesystem_typed_object_loader"],
+    ))
+
+    assert result["status"] == "eligible"
+
+
 def test_foundation_evidence_propagates_executable_callable(monkeypatch, tmp_path):
     monkeypatch.setattr(evidence, "build_implementation_plan", lambda **kwargs: {"artifact_type": "ImplementationPlan"})
     monkeypatch.setattr(

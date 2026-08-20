@@ -36,3 +36,20 @@ def test_iterated_literal_domain_produces_nonempty_collection(tmp_path: Path):
         "value": ["mean"],
         "source": "ast_iterated_literal_domain",
     }
+
+
+def test_infers_attributes_read_from_protocol_method_result(tmp_path: Path):
+    path = tmp_path / "database.py"
+    path.write_text(
+        "def load(db, name):\n"
+        "    record = db.select_record(name)\n"
+        "    return record.kind, record.value\n",
+        encoding="utf-8",
+    )
+
+    fixture = infer_argument_samples(path, "load")["db"]["value"]["fields"]["select_record"]
+
+    assert fixture == {
+        "__fixture__": "callable_declared_model",
+        "fields": {"kind": "sample", "value": "sample"},
+    }

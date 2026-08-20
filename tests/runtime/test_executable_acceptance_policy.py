@@ -34,6 +34,7 @@ def test_temporary_policy_is_scoped_and_restored():
 
     assert structural_sample_policy() == original
     assert dependency_stub_policy()["max_missing_modules"] == 6
+    assert dependency_stub_policy()["max_namespace_modules_per_dependency"] == 8
     assert "stevedore" in dependency_stub_policy()["pre_stub_modules"]
     assert "mro_entries" in dependency_stub_policy()["stub_object_features"]
     assert "cookiecutter" in dependency_stub_policy()["metadata_packages"]

@@ -29,6 +29,17 @@ def readable_temp_path() -> os.PathLike[str]:
     return _ReadableTempPath()
 
 
+def delimited_text_path(delimiter: str, columns: int) -> os.PathLike[str]:
+    handle = tempfile.NamedTemporaryFile(
+        prefix="cognitive-os-delimited-", suffix=".txt", delete=False, mode="w", encoding="utf-8"
+    )
+    handle.write(delimiter.join("sample" for _ in range(max(1, columns))) + "\n")
+    handle.close()
+    result = object.__new__(_ReadableTempPath)
+    result.path = Path(handle.name)
+    return result
+
+
 class _PythonModulePath(_ReadableTempPath):
     def __init__(self, fields: dict[str, object]) -> None:
         handle = tempfile.NamedTemporaryFile(

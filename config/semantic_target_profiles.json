@@ -6979,9 +6979,6 @@
         "logging": "trace output is captured with fixture logger",
         "requires_validation_gate": true
       },
-      "symbol_contains_any": [
-        "trace"
-      ],
       "symbols": [
         "wrap_trace"
       ],

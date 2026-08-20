@@ -90,11 +90,12 @@ def _check_executable_acceptance_policy(catalogs: dict[str, Any]) -> _Check:
     if not dependency.get("external_call_tokens"):
         check.errors.append("executable_acceptance_policy_missing:dependency_policy.external_call_tokens")
     stubs = dict(dependency.get("controlled_stubs") or {})
-    for field_name in ("enabled", "max_missing_modules", "stub_external_missing_modules", "stub_object_features"):
+    for field_name in ("enabled", "max_missing_modules", "max_namespace_modules_per_dependency", "stub_external_missing_modules", "stub_object_features"):
         if field_name not in stubs:
             check.errors.append(f"executable_acceptance_policy_missing:dependency_policy.controlled_stubs.{field_name}")
-    if int(stubs.get("max_missing_modules") or 0) <= 0:
-        check.errors.append("executable_acceptance_policy_invalid:dependency_policy.controlled_stubs.max_missing_modules")
+    for field_name in ("max_missing_modules", "max_namespace_modules_per_dependency"):
+        if int(stubs.get(field_name) or 0) <= 0:
+            check.errors.append(f"executable_acceptance_policy_invalid:dependency_policy.controlled_stubs.{field_name}")
     for feature in ("getitem", "mro_entries"):
         if feature not in stubs.get("stub_object_features", []):
             check.errors.append(f"executable_acceptance_policy_missing:dependency_policy.controlled_stubs.stub_object_features.{feature}")

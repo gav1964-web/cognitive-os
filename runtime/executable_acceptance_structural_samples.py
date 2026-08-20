@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from .executable_acceptance_attribute_samples import add_parameter_attribute_samples
+from .executable_acceptance_file_samples import add_delimited_file_samples
 from .executable_acceptance_policy import structural_sample_policy
 from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_parameter_method_samples
 
@@ -50,6 +51,9 @@ def collect_structural_samples(
         node, parameters, candidates,
         priority=_priority("parameter_attributes"),
         prefixes=tuple(str(item) for item in _settings().get("protocol_method_prefixes", [])),
+    )
+    add_delimited_file_samples(
+        node, parameters, candidates, priority=_priority("importable_module_path")
     )
     _importable_module_paths(node, parameters, candidates)
     _allowed_collection_domains(tree, node, parameters, candidates)

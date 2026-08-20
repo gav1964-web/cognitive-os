@@ -96,6 +96,14 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "filesystem_typed_object_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "truthy"},
+      {"field": "usage_types", "op": "contains_all", "value": ["PathLike", "ProtocolLike"]},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
+      {"field": "raises", "op": "truthy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "object_mapping_projection", "score_bonus": 6, "all": [
       {"field": "output_type", "op": "equals", "value": "MappingLike"},
       {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},

@@ -26,7 +26,7 @@ def isolated_global_nodes(tree: ast.Module, nodes: list[ast.AST], class_name: st
             if names & loaded and not names <= seen:
                 selected.append(item)
                 seen.update(names)
-                loaded.update(loaded_names(item))
+                loaded.update(loaded_names(isolated_member(item)))
                 changed = True
     return [isolated_member(item) for item in tree.body if item in selected]
 
@@ -50,10 +50,18 @@ def isolated_member(item: ast.AST) -> ast.AST:
         if copied.args.kwarg:
             copied.args.kwarg.annotation = None
     elif isinstance(copied, ast.ClassDef):
-        copied.bases = []
+        named_tuple = any(isinstance(base, ast.Name) and base.id == "NamedTuple" for base in copied.bases)
+        copied.bases = [
+            base for base in copied.bases
+            if isinstance(base, ast.Name) and base.id in {"Exception", "NamedTuple"}
+        ]
         copied.keywords = []
         copied.decorator_list = []
         copied.body = [isolated_member(node) for node in copied.body]
+        if named_tuple:
+            for node in copied.body:
+                if isinstance(node, ast.AnnAssign):
+                    node.annotation = ast.Name(id="object", ctx=ast.Load())
     return copied
 
 

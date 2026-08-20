@@ -13,6 +13,7 @@
   "foundation_evidence": {
     "isolated_transitive_effects": ["memory_state"],
     "isolated_direct_effect_profiles": {
+      "filesystem_typed_object_loader": ["filesystem_read"],
       "observability_render_command": ["observability"]
     }
   },
@@ -74,6 +75,7 @@
     "controlled_stubs": {
       "enabled": true,
       "max_missing_modules": 6,
+      "max_namespace_modules_per_dependency": 8,
       "stub_external_missing_modules": true,
       "stub_object_features": [
         "bool_false",

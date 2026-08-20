@@ -48,6 +48,15 @@ def test_data_access_loaders_are_profiled_from_structure():
             },
             "filesystem_typed_collection_loader",
         ),
+        (
+            {
+                "inferred_output_type": "DomainTrace",
+                "argument_usage_types": {"path": "PathLike", "store": "ProtocolLike"},
+                "observed_side_effects": ["filesystem_read"],
+                "raises": ["TraceError"],
+            },
+            "filesystem_typed_object_loader",
+        ),
     ]
     for evidence, family in cases:
         evidence.update({"source_body_complete": True, "state_mutation": False})

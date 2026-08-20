@@ -27,6 +27,9 @@ def materialize(value: Any) -> Any:
             return lambda *args, **kwargs: []
         if fixture == "callable_empty_string":
             return lambda *args, **kwargs: ""
+        if fixture == "callable_declared_model":
+            payload = {"__fixture__": "declared_model", "fields": value.get("fields", {})}
+            return lambda *args, **kwargs: materialize(payload)
         if fixture == "safe_method_attribute":
             return _SafeMethodAttribute()
         if fixture == "safe_symbolic_attribute":
@@ -115,6 +118,9 @@ def materialize(value: Any) -> Any:
         if fixture == "readable_temp_path":
             from .executable_acceptance_path_fixtures import readable_temp_path
             return readable_temp_path()
+        if fixture == "delimited_text_path":
+            from .executable_acceptance_path_fixtures import delimited_text_path
+            return delimited_text_path(str(value.get("delimiter") or ","), int(value.get("columns") or 1))
         if fixture == "python_module_path":
             from .executable_acceptance_path_fixtures import python_module_path
             return python_module_path(dict(value.get("fields") or {}))
