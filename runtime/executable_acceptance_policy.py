@@ -51,6 +51,8 @@ def external_call_tokens() -> tuple[str, ...]:
 
 
 def dependency_stub_policy() -> dict[str, Any]:
+    from .promoted_executable_adapters import generated_module_profiles
+
     dependency = dict(_policy().get("dependency_policy") or {})
     stubs = dict(dependency.get("controlled_stubs") or {})
     metadata = dict(dependency.get("metadata_profiles") or {})
@@ -68,7 +70,10 @@ def dependency_stub_policy() -> dict[str, Any]:
         "metadata_default_version": str(metadata.get("default_version") or "0.0.0"),
         "metadata_packages": tuple(str(item) for item in metadata.get("packages", []) if item),
         "generated_module_profiles_enabled": bool(generated.get("enabled")),
-        "generated_module_profiles": dict(generated.get("modules") or {}),
+        "generated_module_profiles": {
+            **generated_module_profiles(),
+            **dict(generated.get("modules") or {}),
+        },
     }
 
 

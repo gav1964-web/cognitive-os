@@ -92,6 +92,7 @@ def _normalize(response: dict[str, Any]) -> dict[str, Any]:
     recommended_source = str(response.get("recommended_source") or "")
     policy_violations = _policy_violations(f"{diagnosis} {hypothesis} {json.dumps(proposed, ensure_ascii=False)}")
     policy_violations.extend(_proposal_violations(proposed.get("config_mutation_proposal")))
+    policy_violations.extend(_adapter_proposal_violations(proposed.get("capability_adapter_proposal")))
     status = "ok" if diagnosis and hypothesis and roles and not policy_violations else "failed"
     return {
         "status": status,
@@ -124,7 +125,13 @@ def _messages(packet: dict[str, Any]) -> list[dict[str, str]]:
         "config_mutation_proposal. A config proposal is optional and must be nested under proposed_knowledge as "
         "config_mutation_proposal with artifact_type ConfigMutationProposal, target "
         "config/executable_acceptance_policy.json, operation merge_object, path /structural_sample_policy, and "
-        "a small reusable content object. Never propose score, evaluator, or project-specific changes."
+        "a small reusable content object. When the evidence proves an undeclared external module is the only blocker, "
+        "proposed_knowledge may instead include capability_adapter_proposal with artifact_type "
+        "ExecutableCapabilityAdapterProposal, kind generated_module_profile, a Python module name, and profile.attrs. "
+        "Each callable attr must use one of: callable_identity, callable_noop, callable_true, callable_empty_list, "
+        "callable_empty_string, callable_transport_result, stub_class, safe_method_attribute, "
+        "safe_symbolic_attribute, module_getattr_stub. Never include source, code, diff, entrypoint, paths, score, "
+        "evaluator, network behavior, or project-specific changes."
         f" Mutable content top-level keys are limited to: {mutable_keys}."
     )
     return [
@@ -166,3 +173,17 @@ def _proposal_violations(value: Any) -> list[str]:
     if set(content) - allowed:
         errors.append("config_proposal_unknown_or_project_specific_keys")
     return errors
+
+
+def _adapter_proposal_violations(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, dict):
+        return ["capability_adapter_proposal_must_be_object"]
+    try:
+        from .improvement_plugins.executable_adapter_admission import _adapter_from_proposal
+
+        adapter = _adapter_from_proposal(value)
+    except (TypeError, ValueError):
+        adapter = {}
+    return [] if adapter else ["capability_adapter_proposal_invalid_or_unsafe"]

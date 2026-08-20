@@ -32,10 +32,21 @@
       "auto_promote": true,
       "requires_regression_cases": false,
       "minimum_confirmed_cases": 3
+    },
+    {
+      "id": "executable_adapter_admission",
+      "version": "1.0.0",
+      "enabled": true,
+      "priority": 40,
+      "entrypoint": "runtime.improvement_plugins.executable_adapter_admission:run",
+      "change_types": ["foundation_capability_gap"],
+      "auto_promote": false,
+      "requires_regression_cases": false,
+      "minimum_confirmed_cases": 3
     }
   ],
   "cycle": {
-    "max_plugins_per_failure": 3,
+    "max_plugins_per_failure": 4,
     "stop_after_promotion": true,
     "runtime_patch_auto_promotion": false
   }
