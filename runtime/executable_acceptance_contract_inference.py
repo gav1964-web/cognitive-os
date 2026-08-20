@@ -11,6 +11,7 @@ from typing import Any
 from .python_parser_compatibility import parse_compatible_source
 from .function_invocation_patterns import upstream_test_extraction_policy
 from .executable_acceptance_structural_samples import collect_structural_samples
+from .executable_acceptance_local_call_samples import add_local_call_samples
 
 _UNSAFE = object()
 
@@ -29,6 +30,7 @@ def infer_argument_samples(
     parameters = _parameter_names(node)
     candidates: dict[str, list[tuple[int, Any, str]]] = {name: [] for name in parameters}
     collect_structural_samples(tree, node, parameters, candidates)
+    add_local_call_samples(tree, node, parameters, candidates)
     if project_root and project_root.is_dir():
         _collect_upstream_test_calls(project_root, path, symbol, node, candidates)
     return {

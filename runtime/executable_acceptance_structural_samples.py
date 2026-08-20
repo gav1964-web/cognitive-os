@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from typing import Any
 
+from .executable_acceptance_attribute_samples import add_parameter_attribute_samples
 from .executable_acceptance_policy import structural_sample_policy
 from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_parameter_method_samples
 
@@ -40,7 +41,11 @@ def collect_structural_samples(
     _split_unpack_samples(node, parameters, candidates)
     _keyword_payload_keys(node, candidates)
     _validation_format_hints(node, parameters, candidates)
-    _parameter_attributes(node, parameters, candidates)
+    add_parameter_attribute_samples(
+        node, parameters, candidates,
+        priority=_priority("parameter_attributes"),
+        attribute_policy=dict(_settings().get("attribute_samples") or {}),
+    )
     add_parameter_method_samples(
         node, parameters, candidates,
         priority=_priority("parameter_attributes"),
@@ -255,40 +260,6 @@ def _validation_format_hints(
         for name in names:
             if sample:
                 candidates[name].append((_priority("validation_format_hint"), sample, "ast_validation_format_hint"))
-
-
-def _parameter_attributes(node: FunctionNode, parameters: set[str], candidates: Candidates) -> None:
-    fields: dict[str, set[str]] = {name: set() for name in parameters}
-    called = {
-        (item.func.value.id, item.func.attr)
-        for item in ast.walk(node)
-        if isinstance(item, ast.Call)
-        and isinstance(item.func, ast.Attribute)
-        and isinstance(item.func.value, ast.Name)
-        and item.func.value.id in parameters
-    }
-    for item in ast.walk(node):
-        if isinstance(item, ast.Attribute) and isinstance(item.value, ast.Name):
-            key = (item.value.id, item.attr)
-            if item.value.id in parameters and key not in called:
-                fields[item.value.id].add(item.attr)
-    for name, names in fields.items():
-        if names:
-            candidates[name].append((_priority("parameter_attributes"), {
-                "__fixture__": "declared_model",
-                "type": "AcceptanceInput",
-                "fields": {field: _attribute_sample(field) for field in sorted(names)},
-            }, "ast_parameter_attributes"))
-
-
-def _attribute_sample(name: str) -> Any:
-    policy = dict(_settings().get("attribute_samples") or {})
-    prefixes = tuple(str(item) for item in policy.get("boolean_prefixes") or [])
-    if name.startswith(prefixes) or name in set(policy.get("boolean_names") or []):
-        return policy.get("boolean_value")
-    if name in set(policy.get("integer_names") or []):
-        return policy.get("integer_value")
-    return policy.get("default")
 
 
 def _importable_module_paths(

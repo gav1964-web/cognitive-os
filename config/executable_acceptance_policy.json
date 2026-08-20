@@ -11,7 +11,10 @@
     "program_name": "acceptance-probe"
   },
   "foundation_evidence": {
-    "isolated_transitive_effects": ["memory_state"]
+    "isolated_transitive_effects": ["memory_state"],
+    "isolated_direct_effect_profiles": {
+      "observability_render_command": ["observability"]
+    }
   },
   "structural_sample_policy": {
     "priorities": {

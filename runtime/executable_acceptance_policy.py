@@ -121,6 +121,10 @@ def foundation_evidence_policy() -> dict[str, Any]:
         "isolated_transitive_effects": tuple(
             str(item) for item in policy.get("isolated_transitive_effects", []) if item
         ),
+        "isolated_direct_effect_profiles": {
+            str(name): tuple(str(item) for item in effects if item)
+            for name, effects in dict(policy.get("isolated_direct_effect_profiles") or {}).items()
+        },
     }
 
 

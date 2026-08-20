@@ -34,6 +34,9 @@ def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _
     foundation = dict(policy.get("foundation_evidence") or {})
     if not foundation.get("isolated_transitive_effects"):
         check.errors.append("executable_acceptance_policy_missing:foundation_evidence.isolated_transitive_effects")
+    direct_profiles = dict(foundation.get("isolated_direct_effect_profiles") or {})
+    if not direct_profiles or any(not name or not effects for name, effects in direct_profiles.items()):
+        check.errors.append("executable_acceptance_policy_invalid:foundation_evidence.isolated_direct_effect_profiles")
     isolation = dict(policy.get("source_isolation_policy") or {})
     profiles = dict(isolation.get("effect_module_stubs") or {})
     if not profiles:

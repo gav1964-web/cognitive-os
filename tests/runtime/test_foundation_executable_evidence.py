@@ -1,7 +1,7 @@
 from runtime import foundation_executable_evidence as evidence
 
 
-def _spec(*, effects=None, observed_effects=None, state_mutation=False):
+def _spec(*, effects=None, observed_effects=None, state_mutation=False, archetypes=None):
     return {
         "artifact_type": "TechnicalSpec",
         "extraction_contract": {
@@ -11,6 +11,7 @@ def _spec(*, effects=None, observed_effects=None, state_mutation=False):
                 "observed_side_effects": list(observed_effects or []),
             },
             "side_effects": {"declared": list(effects or [])},
+            "semantic_quality": {"contract_archetype_ids": list(archetypes or [])},
         },
     }
 
@@ -42,6 +43,24 @@ def test_foundation_evidence_rejects_direct_memory_state():
     )
 
     assert result["status"] == "skipped"
+    assert result["reason"] == "side_effectful_target"
+
+
+def test_foundation_evidence_allows_profiled_direct_observability():
+    result = evidence._eligibility(_spec(
+        effects=["observability"],
+        observed_effects=["observability"],
+        archetypes=["observability_render_command"],
+    ))
+
+    assert result["status"] == "eligible"
+
+
+def test_foundation_evidence_rejects_unprofiled_direct_observability():
+    result = evidence._eligibility(_spec(
+        effects=["observability"], observed_effects=["observability"]
+    ))
+
     assert result["reason"] == "side_effectful_target"
 
 
