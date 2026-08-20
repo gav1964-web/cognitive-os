@@ -18,7 +18,7 @@ def stage_training_experience(
     attempts: list[dict[str, Any]],
     conclusion: dict[str, Any],
 ) -> Path:
-    confirmed = outcome["status"] == "confirmed_improvement"
+    confirmed = outcome["status"] == "candidate_improvement_confirmed"
     profile = _confirmed_profile(attempts, outcome)
     if profile:
         proposed = generalized_profile_record(profile)
@@ -81,7 +81,7 @@ def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:
 
 
 def _confirmed_profile(attempts: list[dict[str, Any]], outcome: dict[str, Any]) -> dict[str, Any]:
-    if outcome.get("status") != "confirmed_improvement":
+    if outcome.get("status") != "candidate_improvement_confirmed":
         return {}
     profiles = [dict(dict(row.get("parameter_changes") or {}).get("temporary_semantic_profile") or {})
                 for row in attempts if float(row.get("profile_score_delta") or 0) > 0]

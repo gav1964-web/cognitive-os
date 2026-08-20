@@ -1,6 +1,7 @@
+import json
 from pathlib import Path
 
-from runtime.self_improving_foundation_trial import run_self_improving_foundation_trial
+from runtime.self_improving_foundation_trial import _write_checkpoint, run_self_improving_foundation_trial
 
 
 def _report(cases, status="needs_work"):
@@ -29,7 +30,7 @@ def test_trial_trains_weakest_case_with_stable_regression_projects(monkeypatch, 
 
     def train(**kwargs):
         calls.append(kwargs)
-        return {"status": "confirmed_improvement", "outcome": {"target_reached": False}}
+        return {"status": "candidate_improvement_confirmed", "outcome": {"target_reached": False}}
 
     progress = []
     result = run_self_improving_foundation_trial(
@@ -67,3 +68,19 @@ def test_trial_does_not_train_out_of_scope_or_target_cases(monkeypatch, tmp_path
     assert result["status"] == "target_verified"
     assert result["training"] == []
     assert result["summary"]["eligible_failure_count"] == 0
+
+
+def test_checkpoint_preserves_completed_training_before_verification(tmp_path: Path):
+    path = _write_checkpoint(
+        tmp_path,
+        {"report_path": "baseline.json"},
+        [{
+            "project": "sample", "status": "candidate_improvement_confirmed",
+            "report_path": "training.json", "outcome": {"target_reached": True},
+        }],
+        9.7,
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["status"] == "verification_pending"
+    assert payload["training"][0]["status"] == "candidate_improvement_confirmed"

@@ -25,7 +25,7 @@ def test_recognition_only_cases_do_not_confirm_treatment():
     report = build_profile_validation_report(candidate, observations, target_score=9.7)
 
     assert report["recognition_case_count"] == 2
-    assert report["confirmed_improvement_case_count"] == 1
+    assert report["candidate_improvement_case_count"] == 1
     assert report["status"] == "collect_more_improvement_cases"
 
 
@@ -39,7 +39,7 @@ def test_independent_improvements_can_reach_review_gate():
         {
             "project": name,
             "recognized_family": "external_service_state_sync_boundary",
-            "training_status": "confirmed_improvement",
+            "training_status": "candidate_improvement_confirmed",
             "score_delta": 0.5,
         }
         for name in ("holdout_a", "holdout_b")
@@ -47,5 +47,5 @@ def test_independent_improvements_can_reach_review_gate():
 
     report = build_profile_validation_report(candidate, observations, target_score=9.7)
 
-    assert report["confirmed_improvement_case_count"] == 3
+    assert report["candidate_improvement_case_count"] == 3
     assert report["status"] == "ready_for_review"

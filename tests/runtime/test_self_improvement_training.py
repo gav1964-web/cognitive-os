@@ -28,7 +28,7 @@ def _case(score: float) -> dict:
 def test_training_confirms_score_improvement_without_role_regression():
     result = _outcome(_case(8.4), _case(9.2), 9.7)
 
-    assert result["status"] == "confirmed_improvement"
+    assert result["status"] == "candidate_improvement_confirmed"
     assert result["score_delta"] == 0.8
     assert result["target_reached"] is False
 
@@ -160,7 +160,7 @@ def test_profile_candidate_keeps_project_paths_only_in_provenance(tmp_path):
         {"failure_class": "target_selection", "hypothesis": "private/path.py:sync_private"},
         {"project_min_score": 8.4},
         {"project_min_score": 9.7},
-        {"status": "confirmed_improvement"},
+        {"status": "candidate_improvement_confirmed"},
         attempts,
         {
             "target_search_exhausted": True,
@@ -216,7 +216,7 @@ def test_zero_delta_profile_is_not_staged_as_contract_template(tmp_path):
         {"proposed_knowledge": {"label": "target selection"}},
         {"project_min_score": 9.0},
         {"project_min_score": 9.7},
-        {"status": "confirmed_improvement"},
+        {"status": "candidate_improvement_confirmed"},
         [{"parameter_changes": {"temporary_semantic_profile": profile}, "profile_score_delta": 0.0}],
         {"target_search_exhausted": True},
     )

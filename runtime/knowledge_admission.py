@@ -262,6 +262,50 @@ def grouped_candidate_report(candidates: list[dict[str, Any]], *, min_confirmed_
     }
 
 
+def capability_gap_report(
+    candidates: list[dict[str, Any]], *, min_observed_projects: int = 3
+) -> dict[str, Any]:
+    """Aggregate repeated capability gaps without treating observations as promotable knowledge."""
+    groups: dict[str, dict[str, Any]] = {}
+    for candidate in candidates:
+        if candidate.get("record_type") != "foundation_capability_gap":
+            continue
+        record = dict(candidate.get("proposed_record") or {})
+        gap_id = str(record.get("gap_id") or "unknown")
+        group = groups.setdefault(gap_id, {
+            "gap_id": gap_id,
+            "label": record.get("label"),
+            "candidate_ids": [],
+            "projects": [],
+            "role_scope": [],
+        })
+        group["candidate_ids"].append(candidate.get("candidate_id"))
+        group["role_scope"] = sorted(set(group["role_scope"]) | set(record.get("role_scope") or []))
+        for case in candidate.get("source_cases", []):
+            project = str(dict(case or {}).get("project") or "")
+            if project and project not in group["projects"]:
+                group["projects"].append(project)
+    rows = []
+    for group in groups.values():
+        count = len(group["projects"])
+        group["observed_project_count"] = count
+        group["status"] = "research_candidate" if count >= min_observed_projects else "collect_more_cases"
+        rows.append(group)
+    rows.sort(key=lambda row: (-int(row["observed_project_count"]), str(row["gap_id"])))
+    return {
+        "artifact_type": "FoundationCapabilityGapReport",
+        "gap_count": len(rows),
+        "min_observed_projects": min_observed_projects,
+        "gaps": rows,
+        "research_candidates": [row["gap_id"] for row in rows if row["status"] == "research_candidate"],
+        "policy": {
+            "observation_is_not_confirmation": True,
+            "automatic_kb_promotion_forbidden": True,
+            "research_candidate_requires_new_hypothesis_and_holdout": True,
+        },
+    }
+
+
 def kb_candidate_from_generic_project(
     *,
     project: str,

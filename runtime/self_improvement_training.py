@@ -259,7 +259,7 @@ def _outcome(
     reached = after["status"] == "ok" and after["project_min_score"] >= target
     improved = delta > 0 and not regressions and not source_changed
     return {
-        "status": "confirmed_improvement" if (reached or improved) and not source_changed else "hypothesis_not_confirmed",
+        "status": "candidate_improvement_confirmed" if (reached or improved) and not source_changed else "hypothesis_not_confirmed",
         "score_delta": delta,
         "target_reached": reached,
         "role_regressions": regressions,

@@ -41,7 +41,7 @@ def main() -> int:
         write=not args.no_write,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if report["status"] in {"already_at_target", "confirmed_improvement"} else 1
+    return 0 if report["status"] in {"already_at_target", "candidate_improvement_confirmed"} else 1
 
 
 if __name__ == "__main__":

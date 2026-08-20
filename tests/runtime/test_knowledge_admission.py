@@ -8,6 +8,7 @@ from pathlib import Path
 from runtime.knowledge_admission import (
     build_manual_merge_block,
     build_kb_candidate,
+    capability_gap_report,
     can_promote_candidate,
     grouped_candidate_report,
     kb_candidate_from_generic_project,
@@ -107,6 +108,31 @@ def test_grouped_candidate_report_counts_confirmed_cases():
     assert group["confirmed_case_count"] == 3
     assert group["gate_status"] == "needs_teacher_approval"
     assert report["ready_for_teacher_review"] == ["project_archetype_rule:schema_validation_library"]
+
+
+def test_capability_gap_report_requires_three_independent_projects():
+    candidates = [
+        build_kb_candidate(
+            record_type="foundation_capability_gap",
+            proposed_record={
+                "gap_id": "target_selection:no_viable_executable_candidate",
+                "label": "No viable executable first-slice candidate",
+                "role_scope": ["architect", "spec_writer"],
+            },
+            source_cases=[{"project": project, "status": "observed"}],
+            teacher_reference="self-improvement",
+        )
+        for project in ("one", "two", "three")
+    ]
+    candidates.append(candidates[0])
+
+    report = capability_gap_report(candidates)
+    gap = report["gaps"][0]
+
+    assert gap["observed_project_count"] == 3
+    assert gap["status"] == "research_candidate"
+    assert report["research_candidates"] == ["target_selection:no_viable_executable_candidate"]
+    assert report["policy"]["automatic_kb_promotion_forbidden"] is True
 
 
 def test_kb_candidate_from_generic_project_stays_staged():

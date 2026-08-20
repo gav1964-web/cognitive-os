@@ -16,7 +16,7 @@ def build_profile_validation_report(
     recognized = [row for row in observations if row.get("recognized_family") == family]
     independent_improvements = [
         row for row in recognized
-        if row.get("training_status") == "confirmed_improvement" and float(row.get("score_delta") or 0) > 0
+        if row.get("training_status") == "candidate_improvement_confirmed" and float(row.get("score_delta") or 0) > 0
     ]
     confirmed_count = len(confirmed_training) + len(independent_improvements)
     return {
@@ -26,8 +26,8 @@ def build_profile_validation_report(
         "contract_family": family,
         "target_score": target_score,
         "recognition_case_count": len(recognized),
-        "confirmed_improvement_case_count": confirmed_count,
-        "required_confirmed_improvement_cases": 3,
+        "candidate_improvement_case_count": confirmed_count,
+        "required_candidate_improvement_cases": 3,
         "status": "ready_for_review" if confirmed_count >= 3 else "collect_more_improvement_cases",
         "observations": observations,
         "evidence_policy": {

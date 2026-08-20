@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from .knowledge_admission import capability_gap_report, load_kb_candidates
 from .role_foundation_field_trial import run_role_foundation_field_trial
 from .self_improvement_training import train_on_project
 
@@ -57,6 +58,8 @@ def run_self_improving_foundation_trial(
             promote_config=promote_config,
             write=write,
         ))
+        if write:
+            _write_checkpoint(root, baseline, training, target_score)
         _emit(
             _progress, "training_completed", index=index, project=case["project"],
             status=training[-1].get("status"),
@@ -77,11 +80,12 @@ def run_self_improving_foundation_trial(
         "baseline": baseline,
         "training": training,
         "verification": verification,
+        "capability_gaps": capability_gap_report(load_kb_candidates(root=root)),
         "summary": {
             "eligible_failure_count": sum(_requires_training(case, target_score) for case in cases),
             "training_project_count": len(training),
-            "confirmed_improvement_count": sum(
-                report.get("status") == "confirmed_improvement" for report in training
+            "candidate_improvement_count": sum(
+                report.get("status") == "candidate_improvement_confirmed" for report in training
             ),
             "target_reached_count": sum(
                 bool(dict(report.get("outcome") or {}).get("target_reached")) for report in training
@@ -131,7 +135,7 @@ def _regression_projects(
 def _status(verification: dict[str, Any], training: list[dict[str, Any]]) -> str:
     if verification.get("status") == "ok":
         return "target_verified"
-    if any(report.get("status") == "confirmed_improvement" for report in training):
+    if any(report.get("status") == "candidate_improvement_confirmed" for report in training):
         return "improvement_candidates_staged"
     return "needs_work"
 
@@ -147,4 +151,23 @@ def _write_report(root: Path, report: dict[str, Any]) -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     path = directory / f"self_improving_foundation_trial_{stamp}.json"
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_checkpoint(
+    root: Path, baseline: dict[str, Any], training: list[dict[str, Any]], target_score: float
+) -> Path:
+    payload = {
+        "artifact_type": "SelfImprovingFoundationCheckpoint",
+        "status": "verification_pending",
+        "target_score": target_score,
+        "baseline_report_path": baseline.get("report_path"),
+        "training": [{
+            "project": row.get("project"), "status": row.get("status"),
+            "report_path": row.get("report_path"), "outcome": row.get("outcome"),
+        } for row in training],
+    }
+    path = root / "artifacts" / "self_improvement" / "self_improving_foundation_checkpoint.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
