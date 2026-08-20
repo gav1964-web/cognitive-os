@@ -50,6 +50,7 @@ def semantic_target_quality_report(
     input_contract: dict[str, Any] | None = None,
     output_contract: dict[str, Any] | None = None,
     side_effect_contract: dict[str, Any] | None = None,
+    recognized_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not target:
         return {"status": "blocked", "target": "", "score": 0, "reasons": ["no selected extraction candidate"]}
@@ -101,7 +102,11 @@ def semantic_target_quality_report(
     score += int(archetype_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
     reasons.extend(archetype_adjustments["reasons"])
+    recognized_profile = dict(recognized_profile or {})
     profile_ids = list(profile_adjustments.get("profile_ids") or [])
+    if recognized_profile.get("id"):
+        profile_ids.append(str(recognized_profile["id"]))
+        reasons.append(str(recognized_profile.get("reason") or "promoted AST contract profile matched"))
     archetype_ids = list(archetype_adjustments.get("profile_ids") or [])
     structural_rule = structural_contract_family_rule(structural_evidence, side_effect_contract)
     structural_profile = str(structural_rule.get("family_id") or "")
@@ -113,6 +118,7 @@ def semantic_target_quality_report(
         profile_adjustments.get("profiled_contract_family")
         or archetype_adjustments.get("profiled_contract_family")
         or structural_profile
+        or recognized_profile.get("contract_family")
     )
     if "pure transform" in reason_text or "deterministic parser" in reason_text:
         score += 8
@@ -147,6 +153,7 @@ def semantic_target_quality_report(
         profile_adjustments["benign_runtime_boundary"]
         or archetype_adjustments["benign_runtime_boundary"]
         or structural_rule.get("benign_runtime_boundary")
+        or recognized_profile.get("benign_runtime_boundary")
     )
     if boundary and not (special_boundary["allow_runtime"] or benign_boundary):
         score -= min(35, 12 + len(boundary) * 5)

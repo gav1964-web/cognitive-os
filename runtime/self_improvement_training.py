@@ -276,7 +276,7 @@ def _report(
         "invariants": {
             "evaluation_policy_changed": False,
             "source_project_changes_allowed": False,
-            "active_kb_auto_promotion": False,
+            "active_kb_promotion_mode": "gated_improvement_plugins",
         },
     }
 

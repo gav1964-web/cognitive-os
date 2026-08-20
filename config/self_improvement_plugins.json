@@ -10,6 +10,17 @@
       "change_types": ["config_mutation_proposal"],
       "auto_promote": true,
       "requires_regression_cases": true
+    },
+    {
+      "id": "semantic_profile_admission",
+      "version": "1.0.0",
+      "enabled": true,
+      "priority": 20,
+      "entrypoint": "runtime.improvement_plugins.semantic_profile_admission:run",
+      "change_types": ["semantic_contract_profile_template"],
+      "auto_promote": true,
+      "requires_regression_cases": false,
+      "minimum_confirmed_cases": 3
     }
   ],
   "cycle": {

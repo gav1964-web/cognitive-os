@@ -4,7 +4,6 @@ import ast
 import builtins
 import re
 from typing import Any
-from runtime.contract_archetype_inference import contract_archetype_for_target
 from runtime.role_spec_writer_ranking import (
     candidate_level_bonus as _candidate_level_bonus,
     name_and_contract_score as _name_and_contract_score,
@@ -12,7 +11,7 @@ from runtime.role_spec_writer_ranking import (
 )
 from runtime.role_skill_common import now_iso
 from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
-from runtime.semantic_target_profiles import contract_for_target
+from runtime.technical_spec_domain_contract import domain_extraction_contract
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
 from runtime.spec_writer_target_binding import promote_environment_ready_candidate, standalone_target_eligibility
@@ -198,7 +197,7 @@ def _extraction_contract(
         }
     candidate = dict(ranked[0].get("evidence", {})) if ranked else {}
     source = str(candidate.get("source") or "")
-    domain_contract = _domain_extraction_contract(source)
+    domain_contract = domain_extraction_contract(source, candidate)
     structural_evidence = infer_source_contract(candidate)
     signature_input_contract = _input_contract_from_candidate(candidate)
     signature_output_contract = _output_contract_from_candidate(candidate)
@@ -265,7 +264,7 @@ def _extraction_contract(
         ranked_candidates=[str(row.get("source")) for row in contract["ranked_candidates"] if isinstance(row, dict)],
         source_evidence=[str(row.get("source")) for row in evidence if row.get("source")],
         selection_reason=str(contract.get("selection_reason") or ""),
-        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract, "side_effect_contract": contract["side_effects"]},
+        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract, "side_effect_contract": contract["side_effects"], "recognized_profile": domain_contract},
     )
     quality = dict(contract.get("semantic_quality") or {})
     quality_reasons = " ".join(str(reason) for reason in list(quality.get("reasons", []) or [])).lower()
@@ -311,12 +310,6 @@ def _binding_rejection_rows(ranked: list[dict[str, Any]]) -> list[dict[str, Any]
             "reason_code": item.get("blocked_reason"),
         })
     return rows
-def _domain_extraction_contract(source: str) -> dict[str, Any]:
-    profile_contract = contract_for_target(source)
-    if profile_contract:
-        return profile_contract
-    return contract_archetype_for_target(source)
-
 def _reconciled_input_contract(
     signature_contract: dict[str, str], domain_contract: dict[str, Any], bindings: dict[str, Any] | None = None
 ) -> dict[str, str]:
@@ -356,7 +349,9 @@ def _enforce_preferred_first_slice_scope(ranked: list[dict[str, Any]], preferred
     return enriched
 def _first_slice_target_can_override(item: dict[str, Any], *, best_score: int) -> bool:
     source = str(item.get("source") or "").lower()
-    if _domain_extraction_contract(str(item.get("source") or "")).get("contract_family"):
+    if domain_extraction_contract(
+        str(item.get("source") or ""), dict(item.get("evidence") or item)
+    ).get("contract_family"):
         return True
     if int(item.get("score") or 0) < best_score - 30:
         return False

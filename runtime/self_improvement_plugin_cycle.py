@@ -37,6 +37,7 @@ def run_improvement_plugin_cycle(
             "regression_projects": regression_projects,
             "promote": promotion_requested,
             "requires_regression_cases": bool(plugin.get("requires_regression_cases")),
+            "plugin_config": plugin,
         })
         attempt = {
             "plugin_id": plugin["id"],

@@ -95,7 +95,7 @@ def run_self_improving_foundation_trial(
         "invariants": {
             "field_trial_is_measurement_only": True,
             "source_project_changes_allowed": False,
-            "active_kb_auto_promotion": False,
+            "active_kb_promotion_mode": "gated_improvement_plugins",
             "config_promotion_mode": "plugin_policy" if promote_config is None else "enabled" if promote_config else "disabled",
         },
     }

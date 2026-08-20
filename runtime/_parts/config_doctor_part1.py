@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,6 +34,7 @@ from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.self_improvement_profile_families import load_contract_families
 from runtime.self_improvement_plugin_loader import load_improvement_plugin_catalog
+from runtime.promoted_semantic_contract_profiles import load_promoted_profiles
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.source_target_policy import load_role_source_policy
 from runtime.spec_writer_ranking_kb import assert_no_knowledge_leakage, load_spec_writer_ranking_kb
@@ -141,6 +140,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "semantic_target_profiles": load_semantic_target_profiles(str(root / "config" / "semantic_target_profiles.json")),
         "self_improvement_contract_families": load_contract_families(str(root / "config" / "self_improvement_contract_families.json")),
         "self_improvement_plugins": load_improvement_plugin_catalog(str(root / "config" / "self_improvement_plugins.json")),
+        "promoted_semantic_contract_profiles": load_promoted_profiles(str(root / "knowledge" / "role_knowledge" / "promoted_semantic_contract_profiles.json")),
         "structural_contract_family_rules": load_structural_family_rules(str(root / "knowledge" / "contract_families" / "structural_recognition.json")),
         "stage2_template_routes": load_stage2_template_routes(str(root / "config" / "stage2_template_routes.json")),
         "web_extraction_profiles": load_web_extraction_profiles(str(root / "config" / "web_extraction_profiles.json")),
