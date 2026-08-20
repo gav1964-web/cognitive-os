@@ -49,6 +49,10 @@ def _attempt(packet: dict[str, Any], *, config: LocalInferenceConfig, tier: str)
     except LocalInferenceError as exc:
         return {"status": "failed", "confidence": 0.0, "error": str(exc), "model_trace": _trace(config, tier)}
     normalized = _normalize(response)
+    evidence_class = _evidence_failure_class(packet)
+    if evidence_class:
+        normalized["llm_failure_class"] = normalized["failure_class"]
+        normalized["failure_class"] = evidence_class
     current = str(packet.get("selected_candidate") or "")
     if normalized.get("recommended_source") == current:
         normalized["recommended_source"] = ""
@@ -56,6 +60,19 @@ def _attempt(packet: dict[str, Any], *, config: LocalInferenceConfig, tier: str)
         normalized["status"] = "failed"
     normalized["model_trace"] = _trace(config, tier)
     return normalized
+
+
+def _evidence_failure_class(packet: dict[str, Any]) -> str:
+    policy = dict(load_project_evolution_policy().get("self_improvement") or {})
+    taxonomy = dict(policy.get("failure_classification") or {})
+    downstream = dict(packet.get("downstream_evidence") or {})
+    reason = str(downstream.get("reason") or "")
+    reason_map = dict(taxonomy.get("downstream_reason_map") or {})
+    if reason in reason_map:
+        return str(reason_map[reason])
+    skipped = dict(dict(downstream.get("summary") or {}).get("skipped_reason_counts") or {})
+    skipped_map = dict(taxonomy.get("skipped_reason_map") or {})
+    return next((str(skipped_map[key]) for key in sorted(skipped) if key in skipped_map), "")
 
 
 def _normalize(response: dict[str, Any]) -> dict[str, Any]:

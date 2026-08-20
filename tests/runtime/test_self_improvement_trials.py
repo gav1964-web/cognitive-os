@@ -71,6 +71,16 @@ def test_best_attempt_uses_measured_minimum_not_llm_claim():
     assert best_attempt(baseline, attempts)["project_min_score"] == 9.2
 
 
+def test_best_attempt_keeps_baseline_when_every_trial_regresses():
+    baseline = {"project_min_score": 8.8, "role_scores": {"a": 9.2, "b": 8.8}}
+    attempts = [
+        {"result": {"project_min_score": 7.5, "role_scores": {"a": 9.2, "b": 7.5}}},
+        {"result": {"project_min_score": 6.4, "role_scores": {"a": 8.3, "b": 6.4}}},
+    ]
+
+    assert best_attempt(baseline, attempts) == baseline
+
+
 def test_repeated_flat_target_trials_request_contract_knowledge():
     baseline = {"project_min_score": 8.4}
     attempts = [

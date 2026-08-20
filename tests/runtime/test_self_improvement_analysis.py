@@ -103,3 +103,20 @@ def test_current_failed_target_is_not_an_actionable_recommendation():
 
     assert result["status"] == "failed"
     assert "same_as_failed_target" in result["policy_violations"]
+
+
+def test_observed_acceptance_reason_canonicalizes_free_form_failure_class():
+    response = _diagnosis(0.9)
+    response["failure_class"] = "transport/context errors"
+    packet = {
+        "downstream_evidence": {
+            "status": "passed",
+            "acceptance_signal": "meta_only",
+            "summary": {"skipped_reason_counts": {"positive_sample_execution_failed": 1}},
+        }
+    }
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure(packet, local_config=_config("local"))
+
+    assert result["failure_class"] == "executable_sample_contract"
+    assert result["llm_failure_class"] == "transport/context errors"

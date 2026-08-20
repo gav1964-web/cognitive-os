@@ -60,7 +60,8 @@ def best_attempt(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> di
             sum(scores),
         )
 
-    return dict(max(attempts, key=key).get("result") or baseline)
+    candidates = [{"result": baseline}, *attempts]
+    return dict(max(candidates, key=key).get("result") or baseline)
 
 
 def trial_conclusion(

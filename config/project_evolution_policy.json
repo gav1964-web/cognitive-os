@@ -29,6 +29,18 @@
     "teacher_profile": "external_l45_intent_resolver",
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
+    "failure_classification": {
+      "downstream_reason_map": {
+        "side_effectful_target": "side_effectful_target",
+        "first_slice_reselection_required": "first_slice_reselection_required",
+        "import_failed_runtime_error": "dependency_boundary",
+        "positive_sample_execution_failed": "executable_sample_contract"
+      },
+      "skipped_reason_map": {
+        "positive_sample_execution_failed": "executable_sample_contract",
+        "import_failed_runtime_error": "dependency_boundary"
+      }
+    },
     "mutable_config_paths": {
       "config/executable_acceptance_policy.json": ["/structural_sample_policy"]
     },
