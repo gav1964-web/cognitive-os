@@ -286,6 +286,7 @@
       "api_visibility": "public",
       "argv": ["program"],
       "batch_size": 1,
+      "beta": 1,
       "cancels": [],
       "component_prop_inputs": [],
       "connection": "sse",
