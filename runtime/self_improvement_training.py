@@ -24,7 +24,7 @@ from .role_foundation_pipeline import run_role_foundation_pipeline
 from .self_improvement_analysis import diagnose_training_failure
 from .self_improvement_experience import stage_training_experience
 from .self_improvement_profile_trial import run_profile_trial
-from .self_improvement_trials import best_attempt, challenger_sources, trial_conclusion
+from .self_improvement_trials import best_attempt, challenger_sources, finalize_profile_conclusion, trial_conclusion
 
 def train_on_project(
     *,
@@ -62,9 +62,8 @@ def train_on_project(
     conclusion = trial_conclusion(
         baseline, attempts, no_viable_challengers=bool(diagnosis.get("recommended_source") and not sources)
     )
-    profile_attempt = _run_contract_profile_attempt(
-        root, project_dir, baseline, diagnosis, selected, target, sources, conclusion
-    )
+    profile_attempt = _run_contract_profile_attempt(root, project_dir, baseline, diagnosis, selected, target, sources, conclusion)
+    conclusion = finalize_profile_conclusion(conclusion, profile_attempt)
     if profile_attempt:
         attempts.append(profile_attempt)
         conclusion["semantic_profile_trial"] = {

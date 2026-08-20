@@ -284,6 +284,28 @@ def test_no_viable_candidate_is_staged_as_portable_capability_gap(tmp_path):
     assert "private_project" not in payload["proposed_record"]["gap_id"]
 
 
+def test_missing_semantic_profile_is_staged_as_distinct_capability_gap(tmp_path):
+    path = stage_training_experience(
+        tmp_path,
+        tmp_path / "private_project",
+        {"failure_class": "executable_sample_contract", "target_roles": ["spec_writer"]},
+        {"project_min_score": 7.5},
+        {"project_min_score": 7.5},
+        {"status": "hypothesis_not_confirmed"},
+        [],
+        {
+            "recommended_change_type": "staged_capability_gap",
+            "next_hypothesis": "missing_reusable_semantic_contract",
+        },
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["record_type"] == "foundation_capability_gap"
+    assert payload["proposed_record"]["gap_id"] == (
+        "executable_sample_contract:missing_reusable_semantic_contract"
+    )
+
+
 def test_confirmed_reselection_stages_portable_selection_contrast(tmp_path):
     before = {
         "project_min_score": 8.8,

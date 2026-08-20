@@ -92,3 +92,13 @@ def trial_conclusion(
             "staged_capability_gap" if no_viable else "staged_kb_contract_profile" if target_search_exhausted else "none"
         ),
     }
+
+
+def finalize_profile_conclusion(
+    conclusion: dict[str, Any], profile_attempt: dict[str, Any] | None
+) -> dict[str, Any]:
+    result = dict(conclusion)
+    if profile_attempt is None and result.get("recommended_change_type") == "staged_kb_contract_profile":
+        result["recommended_change_type"] = "staged_capability_gap"
+        result["profile_discovery_status"] = "no_supported_profile"
+    return result

@@ -1,4 +1,9 @@
-from runtime.self_improvement_trials import best_attempt, challenger_sources, trial_conclusion
+from runtime.self_improvement_trials import (
+    best_attempt,
+    challenger_sources,
+    finalize_profile_conclusion,
+    trial_conclusion,
+)
 
 
 def test_challengers_prioritize_recommendation_and_exclude_failed_source():
@@ -116,3 +121,15 @@ def test_no_viable_challengers_stages_capability_gap_without_trials():
     assert result["target_search_exhausted"] is True
     assert result["next_hypothesis"] == "no_viable_executable_candidate"
     assert result["recommended_change_type"] == "staged_capability_gap"
+
+
+def test_missing_contract_profile_becomes_capability_gap():
+    conclusion = {
+        "next_hypothesis": "missing_reusable_semantic_contract",
+        "recommended_change_type": "staged_kb_contract_profile",
+    }
+
+    result = finalize_profile_conclusion(conclusion, None)
+
+    assert result["recommended_change_type"] == "staged_capability_gap"
+    assert result["profile_discovery_status"] == "no_supported_profile"
