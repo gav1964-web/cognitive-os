@@ -10,6 +10,9 @@
     "isolate_process_arguments": true,
     "program_name": "acceptance-probe"
   },
+  "foundation_evidence": {
+    "isolated_transitive_effects": ["memory_state"]
+  },
   "structural_sample_policy": {
     "priorities": {
       "allowed_collection_domain": 105,
@@ -33,6 +36,7 @@
     "numeric_sequence_sample": [0.0, 1.0],
     "numeric_arithmetic_sample": 1,
     "parameter_callable_fixture": "callable_identity",
+    "protocol_method_prefixes": ["collect_", "fetch_", "find_", "get_", "iter_", "list_", "load_", "query_", "read_", "resolve_", "select_"],
     "maximum_inferred_length": 32,
     "length_constraint_samples": {
       "default_element": 0,

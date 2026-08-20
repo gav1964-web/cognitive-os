@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
+from .executable_acceptance_policy import foundation_evidence_policy
 from .implementation_plan_builder import build_implementation_plan
 from .test_plan_builder import build_test_plan
 
@@ -49,6 +50,9 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
     request = dict(spec.get("first_slice_reselection_request") or {})
     structural = dict(contract.get("structural_evidence") or {})
     effects = list(dict(contract.get("side_effects") or {}).get("declared") or [])
+    direct_effects = list(structural.get("observed_side_effects") or [])
+    isolated_effects = set(foundation_evidence_policy()["isolated_transitive_effects"])
+    effects_are_isolated_transitive = bool(effects) and not direct_effects and set(effects) <= isolated_effects
     reason = ""
     if spec.get("artifact_type") != "TechnicalSpec":
         reason = "technical_spec_missing"
@@ -56,7 +60,7 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
         reason = "first_slice_reselection_required"
     elif not target or contract.get("status") == "blocked_no_safe_candidate":
         reason = "safe_target_missing"
-    elif effects:
+    elif effects and not effects_are_isolated_transitive:
         reason = "side_effectful_target"
     elif structural.get("state_mutation") is True:
         reason = "state_mutating_target"

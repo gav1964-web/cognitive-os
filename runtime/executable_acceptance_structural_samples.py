@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from .executable_acceptance_policy import structural_sample_policy
+from .executable_acceptance_protocol_samples import add_parameter_method_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -39,6 +40,11 @@ def collect_structural_samples(
     _keyword_payload_keys(node, candidates)
     _validation_format_hints(node, parameters, candidates)
     _parameter_attributes(node, parameters, candidates)
+    add_parameter_method_samples(
+        node, parameters, candidates,
+        priority=_priority("parameter_attributes"),
+        prefixes=tuple(str(item) for item in _settings().get("protocol_method_prefixes", [])),
+    )
     _importable_module_paths(node, parameters, candidates)
     _allowed_collection_domains(tree, node, parameters, candidates)
 

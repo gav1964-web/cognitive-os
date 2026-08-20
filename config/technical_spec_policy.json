@@ -122,7 +122,7 @@
   "first_slice_reselection": {
     "enabled": true,
     "production_triggers": ["low_first_slice_viability", "first_slice_semantic_quality_below_threshold"],
-    "minimum_semantic_score": 97,
+    "minimum_semantic_score": 95,
     "execution_feedback_enabled": true,
     "execution_feedback_max_iterations": 2,
     "execution_rejection_reasons": [

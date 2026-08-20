@@ -11,6 +11,7 @@ def _check_structural_sample_policy(policy: dict[str, Any], check: _Check) -> No
         "priorities", "conversion_samples", "numeric_sequence_calls", "attribute_samples",
         "length_constraint_samples",
         "unpack_samples",
+        "protocol_method_prefixes",
         "format_samples", "format_pattern", "module_attribute_calls", "collection_difference_method",
     )
     for field_name in fields:
@@ -30,6 +31,9 @@ def _check_structural_sample_policy(policy: dict[str, Any], check: _Check) -> No
 def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _Check:
     check = _Check("executable_acceptance_source_isolation_integrity")
     policy = dict(catalogs["executable_acceptance_policy"])
+    foundation = dict(policy.get("foundation_evidence") or {})
+    if not foundation.get("isolated_transitive_effects"):
+        check.errors.append("executable_acceptance_policy_missing:foundation_evidence.isolated_transitive_effects")
     isolation = dict(policy.get("source_isolation_policy") or {})
     profiles = dict(isolation.get("effect_module_stubs") or {})
     if not profiles:

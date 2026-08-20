@@ -115,6 +115,15 @@ def execution_context_policy() -> dict[str, Any]:
     }
 
 
+def foundation_evidence_policy() -> dict[str, Any]:
+    policy = dict(_policy().get("foundation_evidence") or {})
+    return {
+        "isolated_transitive_effects": tuple(
+            str(item) for item in policy.get("isolated_transitive_effects", []) if item
+        ),
+    }
+
+
 def skipped_recovery_hint(reason: str) -> str:
     recovery = dict(_policy().get("skipped_recovery") or {})
     return str(recovery.get(reason) or "")

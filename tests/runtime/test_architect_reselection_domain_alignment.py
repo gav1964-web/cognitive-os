@@ -1,4 +1,9 @@
-from runtime.architect_first_slice_reselection import _domain_aligned_sources, _expanded_candidate_sources, _viable_candidates
+from runtime.architect_first_slice_reselection import (
+    _domain_aligned_sources,
+    _expanded_candidate_sources,
+    _semantic_threshold_satisfied,
+    _viable_candidates,
+)
 from runtime.architect_candidate_quality import contract_quality
 
 
@@ -60,10 +65,19 @@ def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold(
         }
     }
 
-    selected, viable = _viable_candidates([source], context, {}, limit=8, minimum_semantic_score=97)
+    selected, viable = _viable_candidates([source], context, {}, limit=8, minimum_semantic_score=95)
 
-    assert viable and viable[0]["semantic_score"] < 97
+    assert viable and viable[0]["semantic_score"] < 95
     assert selected == []
+
+
+def test_reselection_accepts_strong_candidate_at_semantic_policy_floor():
+    assert _semantic_threshold_satisfied(
+        {"semantic_status": "strong", "semantic_score": 95}, None, 95
+    )
+    assert not _semantic_threshold_satisfied(
+        {"semantic_status": "strong", "semantic_score": 94}, None, 95
+    )
 
 
 def test_architect_quality_preserves_analyzer_pure_transform_evidence():
