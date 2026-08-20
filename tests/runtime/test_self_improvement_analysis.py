@@ -105,6 +105,19 @@ def test_current_failed_target_is_not_an_actionable_recommendation():
     assert "same_as_failed_target" in result["policy_violations"]
 
 
+def test_empty_recommendation_is_valid_when_no_candidate_was_selected():
+    response = _diagnosis(0.9)
+    response["recommended_source"] = ""
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure(
+            {"selected_candidate": None},
+            local_config=_config("local"),
+        )
+
+    assert result["status"] == "ok"
+    assert "same_as_failed_target" not in result["policy_violations"]
+
+
 def test_observed_acceptance_reason_canonicalizes_free_form_failure_class():
     response = _diagnosis(0.9)
     response["failure_class"] = "transport/context errors"

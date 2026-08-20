@@ -54,7 +54,7 @@ def _attempt(packet: dict[str, Any], *, config: LocalInferenceConfig, tier: str)
         normalized["llm_failure_class"] = normalized["failure_class"]
         normalized["failure_class"] = evidence_class
     current = str(packet.get("selected_candidate") or "")
-    if normalized.get("recommended_source") == current:
+    if current and normalized.get("recommended_source") == current:
         normalized["recommended_source"] = ""
         normalized.setdefault("policy_violations", []).append("same_as_failed_target")
         normalized["status"] = "failed"
