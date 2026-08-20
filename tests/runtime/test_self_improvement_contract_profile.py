@@ -45,6 +45,32 @@ def test_synthesizes_dynamic_dispatch_profile_from_source_evidence(tmp_path):
     assert all(profile["training_evidence"].values())
 
 
+def test_synthesizes_external_api_command_profile_from_source_evidence(tmp_path):
+    (tmp_path / "client.py").write_text(
+        "class Client:\n"
+        "    def send_message(self, user, body):\n"
+        "        return self._post('/messages/{}'.format(user), {'message': str(body)})\n",
+        encoding="utf-8",
+    )
+
+    profile = synthesize_contract_profile(tmp_path, "client.py:send_message")
+
+    assert profile["contract_family"] == "external_api_command_boundary"
+    assert profile["side_effect_policy"]["declared"] == ["network"]
+    assert all(profile["training_evidence"].values())
+
+
+def test_rejects_read_only_api_query_as_external_command(tmp_path):
+    (tmp_path / "client.py").write_text(
+        "class Client:\n"
+        "    def matches(self, since):\n"
+        "        return self._get('/matches', {'since': since})\n",
+        encoding="utf-8",
+    )
+
+    assert synthesize_contract_profile(tmp_path, "client.py:matches") is None
+
+
 def test_synthesizes_stateful_recursive_xml_serializer_profile(tmp_path):
     (tmp_path / "serializer.py").write_text(
         "class Serializer:\n"

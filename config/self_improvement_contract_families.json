@@ -58,6 +58,15 @@
       "failure_modes": ["external_service_failure", "rate_limited", "partial_state_write", "invalid_session"],
       "reason": "AST proves an external-service synchronization orchestration contract"
     },
+    "external_api_command_boundary": {
+      "input_contract": {"command": "ExternalApiCommand(target, payload)", "receiver_state": "ApiClientState(transport, credentials?)"},
+      "output_contract": {"result": "ExternalApiCommandResult", "failure_packet": "ExternalApiCommandFailure(kind, status?, retry_after?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["network"], "delegation_policy": "transport call and payload are explicit", "requires_validation_gate": true},
+      "validation_gates": ["payload projection is deterministic", "transport failure and response shape remain explicit", "credentials and private payloads are not exposed"],
+      "failure_modes": ["transport_failure", "invalid_payload", "remote_rejection", "response_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded external API command delegated through receiver transport"
+    },
     "file_extension_admission_policy": {
       "input_contract": {"filename": "FileName(value)", "policy": "AllowedExtensionSet(values)"},
       "output_contract": {"accepted": "bool", "failure_packet": "FileAdmissionFailure(kind, extension?)"},

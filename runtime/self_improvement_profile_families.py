@@ -29,6 +29,7 @@ def recognize_contract_family(node: ast.AsyncFunctionDef | ast.FunctionDef) -> t
         ("stateful_recursive_xml_serialization_boundary", _stateful_xml_serialization_evidence),
         ("dynamic_method_dispatch_boundary", _dynamic_dispatch_evidence),
         ("external_service_state_sync_boundary", _sync_evidence),
+        ("external_api_command_boundary", _external_api_command_evidence),
         ("file_extension_admission_policy", _file_admission_evidence),
         ("route_tree_flatten_boundary", _route_flatten_evidence),
         ("persistence_append_command", _persistence_append_evidence),
@@ -98,6 +99,34 @@ def _sync_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bo
         "failure_boundary": _has(node, ast.Try) or _has(node, ast.Raise),
         "structured_result": dictionary_return or annotated_mapping,
     }
+
+
+def _external_api_command_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:
+    calls = [item for item in ast.walk(node) if isinstance(item, ast.Call)]
+    delegated = [call for call in calls if _call_name(call.func).lower().startswith("self.")]
+    transport_calls = [call for call in delegated if _write_transport_call(call)]
+    returns_transport = any(
+        isinstance(item, ast.Return) and item.value in transport_calls for item in ast.walk(node)
+    )
+    command_args = [arg.arg for arg in node.args.args if arg.arg not in {"self", "cls"}]
+    return {
+        "instance_transport": bool(node.args.args and node.args.args[0].arg == "self"),
+        "command_inputs": bool(command_args),
+        "write_transport": bool(transport_calls),
+        "delegated_result": returns_transport,
+        "payload_projection": any(isinstance(item, ast.Dict) for item in ast.walk(node)),
+        "bounded_body": len(list(ast.walk(node))) <= 50,
+    }
+
+
+def _write_transport_call(call: ast.Call) -> bool:
+    name = _call_name(call.func).lower()
+    if name.endswith(("._post", ".post", "._put", ".put", "._patch", ".patch", "._delete", ".delete")):
+        return True
+    if not name.endswith("._request") or not call.args:
+        return False
+    method = call.args[0]
+    return isinstance(method, ast.Constant) and str(method.value).lower() in {"post", "put", "patch", "delete"}
 
 
 def _file_admission_evidence(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, bool]:
