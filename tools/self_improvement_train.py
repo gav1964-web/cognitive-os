@@ -18,7 +18,10 @@ def main() -> int:
     parser.add_argument("--project-dir", required=True)
     parser.add_argument("--target-score", type=float, default=9.7)
     parser.add_argument("--regression-project-dir", action="append", default=[])
-    parser.add_argument("--promote-config", action="store_true")
+    promotion = parser.add_mutually_exclusive_group()
+    promotion.add_argument("--promote-config", dest="promote_config", action="store_true")
+    promotion.add_argument("--no-promote-config", dest="promote_config", action="store_false")
+    parser.set_defaults(promote_config=None)
     parser.add_argument(
         "--no-write",
         action="store_true",

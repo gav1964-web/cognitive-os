@@ -1,0 +1,20 @@
+{
+  "schema_version": "self_improvement_plugins.v1",
+  "plugins": [
+    {
+      "id": "config_mutation",
+      "version": "1.0.0",
+      "enabled": true,
+      "priority": 10,
+      "entrypoint": "runtime.improvement_plugins.config_mutation:run",
+      "change_types": ["config_mutation_proposal"],
+      "auto_promote": true,
+      "requires_regression_cases": true
+    }
+  ],
+  "cycle": {
+    "max_plugins_per_failure": 3,
+    "stop_after_promotion": true,
+    "runtime_patch_auto_promotion": false
+  }
+}

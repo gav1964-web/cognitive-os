@@ -24,6 +24,7 @@ from .role_foundation_pipeline import run_role_foundation_pipeline
 from .self_improvement_analysis import diagnose_training_failure
 from .self_improvement_experience import stage_training_experience
 from .self_improvement_profile_trial import run_profile_trial
+from .self_improvement_plugin_adapter import run_training_improvement_plugins
 from .self_improvement_trials import best_attempt, challenger_sources, finalize_profile_conclusion, trial_conclusion
 
 def train_on_project(
@@ -34,7 +35,7 @@ def train_on_project(
     local_config: LocalInferenceConfig | None = None,
     teacher_config: LocalInferenceConfig | None = None,
     regression_projects: list[Path] | None = None,
-    promote_config: bool = False,
+    promote_config: bool | None = None,
     write: bool = True,
 ) -> dict[str, Any]:
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
@@ -48,7 +49,7 @@ def train_on_project(
     failure_packet = _failure_packet(baseline, target)
     diagnosis = diagnose_training_failure(failure_packet, local_config=local, teacher_config=teacher)
     diagnosis = _validate_recommended_source(diagnosis, baseline)
-    config_evolution = _run_config_evolution(
+    plugin_cycle, config_evolution, plugin_attempts = run_training_improvement_plugins(
         root, project_dir, failure_packet, diagnosis, regression_projects or [], promote=promote_config
     )
     selected = teacher if dict(diagnosis.get("model_trace") or {}).get("tier") == "external_teacher" else local
@@ -58,7 +59,10 @@ def train_on_project(
         current_source=str(baseline.get("selected_extraction_candidate") or ""),
         limit=int(policy.get("max_challenger_attempts") or 3),
     )
-    attempts = _run_training_attempts(root, project_dir, baseline, diagnosis, selected, target, sources)
+    attempts = [
+        *plugin_attempts,
+        *_run_training_attempts(root, project_dir, baseline, diagnosis, selected, target, sources),
+    ]
     conclusion = trial_conclusion(
         baseline, attempts, no_viable_challengers=bool(diagnosis.get("recommended_source") and not sources)
     )
@@ -83,29 +87,11 @@ def train_on_project(
     report["training_attempts"] = attempts
     report["trial_conclusion"] = conclusion
     report["config_evolution"] = config_evolution
+    report["improvement_plugin_cycle"] = plugin_cycle
     report["knowledge_candidate_path"] = candidate_path.as_posix() if candidate_path else None
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
-
-def _run_config_evolution(
-    root: Path,
-    project_dir: Path,
-    failure_packet: dict[str, Any],
-    diagnosis: dict[str, Any],
-    regression_projects: list[Path],
-    *,
-    promote: bool,
-) -> dict[str, Any] | None:
-    from .self_improvement_evolution_runner import evolve_diagnosed_foundation_policy
-
-    return evolve_diagnosed_foundation_policy(
-        root=root, project_dir=project_dir,
-        failure_packet=failure_packet,
-        diagnosis=diagnosis,
-        regression_projects=regression_projects,
-        promote=promote,
-    )
 
 def _run_contract_profile_attempt(
     root: Path,

@@ -35,6 +35,7 @@ from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.self_improvement_profile_families import load_contract_families
+from runtime.self_improvement_plugin_loader import load_improvement_plugin_catalog
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.source_target_policy import load_role_source_policy
 from runtime.spec_writer_ranking_kb import assert_no_knowledge_leakage, load_spec_writer_ranking_kb
@@ -47,7 +48,6 @@ from runtime.web_extraction_profiles import load_web_extraction_profiles
 from plugins.project_map_report.src.language_scope import load_language_scope_policy
 
 ROOT = Path(__file__).resolve().parents[2]
-
 @dataclass
 class _Check:
     code: str
@@ -124,7 +124,6 @@ def run_config_doctor(root: Path | None = None) -> dict[str, Any]:
         },
         "checks": rows,
     }
-
 def _load_check(code: str, fn: Callable[[], Any]) -> _Check:
     check = _Check(code)
     try:
@@ -141,6 +140,7 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "semantic_resolution_rules": load_semantic_resolution_rules(str(root / "config" / "semantic_resolution_rules.json")),
         "semantic_target_profiles": load_semantic_target_profiles(str(root / "config" / "semantic_target_profiles.json")),
         "self_improvement_contract_families": load_contract_families(str(root / "config" / "self_improvement_contract_families.json")),
+        "self_improvement_plugins": load_improvement_plugin_catalog(str(root / "config" / "self_improvement_plugins.json")),
         "structural_contract_family_rules": load_structural_family_rules(str(root / "knowledge" / "contract_families" / "structural_recognition.json")),
         "stage2_template_routes": load_stage2_template_routes(str(root / "config" / "stage2_template_routes.json")),
         "web_extraction_profiles": load_web_extraction_profiles(str(root / "config" / "web_extraction_profiles.json")),

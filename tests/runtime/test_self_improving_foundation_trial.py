@@ -84,3 +84,31 @@ def test_checkpoint_preserves_completed_training_before_verification(tmp_path: P
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["status"] == "verification_pending"
     assert payload["training"][0]["status"] == "candidate_improvement_confirmed"
+
+
+def test_trial_delegates_config_promotion_to_plugin_policy(monkeypatch, tmp_path: Path):
+    weak = {
+        "project": "weak", "project_dir": str(tmp_path / "weak"),
+        "status": "ok", "project_min_score": 9.0,
+    }
+    stable = {
+        "project": "stable", "project_dir": str(tmp_path / "stable"),
+        "status": "ok", "project_min_score": 9.8,
+    }
+    reports = iter([_report([weak, stable]), _report([weak, stable])])
+    monkeypatch.setattr(
+        "runtime.self_improving_foundation_trial.run_role_foundation_field_trial",
+        lambda **kwargs: next(reports),
+    )
+    calls = []
+
+    def train(**kwargs):
+        calls.append(kwargs)
+        return {"status": "hypothesis_not_confirmed", "outcome": {"target_reached": False}}
+
+    result = run_self_improving_foundation_trial(
+        root=tmp_path, project_roots=[tmp_path], write=False, _trainer=train,
+    )
+
+    assert calls[0]["promote_config"] is None
+    assert result["invariants"]["config_promotion_mode"] == "plugin_policy"

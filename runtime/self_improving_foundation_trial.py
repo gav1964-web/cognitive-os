@@ -24,7 +24,7 @@ def run_self_improving_foundation_trial(
     target_score: float = 9.7,
     max_training_projects: int = 3,
     regression_case_count: int = 3,
-    promote_config: bool = False,
+    promote_config: bool | None = None,
     write: bool = True,
     executable_acceptance: bool = True,
     _trainer: Trainer = train_on_project,
@@ -96,7 +96,7 @@ def run_self_improving_foundation_trial(
             "field_trial_is_measurement_only": True,
             "source_project_changes_allowed": False,
             "active_kb_auto_promotion": False,
-            "config_promotion_requested": promote_config,
+            "config_promotion_mode": "plugin_policy" if promote_config is None else "enabled" if promote_config else "disabled",
         },
     }
     if write:
