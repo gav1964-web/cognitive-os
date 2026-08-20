@@ -238,6 +238,20 @@ The foundation contour must produce more than MVP-shaped placeholders:
 - `TechnicalSpec.human_review` carries decision points, non-goals and review notes for people while the JSON artifact remains the machine API for the next role.
 - `TechnicalSpec.extraction_contract.semantic_quality` is a separate advisory signal. It distinguishes a well-formed contract from an architecturally useful first slice and flags meta-infrastructure, runtime-boundary, trivial accessor and support/helper targets for review.
 - `ArchitectRedTeamReport` is the deterministic handoff gate before SpecWriter. It rejects ADRs without option tradeoffs, explained rejected options, bounded source-backed first slice with selection policy, actionable risk model, actionable SpecWriter brief, source context for brief targets, source-linked traceability and explicit forbidden-action enforcement. An `ArchitectureDecisionRecord` is ready for SpecWriter only with `handoff_verdict=ready_for_spec_writer`.
+
+Foundation corpus measurement and training are separate operations. Use
+`tools/role_foundation_field_trial.py` for an immutable measurement, and use the
+self-improving route when failures should become bounded training examples:
+
+```bash
+python tools/self_improving_foundation_trial.py --root . \
+  --projects-dir artifacts/corpora/example --target-score 9.7
+```
+
+The self-improving route measures first, selects the weakest in-scope projects,
+uses already-passing projects as regression cases, invokes Cognitive OS
+diagnosis/trials, and verifies the corpus again. Successful KB experience is
+staged as a candidate; it is not activated without promotion evidence.
 - `SpecWriterRedTeamReport` is the deterministic handoff gate before Implementer. It rejects weak `Any -> Any` contracts, side-effecting targets without validation/idempotency/process/retry gates, missing candidate acceptance, missing interface contract for the selected target, first-slice traceability gaps, and `TechnicalSpec.extraction_contract.candidate` values outside `ArchitectureDecisionRecord.first_slice_contract.targets`. A `TechnicalSpec` is implementation-ready only with `handoff_verdict=ready_for_implementer`.
 - With `write=True`, the contour writes human-readable Markdown documents for review: `human_documents.architecture_analysis` and `human_documents.technical_spec`. These documents are reading surfaces over the typed JSON artifacts, not replacement protocols. `HumanRoleDocumentQualityReport` checks that they preserve the machine chain (`ProjectMapReport -> ArchitectureDecisionRecord -> TechnicalSpec`), Russian human-readable sections, evidence/traceability, validation gates, acceptance criteria, and implementation handoff.
 
