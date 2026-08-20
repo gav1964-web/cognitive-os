@@ -27,6 +27,8 @@ def method_fixture_values(
 
 
 def _inferred_attribute_fixture(name: str, nodes: list[ast.AST]) -> Any:
+    if _used_as_text_value(name, nodes):
+        return "sample"
     operations = {
         item.func.attr
         for node in nodes
@@ -43,6 +45,32 @@ def _inferred_attribute_fixture(name: str, nodes: list[ast.AST]) -> Any:
     if operations & {"append", "extend"}:
         return []
     return {"__fixture__": "safe_method_attribute"}
+
+
+def _used_as_text_value(name: str, nodes: list[ast.AST]) -> bool:
+    for node in nodes:
+        for item in ast.walk(node):
+            if isinstance(item, ast.FormattedValue) and name in _loaded_self_attributes(item.value):
+                return True
+            if (
+                isinstance(item, ast.Call)
+                and isinstance(item.func, ast.Attribute)
+                and item.func.attr in {"format", "format_map"}
+                and any(name in _loaded_self_attributes(value) for value in [*item.args, *[part.value for part in item.keywords]])
+            ):
+                return True
+    return False
+
+
+def _loaded_self_attributes(node: ast.AST) -> set[str]:
+    return {
+        item.attr
+        for item in ast.walk(node)
+        if isinstance(item, ast.Attribute)
+        and isinstance(item.value, ast.Name)
+        and item.value.id == "self"
+        and isinstance(item.ctx, ast.Load)
+    }
 
 
 def _self_attributes(nodes: list[ast.AST], context: type[ast.expr_context]) -> set[str]:

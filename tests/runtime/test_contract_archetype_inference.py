@@ -28,8 +28,8 @@ def test_contract_archetype_inference_matches_generalized_holdout_shapes():
         "zipp/glob.py:translate_core": "glob_pattern_translation",
         "jsonschema/validators.py:create": "validator_factory",
         "starlette/authentication.py:requires": "permission_gate_decorator",
+        "pkg/package_downloader.py:get_download_url": "package_download_url_resolution",
     }
-
     for target, archetype in cases.items():
         contract = contract_archetype_for_target(target)
         adjustments = archetype_score_adjustments(target)
@@ -50,8 +50,8 @@ def test_contract_archetypes_cover_type_terminal_hook_and_api_boundaries():
         "monitor/views.py:header": "terminal_header_rendering",
         "runtime/ingredient.py:post_run_hook": "lifecycle_hook_registration",
         "client/http.py:send_api_request": "protocol_request_transaction",
+        "artifact_downloader.py:resolve_download_url": "package_download_url_resolution",
     }
-
     for target, expected in cases.items():
         contract = contract_archetype_for_target(target)
         assert contract["contract_archetype"] == expected

@@ -21,7 +21,6 @@ from .executable_acceptance_contract_inference import infer_argument_samples
 
 ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 
-
 def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dict[str, Any]:
     targets: list[str] = []
     skipped: list[dict[str, str]] = []
@@ -202,6 +201,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     binding = positive_case_binding(func, target, obligations, inferred)
     if not binding["accepted"]:
         cleanup_dependency_stubs(loaded)
+        isolated_support = {} if loaded.get("source_isolated") else _isolated_retry(path, symbol, target, obligations, inferred)
+        if isolated_support.get("supported"):
+            return isolated_support
         return _unsupported("positive_signature_mismatch")
     diagnostics = []
     with import_path(project_dir, path):
@@ -271,7 +273,6 @@ def _source_isolated_support(
         return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
     return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "argument_overrides": binding["overrides"], "argument_sample_evidence": binding["evidence"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
 
-
 def _isolated_retry(
     path: Path,
     symbol: str,
@@ -283,7 +284,6 @@ def _isolated_retry(
     if not callable(isolated.get("callable")):
         return _unsupported(str(isolated.get("reason") or "target_not_callable"), str(isolated.get("detail") or ""))
     return _source_isolated_support(isolated, target, obligations, inferred)
-
 
 def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]], inferred: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     try:

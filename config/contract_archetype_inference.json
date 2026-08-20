@@ -3502,6 +3502,21 @@
       "failure_modes": ["connection_missing", "already_closed", "close_error", "cancellation_error"]
     },
     {
+      "id": "package_download_url_resolution",
+      "priority": 112,
+      "symbols": ["get_dl_url", "get_download_url", "resolve_download_url", "build_download_url"],
+      "path_contains_any": ["downloader", "package_download", "artifact_download"],
+      "score_bonus": 24,
+      "ranking_bonus": 40,
+      "reason": "package download URL resolution is a bounded package-reference to transport-URL contract",
+      "contract_family": "package_download_url_resolution",
+      "input_contract": {"package_ref": "PackageDownloadReference(provider, group?, project, ref, instance?, token?)"},
+      "output_contract": {"download_url": "ResolvedDownloadUrl(url, provider, credential_policy?)", "failure_packet": "DownloadUrlResolutionFailure(kind, provider?, evidence_ref)"},
+      "side_effect_policy": {"requires_validation_gate": true, "network": "URL construction must not perform transport or filesystem access"},
+      "validation_gates": ["public and authenticated URL forms are covered", "provider, project and ref escaping is explicit", "URL resolution performs no network or filesystem operation"],
+      "failure_modes": ["missing_project", "invalid_ref", "unsupported_provider", "invalid_instance"]
+    },
+    {
       "id": "dataset_instance_generation_boundary",
       "priority": 112,
       "symbols": ["gen_instance", "generate_instance", "build_instance", "make_instance"],

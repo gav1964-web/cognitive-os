@@ -85,6 +85,37 @@ def test_source_isolated_method_keeps_module_helper_closure(tmp_path: Path):
     assert result["summary"]["source_isolated_targets"] == ["src/pkg/module.py:handle"]
 
 
+def test_method_falls_back_when_imported_name_masks_signature(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "from unavailable_package import get_download_url\n\n"
+        "class Downloader:\n"
+        "    def get_download_url(self):\n"
+        "        return 'https://host/{group}/{project}/{ref}'.format(\n"
+        "            group=self.group, project=self.project, ref=self.ref\n"
+        "        )\n",
+        encoding="utf-8",
+    )
+
+    target = "module.py:Downloader.get_download_url"
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan(target, {"receiver_state": "sample"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["source_isolated_targets"] == [target]
+    assert result["summary"]["dropped_surplus_payload_targets"] == [target]
+    assert result["summary"]["method_instance_attributes"][target] == {
+        "group": "sample",
+        "project": "sample",
+        "ref": "sample",
+    }
+
+
 def test_source_isolated_function_stubs_configured_socket_effect(tmp_path: Path):
     project = tmp_path / "project"
     module = project / "commands" / "check_connection.py"
