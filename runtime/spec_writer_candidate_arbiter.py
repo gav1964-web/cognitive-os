@@ -6,6 +6,12 @@ import json
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .technical_spec_policy import load_technical_spec_policy
+
+
+ARBITRATION_POLICY = dict(load_technical_spec_policy().get("candidate_arbitration") or {})
+NORMAL_CANDIDATE_LIMIT = int(ARBITRATION_POLICY.get("normal_candidate_limit") or 5)
+TRAINING_PREFERRED_RANK_LIMIT = int(ARBITRATION_POLICY.get("self_improvement_preferred_rank_limit") or 16)
 
 
 def arbitrate_candidates(
@@ -14,9 +20,9 @@ def arbitrate_candidates(
     config: LocalInferenceConfig | None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     preferred = str(dict(config.advisory_context or {}).get("preferred_source") or "") if config else ""
-    bounded_sources = {str(row.get("source") or "") for row in ranked[:5]}
+    bounded_sources = {str(row.get("source") or "") for row in ranked[:TRAINING_PREFERRED_RANK_LIMIT]}
     if preferred and preferred in bounded_sources:
-        chosen = next(row for row in ranked[:5] if str(row.get("source") or "") == preferred)
+        chosen = next(row for row in ranked[:TRAINING_PREFERRED_RANK_LIMIT] if str(row.get("source") or "") == preferred)
         reordered = [chosen, *[row for row in ranked if row is not chosen]]
         chosen["reasons"] = [*list(chosen.get("reasons") or []), "self-improvement challenger selected this bounded source"]
         return reordered, {
@@ -28,7 +34,7 @@ def arbitrate_candidates(
         }
     if config is None or not _needs_arbitration(ranked):
         return ranked, {"source": "deterministic", "llm_invoked": False, "eligible": False}
-    candidates = ranked[:5]
+    candidates = ranked[:NORMAL_CANDIDATE_LIMIT]
     try:
         response = call_json_chat(_messages(candidates, config.advisory_context), config=config)
     except LocalInferenceError as first_error:

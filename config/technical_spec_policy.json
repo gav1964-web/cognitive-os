@@ -68,6 +68,10 @@
     "generic_semantic_delta": 18,
     "generic_score_slack": 20
   },
+  "candidate_arbitration": {
+    "normal_candidate_limit": 5,
+    "self_improvement_preferred_rank_limit": 16
+  },
   "first_slice_scope": {
     "enforce_candidate_within_targets": true,
     "work_plan_target_limit": 32,

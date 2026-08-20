@@ -22,7 +22,7 @@ def load_technical_spec_policy(path: str | None = None) -> dict[str, Any]:
     schema_version = str(payload.get("schema_version") or "")
     if schema_version != EXPECTED_SCHEMA_VERSION:
         raise ValueError(f"unsupported technical spec policy schema: {schema_version}")
-    for section_name in ("snippet_analysis", "contract_type_inference", "semantic_rerank", "architecture_shape_score", "target_binding_policy", "dependency_readiness"):
+    for section_name in ("snippet_analysis", "contract_type_inference", "semantic_rerank", "candidate_arbitration", "architecture_shape_score", "target_binding_policy", "dependency_readiness"):
         if not isinstance(payload.get(section_name), dict):
             raise ValueError(f"missing technical spec policy section: {section_name}")
     return payload

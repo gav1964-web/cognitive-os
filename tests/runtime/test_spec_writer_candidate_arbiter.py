@@ -77,3 +77,21 @@ def test_self_improvement_challenger_selects_exact_bounded_source_without_llm():
     assert result[0]["source"] == "service.py:sync"
     assert advisory["source"] == "self_improvement_challenger"
     assert advisory["llm_invoked"] is False
+
+
+def test_self_improvement_challenger_can_reach_beyond_normal_top_five():
+    ranked = [
+        {"source": f"service.py:candidate_{index}", "score": 100 - index, "reasons": [], "evidence": {}}
+        for index in range(8)
+    ]
+    config = LocalInferenceConfig(
+        base_url="http://local",
+        model="test",
+        advisory_context={"preferred_source": "service.py:candidate_6"},
+    )
+
+    result, advisory = arbitrate_candidates(ranked, config=config)
+
+    assert result[0]["source"] == "service.py:candidate_6"
+    assert advisory["source"] == "self_improvement_challenger"
+    assert advisory["llm_invoked"] is False
