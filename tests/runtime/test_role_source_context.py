@@ -122,6 +122,26 @@ def test_source_context_marks_nested_function_parent(tmp_path: Path):
     assert snippet["parent_function"] == "outer"
 
 
+def test_source_context_marks_nested_function_inside_control_block(tmp_path: Path):
+    source = tmp_path / "workflow.py"
+    source.write_text(
+        "def outer(lines):\n"
+        "    with open('result.txt') as stream:\n"
+        "        def parse(values):\n"
+        "            return list(values)\n"
+        "        return parse(lines)\n",
+        encoding="utf-8",
+    )
+
+    context = build_source_context(
+        project_root=str(tmp_path), project_report={}, sources=["workflow.py:parse"]
+    )
+    snippet = context["workflow.py:parse"]["snippet"]
+
+    assert snippet["target_binding"] == "nested_function"
+    assert snippet["parent_function"] == "outer"
+
+
 def test_source_context_finds_function_declared_in_top_level_else(tmp_path: Path):
     source = tmp_path / "conditional.py"
     source.write_text(

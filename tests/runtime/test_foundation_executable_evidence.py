@@ -113,3 +113,24 @@ def test_foundation_evidence_propagates_executable_callable(monkeypatch, tmp_pat
 
     assert result["status"] == "passed"
     assert result["acceptance_signal"] == "executable_callable"
+
+
+def test_foundation_evidence_uses_process_boundary_when_requested(monkeypatch, tmp_path):
+    monkeypatch.setattr(evidence, "build_implementation_plan", lambda **kwargs: {})
+    monkeypatch.setattr(
+        evidence, "build_test_plan",
+        lambda **kwargs: {"executable_acceptance": {"obligations": [{"id": "EA-1"}]}},
+    )
+    observed = {}
+
+    def isolated(**kwargs):
+        observed.update(kwargs)
+        return {"status": "passed", "summary": {"signal_strength": "executable_callable"}}
+
+    monkeypatch.setattr(evidence, "run_executable_acceptance_process", isolated)
+    result = evidence.collect_foundation_executable_evidence(
+        root=tmp_path, project_dir=tmp_path, technical_spec=_spec(), process_isolated=True,
+    )
+
+    assert observed["timeout_seconds"] == 180
+    assert result["acceptance_signal"] == "executable_callable"

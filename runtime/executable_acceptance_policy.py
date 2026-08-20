@@ -130,6 +130,9 @@ def execution_context_policy() -> dict[str, Any]:
 def foundation_evidence_policy() -> dict[str, Any]:
     policy = dict(_policy().get("foundation_evidence") or {})
     return {
+        "isolated_process_timeout_seconds": max(
+            1, int(policy.get("isolated_process_timeout_seconds") or 180)
+        ),
         "isolated_transitive_effects": tuple(
             str(item) for item in policy.get("isolated_transitive_effects", []) if item
         ),

@@ -11,7 +11,7 @@ from .executable_acceptance_attribute_samples import add_parameter_attribute_sam
 from .executable_acceptance_file_samples import add_delimited_file_samples
 from .executable_acceptance_literal_buffers import add_literal_buffer_samples
 from .executable_acceptance_policy import structural_sample_policy
-from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_parameter_method_samples
+from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_mapping_protocol_samples, add_parameter_method_samples
 from .executable_acceptance_qualified_samples import add_qualified_call_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
@@ -70,6 +70,12 @@ def collect_structural_samples(
         node, parameters, candidates,
         priority=_priority("parameter_attributes"),
         prefixes=tuple(str(item) for item in _settings().get("protocol_method_prefixes", [])),
+    )
+    add_mapping_protocol_samples(
+        node, parameters, candidates,
+        priority=_priority("parameter_attributes"),
+        methods={str(item) for item in _settings().get("mapping_protocol_methods", [])},
+        sample=dict(_settings().get("mapping_protocol_sample") or {}),
     )
     add_delimited_file_samples(
         node, parameters, candidates, priority=_priority("importable_module_path")

@@ -7,13 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
+from .executable_acceptance_process import run_executable_acceptance_process
 from .executable_acceptance_policy import foundation_evidence_policy
 from .implementation_plan_builder import build_implementation_plan
 from .test_plan_builder import build_test_plan
 
 
 def collect_foundation_executable_evidence(
-    *, root: Path, project_dir: Path, technical_spec: dict[str, Any]
+    *, root: Path, project_dir: Path, technical_spec: dict[str, Any],
+    process_isolated: bool = False,
 ) -> dict[str, Any]:
     eligibility = _eligibility(technical_spec)
     if eligibility["status"] != "eligible":
@@ -26,12 +28,17 @@ def collect_foundation_executable_evidence(
     obligations = list(dict(test_plan.get("executable_acceptance") or {}).get("obligations") or [])
     if not obligations:
         return {**eligibility, "status": "skipped", "reason": "no_executable_obligations"}
-    acceptance = run_executable_acceptance(
-        root=root,
-        project_dir=project_dir,
-        test_plan=test_plan,
-        work_dir=_work_dir(root, project_dir, str(eligibility["target"])),
-    )
+    work_dir = _work_dir(root, project_dir, str(eligibility["target"]))
+    if process_isolated:
+        policy = foundation_evidence_policy()
+        acceptance = run_executable_acceptance_process(
+            root=root, project_dir=project_dir, test_plan=test_plan, work_dir=work_dir,
+            timeout_seconds=int(policy["isolated_process_timeout_seconds"]),
+        )
+    else:
+        acceptance = run_executable_acceptance(
+            root=root, project_dir=project_dir, test_plan=test_plan, work_dir=work_dir,
+        )
     summary = dict(acceptance.get("summary") or {})
     signal = str(summary.get("signal_strength") or "") if acceptance.get("status") == "passed" else ""
     return {

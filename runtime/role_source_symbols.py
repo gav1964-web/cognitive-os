@@ -25,23 +25,28 @@ def symbol_matches(
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) or node.name != symbol:
                 continue
             row = {"kind": "function", "line": int(getattr(node, "lineno", 0) or 0)}
-            if isinstance(parent, ast.ClassDef):
-                row.update({"kind": "method", "class_name": parent.name})
-                enclosing = _enclosing_function(parent, parents)
+            scopes = _enclosing_scopes(node, parents)
+            if scopes and isinstance(scopes[0], (ast.FunctionDef, ast.AsyncFunctionDef)):
+                row.update({"kind": "nested_function", "parent_name": scopes[0].name})
+            elif scopes and isinstance(scopes[0], ast.ClassDef):
+                row.update({"kind": "method", "class_name": scopes[0].name})
+                enclosing = next(
+                    (scope for scope in scopes[1:] if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef))),
+                    None,
+                )
                 if enclosing:
-                    row.update({"kind": "nested_method", "parent_name": enclosing})
-            elif isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                row.update({"kind": "nested_function", "parent_name": parent.name})
+                    row.update({"kind": "nested_method", "parent_name": enclosing.name})
             if owner_class and row.get("class_name") != owner_class:
                 continue
             matches.append(row)
     return matches
 
 
-def _enclosing_function(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> str:
+def _enclosing_scopes(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> list[ast.AST]:
+    scopes: list[ast.AST] = []
     parent = parents.get(node)
     while parent is not None:
-        if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            return parent.name
+        if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            scopes.append(parent)
         parent = parents.get(parent)
-    return ""
+    return scopes

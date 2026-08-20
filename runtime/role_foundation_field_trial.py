@@ -20,6 +20,7 @@ from .role_foundation_feedback_scores import (
 from .role_foundation_trial_status import (
     case_status as _case_status,
 )
+from .python_module_transaction import python_module_transaction
 
 
 DEFAULT_GOAL = "Produce ADR and TechnicalSpec for first safe transformation"
@@ -38,7 +39,7 @@ def run_role_foundation_field_trial(
     if limit > 0:
         projects = projects[:limit]
     cases = [
-        _run_case(
+        _run_isolated_case(
             root=root, project_dir=project, write=write,
             executable_acceptance=executable_acceptance,
         )
@@ -48,6 +49,18 @@ def run_role_foundation_field_trial(
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
+
+
+def _run_isolated_case(
+    *, root: Path, project_dir: Path, write: bool, executable_acceptance: bool
+) -> dict[str, Any]:
+    with python_module_transaction():
+        return _run_case(
+            root=root,
+            project_dir=project_dir,
+            write=write,
+            executable_acceptance=executable_acceptance,
+        )
 
 
 def discover_python_projects(roots: list[Path]) -> list[Path]:
@@ -117,6 +130,7 @@ def _run_case(
             root=root,
             project_dir=project_dir,
             technical_spec=dict(loaded_result["artifacts"].get("technical_spec") or {}),
+            process_isolated=True,
         )
         result["downstream_evidence"] = downstream_evidence
     semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})

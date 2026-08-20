@@ -334,6 +334,8 @@ def _weaker_than_configured_fixture(
 ) -> bool:
     configured = defaults.get(name)
     inferred_value = inferred.get("value")
+    if str(inferred.get("source") or "").startswith("ast_mapping_protocol:"):
+        return False
     return (
         isinstance(configured, dict)
         and bool(configured.get("__fixture__"))

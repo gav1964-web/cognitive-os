@@ -63,6 +63,25 @@ def add_parameter_method_samples(
             }, "ast_parameter_methods"))
 
 
+def add_mapping_protocol_samples(
+    node: ast.AST,
+    parameters: set[str],
+    candidates: dict[str, list[tuple[int, Any, str]]],
+    *,
+    priority: int,
+    methods: set[str],
+    sample: dict[str, Any],
+) -> None:
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Call) or not isinstance(item.func, ast.Attribute):
+            continue
+        owner = item.func.value
+        if isinstance(owner, ast.Name) and owner.id in parameters and item.func.attr in methods:
+            candidates[owner.id].append(
+                (priority, dict(sample), f"ast_mapping_protocol:{item.func.attr}")
+            )
+
+
 def _method_result_attributes(
     node: ast.AST, parameters: set[str]
 ) -> dict[tuple[str, str], set[str]]:

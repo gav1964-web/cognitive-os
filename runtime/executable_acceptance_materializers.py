@@ -27,6 +27,8 @@ def materialize(value: Any) -> Any:
             return lambda *args, **kwargs: []
         if fixture == "callable_empty_string":
             return lambda *args, **kwargs: ""
+        if fixture == "empty_mapping":
+            return {}
         if fixture == "callable_transport_result":
             return lambda *args, **kwargs: {"accepted": True}
         if fixture == "callable_declared_model":
