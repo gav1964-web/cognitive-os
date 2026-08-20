@@ -112,6 +112,10 @@ def _facts(
         "owner_class": str(snippet.get("owner_class") or context.get("owner_class") or "").lower(),
         "snippet_text": snippet_text,
         "side_effects": " ".join(str(item).lower() for item in side_effects),
+        "direct_side_effects": " ".join(
+            str(item).lower() for item in list(structural.get("observed_side_effects") or [])
+        ),
+        "state_mutation": str(bool(structural.get("state_mutation"))).lower(),
         "calls": " ".join(str(item).lower() for item in list(context.get("unresolved_calls") or [])),
         "input_complexity": _input_complexity_fact(snippet, payload),
     }
@@ -256,7 +260,7 @@ def _validate_matchers(match: dict[str, Any]) -> None:
     allowed_facts = {
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
         "decorators", "owner_class", "snippet_text", "side_effects", "calls", "receiver_kind",
-        "input_complexity", "receiver_fixture_status", "runtime_call_scope",
+        "input_complexity", "receiver_fixture_status", "runtime_call_scope", "direct_side_effects", "state_mutation",
     }
     for key, values in match.items():
         suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""

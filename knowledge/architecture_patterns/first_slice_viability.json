@@ -138,6 +138,35 @@
       "reason": "stateful data-loading lifecycle requires an explicit state fixture before executable handoff"
     },
     {
+      "rule_id": "direct_memory_state_boundary",
+      "score_delta": -60,
+      "reselection_required": true,
+      "match": {
+        "state_mutation_in": ["true"]
+      },
+      "reason": "direct caller-visible state mutation requires a pure calculation or explicit state fixture before foundation handoff"
+    },
+    {
+      "rule_id": "filesystem_hash_boundary",
+      "score_delta": -45,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["hash", "checksum", "digest"],
+        "direct_side_effects_contains_any": ["filesystem_read"]
+      },
+      "reason": "filesystem hashing should yield to a fixture-free archive, encoding, or digest-shaping contract"
+    },
+    {
+      "rule_id": "filesystem_rebuild_boundary",
+      "score_delta": -60,
+      "reselection_required": true,
+      "match": {
+        "symbol_contains_any": ["rebuild"],
+        "direct_side_effects_contains_any": ["filesystem_write"]
+      },
+      "reason": "filesystem rebuild orchestration should yield to its pure grouping, formatting, or diff contract"
+    },
+    {
       "rule_id": "utility_path_boundary",
       "score_delta": 16,
       "match": {
@@ -171,6 +200,16 @@
         "side_effects_contains_any": ["network", "subprocess", "external_runtime"]
       },
       "reason": "network, subprocess, or external runtime I/O requires an adapter fixture and is deferred behind a pure contract"
+    },
+    {
+      "rule_id": "observability_bootstrap_boundary",
+      "score_delta": -35,
+      "reselection_required": true,
+      "match": {
+        "symbol_in": ["main"],
+        "direct_side_effects_contains_any": ["observability"]
+      },
+      "reason": "observable application bootstrap is orchestration context rather than a reusable foundation slice"
     },
     {
       "rule_id": "ml_training_lifecycle",
