@@ -4,7 +4,7 @@
   "materializable_parameter_attributes": [
     "append", "casefold", "decode", "encode", "endswith", "format", "get",
     "items", "join", "keys", "lower", "lstrip", "partition", "removeprefix",
-    "removesuffix", "replace", "rsplit", "rstrip", "split", "startswith",
+    "removesuffix", "replace", "rsplit", "rstrip", "shape", "split", "startswith",
     "strip", "upper", "values"
   ],
   "rules": [

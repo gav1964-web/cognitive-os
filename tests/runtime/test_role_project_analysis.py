@@ -70,3 +70,25 @@ def test_interpreter_synthesis_remains_advisory_to_configured_architect(monkeypa
     assert prepared["role_analysis_contract"]["interpretation_authority"] == "advisory_only"
     assert adr["first_slice_contract"]["targets"] == ["pkg/ast.py:parse"]
     assert spec["extraction_contract"]["candidate"] == "pkg/ast.py:parse"
+
+
+def test_project_report_preserves_bounded_reselection_inventory(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("runtime.role_project_analysis.interpret_project_report", lambda *args, **kwargs: {})
+    report = {"root": tmp_path.as_posix(), "summary": {}, "answers": {}}
+
+    prepared = prepare_role_project_report(
+        root=tmp_path,
+        goal="Find a safe fallback",
+        analyzer_outputs={
+            "project_map_report": report,
+            "extract_python_structure": {
+                "central_nodes": [{"path": "pkg/features.py", "name": "extract_features"}],
+                "pure_transform_candidates": [{"path": "pkg/core.py", "name": "normalize"}],
+            },
+        },
+    )
+
+    assert prepared["reselection_candidate_inventory"] == [
+        "pkg/features.py:extract_features",
+        "pkg/core.py:normalize",
+    ]

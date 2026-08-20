@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from .executable_acceptance_policy import structural_sample_policy
-from .executable_acceptance_protocol_samples import add_parameter_method_samples
+from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_parameter_method_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -25,6 +25,7 @@ def _priority(name: str) -> int:
 def collect_structural_samples(
     tree: ast.Module, node: FunctionNode, parameters: set[str], candidates: Candidates
 ) -> None:
+    add_iterated_literal_domain_samples(node, parameters, candidates, priority=_priority("iterated_literal_domain"))
     string_sequences = _string_sequence_parameters(node, parameters)
     for item in ast.walk(node):
         _conversion(item, parameters, candidates)

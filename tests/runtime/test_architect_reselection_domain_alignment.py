@@ -50,6 +50,13 @@ def test_expanded_reselection_excludes_root_example_scripts():
     assert _expanded_candidate_sources(report, {}, policy) == ["pkg/core.py:normalize"]
 
 
+def test_expanded_reselection_can_use_analyzer_callable_inventory():
+    report = {"reselection_candidate_inventory": ["pkg/features.py:extract_features"]}
+    policy = {"candidate_sources": ["project_callable_inventory"], "expanded_candidate_limit": 8}
+
+    assert _expanded_candidate_sources(report, {}, policy) == ["pkg/features.py:extract_features"]
+
+
 def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold():
     source = "pkg/core.py:transform"
     context = {

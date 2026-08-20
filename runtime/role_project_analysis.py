@@ -40,6 +40,9 @@ def prepare_role_project_report(
         },
     }
     interpretation = interpret_project_report(goal_report, root=root.as_posix())
+    project_map_report["reselection_candidate_inventory"] = _reselection_candidate_inventory(
+        dict(analyzer_outputs.get("extract_python_structure") or {})
+    )
     project_map_report = enrich_weak_contract_readiness(project_map_report)
     project_map_report = enrich_module_script_readiness(project_map_report)
     return {
@@ -56,6 +59,19 @@ def prepare_role_project_report(
             "interpretation_authority": "advisory_only",
         },
     }
+
+
+def _reselection_candidate_inventory(structure: dict[str, Any]) -> list[str]:
+    rows = [
+        *list(structure.get("central_nodes") or []),
+        *list(structure.get("pure_transform_candidates") or []),
+        *list(structure.get("bounded_policy_candidates") or []),
+    ]
+    return list(dict.fromkeys(
+        f"{row['path']}:{row['name']}"
+        for row in rows
+        if isinstance(row, dict) and row.get("path") and row.get("name")
+    ))[:64]
 
 
 def enrich_weak_contract_readiness(project_map_report: dict[str, Any]) -> dict[str, Any]:

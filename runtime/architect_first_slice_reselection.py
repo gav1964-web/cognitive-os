@@ -114,6 +114,8 @@ def _expanded_candidate_sources(
     for key in ("process_boundary_candidates", "mixed_responsibility_functions", "hidden_orchestrators"):
         if key in enabled:
             sources.extend(_row_sources(readiness.get(key)))
+    if "project_callable_inventory" in enabled:
+        sources.extend(str(item) for item in list(project_report.get("reselection_candidate_inventory") or []))
     if "dataflows" in enabled:
         sources.extend(str(row.get("entrypoint") or "") for row in _rows(readiness.get("dataflows")))
     if "minimal_extraction_plan" in enabled:

@@ -138,7 +138,7 @@
     "expanded_candidate_limit": 64,
   "selected_target_limit": 32,
     "domain_candidate_required_any": {
-      "scientific_compute_library": ["array", "tensor", "compute", "fit", "solve", "solver", "math/", "model", "predict", "transform", "domain", "derivative", "integral", "sequence", "protein"]
+      "scientific_compute_library": ["array", "tensor", "compute", "feature", "fit", "solve", "solver", "math/", "model", "predict", "transform", "domain", "derivative", "integral", "sequence", "protein"]
     },
     "candidate_sources": [
       "pure_transforms",
@@ -148,7 +148,8 @@
       "mixed_responsibility_functions",
       "hidden_orchestrators",
       "dataflows",
-      "minimal_extraction_plan"
+      "minimal_extraction_plan",
+      "project_callable_inventory"
     ]
   },
   "semantic_review_override": {

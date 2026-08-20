@@ -6,6 +6,31 @@ import ast
 from typing import Any
 
 
+def add_iterated_literal_domain_samples(
+    node: ast.AST,
+    parameters: set[str],
+    candidates: dict[str, list[tuple[int, Any, str]]],
+    *,
+    priority: int,
+) -> None:
+    for loop in (item for item in ast.walk(node) if isinstance(item, ast.For)):
+        if not isinstance(loop.target, ast.Name) or not isinstance(loop.iter, ast.Name):
+            continue
+        if loop.iter.id not in parameters:
+            continue
+        literal = next((
+            other.value
+            for comparison in ast.walk(loop)
+            if isinstance(comparison, ast.Compare)
+            for other in [comparison.left, *comparison.comparators]
+            if isinstance(other, ast.Constant)
+            and isinstance(other.value, (str, int, float, bool))
+            and any(isinstance(part, ast.Name) and part.id == loop.target.id for part in [comparison.left, *comparison.comparators])
+        ), None)
+        if literal is not None:
+            candidates[loop.iter.id].append((priority, [literal], "ast_iterated_literal_domain"))
+
+
 def add_parameter_method_samples(
     node: ast.AST,
     parameters: set[str],

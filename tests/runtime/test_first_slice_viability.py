@@ -137,6 +137,22 @@ def test_common_scalar_protocol_remains_materializable():
     assert result["reselection_required"] is False
 
 
+def test_array_shape_access_remains_materializable():
+    result = first_slice_viability(
+        "features.py:extract_features",
+        {
+            "snippet": {
+                "target_binding": "function_symbol",
+                "text": "def extract_features(values):\n    return values.shape[-1]",
+            }
+        },
+        knowledge_rule="scientific_compute_library",
+    )
+
+    assert result["status"] == "eligible"
+    assert result["reselection_required"] is False
+
+
 def test_analyzer_protocol_usage_survives_truncated_snippet():
     result = first_slice_viability(
         "metrics.py:build_payload",
