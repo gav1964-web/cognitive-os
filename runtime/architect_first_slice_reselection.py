@@ -8,6 +8,7 @@ from typing import Any
 from .architect_candidate_quality import contract_quality
 from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
+from .promoted_candidate_selection_policies import apply_selection_policies
 from .role_source_context import build_source_context
 from .source_target_policy import is_context_only_implementation_target
 from .spec_writer_target_binding import standalone_target_eligibility
@@ -64,6 +65,7 @@ def reselect_architecture_first_slice(
         architecture_decision,
         limit=max(1, int(policy.get("selected_target_limit") or 8)),
         minimum_semantic_score=int(dict(request.get("blocking_evidence") or {}).get("minimum_semantic_score") or 0),
+        selection_request=request,
     )
     _mark_manifest_declared_context(selected, expanded_context, declared, policy)
     evidence = {
@@ -158,6 +160,7 @@ def _viable_candidates(
     *,
     limit: int,
     minimum_semantic_score: int = 0,
+    selection_request: dict[str, Any] | None = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     first_slice = dict(architecture_decision.get("first_slice_contract") or {})
     knowledge_rule = str(first_slice.get("knowledge_rule") or "")
@@ -167,6 +170,7 @@ def _viable_candidates(
         profile = first_slice_viability(source, source_context, knowledge_rule=knowledge_rule)
         if profile["status"] == "eligible" and not profile.get("reselection_required"):
             snippet = dict(dict(source_context or {}).get("snippet") or {})
+            structural = dict(snippet.get("structural_contract") or {})
             ranked.append({
                 "target": source,
                 "index": index,
@@ -177,6 +181,10 @@ def _viable_candidates(
                 ),
                 **contract_quality(source, source_context, sources),
                 **profile,
+                "return_paths": int(structural.get("return_paths") or 0),
+                "typed_argument_count": int(structural.get("typed_argument_count") or 0),
+                "state_mutation": bool(structural.get("state_mutation")),
+                "output_inference_basis": str(structural.get("output_inference_basis") or ""),
             })
     ranked.sort(key=lambda row: (
         -int(bool(row["environment_ready"])),
@@ -187,6 +195,7 @@ def _viable_candidates(
         str(row["target"]),
         int(row["index"]),
     ))
+    ranked = apply_selection_policies(ranked, dict(selection_request or {}))
     qualified = [
         row for row in ranked
         if _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)

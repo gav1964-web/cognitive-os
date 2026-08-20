@@ -21,6 +21,17 @@
       "auto_promote": true,
       "requires_regression_cases": false,
       "minimum_confirmed_cases": 3
+    },
+    {
+      "id": "candidate_selection_admission",
+      "version": "1.0.0",
+      "enabled": true,
+      "priority": 30,
+      "entrypoint": "runtime.improvement_plugins.candidate_selection_admission:run",
+      "change_types": ["foundation_selection_contrast"],
+      "auto_promote": true,
+      "requires_regression_cases": false,
+      "minimum_confirmed_cases": 3
     }
   ],
   "cycle": {
