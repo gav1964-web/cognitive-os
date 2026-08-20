@@ -158,6 +158,7 @@ def _run_training_attempts(
             spec_writer_config=advisory if source is not None or "spec_writer" in roles else None,
         )
         attempts.append({
+            "parameter_applied": not source or result.get("selected_extraction_candidate") == source,
             "parameter_changes": {
                 "architect_advisory": bool(source is None and "architect" in roles),
                 "spec_writer_advisory": bool(source is not None or "spec_writer" in roles),
@@ -345,7 +346,6 @@ def _source_fingerprint(project_dir: Path) -> str:
         except OSError:
             continue
     return digest.hexdigest()
-
 def _compact_candidate_quality(value: Any) -> dict[str, Any]:
     row = dict(value or {})
     return {

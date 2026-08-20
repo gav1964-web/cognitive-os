@@ -60,7 +60,7 @@ def best_attempt(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> di
             sum(scores),
         )
 
-    candidates = [{"result": baseline}, *attempts]
+    candidates = [{"result": baseline}, *[row for row in attempts if row.get("parameter_applied") is not False]]
     return dict(max(candidates, key=key).get("result") or baseline)
 
 
@@ -71,11 +71,12 @@ def trial_conclusion(
     tested = [
         dict(row.get("parameter_changes") or {}).get("spec_writer_candidate_preference")
         for row in attempts
-        if dict(row.get("parameter_changes") or {}).get("spec_writer_candidate_preference")
+        if row.get("parameter_applied") is not False
+        and dict(row.get("parameter_changes") or {}).get("spec_writer_candidate_preference")
     ]
     deltas = [
         round(float(dict(row.get("result") or {}).get("project_min_score") or 0.0) - float(baseline["project_min_score"]), 2)
-        for row in attempts
+        for row in attempts if row.get("parameter_applied") is not False
     ]
     target_search_exhausted = no_viable_challengers or (len(tested) >= 2 and not any(delta > 0 for delta in deltas))
     no_viable = target_search_exhausted and no_viable_challengers

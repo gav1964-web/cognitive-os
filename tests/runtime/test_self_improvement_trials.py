@@ -81,6 +81,20 @@ def test_best_attempt_keeps_baseline_when_every_trial_regresses():
     assert best_attempt(baseline, attempts) == baseline
 
 
+def test_unapplied_preference_cannot_confirm_improvement_or_exhaust_search():
+    baseline = {"project_min_score": 7.5, "role_scores": {"spec_writer": 7.5}}
+    attempts = [{
+        "parameter_applied": False,
+        "parameter_changes": {"spec_writer_candidate_preference": "api.py:requested"},
+        "result": {"project_min_score": 9.7, "role_scores": {"spec_writer": 9.7}},
+    }]
+
+    assert best_attempt(baseline, attempts) == baseline
+    conclusion = trial_conclusion(baseline, attempts)
+    assert conclusion["tested_candidate_preferences"] == []
+    assert conclusion["target_search_exhausted"] is False
+
+
 def test_repeated_flat_target_trials_request_contract_knowledge():
     baseline = {"project_min_score": 8.4}
     attempts = [

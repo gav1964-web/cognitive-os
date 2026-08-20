@@ -120,3 +120,15 @@ def test_observed_acceptance_reason_canonicalizes_free_form_failure_class():
 
     assert result["failure_class"] == "executable_sample_contract"
     assert result["llm_failure_class"] == "transport/context errors"
+
+
+def test_missing_import_is_canonical_dependency_boundary():
+    response = _diagnosis(0.9)
+    response["failure_class"] = "dependency_management"
+    packet = {"downstream_evidence": {"summary": {
+        "skipped_reason_counts": {"import_failed_missing_module": 1},
+    }}}
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure(packet, local_config=_config("local"))
+
+    assert result["failure_class"] == "dependency_boundary"

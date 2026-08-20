@@ -115,6 +115,26 @@ def test_training_skips_trials_without_concrete_diagnosis(tmp_path):
     assert attempts == []
 
 
+def test_training_marks_ignored_candidate_preference(monkeypatch, tmp_path):
+    result = {
+        **_case(8.8),
+        "selected_extraction_candidate": "app.py:other",
+    }
+    monkeypatch.setattr("runtime.self_improvement_training._evaluate", lambda *args, **kwargs: result)
+
+    attempts = _run_training_attempts(
+        tmp_path,
+        tmp_path,
+        _case(7.5),
+        {"failure_class": "target_selection", "target_roles": ["spec_writer"]},
+        LocalInferenceConfig(base_url="http://local", model="test"),
+        9.7,
+        ["app.py:requested"],
+    )
+
+    assert attempts[0]["parameter_applied"] is False
+
+
 def test_generalized_profile_record_drops_project_specific_selector():
     profile = {
         "id": "training_123",

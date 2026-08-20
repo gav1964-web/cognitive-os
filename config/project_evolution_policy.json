@@ -33,10 +33,12 @@
       "downstream_reason_map": {
         "side_effectful_target": "side_effectful_target",
         "first_slice_reselection_required": "first_slice_reselection_required",
+        "import_failed_missing_module": "dependency_boundary",
         "import_failed_runtime_error": "dependency_boundary",
         "positive_sample_execution_failed": "executable_sample_contract"
       },
       "skipped_reason_map": {
+        "import_failed_missing_module": "dependency_boundary",
         "positive_sample_execution_failed": "executable_sample_contract",
         "import_failed_runtime_error": "dependency_boundary"
       }
