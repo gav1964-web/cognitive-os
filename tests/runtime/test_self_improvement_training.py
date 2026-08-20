@@ -101,6 +101,20 @@ def test_training_skips_advisory_when_recommended_challenger_is_not_viable(tmp_p
     assert attempts == []
 
 
+def test_training_skips_trials_without_concrete_diagnosis(tmp_path):
+    attempts = _run_training_attempts(
+        tmp_path,
+        tmp_path,
+        _case(9.5),
+        {"failure_class": "unknown", "target_roles": ["spec_writer"]},
+        LocalInferenceConfig(base_url="http://local", model="test"),
+        9.7,
+        ["app.py:challenger"],
+    )
+
+    assert attempts == []
+
+
 def test_generalized_profile_record_drops_project_specific_selector():
     profile = {
         "id": "training_123",

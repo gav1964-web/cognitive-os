@@ -140,9 +140,10 @@ def _run_training_attempts(
     target: float,
     sources: list[str],
 ) -> list[dict[str, Any]]:
-    if diagnosis.get("recommended_source") and not sources:
-        return []
     roles = set(diagnosis.get("target_roles") or [])
+    unknown_failure = str(diagnosis.get("failure_class") or "unknown").strip().lower() == "unknown"
+    if not roles or unknown_failure or (diagnosis.get("recommended_source") and not sources):
+        return []
     trial_sources: list[str | None] = sources or [None]
     attempts: list[dict[str, Any]] = []
     for source in trial_sources:
@@ -344,7 +345,6 @@ def _source_fingerprint(project_dir: Path) -> str:
         except OSError:
             continue
     return digest.hexdigest()
-
 
 def _compact_candidate_quality(value: Any) -> dict[str, Any]:
     row = dict(value or {})
