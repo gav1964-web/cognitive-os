@@ -89,10 +89,17 @@ def _normalize(response: dict[str, Any]) -> dict[str, Any]:
     hypothesis = str(response.get("hypothesis") or "")[:1200]
     proposed_value = response.get("proposed_knowledge")
     proposed = dict(proposed_value) if isinstance(proposed_value, dict) else {}
+    proposed, proposal_rejections = _sanitize_proposals(proposed)
     recommended_source = str(response.get("recommended_source") or "")
-    policy_violations = _policy_violations(f"{diagnosis} {hypothesis} {json.dumps(proposed, ensure_ascii=False)}")
-    policy_violations.extend(_proposal_violations(proposed.get("config_mutation_proposal")))
-    policy_violations.extend(_adapter_proposal_violations(proposed.get("capability_adapter_proposal")))
+    generic_knowledge = {
+        key: value for key, value in proposed.items()
+        if key not in {"config_mutation_proposal", "capability_adapter_proposal"}
+    }
+    policy_violations = _policy_violations(
+        f"{diagnosis} {hypothesis} {json.dumps(generic_knowledge, ensure_ascii=False)}"
+    )
+    if "config_mutation_proposal" not in proposed:
+        changes = [item for item in changes if item != "config_mutation_proposal"]
     status = "ok" if diagnosis and hypothesis and roles and not policy_violations else "failed"
     return {
         "status": status,
@@ -105,6 +112,7 @@ def _normalize(response: dict[str, Any]) -> dict[str, Any]:
         "proposed_knowledge": proposed,
         "recommended_source": recommended_source,
         "policy_violations": policy_violations,
+        "proposal_rejections": proposal_rejections,
     }
 
 
@@ -125,7 +133,9 @@ def _messages(packet: dict[str, Any]) -> list[dict[str, str]]:
         "config_mutation_proposal. A config proposal is optional and must be nested under proposed_knowledge as "
         "config_mutation_proposal with artifact_type ConfigMutationProposal, target "
         "config/executable_acceptance_policy.json, operation merge_object, path /structural_sample_policy, and "
-        "a small reusable content object. When the evidence proves an undeclared external module is the only blocker, "
+        "a small reusable content object. Omit config_mutation_proposal unless every required field and content key "
+        "matches this contract exactly; rejected proposals are discarded and do not improve the diagnosis. "
+        "When the evidence proves an undeclared external module is the only blocker, "
         "proposed_knowledge may instead include capability_adapter_proposal with artifact_type "
         "ExecutableCapabilityAdapterProposal, kind generated_module_profile, a Python module name, and profile.attrs. "
         "Each callable attr must use one of: callable_identity, callable_noop, callable_true, callable_empty_list, "
@@ -187,3 +197,27 @@ def _adapter_proposal_violations(value: Any) -> list[str]:
     except (TypeError, ValueError):
         adapter = {}
     return [] if adapter else ["capability_adapter_proposal_invalid_or_unsafe"]
+
+
+def _sanitize_proposals(proposed: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    result = dict(proposed)
+    rejections: list[dict[str, Any]] = []
+    validators = {
+        "config_mutation_proposal": _proposal_violations,
+        "capability_adapter_proposal": _adapter_proposal_violations,
+    }
+    for key, validator in validators.items():
+        if key not in result:
+            continue
+        value = result[key]
+        if value is None:
+            violations = [f"{key}_must_be_object"]
+        else:
+            violations = validator(value)
+        violations.extend(
+            f"proposal_{code}" for code in _policy_violations(json.dumps(value, ensure_ascii=False))
+        )
+        if violations:
+            result.pop(key, None)
+            rejections.append({"proposal": key, "violations": list(dict.fromkeys(violations))})
+    return result, rejections

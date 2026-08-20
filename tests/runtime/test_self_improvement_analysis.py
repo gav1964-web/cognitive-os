@@ -54,7 +54,7 @@ def test_confident_but_non_actionable_diagnosis_escalates_to_teacher():
     assert result["model_trace"]["tier"] == "external_teacher"
 
 
-def test_invalid_local_config_proposal_escalates_to_teacher():
+def test_invalid_local_config_proposal_is_removed_without_poisoning_diagnosis():
     local = _diagnosis(0.95)
     local["proposed_knowledge"] = {"config_mutation_proposal": {
         "artifact_type": "ConfigMutationProposal",
@@ -63,12 +63,46 @@ def test_invalid_local_config_proposal_escalates_to_teacher():
         "path": "/structural_sample_policy",
         "content": {"project.py:handler": {"input_contract": "string"}},
     }}
-    teacher = _diagnosis(0.9)
-    with patch("runtime.self_improvement_analysis.call_json_chat", side_effect=[local, teacher]) as mocked:
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=local) as mocked:
         result = diagnose_training_failure({}, local_config=_config("local"), teacher_config=_config("teacher"))
 
-    assert mocked.call_count == 2
-    assert result["model_trace"]["tier"] == "external_teacher"
+    assert mocked.call_count == 1
+    assert result["status"] == "ok"
+    assert "config_mutation_proposal" not in result["proposed_knowledge"]
+    assert result["proposal_rejections"][0]["proposal"] == "config_mutation_proposal"
+    assert "config_mutation_proposal" not in result["parameter_changes"]
+
+
+def test_valid_config_proposal_remains_available_to_plugin_cycle():
+    response = _diagnosis(0.9)
+    response["parameter_changes"] = ["config_mutation_proposal"]
+    response["proposed_knowledge"] = {"config_mutation_proposal": {
+        "artifact_type": "ConfigMutationProposal",
+        "target": "config/executable_acceptance_policy.json",
+        "operation": "merge_object",
+        "path": "/structural_sample_policy",
+        "content": {"format_samples": {"url": ["https://example.test"]}},
+    }}
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure({}, local_config=_config("local"))
+
+    assert result["status"] == "ok"
+    assert result["proposal_rejections"] == []
+    assert "config_mutation_proposal" in result["proposed_knowledge"]
+
+
+def test_explicit_null_proposal_is_removed():
+    response = _diagnosis(0.9)
+    response["proposed_knowledge"] = {"config_mutation_proposal": None}
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure({}, local_config=_config("local"))
+
+    assert result["status"] == "ok"
+    assert result["proposed_knowledge"] == {}
+    assert result["proposal_rejections"] == [{
+        "proposal": "config_mutation_proposal",
+        "violations": ["config_mutation_proposal_must_be_object"],
+    }]
 
 
 def test_score_manipulation_hypothesis_is_rejected():
