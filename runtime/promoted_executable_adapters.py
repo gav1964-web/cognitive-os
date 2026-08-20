@@ -94,7 +94,11 @@ def _validate_payload(value: Any, *, depth: int) -> None:
     if fixture is not None and fixture not in _SAFE_FIXTURES:
         raise ValueError(f"unsafe executable adapter fixture: {fixture}")
     for key, item in value.items():
-        if not isinstance(key, str) or (key.startswith("__") and key != "__fixture__"):
+        safe_getattr = (
+            depth == 0 and key == "__getattr__"
+            and item == {"__fixture__": "module_getattr_stub"}
+        )
+        if not isinstance(key, str) or (key.startswith("__") and key != "__fixture__" and not safe_getattr):
             raise ValueError("invalid executable adapter attribute")
         _validate_payload(item, depth=depth + 1)
 

@@ -8,6 +8,7 @@ from typing import Any
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
 from .executable_acceptance_policy import structural_sample_policy
 from .project_evolution_policy import load_project_evolution_policy
+from .self_improvement_evidence_proposals import attach_evidence_proposal
 
 
 def diagnose_training_failure(
@@ -49,6 +50,7 @@ def _attempt(packet: dict[str, Any], *, config: LocalInferenceConfig, tier: str)
     except LocalInferenceError as exc:
         return {"status": "failed", "confidence": 0.0, "error": str(exc), "model_trace": _trace(config, tier)}
     normalized = _normalize(response)
+    normalized = attach_evidence_proposal(packet, normalized)
     evidence_class = _evidence_failure_class(packet)
     if evidence_class:
         normalized["llm_failure_class"] = normalized["failure_class"]
