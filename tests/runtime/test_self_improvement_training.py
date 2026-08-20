@@ -5,6 +5,7 @@ from runtime.self_improvement_experience import generalized_profile_record, stag
 from runtime.self_improvement_training import (
     _failure_packet,
     _outcome,
+    _run_training_attempts,
     _source_fingerprint,
     _validate_recommended_source,
 )
@@ -84,6 +85,20 @@ def test_training_rejects_current_failed_source_as_challenger():
 
     assert result["recommended_source"] == ""
     assert "same_as_failed_target" in result["policy_violations"]
+
+
+def test_training_skips_advisory_when_recommended_challenger_is_not_viable(tmp_path):
+    attempts = _run_training_attempts(
+        tmp_path,
+        tmp_path,
+        _case(8.8),
+        {"recommended_source": "models.py:property", "target_roles": ["architect", "spec_writer"]},
+        LocalInferenceConfig(base_url="http://local", model="test"),
+        9.7,
+        [],
+    )
+
+    assert attempts == []
 
 
 def test_generalized_profile_record_drops_project_specific_selector():
@@ -208,3 +223,28 @@ def test_zero_delta_profile_is_not_staged_as_contract_template(tmp_path):
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["record_type"] == "role_training_experience"
+
+
+def test_no_viable_candidate_is_staged_as_portable_capability_gap(tmp_path):
+    path = stage_training_experience(
+        tmp_path,
+        tmp_path / "private_project",
+        {
+            "failure_class": "target_selection",
+            "hypothesis": "private_project has no usable target",
+            "target_roles": ["architect", "spec_writer"],
+        },
+        {"project_min_score": 8.8},
+        {"project_min_score": 8.8},
+        {"status": "hypothesis_not_confirmed"},
+        [],
+        {
+            "recommended_change_type": "staged_capability_gap",
+            "next_hypothesis": "no_viable_executable_candidate",
+        },
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["record_type"] == "foundation_capability_gap"
+    assert payload["proposed_record"]["gap_id"] == "target_selection:no_viable_executable_candidate"
+    assert "private_project" not in payload["proposed_record"]["gap_id"]

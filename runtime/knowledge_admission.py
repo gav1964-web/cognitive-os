@@ -307,7 +307,7 @@ def _candidate_group_key(candidate: dict[str, Any]) -> str:
 
 
 def _proposed_id(record: dict[str, Any]) -> str:
-    for key in ("rule_id", "pattern_id", "risk_id", "lesson_id", "fact_id"):
+    for key in ("rule_id", "pattern_id", "risk_id", "lesson_id", "fact_id", "gap_id"):
         value = record.get(key)
         if value:
             return str(value)

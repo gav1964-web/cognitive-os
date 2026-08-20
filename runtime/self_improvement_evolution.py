@@ -30,7 +30,7 @@ def run_config_evolution(
     base = root.resolve()
     packet_hash = _digest(failure_packet)
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
-    allowed_error = _allowlist_error(proposal, policy)
+    allowed_error = _allowlist_error(base, proposal, policy)
     validation = _validate(base, proposal) if not allowed_error else {
         "status": "blocked", "validation": {"status": "failed", "errors": [allowed_error]}
     }
@@ -66,7 +66,7 @@ def proposal_from_diagnosis(diagnosis: dict[str, Any]) -> dict[str, Any] | None:
     return dict(value) if isinstance(value, dict) else None
 
 
-def _allowlist_error(proposal: dict[str, Any], policy: dict[str, Any]) -> str:
+def _allowlist_error(root: Path, proposal: dict[str, Any], policy: dict[str, Any]) -> str:
     if proposal.get("artifact_type") != "ConfigMutationProposal":
         return "artifact_type_must_be_ConfigMutationProposal"
     if proposal.get("operation") != "merge_object":
@@ -76,7 +76,51 @@ def _allowlist_error(proposal: dict[str, Any], policy: dict[str, Any]) -> str:
     allowed = dict(policy.get("mutable_config_paths") or {})
     if pointer not in list(allowed.get(target) or []):
         return f"mutation_path_not_allowed:{target}:{pointer}"
+    return _mutation_shape_error(root, target, pointer, proposal.get("content"))
+
+
+def _mutation_shape_error(root: Path, target: str, pointer: str, patch: Any) -> str:
+    if not isinstance(patch, dict) or not patch:
+        return "mutation_content_must_be_nonempty_object"
+    try:
+        payload = json.loads((root / target).read_text(encoding="utf-8"))
+        current: Any = payload
+        for token in pointer.strip("/").split("/"):
+            current = current[token.replace("~1", "/").replace("~0", "~")]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        return f"mutation_contract_unavailable:{target}:{pointer}"
+    error = _compatible_patch_error(current, patch, pointer)
+    if error:
+        return error
+    candidate = materialize_config_mutation(root, {
+        "target": target, "operation": "merge_object", "path": pointer, "content": patch,
+    })
+    return "mutation_has_no_effect" if candidate == payload else ""
+
+
+def _compatible_patch_error(current: Any, patch: Any, path: str) -> str:
+    if not isinstance(current, dict) or not isinstance(patch, dict):
+        return f"mutation_shape_mismatch:{path}"
+    for key, value in patch.items():
+        child_path = f"{path}/{key}"
+        if key not in current:
+            return f"mutation_key_not_executable:{child_path}"
+        expected = current[key]
+        if isinstance(value, dict):
+            error = _compatible_patch_error(expected, value, child_path)
+            if error:
+                return error
+        elif not _compatible_scalar(expected, value):
+            return f"mutation_type_mismatch:{child_path}"
     return ""
+
+
+def _compatible_scalar(expected: Any, value: Any) -> bool:
+    if isinstance(expected, bool):
+        return isinstance(value, bool)
+    if isinstance(expected, (int, float)) and not isinstance(expected, bool):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return type(value) is type(expected)
 
 
 def _validate(root: Path, proposal: dict[str, Any]) -> dict[str, Any]:

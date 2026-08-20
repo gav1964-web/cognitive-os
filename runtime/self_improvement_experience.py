@@ -31,8 +31,18 @@ def stage_training_experience(
         proposed = dict(diagnosis.get("proposed_knowledge") or {})
         proposed.update({"failure_class": diagnosis.get("failure_class"), "hypothesis": diagnosis.get("hypothesis")})
         proposed["trial_conclusion"] = conclusion
+    capability_gap = conclusion.get("recommended_change_type") == "staged_capability_gap"
+    if capability_gap:
+        proposed.update({
+            "gap_id": f"{diagnosis.get('failure_class')}:no_viable_executable_candidate",
+            "label": "No viable executable first-slice candidate",
+            "role_scope": list(diagnosis.get("target_roles") or []),
+        })
     candidate = build_kb_candidate(
-        record_type="semantic_contract_profile_template" if profile else "role_training_experience",
+        record_type=(
+            "semantic_contract_profile_template" if profile else
+            "foundation_capability_gap" if capability_gap else "role_training_experience"
+        ),
         proposed_record=proposed,
         source_cases=[{
             "project": project_dir.name,

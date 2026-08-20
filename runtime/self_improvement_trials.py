@@ -15,7 +15,11 @@ def challenger_sources(
     """Return unique, evaluator-discovered sources in diagnostic priority order."""
     evidence = dict(failure_packet.get("artifact_evidence") or {})
     spec = dict(evidence.get("technical_spec") or {})
-    ranked = [str(row.get("source") or "") for row in list(spec.get("ranked_candidates") or [])]
+    ranked_rows = list(spec.get("ranked_candidates") or [])
+    ranked = [
+        str(row.get("source") or "") for row in ranked_rows
+        if not _candidate_trial_blockers(dict(row or {}))
+    ]
     recommended = str(diagnosis.get("recommended_source") or "")
     ordered = ([recommended] if recommended else []) + ranked
     result: list[str] = []
@@ -26,6 +30,18 @@ def challenger_sources(
         if len(result) >= max(0, limit):
             break
     return result
+
+
+def _candidate_trial_blockers(candidate: dict[str, Any]) -> list[str]:
+    text = " ".join(str(item).lower() for item in candidate.get("reasons", []))
+    blockers = {
+        "property_accessor": "property accessor is state evidence",
+        "write_operation": "write/update/delete operation is side-effect evidence",
+        "runtime_dependency": "runtime environment misses external imports",
+        "execution_cost": "execution cost requires reselection",
+        "read_only_context": "read-only context candidate retained",
+    }
+    return [code for code, token in blockers.items() if token in text]
 
 
 def best_attempt(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -45,7 +61,9 @@ def best_attempt(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> di
     return dict(max(attempts, key=key).get("result") or baseline)
 
 
-def trial_conclusion(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -> dict[str, Any]:
+def trial_conclusion(
+    baseline: dict[str, Any], attempts: list[dict[str, Any]], *, no_viable_challengers: bool = False
+) -> dict[str, Any]:
     """Convert repeated measured failures into the next reusable hypothesis."""
     tested = [
         dict(row.get("parameter_changes") or {}).get("spec_writer_candidate_preference")
@@ -56,11 +74,17 @@ def trial_conclusion(baseline: dict[str, Any], attempts: list[dict[str, Any]]) -
         round(float(dict(row.get("result") or {}).get("project_min_score") or 0.0) - float(baseline["project_min_score"]), 2)
         for row in attempts
     ]
-    target_search_exhausted = len(tested) >= 2 and not any(delta > 0 for delta in deltas)
+    target_search_exhausted = no_viable_challengers or (len(tested) >= 2 and not any(delta > 0 for delta in deltas))
+    no_viable = target_search_exhausted and no_viable_challengers
     return {
         "tested_candidate_preferences": tested,
         "measured_score_deltas": deltas,
         "target_search_exhausted": target_search_exhausted,
-        "next_hypothesis": "missing_reusable_semantic_contract" if target_search_exhausted else "continue_bounded_parameter_search",
-        "recommended_change_type": "staged_kb_contract_profile" if target_search_exhausted else "none",
+        "next_hypothesis": (
+            "no_viable_executable_candidate" if no_viable else
+            "missing_reusable_semantic_contract" if target_search_exhausted else "continue_bounded_parameter_search"
+        ),
+        "recommended_change_type": (
+            "staged_capability_gap" if no_viable else "staged_kb_contract_profile" if target_search_exhausted else "none"
+        ),
     }

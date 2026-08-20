@@ -26,7 +26,6 @@ from .self_improvement_experience import stage_training_experience
 from .self_improvement_profile_trial import run_profile_trial
 from .self_improvement_trials import best_attempt, challenger_sources, trial_conclusion
 
-
 def train_on_project(
     *,
     root: Path,
@@ -60,7 +59,9 @@ def train_on_project(
         limit=int(policy.get("max_challenger_attempts") or 3),
     )
     attempts = _run_training_attempts(root, project_dir, baseline, diagnosis, selected, target, sources)
-    conclusion = trial_conclusion(baseline, attempts)
+    conclusion = trial_conclusion(
+        baseline, attempts, no_viable_challengers=bool(diagnosis.get("recommended_source") and not sources)
+    )
     profile_attempt = _run_contract_profile_attempt(
         root, project_dir, baseline, diagnosis, selected, target, sources, conclusion
     )
@@ -88,7 +89,6 @@ def train_on_project(
         report["report_path"] = _write_report(root, report).as_posix()
     return report
 
-
 def _run_config_evolution(
     root: Path,
     project_dir: Path,
@@ -108,7 +108,6 @@ def _run_config_evolution(
         promote=promote,
     )
 
-
 def _run_contract_profile_attempt(
     root: Path,
     project_dir: Path,
@@ -119,7 +118,7 @@ def _run_contract_profile_attempt(
     sources: list[str],
     conclusion: dict[str, Any],
 ) -> dict[str, Any] | None:
-    if not conclusion.get("target_search_exhausted"):
+    if not conclusion.get("target_search_exhausted") or conclusion.get("next_hypothesis") == "no_viable_executable_candidate":
         return None
 
     def evaluate(source: str) -> dict[str, Any]:
@@ -141,6 +140,8 @@ def _run_training_attempts(
     target: float,
     sources: list[str],
 ) -> list[dict[str, Any]]:
+    if diagnosis.get("recommended_source") and not sources:
+        return []
     roles = set(diagnosis.get("target_roles") or [])
     trial_sources: list[str | None] = sources or [None]
     attempts: list[dict[str, Any]] = []

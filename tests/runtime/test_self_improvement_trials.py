@@ -38,6 +38,18 @@ def test_challengers_reject_invented_recommendation():
     assert result == ["app.py:real"]
 
 
+def test_challengers_skip_candidates_that_cannot_change_measured_outcome():
+    packet = {"artifact_evidence": {"technical_spec": {"ranked_candidates": [
+        {"source": "models.py:total", "reasons": ["property accessor is state evidence, not a meaningful first slice"]},
+        {"source": "service.py:save", "reasons": ["execution cost requires reselection: persistence_mutation"]},
+        {"source": "service.py:normalize", "reasons": ["bounded deterministic transform"]},
+    ]}}}
+
+    result = challenger_sources({}, packet, current_source="app.py:failed", limit=3)
+
+    assert result == ["service.py:normalize"]
+
+
 def test_best_attempt_uses_measured_minimum_not_llm_claim():
     baseline = {"project_min_score": 8.4, "role_scores": {"a": 9.7, "b": 8.4}}
     attempts = [
@@ -59,3 +71,13 @@ def test_repeated_flat_target_trials_request_contract_knowledge():
 
     assert result["target_search_exhausted"] is True
     assert result["recommended_change_type"] == "staged_kb_contract_profile"
+
+
+def test_no_viable_challengers_stages_capability_gap_without_trials():
+    result = trial_conclusion(
+        {"project_min_score": 8.8}, [], no_viable_challengers=True
+    )
+
+    assert result["target_search_exhausted"] is True
+    assert result["next_hypothesis"] == "no_viable_executable_candidate"
+    assert result["recommended_change_type"] == "staged_capability_gap"

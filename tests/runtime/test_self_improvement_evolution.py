@@ -152,6 +152,27 @@ def test_evolution_rejects_mutation_outside_allowlist_without_evaluation():
     assert "mutation_path_not_allowed" in report["validation"]["validation"]["errors"][0]
 
 
+def test_evolution_rejects_structurally_valid_but_non_executable_parameter():
+    proposal = _proposal()
+    proposal["content"] = {"priorities": {"first_slice_selection": {"property_accessor": 0.3}}}
+
+    def evaluate(candidate, case):
+        raise AssertionError("non-executable proposal must not be evaluated")
+
+    report = run_config_evolution(
+        root=ROOT,
+        failure_packet={},
+        proposal=proposal,
+        shadow_case="shadow",
+        regression_cases=[],
+        evaluate=evaluate,
+    )
+
+    assert report["decision"] == "rejected_validation"
+    errors = report["validation"]["validation"]["errors"]
+    assert any("mutation_key_not_executable:/structural_sample_policy/priorities/first_slice_selection" in row for row in errors)
+
+
 def test_proposal_can_be_extracted_from_llm_diagnosis():
     proposal = _proposal()
     diagnosis = {"proposed_knowledge": {"config_mutation_proposal": proposal}}
