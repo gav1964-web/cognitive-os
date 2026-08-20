@@ -9,8 +9,10 @@ from typing import Any
 
 from .executable_acceptance_attribute_samples import add_parameter_attribute_samples
 from .executable_acceptance_file_samples import add_delimited_file_samples
+from .executable_acceptance_literal_buffers import add_literal_buffer_samples
 from .executable_acceptance_policy import structural_sample_policy
 from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_parameter_method_samples
+from .executable_acceptance_qualified_samples import add_qualified_call_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -28,6 +30,23 @@ def collect_structural_samples(
     tree: ast.Module, node: FunctionNode, parameters: set[str], candidates: Candidates
 ) -> None:
     add_iterated_literal_domain_samples(node, parameters, candidates, priority=_priority("iterated_literal_domain"))
+    buffer_policy = dict(_settings().get("literal_buffer_methods") or {})
+    add_literal_buffer_samples(
+        node,
+        parameters,
+        candidates,
+        priority=_priority("literal_buffer_method"),
+        methods=dict(buffer_policy.get("positions") or {}),
+        minimum_length=min(
+            int(buffer_policy.get("minimum_length") or 0),
+            int(_settings().get("maximum_inferred_length") or 0),
+        ),
+    )
+    add_qualified_call_samples(
+        node, parameters, candidates,
+        priority=_priority("qualified_call_argument"),
+        samples=dict(_settings().get("qualified_call_argument_samples") or {}),
+    )
     string_sequences = _string_sequence_parameters(node, parameters)
     for item in ast.walk(node):
         _conversion(item, parameters, candidates)

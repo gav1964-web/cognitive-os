@@ -101,8 +101,10 @@ def materialize(value: Any) -> Any:
             return parser
         if fixture == "bytes_io_empty":
             return __import__("io").BytesIO(b"")
-        if fixture == "bytes_empty":
-            return b""
+        if fixture in {"bytes_empty", "bytes_literal"}:
+            return bytes.fromhex(str(value.get("hex") or ""))
+        if fixture == "numpy_array":
+            return __import__("numpy").asarray(value.get("items") or [0.0, 1.0])
         if fixture == "dateutil_parserinfo_minimal":
             return type("Info", (), _PARSERINFO_METHODS)()
         if fixture == "dateutil_result":

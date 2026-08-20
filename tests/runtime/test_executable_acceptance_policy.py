@@ -60,6 +60,7 @@ def test_temporary_policy_is_scoped_and_restored():
     assert sample_value("ConfigParser", "cfg") == {"__fixture__": "configparser_flake8_empty"}
     assert sample_value("Graph", "G") == {"__fixture__": "networkx_graph_path"}
     assert sample_value("int", "iterations") == 1
+    assert sample_value("", "batch_size", signature_mode=True) == 1
     assert sample_value("bool", "include_initial_labels") is False
     assert sample_value("BytesIO", "body") == {"__fixture__": "bytes_io_empty"}
     assert sample_value("parserinfo", "info") == {"__fixture__": "dateutil_parserinfo_minimal"}

@@ -29,11 +29,13 @@
       "iterated_literal_domain": 106,
       "keyword_payload": 95,
       "length_constraint": 88,
+      "literal_buffer_method": 109,
       "numeric_arithmetic": 92,
       "numeric_sequence": 107,
       "parameter_callable": 112,
       "parameter_unpack": 96,
       "parameter_attributes": 87,
+      "qualified_call_argument": 111,
       "required_mapping_keys": 90,
       "strptime_format": 100,
       "split_unpack": 108,
@@ -43,9 +45,16 @@
     "numeric_sequence_calls": ["absolute", "array", "asarray", "flipud", "mean", "std"],
     "numeric_sequence_sample": [0.0, 1.0],
     "numeric_arithmetic_sample": 1,
+    "qualified_call_argument_samples": {
+      "torch.from_numpy": {"__fixture__": "numpy_array", "items": [0.0, 1.0]}
+    },
     "parameter_callable_fixture": "callable_identity",
     "protocol_method_prefixes": ["collect_", "fetch_", "find_", "get_", "iter_", "list_", "load_", "query_", "read_", "resolve_", "select_"],
     "maximum_inferred_length": 32,
+    "literal_buffer_methods": {
+      "positions": {"startswith": "prefix", "endswith": "suffix"},
+      "minimum_length": 32
+    },
     "length_constraint_samples": {
       "default_element": 0,
       "string_element": "0"
@@ -276,6 +285,7 @@
       "api_description": null,
       "api_visibility": "public",
       "argv": ["program"],
+      "batch_size": 1,
       "cancels": [],
       "component_prop_inputs": [],
       "connection": "sse",

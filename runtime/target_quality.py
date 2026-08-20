@@ -196,7 +196,7 @@ def semantic_target_quality_report(
     effective_suspicious = [] if suspicious_allowed else suspicious
     if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
         status = "strong"
-    elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or liveness_probe):
+    elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
         status = "acceptable"
     elif score >= 40:
         status = "suspicious"

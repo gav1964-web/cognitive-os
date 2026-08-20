@@ -389,6 +389,6 @@ def test_non_implementation_and_example_targets_are_not_strong_first_slices():
         },
     )
 
-    assert abstract["status"] != "strong"
+    assert abstract["status"] in {"suspicious", "poor"}
     assert example["status"] != "strong"
-    assert stub["status"] != "strong"
+    assert stub["status"] in {"suspicious", "poor"}
