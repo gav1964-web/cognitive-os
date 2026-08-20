@@ -27,6 +27,8 @@ def materialize(value: Any) -> Any:
             return lambda *args, **kwargs: []
         if fixture == "callable_empty_string":
             return lambda *args, **kwargs: ""
+        if fixture == "callable_transport_result":
+            return lambda *args, **kwargs: {"accepted": True}
         if fixture == "callable_declared_model":
             payload = {"__fixture__": "declared_model", "fields": value.get("fields", {})}
             return lambda *args, **kwargs: materialize(payload)

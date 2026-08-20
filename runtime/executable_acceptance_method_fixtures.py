@@ -21,9 +21,29 @@ def method_fixture_values(
         )
         or {}
     )
+    policy = method_fixture_policy()
+    fixture = str(policy.get("delegated_transport_fixture") or "")
+    for name in _delegated_transport_calls(symbol, nodes, policy):
+        raw.setdefault(name, {"__fixture__": fixture})
     for name in sorted(_self_attributes(nodes, ast.Load) - methods):
         raw.setdefault(name, _inferred_attribute_fixture(name, nodes))
     return raw, {key: materialize(value) for key, value in raw.items()}
+
+
+def _delegated_transport_calls(symbol: str, nodes: list[ast.AST], policy: dict[str, Any]) -> set[str]:
+    allowed = set(policy.get("delegated_transport_methods") or [])
+    target = next((node for node in nodes if getattr(node, "name", None) == symbol), None)
+    if target is None or not policy.get("delegated_transport_fixture"):
+        return set()
+    return {
+        item.func.attr
+        for item in ast.walk(target)
+        if isinstance(item, ast.Call)
+        and isinstance(item.func, ast.Attribute)
+        and isinstance(item.func.value, ast.Name)
+        and item.func.value.id == "self"
+        and item.func.attr in allowed
+    }
 
 
 def _inferred_attribute_fixture(name: str, nodes: list[ast.AST]) -> Any:

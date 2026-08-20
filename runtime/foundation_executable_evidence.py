@@ -55,6 +55,7 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
     isolated_effects = set(evidence_policy["isolated_transitive_effects"])
     effects_are_isolated_transitive = bool(effects) and not direct_effects and set(effects) <= isolated_effects
     archetypes = set(dict(contract.get("semantic_quality") or {}).get("contract_archetype_ids") or [])
+    archetypes.add(str(contract.get("contract_family") or ""))
     profiles = dict(evidence_policy["isolated_direct_effect_profiles"])
     effects_are_isolated_direct = any(
         archetype in archetypes
@@ -63,6 +64,13 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
         and set(effects) <= set(allowed)
         for archetype, allowed in profiles.items()
     )
+    delegated_profiles = dict(evidence_policy["isolated_delegated_effect_profiles"])
+    effects_are_isolated_delegated = any(
+        archetype in archetypes
+        and not direct_effects
+        and set(effects) <= set(allowed)
+        for archetype, allowed in delegated_profiles.items()
+    )
     reason = ""
     if spec.get("artifact_type") != "TechnicalSpec":
         reason = "technical_spec_missing"
@@ -70,7 +78,9 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
         reason = "first_slice_reselection_required"
     elif not target or contract.get("status") == "blocked_no_safe_candidate":
         reason = "safe_target_missing"
-    elif effects and not (effects_are_isolated_transitive or effects_are_isolated_direct):
+    elif effects and not (
+        effects_are_isolated_transitive or effects_are_isolated_direct or effects_are_isolated_delegated
+    ):
         reason = "side_effectful_target"
     elif structural.get("state_mutation") is True:
         reason = "state_mutating_target"

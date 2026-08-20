@@ -1,6 +1,6 @@
 from runtime.executable_acceptance_contract_inference import infer_argument_samples
 from runtime.executable_acceptance_isolation import load_source_isolated_callable
-from runtime.executable_acceptance_support import positive_samples_execute
+from runtime.executable_acceptance_support import positive_samples_execute, signature_needs_negative_case
 
 
 def test_infers_callable_fixture_when_parameter_is_invoked(tmp_path):
@@ -68,6 +68,37 @@ def test_source_isolated_method_infers_mapping_receiver_attribute(tmp_path):
     assert loaded["reason"] == ""
     assert loaded["callable"]("missing") is None
     assert loaded["method_instance_attributes"] == {"_widgets": {}}
+
+
+def test_source_isolated_method_stubs_delegated_transport(tmp_path):
+    source = tmp_path / "client.py"
+    source.write_text(
+        "class Client:\n"
+        "    def _post(self, path, payload):\n"
+        "        raise RuntimeError('network must not run')\n"
+        "    def send(self, user, body):\n"
+        "        return self._post('/users/{}'.format(user), {'body': body})\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "send")
+
+    assert loaded["callable"]("user", "hello") == {"accepted": True}
+    assert loaded["method_instance_attributes"] == {
+        "_post": {"__fixture__": "callable_transport_result"},
+    }
+
+
+def test_optional_receiver_fallback_does_not_require_missing_input_failure():
+    def invalidate(access_token=None):
+        return access_token or "receiver-token"
+
+    obligations = [
+        {"target": "client.py:invalidate", "kind": "positive_contract_case", "given": {"command": "sample"}},
+        {"target": "client.py:invalidate", "kind": "malformed_input_case", "given": {}},
+    ]
+
+    assert signature_needs_negative_case(invalidate, "client.py:invalidate", obligations) is False
 
 
 def test_infers_delimited_string_from_split_unpack(tmp_path):

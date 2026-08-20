@@ -10,6 +10,7 @@ from .executable_acceptance_loading import cleanup_dependency_stubs, import_path
 from .executable_acceptance_module_path import package_import_target
 from .executable_acceptance_isolation import load_source_isolated_callable
 from .executable_acceptance_methods import load_method_callable, method_detail
+from .executable_acceptance_negative_case import missing_input_case_required
 from .executable_acceptance_samples import positive_samples_execute
 from .executable_acceptance_policy import dependency_stub_policy, execution_context_policy, sample_value, skipped_recovery_hint
 from .executable_acceptance_support_results import module_profile_attrs as _module_profile_attrs
@@ -344,27 +345,11 @@ def _weaker_than_configured_fixture(
 
 
 def signature_needs_negative_case(func: object, target: str, obligations: list[dict[str, Any]]) -> bool:
-    malformed = [row for row in obligations if row.get("target") == target and row.get("kind") == "malformed_input_case"]
-    if not malformed:
-        return False
-    try:
-        signature = inspect.signature(func)
-    except (TypeError, ValueError):
-        return False
-    if positive_case_binding(func, target, obligations).get("drop_surplus_payload"):
-        return False
-    positive_rows = [row for row in obligations if row.get("target") == target and row.get("kind") == "positive_contract_case"]
-    positive_keys = {str(key) for row in positive_rows for key in dict(row.get("given", {}))}
-    explicit_params = {name for name, param in signature.parameters.items() if param.kind in ACCEPTED_PARAM_KINDS}
-    for row in malformed:
-        given = dict(row.get("given", {}))
-        try:
-            signature.bind(**given)
-        except TypeError:
-            return True
-        if positive_keys - set(given) - explicit_params:
-            return True
-    return False
+    binding = positive_case_binding(func, target, obligations)
+    return missing_input_case_required(
+        func, target, obligations,
+        drops_surplus_payload=bool(binding.get("drop_surplus_payload")),
+    )
 
 
 def _adapt_given_to_signature(signature: inspect.Signature, given: dict[str, Any]) -> dict[str, str] | None:

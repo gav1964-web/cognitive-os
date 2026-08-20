@@ -78,6 +78,10 @@ def method_fixture_policy() -> dict[str, Any]:
         "enabled": bool(policy.get("enabled")),
         "safe_uninitialized_instance": bool(policy.get("safe_uninitialized_instance")),
         "default_constructor_first": bool(policy.get("default_constructor_first")),
+        "delegated_transport_methods": tuple(
+            str(item) for item in policy.get("delegated_transport_methods", []) if item
+        ),
+        "delegated_transport_fixture": str(policy.get("delegated_transport_fixture") or ""),
         "local_import_stub_functions": tuple(str(item) for item in policy.get("local_import_stub_functions", []) if item),
         "local_import_stub_methods": tuple(str(item) for item in policy.get("local_import_stub_methods", []) if item),
         "instance_attribute_profiles": dict(policy.get("instance_attribute_profiles") or {}),
@@ -127,6 +131,10 @@ def foundation_evidence_policy() -> dict[str, Any]:
         "isolated_direct_effect_profiles": {
             str(name): tuple(str(item) for item in effects if item)
             for name, effects in dict(policy.get("isolated_direct_effect_profiles") or {}).items()
+        },
+        "isolated_delegated_effect_profiles": {
+            str(name): tuple(str(item) for item in effects if item)
+            for name, effects in dict(policy.get("isolated_delegated_effect_profiles") or {}).items()
         },
     }
 

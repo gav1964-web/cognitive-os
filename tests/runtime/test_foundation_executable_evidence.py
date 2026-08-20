@@ -1,7 +1,7 @@
 from runtime import foundation_executable_evidence as evidence
 
 
-def _spec(*, effects=None, observed_effects=None, state_mutation=False, archetypes=None):
+def _spec(*, effects=None, observed_effects=None, state_mutation=False, archetypes=None, contract_family=None):
     return {
         "artifact_type": "TechnicalSpec",
         "extraction_contract": {
@@ -12,6 +12,7 @@ def _spec(*, effects=None, observed_effects=None, state_mutation=False, archetyp
             },
             "side_effects": {"declared": list(effects or [])},
             "semantic_quality": {"contract_archetype_ids": list(archetypes or [])},
+            "contract_family": contract_family,
         },
     }
 
@@ -72,6 +73,21 @@ def test_foundation_evidence_allows_profiled_typed_object_loader():
     ))
 
     assert result["status"] == "eligible"
+
+
+def test_foundation_evidence_allows_typed_external_api_command():
+    result = evidence._eligibility(_spec(
+        effects=["network"],
+        contract_family="external_api_command_boundary",
+    ))
+
+    assert result["status"] == "eligible"
+
+
+def test_foundation_evidence_rejects_unprofiled_delegated_network_effect():
+    result = evidence._eligibility(_spec(effects=["network"]))
+
+    assert result["reason"] == "side_effectful_target"
 
 
 def test_foundation_evidence_propagates_executable_callable(monkeypatch, tmp_path):

@@ -12,6 +12,9 @@
   },
   "foundation_evidence": {
     "isolated_transitive_effects": ["memory_state"],
+    "isolated_delegated_effect_profiles": {
+      "external_api_command_boundary": ["network"]
+    },
     "isolated_direct_effect_profiles": {
       "filesystem_typed_object_loader": ["filesystem_read"],
       "observability_render_command": ["observability"]
@@ -143,6 +146,8 @@
     "enabled": true,
     "safe_uninitialized_instance": true,
     "default_constructor_first": true,
+    "delegated_transport_methods": ["_post", "post", "_put", "put", "_patch", "patch", "_delete", "delete", "_request", "request"],
+    "delegated_transport_fixture": "callable_transport_result",
     "local_import_stub_functions": ["create_application", "determine_local_workspace_environment"],
     "local_import_stub_methods": ["BlocksConfig.set_event_trigger", "StreamableHTTPServerTransport._handle_post_request"],
     "instance_attribute_profiles": {
