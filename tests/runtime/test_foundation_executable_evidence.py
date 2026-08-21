@@ -133,4 +133,5 @@ def test_foundation_evidence_uses_process_boundary_when_requested(monkeypatch, t
     )
 
     assert observed["timeout_seconds"] == 180
+    assert observed["executable_policy"]["schema_version"] == "executable_acceptance_policy.v1"
     assert result["acceptance_signal"] == "executable_callable"

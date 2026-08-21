@@ -11,21 +11,18 @@ from .executable_acceptance_attribute_samples import add_parameter_attribute_sam
 from .executable_acceptance_file_samples import add_delimited_file_samples
 from .executable_acceptance_literal_buffers import add_literal_buffer_samples
 from .executable_acceptance_policy import structural_sample_policy
+from .executable_acceptance_parameter_strategies import add_parameter_strategy_samples
 from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_mapping_protocol_samples, add_parameter_method_samples
 from .executable_acceptance_qualified_samples import add_qualified_call_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
-
-
 def _settings() -> dict[str, Any]:
     return structural_sample_policy()
 
 
 def _priority(name: str) -> int:
     return int(dict(_settings().get("priorities") or {})[name])
-
-
 def collect_structural_samples(
     tree: ast.Module, node: FunctionNode, parameters: set[str], candidates: Candidates
 ) -> None:
@@ -57,6 +54,8 @@ def collect_structural_samples(
         _length_constraint(item, parameters, candidates, string_sequences)
     _required_mapping_keys(node, parameters, candidates)
     _parameter_unpack_samples(node, parameters, candidates)
+    add_parameter_strategy_samples(node, parameters, candidates,
+        policy=dict(_settings().get("parameter_strategies") or {}), priorities=dict(_settings().get("priorities") or {}))
     _parameter_callable_samples(node, parameters, candidates)
     _split_unpack_samples(node, parameters, candidates)
     _keyword_payload_keys(node, candidates)

@@ -113,6 +113,9 @@ def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
             requirements["forbidden_output_inference_basis"] = ["no_value_return"]
     if successful and all(not row.get("state_mutation") for row in successful) and any(row.get("state_mutation") for row in failed):
         requirements["state_mutation"] = False
+    if successful and all(not row.get("observed_side_effects") for row in successful):
+        if any(row.get("observed_side_effects") for row in failed):
+            requirements["no_observed_side_effects"] = True
     minimum_typed = min([int(row.get("typed_argument_count") or 0) for row in successful] or [0])
     if minimum_typed > max([int(row.get("typed_argument_count") or 0) for row in failed] or [0]):
         requirements["min_typed_argument_count"] = minimum_typed

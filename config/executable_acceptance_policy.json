@@ -22,6 +22,12 @@
     }
   },
   "structural_sample_policy": {
+    "parameter_strategies": {
+      "callable_arity": false,
+      "derived_conversion": false,
+      "indexed_sequence": false,
+      "nested_mapping_paths": false
+    },
     "priorities": {
       "allowed_collection_domain": 105,
       "comparison_literal": 70,

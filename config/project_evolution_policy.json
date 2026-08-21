@@ -22,7 +22,14 @@
   },
   "self_improvement": {
     "trigger_score_below": 9.7,
-    "max_training_iterations": 1,
+    "max_training_iterations": 5,
+    "minimum_capability_request_projects": 3,
+    "promotion_transaction_paths": [
+      "config/executable_acceptance_policy.json",
+      "knowledge/role_knowledge/promoted_candidate_selection_policies.json",
+      "knowledge/role_knowledge/promoted_executable_adapters.json",
+      "knowledge/role_knowledge/promoted_semantic_contract_profiles.json"
+    ],
     "max_challenger_attempts": 3,
     "max_temporary_profile_attempts": 1,
     "local_diagnostician_profile": "local_l35",

@@ -10,21 +10,20 @@ import stat
 import subprocess
 import sys
 import tempfile
-import time
-import urllib.parse
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
+
+try:
+    from tools.gitlab_corpus_search import search_page as _search_page
+    from tools.gitlab_corpus_search import search_stratum
+except ModuleNotFoundError:  # Direct script execution exposes tools/ on sys.path.
+    from gitlab_corpus_search import search_page as _search_page
+    from gitlab_corpus_search import search_stratum
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY = ROOT / "config" / "gitlab_blind_corpus_strata.json"
-API_URL = "https://gitlab.com/api/v4/projects"
-
-
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
@@ -54,10 +53,13 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
     known_names, known_repos = known_projects(root / "artifacts")
     selected: list[dict[str, Any]] = []
+    overflow: list[dict[str, Any]] = []
+    requested_by_stratum: dict[str, int] = {}
     claimed_names = set(known_names)
     claimed_repos = set(known_repos)
     for stratum in policy["strata"]:
         count = int(policy["projects_per_stratum"])
+        requested_by_stratum[str(stratum["id"])] = count
         candidates = _search_stratum(
             stratum, policy, excluded_names=claimed_names, excluded_repos=claimed_repos, needed=count
         )
@@ -65,13 +67,23 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
             row for row in candidates
             if _unseen(row, claimed_names, claimed_repos) and _eligible(row, policy)
         ]
-        if len(rows) < count:
-            raise RuntimeError(f"not enough unseen projects for {stratum['id']}: {len(rows)} < {count}")
         for row in rows[:count]:
             row["stratum"] = str(stratum["id"])
             selected.append(row)
             claimed_names.add(row["full_name"].lower())
             claimed_repos.add(_repo_key(row["full_name"]))
+        overflow.extend({**row, "stratum": str(stratum["id"])} for row in rows[count:])
+    requested_total = sum(requested_by_stratum.values())
+    for row in sorted(overflow, key=lambda item: (-item["stars"], item["full_name"].lower())):
+        if len(selected) >= requested_total:
+            break
+        if not _unseen(row, claimed_names, claimed_repos):
+            continue
+        selected.append(row)
+        claimed_names.add(row["full_name"].lower())
+        claimed_repos.add(_repo_key(row["full_name"]))
+    if len(selected) < requested_total:
+        raise RuntimeError(f"not enough unseen projects across strata: {len(selected)} < {requested_total}")
     corpus.mkdir(parents=True, exist_ok=False)
     payload = {
         "artifact_type": "GitLabBlindCorpusSelection",
@@ -81,11 +93,21 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
         "known_blacklist_count": len(known_names),
         "known_repository_name_count": len(known_repos),
         "project_count": len(selected),
+        "requested_by_stratum": requested_by_stratum,
+        "selected_by_stratum": _count_by_stratum(selected),
         "policy": policy,
         "projects": selected,
     }
     selection_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"status": "ok", "selection_path": selection_path.as_posix(), **_selection_summary(payload)}
+
+
+def _count_by_stratum(projects: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for project in projects:
+        key = str(project.get("stratum") or "unknown")
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def clone_corpus(corpus: Path, *, force: bool = False) -> dict[str, Any]:
@@ -149,6 +171,7 @@ def replace_failed(root: Path, corpus: Path) -> dict[str, Any]:
         for candidate in candidates:
             if not _unseen(candidate, known_names, known_repos) or not _eligible(candidate, selection["policy"]):
                 continue
+            known_names.add(str(candidate["full_name"]).lower()); known_repos.add(_repo_key(str(candidate["full_name"])))
             candidate["stratum"] = original["stratum"]
             result = _clone_one(source_dir, candidate, force=False)
             attempts.append(result)
@@ -207,56 +230,10 @@ def _search_stratum(
     excluded_repos: set[str],
     needed: int,
 ) -> list[dict[str, Any]]:
-    by_name: dict[str, dict[str, Any]] = {}
-    for page in range(1, int(policy.get("maximum_search_pages") or 2) + 1):
-        requests = []
-        for query in stratum["queries"]:
-            requests.append({
-                "search": str(query),
-                "simple": "true",
-                "with_programming_language": "Python",
-                "archived": "false",
-                "order_by": "star_count",
-                "sort": "desc",
-                "per_page": "100",
-                "page": str(page),
-            })
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            pages = list(pool.map(_search_page, requests))
-        for items in pages:
-            for item in items:
-                row = _project_row(item)
-                by_name.setdefault(row["full_name"].lower(), row)
-        eligible = [
-            row for row in by_name.values()
-            if _unseen(row, excluded_names, excluded_repos) and _eligible(row, policy)
-        ]
-        if len(eligible) >= needed:
-            break
-    return sorted(by_name.values(), key=lambda row: (-row["stars"], row["full_name"].lower()))
-
-
-def _search_page(params: dict[str, str]) -> list[dict[str, Any]]:
-    url = f"{API_URL}?{urllib.parse.urlencode(params)}"
-    request = urllib.request.Request(url, headers={"User-Agent": "cognitive-os-gitlab-blind-corpus"})
-    for attempt in range(2):
-        try:
-            with urllib.request.urlopen(request, timeout=45) as response:
-                payload = json.load(response)
-                return [dict(row) for row in payload if isinstance(row, dict)]
-        except HTTPError as exc:
-            retryable = exc.code == 429 or 500 <= exc.code < 600
-            if 500 <= exc.code < 600 and attempt == 1:
-                return []
-            if not retryable or attempt == 1:
-                raise
-            delay = int(exc.headers.get("Retry-After") or (attempt + 1) * 2)
-            time.sleep(delay)
-        except (TimeoutError, URLError):
-            if attempt == 1:
-                return []
-            time.sleep(attempt + 1)
-    return []
+    return search_stratum(
+        stratum, policy, excluded_names=excluded_names, excluded_repos=excluded_repos,
+        needed=needed, project_row=_project_row, unseen=_unseen, eligible=_eligible,
+    )
 
 
 def _project_row(item: dict[str, Any]) -> dict[str, Any]:

@@ -69,6 +69,8 @@ def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) 
     forbidden = {str(item) for item in required.get("forbidden_output_inference_basis") or []}
     if str(candidate.get("output_inference_basis") or "") in forbidden:
         return False
+    if required.get("no_observed_side_effects") is True and candidate.get("observed_side_effects"):
+        return False
     minimum_typed = int(required.get("min_typed_argument_count") or 0)
     return int(candidate.get("typed_argument_count") or 0) >= minimum_typed
 

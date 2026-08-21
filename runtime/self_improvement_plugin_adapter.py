@@ -28,6 +28,27 @@ def run_training_improvement_plugins(
     return cycle, _config_evolution_result(cycle), _training_attempts(cycle)
 
 
+def run_post_training_admission(
+    root: Path,
+    project_dir: Path,
+    failure_packet: dict[str, Any],
+    diagnosis: dict[str, Any],
+    regression_projects: list[Path],
+    *,
+    promote: bool | None,
+) -> dict[str, Any]:
+    """Admit a measured reselection after trials, before staging its evidence."""
+    return run_improvement_plugin_cycle(
+        root=root,
+        project_dir=project_dir,
+        failure_packet=failure_packet,
+        diagnosis=diagnosis,
+        regression_projects=regression_projects,
+        promote=promote,
+        plugin_ids={"candidate_selection_admission"},
+    )
+
+
 def _config_evolution_result(cycle: dict[str, Any]) -> dict[str, Any] | None:
     for attempt in list(cycle.get("attempts") or []):
         if attempt.get("plugin_id") == "config_mutation" and isinstance(attempt.get("evolution"), dict):

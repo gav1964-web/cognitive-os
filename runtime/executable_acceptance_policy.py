@@ -34,6 +34,11 @@ def clear_executable_acceptance_policy_cache() -> None:
     _cached_policy.cache_clear()
 
 
+def effective_executable_acceptance_policy() -> dict[str, Any]:
+    """Return an isolated copy suitable for a sandbox worker payload."""
+    return _clone(_policy())
+
+
 @contextmanager
 def temporary_executable_acceptance_policy(policy: dict[str, Any]):
     if policy.get("schema_version") != "executable_acceptance_policy.v1":

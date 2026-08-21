@@ -19,7 +19,7 @@ def _root(tmp_path):
     return tmp_path
 
 
-def _record(*, failed_returns=0, successful_returns=1):
+def _record(*, failed_returns=0, successful_returns=1, failed_effects=None):
     return {
         "contrast_id": "side_effectful_target:measured_candidate_reselection",
         "failed_contract": {
@@ -28,6 +28,7 @@ def _record(*, failed_returns=0, successful_returns=1):
             "output_inference_basis": "no_value_return" if failed_returns == 0 else "return_expression",
             "state_mutation": False,
             "typed_argument_count": 0,
+            "observed_side_effects": list(failed_effects or []),
         },
         "successful_contract": {
             "acceptance_signal": "executable_callable",
@@ -35,6 +36,7 @@ def _record(*, failed_returns=0, successful_returns=1):
             "output_inference_basis": "return_expression",
             "state_mutation": False,
             "typed_argument_count": 0,
+            "observed_side_effects": [],
         },
         "numeric_bonus_from_training": False,
     }
@@ -163,6 +165,42 @@ def test_admission_rejects_contrast_without_structural_difference(tmp_path):
     assert result["reason"] == "no_structural_discriminator"
 
 
+def test_admission_learns_side_effect_free_selection_without_relaxing_execution_gate(
+    monkeypatch, tmp_path
+):
+    root = _root(tmp_path)
+    record = _record(failed_returns=0, successful_returns=0, failed_effects=["memory_state"])
+    for project in ("alpha", "beta", "gamma"):
+        _stage(root, project, record)
+    holdout = root / "holdout"
+    holdout.mkdir()
+    effect = _effect()
+    effect["treatment"]["selected_candidate_quality"]["structural_evidence"].update({
+        "return_paths": 0,
+        "output_inference_basis": "no_value_return",
+        "observed_side_effects": [],
+    })
+    monkeypatch.setattr(admission, "_holdout_effect", lambda *_args: effect)
+
+    result = admission.run({
+        "root": root,
+        "project_dir": holdout,
+        "failure_packet": {
+            "selected_candidate": "app.py:write_only",
+            "downstream_evidence": {"acceptance_signal": ""},
+        },
+        "diagnosis": {"recommended_source": "app.py:build_value"},
+        "promote": True,
+        "plugin_config": {"minimum_confirmed_cases": 3},
+    })
+
+    assert result["status"] == "promoted"
+    policy = load_selection_policies(
+        str(root / "knowledge" / "role_knowledge" / "promoted_candidate_selection_policies.json")
+    )["policies"][0]
+    assert policy["structural_requirements"] == {"no_observed_side_effects": True}
+
+
 def test_architect_reselection_passes_structure_to_policy_hook(monkeypatch):
     context = {
         "app.py:write": {
@@ -171,6 +209,7 @@ def test_architect_reselection_passes_structure_to_policy_hook(monkeypatch):
                     "return_paths": 0,
                     "output_inference_basis": "no_value_return",
                     "typed_argument_count": 0,
+                    "observed_side_effects": ["memory_state"],
                 }
             }
         },
@@ -180,6 +219,7 @@ def test_architect_reselection_passes_structure_to_policy_hook(monkeypatch):
                     "return_paths": 1,
                     "output_inference_basis": "return_expression",
                     "typed_argument_count": 1,
+                    "observed_side_effects": [],
                 }
             }
         },
@@ -219,4 +259,5 @@ def test_architect_reselection_passes_structure_to_policy_hook(monkeypatch):
     build = next(row for row in captured["rows"] if row["target"] == "app.py:build")
     assert build["return_paths"] == 1
     assert build["typed_argument_count"] == 1
+    assert build["observed_side_effects"] == []
     assert captured["request"] == request

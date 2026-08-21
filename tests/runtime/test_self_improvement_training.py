@@ -5,6 +5,7 @@ from runtime.self_improvement_experience import generalized_profile_record, stag
 from runtime.self_improvement_training import (
     _failure_packet,
     _outcome,
+    _run_post_trial_admission,
     _run_training_attempts,
     _source_fingerprint,
     _validate_recommended_source,
@@ -133,6 +134,48 @@ def test_training_marks_ignored_candidate_preference(monkeypatch, tmp_path):
     )
 
     assert attempts[0]["parameter_applied"] is False
+
+
+def test_post_trial_admission_uses_only_confirmed_measured_reselection(monkeypatch, tmp_path):
+    captured = {}
+
+    def admit(root, project_dir, packet, diagnosis, regressions, *, promote):
+        captured.update({"diagnosis": diagnosis, "promote": promote})
+        return {"status": "blocked", "reason": "confirmed_cases_required"}
+
+    monkeypatch.setattr("runtime.self_improvement_training.run_post_training_admission", admit)
+    result = _run_post_trial_admission(
+        tmp_path,
+        tmp_path / "holdout",
+        {"selected_candidate": "app.py:write"},
+        {"failure_class": "side_effectful_target"},
+        {"selected_extraction_candidate": "app.py:write"},
+        {"selected_extraction_candidate": "app.py:build"},
+        {"status": "candidate_improvement_confirmed"},
+        [],
+        True,
+    )
+
+    assert result["reason"] == "confirmed_cases_required"
+    assert captured["diagnosis"]["recommended_source"] == "app.py:build"
+    assert captured["promote"] is True
+
+
+def test_post_trial_admission_skips_unconfirmed_reselection(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "runtime.self_improvement_training.run_post_training_admission",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected admission")),
+    )
+
+    result = _run_post_trial_admission(
+        tmp_path, tmp_path, {}, {},
+        {"selected_extraction_candidate": "app.py:write"},
+        {"selected_extraction_candidate": "app.py:build"},
+        {"status": "hypothesis_not_confirmed"},
+        [], None,
+    )
+
+    assert result["status"] == "not_applicable"
 
 
 def test_generalized_profile_record_drops_project_specific_selector():
@@ -280,7 +323,9 @@ def test_no_viable_candidate_is_staged_as_portable_capability_gap(tmp_path):
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["record_type"] == "foundation_capability_gap"
-    assert payload["proposed_record"]["gap_id"] == "target_selection:no_viable_executable_candidate"
+    assert payload["proposed_record"]["gap_id"] == (
+        "target_selection:no_viable_executable_candidate:unclassified"
+    )
     assert "private_project" not in payload["proposed_record"]["gap_id"]
 
 
@@ -302,7 +347,7 @@ def test_missing_semantic_profile_is_staged_as_distinct_capability_gap(tmp_path)
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["record_type"] == "foundation_capability_gap"
     assert payload["proposed_record"]["gap_id"] == (
-        "executable_sample_contract:missing_reusable_semantic_contract"
+        "executable_sample_contract:missing_reusable_semantic_contract:unclassified"
     )
 
 

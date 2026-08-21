@@ -11,13 +11,14 @@ from typing import Any
 
 def run_executable_acceptance_process(
     *, root: Path, project_dir: Path, test_plan: dict[str, Any], work_dir: Path,
-    timeout_seconds: int,
+    timeout_seconds: int, executable_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = {
         "root": str(root.resolve()),
         "project_dir": str(project_dir.resolve()),
         "test_plan": test_plan,
         "work_dir": str(work_dir.resolve()),
+        "executable_policy": executable_policy,
     }
     try:
         completed = subprocess.run(

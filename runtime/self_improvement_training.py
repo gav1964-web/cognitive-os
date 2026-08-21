@@ -23,8 +23,15 @@ from .role_foundation_feedback_scores import role_score_evaluation
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .self_improvement_analysis import diagnose_training_failure
 from .self_improvement_experience import stage_training_experience
+from .self_improvement_failure_evidence import (
+    artifact_evidence as _artifact_evidence,
+    compact_candidate_quality as _compact_candidate_quality,
+    capability_signature as _capability_signature,
+    minimal_artifact_evidence as _minimal_artifact_evidence,
+    reselection_exhausted as _reselection_exhausted,
+)
 from .self_improvement_profile_trial import run_profile_trial
-from .self_improvement_plugin_adapter import run_training_improvement_plugins
+from .self_improvement_plugin_adapter import run_post_training_admission, run_training_improvement_plugins
 from .self_improvement_trials import best_attempt, challenger_sources, finalize_profile_conclusion, trial_conclusion
 
 def train_on_project(
@@ -64,8 +71,15 @@ def train_on_project(
         *_run_training_attempts(root, project_dir, baseline, diagnosis, selected, target, sources),
     ]
     conclusion = trial_conclusion(
-        baseline, attempts, no_viable_challengers=bool(diagnosis.get("recommended_source") and not sources)
+        baseline,
+        attempts,
+        no_viable_challengers=(
+            _reselection_exhausted(failure_packet)
+            or bool(diagnosis.get("recommended_source") and not sources)
+        ),
     )
+    if conclusion.get("recommended_change_type") == "staged_capability_gap":
+        conclusion["capability_signature"] = _capability_signature(failure_packet)
     profile_attempt = _run_contract_profile_attempt(root, project_dir, baseline, diagnosis, selected, target, sources, conclusion)
     conclusion = finalize_profile_conclusion(conclusion, profile_attempt)
     if profile_attempt:
@@ -79,6 +93,10 @@ def train_on_project(
     trained = best_attempt(baseline, attempts)
     source_changed = _source_fingerprint(project_dir) != source_before
     outcome = _outcome(baseline, trained, target, source_changed=source_changed)
+    post_admission = _run_post_trial_admission(
+        root, project_dir, failure_packet, diagnosis, baseline, trained, outcome,
+        regression_projects or [], promote_config,
+    )
     candidate_path = stage_training_experience(
         root, project_dir, diagnosis, baseline, trained, outcome, attempts, conclusion
     ) if write else None
@@ -88,10 +106,32 @@ def train_on_project(
     report["trial_conclusion"] = conclusion
     report["config_evolution"] = config_evolution
     report["improvement_plugin_cycle"] = plugin_cycle
+    report["post_training_admission"] = post_admission
     report["knowledge_candidate_path"] = candidate_path.as_posix() if candidate_path else None
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
+
+
+def _run_post_trial_admission(
+    root: Path,
+    project_dir: Path,
+    failure_packet: dict[str, Any],
+    diagnosis: dict[str, Any],
+    baseline: dict[str, Any],
+    trained: dict[str, Any],
+    outcome: dict[str, Any],
+    regression_projects: list[Path],
+    promote: bool | None,
+) -> dict[str, Any]:
+    challenger = str(trained.get("selected_extraction_candidate") or "")
+    source = str(baseline.get("selected_extraction_candidate") or "")
+    if outcome.get("status") != "candidate_improvement_confirmed" or not challenger or challenger == source:
+        return {"status": "not_applicable", "reason": "confirmed_reselection_missing", "attempts": []}
+    enriched = {**diagnosis, "recommended_source": challenger}
+    return run_post_training_admission(
+        root, project_dir, failure_packet, enriched, regression_projects, promote=promote
+    )
 
 def _run_contract_profile_attempt(
     root: Path,
@@ -183,6 +223,7 @@ def _evaluate(
         downstream = collect_foundation_executable_evidence(
             root=root, project_dir=project_dir,
             technical_spec=dict(loaded["artifacts"].get("technical_spec") or {}),
+            process_isolated=True,
         )
         result["downstream_evidence"] = downstream
     scored = {**result, "artifacts": loaded["artifacts"]}
@@ -290,34 +331,6 @@ def _write_report(root: Path, report: dict[str, Any]) -> Path:
     return path
 
 
-def _artifact_evidence(artifacts: dict[str, Any]) -> dict[str, Any]:
-    evidence = {}
-    for key in ("architecture_decision", "technical_spec"):
-        path = dict(artifacts.get(key) or {}).get("path")
-        if not path:
-            continue
-        try:
-            payload = json.loads(Path(str(path)).read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if key == "architecture_decision":
-            first_slice = dict(payload.get("first_slice_contract") or {})
-            evidence[key] = {
-                "first_slice": {"goal": first_slice.get("goal"), "targets": list(first_slice.get("targets") or [])[:8]},
-                "risks": [_compact_risk(row) for row in list(payload.get("risks") or [])[:4]],
-                "advisory": payload.get("architect_advisory"),
-            }
-        else:
-            contract = dict(payload.get("extraction_contract") or {})
-            evidence[key] = {
-                "status": contract.get("status"),
-                "candidate": contract.get("candidate"),
-                "semantic_quality": _compact_candidate_quality(contract.get("semantic_quality", {})),
-                "ranked_candidates": [_compact_ranked(row) for row in list(contract.get("ranked_candidates") or [])[:5]],
-            }
-    return evidence
-
-
 def _source_fingerprint(project_dir: Path) -> str:
     digest = hashlib.sha256()
     try:
@@ -331,44 +344,6 @@ def _source_fingerprint(project_dir: Path) -> str:
         except OSError:
             continue
     return digest.hexdigest()
-def _compact_candidate_quality(value: Any) -> dict[str, Any]:
-    row = dict(value or {})
-    return {
-        key: row.get(key)
-        for key in ("target", "status", "score", "semantic_profile_ids", "contract_archetype_ids")
-        if row.get(key) not in (None, "", [])
-    }
-
-
-def _compact_ranked(value: Any) -> dict[str, Any]:
-    row = dict(value or {})
-    return {
-        "source": row.get("source"),
-        "score": row.get("score"),
-        "kind": row.get("kind"),
-        "side_effects": list(row.get("side_effects") or [])[:5],
-        "reasons": [str(item)[:160] for item in list(row.get("reasons") or [])[:4]],
-    }
-
-
-def _compact_risk(value: Any) -> dict[str, Any]:
-    row = dict(value or {})
-    return {key: row.get(key) for key in ("description", "evidence", "severity") if row.get(key)}
-
-
-def _minimal_artifact_evidence(value: Any) -> dict[str, Any]:
-    evidence = dict(value or {})
-    adr = dict(evidence.get("architecture_decision") or {})
-    spec = dict(evidence.get("technical_spec") or {})
-    return {
-        "architecture_decision": {"first_slice": adr.get("first_slice")},
-        "technical_spec": {
-            "status": spec.get("status"),
-            "candidate": spec.get("candidate"),
-            "semantic_quality": spec.get("semantic_quality"),
-            "ranked_candidates": list(spec.get("ranked_candidates") or [])[:3],
-        },
-    }
 
 
 def _validate_recommended_source(diagnosis: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:

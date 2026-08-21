@@ -184,6 +184,7 @@ def _viable_candidates(
                 "return_paths": int(structural.get("return_paths") or 0),
                 "typed_argument_count": int(structural.get("typed_argument_count") or 0),
                 "state_mutation": bool(structural.get("state_mutation")),
+                "observed_side_effects": list(structural.get("observed_side_effects") or []),
                 "output_inference_basis": str(structural.get("output_inference_basis") or ""),
             })
     ranked.sort(key=lambda row: (

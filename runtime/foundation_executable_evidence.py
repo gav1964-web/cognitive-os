@@ -8,7 +8,10 @@ from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
 from .executable_acceptance_process import run_executable_acceptance_process
-from .executable_acceptance_policy import foundation_evidence_policy
+from .executable_acceptance_policy import (
+    effective_executable_acceptance_policy,
+    foundation_evidence_policy,
+)
 from .implementation_plan_builder import build_implementation_plan
 from .test_plan_builder import build_test_plan
 
@@ -34,6 +37,7 @@ def collect_foundation_executable_evidence(
         acceptance = run_executable_acceptance_process(
             root=root, project_dir=project_dir, test_plan=test_plan, work_dir=work_dir,
             timeout_seconds=int(policy["isolated_process_timeout_seconds"]),
+            executable_policy=effective_executable_acceptance_policy(),
         )
     else:
         acceptance = run_executable_acceptance(

@@ -20,13 +20,18 @@ def run_improvement_plugin_cycle(
     diagnosis: dict[str, Any],
     regression_projects: list[Path],
     promote: bool | None = None,
+    plugin_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Run applicable plugins and stop after the first proven promotion."""
     catalog = load_improvement_plugin_catalog()
     cycle_policy = dict(catalog.get("cycle") or {})
     limit = int(cycle_policy.get("max_plugins_per_failure") or 1)
     attempts: list[dict[str, Any]] = []
-    for plugin in enabled_improvement_plugins()[:limit]:
+    plugins = [
+        plugin for plugin in enabled_improvement_plugins()
+        if plugin_ids is None or str(plugin["id"]) in plugin_ids
+    ]
+    for plugin in plugins[:limit]:
         handler = load_improvement_entrypoint(str(plugin["entrypoint"]))
         promotion_requested = bool(plugin.get("auto_promote")) if promote is None else bool(promote)
         result = handler({

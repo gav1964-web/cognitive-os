@@ -37,10 +37,12 @@ def stage_training_experience(
     capability_gap = conclusion.get("recommended_change_type") == "staged_capability_gap"
     if capability_gap:
         gap_hypothesis = str(conclusion.get("next_hypothesis") or "unknown_foundation_capability")
+        signature = str(conclusion.get("capability_signature") or "unclassified")
         proposed.update({
-            "gap_id": f"{diagnosis.get('failure_class')}:{gap_hypothesis}",
+            "gap_id": f"{diagnosis.get('failure_class')}:{gap_hypothesis}:{signature}",
             "label": gap_hypothesis.replace("_", " ").capitalize(),
             "role_scope": list(diagnosis.get("target_roles") or []),
+            "capability_signature": signature,
         })
     candidate = build_kb_candidate(
         record_type=(

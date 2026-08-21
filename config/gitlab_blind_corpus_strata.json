@@ -2,15 +2,20 @@
   "schema_version": "gitlab_blind_corpus_strata.v1",
   "projects_per_stratum": 8,
   "minimum_stars": 3,
-  "maximum_search_pages": 5,
+  "search_order_by": "last_activity_at",
+  "maximum_search_pages": 8,
+  "search_page_batch_size": 2,
+  "search_workers": 6,
+  "api_timeout_seconds": 20,
+  "api_retry_attempts": 2,
   "minimum_recent_year": 2020,
   "excluded_name_tokens": ["awesome", "tutorial", "course", "interview", "cheatsheet", "examples", "demo"],
   "excluded_description_tokens": ["mirror of", "deprecated", "archived", "learning exercise", "collection of links"],
   "strata": [
-    {"id": "legacy_automation", "queries": ["automation", "command line", "backup", "monitoring", "migration", "deployment", "scraper", "bot"]},
-    {"id": "data_ml_scientific", "queries": ["machine learning", "data pipeline", "scientific", "neural network", "computer vision", "natural language", "forecasting", "bioinformatics", "data science", "pytorch", "tensorflow", "astronomy", "computational physics", "computational chemistry", "genomics", "geospatial analysis", "scientific computing", "numerical simulation", "medical imaging", "climate modeling", "quantum computing", "optimization solver"]},
+    {"id": "legacy_automation", "queries": ["automation", "command line", "backup", "monitoring", "migration", "deployment", "scraper", "bot", "workflow automation", "system administration", "task scheduler", "log analysis", "web scraping", "chatbot", "etl automation", "report generator", "file processing", "email automation", "inventory management", "database migration"]},
+    {"id": "data_ml_scientific", "queries": ["machine learning", "data pipeline", "scientific", "neural network", "computer vision", "natural language", "forecasting", "bioinformatics", "data science", "pytorch", "tensorflow", "astronomy", "computational physics", "computational chemistry", "genomics", "geospatial analysis", "scientific computing", "numerical simulation", "medical imaging", "climate modeling", "quantum computing", "optimization solver", "causal inference", "reinforcement learning", "anomaly detection", "time series analysis", "graph neural network", "remote sensing", "cheminformatics", "microscopy analysis", "oceanography", "seismology", "epidemiology modeling"]},
     {"id": "backend_api", "queries": ["fastapi", "django", "flask", "rest api", "web service", "graphql", "microservice", "backend"]},
-    {"id": "infra_devops_monorepo", "queries": ["devops", "kubernetes", "ansible", "ci cd", "infrastructure", "orchestration", "monorepo", "platform engineering", "docker", "terraform", "cloud automation", "observability", "build system", "release automation", "service mesh", "package manager"]},
+    {"id": "infra_devops_monorepo", "queries": ["devops", "kubernetes", "ansible", "ci cd", "infrastructure", "orchestration", "monorepo", "platform engineering", "docker", "terraform", "cloud automation", "observability", "build system", "release automation", "service mesh", "package manager", "configuration management", "secrets management", "ci runner", "artifact registry", "backup orchestration", "deployment tooling", "cluster management", "infrastructure testing", "container security", "cloud provisioning"]},
     {"id": "mixed_unusual", "queries": ["security", "proxy", "protocol", "compiler", "desktop", "multimedia", "hardware", "simulation"]}
   ]
 }
