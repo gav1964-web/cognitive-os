@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added autonomous hypothesis validation: Cognitive OS now builds a portable failure signature, discovers two or three unseen similar Python holdouts, trains sequentially, and returns a measured admission result before corpus verification.
+- Added post-training candidate-selection admission so the best measured challenger can be validated and promoted by the registered plugin cycle without manual project repair; corpus regression still rolls promotion back.
+- Separated adaptive hypothesis holdouts from large blind release corpora and made GitLab provider failures explicit blockers rather than negative hypothesis evidence.
 - Added a minimum-based downstream field trial for Implementer, Task Tree Builder, Programmer Executor, Tester, and Reviewer, including executable-callable, skipped-target, strategy, sandbox-candidate, and verifier evidence.
 - Hardened executable acceptance against project-owned `SystemExit` and unguarded top-level infinite loops; hazardous modules now fail a sample or use source isolation instead of terminating or hanging the corpus run.
 - Reused the shared Python compatibility parser in source-contract analysis and patch synthesis, preserving Python 2 callable evidence without mutating analyzed source.

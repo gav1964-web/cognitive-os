@@ -36,3 +36,19 @@ def test_contract_registry_is_documented_and_enforced():
     assert "Contract Registry" in baseline
     assert "runtime/contract_registry.py" in spec
     assert (ROOT / "runtime" / "contract_registry.py").exists()
+
+
+def test_hypothesis_driven_self_improvement_docs_match_runtime():
+    self_improvement = (ROOT / "SELF_IMPROVEMENT.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    baseline = (ROOT / "COGNITIVE_OS_TECHNICAL_BASELINE.md").read_text(encoding="utf-8")
+
+    for text in (self_improvement, readme, baseline):
+        normalized = " ".join(text.lower().split())
+        assert "HypothesisValidationPlan" in text
+        assert "post-training admission" in normalized
+        assert "two or three" in normalized or "два-три" in normalized
+    assert "external_discovery_failed" in self_improvement
+    assert "large blind corpora remain release/calibration" in readme
+    assert (ROOT / "runtime" / "self_improvement_hypothesis_validation.py").exists()
+    assert (ROOT / "tools" / "self_improvement_project_discovery.py").exists()

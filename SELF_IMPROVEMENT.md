@@ -13,13 +13,29 @@ The source project, score threshold, evaluator, role caps, and active knowledge 
 3. Escalate once to the external teacher only when the local result fails, is uncertain, or is not actionable.
 4. Test at most three source candidates already discovered by the deterministic analyzer.
 5. Select the best attempt using measured role scores, never an LLM claim.
-6. Stage the experience as a KB candidate. Active KB promotion remains a reviewed operation.
-7. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile.
-8. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
+6. Stage the measured experience as a KB candidate and run post-training admission with the best confirmed challenger.
+7. If the hypothesis is portable but evidence is still insufficient, build a `HypothesisValidationPlan` and ask the configured discovery capability for two or three unseen similar Python projects.
+8. Train and verify sequentially on those independent holdouts. A later holdout may promote an allowlisted policy only after earlier projects supplied the configured repeated evidence.
+9. Re-evaluate the original corpus. Roll back every changed promotion path when the corpus gate finds a regression or no attributable improvement.
+10. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile or a typed capability-development request.
+11. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
+
+The small hypothesis holdout and the large blind corpus have different jobs. The two-or-three-project holdout is an
+active learning step selected from the portable failure class and structural signature. It answers whether one concrete
+hypothesis generalizes. A 20-40 project multi-type blind corpus remains a release/calibration exam and must not be
+reused as routine training evidence for every hypothesis.
+
+Project discovery is a replaceable external capability. The current CLI adapter searches GitLab, freezes selection and
+commit metadata under `artifacts/hypothesis_holdouts/<hypothesis_id>/`, and excludes every previously selected repository.
+Provider timeout or rate limiting produces `HypothesisValidationTrial.status=blocked` with
+`reason=external_discovery_failed`; it is not recorded as a failed technical hypothesis.
 
 Temporary profiles cannot contain numeric score or ranking bonuses. They may only supply a typed contract family that
 removes an unprofiled-target cap when source evidence proves every recognition gate. A successful profile is generalized
-into a staged template and still requires independent cases and review before it can enter the active KB.
+into a staged template and still requires independent cases and admission before it can enter active knowledge.
+Raw `KnowledgeCandidate` records are never merged automatically. Separately registered improvement plugins may
+auto-promote only their narrow allowlisted policy/config targets after repeated evidence, an independent holdout,
+unchanged source projects, no role regression, and the normal corpus rollback gate.
 
 Independent validation keeps recognition coverage separate from treatment evidence. A project that matches the AST
 recognizer but already scores `9.7+` proves portability of the classifier only; it does not count toward the three
@@ -41,6 +57,15 @@ Run one training case:
 ```powershell
 python tools\self_improvement_train.py --root . --project-dir PATH --target-score 9.7
 ```
+
+Run the complete corpus loop. Hypothesis-driven discovery is enabled by default for writable runs:
+
+```powershell
+python tools\self_improving_foundation_trial.py --root . --projects-dir PATH --target-score 9.7
+```
+
+Use `--no-hypothesis-discovery` only to diagnose a fixed local corpus. `--no-write` also disables discovery because a
+valid independent holdout requires a frozen selection and isolated checkout artifacts.
 
 Use `--no-write` to skip the durable training report and KB candidate. Verified role evidence is still materialized
 because the current evaluator checks both structured artifacts and generated human documents.

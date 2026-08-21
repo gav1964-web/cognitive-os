@@ -53,6 +53,20 @@ The portable CI gate runs repository-contained deterministic checks only. Live L
 
 ## Role Readiness
 
+Foundation self-improvement now includes an autonomous hypothesis-validation
+step. After a staged measured hypothesis, Cognitive OS can derive a portable
+failure signature, discover two or three unseen similar GitLab projects, train
+on them sequentially, run post-training admission, and then verify or roll back
+the promotion on the original corpus. The discovery selection is frozen under
+`artifacts/hypothesis_holdouts/<hypothesis_id>/`; provider failure is reported as
+a blocked capability and does not count against the hypothesis.
+
+The implementation is locally verified by 79 focused self-improvement,
+executable-acceptance, corpus, and discovery tests plus Config Doctor `37/37`.
+This is implementation evidence, not a new role-readiness score: the live GitLab
+holdout run remains pending because the anonymous API returned `429` during the
+attempt. Existing role minima below remain historical measured corpus results.
+
 Latest MVP readiness command: `python tools/role_mvp_readiness.py --root .`. Generated reports under `artifacts/` are machine-local evidence and are not committed as repository fixtures.
 
 | Role | Status | Score |

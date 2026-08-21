@@ -241,6 +241,14 @@ Project-analysis L3.5 path обязан получать только compact fa
 
 Первый закрепленный benchmark - `Project Analyzer Field Trial v0.1`. Corpus хранится в `benchmarks/project_analyzer/projects`, каждый проект имеет `expected_analysis.json`, а `tools/project_analyzer_benchmark.py` считает coverage, misses и false positives по категориям анализа. Следующие улучшения Project Analyzer должны подтягиваться через провалы этого benchmark, а не через добавление новых слоев.
 
+### 4.3 Автономная проверка гипотез развития
+
+Foundation self-improvement реализует цикл `measurement -> FailurePacket -> L3.5/L4.5 diagnosis -> bounded trials -> post-training admission -> hypothesis holdout -> corpus verification/rollback`. После измеренного улучшения `runtime/self_improvement_hypothesis_validation.py` строит переносимый `HypothesisValidationPlan` из failure class и структурного evidence без путей исходного проекта. Сетевой discoverer является инъецируемой capability; текущий адаптер `tools/self_improvement_project_discovery.py` ищет и замораживает два-три unseen GitLab-проекта. Замена GitLab на GitHub не должна требовать изменения ролей или admission logic.
+
+Holdout-проекты последовательно проходят тот же `train_on_project`, поэтому накопление evidence, post-training admission и promotion выполняет Cognitive OS. Активироваться могут только allowlisted config/policy targets зарегистрированных improvement plugins. Обычный `KnowledgeCandidate` не имеет права на automatic merge. После любого promotion исходный corpus измеряется неизменным evaluator; изменение promotion transaction paths откатывается при регрессии или отсутствии подтвержденного corpus effect.
+
+`HypothesisValidationTrial` различает `completed`, `not_applicable` и `blocked`. Ошибка внешнего поиска, timeout или rate limit записывается как `external_discovery_failed`, не засчитывается как отрицательный результат гипотезы и не разрешает ослабить minimum evidence. Малый similarity holdout проверяет одну гипотезу; большой blind multi-type corpus остаётся независимым release/calibration gate.
+
 ### 5. Кузница возможностей (Уровень 3.2)
 Уровень 3.2 отвечает за controlled build lifecycle capabilities. Он не является обычным plugin и не исполняет пользовательские pipeline. Его задача — создавать и пересобирать каталоговые plugins через проверяемый процесс.
 

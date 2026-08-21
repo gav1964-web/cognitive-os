@@ -252,6 +252,22 @@ The self-improving route measures first, selects the weakest in-scope projects,
 uses already-passing projects as regression cases, invokes Cognitive OS
 diagnosis/trials, and verifies the corpus again. Successful KB experience is
 staged as a candidate; it is not activated without promotion evidence.
+
+When a measured hypothesis is promising but has too little independent evidence,
+Cognitive OS now builds a portable `HypothesisValidationPlan`, discovers two or
+three unseen similar Python projects, freezes them under
+`artifacts/hypothesis_holdouts/<hypothesis_id>/`, and validates the hypothesis on
+those holdouts before the original corpus is measured again. This small adaptive
+holdout is for one hypothesis; large blind corpora remain release/calibration
+evidence. GitLab is the current replaceable discovery adapter. A provider timeout
+or rate limit is reported as a blocked discovery capability, not as a disproved
+hypothesis. Use `--no-hypothesis-discovery` only for fixed-corpus diagnostics.
+
+Post-training admission runs after candidate trials, so it can consume the best
+measured challenger. Raw KB candidates still cannot merge themselves. Only
+registered improvement plugins may promote narrow allowlisted policy/config
+targets, and only after repeated independent evidence, holdout improvement, no
+role regression, unchanged source projects, and corpus-level rollback checks.
 - `SpecWriterRedTeamReport` is the deterministic handoff gate before Implementer. It rejects weak `Any -> Any` contracts, side-effecting targets without validation/idempotency/process/retry gates, missing candidate acceptance, missing interface contract for the selected target, first-slice traceability gaps, and `TechnicalSpec.extraction_contract.candidate` values outside `ArchitectureDecisionRecord.first_slice_contract.targets`. A `TechnicalSpec` is implementation-ready only with `handoff_verdict=ready_for_implementer`.
 - With `write=True`, the contour writes human-readable Markdown documents for review: `human_documents.architecture_analysis` and `human_documents.technical_spec`. These documents are reading surfaces over the typed JSON artifacts, not replacement protocols. `HumanRoleDocumentQualityReport` checks that they preserve the machine chain (`ProjectMapReport -> ArchitectureDecisionRecord -> TechnicalSpec`), Russian human-readable sections, evidence/traceability, validation gates, acceptance criteria, and implementation handoff.
 
