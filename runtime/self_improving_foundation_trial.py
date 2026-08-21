@@ -18,6 +18,10 @@ from .self_improvement_iteration import (
     rollback_promotion_state,
     snapshot_digest,
 )
+from .self_improvement_hypothesis_validation import (
+    HoldoutDiscoverer,
+    run_hypothesis_validation,
+)
 from .self_improvement_training import train_on_project
 
 
@@ -38,6 +42,7 @@ def run_self_improving_foundation_trial(
     write: bool = True,
     executable_acceptance: bool = True,
     _trainer: Trainer = train_on_project,
+    _holdout_discoverer: HoldoutDiscoverer | None = None,
     _progress: ProgressSink | None = None,
 ) -> dict[str, Any]:
     """Let Cognitive OS train, verify, promote, and roll back until convergence."""
@@ -95,13 +100,34 @@ def run_self_improving_foundation_trial(
                 _progress, "training_completed", iteration=iteration,
                 index=index, project=case["project"], status=report.get("status"),
             )
+        holdout = {"status": "not_requested", "training": [], "promotion_count": 0}
+        staged = any(_staged_learning(report) for report in round_training)
+        if _holdout_discoverer and staged and not any(_promotion_count(row) for row in round_training):
+            _emit(_progress, "hypothesis_validation_started", iteration=iteration)
+            holdout = run_hypothesis_validation(
+                root=root, training=round_training, discover=_holdout_discoverer,
+                trainer=_trainer, target_score=target_score,
+                regression_projects=regression_projects, promote_config=promote_config,
+                write=write, policy=policy,
+            )
+            holdout_training = list(holdout.get("training") or [])
+            training.extend(holdout_training)
+            if write and holdout_training:
+                _write_checkpoint(root, baseline, training, target_score)
+            _emit(
+                _progress, "hypothesis_validation_completed", iteration=iteration,
+                status=holdout.get("status"), decision=holdout.get("decision"),
+            )
         _emit(_progress, "verification_started", iteration=iteration)
         candidate = _measure(
             root, project_roots, limit, write, target_score, executable_acceptance
         )
         assessment = assess_iteration(verification, candidate, target_score=target_score)
         changed = changed_promotion_paths(root, snapshot)
-        promoted = bool(changed) or any(_promotion_count(row) for row in round_training)
+        promoted = (
+            bool(changed) or any(_promotion_count(row) for row in round_training)
+            or int(holdout.get("promotion_count") or 0) > 0
+        )
         rollback = {"applied": False, "paths": []}
         if changed and assessment["status"] != "accepted":
             rollback = {"applied": True, "paths": rollback_promotion_state(root, snapshot)}
@@ -112,6 +138,7 @@ def run_self_improving_foundation_trial(
             "iteration": iteration,
             "snapshot_sha256": snapshot_digest(snapshot),
             "training": round_training,
+            "hypothesis_validation": holdout,
             "assessment": assessment,
             "promoted": promoted,
             "changed_paths": changed,
@@ -188,6 +215,10 @@ def run_self_improving_foundation_trial(
                 bool(dict(report.get("outcome") or {}).get("target_reached")) for report in training
             ),
             "regression_case_count": maximum_regression_cases,
+            "hypothesis_holdout_project_count": sum(
+                int(dict(row.get("hypothesis_validation") or {}).get("discovered_project_count") or 0)
+                for row in iterations
+            ),
         },
         "invariants": {
             "field_trial_is_measurement_only": True,

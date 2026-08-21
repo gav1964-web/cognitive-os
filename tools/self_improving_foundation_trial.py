@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.self_improving_foundation_trial import run_self_improving_foundation_trial
+from tools.self_improvement_project_discovery import gitlab_holdout_discoverer
 
 
 def main() -> int:
@@ -27,6 +28,7 @@ def main() -> int:
     parser.set_defaults(promote_config=None)
     parser.add_argument("--no-write", action="store_true")
     parser.add_argument("--no-executable-acceptance", action="store_true")
+    parser.add_argument("--no-hypothesis-discovery", action="store_true")
     parser.add_argument("--full-report", action="store_true")
     args = parser.parse_args()
 
@@ -43,6 +45,10 @@ def main() -> int:
         promote_config=args.promote_config,
         write=not args.no_write,
         executable_acceptance=not args.no_executable_acceptance,
+        _holdout_discoverer=(
+            None if args.no_hypothesis_discovery or args.no_write
+            else gitlab_holdout_discoverer(root)
+        ),
         _progress=_progress,
     )
     output = report if args.full_report else _summary(report)

@@ -36,6 +36,20 @@
     "teacher_profile": "external_l45_intent_resolver",
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
+    "hypothesis_holdout": {
+      "enabled": true,
+      "provider": "gitlab",
+      "minimum_projects": 2,
+      "maximum_projects": 3,
+      "maximum_search_pages": 2,
+      "query_profiles": {
+        "side_effectful_target": ["state management", "report generator", "observability", "command handler"],
+        "executable_sample_contract": ["data validation", "parser", "serializer", "python library"],
+        "dependency_boundary": ["api client", "integration service", "plugin system", "adapter"],
+        "first_slice_reselection_required": ["workflow engine", "service layer", "automation tool", "data pipeline"],
+        "default": ["python application", "python library", "automation tool"]
+      }
+    },
     "failure_classification": {
       "downstream_reason_map": {
         "side_effectful_target": "side_effectful_target",

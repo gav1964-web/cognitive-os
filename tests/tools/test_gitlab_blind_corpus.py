@@ -58,6 +58,19 @@ def test_known_projects_includes_effective_replacements(tmp_path: Path):
     assert "final-tool" in repos
 
 
+def test_known_projects_includes_nested_hypothesis_holdouts(tmp_path: Path):
+    corpus = tmp_path / "hypothesis_holdouts" / "hvp_test"
+    corpus.mkdir(parents=True)
+    (corpus / "selection.json").write_text(
+        json.dumps({"projects": [{"full_name": "owner/holdout-tool"}]}), encoding="utf-8"
+    )
+
+    names, repos = known_projects(tmp_path)
+
+    assert "owner/holdout-tool" in names
+    assert "holdout-tool" in repos
+
+
 def test_gitlab_project_row_and_eligibility():
     row = _project_row(_item(7, "group/runtime-engine"))
     policy = {
