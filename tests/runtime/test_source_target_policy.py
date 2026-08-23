@@ -50,3 +50,8 @@ def test_role_source_policy_blocks_integration_test_variants():
 def test_example_file_token_does_not_exclude_product_package_name():
     assert implementation_target_violation("example_menu.py:main")["status"] == "blocked_no_safe_candidate"
     assert implementation_target_violation("example_domain/services.py:get_book")["status"] == "allowed"
+
+
+def test_backup_directory_is_context_only_but_root_backup_module_is_product_code():
+    assert implementation_target_violation("backup/handlers.py:emit")["status"] == "blocked_no_safe_candidate"
+    assert implementation_target_violation("backup.py:run")["status"] == "allowed"

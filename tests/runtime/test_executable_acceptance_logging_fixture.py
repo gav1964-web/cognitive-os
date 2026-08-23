@@ -44,3 +44,26 @@ def test_logging_formatter_executes_with_log_record_fixture(tmp_path):
     assert evidence["formatter.py:PaddingFormatter.format"]["record"]["source"] == (
         "ast_inherited_method_contract:logging.Formatter.format"
     )
+
+
+def test_logging_handler_record_projection_infers_real_log_record(tmp_path):
+    source = tmp_path / "handler.py"
+    source.write_text(
+        "import logging\n\n"
+        "class QueueHandler(logging.Handler):\n"
+        "    def _format_record(self, record):\n"
+        "        if record.args:\n"
+        "            record.msg = record.msg % record.args\n"
+        "            record.args = None\n"
+        "        return record\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "QueueHandler._format_record")["record"]
+
+    record = materialize(inferred["value"])
+    assert inferred["source"] == (
+        "ast_inherited_method_contract:logging.Handler._format_record"
+    )
+    assert isinstance(record, logging.LogRecord)
+    assert record.getMessage() == "sample"

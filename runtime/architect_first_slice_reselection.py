@@ -193,10 +193,10 @@ def _viable_candidates(
     ranked.sort(key=lambda row: (
         -int(row["architecture_significance"]),
         -int(bool(row["environment_ready"])),
-        -int(bool(row["receiver_independent"])),
         -int(row["semantic_score"]),
         -int(row["contract_shape_score"]),
         -int(row["score"]),
+        -int(bool(row["receiver_independent"])),
         str(row["target"]),
         int(row["index"]),
     ))

@@ -29,3 +29,30 @@ def test_logging_record_projection_accepts_source_derived_receiver_fixture():
         row["rule_id"] == "logging_record_projection_boundary"
         for row in result["matched_rules"]
     )
+
+
+def test_logging_record_projection_is_not_blocked_by_unrelated_file_dependencies():
+    context = {
+        "snippet": {
+            "target_binding": "method_symbol",
+            "owner_class": "MultiProcessingHandler",
+            "text": (
+                "def _format_record(self, record):\n"
+                "    record.msg = record.msg % record.args\n"
+                "    record.args = None\n"
+                "    return record\n"
+            ),
+            "structural_contract": {
+                "source_body_complete": True,
+                "state_mutation": True,
+                "observed_side_effects": ["memory_state"],
+            },
+        },
+    }
+
+    result = first_slice_viability(
+        "multiprocessing_logging.py:MultiProcessingHandler._format_record", context
+    )
+
+    assert result["status"] == "eligible"
+    assert result["reselection_required"] is False

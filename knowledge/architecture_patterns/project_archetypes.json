@@ -6,6 +6,7 @@
       "_testing",
       "bench",
       "benchmarks",
+      "backup",
       "ci_tools",
       "doc",
       "docs",
@@ -4176,14 +4177,23 @@
       "match": {
         "project_name_contains_any": [
           "loguru",
-          "structlog"
+          "structlog",
+          "nb_log",
+          "logger",
+          "logging",
+          "-log",
+          "_log"
         ],
         "text_contains_any": [
           "loguru",
           "_logger.py",
-          "_log"
+          "_log",
+          "logging.handler",
+          "logging.formatter",
+          "logrecord",
+          "formatmessage"
         ],
-        "min_score": 80
+        "min_score": 70
       },
       "diagnosis": {
         "primary_sources": [
@@ -4193,6 +4203,8 @@
           "bottlenecks"
         ],
         "primary_target_prefer": [
+          "formatmessage",
+          "_format_record",
           "_logger.py:add",
           "_logger.py:_log",
           "_better_exceptions.py:_format_exception"
@@ -4209,11 +4221,15 @@
         "name": "logging_record_dispatch_slice",
         "goal": "Stabilize one log call path from message input to sink dispatch.",
         "target_sources": [
+          "domain_anchors",
           "central",
           "orchestrators",
           "broad"
         ],
         "targets_prefer": [
+          "formatmessage",
+          "_format_record",
+          "formatter.py:format",
           "_logger.py:_log",
           "_logger.py:add",
           "_better_exceptions.py:_format_exception"

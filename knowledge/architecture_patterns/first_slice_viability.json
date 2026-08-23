@@ -75,7 +75,6 @@
         "path_contains_any": ["logging", "formatter"],
         "symbol_in": ["format"],
         "receiver_kind_in": ["instance"],
-        "dependency_status_in": ["ready"],
         "input_complexity_in": ["object_protocol"],
         "direct_side_effects_in": ["memory_state"]
       },
@@ -101,8 +100,7 @@
       "match": {
         "path_contains_any": ["handler", "logging"],
         "symbol_contains_any": ["format_record", "record_format"],
-        "owner_class_contains_any": ["formatter", "handler"],
-        "dependency_status_in": ["ready"]
+        "owner_class_contains_any": ["formatter", "handler"]
       },
       "reason": "logging record projection is executable with a source-derived receiver and LogRecord fixture"
     },

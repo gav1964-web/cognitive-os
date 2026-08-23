@@ -92,3 +92,32 @@ def test_project_report_preserves_bounded_reselection_inventory(monkeypatch, tmp
         "pkg/features.py:extract_features",
         "pkg/core.py:normalize",
     ]
+
+
+def test_project_report_prioritizes_advisory_slice_and_filters_context_only_targets(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(
+        "runtime.role_project_analysis.interpret_project_report",
+        lambda *args, **kwargs: {
+            "architecture_synthesis": {
+                "recommended_first_slice": {
+                    "targets": ["backup/old.py:format", "pkg/formatters.py:formatMessage"]
+                }
+            }
+        },
+    )
+
+    prepared = prepare_role_project_report(
+        root=tmp_path,
+        goal="Select a record formatter",
+        analyzer_outputs={
+            "project_map_report": {"root": tmp_path.as_posix(), "summary": {}, "answers": {}},
+            "extract_python_structure": {
+                "central_nodes": [{"path": "pkg/handlers.py", "name": "emit"}],
+            },
+        },
+    )
+
+    assert prepared["reselection_candidate_inventory"] == [
+        "pkg/formatters.py:formatMessage",
+        "pkg/handlers.py:emit",
+    ]

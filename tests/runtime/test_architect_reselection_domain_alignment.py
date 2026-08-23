@@ -104,3 +104,44 @@ def test_architect_quality_preserves_analyzer_pure_transform_evidence():
     quality = contract_quality(source, context, [source])
 
     assert quality["semantic_score"] >= 97
+
+
+def test_reselection_prefers_strong_method_contract_over_weak_convenience_function():
+    function = "pkg/logger.py:critical"
+    formatter = "pkg/formatters.py:EventFormatter.formatMessage"
+    context = {
+        function: {
+            "node_kind": "function",
+            "snippet": {
+                "text": "def critical(message): logger.critical(message)",
+                "target_binding": "function_symbol",
+                "structural_contract": {
+                    "source_body_complete": True,
+                    "inferred_output_type": "VoidSideEffect",
+                    "observed_side_effects": ["observability"],
+                },
+            },
+            "dependency_readiness": {"status": "ready"},
+        },
+        formatter: {
+            "node_kind": "function",
+            "snippet": {
+                "text": "def formatMessage(self, record): return self._style.format(record)",
+                "target_binding": "method_symbol",
+                "owner_class": "EventFormatter",
+                "structural_contract": {
+                    "source_body_complete": True,
+                    "argument_count": 1,
+                    "typed_argument_count": 1,
+                    "inferred_output_type": "str",
+                    "return_paths": 1,
+                },
+            },
+            "dependency_readiness": {"status": "ready"},
+        },
+    }
+
+    selected, evidence = _viable_candidates([function, formatter], context, {}, limit=2)
+
+    assert selected[0] == formatter
+    assert evidence[0]["semantic_score"] >= evidence[1]["semantic_score"]

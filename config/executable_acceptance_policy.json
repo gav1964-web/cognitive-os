@@ -93,6 +93,12 @@
           "methods": ["format"],
           "parameter": "record",
           "fixture": "logging_log_record"
+        },
+        {
+          "base_contains": "logging.Handler",
+          "methods": ["_format_record", "format_record", "formatMessage", "emit"],
+          "parameter": "record",
+          "fixture": "logging_log_record"
         }
       ],
       "boolean_names": ["disabled", "enabled", "nullable"],

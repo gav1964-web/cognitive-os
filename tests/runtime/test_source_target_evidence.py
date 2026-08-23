@@ -33,5 +33,23 @@ def test_extracts_class_qualified_method(tmp_path):
     evidence = source_target_evidence(tmp_path, "worker.py:Worker.set_state")
 
     assert evidence["node_kind"] == "method"
+    assert evidence["snippet"]["owner_class"] == "Worker"
+    assert evidence["snippet"]["target_binding"] == "method_symbol"
+    assert evidence["snippet"]["structural_contract"]["state_mutation"] is True
     assert evidence["signature"]["args"][1] == {"name": "value", "annotation": "str"}
     assert "self.value = value" in evidence["snippet"]["text"]
+
+
+def test_extracts_method_from_python2_compatible_source(tmp_path):
+    (tmp_path / "legacy.py").write_text(
+        "class Handler(object):\n"
+        "    def format(self, record):\n"
+        "        try:\n            return record.msg\n"
+        "        except ValueError, exc:\n            return str(exc)\n",
+        encoding="utf-8",
+    )
+
+    evidence = source_target_evidence(tmp_path, "legacy.py:Handler.format")
+
+    assert evidence["snippet"]["owner_class"] == "Handler"
+    assert evidence["parser_mode"]

@@ -9,6 +9,7 @@ from typing import Any
 from .project_benchmark import analyze_project
 from .project_interpreter import interpret_project_report
 from .module_script_boundary import enrich_module_script_readiness
+from .source_target_policy import is_context_only_implementation_target
 
 
 def analyze_role_project(*, root: Path, project_dir: Path, goal: str) -> dict[str, Any]:
@@ -41,7 +42,10 @@ def prepare_role_project_report(
     }
     interpretation = interpret_project_report(goal_report, root=root.as_posix())
     project_map_report["reselection_candidate_inventory"] = _reselection_candidate_inventory(
-        dict(analyzer_outputs.get("extract_python_structure") or {})
+        dict(analyzer_outputs.get("extract_python_structure") or {}),
+        preferred_targets=list(
+            dict(dict(interpretation.get("architecture_synthesis") or {}).get("recommended_first_slice") or {}).get("targets") or []
+        ),
     )
     project_map_report = enrich_weak_contract_readiness(project_map_report)
     project_map_report = enrich_module_script_readiness(project_map_report)
@@ -61,16 +65,23 @@ def prepare_role_project_report(
     }
 
 
-def _reselection_candidate_inventory(structure: dict[str, Any]) -> list[str]:
+def _reselection_candidate_inventory(
+    structure: dict[str, Any], *, preferred_targets: list[Any] | None = None
+) -> list[str]:
     rows = [
         *list(structure.get("central_nodes") or []),
         *list(structure.get("pure_transform_candidates") or []),
         *list(structure.get("bounded_policy_candidates") or []),
     ]
-    return list(dict.fromkeys(
+    discovered = [
         f"{row['path']}:{row['name']}"
         for row in rows
         if isinstance(row, dict) and row.get("path") and row.get("name")
+    ]
+    return list(dict.fromkeys(
+        str(source)
+        for source in [*list(preferred_targets or []), *discovered]
+        if ".py:" in str(source) and not is_context_only_implementation_target(str(source))
     ))[:64]
 
 

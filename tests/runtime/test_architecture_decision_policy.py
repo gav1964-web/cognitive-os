@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from runtime.architecture_decision_builder import build_architecture_decision
 from runtime.architecture_decision_policy import load_architecture_decision_policy
+from runtime._parts.project_facts_part1 import _domain_anchor_refs
 
 
 def test_architecture_decision_policy_loads_required_sections():
@@ -12,6 +13,22 @@ def test_architecture_decision_policy_loads_required_sections():
     assert policy["fallback_slice"]["steps"]
     assert policy["source_selection"]["context_only_path_tokens"]
     assert policy["source_selection"]["brief_sort_rules"]
+    assert "/backup/" in policy["source_selection"]["context_only_path_tokens"]
+
+
+def test_logging_domain_anchors_prefer_record_formatting_over_sink_dispatch():
+    anchors = _domain_anchor_refs(
+        {
+            "files": [
+                {"path": "pkg/handlers.py", "functions": [{"name": "emit", "loc": 8}]},
+                {"path": "pkg/formatters.py", "functions": [{"name": "formatMessage", "loc": 5}]},
+            ]
+        },
+        {"kind": "logging_library"},
+        limit=5,
+    )
+
+    assert anchors[0].startswith("pkg/formatters.py:formatMessage")
 
 
 def test_architecture_decision_policy_drives_fallback_and_source_selection(tmp_path):

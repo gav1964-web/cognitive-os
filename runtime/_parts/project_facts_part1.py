@@ -233,6 +233,18 @@ def _domain_anchor_refs(python_structure: dict[str, Any], domain_profile: dict[s
                 if name in {"chat_completions", "_handle_chat_request", "build_providers_from_config", "select_provider"}:
                     refs.append(_node_ref({"path": path, "name": name, "loc": function.get("loc")}))
         return sorted(set(refs))[:limit]
+    if kind == "logging_library":
+        refs = []
+        preferred = {"format", "formatmessage", "_format_record", "format_record", "emit"}
+        for file_row in python_structure.get("files", []):
+            path = str(file_row.get("path") or "")
+            if not path or _is_contextual_path(path):
+                continue
+            for function in file_row.get("functions", []):
+                name = str(function.get("name") or "")
+                if name.lower() in preferred:
+                    refs.append(_node_ref({"path": path, "name": name, "loc": function.get("loc")}))
+        return sorted(set(refs), key=lambda ref: (_logging_anchor_priority(ref), ref))[:limit]
     if kind != "llm_auto_repair_loop":
         return []
     preferred = {
@@ -282,6 +294,10 @@ def _has_chat_completion_route(python_structure: dict[str, Any]) -> bool:
             return True
     return False
 
+def _logging_anchor_priority(ref: str) -> int:
+    name = ref.split(":", 1)[-1].split("(", 1)[0].lower()
+    return {"formatmessage": 0, "_format_record": 1, "format_record": 2, "format": 3, "emit": 4}.get(name, 20)
+
 def _node_refs(nodes: list[dict[str, Any]], *, limit: int) -> list[str]:
     refs = []
     for node in nodes[:limit]:
@@ -290,6 +306,9 @@ def _node_refs(nodes: list[dict[str, Any]], *, limit: int) -> list[str]:
             ref += f"({node.get('loc')} loc)"
         refs.append(ref)
     return refs
+
+def _node_ref(node: dict[str, Any]) -> str:
+    return _node_refs([node], limit=1)[0]
 
 def _repair_anchor_priority(ref: str) -> int:
     name = ref.split(":", 1)[-1].split("(", 1)[0]

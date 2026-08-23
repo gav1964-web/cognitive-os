@@ -25,6 +25,18 @@ def test_domain_profile_uses_weighted_kb_project_name_and_text_markers():
     assert profile["evidence"]
 
 
+def test_domain_profile_prefers_logging_library_over_incidental_gunicorn_mention():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/acme_logging", "frameworks": [], "entrypoints": [], "routes": 0},
+        {"files": [{"path": "acme/formatters.py", "text": "import logging\nclass EventFormatter(logging.Formatter): pass\n# gunicorn compatible"}]},
+        {"files": [{"path": "acme/formatters.py", "functions": [{"name": "formatMessage", "calls": []}]}]},
+        [],
+        {"logging"},
+    )
+
+    assert profile["kind"] == "logging_library"
+
+
 def test_domain_profile_does_not_treat_navigation_substrings_as_docs_generator():
     profile = infer_domain_profile(
         {"root": "F:/tmp/async_store", "frameworks": [], "entrypoints": ["store/client.py"], "routes": 0},
