@@ -12,6 +12,7 @@ from .python_parser_compatibility import parse_compatible_source
 from .function_invocation_patterns import upstream_test_extraction_policy
 from .executable_acceptance_structural_samples import collect_structural_samples
 from .executable_acceptance_local_call_samples import add_local_call_samples
+from .executable_acceptance_policy import structural_sample_policy
 
 _UNSAFE = object()
 
@@ -29,6 +30,7 @@ def infer_argument_samples(
         return {}
     parameters = _parameter_names(node)
     candidates: dict[str, list[tuple[int, Any, str]]] = {name: [] for name in parameters}
+    _collect_declared_defaults(node, candidates)
     collect_structural_samples(tree, node, parameters, candidates)
     add_local_call_samples(tree, node, parameters, candidates)
     if project_root and project_root.is_dir():
@@ -66,6 +68,25 @@ def _unique_callable(tree: ast.AST, symbol: str) -> ast.FunctionDef | ast.AsyncF
 def _parameter_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
     args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
     return {item.arg for item in args if item.arg not in {"self", "cls"}}
+
+
+def _collect_declared_defaults(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    candidates: dict[str, list[tuple[int, Any, str]]],
+) -> None:
+    positional = [*node.args.posonlyargs, *node.args.args]
+    rows = list(zip(positional[-len(node.args.defaults):], node.args.defaults)) if node.args.defaults else []
+    rows.extend(zip(node.args.kwonlyargs, node.args.kw_defaults))
+    priority = int(structural_sample_policy()["priorities"]["declared_default"])
+    for argument, default in rows:
+        if argument.arg not in candidates or default is None:
+            continue
+        try:
+            value = ast.literal_eval(default)
+        except (ValueError, TypeError):
+            continue
+        if _json_safe(value):
+            candidates[argument.arg].append((priority, value, "ast_declared_default"))
 
 
 def _collect_upstream_test_calls(

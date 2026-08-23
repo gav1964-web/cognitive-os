@@ -62,8 +62,13 @@ def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _
         if not module_name or not attrs:
             check.errors.append(f"executable_acceptance_source_isolation_invalid:{module_name}")
         for value in attrs.values():
-            if isinstance(value, dict) and value.get("__fixture__") not in {"callable_object_noop"}:
+            if not isinstance(value, dict):
+                continue
+            fixture = value.get("__fixture__")
+            if fixture not in {"callable_constant", "callable_object_noop"}:
                 check.errors.append(f"executable_acceptance_source_isolation_unknown_fixture:{module_name}")
+            elif fixture == "callable_constant" and "value" not in value:
+                check.errors.append(f"executable_acceptance_source_isolation_invalid_fixture:{module_name}")
     method = dict(policy.get("method_fixture_policy") or {})
     if not method.get("required_mapping_key_sample") or not method.get("required_mapping_value_fixture"):
         check.errors.append("executable_acceptance_policy_missing:method_fixture_policy.required_mapping_fixture")

@@ -32,6 +32,11 @@ def add_qualified_call_samples(
 
 
 def _qualified_name(node: ast.AST) -> str:
-    if not isinstance(node, ast.Attribute) or not isinstance(node.value, ast.Name):
+    parts = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
         return ""
-    return f"{node.value.id}.{node.attr}"
+    return ".".join([current.id, *reversed(parts)])

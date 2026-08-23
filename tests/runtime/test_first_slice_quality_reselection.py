@@ -77,3 +77,27 @@ def test_spec_writer_returns_deferred_candidate_without_explicit_rule_flag():
 
     assert request["status"] == "required"
     assert request["trigger"] == "low_first_slice_viability"
+
+
+def test_spec_writer_preserves_architect_semantic_viability_override():
+    contract = {
+        "candidate": "pkg/handlers.py:format_timestamp",
+        "semantic_quality": {"status": "strong", "score": 89},
+        "structural_evidence": {
+            "argument_count": 1,
+            "typed_argument_count": 0,
+            "explicit_return_annotation": "",
+        },
+        "first_slice_viability": {
+            "status": "eligible",
+            "reselection_required": False,
+            "matched_rules": [{"rule_id": "static_time_format_boundary"}],
+        },
+    }
+
+    request = build_first_slice_reselection_request(
+        contract,
+        {"status": "not_required", "ranked_alternatives": []},
+    )
+
+    assert request["status"] == "not_required"

@@ -87,6 +87,21 @@ def test_reselection_accepts_strong_candidate_at_semantic_policy_floor():
     )
 
 
+def test_reselection_accepts_only_strong_configured_viability_override():
+    matched = [{"rule_id": "static_time_format_boundary"}]
+
+    assert _semantic_threshold_satisfied(
+        {"semantic_status": "strong", "semantic_score": 89, "matched_rules": matched},
+        None,
+        95,
+    )
+    assert not _semantic_threshold_satisfied(
+        {"semantic_status": "suspicious", "semantic_score": 89, "matched_rules": matched},
+        None,
+        95,
+    )
+
+
 def test_architect_quality_preserves_analyzer_pure_transform_evidence():
     source = "pkg/math.py:normalize"
     context = {

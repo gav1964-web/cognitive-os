@@ -14,6 +14,7 @@ from runtime.executable_acceptance_policy import (
     structural_sample_policy,
     temporary_executable_acceptance_policy,
 )
+from runtime.executable_acceptance_effect_stubs import configured_effect_stubs
 from runtime.executable_acceptance_materializers import materialize
 
 
@@ -54,6 +55,7 @@ def test_temporary_policy_is_scoped_and_restored():
     assert "DataProfilerColumnDomainBuilder._get_domains" in method_fixture_policy()["instance_attribute_profiles"]
     assert "socket" in source_isolation_policy()["effect_module_stubs"]
     assert "logging.Handler" in source_isolation_policy()["preserved_stdlib_class_bases"]
+    assert "logging.Formatter" in source_isolation_policy()["preserved_stdlib_class_bases"]
     assert "optional dependency" in skipped_recovery_hint("import_failed_missing_module")
     assert "closure" in skipped_recovery_hint("nested_function_requires_closure")
     assert sample_value("Callable[[dict], str]", "id_of") == {"__fixture__": "callable_id_of"}
@@ -85,6 +87,17 @@ def test_temporary_policy_is_scoped_and_restored():
     assert sample_value("bytes", "payload") == {"__fixture__": "bytes_empty"}
     assert sample_value("IndexableLike", "data") == {}
     assert sample_value("", "function") == {"__fixture__": "callable_identity"}
+
+
+def test_socket_effect_stub_preserves_hostname_read():
+    import socket
+
+    with configured_effect_stubs({"socket"}):
+        import socket as isolated_socket
+
+        assert isolated_socket.gethostname() == "acceptance-host"
+
+    assert socket.gethostname() != ""
     assert sample_value("", "arity") == 1
     assert materialize({"iterations": "sample", "digest_size": "sample"}) == {"iterations": 1, "digest_size": 8}
     row = materialize({"__fixture__": "record_row_empty"})

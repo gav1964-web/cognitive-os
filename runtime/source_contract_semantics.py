@@ -7,6 +7,7 @@ import textwrap
 from typing import Any
 
 from runtime.source_contract_helpers import is_file_extension_policy, literal_return_only, local_type_factories, target_mutates_external_state, yield_path_count
+from runtime.source_contract_argument_types import qualified_call_argument_types
 from runtime.source_contract_types import all_contract_shapes_concrete, concrete_output, concrete_type
 from runtime.source_ast_scope import callable_scope_walk, nested_definitions
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
@@ -289,7 +290,7 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
     if function is None:
         return {}
     known = set(names)
-    inferred: dict[str, str] = {}
+    inferred = qualified_call_argument_types(function, known)
     numerical_context = any(
         isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow."))
         for node in callable_scope_walk(function)

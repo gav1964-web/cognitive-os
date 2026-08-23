@@ -72,8 +72,9 @@
       "score_delta": 230,
       "reselection_override": true,
       "match": {
-        "path_contains_any": ["logging", "formatter"],
+        "path_contains_any": ["logging", "formatter", "handler"],
         "symbol_in": ["format"],
+        "owner_class_contains_any": ["formatter"],
         "receiver_kind_in": ["instance"],
         "input_complexity_in": ["object_protocol"],
         "direct_side_effects_in": ["memory_state"]
@@ -112,6 +113,18 @@
         "decorators_contains_any": ["staticmethod", "classmethod"]
       },
       "reason": "static or class method exposes an explicit receiver-independent boundary"
+    },
+    {
+      "rule_id": "static_time_format_boundary",
+      "score_delta": 80,
+      "reselection_override": true,
+      "match": {
+        "decorators_contains_any": ["staticmethod"],
+        "dependency_status_in": ["ready"],
+        "calls_contains_any": ["strftime"],
+        "direct_side_effects_in": [""]
+      },
+      "reason": "complete static time-to-string formatting is a bounded executable naming contract"
     },
     {
       "rule_id": "runtime_lifecycle_boundary",

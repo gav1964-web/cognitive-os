@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .architect_semantic_admission import semantic_threshold_satisfied
 from .promoted_candidate_selection_policies import selection_policy_mismatches
 from .technical_spec_policy import load_technical_spec_policy
 
@@ -21,15 +22,17 @@ def build_first_slice_reselection_request(
     reselection_policy = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
     semantic_minimum = int(reselection_policy.get("minimum_semantic_score") or 0)
     semantic_score = int(semantic_quality.get("score") or 0)
-    explicit_return = str(structural.get("explicit_return_annotation") or "").strip().lower()
-    fully_annotated = (
-        explicit_return not in {"", "any", "typing.any", "object"}
-        and int(structural.get("typed_argument_count") or 0) >= int(structural.get("argument_count") or 0)
-    )
     semantic_below_threshold = (
         bool(extraction_contract.get("candidate") and semantic_quality)
-        and semantic_score < semantic_minimum
-        and not fully_annotated
+        and not semantic_threshold_satisfied(
+            {
+                "semantic_score": semantic_score,
+                "semantic_status": semantic_quality.get("status"),
+                "matched_rules": viability.get("matched_rules", []),
+            },
+            {"snippet": {"structural_contract": structural}},
+            semantic_minimum,
+        )
     )
     policy_mismatches = selection_policy_mismatches(structural)
     ready = [

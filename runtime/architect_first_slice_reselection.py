@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from .architect_candidate_quality import contract_quality
+from .architect_semantic_admission import (
+    semantic_threshold_satisfied as _semantic_threshold_satisfied,
+)
 from .architecture_target_priority import architecture_contract_has_priority, architecture_target_score
 from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
@@ -206,20 +209,6 @@ def _viable_candidates(
         if _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)
     ]
     return [str(row["target"]) for row in qualified[:limit]], ranked
-
-def _semantic_threshold_satisfied(
-    candidate: dict[str, Any], source_context: dict[str, Any] | None, minimum: int
-) -> bool:
-    if int(candidate.get("semantic_score") or 0) >= minimum:
-        return True
-    snippet = dict(dict(source_context or {}).get("snippet") or {})
-    structural = dict(snippet.get("structural_contract") or {})
-    explicit_return = str(structural.get("explicit_return_annotation") or "").strip().lower()
-    return bool(
-        explicit_return not in {"", "any", "typing.any", "object", "none", "nonetype"}
-        and int(structural.get("typed_argument_count") or 0) >= int(structural.get("argument_count") or 0)
-    )
-
 
 def _row_sources(value: Any) -> list[str]:
     sources = []

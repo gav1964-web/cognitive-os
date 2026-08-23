@@ -39,6 +39,9 @@ def _stub_module(name: str, profile: dict[str, Any]) -> types.ModuleType:
 def _stub_value(value: Any, label: str) -> Any:
     if isinstance(value, dict) and value.get("__fixture__") == "callable_object_noop":
         return _NoopObject(label)
+    if isinstance(value, dict) and value.get("__fixture__") == "callable_constant":
+        constant = value.get("value")
+        return lambda *args, **kwargs: constant
     return value
 
 

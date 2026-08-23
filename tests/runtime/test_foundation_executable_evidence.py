@@ -38,6 +38,12 @@ def test_foundation_evidence_allows_isolated_transitive_memory_state():
     assert result["status"] == "eligible"
 
 
+def test_foundation_evidence_allows_isolated_transitive_observability():
+    result = evidence._eligibility(_spec(effects=["observability"]))
+
+    assert result["status"] == "eligible"
+
+
 def test_foundation_evidence_rejects_direct_memory_state_without_process_isolation():
     result = evidence._eligibility(
         _spec(effects=["memory_state"], observed_effects=["memory_state"])

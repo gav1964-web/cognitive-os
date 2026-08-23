@@ -12,7 +12,7 @@
   },
   "foundation_evidence": {
     "isolated_process_timeout_seconds": 180,
-    "isolated_transitive_effects": ["memory_state"],
+    "isolated_transitive_effects": ["memory_state", "observability"],
     "process_isolated_direct_effects": ["memory_state"],
     "process_isolated_direct_effect_profiles": {
       "logging_sink_adapter": ["network"]
@@ -40,6 +40,7 @@
       "allowed_collection_domain": 105,
       "comparison_literal": 70,
       "conversion": 80,
+      "declared_default": 110,
       "importable_module_path": 110,
       "iterated_literal_domain": 106,
       "keyword_payload": 95,
@@ -61,6 +62,10 @@
     "numeric_sequence_sample": [0.0, 1.0],
     "numeric_arithmetic_sample": 1,
     "qualified_call_argument_samples": {
+      "datetime.datetime.fromtimestamp": 0,
+      "datetime.datetime.utcfromtimestamp": 0,
+      "datetime.fromtimestamp": 0,
+      "datetime.utcfromtimestamp": 0,
       "torch.from_numpy": {"__fixture__": "numpy_array", "items": [0.0, 1.0]}
     },
     "parameter_callable_fixture": "callable_identity",
@@ -274,7 +279,7 @@
     }
   },
   "source_isolation_policy": {
-    "preserved_stdlib_class_bases": ["logging.Handler"],
+    "preserved_stdlib_class_bases": ["logging.Formatter", "logging.Handler"],
     "stdlib_import_fallbacks": [
       {"module": "datetime", "name": "UTC", "fallback_name": "timezone", "fallback_attribute": "utc"}
     ],
@@ -309,6 +314,7 @@
         "socket": {
         "attributes": {
           "AF_INET": 2,
+          "gethostname": {"__fixture__": "callable_constant", "value": "acceptance-host"},
           "SHUT_RDWR": 2,
           "SOCK_STREAM": 1,
           "socket": {"__fixture__": "callable_object_noop"}

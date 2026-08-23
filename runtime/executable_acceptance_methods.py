@@ -20,10 +20,11 @@ def load_method_callable(path: Path, symbol: str, module: object | None) -> dict
         return {"callable": None, "detail": "method_match_missing_or_module_unloaded"}
     class_name = match["class_name"]
     symbol = match["method_name"]
+    runtime_symbol = runtime_method_name(class_name, symbol)
     cls = getattr(module, class_name, None)
     if cls is None:
         return {"callable": None, "detail": f"{class_name}.{symbol}: class_not_loaded"}
-    member = getattr(cls, symbol, None)
+    member = getattr(cls, runtime_symbol, None)
     if callable(member) and _callable_accepts_without_self(member):
         return {"callable": member, "method": match}
     instance = _method_instance(cls, policy)
@@ -35,7 +36,7 @@ def load_method_callable(path: Path, symbol: str, module: object | None) -> dict
             setattr(instance, key, materialize(value))
         except Exception as exc:
             return {"callable": None, "detail": f"{class_name}.{symbol}: instance_attr_unsettable:{key}:{type(exc).__name__}"}
-    bound = getattr(instance, symbol, None)
+    bound = getattr(instance, runtime_symbol, None)
     if callable(bound):
         return {"callable": bound, "method": match, "instance_attributes": attrs}
     return {"callable": None, "detail": f"{class_name}.{symbol}: method_not_bound"}
@@ -66,6 +67,12 @@ def _callable_accepts_without_self(func: object) -> bool:
     except (TypeError, ValueError):
         return False
     return not params or params[0] not in {"self", "cls"}
+
+
+def runtime_method_name(class_name: str, method_name: str) -> str:
+    if method_name.startswith("__") and not method_name.endswith("__"):
+        return f"_{class_name.lstrip('_')}{method_name}"
+    return method_name
 
 
 def _unique_method_match(path: Path, symbol: str) -> dict[str, str] | None:

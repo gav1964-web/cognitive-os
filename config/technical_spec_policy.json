@@ -20,6 +20,12 @@
     ]
   },
   "contract_type_inference": {
+    "qualified_call_argument_types": {
+      "datetime.datetime.fromtimestamp": "NumberLike",
+      "datetime.datetime.utcfromtimestamp": "NumberLike",
+      "datetime.fromtimestamp": "NumberLike",
+      "datetime.utcfromtimestamp": "NumberLike"
+    },
     "ignored_return_annotations": ["any", "typing.any", "none", "object"],
     "argument_rules": [
       {"type": "RequestLike", "exact": ["request", "req"], "contains_any": ["request"]},
@@ -128,6 +134,7 @@
     "enabled": true,
     "production_triggers": ["low_first_slice_viability", "first_slice_semantic_quality_below_threshold"],
     "minimum_semantic_score": 95,
+    "semantic_override_viability_rules": ["static_time_format_boundary"],
     "execution_feedback_enabled": true,
     "execution_feedback_max_iterations": 2,
     "execution_rejection_reasons": [

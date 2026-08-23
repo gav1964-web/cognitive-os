@@ -21,6 +21,7 @@ from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_framework_context import preload_framework_modules, with_framework_context
 from .executable_acceptance_method_fixtures import method_fixture_values
 from .executable_acceptance_method_selection import unique_method_class
+from .executable_acceptance_methods import runtime_method_name
 from .executable_acceptance_local_imports import replace_local_import_factories
 from .executable_acceptance_package_shells import fresh_local_package
 from .executable_acceptance_resource_io import read_only_open_for
@@ -84,6 +85,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         _, separator, method_name = symbol.partition(".")
         method_name = method_name if separator else symbol
         class_node, method_names = match
+        runtime_symbol = runtime_method_name(class_node.name, method_name)
         methods = {
             node.name: node
             for node in class_node.body
@@ -118,7 +120,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
         configured_stubs = install_configured_global_fixtures(body, namespace)
         wildcard_stubs = install_unresolved_wildcard_names(tree, body, namespace)
         cls = namespace[class_node.name]
-        member = getattr(cls, method_name, None)
+        member = getattr(cls, runtime_symbol, None)
         raw_attrs, attrs = method_fixture_values(class_node.name, method_name, body, selected)
         if callable(member) and _callable_accepts_without_self(member):
             func = member
@@ -126,7 +128,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             instance = object.__new__(cls)
             for key, value in attrs.items():
                 setattr(instance, key, value)
-            func = getattr(instance, method_name, None)
+            func = getattr(instance, runtime_symbol, None)
         if callable(func):
             func = with_runtime_effect_stubs(func, set(effect_stubs))
             func = with_framework_context(func, path)
