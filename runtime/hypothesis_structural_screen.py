@@ -1,7 +1,6 @@
 """Rank cloned projects by cheap structural evidence for a portable signature."""
 
 from __future__ import annotations
-
 import ast
 import builtins
 import re
@@ -29,13 +28,15 @@ def screen_projects(
     maximum = max(1, int(policy.get("maximum_shortlist_projects") or len(rows) or 1))
     minimum = min(maximum, max(0, int(policy.get("minimum_shortlist_projects") or 0)))
     recovery_required = bool(policy.get("recovery_contract"))
+    context_required = bool(policy.get("semantic_context"))
     matches = [
         row for row in ranked
         if row["structural_match_count"]
         and (not recovery_required or row["recovery_match_count"])
+        and (not context_required or row["semantic_context_structural_match_count"])
     ]
     selected = matches[:maximum]
-    if len(selected) < minimum and not recovery_required:
+    if len(selected) < minimum and not recovery_required and not context_required:
         selected_names = {row["project"] for row in selected}
         fallback = [row for row in ranked if row["project"] not in selected_names]
         selected.extend(fallback[: minimum - len(selected)])
@@ -48,6 +49,7 @@ def screen_projects(
         "portable_signature": portable_signature,
         "target_effects": sorted(target_effects),
         "target_output_basis": target_output,
+        "target_semantic_context": list(policy.get("semantic_context") or []),
         "candidate_project_count": len(rows),
         "structural_match_project_count": len(matches),
         "selected_project_count": len(selected),
@@ -72,6 +74,12 @@ def _screen_project(
     recovery_matches = 0
     best_score = 0
     recovery_samples: list[dict[str, Any]] = []
+    context_hits: set[str] = set()
+    contextual_structural_matches = 0
+    contextual_samples: list[dict[str, Any]] = []
+    context_tokens = dict(policy.get("semantic_context_tokens") or {})
+    context_callable_tokens = dict(policy.get("semantic_context_callable_tokens") or {})
+    required_context = {str(value) for value in policy.get("semantic_context") or []}
     for path in iter_python_source_files(project):
         relative = path.relative_to(project)
         if any(part.lower() in excluded for part in relative.parts[:-1]):
@@ -85,6 +93,11 @@ def _screen_project(
                 oversized_files += 1
                 continue
             source = path.read_text(encoding="utf-8", errors="replace")
+            searchable = f"{relative.as_posix()}\n{source}".lower()
+            context_hits.update(
+                context for context in required_context
+                if any(str(token).lower() in searchable for token in context_tokens.get(context) or [])
+            )
             tree, parser_mode = parse_compatible_source(source, relative.as_posix())
         except (OSError, SyntaxError):
             parse_failures += 1
@@ -98,6 +111,16 @@ def _screen_project(
             functions_scanned += 1
             signature = _signature(node)
             snippet = _node_text(source_lines, node)
+            node_searchable = f"{relative.as_posix()}\n{snippet}".lower()
+            node_context_hits = sorted(
+                context for context in required_context
+                if any(str(token).lower() in node_searchable for token in context_tokens.get(context) or [])
+                and (
+                    not context_callable_tokens.get(context)
+                    or any(str(token).lower() in node.name.lower()
+                           for token in context_callable_tokens.get(context) or [])
+                )
+            )
             evidence = infer_source_contract({
                 "signature": signature,
                 "snippet": snippet,
@@ -120,18 +143,25 @@ def _screen_project(
             best_score = max(best_score, score)
             if matched:
                 structural_matches += 1
+                if node_context_hits:
+                    contextual_structural_matches += 1
             recovery_matched = _matches_recovery(evidence, policy)
             if recovery_matched:
                 recovery_matches += 1
             if matched and len(samples) < int(policy.get("maximum_evidence_samples") or 8):
-                samples.append({
+                sample = {
                     "source": f"{relative.as_posix()}:{_qualified_name(node, owners)}",
                     "line": int(getattr(node, "lineno", 0) or 0),
                     "observed_side_effects": sorted(effects),
                     "output_inference_basis": output,
                     "score": score,
                     **({"parser_mode": parser_mode} if parser_mode else {}),
-                })
+                }
+                samples.append(sample)
+                if node_context_hits:
+                    contextual_samples.append({
+                        **sample, "semantic_context_matches": node_context_hits,
+                    })
             if recovery_matched:
                 recovery_samples.append({
                     "source": f"{relative.as_posix()}:{_qualified_name(node, owners)}",
@@ -166,6 +196,10 @@ def _screen_project(
         "structural_score": best_score,
         "structural_match_count": structural_matches,
         "recovery_match_count": recovery_matches,
+        "semantic_context_matches": sorted(context_hits),
+        "semantic_context_match_count": len(context_hits),
+        "semantic_context_structural_match_count": contextual_structural_matches,
+        "contextual_evidence_samples": contextual_samples,
         "structural_match_density": round(density, 6),
         "evidence_samples": samples,
         "recovery_evidence_samples": recovery_samples,

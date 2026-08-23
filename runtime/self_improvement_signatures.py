@@ -44,7 +44,19 @@ def diagnosis_envelope(
         "effect_match_mode": str(policy.get("effect_match_mode") or "exact"),
         "output_family": output_family,
         "accepted_output_bases": sorted({output_family, *map(str, output_members)}),
+        "semantic_context": semantic_context(report),
     }
+
+
+def semantic_context(report: dict[str, Any]) -> list[str]:
+    """Keep measured contract identity separate from the structural signature."""
+    baseline = dict(report.get("baseline") or {})
+    quality = dict(baseline.get("selected_candidate_quality") or {})
+    values = [
+        *list(quality.get("contract_archetype_ids") or []),
+        *list(quality.get("semantic_profile_ids") or []),
+    ]
+    return sorted({str(value) for value in values if value})
 
 
 def normalize_portable_signature(signature: str, normalization: dict[str, Any]) -> str:

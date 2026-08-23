@@ -39,7 +39,7 @@
     "maximum_field_trial_case_seconds": 60,
     "hypothesis_holdout": {
       "enabled": true,
-      "plan_version": "hypothesis_holdout.v25",
+      "plan_version": "hypothesis_holdout.v29",
       "providers": ["gitlab", "github"],
       "provider_policy_overrides": {
         "gitlab": {"minimum_stars": 0},
@@ -84,6 +84,18 @@
       },
       "structural_prescreen": {
         "enabled": true,
+        "semantic_context_tokens": {
+          "logging_adapter_factory": ["logging.config", "handler factory", "dicthandler", "create_handler"],
+          "logging_sink_adapter": ["logging.handler", "def emit", "send_message", "transport"],
+          "logging_record_projection": ["logging.formatter", "logging.logrecord", "def format(self, record", "def format_record"],
+          "logging_output_format_boundary": ["logging.formatter", "logging.logrecord", "def format(self, record", "def format_record"]
+        },
+        "semantic_context_callable_tokens": {
+          "logging_adapter_factory": ["create", "build", "factory", "get_handler"],
+          "logging_sink_adapter": ["emit", "send", "write", "publish", "__call__"],
+          "logging_record_projection": ["format", "project", "serialize"],
+          "logging_output_format_boundary": ["format", "serialize"]
+        },
         "maximum_shortlist_projects": 8,
         "minimum_shortlist_projects": 2,
         "maximum_python_files": 120,
@@ -161,6 +173,12 @@
       },
       "signature_query_terms": {
         "maximum_queries": 58,
+        "semantic_context": {
+          "logging_adapter_factory": ["logging handler factory", "logging config handler"],
+          "logging_sink_adapter": ["logging sink handler", "logging transport adapter"],
+          "logging_record_projection": ["structured logging formatter", "LogRecord formatter"],
+          "logging_output_format_boundary": ["structured logging formatter", "log formatter"]
+        },
         "effects": {
           "memory_state": [
             "topic:state-management",

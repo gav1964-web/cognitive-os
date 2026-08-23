@@ -3,6 +3,57 @@ from pathlib import Path
 from runtime.hypothesis_structural_screen import screen_projects
 
 
+def test_structural_screen_requires_configured_semantic_context(tmp_path):
+    logging_project = tmp_path / "logging_project"
+    unrelated_project = tmp_path / "unrelated_project"
+    logging_project.mkdir(); unrelated_project.mkdir()
+    (logging_project / "formatter.py").write_text(
+        "import logging\nclass JsonFormatter(logging.Formatter):\n"
+        "    def format(self, record):\n        return record.msg\n",
+        encoding="utf-8",
+    )
+    (unrelated_project / "state.py").write_text(
+        "def format(value):\n    return value\n", encoding="utf-8",
+    )
+    policy = {
+        "semantic_context": ["logging_record_projection"],
+        "semantic_context_tokens": {
+            "logging_record_projection": [
+                "logging.formatter", "logrecord", "def format(self, record",
+            ],
+        },
+        "semantic_context_callable_tokens": {
+            "logging_record_projection": ["format"],
+        },
+        "maximum_shortlist_projects": 2,
+    }
+
+    report = screen_projects(
+        [unrelated_project, logging_project], "meta_only|pure|return_expression", policy,
+    )
+
+    assert report["selected_projects"] == ["logging_project"]
+    row = next(row for row in report["projects"] if row["project"] == "logging_project")
+    assert row["contextual_evidence_samples"][0]["source"].endswith(":JsonFormatter.format")
+
+
+def test_semantic_context_disables_unrelated_minimum_shortlist_fallback(tmp_path):
+    project = tmp_path / "unrelated"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "def format_value(value):\n    return value\n", encoding="utf-8",
+    )
+
+    report = screen_projects([project], "meta_only|pure|return_expression", {
+        "semantic_context": ["logging_record_projection"],
+        "semantic_context_tokens": {"logging_record_projection": ["logrecord"]},
+        "semantic_context_callable_tokens": {"logging_record_projection": ["format"]},
+        "minimum_shortlist_projects": 1,
+    })
+
+    assert report["selected_projects"] == []
+
+
 def _policy(**overrides):
     return {
         "maximum_shortlist_projects": 3,

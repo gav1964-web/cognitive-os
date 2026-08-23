@@ -1,6 +1,6 @@
 from runtime.self_improvement_hypothesis_validation import build_validation_plan
 from runtime.self_improvement_signatures import (
-    assess_signature_match, portable_failure_signature, recovery_metrics,
+    assess_signature_match, diagnosis_envelope, portable_failure_signature, recovery_metrics,
 )
 
 
@@ -110,3 +110,14 @@ def test_hypothesis_identity_uses_measured_signature_over_diagnosis_label():
     assert plan("dependency_boundary")["hypothesis_id"] == plan(
         "executable_sample_contract"
     )["hypothesis_id"]
+
+
+def test_diagnosis_envelope_preserves_measured_semantic_context():
+    report = {"baseline": {"selected_candidate_quality": {
+        "contract_archetype_ids": ["logging_record_projection"],
+        "semantic_profile_ids": ["logging_output_format_boundary"],
+    }}}
+
+    assert diagnosis_envelope(report)["semantic_context"] == [
+        "logging_output_format_boundary", "logging_record_projection",
+    ]

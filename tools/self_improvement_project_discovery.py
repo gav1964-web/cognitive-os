@@ -76,6 +76,8 @@ def _holdout_directory(root: Path, plan: dict[str, Any]) -> Path:
     name = str(plan["hypothesis_id"])
     if "search_page_start" in plan:
         window = json.dumps({
+            "plan_version": str(plan.get("plan_version") or ""),
+            "semantic_context": list(plan.get("semantic_context") or []),
             "queries": list(plan.get("queries") or []),
             "page_start": int(plan.get("search_page_start") or 1),
             "page_end": int(plan.get("query_page_end") or 0),
@@ -205,6 +207,7 @@ def _structural_shortlist(
         normalization.get("output_basis_families") or {}
     )
     policy["recovery_contract"] = dict(plan.get("recovery_contract") or {})
+    policy["semantic_context"] = list(plan.get("semantic_context") or [])
     report_path = directory / "structural_screen.json"
     if report_path.is_file():
         report = json.loads(report_path.read_text(encoding="utf-8"))

@@ -8,8 +8,9 @@ from typing import Any, Callable
 
 from .self_improvement_capability_request import capability_development_requests
 from .self_improvement_signatures import (
-    assess_signature_match, diagnosis_envelope, normalize_failure_class, normalize_portable_signature,
+    diagnosis_envelope, normalize_failure_class, normalize_portable_signature,
     portable_failure_signature, recovery_metrics, signatures_match as _signatures_match,
+    semantic_context,
 )
 from .self_improvement_plugin_foundry import resolve_plugin_requests
 from .self_improvement_recovery_contract import recovery_contract
@@ -18,6 +19,7 @@ from .self_improvement_search_cursor import (
     advance_query_cursors, build_round_search_plan, prior_query_page_ends,
 )
 from .self_improvement_target_alignment import probe_for_plan, remember_retrieval_target
+from .self_improvement_hypothesis_context import probe_summary as _probe_summary
 
 HoldoutDiscoverer = Callable[[dict[str, Any]], list[Path]]
 Trainer = Callable[..., dict[str, Any]]
@@ -197,11 +199,13 @@ def build_validation_plan(
     if failure_class == "unknown":
         return {}
     signature = portable_failure_signature(report, normalization)
-    queries = _validation_queries(settings, failure_class, signature)
+    context = semantic_context(report)
+    queries = _validation_queries(settings, failure_class, signature, context)
     if not queries:
         return {}
     plan_version = str(settings.get("plan_version") or "hypothesis_holdout.v1")
-    digest = hashlib.sha256(signature.encode()).hexdigest()[:12]
+    identity = json.dumps([signature, context], ensure_ascii=True, separators=(",", ":"))
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
     providers = [str(value) for value in settings.get("providers") or [] if value]
     if not providers:
         providers = [str(settings.get("provider") or "gitlab")]
@@ -211,6 +215,7 @@ def build_validation_plan(
         "plan_version": plan_version,
         "failure_class": failure_class,
         "portable_signature": signature,
+        "semantic_context": context,
         "diagnosis_envelope": diagnosis_envelope(report, normalization),
         "queries": queries,
         "minimum_projects": max(2, int(settings.get("minimum_projects") or 2)),
@@ -233,7 +238,8 @@ def build_validation_plan(
 
 
 def _validation_queries(
-    settings: dict[str, Any], failure_class: str, signature: str
+    settings: dict[str, Any], failure_class: str, signature: str,
+    semantic_context: list[str] | None = None,
 ) -> list[str]:
     profiles = dict(settings.get("query_profiles") or {})
     fallback = list(profiles.get(failure_class) or profiles.get("default") or [])
@@ -248,18 +254,24 @@ def _validation_queries(
     output_terms = [
         str(term) for term in list(dict(terms.get("output_bases") or {}).get(output_basis) or [])
     ]
+    context_terms = [
+        str(term) for context in semantic_context or []
+        for term in list(dict(terms.get("semantic_context") or {}).get(context) or [])
+    ]
     planned = []
     composition = dict(settings.get("query_composition") or {})
     if composition.get("enabled"):
         composite_limit = max(0, int(composition.get("maximum_queries") or 4))
         plain_effects = [term for term in effect_terms if ":" not in term]
-        for effect_term in plain_effects:
+        anchors = [term for term in context_terms if ":" not in term] or plain_effects
+        for effect_term in anchors:
             for output_term in [term for term in output_terms if ":" not in term]:
                 if len(planned) >= composite_limit:
                     break
                 planned.append(f"{effect_term} {output_term}")
             if len(planned) >= composite_limit:
                 break
+    planned.extend(context_terms)
     for index in range(max(len(effect_terms), len(output_terms))):
         if index < len(effect_terms):
             planned.append(effect_terms[index])
@@ -309,29 +321,6 @@ def _verified(report: dict[str, Any], target: float) -> bool:
 
 def _result(status: str, **values: Any) -> dict[str, Any]:
     return {"artifact_type": "HypothesisValidationTrial", "status": status, **values}
-
-
-def _probe_summary(project: Path, probe: dict[str, Any] | None, plan: dict[str, Any]) -> dict[str, Any]:
-    diagnosis = dict((probe or {}).get("diagnosis") or {})
-    baseline = dict((probe or {}).get("baseline") or {})
-    normalization = dict(plan.get("signature_normalization") or {})
-    actual = normalize_failure_class(str(diagnosis.get("failure_class") or ""), normalization)
-    signature = portable_failure_signature(
-        {"baseline": baseline, "diagnosis": diagnosis}, normalization
-    ) if probe else None
-    actual = actual or str(signature or "").split("|", 1)[0]
-    assessment = assess_signature_match(
-        str(signature or ""), str(plan["portable_signature"]),
-        dict(plan.get("signature_normalization") or {}),
-    ) if probe else {"matched": True, "match_kind": "not_measured"}
-    return {
-        "project": project.name, "project_dir": project.as_posix(),
-        "project_min_score": baseline.get("project_min_score"),
-        "retrieval_alignment": dict((probe or {}).get("retrieval_alignment") or {}),
-        "failure_class": actual or None, "portable_signature": signature,
-        "matches_hypothesis": probe is None or bool(assessment["matched"]),
-        "signature_assessment": assessment,
-    }
 
 
 def _probe_matches(probe: dict[str, Any], plan: dict[str, Any]) -> bool:

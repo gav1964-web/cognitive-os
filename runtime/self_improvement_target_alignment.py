@@ -49,7 +49,10 @@ def retrieval_targets(report: dict[str, Any]) -> dict[str, str]:
     targets: dict[str, str] = {}
     for row in report.get("projects") or []:
         project = str(row.get("project") or "")
-        samples = list(row.get("evidence_samples") or [])
+        samples = list(
+            row.get("contextual_evidence_samples")
+            or row.get("evidence_samples") or []
+        )
         best = max(samples, key=lambda sample: int(sample.get("score") or 0), default={})
         if project in selected and best.get("source"):
             targets[project] = str(best["source"])
