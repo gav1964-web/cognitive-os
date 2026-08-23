@@ -22,3 +22,16 @@ def test_rejects_path_escape_and_nested_ambiguous_symbol(tmp_path):
 
     assert source_target_evidence(tmp_path, "../outside.py:run") == {}
     assert source_target_evidence(tmp_path, "worker.py:run") == {}
+
+
+def test_extracts_class_qualified_method(tmp_path):
+    (tmp_path / "worker.py").write_text(
+        "class Worker:\n    def set_state(self, value: str):\n        self.value = value\n",
+        encoding="utf-8",
+    )
+
+    evidence = source_target_evidence(tmp_path, "worker.py:Worker.set_state")
+
+    assert evidence["node_kind"] == "method"
+    assert evidence["signature"]["args"][1] == {"name": "value", "annotation": "str"}
+    assert "self.value = value" in evidence["snippet"]["text"]

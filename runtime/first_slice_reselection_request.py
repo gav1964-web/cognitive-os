@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .promoted_candidate_selection_policies import selection_policy_mismatches
 from .technical_spec_policy import load_technical_spec_policy
 
 
@@ -30,11 +31,12 @@ def build_first_slice_reselection_request(
         and semantic_score < semantic_minimum
         and not fully_annotated
     )
+    policy_mismatches = selection_policy_mismatches(structural)
     ready = [
         row for row in list(dependency_profile.get("ranked_alternatives") or [])
         if isinstance(row, dict) and row.get("readiness_status") == "ready" and ":" in str(row.get("target") or "")
     ]
-    if not semantic_block and not source_unbound and not source_context_blocked and not viability_blocked and not semantic_below_threshold and (
+    if not semantic_block and not source_unbound and not source_context_blocked and not viability_blocked and not semantic_below_threshold and not policy_mismatches and (
         dependency_profile.get("status") != "resolution_required" or ready
     ):
         return {
@@ -47,6 +49,7 @@ def build_first_slice_reselection_request(
         "source_body_not_bound_in_approved_first_slice" if source_unbound
         else "low_first_slice_viability" if viability_blocked
         else "first_slice_semantic_quality_below_threshold" if semantic_below_threshold
+        else "promoted_selection_policy_mismatch" if policy_mismatches
         else "no_environment_ready_candidate_in_approved_first_slice"
     )
     return {
@@ -62,6 +65,8 @@ def build_first_slice_reselection_request(
             "first_slice_viability": viability,
             "semantic_quality": semantic_quality,
             "minimum_semantic_score": semantic_minimum,
+            "acceptance_signal": "meta_only" if policy_mismatches else None,
+            "selection_policy_mismatches": policy_mismatches,
         },
         "required_candidate_properties": list(policy.get("reselection_required_properties") or []),
         "authority": "architect_reselection_required_no_automatic_scope_expansion",

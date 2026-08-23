@@ -23,6 +23,24 @@
       "minimum_confirmed_cases": 3
     },
     {
+      "id": "candidate_selection_discriminator",
+      "version": "1.1.0",
+      "enabled": true,
+      "priority": 25,
+      "entrypoint": "runtime.improvement_plugins.candidate_selection_discriminator:run",
+      "change_types": ["foundation_selection_contrast"],
+      "implements_capabilities": ["candidate_selection_discriminator_plugin"],
+      "failure_classes": [
+        "executable_sample_contract",
+        "first_slice_reselection_required",
+        "side_effectful_target"
+      ],
+      "auto_promote": false,
+      "requires_regression_cases": false,
+      "maximum_shadow_challengers": 4,
+      "minimum_emergent_confirmations": 3
+    },
+    {
       "id": "candidate_selection_admission",
       "version": "1.0.0",
       "enabled": true,
@@ -30,7 +48,7 @@
       "entrypoint": "runtime.improvement_plugins.candidate_selection_admission:run",
       "change_types": ["foundation_selection_contrast"],
       "auto_promote": true,
-      "requires_regression_cases": false,
+      "requires_regression_cases": true,
       "minimum_confirmed_cases": 3
     },
     {
@@ -46,18 +64,19 @@
     },
     {
       "id": "bounded_parameter_strategy",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "enabled": true,
       "priority": 50,
       "entrypoint": "runtime.improvement_plugins.bounded_parameter_strategy:run",
       "change_types": ["bounded_parameter_strategy"],
+      "implements_capabilities": ["bounded_parameter_strategy_extension"],
       "auto_promote": true,
       "requires_regression_cases": true,
       "minimum_confirmed_cases": 3
     }
   ],
   "cycle": {
-    "max_plugins_per_failure": 5,
+    "max_plugins_per_failure": 6,
     "stop_after_promotion": true,
     "runtime_patch_auto_promotion": false
   }

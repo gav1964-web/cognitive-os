@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from runtime.project_evolution_policy import evaluate_project_evolution, load_project_evolution_policy
+import pytest
+
+from runtime.project_evolution_policy import (
+    ProjectEvolutionPolicyError, evaluate_project_evolution, load_project_evolution_policy,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +38,19 @@ def test_project_evolution_policy_declares_route_not_only_gates() -> None:
     assert "raw_score_rises_while_calibrated_score_is_capped" in policy["stop_signals"]
     assert policy["evidence_milestones"]["calibrated_9_5"]["minimum_scored_projects"] == 160
     assert policy["evidence_milestones"]["calibrated_9_7"]["minimum_scored_projects"] == 320
+
+
+def test_project_evolution_policy_rejects_overlapping_failure_class_aliases(tmp_path: Path) -> None:
+    payload = json.loads((ROOT / "config" / "project_evolution_policy.json").read_text(encoding="utf-8"))
+    families = payload["self_improvement"]["hypothesis_holdout"]["signature_normalization"][
+        "failure_class_families"
+    ]
+    families["another_family"] = ["spec_writer_no_safe_candidate"]
+    path = tmp_path / "policy.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ProjectEvolutionPolicyError, match="belongs to multiple families"):
+        load_project_evolution_policy(str(path))
 
 
 def test_project_evolution_allows_9_5_gate_for_field_validated_kb_growth() -> None:

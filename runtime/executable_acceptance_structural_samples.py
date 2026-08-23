@@ -61,7 +61,7 @@ def collect_structural_samples(
     _keyword_payload_keys(node, candidates)
     _validation_format_hints(node, parameters, candidates)
     add_parameter_attribute_samples(
-        node, parameters, candidates,
+        tree, node, parameters, candidates,
         priority=_priority("parameter_attributes"),
         attribute_policy=dict(_settings().get("attribute_samples") or {}),
     )

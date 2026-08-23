@@ -30,7 +30,7 @@ def load_contract_archetypes(path: str | None = None) -> dict[str, Any]:
             raise ContractArchetypeInferenceError("each contract archetype requires id and contract_family")
         for field_name in (
             "symbols", "symbol_prefixes", "symbol_suffixes", "symbol_contains_any", "symbol_contains_all",
-            "path_contains_any",
+            "owner_contains_any", "path_contains_any",
         ):
             if not isinstance(row.get(field_name, []), list):
                 raise ContractArchetypeInferenceError(f"archetype {row.get('id')} requires {field_name} list")
@@ -40,9 +40,11 @@ def load_contract_archetypes(path: str | None = None) -> dict[str, Any]:
 def matching_archetypes(target: str, *, path: str | None = None) -> list[dict[str, Any]]:
     payload = load_contract_archetypes(path)
     lowered = target.replace("\\", "/").lower()
-    symbol = (lowered.rsplit(":", 1)[-1] if ":" in lowered else lowered).rsplit(".", 1)[-1]
+    qualified_symbol = lowered.rsplit(":", 1)[-1] if ":" in lowered else lowered
+    symbol = qualified_symbol.rsplit(".", 1)[-1]
+    owner = qualified_symbol.rsplit(".", 1)[0] if "." in qualified_symbol else ""
     source_path = lowered.split(":", 1)[0] if ":" in lowered else ""
-    matches = [row for row in payload["archetypes"] if _matches(row, source_path, symbol)]
+    matches = [row for row in payload["archetypes"] if _matches(row, source_path, owner, symbol)]
     return sorted(matches, key=lambda row: -int(row.get("priority") or 0))
 
 
@@ -97,8 +99,11 @@ def archetype_ranking_adjustments(target: str) -> dict[str, Any]:
     return {"score_delta": score_delta, "reasons": reasons, "profile_ids": profile_ids}
 
 
-def _matches(row: dict[str, Any], source_path: str, symbol: str) -> bool:
+def _matches(row: dict[str, Any], source_path: str, owner: str, symbol: str) -> bool:
     if not _symbol_matches(row, symbol):
+        return False
+    owner_tokens = [str(item).lower() for item in row.get("owner_contains_any", [])]
+    if owner_tokens and not any(token in owner for token in owner_tokens):
         return False
     path_tokens = [str(item).lower() for item in row.get("path_contains_any", [])]
     return not path_tokens or any(token in source_path for token in path_tokens)

@@ -1,4 +1,100 @@
 {
-  "schema_version": "promoted_candidate_selection_policies.v1",
-  "policies": []
+  "policies": [
+    {
+      "id": "executable_sample_contract:measured_candidate_reselection",
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "output_inference_basis": [
+          "explicit_none_annotation",
+          "explicit_return_annotation",
+          "insufficient_structural_evidence",
+          "return_expression"
+        ]
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "datamade__usaddress",
+          "devopness__devopness",
+          "ergonomica__ergonomica",
+          "rohfle__doip-simulator",
+          "tanelpoder__0xtools"
+        ],
+        "holdout_project": "instacart__lore",
+        "holdout_score_delta": 2.2
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_output_inference_basis": [
+          "no_value_return"
+        ],
+        "min_return_paths": 1
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
+      "id": "executable_sample_contract:measured_candidate_reselection:structural_42894bff57",
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "output_inference_basis": [
+          "insufficient_structural_evidence"
+        ]
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "hoadaknong__cv-parser-ner",
+          "mkuurstra-works__python__pylnms",
+          "rohfle__doip-simulator"
+        ],
+        "holdout_project": "akitayamado__avito-parser-com-nedvizemost",
+        "holdout_score_delta": 2.1
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_output_inference_basis": [
+          "insufficient_structural_evidence"
+        ]
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
+      "id": "side_effectful_target:measured_candidate_reselection",
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "output_inference_basis": [
+          "no_value_return"
+        ],
+        "required_observed_side_effects": [
+          "memory_state"
+        ]
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "Arnav3241__Jarvis-v13",
+          "generally-intelligent__simone",
+          "lonelyenvoy__python-memoization",
+          "numerous__report-generator",
+          "saurabhwadekar__FletX"
+        ],
+        "holdout_project": "devopness__devopness",
+        "holdout_score_delta": 2.2
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_observed_side_effects": [
+          "memory_state"
+        ]
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    }
+  ],
+  "schema_version": "promoted_candidate_selection_policies.v1"
 }

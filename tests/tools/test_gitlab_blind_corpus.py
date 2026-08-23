@@ -127,6 +127,28 @@ def test_search_stratum_batches_multiple_pages():
     assert sorted(calls) == [1, 2, 3, 4]
 
 
+def test_search_stratum_respects_discovery_round_page_start():
+    policy = {
+        "minimum_stars": 1, "minimum_recent_year": 2020,
+        "maximum_search_pages": 2, "search_page_start": 3,
+        "search_page_batch_size": 1, "excluded_name_tokens": [],
+        "excluded_description_tokens": [],
+    }
+    calls = []
+
+    def page(params, _policy):
+        calls.append(int(params["page"]))
+        return []
+
+    with patch("tools.gitlab_corpus_search.search_page", side_effect=page):
+        _search_stratum(
+            {"id": "state", "queries": ["state registry"]}, policy,
+            excluded_names=set(), excluded_repos=set(), needed=1,
+        )
+
+    assert calls == [3, 4]
+
+
 def test_search_stratum_uses_configured_activity_cursor():
     policy = {
         "minimum_stars": 1,

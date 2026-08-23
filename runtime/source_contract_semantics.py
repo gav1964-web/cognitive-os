@@ -6,7 +6,7 @@ import ast
 import textwrap
 from typing import Any
 
-from runtime.source_contract_helpers import is_file_extension_policy, local_type_factories, target_mutates_external_state, yield_path_count
+from runtime.source_contract_helpers import is_file_extension_policy, literal_return_only, local_type_factories, target_mutates_external_state, yield_path_count
 from runtime.source_contract_types import all_contract_shapes_concrete, concrete_output, concrete_type
 from runtime.source_ast_scope import callable_scope_walk, nested_definitions
 from runtime.source_contract_docstrings import documented_output_shape, docstring_argument_types
@@ -48,11 +48,13 @@ def infer_source_contract(candidate: dict[str, Any]) -> dict[str, Any]:
         "inferred_output_type": inferred_output,
         "output_inference_basis": output_basis,
         "return_paths": _return_path_count(function),
+        "literal_return_only": literal_return_only(function),
         "yield_paths": yield_path_count(function),
         "raises": _raise_names(function),
         "state_mutation": _has_state_mutation(function),
         "dynamic_dispatch": has_receiver_request_dispatch(function) if function is not None else False,
         "file_extension_policy": is_file_extension_policy(function),
+        "called_operations": _called_operations(function),
         "observed_side_effects": observed_side_effects(function, args),
         "decorators": sorted(str(value) for value in candidate.get("decorators", []) if value),
     }
@@ -227,6 +229,12 @@ def _call_name(node: ast.AST | None) -> str:
         base = _call_name(node.value)
         return f"{base}.{node.attr}" if base else node.attr
     return ""
+
+
+def _called_operations(function: ast.AST | None) -> list[str]:
+    if function is None:
+        return []
+    return sorted({_call_name(node.func) for node in callable_scope_walk(function) if isinstance(node, ast.Call)} - {""})
 
 
 def _snippet_text(value: object) -> str:

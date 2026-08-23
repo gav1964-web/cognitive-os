@@ -1,5 +1,4 @@
 """Project-driven self-improvement loop for Cognitive OS roles."""
-
 from __future__ import annotations
 
 import json
@@ -44,18 +43,22 @@ def train_on_project(
     regression_projects: list[Path] | None = None,
     promote_config: bool | None = None,
     write: bool = True,
+    prepared_probe: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
     target = float(target_score or policy.get("trigger_score_below") or 9.7)
-    source_before = _source_fingerprint(project_dir)
-    baseline = _evaluate(root, project_dir, write=True)
+    probe = prepared_probe or probe_project(
+        root=root, project_dir=project_dir, target_score=target,
+        local_config=local_config, teacher_config=teacher_config,
+    )
+    source_before = str(probe["source_fingerprint"])
+    baseline = dict(probe["baseline"])
     if baseline["status"] == "ok" and baseline["project_min_score"] >= target:
         return _report(project_dir, target, baseline, None, None, status="already_at_target")
     local = local_config or LocalInferenceConfig.from_env()
     teacher = teacher_config or LocalInferenceConfig.from_l45_env()
     failure_packet = _failure_packet(baseline, target)
-    diagnosis = diagnose_training_failure(failure_packet, local_config=local, teacher_config=teacher)
-    diagnosis = _validate_recommended_source(diagnosis, baseline)
+    diagnosis = dict(probe["diagnosis"])
     plugin_cycle, config_evolution, plugin_attempts = run_training_improvement_plugins(
         root, project_dir, failure_packet, diagnosis, regression_projects or [], promote=promote_config
     )
@@ -113,6 +116,30 @@ def train_on_project(
     return report
 
 
+def probe_project(
+    *, root: Path, project_dir: Path, target_score: float,
+    local_config: LocalInferenceConfig | None = None,
+    teacher_config: LocalInferenceConfig | None = None,
+    evaluation_target: str | None = None,
+) -> dict[str, Any]:
+    """Measure and diagnose once so hypothesis screening can precede training."""
+    source_fingerprint = _source_fingerprint(project_dir)
+    baseline = _evaluate(root, project_dir, write=True, evaluation_target=evaluation_target)
+    diagnosis = None
+    if baseline["status"] != "ok" or baseline["project_min_score"] < target_score:
+        local = local_config or LocalInferenceConfig.from_env()
+        teacher = teacher_config or LocalInferenceConfig.from_l45_env()
+        packet = _failure_packet(baseline, target_score)
+        diagnosis = diagnose_training_failure(packet, local_config=local, teacher_config=teacher)
+        diagnosis = _validate_recommended_source(diagnosis, baseline)
+    return {
+        "project": project_dir.name,
+        "baseline": baseline,
+        "diagnosis": diagnosis,
+        "source_fingerprint": source_fingerprint,
+    }
+
+
 def _run_post_trial_admission(
     root: Path,
     project_dir: Path,
@@ -128,7 +155,19 @@ def _run_post_trial_admission(
     source = str(baseline.get("selected_extraction_candidate") or "")
     if outcome.get("status") != "candidate_improvement_confirmed" or not challenger or challenger == source:
         return {"status": "not_applicable", "reason": "confirmed_reselection_missing", "attempts": []}
-    enriched = {**diagnosis, "recommended_source": challenger}
+    enriched = {
+        **diagnosis,
+        "recommended_source": challenger,
+        "measured_selection_effect": {
+            "status": "confirmed_selection_effect",
+            "source": source,
+            "challenger": challenger,
+            "score_delta": outcome.get("score_delta"),
+            "role_regressions": list(outcome.get("role_regressions") or []),
+            "control": baseline,
+            "treatment": trained,
+        },
+    }
     return run_post_training_admission(
         root, project_dir, failure_packet, enriched, regression_projects, promote=promote
     )
@@ -243,19 +282,20 @@ def _evaluate(
         "artifacts": result.get("artifacts", {}),
     }
 
-
 def _failure_packet(case: dict[str, Any], target: float) -> dict[str, Any]:
     packet = {
         "project_min_score": case["project_min_score"],
         "target_score": target,
         "role_scores": case["role_scores"],
         "status": case["status"],
-        "selected_candidate": case.get("selected_extraction_candidate"),
+        "selected_candidate": case.get("selected_extraction_candidate")
+        or dict(case.get("selected_candidate_quality") or {}).get("target"),
         "candidate_quality": _compact_candidate_quality(case.get("selected_candidate_quality", {})),
         "warnings": case.get("warnings", [])[:12],
         "downstream_evidence": case.get("downstream_evidence", {}),
         "artifact_paths": {key: dict(value or {}).get("path") for key, value in case.get("artifacts", {}).items()},
         "artifact_evidence": _artifact_evidence(case.get("artifacts", {})),
+        "retrieval_recovery_candidates": list(case.get("retrieval_recovery_candidates") or [])[:4],
     }
     encoded = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     if len(encoded) > 6000:

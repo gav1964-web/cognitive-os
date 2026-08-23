@@ -65,6 +65,28 @@ def test_stateless_method_calling_framework_runtime_requires_specialized_fixture
     assert result["runtime_call_scope"] == "external_global"
 
 
+def test_complete_typed_stateless_architecture_method_can_enter_probe():
+    context = _context(
+        "def resolve(self, payload: Request) -> Result: return decide(payload)"
+    )
+    context["dependency_readiness"] = {"status": "ready"}
+    context["snippet"]["structural_contract"].update({
+        "argument_count": 1,
+        "typed_argument_count": 1,
+        "explicit_return_annotation": "Result",
+        "observed_side_effects": [],
+    })
+
+    result = first_slice_viability("service.py:Engine.resolve", context)
+
+    assert result["status"] == "eligible"
+    assert result["reselection_required"] is False
+    assert any(
+        row["rule_id"] == "typed_stateless_architecture_method_probe"
+        for row in result["matched_rules"]
+    )
+
+
 def test_static_method_calling_scalar_parameter_is_fixture_ready():
     result = first_slice_viability(
         "response.py:Response.format_items",

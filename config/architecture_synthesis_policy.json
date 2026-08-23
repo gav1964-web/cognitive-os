@@ -17,6 +17,36 @@
       "Add contract and negative tests."
     ]
   },
+  "first_slice_target_priority": {
+    "path_contains": [
+      {"token": "/service.py", "weight": 24},
+      {"token": "/services.py", "weight": 24},
+      {"token": "/factory.py", "weight": 24},
+      {"token": "/api.py", "weight": 14}
+    ],
+    "symbol_contains": [
+      {"token": "parse_file", "weight": 18},
+      {"token": "providers_from_config", "weight": 22}
+    ],
+    "symbol_prefixes": [
+      {"token": "build_", "weight": 18},
+      {"token": "create_", "weight": 18},
+      {"token": "resolve", "weight": 18},
+      {"token": "parse_", "weight": 12}
+    ],
+    "low_value_path_contains": [
+      {"token": "/helpers.py", "weight": 14},
+      {"token": "/utils.py", "weight": 12},
+      {"token": "/_llm_client.py", "weight": 16},
+      {"token": "/routing.py", "weight": 22}
+    ],
+    "low_value_symbol_prefixes": [
+      {"token": "should_", "weight": 20},
+      {"token": "has_", "weight": 18},
+      {"token": "is_", "weight": 14},
+      {"token": "get_", "weight": 8}
+    ]
+  },
   "defer": {
     "default_items": [
       "Do not rewrite the whole project before one slice has passing contract tests."

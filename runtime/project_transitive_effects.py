@@ -37,12 +37,13 @@ def _project_nodes(root: Path, *, max_files: int) -> dict[str, dict[str, Any]]:
             relative = path.relative_to(root).as_posix()
         except (OSError, SyntaxError, ValueError):
             continue
+        lines = text.splitlines(keepends=True)
         for qualified_name, node in _module_callables(tree):
             source = f"{relative}:{qualified_name}"
             nodes[source] = {
                 "symbol": node.name,
                 "calls": _called_symbols(node),
-                "effects": set(infer_ast_side_effects(node, _node_text(text, node))),
+                "effects": set(infer_ast_side_effects(node, _node_text(lines, node))),
             }
     return nodes
 
@@ -61,14 +62,12 @@ def _module_callables(tree: ast.Module) -> list[tuple[str, ast.FunctionDef | ast
     return callables
 
 
-def _node_text(source: str, node: ast.AST) -> str:
-    segment = ast.get_source_segment(source, node)
-    if segment is not None:
-        return segment
-    try:
-        return ast.unparse(node)
-    except (TypeError, ValueError):
+def _node_text(source_lines: list[str], node: ast.AST) -> str:
+    start = getattr(node, "lineno", None)
+    end = getattr(node, "end_lineno", None)
+    if not isinstance(start, int) or not isinstance(end, int):
         return ""
+    return "".join(source_lines[max(0, start - 1) : end])
 
 
 def _source_effect_report(

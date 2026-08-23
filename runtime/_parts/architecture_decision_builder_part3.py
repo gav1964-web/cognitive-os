@@ -119,6 +119,7 @@ def _fallback_architecture_synthesis(project_report: dict[str, Any]) -> dict[str
             "name": _fallback_slice_name(primary),
             "goal": str(plan.get("goal") or "Extract the first source-backed reusable capability."),
             "targets": candidates[:8],
+            "target_limit": 1,
             "steps": _fallback_slice_steps(primary, plan, readiness),
             "knowledge_rule": str(FALLBACK_SLICE_POLICY.get("knowledge_rule") or "project_map_report_minimal_extraction_plan"),
         },
@@ -250,7 +251,6 @@ def _callable_transform_fallback_candidates(answers: dict[str, Any]) -> list[str
             rows.append(target)
     limit = int(policy.get("max_candidates") or 3)
     return _dedupe_strings(rows)[:limit]
-
 def _callable_transform_fallback_target(target: str, item: dict[str, Any], *, policy: dict[str, Any]) -> bool:
     if not _implementation_brief_source(target):
         return False

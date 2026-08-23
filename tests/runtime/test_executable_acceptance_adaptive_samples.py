@@ -70,6 +70,70 @@ def test_source_isolated_method_infers_mapping_receiver_attribute(tmp_path):
     assert loaded["method_instance_attributes"] == {"_widgets": {}}
 
 
+def test_source_isolated_method_infers_numeric_receiver_attribute(tmp_path):
+    source = tmp_path / "reader.py"
+    source.write_text(
+        "class Reader:\n"
+        "    def reset(self):\n"
+        "        self._order = list(range(self._count))\n"
+        "        return self._order\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "Reader.reset")
+
+    assert loaded["callable"]() == [0]
+    assert loaded["method_instance_attributes"]["_count"] == 1
+
+
+def test_source_isolated_method_infers_required_mapping_key(tmp_path):
+    source = tmp_path / "registry.py"
+    source.write_text(
+        "class Registry:\n"
+        "    def remove(self, node_id):\n"
+        "        self._items.pop(node_id)\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "Registry.remove")
+
+    node_id = "0" * 64
+    assert loaded["callable"](node_id) is None
+    assert node_id in loaded["method_instance_attributes"]["_items"]
+
+
+def test_source_isolation_falls_back_for_newer_stdlib_symbol(tmp_path):
+    source = tmp_path / "clock.py"
+    source.write_text(
+        "from datetime import UTC, datetime\n"
+        "def now():\n"
+        "    return datetime.now(UTC)\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "now")
+
+    assert loaded["reason"] == ""
+    assert loaded["callable"]().utcoffset().total_seconds() == 0
+
+
+def test_infers_chainable_parameter_protocol_fixture(tmp_path):
+    source = tmp_path / "tree_output.py"
+    source.write_text(
+        "def add_components(branch, components):\n"
+        "    for name in components:\n"
+        "        branch.add(name).add('source')\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "add_components")
+
+    assert inferred["branch"] == {
+        "value": {"__fixture__": "safe_method_attribute"},
+        "source": "ast_parameter_callable_protocol:add",
+    }
+
+
 def test_source_isolated_method_stubs_delegated_transport(tmp_path):
     source = tmp_path / "client.py"
     source.write_text(

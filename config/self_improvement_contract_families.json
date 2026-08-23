@@ -115,6 +115,14 @@
       "failure_modes": ["unsupported_source_shape", "field_projection_failure", "key_normalization_collision"],
       "reason": "AST proves a bounded object-to-mapping projection"
     },
+    "protocol_string_fallback_projection": {
+      "input_contract": {"source": "ProtocolLike"},
+      "output_contract": {"result": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "fallback projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["primary and fallback attribute paths are covered", "missing primary data selects the fallback deterministically", "source state is not mutated"],
+      "failure_modes": ["unsupported_source_shape", "primary_projection_failure", "fallback_projection_failure"],
+      "reason": "AST proves a bounded protocol-to-string projection with fallback paths"
+    },
     "callable_decorator_factory": {
       "input_contract": {"declaration": "DecoratorDeclaration", "options": "DecoratorOptions"},
       "output_contract": {"result": "Callable"},
@@ -130,6 +138,14 @@
       "validation_gates": ["all placeholders bind deterministically", "escaping and empty values are covered", "output is stable for identical parameters"],
       "failure_modes": ["missing_parameter", "invalid_parameter_type", "template_render_failure"],
       "reason": "AST proves a bounded parameterized text builder"
+    },
+    "cryptographic_digest_transform": {
+      "input_contract": {"source": "str"},
+      "output_contract": {"digest": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "digest calculation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["identical inputs produce identical digests", "input encoding is explicit", "source text is not mutated"],
+      "failure_modes": ["unsupported_input_type", "encoding_failure", "digest_algorithm_unavailable"],
+      "reason": "AST proves a bounded cryptographic digest transform"
     },
     "mapping_observability_validation_command": {
       "input_contract": {"path": "PathLike", "values": "MappingLike"},

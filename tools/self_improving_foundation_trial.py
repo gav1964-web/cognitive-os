@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.self_improving_foundation_trial import run_self_improving_foundation_trial
-from tools.self_improvement_project_discovery import gitlab_holdout_discoverer
+from tools.self_improvement_project_discovery import holdout_discoverer
 
 
 def main() -> int:
@@ -47,7 +47,7 @@ def main() -> int:
         executable_acceptance=not args.no_executable_acceptance,
         _holdout_discoverer=(
             None if args.no_hypothesis_discovery or args.no_write
-            else gitlab_holdout_discoverer(root)
+            else holdout_discoverer(root)
         ),
         _progress=_progress,
     )

@@ -108,6 +108,17 @@ def test_search_paginates_only_until_enough_unseen_projects_exist():
     assert search.call_args_list[1].args[0]["page"] == "2"
 
 
+def test_search_respects_discovery_round_page_start():
+    policy = {
+        "minimum_stars": 1, "maximum_size_kb": 10,
+        "maximum_search_pages": 2, "search_page_start": 3,
+    }
+    with patch("tools.github_blind_corpus._search_page", return_value={"items": []}) as search:
+        _search_stratum({"queries": ["state registry"]}, policy, needed=1)
+
+    assert [call.args[0]["page"] for call in search.call_args_list] == ["3", "4"]
+
+
 def test_authenticated_search_does_not_put_token_in_command():
     completed = type("Completed", (), {"returncode": 0, "stdout": '{"items": []}', "stderr": ""})()
     with patch("subprocess.run", return_value=completed) as run:

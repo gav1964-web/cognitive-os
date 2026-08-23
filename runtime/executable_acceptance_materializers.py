@@ -1,12 +1,8 @@
 """Materialize config-backed executable acceptance fixtures."""
 
 from __future__ import annotations
-
 from typing import Any
-
 from .executable_acceptance_policy import sample_value
-
-
 def materialize(value: Any) -> Any:
     if isinstance(value, dict):
         value = _domain_coerced_payload(value)
@@ -17,6 +13,8 @@ def materialize(value: Any) -> Any:
             return lambda schema: schema.items() if hasattr(schema, "items") else []
         if fixture == "callable_identity":
             return lambda value, *args, **kwargs: value
+        if fixture == "callable_logging_record_message":
+            return lambda record, *args, **kwargs: record.getMessage() if hasattr(record, "getMessage") else str(record)
         if fixture == "callable_noop":
             return lambda *args, **kwargs: None
         if fixture == "callable_float":
@@ -75,6 +73,8 @@ def materialize(value: Any) -> Any:
         if fixture == "declared_model":
             fields = {str(key): materialize(item) for key, item in dict(value.get("fields") or {}).items()}
             return type(str(value.get("type") or "AcceptanceModel"), (), fields)()
+        if fixture == "logging_log_record":
+            return __import__("logging").LogRecord("acceptance", 20, "", 0, "sample", (), None)
         if fixture == "jsonrpc_adapter":
             return type("Adapter", (), {"validate_python": lambda self, value, **kwargs: value})()
         if fixture == "click_context_noop":
@@ -103,6 +103,8 @@ def materialize(value: Any) -> Any:
             return parser
         if fixture == "bytes_io_empty":
             return __import__("io").BytesIO(b"")
+        if fixture == "datetime_utc":
+            return __import__("datetime").datetime(2026, 1, 2, 3, 4, 5, tzinfo=__import__("datetime").timezone.utc)
         if fixture in {"bytes_empty", "bytes_literal"}:
             return bytes.fromhex(str(value.get("hex") or ""))
         if fixture == "numpy_array":
@@ -124,6 +126,8 @@ def materialize(value: Any) -> Any:
         if fixture == "readable_temp_path":
             from .executable_acceptance_path_fixtures import readable_temp_path
             return readable_temp_path()
+        if fixture == "temporary_directory":
+            return __import__("runtime.executable_acceptance_path_fixtures", fromlist=["temporary_directory"]).temporary_directory()
         if fixture == "delimited_text_path":
             from .executable_acceptance_path_fixtures import delimited_text_path
             return delimited_text_path(str(value.get("delimiter") or ","), int(value.get("columns") or 1))
@@ -166,8 +170,6 @@ def materialize(value: Any) -> Any:
     if isinstance(value, list):
         return [materialize(item) for item in value]
     return value
-
-
 def _stub_init(self: Any, *args: Any, **kwargs: Any) -> None:
     self.__dict__.update(kwargs)
 

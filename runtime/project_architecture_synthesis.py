@@ -1,5 +1,4 @@
 """Knowledge-backed architecture synthesis for project-analysis reports."""
-
 from __future__ import annotations
 import ast
 import hashlib
@@ -8,6 +7,7 @@ from typing import Any
 
 from .architecture_synthesis_policy import load_architecture_synthesis_policy
 from .architecture_slice_naming import semantic_first_slice_name
+from .architecture_target_priority import rank_architecture_targets
 from .knowledge_usage_telemetry import record_knowledge_usage
 from .role_knowledge import role_knowledge_distribution
 from .project_facts import facts_from_project_report, llm_fact_digest
@@ -270,14 +270,15 @@ def _source_targets(sources: Any, facts: dict[str, Any], analysis_tasks: dict[st
             rows.extend(str(row.get("target") or "") for row in bottlenecks)
     return [row for row in rows if row]
 
-
 def _prefer_targets(rows: list[str], needles: list[str], knowledge: dict[str, Any]) -> list[str]:
     selected: list[str] = []
     for needle in needles:
         match = _find_contains(rows, needle)
         if match and match not in selected:
             selected.append(match)
-    for row in rows:
+    remaining = [row for row in rows if row not in selected]
+    priority = dict(ARCHITECTURE_SYNTHESIS_POLICY.get("first_slice_target_priority") or {})
+    for row in rank_architecture_targets(remaining, priority):
         if row not in selected:
             selected.append(row)
     active = [row for row in selected if not _is_context_only_target(row, knowledge)]

@@ -55,17 +55,142 @@ The portable CI gate runs repository-contained deterministic checks only. Live L
 
 Foundation self-improvement now includes an autonomous hypothesis-validation
 step. After a staged measured hypothesis, Cognitive OS can derive a portable
-failure signature, discover two or three unseen similar GitLab projects, train
-on them sequentially, run post-training admission, and then verify or roll back
+failure signature, discover a bounded unseen reserve through the
+`GitLab -> GitHub` fallback chain, probe it, train only two or three projects
+with a matching diagnosed failure class and portable signature, run post-training admission, and then verify or roll back
 the promotion on the original corpus. The discovery selection is frozen under
 `artifacts/hypothesis_holdouts/<hypothesis_id>/`; provider failure is reported as
-a blocked capability and does not count against the hypothesis.
+a blocked capability only after provider-chain exhaustion and does not count
+against the hypothesis. Complete and blocked validation trials are durable JSON artifacts.
 
-The implementation is locally verified by 79 focused self-improvement,
+The implementation is locally verified by 159 focused self-improvement,
 executable-acceptance, corpus, and discovery tests plus Config Doctor `37/37`.
-This is implementation evidence, not a new role-readiness score: the live GitLab
-holdout run remains pending because the anonymous API returned `429` during the
-attempt. Existing role minima below remain historical measured corpus results.
+This is implementation evidence, not a new role-readiness score. Live validation
+`hvp_af4117f08dcf` used the GitLab-to-GitHub fallback and probed six unseen projects.
+Two shared the broad `side_effectful_target` class, but none matched the staged
+`side_effectful_target|memory_state|no_value_return` signature. The strict rerun
+therefore ended `blocked / insufficient_matching_holdouts`, trained no unrelated
+project, and persisted `hypothesis_validation_20260821T061834122084Z.json`.
+Existing role minima below remain historical measured corpus results.
+
+The follow-up live multi-round trial probed 16 new projects across frozen selections
+`hvp_af4117f08dcf`, `_r2` and `_r3` (`6 + 6 + 4`). Every previously probed repository
+was excluded and per-round/per-probe progress remained visible. Zero projects matched
+the complete `side_effectful_target|memory_state|no_value_return` signature, so the
+trial correctly ended `blocked / insufficient_matching_holdouts` without training or
+promotion. The durable report is
+`hypothesis_validation_20260821T070819226402Z.json`. This is discovery-quality evidence,
+not role-readiness evidence: repository-metadata queries remain too broad for this
+function-level signature.
+
+Signature-aware v7 then separated adaptive eligibility from the 300-star release
+floor and used a 20-star holdout floor. It produced six new eligible projects and
+found the first exact independent match: `saurabhwadekar/FletX` at baseline `8.8`.
+Its metadata (`global state management library`, `state-management`) provides a
+portable vocabulary signal. With only one exact match, the gate correctly withheld
+training and promotion; report:
+`hypothesis_validation_20260821T072517405457Z.json`.
+
+V8 expanded the configuration vocabulary to six queries and measured six further
+projects. It found a nearby but distinct
+`side_effectful_target|memory_state|explicit_return_annotation` case and no second
+exact `no_value_return` match, so training remained blocked. The runtime now
+re-probes and reuses FletX from durable exact evidence after planner evolution
+instead of excluding it from search and forgetting it. V8 report:
+`hypothesis_validation_20260821T073240035636Z.json`.
+
+V9 kept the evaluator unchanged and expanded only discovery vocabulary with
+portable repository signals observed around the first exact match: state-management,
+global-state descriptions, event-driven systems, state machines and caches. The
+trial re-probed three durable projects, including the still-exact FletX result at
+`8.8`, and measured six new projects. Four new projects reached `9.7`; the two
+remaining failures had different signatures (`observability` at `8.8` and
+`dependency_boundary` at `7.5`). No second exact
+`side_effectful_target|memory_state|no_value_return` match was found, so Cognitive OS
+correctly withheld training and promotion after three rounds. Report:
+`hypothesis_validation_20260821T081215897018Z.json`. That immutable report predates
+the counter clarification and records `discovered_project_count=9` as the aggregate
+`6 new + 3 prior`; subsequent reports keep new discovery and prior evidence separate.
+
+V10 replaces further keyword tuning with two-stage retrieval. Each round can freeze
+18 metadata candidates, scan at most 120 product Python files and 3000 callables per
+project, then freeze no more than six projects for the full role probe. Structural
+matches are ranked first; a bounded fallback preserves recall when fewer than two
+matches are visible. The screen shares source-contract inference with the role
+pipeline, but remains non-scoring retrieval evidence and cannot trigger training or
+promotion. Its live result is recorded below.
+
+Live v10 froze 18 new GitHub candidates and sent only six through the full probe.
+None matched the exact raw signature, but `lzjever/routilux` produced the same
+`side_effectful_target|memory_state` failure with an explicit `None` annotation.
+This showed that retrieval reduced full-probe cost threefold while the raw output
+basis over-specialized evidence. Report:
+`hypothesis_validation_20260821T083806084781Z.json`.
+
+V11 moved that equivalence into policy as the semantic `void_side_effect` family.
+The durable evidence loader then found and re-probed `FletX` and `routilux` without
+new network discovery. Both remained at baseline `8.8`; training changed neither
+score, verified zero projects and promoted nothing. Cognitive OS grouped them with
+the original `numerous/report-generator` failure and autonomously emitted
+`CapabilityDevelopmentRequest cdr_84e96967eadb` for a
+`candidate_selection_discriminator_plugin`. Final decision:
+`capability_development_required`; report:
+`hypothesis_validation_20260821T085307658091Z.json`. This is progress in the
+self-improvement control loop, not an improvement in role readiness.
+
+V12-v17 implemented the requested capability rather than raising a score by hand.
+`candidate_selection_discriminator` now tests existing ranked, reselection and ADR
+targets; `ImprovementPluginFoundryReport` binds the typed request to that plugin.
+A fixed shadow-treatment handoff raised `numerous/report-generator` and FletX from
+`8.8` to `9.6`. Expanding the bounded candidate window raised `python-memoization`
+from `8.8` to `9.7`; an initial policy promotion was invalidated after operational
+testing exposed an `hfos` regression to `5.0`, and the active KB record was removed.
+
+The corrected admission path requires matching regression projects, consumes the
+frozen measured treatment, synthesizes pairwise effect differences, snapshots KB
+state, and rolls back on score/status regression. Discovery requires a fresh match
+and clones with four bounded workers. V16 found unseen `Jarvis-v13` and improved it
+`8.8 -> 9.7`, but admission was withheld while measured-effect handoff was repaired.
+V17 then full-probed eight further unseen projects and ended honestly with
+`blocked / insufficient_new_matching_holdouts`; no policy is active and no readiness
+score is increased. Durable report:
+`hypothesis_validation_20260821T111943672167Z.json`.
+
+V18 improves recovery evidence rather than role scores. Hypothesis plans now carry
+a structured diagnosis envelope, metadata queries compose effect and output-basis
+terms before broad fallback, and full probes preserve exact, compatible, near-
+contrast and unrelated outcomes. Recovery reports publish matching yield and
+signature discrimination; contrasts remain non-training evidence. The focused
+self-improvement suite passes `128` tests and Config Doctor remains `37/37`. No role
+readiness increase is claimed without a new live holdout result.
+
+The first live v18 recovery probe revalidated four of five prior projects and
+reported matching yield/signature discrimination `0.8 / 0.8`, but found no fresh
+candidate. It also exposed two defects: normalized `void_side_effect` lacked query
+vocabulary, and known-regression `hfos` was treated as compatible despite an added
+filesystem write. V19 adds the missing composite-query vocabulary and policy-defined
+forbidden additional effects. This is a recovery correction, not a readiness gain.
+
+The probe-only v19 replay excluded `hfos`, retained four safe prior matches, and
+improved measured matching yield/signature discrimination from `0.8 / 0.8` to
+`1.0 / 1.0`; it still found zero fresh projects and remained correctly blocked.
+The remaining discovery defect was loss of provider-page position after a plan
+version change. V20 adds a durable semantic search cursor, so the next run resumes
+after pages 1-6 instead of scanning them again. No readiness increase is claimed.
+
+Live v20 correctly resumed at pages 7-12 and still found zero fresh eligible
+projects. It also exposed intermittent loss of FletX's redundant diagnosis class
+while its classified baseline signature remained intact. V21 restores a missing
+class from that portable signature only; effect/output and forbidden-effect gates
+remain strict. The forge candidate supply is still the active blocker.
+
+V22 replaced the shared cursor with per-query durable cursors, rotated bounded query
+batches, translated provider syntax, expanded portable state vocabulary, and lowered
+only adaptive-discovery star floors. Live probe-only validation supplied 16 new full
+probes instead of zero and preserved one near contrast, but found no fresh exact
+match. It remained `blocked / insufficient_new_matching_holdouts`; role readiness
+is unchanged. The active blocker is now first-slice alignment precision in the
+structural prescreen, not forge candidate supply.
 
 Latest MVP readiness command: `python tools/role_mvp_readiness.py --root .`. Generated reports under `artifacts/` are machine-local evidence and are not committed as repository fixtures.
 

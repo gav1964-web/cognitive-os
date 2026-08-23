@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from runtime.architect_red_team import red_team_architecture_decision
+from runtime.architect_red_team import _looks_like_contract_type_ref, red_team_architecture_decision
+
+
+def test_class_qualified_method_is_not_misclassified_as_contract_type():
+    assert not _looks_like_contract_type_ref("store.py:Store.set_value")
+    assert _looks_like_contract_type_ref("store.py:Store.UpdateResult")
 
 
 def test_architect_red_team_accepts_bounded_source_backed_adr():

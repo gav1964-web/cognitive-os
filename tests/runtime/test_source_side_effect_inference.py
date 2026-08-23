@@ -107,3 +107,13 @@ def test_terminal_widget_render_calls_are_external_runtime_effects():
     node = ast.parse("def redraw(self):\n    self.goto(0, 0)\n    self.wr('ready')\n").body[0]
 
     assert infer_ast_side_effects(node, ast.unparse(node)) == ["external_runtime"]
+
+
+def test_pure_factory_is_excluded_without_hiding_real_observability():
+    factory = ast.parse("def keys():\n    return logging.makeLogRecord({}).__dict__.keys()\n").body[0]
+    mixed = ast.parse(
+        "def report():\n    logging.makeLogRecord({})\n    logger.info('ready')\n"
+    ).body[0]
+
+    assert infer_ast_side_effects(factory, ast.unparse(factory)) == []
+    assert infer_ast_side_effects(mixed, ast.unparse(mixed)) == ["observability"]

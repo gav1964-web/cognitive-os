@@ -19,6 +19,8 @@ def artifact_evidence(artifacts: dict[str, Any]) -> dict[str, Any]:
             continue
         if key == "architecture_decision":
             first_slice = dict(payload.get("first_slice_contract") or {})
+            clamp = dict(payload.get("evaluation_target_clamp") or {})
+            source_pool = _source_candidate_pool(dict(payload.get("source_context") or {}))
             evidence[key] = {
                 "first_slice": {
                     "goal": first_slice.get("goal"),
@@ -26,6 +28,14 @@ def artifact_evidence(artifacts: dict[str, Any]) -> dict[str, Any]:
                 },
                 "risks": [_compact_risk(row) for row in list(payload.get("risks") or [])[:4]],
                 "advisory": payload.get("architect_advisory"),
+                "evaluation_target_clamp": {
+                    "mode": clamp.get("mode"),
+                    "target": clamp.get("target"),
+                    "candidate_pool": [
+                        str(item) for item in list(clamp.get("candidate_pool") or [])[:8]
+                    ],
+                } if clamp else {},
+                "source_candidate_pool": source_pool,
             }
         else:
             contract = dict(payload.get("extraction_contract") or {})
@@ -65,7 +75,7 @@ def compact_candidate_quality(value: Any) -> dict[str, Any]:
     structural = dict(row.get("structural_evidence") or {})
     result["structural_evidence"] = {
         key: structural.get(key)
-        for key in ("observed_side_effects", "state_mutation")
+        for key in ("literal_return_only", "observed_side_effects", "state_mutation")
         if structural.get(key) not in (None, "", [])
     }
     return result
@@ -76,7 +86,11 @@ def minimal_artifact_evidence(value: Any) -> dict[str, Any]:
     adr = dict(evidence.get("architecture_decision") or {})
     spec = dict(evidence.get("technical_spec") or {})
     return {
-        "architecture_decision": {"first_slice": adr.get("first_slice")},
+        "architecture_decision": {
+            "first_slice": adr.get("first_slice"),
+            "evaluation_target_clamp": adr.get("evaluation_target_clamp"),
+            "source_candidate_pool": list(adr.get("source_candidate_pool") or [])[:12],
+        },
         "technical_spec": {
             "status": spec.get("status"),
             "candidate": spec.get("candidate"),
@@ -127,6 +141,31 @@ def _compact_ranked(value: Any) -> dict[str, Any]:
         "side_effects": list(row.get("side_effects") or [])[:5],
         "reasons": [str(item)[:160] for item in list(row.get("reasons") or [])[:4]],
     }
+
+
+def _source_candidate_pool(context: dict[str, Any]) -> list[str]:
+    rows = []
+    for source, value in context.items():
+        if ":" not in str(source):
+            continue
+        row = dict(value or {})
+        snippet = dict(row.get("snippet") or {})
+        structural = dict(snippet.get("structural_contract") or row.get("structural_contract") or {})
+        dependency = dict(row.get("dependency_readiness") or {})
+        effects = set(str(item) for item in row.get("side_effects") or [])
+        effects.update(str(item) for item in structural.get("observed_side_effects") or [])
+        binding = str(snippet.get("target_binding") or row.get("target_binding") or "")
+        output = str(structural.get("output_inference_basis") or "")
+        rows.append((
+            int(bool(effects)),
+            int(binding not in {"function_symbol", "staticmethod", "classmethod"}),
+            int(dependency.get("status") not in {"", "ready"}),
+            int(int(structural.get("return_paths") or 0) < 1),
+            int(output in {"", "insufficient_structural_evidence", "no_value_return"}),
+            str(source),
+        ))
+    rows.sort()
+    return [row[-1] for row in rows[:12]]
 
 
 def _compact_risk(value: Any) -> dict[str, Any]:

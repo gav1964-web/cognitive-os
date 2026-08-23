@@ -314,11 +314,7 @@ def positive_case_binding(func: object, target: str, obligations: list[dict[str,
     for row in obligations:
         if row.get("target") != target or row.get("kind") != "positive_contract_case":
             continue
-        configured.update({
-            name: value
-            for name, value in dict(row.get("given") or {}).items()
-            if isinstance(value, dict) and value.get("__fixture__")
-        })
+        configured.update(dict(row.get("given") or {}))
     evidence = {
         name: dict(row)
         for name, row in dict(inferred or {}).items()
@@ -332,16 +328,16 @@ def positive_case_binding(func: object, target: str, obligations: list[dict[str,
 def _weaker_than_configured_fixture(
     name: str, inferred: dict[str, Any], defaults: dict[str, Any]
 ) -> bool:
+    if name not in defaults:
+        return False
     configured = defaults.get(name)
     inferred_value = inferred.get("value")
-    if str(inferred.get("source") or "").startswith("ast_mapping_protocol:"):
+    source = str(inferred.get("source") or "")
+    if source.startswith("ast_mapping_protocol:") or source == "ast_required_mapping_keys":
         return False
-    return (
-        isinstance(configured, dict)
-        and bool(configured.get("__fixture__"))
-        and isinstance(inferred_value, dict)
-        and bool(inferred_value.get("__fixture__"))
-    )
+    if configured == "sample" or isinstance(configured, (dict, list)) and not configured:
+        return False
+    return configured != inferred_value
 
 
 def signature_needs_negative_case(func: object, target: str, obligations: list[dict[str, Any]]) -> bool:

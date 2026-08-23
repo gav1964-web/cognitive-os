@@ -55,6 +55,58 @@
       "reason": "method delegates to an unresolved module or framework runtime and requires a specialized fixture boundary"
     },
     {
+      "rule_id": "typed_stateless_architecture_method_probe",
+      "score_delta": 60,
+      "reselection_override": true,
+      "match": {
+        "receiver_kind_in": ["stateless_instance"],
+        "dependency_status_in": ["ready"],
+        "contract_complete_in": ["true"],
+        "direct_side_effects_in": [""],
+        "symbol_contains_any": ["build", "create", "parse", "resolve"]
+      },
+      "reason": "complete typed stateless architecture method is eligible for an executable source-isolated probe"
+    },
+    {
+      "rule_id": "logging_formatter_record_boundary",
+      "score_delta": 230,
+      "reselection_override": true,
+      "match": {
+        "path_contains_any": ["logging", "formatter"],
+        "symbol_in": ["format"],
+        "receiver_kind_in": ["instance"],
+        "dependency_status_in": ["ready"],
+        "input_complexity_in": ["object_protocol"],
+        "direct_side_effects_in": ["memory_state"]
+      },
+      "reason": "logging formatter mutation is bounded to a fixture-backed LogRecord-to-text contract"
+    },
+    {
+      "rule_id": "logging_sink_adapter_boundary",
+      "score_delta": 310,
+      "reselection_override": true,
+      "match": {
+        "path_contains_any": ["handler", "journal", "logging"],
+        "symbol_in": ["__call__"],
+        "owner_class_contains_any": ["handler", "stream"],
+        "dependency_status_in": ["ready"],
+        "direct_side_effects_contains_any": ["network"]
+      },
+      "reason": "logging sink call is executable only through its process-isolated fake transport contract"
+    },
+    {
+      "rule_id": "logging_record_projection_boundary",
+      "score_delta": 220,
+      "reselection_override": true,
+      "match": {
+        "path_contains_any": ["handler", "logging"],
+        "symbol_contains_any": ["format_record", "record_format"],
+        "owner_class_contains_any": ["formatter", "handler"],
+        "dependency_status_in": ["ready"]
+      },
+      "reason": "logging record projection is executable with a source-derived receiver and LogRecord fixture"
+    },
+    {
       "rule_id": "static_method_boundary",
       "score_delta": 15,
       "match": {
@@ -68,7 +120,7 @@
       "score_delta": -70,
       "reselection_required": true,
       "match": {
-        "symbol_in": ["execute", "launch", "retry", "_kill_process", "kill_process", "shutdown", "terminate"]
+        "symbol_in": ["close", "execute", "flush", "force_flush", "launch", "retry", "_kill_process", "kill_process", "shutdown", "terminate"]
       },
       "reason": "runtime lifecycle entrypoint requires environment orchestration rather than first-slice execution"
     },
@@ -86,7 +138,7 @@
       "score_delta": -70,
       "reselection_required": true,
       "match": {
-        "symbol_contains_any": ["create_connection", "handler", "pretrained", "train_model"]
+        "symbol_contains_any": ["create_connection", "pretrained", "train_model"]
       },
       "reason": "resource, training, or dispatch boundary has high execution cost and requires a cheaper contract slice"
     },
@@ -104,7 +156,8 @@
       "score_delta": -50,
       "reselection_required": true,
       "match": {
-        "path_contains_any": ["/cli/", "/commands/"]
+        "path_contains_any": ["/cli/", "/commands/"],
+        "symbol_in": ["cli", "command", "execute", "main", "run"]
       },
       "reason": "CLI command surface depends on process configuration and is deferred behind reusable core logic"
     },

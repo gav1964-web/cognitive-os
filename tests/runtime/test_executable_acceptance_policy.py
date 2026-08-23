@@ -53,6 +53,7 @@ def test_temporary_policy_is_scoped_and_restored():
     assert "WsgiToAsgiInstance.build_environ" in method_fixture_policy()["instance_attribute_profiles"]
     assert "DataProfilerColumnDomainBuilder._get_domains" in method_fixture_policy()["instance_attribute_profiles"]
     assert "socket" in source_isolation_policy()["effect_module_stubs"]
+    assert "logging.Handler" in source_isolation_policy()["preserved_stdlib_class_bases"]
     assert "optional dependency" in skipped_recovery_hint("import_failed_missing_module")
     assert "closure" in skipped_recovery_hint("nested_function_requires_closure")
     assert sample_value("Callable[[dict], str]", "id_of") == {"__fixture__": "callable_id_of"}

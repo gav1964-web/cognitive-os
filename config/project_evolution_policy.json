@@ -36,21 +36,238 @@
     "teacher_profile": "external_l45_intent_resolver",
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
+    "maximum_field_trial_case_seconds": 60,
     "hypothesis_holdout": {
       "enabled": true,
-      "provider": "gitlab",
-      "minimum_projects": 2,
-      "maximum_projects": 3,
+      "plan_version": "hypothesis_holdout.v25",
+      "providers": ["gitlab", "github"],
+      "provider_policy_overrides": {
+        "gitlab": {"minimum_stars": 0},
+        "github": {"minimum_stars": 5, "maximum_size_kb": 30000}
+      },
+      "minimum_projects": 4,
+      "minimum_emergent_redirect_projects": 4,
+      "minimum_new_projects": 1,
+      "maximum_projects": 4,
+      "candidate_pool_projects": 24,
+      "clone_workers": 4,
+      "maximum_discovery_rounds": 3,
       "maximum_search_pages": 2,
+      "queries_per_round": 8,
+      "signature_normalization": {
+        "effect_match_mode": "required_subset",
+        "near_match_score": 0.65,
+        "failure_class_families": {
+          "spec_writer_candidate_selection": [
+            "spec_contract_unsafe_candidates",
+            "spec_writer_blocked_no_safe_candidate",
+            "spec_writer_no_safe_candidate"
+          ]
+        },
+        "forbidden_additional_effects": [
+          "database_write",
+          "filesystem_write",
+          "network",
+          "process_control",
+          "subprocess"
+        ],
+        "output_basis_families": {
+          "void_side_effect": [
+            "no_value_return",
+            "explicit_none_annotation"
+          ]
+        }
+      },
+      "query_composition": {
+        "enabled": true,
+        "maximum_queries": 6
+      },
+      "structural_prescreen": {
+        "enabled": true,
+        "maximum_shortlist_projects": 8,
+        "minimum_shortlist_projects": 2,
+        "maximum_python_files": 120,
+        "maximum_functions": 3000,
+        "maximum_file_bytes": 500000,
+        "maximum_project_python_file_bytes": 1000000,
+        "maximum_evidence_samples": 8,
+        "excluded_directories": [
+          "tests",
+          "test",
+          "docs",
+          "examples",
+          "benchmarks",
+          "build",
+          "dist",
+            "generated",
+            "vendor",
+            "vendors",
+            "third_party",
+            "third-party",
+            "3rdparty",
+            "site-packages",
+            "example_scenes"
+        ],
+          "excluded_file_names": [
+            "conftest.py",
+            "setup.py"
+        ],
+        "excluded_file_prefixes": [
+          "test_"
+        ],
+        "excluded_callable_names": [
+          "__init__",
+          "__new__",
+          "__enter__",
+          "__exit__",
+          "setup",
+          "teardown",
+          "setUp",
+          "tearDown"
+        ],
+        "callable_name_tokens": {
+          "void_side_effect": [
+            "add",
+            "append",
+            "cache",
+            "clear",
+            "dispatch",
+            "emit",
+            "handle",
+            "record",
+            "register",
+            "remove",
+            "reset",
+            "set",
+            "store",
+            "update",
+            "write"
+          ]
+        },
+        "weights": {
+          "exact_effects": 60,
+          "compatible_effects": 40,
+          "overlapping_effects": 15,
+          "output_basis": 40,
+          "callable_name_signal": 20
+        }
+      },
       "query_profiles": {
         "side_effectful_target": ["state management", "report generator", "observability", "command handler"],
         "executable_sample_contract": ["data validation", "parser", "serializer", "python library"],
         "dependency_boundary": ["api client", "integration service", "plugin system", "adapter"],
         "first_slice_reselection_required": ["workflow engine", "service layer", "automation tool", "data pipeline"],
         "default": ["python application", "python library", "automation tool"]
+      },
+      "signature_query_terms": {
+        "maximum_queries": 58,
+        "effects": {
+          "memory_state": [
+            "topic:state-management",
+            "global state in:name,description",
+            "topic:event-driven",
+            "topic:state-machine",
+            "state registry",
+            "in-memory state",
+            "topic:cache",
+            "event dispatcher",
+            "plugin registry",
+            "command bus",
+            "observer pattern",
+            "session store",
+            "cache manager",
+            "reactive state",
+            "state container",
+            "listener registry",
+            "cache invalidation",
+            "memoization library",
+            "object registry",
+            "session manager",
+            "signal dispatcher",
+            "dependency injection container",
+            "state machine library",
+            "event bus",
+            "signal registry",
+            "callback registry",
+            "session backend",
+            "cache backend",
+            "identity map",
+            "unit of work",
+            "lifecycle manager",
+            "resource registry",
+            "hook manager",
+            "object pool",
+            "subscription manager",
+            "handler registry",
+            "middleware registry",
+            "service locator",
+            "state coordinator",
+            "runtime registry",
+            "component registry",
+            "task registry",
+            "connection pool",
+            "session registry",
+            "cache store",
+            "state store",
+            "event listener",
+            "callback manager",
+            "hook registry"
+          ],
+          "filesystem_read": ["configuration loader", "file reader"],
+          "observability": [
+            "telemetry collector",
+            "metrics recorder",
+            "structured logging",
+            "audit logger",
+            "activity tracker",
+            "progress reporter",
+            "status reporter",
+            "event recorder",
+            "trace recorder",
+            "diagnostic collector",
+            "console reporter",
+            "task monitor",
+            "job monitor",
+            "workflow monitor",
+            "agent framework",
+            "bot framework"
+          ],
+          "network": ["api client", "network adapter"]
+        },
+        "output_bases": {
+          "void_side_effect": [
+            "command handler",
+            "event handler",
+            "state updater",
+            "notification handler",
+            "logging handler",
+            "progress callback",
+            "lifecycle hook",
+            "command registry",
+            "status callback",
+            "event listener"
+          ],
+          "no_value_return": [
+            "command handler",
+            "event handler",
+            "state updater",
+            "notification handler",
+            "logging handler",
+            "progress callback",
+            "lifecycle hook",
+            "command registry",
+            "status callback",
+            "event listener"
+          ],
+          "return_expression": ["data transform", "query service"],
+          "explicit_return_annotation": ["typed service", "typed library"]
+        }
       }
     },
     "failure_classification": {
+      "reselection_trigger_map": {
+        "no_semantically_safe_candidate_in_approved_first_slice": "first_slice_reselection_required"
+      },
       "downstream_reason_map": {
         "side_effectful_target": "side_effectful_target",
         "first_slice_reselection_required": "first_slice_reselection_required",

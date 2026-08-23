@@ -135,3 +135,36 @@ def test_promoted_plugin_treatment_becomes_training_attempt(monkeypatch, tmp_pat
     assert evolution["promotion"]["applied"] is True
     assert attempts[0]["result"]["project_min_score"] == 9.7
     assert attempts[0]["parameter_changes"] == {"improvement_plugin": "config_mutation"}
+
+
+def test_shadow_selected_challenger_becomes_applied_training_attempt(monkeypatch, tmp_path):
+    cycle = {
+        "artifact_type": "SelfImprovementPluginCycleReport",
+        "status": "trial_passed",
+        "attempts": [{
+            "plugin_id": "candidate_selection_discriminator",
+            "status": "trial_passed",
+            "selected_challenger": "app.py:better",
+            "promotion_applied": False,
+            "evolution": {
+                "shadow": {
+                    "status": "ok",
+                    "project_min_score": 9.6,
+                    "selected_extraction_candidate": "app.py:better",
+                },
+                "promotion": {"applied": False},
+            },
+        }],
+    }
+    monkeypatch.setattr(
+        "runtime.self_improvement_plugin_adapter.run_improvement_plugin_cycle",
+        lambda **_kwargs: cycle,
+    )
+
+    _, _, attempts = run_training_improvement_plugins(
+        tmp_path, tmp_path / "weak", {}, {}, [tmp_path / "stable"], promote=None,
+    )
+
+    assert attempts[0]["parameter_applied"] is True
+    assert attempts[0]["plugin_evidence"]["promotion_applied"] is False
+    assert attempts[0]["parameter_changes"]["spec_writer_candidate_preference"] == "app.py:better"

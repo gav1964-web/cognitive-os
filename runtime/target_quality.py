@@ -1,7 +1,6 @@
 """Quality heuristics for selected first-slice targets."""
 
 from __future__ import annotations
-
 from typing import Any
 
 from .contract_archetype_inference import archetype_score_adjustments
@@ -10,6 +9,8 @@ from .source_contract_semantics import structural_quality_adjustment
 from .source_contract_types import all_contract_shapes_concrete
 from .target_structural_families import structural_contract_family_rule
 from .target_quality_policy import policy_tokens, target_quality_section
+from .target_quality_structural_risks import apply_structural_risk_caps
+from .target_quality_context import owner_qualified_target
 
 
 TARGET_QUALITY_POLICY = target_quality_section("target_quality")
@@ -97,7 +98,7 @@ def semantic_target_quality_report(
             "profiled_contract_family": False,
         }
     else:
-        archetype_adjustments = _contextual_archetype_adjustments(target, context_evidence)
+        archetype_adjustments = _contextual_archetype_adjustments(target, context_evidence, structural_evidence)
     score += int(profile_adjustments["score_delta"])
     score += int(archetype_adjustments["score_delta"])
     reasons.extend(profile_adjustments["reasons"])
@@ -128,7 +129,7 @@ def semantic_target_quality_report(
     reasons.extend(special_boundary["reasons"])
 
     suspicious = _suspicious_hits(path, symbol)
-    suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family) or _proven_bounded_helper(
+    suspicious_allowed = _profiled_suspicious_allowed(suspicious, symbol, profiled_contract_family) or bool(structural_rule.get("benign_support_path")) or _proven_bounded_helper(
         suspicious, reason_text, structural_evidence, input_contract, output_contract, side_effect_contract
     )
     meta = [token for token in META_INFRASTRUCTURE_TOKENS if token in lowered]
@@ -173,6 +174,10 @@ def semantic_target_quality_report(
         score -= 45
         marker = ", ".join(non_implementation) if non_implementation else "NotImplementedError-only body"
         reasons.append("declarative interface contract has no executable implementation: " + marker)
+    score, risk_reasons = apply_structural_risk_caps(
+        score, symbol, structural_evidence, profiled_contract_family
+    )
+    reasons.extend(risk_reasons)
     reasons.extend(profile_adjustments["penalty_reasons"])
     if _generic_unprofiled_candidate(path, symbol) and not profiled_contract_family:
         if score > GENERIC_UNPROFILED_SCORE_CAP:
@@ -194,9 +199,9 @@ def semantic_target_quality_report(
     disqualifying_bootstrap = bootstrap and not profiled_contract_family
     disqualifying_non_implementation = bool(non_implementation or not_implemented_stub)
     effective_suspicious = [] if suspicious_allowed else suspicious
-    if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
+    if score >= 85 and not (effective_suspicious or disqualifying_meta or disqualifying_boundary or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe or risk_reasons):
         status = "strong"
-    elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe):
+    elif score >= 65 and not (disqualifying_meta or disqualifying_trivial or disqualifying_bootstrap or disqualifying_non_implementation or liveness_probe or risk_reasons):
         status = "acceptable"
     elif score >= 40:
         status = "suspicious"
@@ -212,7 +217,6 @@ def semantic_target_quality_report(
         "profiled_contract_family": profiled_contract_family,
         "structural_evidence": dict(structural_evidence or {}),
     }
-
 
 def target_quality_report(role_quality: dict[str, Any]) -> dict[str, Any]:
     target = str(role_quality.get("selected_extraction_candidate") or "")
@@ -248,9 +252,8 @@ def target_quality_report(role_quality: dict[str, Any]) -> dict[str, Any]:
         "reasons": reasons,
     }
 
-
-def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) -> dict[str, Any]:
-    direct = archetype_score_adjustments(target)
+def _contextual_archetype_adjustments(target: str, context_evidence: list[str], structural_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    direct = archetype_score_adjustments(owner_qualified_target(target, structural_evidence))
     if direct.get("profile_ids"):
         return direct
     for context in context_evidence:
@@ -258,7 +261,6 @@ def _contextual_archetype_adjustments(target: str, context_evidence: list[str]) 
         if contextual.get("profile_ids"):
             return contextual
     return direct
-
 
 def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:
     hits = []
@@ -271,7 +273,6 @@ def _runtime_boundary_hits(lowered: str, symbol: str) -> list[str]:
             hits.append(token)
     return hits
 
-
 def _strong_contract_hit(lowered: str, symbol: str) -> bool:
     normalized_symbol = symbol.lstrip("_")
     if normalized_symbol in STRONG_CONTRACT_SYMBOLS:
@@ -279,7 +280,6 @@ def _strong_contract_hit(lowered: str, symbol: str) -> bool:
     if normalized_symbol.startswith(STRONG_CONTRACT_PREFIXES):
         return True
     return any(token in lowered for token in STRONG_CONTRACT_TOKENS)
-
 
 def _trivial_symbol(symbol: str) -> bool:
     if symbol in TRIVIAL_SYMBOLS:

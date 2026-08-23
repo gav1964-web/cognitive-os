@@ -206,7 +206,9 @@ def test_training_catalog_never_auto_promotes_executable_adapter():
     plugins = {row["id"]: row for row in enabled_improvement_plugins()}
 
     assert plugins["executable_adapter_admission"]["auto_promote"] is False
-    assert list(plugins).index("executable_adapter_admission") == 3
+    assert list(plugins).index("candidate_selection_admission") < list(plugins).index(
+        "executable_adapter_admission"
+    )
 
 
 def test_temporary_adapter_is_visible_only_inside_acceptance_context():

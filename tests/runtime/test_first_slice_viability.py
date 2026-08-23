@@ -49,11 +49,17 @@ def test_receiver_state_method_is_deferred_but_static_method_remains_eligible():
 
 def test_runtime_lifecycle_and_cli_boundaries_require_cheaper_slice():
     lifecycle = first_slice_viability("runtime/worker.py:execute")
-    cli = first_slice_viability("pkg/cli/base.py:list_templates")
+    close = first_slice_viability("adapter.py:close")
+    flush = first_slice_viability("adapter.py:force_flush")
+    cli = first_slice_viability("pkg/cli/base.py:main")
+    cli_helper = first_slice_viability("pkg/cli/base.py:list_templates")
     training = first_slice_viability("models/network.py:train_model")
 
     assert lifecycle["reselection_required"] is True
+    assert close["reselection_required"] is True
+    assert flush["reselection_required"] is True
     assert cli["reselection_required"] is True
+    assert cli_helper["reselection_required"] is False
     assert training["reselection_required"] is True
 
 

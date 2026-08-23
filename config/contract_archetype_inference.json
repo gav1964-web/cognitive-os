@@ -723,6 +723,66 @@
       "failure_modes": ["malformed_hash", "unsupported_algorithm", "missing_parameter", "invalid_cost"]
     },
     {
+      "id": "component_tree_projection",
+      "priority": 109,
+      "symbol_contains_all": ["add", "component"],
+      "path_contains_any": ["output", "render", "tree"],
+      "score_bonus": 22,
+      "ranking_bonus": 38,
+      "benign_runtime_boundary": true,
+      "reason": "component tree projection is a bounded component mapping to presentation-tree mutation contract",
+      "ranking_reason": "component grouping and tree projection form a representative presentation boundary",
+      "contract_family": "component_tree_projection",
+      "input_contract": {
+        "tree_branch": "TreeBranch(add_child)",
+        "components": "ComponentGroups(kind -> ComponentInfo(name, source_path, files?, scope?))"
+      },
+      "output_contract": {
+        "projection_result": "TreeProjectionResult(added_groups, added_items, diagnostics?)",
+        "failure_packet": "TreeProjectionFailure(kind, component_ref?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "memory_state": "tree mutation uses a process-isolated chainable branch fixture"
+      },
+      "validation_gates": [
+        "empty and populated component groups are covered",
+        "shared and local component presentation remains deterministic",
+        "optional files do not alter required source-path output"
+      ],
+      "failure_modes": ["missing_component_name", "missing_source_path", "invalid_component_group", "tree_add_failure"]
+    },
+    {
+      "id": "object_pool_resource_release",
+      "priority": 108,
+      "symbol_prefixes": ["release_", "return_"],
+      "owner_contains_any": ["pool"],
+      "score_bonus": 22,
+      "ranking_bonus": 40,
+      "benign_runtime_boundary": true,
+      "reason": "object-pool resource release is a bounded resource-to-available-pool state transition",
+      "ranking_reason": "resource return is a representative object-pool lifecycle boundary",
+      "contract_family": "object_pool_resource_release",
+      "input_contract": {
+        "resource": "PooledResource(identity, lifecycle_state?)",
+        "pool_policy": "ObjectPoolPolicy(capacity?, duplicate_return?, synchronization?)"
+      },
+      "output_contract": {
+        "release_result": "PoolReleaseResult(resource_state, available_count?, diagnostics?)",
+        "failure_packet": "PoolReleaseFailure(kind, resource_ref?, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "memory_state": "pool mutation is asserted with before/after snapshots in process isolation"
+      },
+      "validation_gates": [
+        "resource transitions from checked-out to available state",
+        "duplicate and foreign-resource policy is explicit",
+        "pool mutation remains isolated from external effects"
+      ],
+      "failure_modes": ["duplicate_return", "foreign_resource", "pool_closed", "capacity_violation"]
+    },
+    {
       "id": "worker_pool_lifecycle_join",
       "symbol_contains_any": ["join_exited", "task_done", "join"],
       "path_contains_any": ["pool", "queue", "worker", "process"],
@@ -1476,7 +1536,7 @@
     {
       "id": "protocol_command_handler",
       "symbol_prefixes": ["smtp_", "http_"],
-      "symbol_contains_any": ["command", "handler"],
+      "symbol_contains_any": ["command"],
       "path_contains_any": ["smtp", "protocol", "server", "handler"],
       "score_bonus": 24,
       "ranking_bonus": 36,
@@ -1501,6 +1561,85 @@
         "callback and transport failures preserve command evidence"
       ],
       "failure_modes": ["malformed_command", "invalid_state", "handler_error", "transport_error"]
+    },
+    {
+      "id": "logging_adapter_factory",
+      "symbol_contains_all": ["setup", "handler"],
+      "path_contains_any": ["logging", "handler"],
+      "score_bonus": 20,
+      "ranking_bonus": 24,
+      "reason": "logging adapter factory is a bounded configuration-to-handler contract",
+      "contract_family": "logging_adapter_factory",
+      "input_contract": {
+        "configuration": "LoggingAdapterConfig(destination?, level?, metadata?, options?)"
+      },
+      "output_contract": {
+        "handler": "ConfiguredLoggingHandler",
+        "failure_packet": "LoggingAdapterFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "external_resource": "transport/client construction must use a source-isolated fake by default"
+      },
+      "validation_gates": [
+        "default and explicit configuration paths are executable",
+        "external client construction is replaced by a bounded fake",
+        "no live network endpoint is contacted during acceptance"
+      ],
+      "failure_modes": ["invalid_configuration", "client_construction_error", "transport_unavailable"]
+    },
+    {
+      "id": "logging_sink_adapter",
+      "symbols": ["__call__"],
+      "owner_contains_any": ["handler", "stream"],
+      "path_contains_any": ["handler", "journal", "logging"],
+      "score_bonus": 20,
+      "ranking_bonus": 24,
+      "reason": "logging sink adapter is a bounded event-to-transport contract",
+      "contract_family": "logging_sink_adapter",
+      "input_contract": {
+        "event": "LoggingEvent(message, stream?, metadata?)"
+      },
+      "output_contract": {
+        "result": "DeliveryAcknowledgement | None",
+        "failure_packet": "LoggingDeliveryFailure(kind, evidence_ref)"
+      },
+      "side_effect_policy": {
+        "requires_process_boundary": true,
+        "external_transport": "transport must be replaced by a process-isolated fake"
+      },
+      "validation_gates": [
+        "valid and malformed event paths are covered",
+        "transport invocation preserves mapped message fields",
+        "acceptance uses a fake transport and performs no live network call"
+      ],
+      "failure_modes": ["malformed_event", "transport_unavailable", "delivery_error"]
+    },
+    {
+      "id": "logging_record_projection",
+      "symbol_contains_all": ["format", "record"],
+      "owner_contains_any": ["formatter", "handler"],
+      "path_contains_any": ["handler", "logging"],
+      "score_bonus": 24,
+      "ranking_bonus": 36,
+      "reason": "logging record projection is a bounded record-to-serializable-event contract",
+      "contract_family": "logging_record_projection",
+      "input_contract": {
+        "record": "LogRecord(message, pathname?, level?, metadata?)"
+      },
+      "output_contract": {
+        "event": "SerializableLoggingEvent"
+      },
+      "side_effect_policy": {
+        "requires_validation_gate": true,
+        "receiver": "receiver configuration must be materialized from source evidence"
+      },
+      "validation_gates": [
+        "message and source fallback paths are executable",
+        "receiver configuration is fixture-backed",
+        "result is serializable without live transport access"
+      ],
+      "failure_modes": ["invalid_record", "formatting_error", "serialization_error"]
     },
     {
       "id": "api_schema_operation_normalization",
@@ -1997,7 +2136,7 @@
     {
       "id": "search_backend_query_boundary",
       "symbols": ["search"],
-      "symbol_contains_any": ["search"],
+      "symbol_contains_any": [],
       "path_contains_any": ["haystack", "backend", "whoosh", "search"],
       "score_bonus": 24,
       "ranking_bonus": 36,

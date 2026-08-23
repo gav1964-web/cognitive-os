@@ -254,14 +254,73 @@ diagnosis/trials, and verifies the corpus again. Successful KB experience is
 staged as a candidate; it is not activated without promotion evidence.
 
 When a measured hypothesis is promising but has too little independent evidence,
-Cognitive OS now builds a portable `HypothesisValidationPlan`, discovers two or
-three unseen similar Python projects, freezes them under
+Cognitive OS now builds a portable `HypothesisValidationPlan`, discovers a
+bounded reserve of unseen similar Python projects, freezes them under
 `artifacts/hypothesis_holdouts/<hypothesis_id>/`, and validates the hypothesis on
-those holdouts before the original corpus is measured again. This small adaptive
+only projects whose measured diagnosis matches both the staged
+failure class and portable structural signature. Probe results are reused by training. This small adaptive
 holdout is for one hypothesis; large blind corpora remain release/calibration
-evidence. GitLab is the current replaceable discovery adapter. A provider timeout
-or rate limit is reported as a blocked discovery capability, not as a disproved
-hypothesis. Use `--no-hypothesis-discovery` only for fixed-corpus diagnostics.
+evidence. The current replaceable provider chain is `GitLab -> GitHub`; timeout,
+rate limit or shortage at one provider automatically falls through to the next,
+with cross-forge repository deduplication and recorded provenance. Exhaustion of
+all working providers' candidate pools is a normal empty round; unavailability of
+the complete chain is reported as a blocked discovery capability, not as a disproved
+hypothesis. Every completed or blocked validation is persisted under
+`artifacts/self_improvement/hypothesis_validation_*.json`. Use
+`--no-hypothesis-discovery` only for fixed-corpus diagnostics.
+If one reserve has fewer than two class-and-signature matches, Cognitive OS starts
+the next bounded discovery round with a new frozen selection and excludes every
+already probed repository. CLI progress reports every discovery round, probe and
+holdout training transition.
+Successive rounds also advance the provider page window instead of rescanning the
+same star-sorted results (`1-2`, `3-4`, `5-6` with the default policy).
+V22 carries per-query cursors across plan-version changes by normalized failure
+signature. Existing expressions resume after their durable provider window, new
+vocabulary starts at page one, and bounded query batches rotate between rounds.
+GitHub qualifiers are translated to plain terms at the GitLab provider boundary.
+Adaptive holdouts may use bounded provider-policy overrides such as a lower star
+floor; release-corpus policy remains unchanged and independently stricter.
+Exact probes from durable prior validation reports are re-measured from their
+bounded local checkout after search-policy evolution. They remain excluded from
+network discovery without losing valid accumulated evidence.
+Discovery queries first compose configurable effect and output-basis terms, then
+interleave their individual terms in
+`project_evolution_policy.json`; adding a signature vocabulary does not require a
+role or orchestrator source change.
+V10 discovery uses those metadata queries only to freeze a wider candidate pool.
+`runtime/hypothesis_structural_screen.py` then scans bounded product Python files
+with the same source-contract inference used by the roles, ranks projects by the
+portable signature's side effects and output basis, and freezes a smaller shortlist
+in `structural_screen.json`. This report is retrieval evidence only: every selected
+project still needs the complete role probe, exact failure-class/signature match,
+training gate and admission checks. Pool size, scan limits, excluded directories,
+weights and shortlist bounds live under `hypothesis_holdout.structural_prescreen`.
+Portable signatures may also normalize syntax-level output evidence into a policy
+family. V11 treats implicit no-value return and explicit `None` annotation as the
+same `void_side_effect` contract while preserving raw evidence in probe reports.
+V18 preserves the same strict admission rule while adding a structured diagnosis
+envelope and auditable signature assessments. Near contrasts are retained as
+negative evidence rather than silently discarded or incorrectly trained, and every
+trial publishes retrieval yield and signature-discrimination metrics.
+V19 adds normalized-family query vocabulary and keeps provider syntax out of
+composite queries. It also rejects policy-defined high-risk additional effects from
+otherwise compatible subset matches.
+Repeated unresolved candidate-selection attempts across that semantic family emit
+a `CapabilityDevelopmentRequest` for a bounded discriminator plugin.
+The plugin catalog resolves that request through `ImprovementPluginFoundryReport`.
+The discriminator may shadow-test only existing ranked, reselection, or ADR targets.
+Validation requires at least one newly discovered match and trains it before prior
+evidence projects. Clone work uses a bounded four-worker pool; one failed clone does
+not block the remaining frozen selection.
+
+Candidate-selection admission consumes the already measured control/treatment pair,
+synthesizes structural policy from repeated paired contrasts, and requires regression
+projects before promotion. Promotion is transactional: regression causes rollback;
+one evidence-derived trigger refinement is allowed, and a repeated failure rejects
+the policy. A promoted rule enters normal SpecWriter preflight and can request the
+existing Architect first-slice reselection loop when approved scope hides a challenger.
+Repeated diagnosis-matched failures are returned as a typed
+`CapabilityDevelopmentRequest`, rather than another manual project-search task.
 
 Post-training admission runs after candidate trials, so it can consume the best
 measured challenger. Raw KB candidates still cannot merge themselves. Only

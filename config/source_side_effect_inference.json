@@ -44,12 +44,13 @@
     {
       "id": "observability",
       "call_exact": ["print"],
-      "call_contains": ["cprint.", "logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", ".print_ascii", ".print_tty", "sys.__excepthook__"]
+      "call_contains": ["cprint.", "logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", ".print_ascii", ".print_tty", "sys.__excepthook__"],
+      "exclude_prefix": ["logging.makelogrecord"]
     },
     {
       "id": "external_runtime",
-      "call_exact": ["os.read", "os.write", "select.select"],
-      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys", "self.goto", "self.wr", "self.attr_color", "self.attr_reset", ".addstr", ".refresh"]
+      "call_exact": ["os.read", "os.write", "select.select", "self.wr"],
+      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys", "self.goto", "self.attr_color", "self.attr_reset", ".addstr", ".refresh"]
     }
   ],
   "memory_state": {

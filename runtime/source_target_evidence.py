@@ -20,23 +20,43 @@ def source_target_evidence(project_dir: Path, target: str) -> dict[str, Any]:
         tree = ast.parse(source)
     except (OSError, UnicodeError, SyntaxError):
         return {}
-    matches = [
-        node for node in tree.body
-        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and node.name == symbol
-    ]
+    matches, node_kind = _callable_matches(tree, symbol)
     if len(matches) != 1:
         return {}
     node = matches[0]
     return {
         "source": target,
         "kind": "unknown",
-        "node_kind": "function",
+        "node_kind": node_kind,
         "line": node.lineno,
         "loc": int(getattr(node, "end_lineno", node.lineno)) - node.lineno + 1,
         "signature": _signature(node),
         "snippet": {"text": ast.get_source_segment(source, node) or ast.unparse(node)},
-        "claims": ["evaluation-only source evidence extracted from an exact project file and top-level symbol"],
+        "claims": ["evaluation-only source evidence extracted from an exact project file and callable symbol"],
     }
+
+
+def _callable_matches(
+    tree: ast.Module, symbol: str
+) -> tuple[list[ast.AsyncFunctionDef | ast.FunctionDef], str]:
+    owner_name, separator, member_name = symbol.partition(".")
+    if not separator:
+        return ([
+            node for node in tree.body
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+            and node.name == symbol
+        ], "function")
+    owners = [
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == owner_name
+    ]
+    if len(owners) != 1 or "." in member_name:
+        return [], "method"
+    return ([
+        node for node in owners[0].body
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        and node.name == member_name
+    ], "method")
 
 
 def _signature(node: ast.AsyncFunctionDef | ast.FunctionDef) -> dict[str, Any]:

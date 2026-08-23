@@ -23,13 +23,15 @@ def search_stratum(
 ) -> list[dict[str, Any]]:
     by_name: dict[str, dict[str, Any]] = {}
     maximum = int(policy.get("maximum_search_pages") or 2)
+    page_start = max(1, int(policy.get("search_page_start") or 1))
+    page_stop = page_start + maximum - 1
     batch_size = max(1, int(policy.get("search_page_batch_size") or 1))
     workers = max(1, int(policy.get("search_workers") or 4))
     order_by = str(policy.get("search_order_by") or "star_count")
-    for first_page in range(1, maximum + 1, batch_size):
-        pages_in_batch = range(first_page, min(maximum, first_page + batch_size - 1) + 1)
+    for first_page in range(page_start, page_stop + 1, batch_size):
+        pages_in_batch = range(first_page, min(page_stop, first_page + batch_size - 1) + 1)
         label = f"{first_page}-{pages_in_batch.stop - 1}" if len(pages_in_batch) > 1 else str(first_page)
-        print(f"[{stratum['id']}] search pages {label}/{maximum}", file=sys.stderr, flush=True)
+        print(f"[{stratum['id']}] search pages {label}/{page_start}-{page_stop}", file=sys.stderr, flush=True)
         requests = [
             _params(query, page, order_by=order_by)
             for page in pages_in_batch

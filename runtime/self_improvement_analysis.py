@@ -48,7 +48,13 @@ def _attempt(packet: dict[str, Any], *, config: LocalInferenceConfig, tier: str)
     try:
         response = call_json_chat(_messages(packet), config=config)
     except LocalInferenceError as exc:
-        return {"status": "failed", "confidence": 0.0, "error": str(exc), "model_trace": _trace(config, tier)}
+        evidence_class = _evidence_failure_class(packet)
+        return {
+            "status": "failed", "confidence": 0.0, "error": str(exc),
+            "failure_class": evidence_class or "unknown",
+            "classification_source": "executable_evidence" if evidence_class else "unavailable",
+            "model_trace": _trace(config, tier),
+        }
     normalized = _normalize(response)
     normalized = attach_evidence_proposal(packet, normalized)
     evidence_class = _evidence_failure_class(packet)
@@ -72,6 +78,12 @@ def _evidence_failure_class(packet: dict[str, Any]) -> str:
     reason_map = dict(taxonomy.get("downstream_reason_map") or {})
     if reason in reason_map:
         return str(reason_map[reason])
+    evidence = dict(packet.get("artifact_evidence") or {})
+    reselection = dict(dict(evidence.get("technical_spec") or {}).get("reselection") or {})
+    trigger_map = dict(taxonomy.get("reselection_trigger_map") or {})
+    trigger = str(reselection.get("trigger") or "")
+    if trigger in trigger_map:
+        return str(trigger_map[trigger])
     skipped = dict(dict(downstream.get("summary") or {}).get("skipped_reason_counts") or {})
     skipped_map = dict(taxonomy.get("skipped_reason_map") or {})
     return next((str(skipped_map[key]) for key in sorted(skipped) if key in skipped_map), "")

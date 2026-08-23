@@ -26,6 +26,10 @@ def add_parameter_strategy_samples(
         _derived_conversion(node, parameters, candidates, priorities["conversion"])
     if policy.get("indexed_sequence"):
         _indexed_sequence(node, parameters, candidates, priorities["required_mapping_keys"])
+    if policy.get("directory_path"):
+        _directory_paths(node, parameters, candidates, priorities["importable_module_path"])
+    if policy.get("absolute_url"):
+        _absolute_urls(node, parameters, candidates, priorities["validation_format_hint"])
 
 
 def _nested_mapping_paths(
@@ -173,6 +177,43 @@ def _indexed_sequence(
         candidates[name].append(
             (priority + 3, value, "ast_strategy:indexed_sequence")
         )
+
+
+def _directory_paths(
+    node: FunctionNode, parameters: set[str], candidates: Candidates, priority: int
+) -> None:
+    directory_calls = {"iterdir", "listdir", "scandir", "walk"}
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Call):
+            continue
+        called = item.func.attr if isinstance(item.func, ast.Attribute) else getattr(item.func, "id", "")
+        if called not in directory_calls:
+            continue
+        for name in sorted(_origins(item, {value: {value} for value in parameters}) & parameters):
+            candidates[name].append((
+                priority + 20,
+                {"__fixture__": "temporary_directory"},
+                f"ast_strategy:directory_path:{called}",
+            ))
+
+
+def _absolute_urls(
+    node: FunctionNode, parameters: set[str], candidates: Candidates, priority: int
+) -> None:
+    url_calls = {"urlopen", "urlparse", "urlsplit", "request", "get", "post", "put", "patch"}
+    origins = {name: {name} for name in parameters}
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Call) or not item.args:
+            continue
+        called = item.func.attr if isinstance(item.func, ast.Attribute) else getattr(item.func, "id", "")
+        if called not in url_calls:
+            continue
+        for name in sorted(_origins(item.args[0], origins) & parameters):
+            candidates[name].append((
+                priority + 2,
+                "data:text/plain,sample",
+                f"ast_strategy:absolute_url:{called}",
+            ))
 
 
 def _numeric_subscript_path(

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .knowledge_admission import capability_gap_report, load_kb_candidates
+from .self_improvement_signatures import portable_failure_signature
 
 
 def capability_development_requests(
@@ -14,6 +15,7 @@ def capability_development_requests(
     training: list[dict[str, Any]],
     *,
     minimum_projects: int = 3,
+    signature_normalization: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Return repeated gaps that Cognitive OS cannot currently trial or promote."""
     observed = capability_gap_report(
@@ -26,7 +28,13 @@ def capability_development_requests(
         for gap_id in sorted(unsupported)
         if gap_id in gaps and gaps[gap_id]["status"] == "research_candidate"
     ]
-    return [*gap_requests, *_parameter_search_requests(training, minimum_projects)]
+    return [
+        *gap_requests,
+        *_parameter_search_requests(training, minimum_projects),
+        *_structural_discriminator_requests(
+            training, minimum_projects, signature_normalization or {}
+        ),
+    ]
 
 
 def _unsupported_gap_ids(training: list[dict[str, Any]]) -> set[str]:
@@ -100,20 +108,25 @@ def _parameter_search_requests(
         if not report.get("knowledge_candidate_path") or _has_supported_plugin(report):
             continue
         failure_class = str(dict(report.get("diagnosis") or {}).get("failure_class") or "unknown")
-        group = groups.setdefault(failure_class, {
+        signature = _parameter_search_signature(report)
+        group_key = f"{failure_class}:{signature}"
+        group = groups.setdefault(group_key, {
+            "failure_class": failure_class, "signature": signature,
             "projects": set(), "role_scope": set(), "strategy_plugin_attempted": False,
         })
         group["projects"].add(str(report.get("project") or ""))
         group["role_scope"].update(dict(report.get("diagnosis") or {}).get("target_roles") or [])
         group["strategy_plugin_attempted"] |= _strategy_plugin_attempted(report)
     requests = []
-    for failure_class, group in sorted(groups.items()):
+    for _, group in sorted(groups.items()):
+        failure_class = str(group["failure_class"])
+        signature = str(group["signature"])
         projects = sorted(project for project in group["projects"] if project)
         if len(projects) < minimum_projects:
             continue
         gap = {
-            "gap_id": f"training_search:{failure_class}:continue_bounded_parameter_search",
-            "label": f"Bounded parameter search exhausted for {failure_class}",
+            "gap_id": f"training_search:{failure_class}:{signature}:continue_bounded_parameter_search",
+            "label": f"Bounded parameter search exhausted for {failure_class} ({signature})",
             "projects": projects,
             "role_scope": sorted(group["role_scope"]),
         }
@@ -127,6 +140,18 @@ def _parameter_search_requests(
             )
         requests.append(request)
     return requests
+
+
+def _parameter_search_signature(report: dict[str, Any]) -> str:
+    baseline = dict(report.get("baseline") or {})
+    downstream = dict(baseline.get("downstream_evidence") or {})
+    quality = dict(baseline.get("selected_candidate_quality") or {})
+    structural = dict(quality.get("structural_evidence") or {})
+    effects = ",".join(sorted(str(value) for value in structural.get("observed_side_effects") or []))
+    return "|".join([
+        str(downstream.get("reason") or downstream.get("acceptance_signal") or "unclassified"),
+        effects or "pure", str(structural.get("output_inference_basis") or "unknown"),
+    ])
 
 
 def _has_supported_plugin(report: dict[str, Any]) -> bool:
@@ -145,3 +170,57 @@ def _strategy_plugin_attempted(report: dict[str, Any]) -> bool:
         row.get("plugin_id") == "bounded_parameter_strategy"
         for row in list(cycle.get("attempts") or []) if isinstance(row, dict)
     )
+
+
+def _structural_discriminator_requests(
+    training: list[dict[str, Any]], minimum_projects: int,
+    normalization: dict[str, Any],
+) -> list[dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {}
+    for report in training:
+        if not report.get("knowledge_candidate_path") or _has_supported_plugin(report):
+            continue
+        failure_class = str(dict(report.get("diagnosis") or {}).get("failure_class") or "unknown")
+        if failure_class == "unknown":
+            continue
+        signature = portable_failure_signature(report, normalization)
+        key = f"{failure_class}:{signature}"
+        group = groups.setdefault(key, {
+            "failure_class": failure_class, "signature": signature,
+            "projects": set(), "role_scope": set(),
+            "unresolved_selections": 0, "blocked_discriminators": 0,
+        })
+        group["projects"].add(str(report.get("project") or ""))
+        group["role_scope"].update(dict(report.get("diagnosis") or {}).get("target_roles") or [])
+        cycle = dict(report.get("improvement_plugin_cycle") or {})
+        selection_attempts = [
+            row for row in list(cycle.get("attempts") or [])
+            if isinstance(row, dict) and row.get("plugin_id") == "candidate_selection_admission"
+        ]
+        unresolved_reasons = {"measured_challenger_missing", "no_structural_discriminator"}
+        if any(row.get("reason") in unresolved_reasons for row in selection_attempts):
+            group["unresolved_selections"] += 1
+        if any(row.get("reason") == "no_structural_discriminator" for row in selection_attempts):
+            group["blocked_discriminators"] += 1
+    requests = []
+    for group in groups.values():
+        projects = sorted(project for project in group["projects"] if project)
+        if (
+            len(projects) < minimum_projects
+            or int(group["unresolved_selections"]) < minimum_projects
+            or int(group["blocked_discriminators"]) < 1
+        ):
+            continue
+        gap = {
+            "gap_id": (
+                f"training_search:{group['failure_class']}:{group['signature']}:"
+                "structural_discriminator_missing"
+            ),
+            "label": f"Structural discriminator missing for {group['signature']}",
+            "projects": projects,
+            "role_scope": sorted(group["role_scope"]),
+        }
+        request = _request(gap)
+        request["missing_capability"] = "candidate_selection_discriminator_plugin"
+        requests.append(request)
+    return requests

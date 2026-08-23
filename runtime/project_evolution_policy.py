@@ -39,7 +39,24 @@ def load_project_evolution_policy(path: str | None = None) -> dict[str, Any]:
     self_improvement = dict(payload.get("self_improvement") or {})
     if not self_improvement.get("mutable_config_paths") or not self_improvement.get("promotion"):
         raise ProjectEvolutionPolicyError("self improvement requires mutable_config_paths and promotion")
+    _validate_failure_class_families(self_improvement)
     return payload
+
+
+def _validate_failure_class_families(self_improvement: dict[str, Any]) -> None:
+    holdout = dict(self_improvement.get("hypothesis_holdout") or {})
+    normalization = dict(holdout.get("signature_normalization") or {})
+    families = dict(normalization.get("failure_class_families") or {})
+    owners: dict[str, str] = {}
+    for family, members in families.items():
+        canonical = str(family).strip()
+        aliases = [str(value).strip() for value in members or []]
+        if not canonical or not aliases or any(not value for value in aliases):
+            raise ProjectEvolutionPolicyError("failure class families require named families and aliases")
+        for value in [canonical, *aliases]:
+            if value in owners and owners[value] != canonical:
+                raise ProjectEvolutionPolicyError(f"failure class alias {value} belongs to multiple families")
+            owners[value] = canonical
 
 
 def evaluate_project_evolution(change: dict[str, Any], *, policy: dict[str, Any] | None = None) -> dict[str, Any]:

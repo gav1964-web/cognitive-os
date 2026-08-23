@@ -291,7 +291,8 @@ def _looks_like_contract_type_ref(source: str) -> bool:
     symbol = _normalize_source_ref(source).rsplit(":", 1)[-1]
     if not symbol:
         return False
-    return symbol.endswith(("Error", "Exception", "Failure", "Packet", "Request", "Response", "Result")) or symbol[:1].isupper()
+    terminal = symbol.rsplit(".", 1)[-1]
+    return terminal.endswith(("Error", "Exception", "Failure", "Packet", "Request", "Response", "Result")) or terminal[:1].isupper()
 
 
 def _contract_target_has_derived_context(row: dict[str, Any]) -> bool:

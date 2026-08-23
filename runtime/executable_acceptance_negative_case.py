@@ -40,6 +40,12 @@ def missing_input_case_required(
         name for name, param in signature.parameters.items()
         if param.kind in ACCEPTED_PARAM_KINDS and param.default is inspect.Parameter.empty
     }
+    accepts_keywords = any(
+        param.kind == inspect.Parameter.VAR_KEYWORD
+        for param in signature.parameters.values()
+    )
+    if accepts_keywords and any(positive_keys - set(dict(row.get("given", {}))) for row in malformed):
+        return True
     if not required:
         return False
     for row in malformed:

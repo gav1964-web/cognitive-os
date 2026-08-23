@@ -25,3 +25,30 @@ def test_terminal_reselection_evidence_marks_candidate_search_exhausted(tmp_path
     assert evidence["technical_spec"]["reselection"]["terminal"] is True
     assert reselection_exhausted(packet) is True
     assert capability_signature(packet).startswith("unknown|unclassified|")
+
+
+def test_architecture_evidence_carries_safety_ranked_source_candidate_pool(tmp_path):
+    adr = tmp_path / "ArchitectureDecisionRecord.json"
+    adr.write_text(json.dumps({
+        "first_slice_contract": {"targets": ["app.py:write"]},
+        "source_context": {
+            "app.py:write": {
+                "side_effects": ["observability"],
+                "snippet": {"target_binding": "function_symbol", "structural_contract": {
+                    "return_paths": 0, "output_inference_basis": "no_value_return",
+                }},
+            },
+            "app.py:build": {
+                "dependency_readiness": {"status": "ready"},
+                "snippet": {"target_binding": "function_symbol", "structural_contract": {
+                    "return_paths": 1, "output_inference_basis": "return_expression",
+                }},
+            },
+        },
+    }), encoding="utf-8")
+
+    evidence = artifact_evidence({"architecture_decision": {"path": str(adr)}})
+
+    assert evidence["architecture_decision"]["source_candidate_pool"] == [
+        "app.py:build", "app.py:write",
+    ]

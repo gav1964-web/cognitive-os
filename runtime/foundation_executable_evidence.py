@@ -20,7 +20,7 @@ def collect_foundation_executable_evidence(
     *, root: Path, project_dir: Path, technical_spec: dict[str, Any],
     process_isolated: bool = False,
 ) -> dict[str, Any]:
-    eligibility = _eligibility(technical_spec)
+    eligibility = _eligibility(technical_spec, process_isolated=process_isolated)
     if eligibility["status"] != "eligible":
         return eligibility
     implementation_plan = build_implementation_plan(technical_spec=technical_spec)
@@ -55,7 +55,9 @@ def collect_foundation_executable_evidence(
     }
 
 
-def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
+def _eligibility(
+    spec: dict[str, Any], *, process_isolated: bool = False,
+) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract") or {})
     target = str(contract.get("candidate") or "")
     request = dict(spec.get("first_slice_reselection_request") or {})
@@ -65,6 +67,13 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
     evidence_policy = foundation_evidence_policy()
     isolated_effects = set(evidence_policy["isolated_transitive_effects"])
     effects_are_isolated_transitive = bool(effects) and not direct_effects and set(effects) <= isolated_effects
+    process_direct_effects = set(evidence_policy["process_isolated_direct_effects"])
+    effects_are_process_isolated_direct = (
+        process_isolated
+        and bool(direct_effects)
+        and set(direct_effects) <= process_direct_effects
+        and set(effects) <= process_direct_effects
+    )
     archetypes = set(dict(contract.get("semantic_quality") or {}).get("contract_archetype_ids") or [])
     archetypes.add(str(contract.get("contract_family") or ""))
     profiles = dict(evidence_policy["isolated_direct_effect_profiles"])
@@ -74,6 +83,14 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
         and set(direct_effects) <= set(allowed)
         and set(effects) <= set(allowed)
         for archetype, allowed in profiles.items()
+    )
+    process_profiles = dict(evidence_policy["process_isolated_direct_effect_profiles"])
+    effects_are_profiled_process_direct = process_isolated and any(
+        archetype in archetypes
+        and bool(direct_effects)
+        and set(direct_effects) <= set(allowed)
+        and set(effects) <= set(allowed)
+        for archetype, allowed in process_profiles.items()
     )
     delegated_profiles = dict(evidence_policy["isolated_delegated_effect_profiles"])
     effects_are_isolated_delegated = any(
@@ -90,10 +107,14 @@ def _eligibility(spec: dict[str, Any]) -> dict[str, Any]:
     elif not target or contract.get("status") == "blocked_no_safe_candidate":
         reason = "safe_target_missing"
     elif effects and not (
-        effects_are_isolated_transitive or effects_are_isolated_direct or effects_are_isolated_delegated
+        effects_are_isolated_transitive
+        or effects_are_process_isolated_direct
+        or effects_are_isolated_direct
+        or effects_are_profiled_process_direct
+        or effects_are_isolated_delegated
     ):
         reason = "side_effectful_target"
-    elif structural.get("state_mutation") is True:
+    elif structural.get("state_mutation") is True and not effects_are_process_isolated_direct:
         reason = "state_mutating_target"
     return {
         "status": "skipped" if reason else "eligible",

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
 from runtime.architecture_slice_naming import semantic_first_slice_name
+from runtime.architecture_target_priority import analyzer_capability_targets, rank_architecture_targets
 from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
@@ -38,7 +39,10 @@ def build_architecture_decision(
     tasks = _tasks(project_report)
     synthesis = _architecture_synthesis(project_report)
     first_slice = _first_slice_contract(synthesis)
-    first_slice = _first_slice_with_source_targets(first_slice, tasks, plan=plan)
+    capabilities = dict(answers.get("3_capabilities") or {})
+    first_slice = _first_slice_with_source_targets(
+        first_slice, tasks, plan=plan, capability_targets=analyzer_capability_targets(capabilities)
+    )
     boundaries = _subsystem_boundaries(project_report, tasks)
     capabilities = _capability_model(plan, tasks, first_slice)
     risks = _risks(project_report, tasks)
@@ -118,17 +122,20 @@ def build_architecture_decision(
     return apply_architect_advisory(artifact, config=advisory_config)
 
 def _first_slice_with_source_targets(
-    first_slice: dict[str, Any], tasks: list[dict[str, Any]], *, plan: dict[str, Any] | None = None
+    first_slice: dict[str, Any], tasks: list[dict[str, Any]], *, plan: dict[str, Any] | None = None,
+    capability_targets: list[str] | None = None,
 ) -> dict[str, Any]:
     synthesis_targets = [str(target) for target in list(first_slice.get("targets") or [])]
     fallback_targets = _task_source_targets(tasks)
+    fallback_targets.extend(capability_targets or [])
     if not synthesis_targets:
         fallback_targets.extend(_plan_source_targets(plan or {}))
-    targets = _dedupe_strings(synthesis_targets + fallback_targets)
+    targets = rank_architecture_targets(_dedupe_strings(synthesis_targets + fallback_targets))
     if not targets:
         return first_slice
     row = dict(first_slice)
-    target_limit = max(1, min(8, int(row.get("target_limit") or 8)))
+    default_limit = 8 if synthesis_targets else 1
+    target_limit = max(1, min(8, int(row.get("target_limit") or default_limit)))
     row["targets"] = targets[:target_limit]
     if not row.get("name"):
         row["name"] = semantic_first_slice_name("first_bounded_capability_slice", row["targets"])

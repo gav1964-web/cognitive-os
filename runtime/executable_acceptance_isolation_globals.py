@@ -50,10 +50,15 @@ def isolated_member(item: ast.AST) -> ast.AST:
         if copied.args.kwarg:
             copied.args.kwarg.annotation = None
     elif isinstance(copied, ast.ClassDef):
+        from .executable_acceptance_policy import source_isolation_policy
+
         named_tuple = any(isinstance(base, ast.Name) and base.id == "NamedTuple" for base in copied.bases)
+        preserved = set(source_isolation_policy().get("preserved_stdlib_class_bases") or [])
         copied.bases = [
             base for base in copied.bases
-            if isinstance(base, ast.Name) and base.id in {"Exception", "NamedTuple"}
+            if (
+                isinstance(base, ast.Name) and base.id in {"Exception", "NamedTuple"}
+            ) or _qualified_name(base) in preserved
         ]
         copied.keywords = []
         copied.decorator_list = []
@@ -63,6 +68,15 @@ def isolated_member(item: ast.AST) -> ast.AST:
                 if isinstance(node, ast.AnnAssign):
                     node.annotation = ast.Name(id="object", ctx=ast.Load())
     return copied
+
+
+def _qualified_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = _qualified_name(node.value)
+        return f"{prefix}.{node.attr}" if prefix else node.attr
+    return ""
 
 
 def replace_configured_global_factories(

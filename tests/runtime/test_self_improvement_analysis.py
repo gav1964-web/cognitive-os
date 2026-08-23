@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from runtime.local_inference import LocalInferenceConfig
+from runtime.local_inference import LocalInferenceConfig, LocalInferenceError
 from runtime.self_improvement_analysis import diagnose_training_failure
 
 
@@ -40,6 +40,25 @@ def test_low_confidence_local_diagnosis_escalates_once_to_teacher():
     assert mocked.call_count == 2
     assert result["model_trace"]["tier"] == "external_teacher"
     assert result["escalated_from"]["model"] == "local"
+
+
+def test_inference_timeout_preserves_evidence_derived_failure_class():
+    packet = {
+        "downstream_evidence": {
+            "summary": {"skipped_reason_counts": {"positive_sample_execution_failed": 1}},
+        },
+    }
+    with patch(
+        "runtime.self_improvement_analysis.call_json_chat",
+        side_effect=LocalInferenceError("timed out"),
+    ):
+        result = diagnose_training_failure(
+            packet, local_config=_config("local"), teacher_config=_config("teacher")
+        )
+
+    assert result["status"] == "failed"
+    assert result["failure_class"] == "executable_sample_contract"
+    assert result["classification_source"] == "executable_evidence"
 
 
 def test_confident_but_non_actionable_diagnosis_escalates_to_teacher():
@@ -179,3 +198,16 @@ def test_missing_import_is_canonical_dependency_boundary():
         result = diagnose_training_failure(packet, local_config=_config("local"))
 
     assert result["failure_class"] == "dependency_boundary"
+
+
+def test_terminal_reselection_trigger_is_canonical_candidate_failure():
+    response = _diagnosis(0.9)
+    response["failure_class"] = "spec_writer_role_failure"
+    packet = {"artifact_evidence": {"technical_spec": {"reselection": {
+        "trigger": "no_semantically_safe_candidate_in_approved_first_slice",
+    }}}}
+    with patch("runtime.self_improvement_analysis.call_json_chat", return_value=response):
+        result = diagnose_training_failure(packet, local_config=_config("local"))
+
+    assert result["failure_class"] == "first_slice_reselection_required"
+    assert result["llm_failure_class"] == "spec_writer_role_failure"

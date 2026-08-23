@@ -38,9 +38,32 @@ def test_foundation_evidence_allows_isolated_transitive_memory_state():
     assert result["status"] == "eligible"
 
 
-def test_foundation_evidence_rejects_direct_memory_state():
+def test_foundation_evidence_rejects_direct_memory_state_without_process_isolation():
     result = evidence._eligibility(
         _spec(effects=["memory_state"], observed_effects=["memory_state"])
+    )
+
+    assert result["status"] == "skipped"
+    assert result["reason"] == "side_effectful_target"
+
+
+def test_foundation_evidence_allows_direct_memory_state_in_process_isolation():
+    result = evidence._eligibility(
+        _spec(
+            effects=["memory_state"],
+            observed_effects=["memory_state"],
+            state_mutation=True,
+        ),
+        process_isolated=True,
+    )
+
+    assert result["status"] == "eligible"
+
+
+def test_foundation_evidence_rejects_external_effect_in_process_isolation():
+    result = evidence._eligibility(
+        _spec(effects=["filesystem_write"], observed_effects=["filesystem_write"]),
+        process_isolated=True,
     )
 
     assert result["status"] == "skipped"
@@ -52,6 +75,16 @@ def test_foundation_evidence_allows_profiled_direct_observability():
         effects=["observability"],
         observed_effects=["observability"],
         archetypes=["observability_render_command"],
+    ))
+
+    assert result["status"] == "eligible"
+
+
+def test_foundation_evidence_allows_profiled_logging_adapter_factory():
+    result = evidence._eligibility(_spec(
+        effects=["observability"],
+        observed_effects=["observability"],
+        archetypes=["logging_adapter_factory"],
     ))
 
     assert result["status"] == "eligible"
@@ -84,10 +117,30 @@ def test_foundation_evidence_allows_typed_external_api_command():
     assert result["status"] == "eligible"
 
 
+def test_foundation_evidence_allows_delegated_logging_projection_observability():
+    result = evidence._eligibility(_spec(
+        effects=["observability"],
+        contract_family="logging_record_projection",
+    ))
+
+    assert result["status"] == "eligible"
+
+
 def test_foundation_evidence_rejects_unprofiled_delegated_network_effect():
     result = evidence._eligibility(_spec(effects=["network"]))
 
     assert result["reason"] == "side_effectful_target"
+
+
+def test_logging_sink_network_effect_requires_profiled_process_isolation():
+    spec = _spec(
+        effects=["network"],
+        observed_effects=["network"],
+        archetypes=["logging_sink_adapter"],
+    )
+
+    assert evidence._eligibility(spec)["reason"] == "side_effectful_target"
+    assert evidence._eligibility(spec, process_isolated=True)["status"] == "eligible"
 
 
 def test_foundation_evidence_propagates_executable_callable(monkeypatch, tmp_path):
@@ -129,7 +182,14 @@ def test_foundation_evidence_uses_process_boundary_when_requested(monkeypatch, t
 
     monkeypatch.setattr(evidence, "run_executable_acceptance_process", isolated)
     result = evidence.collect_foundation_executable_evidence(
-        root=tmp_path, project_dir=tmp_path, technical_spec=_spec(), process_isolated=True,
+        root=tmp_path,
+        project_dir=tmp_path,
+        technical_spec=_spec(
+            effects=["memory_state"],
+            observed_effects=["memory_state"],
+            state_mutation=True,
+        ),
+        process_isolated=True,
     )
 
     assert observed["timeout_seconds"] == 180

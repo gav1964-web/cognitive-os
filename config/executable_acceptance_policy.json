@@ -13,18 +13,26 @@
   "foundation_evidence": {
     "isolated_process_timeout_seconds": 180,
     "isolated_transitive_effects": ["memory_state"],
+    "process_isolated_direct_effects": ["memory_state"],
+    "process_isolated_direct_effect_profiles": {
+      "logging_sink_adapter": ["network"]
+    },
     "isolated_delegated_effect_profiles": {
-      "external_api_command_boundary": ["network"]
+      "external_api_command_boundary": ["network"],
+      "logging_record_projection": ["observability"]
     },
     "isolated_direct_effect_profiles": {
       "filesystem_typed_object_loader": ["filesystem_read"],
+      "logging_adapter_factory": ["observability"],
       "observability_render_command": ["observability"]
     }
   },
   "structural_sample_policy": {
     "parameter_strategies": {
+      "absolute_url": false,
       "callable_arity": false,
       "derived_conversion": false,
+      "directory_path": false,
       "indexed_sequence": false,
       "nested_mapping_paths": false
     },
@@ -75,6 +83,18 @@
       "split_part": "sample"
     },
     "attribute_samples": {
+      "callable_protocol_fixtures": {
+        "add": "safe_method_attribute",
+        "getMessage": "logging_log_record"
+      },
+      "inherited_method_fixtures": [
+        {
+          "base_contains": "logging.Formatter",
+          "methods": ["format"],
+          "parameter": "record",
+          "fixture": "logging_log_record"
+        }
+      ],
       "boolean_names": ["disabled", "enabled", "nullable"],
       "boolean_prefixes": ["has_", "is_"],
       "integer_names": ["count", "index", "length", "size"],
@@ -166,6 +186,16 @@
     "default_constructor_first": true,
     "delegated_transport_methods": ["_post", "post", "_put", "put", "_patch", "patch", "_delete", "delete", "_request", "request"],
     "delegated_transport_fixture": "callable_transport_result",
+    "numeric_receiver_calls": ["arange", "range"],
+    "numeric_receiver_attribute_sample": 1,
+    "required_mapping_key_sample": "0000000000000000000000000000000000000000000000000000000000000000",
+    "required_mapping_value_fixture": "safe_method_attribute",
+    "callable_attribute_fixtures": {
+      "format": "callable_logging_record_message"
+    },
+    "boolean_condition_value": false,
+    "nullable_comparison_enabled": true,
+    "mapping_value_sample": "sample",
     "local_import_stub_functions": ["create_application", "determine_local_workspace_environment"],
     "local_import_stub_methods": ["BlocksConfig.set_event_trigger", "StreamableHTTPServerTransport._handle_post_request"],
     "instance_attribute_profiles": {
@@ -238,6 +268,10 @@
     }
   },
   "source_isolation_policy": {
+    "preserved_stdlib_class_bases": ["logging.Handler"],
+    "stdlib_import_fallbacks": [
+      {"module": "datetime", "name": "UTC", "fallback_name": "timezone", "fallback_attribute": "utc"}
+    ],
     "global_factory_fixtures": {
       "Client": "safe_symbolic_attribute"
     },
@@ -273,8 +307,8 @@
           "SOCK_STREAM": 1,
           "socket": {"__fixture__": "callable_object_noop"}
         }
+        }
       }
-    }
   },
   "skipped_recovery": {
     "ambiguous_nested_callable_target": "disambiguate the nested callable with class or enclosing function context",
@@ -337,6 +371,7 @@
       "n": 8,
       "markup_mode": "rich",
       "name": "value",
+      "node_id": "0000000000000000000000000000000000000000000000000000000000000000",
       "node_attr": "label",
       "obj": "sample",
       "partial": false,
@@ -402,7 +437,9 @@
     },
     "fixture_type_contains": {
       "applicablevalidators": "callable_items",
+      "datetime": "datetime_utc",
       "id_of": "callable_id_of",
+      "logging.logrecord": "declared_model",
       "source": "pytest_source_minimal"
     },
       "type_contains": {

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import ast
 import builtins
 import re
@@ -16,6 +15,7 @@ from runtime.source_contract_semantics import infer_source_contract
 from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
 from runtime.spec_writer_target_binding import promote_environment_ready_candidate, standalone_target_eligibility
 from runtime.python_source_files import is_python_source_ref
+from runtime.promoted_candidate_selection_policies import apply_preflight_selection_policies
 from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_contract_enrichment import enrich_signature_contract
 from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
@@ -29,10 +29,9 @@ ARCHITECTURE_SHAPE_POLICY = dict(TECHNICAL_SPEC_POLICY["architecture_shape_score
 SIDE_EFFECT_PROCESS_BOUNDARY = set(policy_list(TECHNICAL_SPEC_POLICY, "side_effect_process_boundary"))
 ALLOWED_EXTERNAL_SNIPPET_NAMES = {str(item) for item in SNIPPET_POLICY.get("allowed_external_names", [])}
 HIGH_CONFIDENCE_UNRESOLVED_SETS = tuple(
-    frozenset(str(item) for item in row)
-    for row in SNIPPET_POLICY.get("high_confidence_unresolved_sets", [])
-    if isinstance(row, list)
+    frozenset(str(item) for item in row) for row in SNIPPET_POLICY.get("high_confidence_unresolved_sets", []) if isinstance(row, list)
 )
+from runtime.architecture_target_priority import architecture_contract_has_priority, architecture_target_score, complete_architecture_contract
 IGNORED_RETURN_ANNOTATIONS = set(policy_list(CONTRACT_TYPE_POLICY, "ignored_return_annotations"))
 ARGUMENT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "argument_rules")
 PAYLOAD_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "payload_rules")
@@ -134,7 +133,6 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
             }
         )
     return rows
-
 def _implementation_source(source: str) -> bool:
     lowered = source.lower()
     if _context_only_implementation_source(lowered):
@@ -174,9 +172,13 @@ def _extraction_contract(
         ranked = _semantic_rerank_candidates(ranked, evidence)
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [])
     ranked = _semantic_rerank_candidates(ranked, [dict(item.get("evidence", {})) for item in ranked])
-    ranked = promote_environment_ready_candidate(ranked)
+    if FIRST_SLICE_SCOPE_POLICY.get("preserve_architecture_order_before_execution_failure", True):
+        ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [], architecture_contract_only=True)
+    else:
+        ranked = promote_environment_ready_candidate(ranked)
     ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
+    ranked = apply_preflight_selection_policies(ranked)
     if not ranked:
         blocked_codes = _dedupe([str(item.get("blocked_reason") or "") for item in binding_rejections])
         rejection_rows = _binding_rejection_rows(binding_rejections)
@@ -225,6 +227,7 @@ def _extraction_contract(
                 "reasons": item.get("reasons", []),
                 "side_effects": item.get("side_effects", []),
                 "dependency_readiness": dict(dict(item.get("evidence") or {}).get("dependency_readiness") or {}),
+                **({"selection_policy_ids": item["selection_policy_ids"]} if item.get("selection_policy_ids") else {}),
             }
             for item in ranked[:32]
         ],
@@ -297,8 +300,6 @@ def _extraction_contract(
             ],
         }
     return contract
-
-
 def _binding_rejection_rows(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for item in ranked[:12]:
@@ -315,7 +316,7 @@ def _reconciled_input_contract(
 ) -> dict[str, str]:
     from runtime.contract_input_reconciliation import reconcile_input_contract
     return reconcile_input_contract(signature_contract, domain_contract, bindings)
-def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferred_targets: list[Any]) -> list[dict[str, Any]]:
+def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferred_targets: list[Any], *, architecture_contract_only: bool = False) -> list[dict[str, Any]]:
     preferred = [_normalize_source_ref(str(item)) for item in preferred_targets if item]
     if not ranked or not preferred:
         return ranked
@@ -323,6 +324,9 @@ def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferre
     best_score = int(ranked[0].get("score") or 0)
     for target in preferred:
         if target not in by_source:
+            continue
+        structural = infer_source_contract(dict(by_source[target].get("evidence") or by_source[target]))
+        if architecture_contract_only and not architecture_contract_has_priority(target, structural):
             continue
         if not _first_slice_target_can_override(by_source[target], best_score=best_score):
             continue
@@ -333,6 +337,7 @@ def _promote_preferred_first_slice_target(ranked: list[dict[str, Any]], preferre
         ]
         selected["score"] = int(selected.get("score") or 0) + 80
         return [selected, *[item for item in ranked if item is not by_source[target]]]
+    return ranked
 def _enforce_preferred_first_slice_scope(ranked: list[dict[str, Any]], preferred_targets: list[Any]) -> list[dict[str, Any]]:
     if not ranked or not preferred_targets or not FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
         return ranked
@@ -357,6 +362,9 @@ def _first_slice_target_can_override(item: dict[str, Any], *, best_score: int) -
         return False
     if _ranked_item_has_weak_io(item):
         return False
+    structural = infer_source_contract(dict(item.get("evidence") or item))
+    if architecture_target_score(source) > 0 and complete_architecture_contract(structural):
+        return True
     if int(item.get("score") or 0) >= best_score:
         return True
     side_effects = {str(effect).lower() for effect in list(item.get("side_effects", []))}

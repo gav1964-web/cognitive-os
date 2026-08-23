@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import ast
 from typing import Any
+from .executable_acceptance_inherited_samples import add_inherited_method_samples
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def add_parameter_attribute_samples(
+    tree: ast.Module,
     node: FunctionNode,
     parameters: set[str],
     candidates: Candidates,
@@ -17,6 +19,10 @@ def add_parameter_attribute_samples(
     priority: int,
     attribute_policy: dict[str, Any],
 ) -> None:
+    add_inherited_method_samples(
+        tree, node, parameters, candidates, priority=priority + 5,
+        profiles=list(attribute_policy.get("inherited_method_fixtures") or []),
+    )
     called_paths = {
         path
         for item in ast.walk(node)
@@ -24,6 +30,15 @@ def add_parameter_attribute_samples(
         for path in [_attribute_path(item.func, parameters)]
         if path
     }
+    callable_fixtures = dict(attribute_policy.get("callable_protocol_fixtures") or {})
+    for path in sorted(called_paths):
+        fixture = str(callable_fixtures.get(path[-1]) or "")
+        if fixture:
+            candidates[path[0]].append((
+                priority,
+                {"__fixture__": fixture},
+                f"ast_parameter_callable_protocol:{path[-1]}",
+            ))
     trees: dict[str, dict[str, Any]] = {name: {} for name in parameters}
     for item in ast.walk(node):
         if not isinstance(item, ast.Attribute):

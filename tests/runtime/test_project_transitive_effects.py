@@ -55,6 +55,22 @@ def test_project_effects_do_not_depend_on_ast_unparse(monkeypatch, tmp_path):
     assert report["service.py:publish"] == {}
 
 
+def test_project_effects_do_not_rescan_full_source_for_each_callable(monkeypatch, tmp_path):
+    functions = "\n".join(
+        f"def operation_{index}():\n    open('events.log', 'a').write('{index}')\n"
+        for index in range(200)
+    )
+    (tmp_path / "generated.py").write_text(functions, encoding="utf-8")
+    monkeypatch.setattr(
+        "runtime.project_transitive_effects.ast.get_source_segment",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("full-source rescan")),
+    )
+
+    report = project_transitive_effects(tmp_path)
+
+    assert len(report) == 200
+
+
 def test_project_effects_preserve_class_qualified_methods_and_self_calls(tmp_path):
     (tmp_path / "widget.py").write_text(
         "class Widget:\n"

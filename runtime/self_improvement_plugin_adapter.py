@@ -63,9 +63,17 @@ def _training_attempts(cycle: dict[str, Any]) -> list[dict[str, Any]]:
         shadow = evolution.get("shadow")
         if plugin.get("status") not in {"promoted", "trial_passed"} or not isinstance(shadow, dict):
             continue
+        changes = {"improvement_plugin": plugin.get("plugin_id")}
+        challenger = str(plugin.get("selected_challenger") or "")
+        if challenger:
+            changes["spec_writer_candidate_preference"] = challenger
+        parameter_applied = (
+            shadow.get("selected_extraction_candidate") == challenger
+            if challenger else plugin.get("status") == "promoted"
+        )
         attempts.append({
-            "parameter_changes": {"improvement_plugin": plugin.get("plugin_id")},
-            "parameter_applied": plugin.get("status") == "promoted",
+            "parameter_changes": changes,
+            "parameter_applied": parameter_applied,
             "result": dict(shadow),
             "plugin_evidence": {
                 "status": plugin.get("status"),

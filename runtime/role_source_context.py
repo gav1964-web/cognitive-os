@@ -15,6 +15,7 @@ from .python_source_files import is_python_source_file, iter_python_source_files
 from .python_parser_compatibility import parse_compatible_source
 from .source_dependency_readiness import source_dependency_readiness
 from .role_source_symbols import symbol_matches
+from .role_source_document import load_source_document
 from .module_script_contract import module_script_contract
 from .source_standalone_dependencies import blocking_runtime_names, standalone_dependency_facts
 from .source_target_policy import implementation_policy_int
@@ -91,9 +92,8 @@ def _module_context(path: Path) -> dict[str, Any] | None:
     if not is_python_source_file(path):
         return None
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        tree, _ = parse_compatible_source(text, path.as_posix())
-    except SyntaxError:
+        text, _lines, tree = load_source_document(path)
+    except (OSError, SyntaxError):
         return None
     imports: set[str] = set()
     functions: list[dict[str, Any]] = []
@@ -295,10 +295,9 @@ def _facts_by_source(project_report: dict[str, Any]) -> dict[str, dict[str, Any]
 def _symbol_snippet(path: Path, symbol: str) -> dict[str, Any] | None:
     if not is_python_source_file(path):
         return None
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     try:
-        tree, _ = parse_compatible_source("\n".join(lines), path.as_posix())
-    except SyntaxError:
+        _text, lines, tree = load_source_document(path)
+    except (OSError, SyntaxError):
         return None
     owner_class, separator, method_symbol = symbol.rpartition(".")
     method_symbol = method_symbol if separator else symbol

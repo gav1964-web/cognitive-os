@@ -91,10 +91,12 @@ def _close_first_slice_reselection_loop(
 
 def _replacement_transform(revised_adr: dict[str, Any], user_transform: Any) -> Any:
     def transform(artifact: dict[str, Any]) -> dict[str, Any]:
-        transformed = user_transform(artifact) if callable(user_transform) else artifact
-        if transformed.get("artifact_type") == "ArchitectureDecisionRecord":
-            return revised_adr
-        return transformed
+        replacement = (
+            revised_adr
+            if artifact.get("artifact_type") == "ArchitectureDecisionRecord"
+            else artifact
+        )
+        return user_transform(replacement) if callable(user_transform) else replacement
 
     return transform
 

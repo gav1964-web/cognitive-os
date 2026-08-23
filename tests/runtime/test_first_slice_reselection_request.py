@@ -28,8 +28,8 @@ def test_environment_ready_candidate_does_not_replace_stronger_semantic_contract
 
 def test_spec_writer_execution_cost_penalizes_lifecycle_before_selection():
     score, reasons = execution_cost_adjustment({
-        "source": "pkg/cli/base.py:list_templates",
-        "snippet": "def list_templates(config): return config.templates",
+        "source": "pkg/cli/base.py:main",
+        "snippet": "def main(): print('ready')",
         "target_binding": "function_symbol",
     })
 
@@ -319,6 +319,22 @@ def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monk
     assert request["resolution_status"] == "selected"
     assert request["terminal"] is False
     assert result["implementation_plan"]["first_slice_reselection_request"] == request
+
+
+def test_reselection_applies_user_transform_to_revised_architecture_decision():
+    revised = {"artifact_type": "ArchitectureDecisionRecord", "reselected": True}
+
+    def clamp(artifact):
+        return {**artifact, "evaluation_target_clamp": {"target": "pkg/state.py:update"}}
+
+    transform = configured_pipeline._replacement_transform(revised, clamp)
+    result = transform({"artifact_type": "ArchitectureDecisionRecord", "original": True})
+
+    assert result == {
+        "artifact_type": "ArchitectureDecisionRecord",
+        "reselected": True,
+        "evaluation_target_clamp": {"target": "pkg/state.py:update"},
+    }
 
 
 def _ranked(source: str, score: int, status: str, *, semantic_score: int = 0) -> dict:

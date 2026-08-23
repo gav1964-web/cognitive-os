@@ -9,7 +9,7 @@
   "api_timeout_seconds": 20,
   "api_retry_attempts": 2,
   "minimum_recent_year": 2020,
-  "excluded_name_tokens": ["awesome", "tutorial", "course", "interview", "cheatsheet", "examples", "demo"],
+  "excluded_name_tokens": ["awesome", "tutorial", "course", "interview", "cheatsheet", "examples", "demo", "deletion_scheduled"],
   "excluded_description_tokens": ["mirror of", "deprecated", "archived", "learning exercise", "collection of links"],
   "strata": [
     {"id": "legacy_automation", "queries": ["automation", "command line", "backup", "monitoring", "migration", "deployment", "scraper", "bot", "workflow automation", "system administration", "task scheduler", "log analysis", "web scraping", "chatbot", "etl automation", "report generator", "file processing", "email automation", "inventory management", "database migration"]},

@@ -20,7 +20,10 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     root = Path(context["root"])
     project = Path(context["project_dir"])
     minimum = int(dict(context.get("plugin_config") or {}).get("minimum_confirmed_cases") or 3)
-    evidence = _search_exhaustion_evidence(root)
+    strategy = _strategy(context)
+    if not strategy:
+        return {"status": "not_applicable", "reason": "bounded_strategy_not_identified"}
+    evidence = _search_exhaustion_evidence(root, strategy)
     if project.name in evidence:
         return {
             "status": "blocked", "reason": "independent_holdout_required",
@@ -32,9 +35,6 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
             "status": "blocked", "reason": "repeated_independent_evidence_required",
             "observed_project_count": len(independent), "minimum_confirmed_cases": minimum,
         }
-    strategy = _strategy(context)
-    if not strategy:
-        return {"status": "not_applicable", "reason": "bounded_strategy_not_identified"}
     if not context.get("regression_projects"):
         return {"status": "blocked", "reason": "regression_projects_required"}
     proposal = {
@@ -65,7 +65,7 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _search_exhaustion_evidence(root: Path) -> set[str]:
+def _search_exhaustion_evidence(root: Path, strategy: str = "") -> set[str]:
     projects: set[str] = set()
     for candidate in load_kb_candidates(root=root):
         if candidate.get("record_type") != "role_training_experience":
@@ -75,6 +75,8 @@ def _search_exhaustion_evidence(root: Path) -> set[str]:
         if record.get("failure_class") != FAILURE_CLASS:
             continue
         if conclusion.get("next_hypothesis") != "continue_bounded_parameter_search":
+            continue
+        if strategy and _strategy({"diagnosis": record}) != strategy:
             continue
         for case in list(candidate.get("source_cases") or []):
             if isinstance(case, dict) and case.get("project"):
@@ -95,4 +97,14 @@ def _strategy(context: dict[str, Any]) -> str:
         return "callable_arity"
     if "invalid literal for int" in text or "integer input" in text:
         return "derived_conversion"
+    if any(token in text for token in (
+        "notadirectoryerror", "expected directory structure", "directory structure required",
+        "is not a directory",
+    )):
+        return "directory_path"
+    if any(token in text for token in (
+        "unknown url type", "properly formatted url", "specific url format",
+        "url with scheme", "malformed url", "url parameter",
+    )):
+        return "absolute_url"
     return ""

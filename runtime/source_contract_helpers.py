@@ -35,6 +35,13 @@ def yield_path_count(function: ast.AST | None) -> int:
     return sum(isinstance(node, (ast.Yield, ast.YieldFrom)) for node in callable_scope_walk(function)) if function else 0
 
 
+def literal_return_only(function: ast.AST | None) -> bool:
+    if function is None:
+        return False
+    returns = [node.value for node in callable_scope_walk(function) if isinstance(node, ast.Return)]
+    return bool(returns) and all(isinstance(value, ast.Constant) for value in returns)
+
+
 def is_file_extension_policy(function: ast.AST | None) -> bool:
     if function is None:
         return False

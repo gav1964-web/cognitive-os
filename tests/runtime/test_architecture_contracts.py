@@ -47,8 +47,14 @@ def test_hypothesis_driven_self_improvement_docs_match_runtime():
         normalized = " ".join(text.lower().split())
         assert "HypothesisValidationPlan" in text
         assert "post-training admission" in normalized
-        assert "two or three" in normalized or "два-три" in normalized
+        assert "newly discovered match" in normalized or "минимум новых matches" in normalized
     assert "external_discovery_failed" in self_improvement
+    assert "insufficient_matching_holdouts" in self_improvement
+    assert "insufficient_new_matching_holdouts" in self_improvement
+    assert "hypothesis_validation_*.json" in self_improvement
+    assert "maximum_discovery_rounds" in self_improvement
+    assert "probe_failed" in self_improvement
+    assert "GitLab -> GitHub" in self_improvement
     assert "large blind corpora remain release/calibration" in readme
     assert (ROOT / "runtime" / "self_improvement_hypothesis_validation.py").exists()
     assert (ROOT / "tools" / "self_improvement_project_discovery.py").exists()

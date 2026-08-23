@@ -141,7 +141,8 @@ def _search_stratum(
         f"size:<={int(policy['maximum_size_kb'])} archived:false fork:false"
     )
     max_pages = int(policy.get("maximum_search_pages") or 3) if needed else 1
-    for page in range(1, max_pages + 1):
+    first_page = max(1, int(policy.get("search_page_start") or 1))
+    for page in range(first_page, first_page + max_pages):
         for query in stratum["queries"]:
             fields = {
                 "q": f"{query} {qualifiers}", "sort": "stars", "order": "desc",

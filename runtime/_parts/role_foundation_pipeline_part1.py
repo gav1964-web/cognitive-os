@@ -54,7 +54,7 @@ def run_role_foundation_pipeline(
         project_map_report = _attach_active_root_evidence(project_map_report, active_root_decision)
     project_artifact = _project_map_artifact(analysis_project_dir, goal, project_map_report)
     active_root_selected = active_root_decision["status"] == "selected"
-    current_root_confirmed = _auto_scope_current_root_confirmed
+    current_root_confirmed = _auto_scope_current_root_confirmed or bool(_evaluation_target)
     scope_report = _scope_selection_report(
         analysis_project_dir,
         project_map_report,
@@ -67,7 +67,10 @@ def run_role_foundation_pipeline(
         active_root_selected=active_root_selected,
         current_root_confirmed=current_root_confirmed,
     )
-    auto_scope_useful = scope_required or _syntax_damage_is_test_support_only(dict(project_map_report.get("source_health") or {}))
+    auto_scope_useful = not _evaluation_target and (
+        scope_required
+        or _syntax_damage_is_test_support_only(dict(project_map_report.get("source_health") or {}))
+    )
     if (not active_root_selected or _active_root_is_auto) and _auto_scope_depth < 2 and auto_scope_useful:
         auto_decision = _auto_active_root_decision(analysis_project_dir, scope_report)
         if auto_decision["status"] == "selected":
@@ -84,6 +87,7 @@ def run_role_foundation_pipeline(
                 _auto_scope_depth=_auto_scope_depth + 1,
                 _active_root_is_auto=True,
                 _auto_scope_current_root_confirmed=selected_root == analysis_project_dir,
+                _evaluation_target=_evaluation_target,
             )
     if scope_required:
         scope_artifact = _scope_selection_artifact(analysis_project_dir, goal, scope_report)
@@ -229,7 +233,7 @@ def _no_safe_python_candidate(project_map_report: dict[str, Any]) -> bool:
 def _selected_candidate_quality(spec: dict[str, Any]) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract", {}) or {})
     quality = dict(contract.get("semantic_quality", {}) or {})
-    target = str(contract.get("candidate") or quality.get("target") or "")
+    target = str(contract.get("candidate") or "")
     if not target:
         return quality
     ranked = [str(row.get("source")) for row in list(contract.get("ranked_candidates") or []) if isinstance(row, dict)]

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from runtime.executable_acceptance_contract_inference import infer_argument_samples
+from runtime.executable_acceptance_materializers import materialize
 from runtime.executable_acceptance_policy import (
     load_executable_acceptance_policy,
     temporary_executable_acceptance_policy,
@@ -86,4 +87,36 @@ def test_indexed_sequence_strategy_infers_required_length(tmp_path: Path):
     assert result["grid"] == {
         "value": [0] * 9,
         "source": "ast_strategy:indexed_sequence",
+    }
+
+
+def test_directory_strategy_materializes_path_for_iterdir(tmp_path: Path):
+    result = _infer(
+        tmp_path,
+        "from pathlib import Path\ndef target(directory):\n    return list(Path(directory).iterdir())\n",
+        "directory_path",
+    )
+
+    assert result["directory"] == {
+        "value": {"__fixture__": "temporary_directory"},
+        "source": "ast_strategy:directory_path:iterdir",
+    }
+
+
+def test_temporary_directory_fixture_is_pathlike_directory():
+    value = materialize({"__fixture__": "temporary_directory"})
+
+    assert Path(value).is_dir()
+
+
+def test_absolute_url_strategy_uses_local_data_url(tmp_path: Path):
+    result = _infer(
+        tmp_path,
+        "from urllib import request\ndef target(schema):\n    return request.urlopen(schema).read()\n",
+        "absolute_url",
+    )
+
+    assert result["schema"] == {
+        "value": "data:text/plain,sample",
+        "source": "ast_strategy:absolute_url:urlopen",
     }

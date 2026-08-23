@@ -207,8 +207,13 @@ def known_projects(artifacts: Path) -> tuple[set[str], set[str]]:
     names: set[str] = set()
     repos: set[str] = set()
     selections = []
-    for name in ("selection.json", "effective_selection.json"):
-        selections.extend(artifacts.rglob(name) if artifacts.is_dir() else [])
+    if artifacts.is_dir():
+        for pattern in (
+            "*/selection.json",
+            "*/effective_selection.json",
+            "hypothesis_holdouts/*/selection.json",
+        ):
+            selections.extend(artifacts.glob(pattern))
     for selection in selections:
         try:
             payload = json.loads(selection.read_text(encoding="utf-8"))

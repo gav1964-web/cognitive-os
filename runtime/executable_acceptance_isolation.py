@@ -14,7 +14,9 @@ from .executable_acceptance_ast_imports import loaded_names as _loaded_names
 from .executable_acceptance_ast_imports import needed_class_members
 from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
 from .executable_acceptance_callable_context import with_runtime_effect_stubs
+from .executable_acceptance_constructor_closure import constructs_owner
 from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes, replace_configured_global_factories
+from .executable_acceptance_import_compat import configured_import_fallbacks
 from .executable_acceptance_effect_stubs import configured_effect_stubs
 from .executable_acceptance_framework_context import preload_framework_modules, with_framework_context
 from .executable_acceptance_method_fixtures import method_fixture_values
@@ -40,6 +42,7 @@ def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
         globals_body = isolated_global_nodes(tree, nodes, "")
         globals_body, factory_bindings = replace_configured_global_factories(globals_body)
         imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *nodes])
+        imports = configured_import_fallbacks(imports)
         imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, nodes)
         module = ast.Module(body=[*imports, *globals_body, *nodes], type_ignores=[])
         ast.fix_missing_locations(module)
@@ -87,7 +90,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         selected = _isolated_method_names(methods, method_name)
-        if "__init__" in methods:
+        if "__init__" in methods and constructs_owner(methods, selected, class_node.name):
             selected.add("__init__")
         body = [_isolated_class_member(item) for item in needed_class_members(class_node, selected)]
         globals_body = isolated_global_nodes(tree, body, class_node.name)
@@ -100,6 +103,7 @@ def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
             decorator_list=[],
         )
         imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *body])
+        imports = configured_import_fallbacks(imports)
         imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, body)
         module = ast.Module(body=[*imports, *globals_body, isolated_class], type_ignores=[])
         ast.fix_missing_locations(module)

@@ -18,11 +18,8 @@ from .self_improvement_iteration import (
     rollback_promotion_state,
     snapshot_digest,
 )
-from .self_improvement_hypothesis_validation import (
-    HoldoutDiscoverer,
-    run_hypothesis_validation,
-)
-from .self_improvement_training import train_on_project
+from .self_improvement_hypothesis_validation import HoldoutDiscoverer, run_hypothesis_validation
+from .self_improvement_training import probe_project, train_on_project
 
 
 Trainer = Callable[..., dict[str, Any]]
@@ -47,9 +44,10 @@ def run_self_improving_foundation_trial(
 ) -> dict[str, Any]:
     """Let Cognitive OS train, verify, promote, and roll back until convergence."""
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
+    case_timeout = float(policy.get("maximum_field_trial_case_seconds") or 0.0)
     iteration_limit = max(1, int(max_iterations or policy.get("max_training_iterations") or 1))
     _emit(_progress, "baseline_started")
-    baseline = _measure(root, project_roots, limit, write, target_score, executable_acceptance)
+    baseline = _measure(root, project_roots, limit, write, target_score, executable_acceptance, _progress, case_timeout)
     initial_cases = list(baseline.get("cases") or [])
     initial_failures = [case for case in initial_cases if _requires_training(case, target_score)]
     _emit(_progress, "baseline_completed", failure_count=len(initial_failures))
@@ -64,7 +62,7 @@ def run_self_improving_foundation_trial(
         failures = sorted(
             (
                 case for case in cases
-                if _requires_training(case, target_score)
+                if _trainable_failure(case, target_score)
                 and str(case.get("project") or "") not in attempted_projects
             ),
             key=_training_priority,
@@ -109,6 +107,8 @@ def run_self_improving_foundation_trial(
                 trainer=_trainer, target_score=target_score,
                 regression_projects=regression_projects, promote_config=promote_config,
                 write=write, policy=policy,
+                probe=probe_project if _trainer is train_on_project else None,
+                progress=_progress,
             )
             holdout_training = list(holdout.get("training") or [])
             training.extend(holdout_training)
@@ -118,21 +118,28 @@ def run_self_improving_foundation_trial(
                 _progress, "hypothesis_validation_completed", iteration=iteration,
                 status=holdout.get("status"), decision=holdout.get("decision"),
             )
-        _emit(_progress, "verification_started", iteration=iteration)
-        candidate = _measure(
-            root, project_roots, limit, write, target_score, executable_acceptance
-        )
-        assessment = assess_iteration(verification, candidate, target_score=target_score)
         changed = changed_promotion_paths(root, snapshot)
         promoted = (
             bool(changed) or any(_promotion_count(row) for row in round_training)
             or int(holdout.get("promotion_count") or 0) > 0
         )
+        if promoted:
+            _emit(_progress, "verification_started", iteration=iteration)
+            candidate = _measure(
+                root, project_roots, limit, write, target_score, executable_acceptance, _progress, case_timeout
+            )
+        else:
+            _emit(
+                _progress, "verification_skipped", iteration=iteration,
+                reason="active_promotion_missing",
+            )
+            candidate = verification
+        assessment = assess_iteration(verification, candidate, target_score=target_score)
         rollback = {"applied": False, "paths": []}
         if changed and assessment["status"] != "accepted":
             rollback = {"applied": True, "paths": rollback_promotion_state(root, snapshot)}
             candidate = _measure(
-                root, project_roots, limit, write, target_score, executable_acceptance
+                root, project_roots, limit, write, target_score, executable_acceptance, _progress, case_timeout
             )
         iterations.append({
             "iteration": iteration,
@@ -169,13 +176,15 @@ def run_self_improving_foundation_trial(
             stop_reason = "promotion_failed_corpus_gate"
             break
         attempted_projects.clear()
-    capability_requests = capability_development_requests(
-        root,
-        training,
-        minimum_projects=int(policy.get("minimum_capability_request_projects") or 3),
-    )
+    capability_requests = [
+        *capability_development_requests(
+            root, training,
+            minimum_projects=int(policy.get("minimum_capability_request_projects") or 3),
+        ),
+        *_resource_capability_requests(list(verification.get("cases") or [])),
+    ]
     remaining_unattempted = any(
-        _requires_training(case, target_score)
+        _trainable_failure(case, target_score)
         and str(case.get("project") or "") not in attempted_projects
         for case in list(verification.get("cases") or [])
     )
@@ -204,6 +213,7 @@ def run_self_improving_foundation_trial(
         "capability_development_requests": capability_requests,
         "summary": {
             "eligible_failure_count": len(initial_failures),
+            "resource_blocked_project_count": len(_resource_blocked_projects(initial_cases)),
             "training_project_count": len(training),
             "iteration_count": len(iterations),
             "promotion_count": sum(bool(row.get("promoted")) for row in iterations),
@@ -240,6 +250,32 @@ def _requires_training(case: dict[str, Any], target_score: float) -> bool:
         case.get("status") != "out_of_scope"
         and (case.get("status") != "ok" or float(case.get("project_min_score") or 0.0) < target_score)
     )
+
+
+def _trainable_failure(case: dict[str, Any], target_score: float) -> bool:
+    return _requires_training(case, target_score) and case.get("blocker") != "field_trial_case_timeout"
+
+
+def _resource_blocked_projects(cases: list[dict[str, Any]]) -> list[str]:
+    return sorted({
+        str(case.get("project") or "") for case in cases
+        if case.get("blocker") == "field_trial_case_timeout"
+    })
+
+
+def _resource_capability_requests(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    projects = _resource_blocked_projects(cases)
+    if not projects:
+        return []
+    return [{
+        "artifact_type": "CapabilityDevelopmentRequest",
+        "request_id": "cdr_bounded_foundation_analysis_optimization",
+        "status": "implementation_required",
+        "missing_capability": "bounded_foundation_analysis_optimization",
+        "observed_projects": projects,
+        "intervention_scope": "optimize_or_partition_foundation_analysis_only",
+        "forbidden": ["manual_project_repair", "evaluation_threshold_change", "timeout_increase"],
+    }]
 
 
 def _training_priority(case: dict[str, Any]) -> tuple[float, str]:
@@ -297,11 +333,13 @@ def _staged_learning(report: dict[str, Any]) -> bool:
 
 def _measure(
     root: Path, project_roots: list[Path], limit: int, write: bool,
-    target_score: float, executable_acceptance: bool,
+    target_score: float, executable_acceptance: bool, progress: ProgressSink | None,
+    case_timeout_seconds: float,
 ) -> dict[str, Any]:
     return run_role_foundation_field_trial(
         root=root, project_roots=project_roots, limit=limit, write=write,
-        target_score=target_score, executable_acceptance=executable_acceptance,
+        target_score=target_score, executable_acceptance=executable_acceptance, progress=progress,
+        case_timeout_seconds=case_timeout_seconds,
     )
 
 

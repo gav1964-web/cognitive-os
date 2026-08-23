@@ -34,10 +34,26 @@ def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _
     foundation = dict(policy.get("foundation_evidence") or {})
     if not foundation.get("isolated_transitive_effects"):
         check.errors.append("executable_acceptance_policy_missing:foundation_evidence.isolated_transitive_effects")
+    if not foundation.get("process_isolated_direct_effects"):
+        check.errors.append(
+            "executable_acceptance_policy_missing:foundation_evidence.process_isolated_direct_effects"
+        )
     direct_profiles = dict(foundation.get("isolated_direct_effect_profiles") or {})
     if not direct_profiles or any(not name or not effects for name, effects in direct_profiles.items()):
         check.errors.append("executable_acceptance_policy_invalid:foundation_evidence.isolated_direct_effect_profiles")
+    process_profiles = dict(foundation.get("process_isolated_direct_effect_profiles") or {})
+    if not process_profiles or any(not name or not effects for name, effects in process_profiles.items()):
+        check.errors.append(
+            "executable_acceptance_policy_invalid:foundation_evidence.process_isolated_direct_effect_profiles"
+        )
     isolation = dict(policy.get("source_isolation_policy") or {})
+    bases = list(isolation.get("preserved_stdlib_class_bases") or [])
+    if not bases or any(not isinstance(value, str) or "." not in value for value in bases):
+        check.errors.append("executable_acceptance_source_isolation_invalid:preserved_stdlib_class_bases")
+    fallbacks = list(isolation.get("stdlib_import_fallbacks") or [])
+    fallback_fields = {"module", "name", "fallback_name", "fallback_attribute"}
+    if not fallbacks or any(not fallback_fields <= set(dict(row or {})) for row in fallbacks):
+        check.errors.append("executable_acceptance_source_isolation_invalid:stdlib_import_fallbacks")
     profiles = dict(isolation.get("effect_module_stubs") or {})
     if not profiles:
         check.errors.append("executable_acceptance_source_isolation_missing:effect_module_stubs")
@@ -48,6 +64,9 @@ def _check_executable_acceptance_source_isolation(catalogs: dict[str, Any]) -> _
         for value in attrs.values():
             if isinstance(value, dict) and value.get("__fixture__") not in {"callable_object_noop"}:
                 check.errors.append(f"executable_acceptance_source_isolation_unknown_fixture:{module_name}")
+    method = dict(policy.get("method_fixture_policy") or {})
+    if not method.get("required_mapping_key_sample") or not method.get("required_mapping_value_fixture"):
+        check.errors.append("executable_acceptance_policy_missing:method_fixture_policy.required_mapping_fixture")
     return check
 
 

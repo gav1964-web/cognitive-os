@@ -59,6 +59,12 @@ def first_slice_viability(
         for rule in payload["rules"]
         if isinstance(rule, dict) and str(rule.get("rule_id") or "") in matched_ids
     )
+    if any(
+        bool(rule.get("reselection_override"))
+        for rule in payload["rules"]
+        if isinstance(rule, dict) and str(rule.get("rule_id") or "") in matched_ids
+    ):
+        reselection_required = False
     return {
         "status": "eligible" if score >= minimum else "deferred",
         "reselection_required": reselection_required,
@@ -86,13 +92,20 @@ def _facts(
         "text": str(raw_snippet or ""),
         "target_binding": context.get("target_binding"),
         "structural_contract": context.get("structural_contract"),
+        "signature": context.get("signature"),
     }
+    if not snippet.get("signature") and isinstance(context.get("signature"), Mapping):
+        snippet["signature"] = dict(context["signature"])
+    if not snippet.get("structural_contract") and isinstance(context.get("structural_contract"), Mapping):
+        snippet["structural_contract"] = dict(context["structural_contract"])
+    if not snippet.get("target_binding") and context.get("target_binding"):
+        snippet["target_binding"] = context["target_binding"]
     readiness = dict(raw_readiness) if isinstance(raw_readiness, Mapping) else {}
     decorators = list(snippet.get("decorators") or context.get("decorators") or [])
     target_binding = str(snippet.get("target_binding") or context.get("target_binding") or "").lower()
     decorator_text = " ".join(str(item).lower() for item in decorators)
     snippet_text = str(snippet.get("text") or "").lower()
-    runtime_call_scope = _runtime_call_scope(snippet_text)
+    runtime_call_scope = runtime_call_scope_for(snippet_text)
     side_effects = list(context.get("contract_side_effects") or context.get("side_effects") or snippet.get("side_effects") or [])
     receiver_kind = _receiver_kind(target_binding, decorator_text, snippet_text)
     structural = dict(snippet.get("structural_contract") or {})
@@ -116,9 +129,20 @@ def _facts(
             str(item).lower() for item in list(structural.get("observed_side_effects") or [])
         ),
         "state_mutation": str(bool(structural.get("state_mutation"))).lower(),
+        "contract_complete": str(_contract_complete(structural)).lower(),
         "calls": " ".join(str(item).lower() for item in list(context.get("unresolved_calls") or [])),
         "input_complexity": _input_complexity_fact(snippet, payload),
     }
+
+
+def _contract_complete(structural: dict[str, Any]) -> bool:
+    arguments = int(structural.get("argument_count") or 0)
+    annotation = str(structural.get("explicit_return_annotation") or "").strip().lower()
+    return bool(
+        structural.get("source_body_complete") is True
+        and int(structural.get("typed_argument_count") or 0) >= arguments
+        and annotation not in {"", "any", "typing.any", "object", "none", "nonetype"}
+    )
 
 
 def _receiver_kind(target_binding: str, decorators: str, snippet_text: str) -> str:
@@ -153,7 +177,7 @@ def _receiver_fixture_status(
     return "source_isolated_ready"
 
 
-def _runtime_call_scope(snippet_text: str) -> str:
+def runtime_call_scope_for(snippet_text: str) -> str:
     try:
         tree = ast.parse(textwrap.dedent(snippet_text))
     except (SyntaxError, ValueError):
@@ -200,6 +224,8 @@ def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> 
             for row in signature.get("args") or []
             if isinstance(row, dict) and row.get("name")
         }
+        if not annotations:
+            annotations = _text_parameter_annotations(str(snippet.get("text") or ""))
         if all(annotations.get(name) for name in protocol_names):
             return "declared_protocol"
         return "object_protocol"
@@ -207,6 +233,24 @@ def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> 
         str(snippet.get("text") or ""),
         {str(item) for item in payload.get("materializable_parameter_attributes") or []},
     )
+
+
+def _text_parameter_annotations(snippet: str) -> dict[str, str]:
+    try:
+        tree = ast.parse(snippet)
+    except (SyntaxError, ValueError):
+        return {}
+    function = next(
+        (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))),
+        None,
+    )
+    if function is None:
+        return {}
+    return {
+        arg.arg: ast.unparse(arg.annotation)
+        for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+        if arg.arg not in {"self", "cls"} and arg.annotation is not None
+    }
 
 
 def _input_complexity(snippet: str, materializable_attributes: set[str]) -> str:
@@ -227,6 +271,12 @@ def _input_complexity(snippet: str, materializable_attributes: set[str]) -> str:
         for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
         if arg.arg not in {"self", "cls"}
     }
+    annotated = {
+        arg.arg
+        for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]
+        if arg.arg not in {"self", "cls"} and arg.annotation is not None
+    }
+    protocol_parameters: set[str] = set()
     for node in ast.walk(function):
         if not isinstance(node, ast.Attribute) or node.attr in materializable_attributes:
             continue
@@ -234,7 +284,9 @@ def _input_complexity(snippet: str, materializable_attributes: set[str]) -> str:
         while isinstance(root, (ast.Attribute, ast.Subscript)):
             root = root.value
         if isinstance(root, ast.Name) and root.id in parameters:
-            return "object_protocol"
+            protocol_parameters.add(root.id)
+    if protocol_parameters:
+        return "declared_protocol" if protocol_parameters <= annotated else "object_protocol"
     return "scalar_or_structural"
 
 
@@ -261,6 +313,7 @@ def _validate_matchers(match: dict[str, Any]) -> None:
         "source", "path", "symbol", "knowledge_rule", "target_binding", "dependency_status",
         "decorators", "owner_class", "snippet_text", "side_effects", "calls", "receiver_kind",
         "input_complexity", "receiver_fixture_status", "runtime_call_scope", "direct_side_effects", "state_mutation",
+        "contract_complete",
     }
     for key, values in match.items():
         suffix = "_contains_any" if key.endswith("_contains_any") else "_in" if key.endswith("_in") else ""

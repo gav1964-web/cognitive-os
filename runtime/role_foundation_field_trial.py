@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
@@ -21,6 +22,7 @@ from .role_foundation_trial_status import (
     case_status as _case_status,
 )
 from .python_module_transaction import python_module_transaction
+from .role_foundation_case_runner import run_bounded_foundation_case
 
 
 DEFAULT_GOAL = "Produce ADR and TechnicalSpec for first safe transformation"
@@ -34,21 +36,40 @@ def run_role_foundation_field_trial(
     write: bool = False,
     target_score: float = 9.2,
     executable_acceptance: bool = False,
+    progress: Callable[[dict[str, Any]], None] | None = None,
+    case_timeout_seconds: float = 0.0,
 ) -> dict[str, Any]:
     projects = discover_python_projects(project_roots)
     if limit > 0:
         projects = projects[:limit]
-    cases = [
-        _run_isolated_case(
-            root=root, project_dir=project, write=write,
-            executable_acceptance=executable_acceptance,
+    cases = []
+    for index, project in enumerate(projects, start=1):
+        _emit_progress(progress, "field_trial_case_started", index, len(projects), project)
+        started = time.monotonic()
+        case = run_bounded_foundation_case(
+            _run_isolated_case, {
+                "root": root, "project_dir": project, "write": write,
+                "executable_acceptance": executable_acceptance,
+            }, case_timeout_seconds,
         )
-        for project in projects
-    ]
+        cases.append(case)
+        _emit_progress(
+            progress, "field_trial_case_completed", index, len(projects), project,
+            status=str(case.get("status") or "unknown"),
+            elapsed_seconds=round(time.monotonic() - started, 3),
+        )
     report = _report(cases, target_score=target_score)
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
     return report
+
+
+def _emit_progress(
+    sink: Callable[[dict[str, Any]], None] | None, stage: str,
+    index: int, total: int, project: Path, **details: Any,
+) -> None:
+    if sink:
+        sink({"stage": stage, "index": index, "total": total, "project": project.name, **details})
 
 
 def _run_isolated_case(

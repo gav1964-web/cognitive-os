@@ -74,6 +74,7 @@
   },
   "first_slice_scope": {
     "enforce_candidate_within_targets": true,
+    "preserve_architecture_order_before_execution_failure": true,
     "work_plan_target_limit": 32,
     "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
   },

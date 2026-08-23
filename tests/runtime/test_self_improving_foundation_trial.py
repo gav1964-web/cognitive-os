@@ -59,8 +59,35 @@ def test_trial_trains_weakest_case_with_stable_regression_projects(monkeypatch, 
     assert result["summary"]["eligible_failure_count"] == 2
     assert [event["stage"] for event in progress] == [
         "baseline_started", "baseline_completed", "training_started",
-        "training_completed", "verification_started", "completed",
+        "training_completed", "verification_skipped", "completed",
     ]
+
+
+def test_trial_does_not_remeasure_unchanged_active_policy(monkeypatch, tmp_path: Path):
+    case = {
+        "project": "weak", "project_dir": str(tmp_path / "weak"),
+        "status": "ok", "project_min_score": 9.0,
+    }
+    measurements = []
+
+    def measure(**kwargs):
+        measurements.append(kwargs)
+        return _report([case])
+
+    monkeypatch.setattr(
+        "runtime.self_improving_foundation_trial.run_role_foundation_field_trial", measure,
+    )
+    result = run_self_improving_foundation_trial(
+        root=tmp_path, project_roots=[tmp_path], max_iterations=1, write=False,
+        _trainer=lambda **kwargs: {
+            "status": "hypothesis_not_confirmed",
+            "outcome": {"target_reached": False},
+            "improvement_plugin_cycle": {"promotion_count": 0},
+        },
+    )
+
+    assert len(measurements) == 1
+    assert result["iterations"][0]["verification"] is result["baseline"]
 
 
 def test_trial_does_not_train_out_of_scope_or_target_cases(monkeypatch, tmp_path: Path):

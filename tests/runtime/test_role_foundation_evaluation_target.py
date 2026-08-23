@@ -24,3 +24,26 @@ def test_foundation_pipeline_clamps_existing_source_for_evaluation(tmp_path):
 
     assert result["selected_extraction_candidate"] == "app.py:normalize_name"
     assert result["safety"]["source_code_changes"] is False
+
+
+def test_foundation_pipeline_clamps_class_qualified_method(tmp_path):
+    project = tmp_path / "method_project"
+    project.mkdir()
+    (project / "store.py").write_text(
+        "class Store:\n"
+        "    def set_value(self, value: str):\n"
+        "        self.value = value\n\n"
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip()\n",
+        encoding="utf-8",
+    )
+
+    result = run_role_foundation_pipeline(
+        root=Path(__file__).resolve().parents[2],
+        project_dir=project,
+        goal="Evaluate exact method target",
+        write=False,
+        _evaluation_target="store.py:Store.set_value",
+    )
+
+    assert result["selected_extraction_candidate"] == "store.py:Store.set_value"

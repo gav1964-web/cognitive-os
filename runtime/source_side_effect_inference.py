@@ -70,7 +70,9 @@ def _open_mode(call: ast.Call) -> str:
 def _rule_matches(rule: dict[str, Any], calls: set[str]) -> bool:
     exact = {str(item).lower() for item in rule.get("call_exact", [])}
     contains = [str(item).lower() for item in rule.get("call_contains", [])]
-    return any(call in exact or any(token in call for token in contains) for call in calls)
+    excluded = tuple(str(item).lower() for item in rule.get("exclude_prefix", []))
+    candidates = {call for call in calls if not call.startswith(excluded)}
+    return any(call in exact or any(token in call for token in contains) for call in candidates)
 
 
 def _call_name(node: ast.AST) -> str:

@@ -169,6 +169,9 @@
       "candidates",
       "repos"
     ],
+    "constant_return_hook_prefixes": ["can_", "has_", "is_", "should_"],
+    "constant_return_hook_score_cap": ["69"],
+    "constant_return_hook_reason": ["constant-return hook is weak as first architectural slice"],
     "liveness_probe_symbols": [
       "health",
       "healthcheck",
@@ -618,8 +621,7 @@
         "deploy"
       ],
       "symbol_contains_any": [
-        "release",
-      "deploy",
+        "deploy",
         "build_wheel",
         "upload"
       ]

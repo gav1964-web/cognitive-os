@@ -158,6 +158,8 @@ def test_post_trial_admission_uses_only_confirmed_measured_reselection(monkeypat
 
     assert result["reason"] == "confirmed_cases_required"
     assert captured["diagnosis"]["recommended_source"] == "app.py:build"
+    assert captured["diagnosis"]["measured_selection_effect"]["score_delta"] is None
+    assert captured["diagnosis"]["measured_selection_effect"]["control"]["selected_extraction_candidate"] == "app.py:write"
     assert captured["promote"] is True
 
 

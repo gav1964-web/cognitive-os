@@ -1,11 +1,11 @@
 """Architect-owned expansion of a rejected first-slice candidate window."""
-
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
 from .architect_candidate_quality import contract_quality
+from .architecture_target_priority import architecture_contract_has_priority, architecture_target_score
 from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
 from .promoted_candidate_selection_policies import apply_selection_policies
@@ -174,6 +174,9 @@ def _viable_candidates(
             ranked.append({
                 "target": source,
                 "index": index,
+                "architecture_significance": (
+                    architecture_target_score(source) if architecture_contract_has_priority(source, structural) else 0
+                ),
                 "environment_ready": _environment_ready_callable(source_context),
                 "receiver_independent": (
                     snippet.get("target_binding") == "function_symbol"
@@ -188,6 +191,7 @@ def _viable_candidates(
                 "output_inference_basis": str(structural.get("output_inference_basis") or ""),
             })
     ranked.sort(key=lambda row: (
+        -int(row["architecture_significance"]),
         -int(bool(row["environment_ready"])),
         -int(bool(row["receiver_independent"])),
         -int(row["semantic_score"]),
@@ -202,7 +206,6 @@ def _viable_candidates(
         if _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)
     ]
     return [str(row["target"]) for row in qualified[:limit]], ranked
-
 
 def _semantic_threshold_satisfied(
     candidate: dict[str, Any], source_context: dict[str, Any] | None, minimum: int

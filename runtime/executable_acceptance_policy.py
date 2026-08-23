@@ -92,6 +92,20 @@ def method_fixture_policy() -> dict[str, Any]:
             str(item) for item in policy.get("delegated_transport_methods", []) if item
         ),
         "delegated_transport_fixture": str(policy.get("delegated_transport_fixture") or ""),
+        "numeric_receiver_calls": tuple(
+            str(item) for item in policy.get("numeric_receiver_calls", []) if item
+        ),
+        "numeric_receiver_attribute_sample": int(
+            policy.get("numeric_receiver_attribute_sample") or 1
+        ),
+        "required_mapping_key_sample": str(policy.get("required_mapping_key_sample") or "sample"),
+        "required_mapping_value_fixture": str(
+            policy.get("required_mapping_value_fixture") or "safe_method_attribute"
+        ),
+        "callable_attribute_fixtures": dict(policy.get("callable_attribute_fixtures") or {}),
+        "boolean_condition_value": bool(policy.get("boolean_condition_value", False)),
+        "nullable_comparison_enabled": bool(policy.get("nullable_comparison_enabled")),
+        "mapping_value_sample": policy.get("mapping_value_sample", "sample"),
         "local_import_stub_functions": tuple(str(item) for item in policy.get("local_import_stub_functions", []) if item),
         "local_import_stub_methods": tuple(str(item) for item in policy.get("local_import_stub_methods", []) if item),
         "instance_attribute_profiles": dict(policy.get("instance_attribute_profiles") or {}),
@@ -102,11 +116,15 @@ def method_fixture_policy() -> dict[str, Any]:
 def source_isolation_policy() -> dict[str, Any]:
     policy = dict(_policy().get("source_isolation_policy") or {})
     return {
+        "stdlib_import_fallbacks": _clone(list(policy.get("stdlib_import_fallbacks") or [])),
         "effect_module_stubs": dict(policy.get("effect_module_stubs") or {}),
         "framework_contexts": _clone(dict(policy.get("framework_contexts") or {})),
         "global_factory_fixtures": dict(policy.get("global_factory_fixtures") or {}),
         "local_import_factory_fixtures": _clone(dict(policy.get("local_import_factory_fixtures") or {})),
         "global_symbol_fixtures": dict(policy.get("global_symbol_fixtures") or {}),
+        "preserved_stdlib_class_bases": tuple(
+            str(item) for item in policy.get("preserved_stdlib_class_bases", []) if item
+        ),
     }
 
 
@@ -141,6 +159,13 @@ def foundation_evidence_policy() -> dict[str, Any]:
         "isolated_transitive_effects": tuple(
             str(item) for item in policy.get("isolated_transitive_effects", []) if item
         ),
+        "process_isolated_direct_effects": tuple(
+            str(item) for item in policy.get("process_isolated_direct_effects", []) if item
+        ),
+        "process_isolated_direct_effect_profiles": {
+            str(name): tuple(str(item) for item in effects if item)
+            for name, effects in dict(policy.get("process_isolated_direct_effect_profiles") or {}).items()
+        },
         "isolated_direct_effect_profiles": {
             str(name): tuple(str(item) for item in effects if item)
             for name, effects in dict(policy.get("isolated_direct_effect_profiles") or {}).items()

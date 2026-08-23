@@ -50,3 +50,14 @@ def test_observable_application_bootstrap_requires_reselection():
     assert first_slice_viability(
         "reporting.py:debug_response", _context("observability")
     )["reselection_required"] is False
+
+
+def test_handler_name_alone_does_not_imply_runtime_resource():
+    result = first_slice_viability(
+        "logging_adapter.py:setup_search_handler", _context("observability")
+    )
+
+    assert result["reselection_required"] is False
+    assert not any(
+        row["rule_id"] == "runtime_resource_boundary" for row in result["matched_rules"]
+    )

@@ -103,6 +103,7 @@ def _portable_contract(case: dict[str, Any]) -> dict[str, Any]:
         "typed_argument_count": structural.get("typed_argument_count"),
         "return_paths": structural.get("return_paths"),
         "output_inference_basis": structural.get("output_inference_basis"),
+        "literal_return_only": bool(structural.get("literal_return_only")),
         "state_mutation": bool(structural.get("state_mutation")),
         "observed_side_effects": list(structural.get("observed_side_effects") or []),
         "acceptance_signal": downstream.get("acceptance_signal"),

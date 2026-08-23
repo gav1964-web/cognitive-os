@@ -29,6 +29,22 @@ def readable_temp_path() -> os.PathLike[str]:
     return _ReadableTempPath()
 
 
+class _TemporaryDirectoryPath(os.PathLike[str]):
+    def __init__(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(prefix="cognitive-os-directory-")
+        self.path = Path(self.directory.name)
+
+    def __fspath__(self) -> str:
+        return str(self.path)
+
+    def __str__(self) -> str:
+        return str(self.path)
+
+
+def temporary_directory() -> os.PathLike[str]:
+    return _TemporaryDirectoryPath()
+
+
 def delimited_text_path(delimiter: str, columns: int) -> os.PathLike[str]:
     handle = tempfile.NamedTemporaryFile(
         prefix="cognitive-os-delimited-", suffix=".txt", delete=False, mode="w", encoding="utf-8"
