@@ -316,9 +316,12 @@ not block the remaining frozen selection.
 Candidate-selection admission consumes the already measured control/treatment pair,
 synthesizes structural policy from repeated paired contrasts, and requires regression
 projects before promotion. Promotion is transactional: regression causes rollback;
-one evidence-derived trigger refinement is allowed, and a repeated failure rejects
-the policy. A promoted rule enters normal SpecWriter preflight and can request the
-existing Architect first-slice reselection loop when approved scope hides a challenger.
+a bounded sequence of evidence-derived refinements is allowed, and budget exhaustion
+rejects the policy. Holdout and controls use the same complete execution-feedback route
+as the outer corpus, with configurable repeated control verification. Shared trigger
+constraints remain AND-ed across every OR alternative. A promoted rule enters normal
+SpecWriter preflight and can request the existing Architect first-slice reselection loop
+when approved scope hides a challenger; policy provenance is retained through that rebuild.
 Repeated diagnosis-matched failures are returned as a typed
 `CapabilityDevelopmentRequest`, rather than another manual project-search task.
 

@@ -20,8 +20,8 @@ from runtime.role_project_analysis import prepare_role_project_report
 from runtime.role_artifact_quality import evaluate_role_artifacts
 from runtime.role_skill_common import load_skill_registry, write_role_artifact
 from runtime.scope_selection_document import write_scope_selection_document
+from runtime.selected_candidate_quality import selected_candidate_quality as _selected_candidate_quality
 from runtime.spec_writer_red_team import red_team_technical_spec
-from runtime.target_quality import semantic_target_quality_report
 from runtime.technical_spec_document import write_technical_spec_document
 
 def run_role_foundation_pipeline(
@@ -231,25 +231,6 @@ def _no_safe_python_candidate(project_map_report: dict[str, Any]) -> bool:
     blocked = plan.get("blocked_by") or []
     blockers = [blocked] if isinstance(blocked, str) else list(blocked)
     return "no_safe_python_candidate" in {str(item) for item in blockers}
-
-def _selected_candidate_quality(spec: dict[str, Any]) -> dict[str, Any]:
-    contract = dict(spec.get("extraction_contract", {}) or {})
-    quality = dict(contract.get("semantic_quality", {}) or {})
-    target = str(contract.get("candidate") or "")
-    if not target:
-        return quality
-    ranked = [str(row.get("source")) for row in list(contract.get("ranked_candidates") or []) if isinstance(row, dict)]
-    evidence = [str(row.get("source")) for row in list(spec.get("source_evidence") or []) if isinstance(row, dict)]
-    return semantic_target_quality_report(
-        target,
-        ranked_candidates=ranked,
-        source_evidence=evidence,
-        selection_reason=str(contract.get("selection_reason") or ""),
-        structural_evidence=dict(contract.get("structural_evidence") or {}),
-        input_contract=dict(contract.get("input_contract") or {}),
-        output_contract=dict(contract.get("output_contract") or {}),
-        side_effect_contract=dict(contract.get("side_effects") or {}),
-    )
 
 def _attach_active_root_evidence(project_map_report: dict[str, Any], active_root_decision: dict[str, Any]) -> dict[str, Any]:
     source_health = dict(project_map_report.get("source_health") or {})

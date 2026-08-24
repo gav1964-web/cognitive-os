@@ -57,6 +57,16 @@ def test_expanded_reselection_can_use_analyzer_callable_inventory():
     assert _expanded_candidate_sources(report, {}, policy) == ["pkg/features.py:extract_features"]
 
 
+def test_expanded_reselection_can_use_analyzer_analysis_tasks():
+    report = {"analysis_tasks": {"tasks": [
+        {"target": "pkg/core.py:normalize", "type": "DRAFT_PIPELINE_CAPABILITY"},
+        {"target": "README.md", "type": "REVIEW_DOCUMENTATION"},
+    ]}}
+    policy = {"candidate_sources": ["analysis_tasks"], "expanded_candidate_limit": 8}
+
+    assert _expanded_candidate_sources(report, {}, policy) == ["pkg/core.py:normalize"]
+
+
 def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold():
     source = "pkg/core.py:transform"
     context = {
@@ -76,6 +86,33 @@ def test_reselection_does_not_spend_iteration_on_candidate_below_spec_threshold(
 
     assert viable and viable[0]["semantic_score"] < 95
     assert selected == []
+
+
+def test_learned_policy_can_admit_deferred_candidate(monkeypatch):
+    source = "pkg/core.py:normalize"
+    context = {source: {
+        "node_kind": "function",
+        "dependency_readiness": {"status": "ready"},
+        "snippet": {
+            "text": "def normalize(value): return value",
+            "target_binding": "method_symbol",
+            "signature": {"args": [{"name": "value"}]},
+            "structural_contract": {
+                "return_paths": 1,
+                "argument_usage_types": {"value": "ScalarLike"},
+            },
+        },
+    }}
+    monkeypatch.setattr(
+        "runtime.architect_first_slice_reselection.apply_selection_policies",
+        lambda rows, _request: [{**rows[0], "selection_policy_ids": ["learned"]}],
+    )
+
+    selected, _ranked = _viable_candidates(
+        [source], context, {}, limit=1, selection_request={"trigger": "executable_acceptance_rejected"},
+    )
+
+    assert selected == [source]
 
 
 def test_reselection_accepts_strong_candidate_at_semantic_policy_floor():

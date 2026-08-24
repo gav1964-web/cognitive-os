@@ -59,10 +59,18 @@ def _append_read_only_ranked_context(scoped: list[dict[str, Any]], ranked: list[
     context = []
     for item in ranked:
         source = str(item.get("source") or "")
-        if not source or source in seen or _source_path(source) not in scoped_paths:
+        learned_context = bool(item.get("selection_policy_ids"))
+        if not source or source in seen or (
+            _source_path(source) not in scoped_paths and not learned_context
+        ):
             continue
         row = dict(item)
-        row["reasons"] = [*list(row.get("reasons", [])), "read-only context candidate retained after first-slice scope enforcement"]
+        reason = (
+            "learned policy candidate retained as read-only context"
+            if learned_context and _source_path(source) not in scoped_paths
+            else "read-only context candidate retained after first-slice scope enforcement"
+        )
+        row["reasons"] = [*list(row.get("reasons", [])), reason]
         context.append(row)
         seen.add(source)
     return [*scoped, *context]

@@ -19,6 +19,7 @@ from .self_improvement_iteration import (
     snapshot_digest,
 )
 from .self_improvement_hypothesis_validation import HoldoutDiscoverer, run_hypothesis_validation
+from .self_improvement_engine_fingerprint import improvement_engine_fingerprint
 from .self_improvement_training import probe_project, train_on_project
 
 
@@ -57,7 +58,8 @@ def run_self_improving_foundation_trial(
     iterations: list[dict[str, Any]] = []
     stop_reason = ""
     maximum_regression_cases = 0
-    attempted_projects = _prior_attempted_projects(root, initial_cases)
+    engine_fingerprint = improvement_engine_fingerprint(root)
+    attempted_projects = _prior_attempted_projects(root, initial_cases, engine_fingerprint)
     for iteration in range(1, iteration_limit + 1):
         cases = list(verification.get("cases") or [])
         failures = sorted(
@@ -200,6 +202,7 @@ def run_self_improving_foundation_trial(
         "artifact_type": "SelfImprovingFoundationFieldTrialReport",
         "status": _status(verification, stop_reason),
         "target_score": target_score,
+        "improvement_engine_fingerprint": engine_fingerprint,
         "baseline": baseline,
         "training": training,
         "iterations": iterations,
@@ -298,7 +301,9 @@ def _training_priority(
     return int(not actionable), score, str(case.get("project") or "")
 
 
-def _prior_attempted_projects(root: Path, cases: list[dict[str, Any]]) -> set[str]:
+def _prior_attempted_projects(
+    root: Path, cases: list[dict[str, Any]], engine_fingerprint: str
+) -> set[str]:
     directory = root / "artifacts" / "self_improvement"
     current = {str(row.get("project") or "") for row in cases}
     attempted: set[str] = set()
@@ -308,6 +313,8 @@ def _prior_attempted_projects(root: Path, cases: list[dict[str, Any]]) -> set[st
         except (OSError, json.JSONDecodeError):
             continue
         if report.get("status") != "critical_intervention_required":
+            continue
+        if report.get("improvement_engine_fingerprint") != engine_fingerprint:
             continue
         prior = {str(row.get("project") or "") for row in report.get("baseline", {}).get("cases", [])}
         if current == prior:

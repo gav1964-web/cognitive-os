@@ -82,7 +82,7 @@ def test_extraction_contract_preserves_multi_file_effect_handoff() -> None:
 
 
 def test_extraction_contract_preserves_promoted_selection_evidence(monkeypatch) -> None:
-    def apply(ranked):
+    def apply(ranked, **_kwargs):
         ranked[0]["selection_policy_ids"] = ["verified_policy"]
         return ranked
 
@@ -95,6 +95,36 @@ def test_extraction_contract_preserves_promoted_selection_evidence(monkeypatch) 
     }])
 
     assert contract["selection_policy_ids"] == ["verified_policy"]
+
+
+def test_preflight_policy_ranks_full_read_only_context_before_windowing(monkeypatch) -> None:
+    observed_sizes = []
+
+    def apply(ranked, **_kwargs):
+        observed_sizes.append(len(ranked))
+        reordered = sorted(ranked, key=lambda row: row["source"] != "other.py:challenger")
+        reordered[0]["selection_policy_ids"] = ["learned_policy"]
+        return reordered
+
+    monkeypatch.setattr(spec_part2, "apply_preflight_selection_policies", apply)
+    evidence = [{
+        "source": f"app.py:candidate_{index}",
+        "signature": {"args": [{"name": "value"}]},
+        "snippet": f"def candidate_{index}(value):\n    return value\n",
+    } for index in range(10)]
+    evidence.append({
+        "source": "other.py:challenger",
+        "signature": {"args": [{"name": "value"}]},
+        "snippet": "def challenger(value):\n    return value\n",
+    })
+
+    contract = spec_part2._extraction_contract(
+        evidence,
+        preferred_targets=["app.py:candidate_0"],
+    )
+
+    assert max(observed_sizes) > 1
+    assert contract["candidate"] == "other.py:challenger"
 
 
 def test_technical_spec_document_renders_human_tz_sections() -> None:

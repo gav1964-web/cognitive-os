@@ -234,7 +234,8 @@ def test_architect_reselection_uses_kb_viability_order():
     )
 
     assert selected == ["dataset/io.py:normalize_batch", "dataset/io.py:get_batch"]
-    assert [row["score"] for row in evidence] == [45, 24]
+    assert [row["score"] for row in evidence] == [45, -70, 24]
+    assert [row["target"] for row in evidence if row["viability_eligible"]] == selected
 
 
 def test_architect_reselection_prefers_environment_ready_over_manifest_candidate():
@@ -277,8 +278,11 @@ def test_architect_reselection_excludes_instance_method_that_requires_fixture():
     selected, evidence = _viable_candidates(sources, context, {}, limit=8)
 
     assert selected == ["pkg/data.py:create_set"]
-    assert [row["target"] for row in evidence] == ["pkg/data.py:create_set"]
+    assert [row["target"] for row in evidence] == [
+        "pkg/data.py:create_set", "pkg/model.py:extract",
+    ]
     assert evidence[0]["receiver_independent"] is True
+    assert evidence[1]["viability_eligible"] is False
 
 
 def test_architect_reselection_prefers_complete_contract_over_accessor():

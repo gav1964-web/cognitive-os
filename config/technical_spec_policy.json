@@ -166,7 +166,8 @@
       "hidden_orchestrators",
       "dataflows",
       "minimal_extraction_plan",
-      "project_callable_inventory"
+      "project_callable_inventory",
+      "analysis_tasks"
     ]
   },
   "semantic_review_override": {

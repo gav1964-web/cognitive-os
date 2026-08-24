@@ -138,7 +138,6 @@ def test_active_policy_reorders_only_execution_reselection(tmp_path):
     assert [row["target"] for row in reordered] == ["build", "write"]
     assert reordered[0]["selection_policy_ids"] == ["returning_challenger"]
 
-
 def test_active_policy_preflight_reorders_existing_candidate_evidence(tmp_path):
     root = _root(tmp_path)
     policy_path = root / "knowledge" / "role_knowledge" / "promoted_candidate_selection_policies.json"

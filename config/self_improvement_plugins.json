@@ -53,7 +53,9 @@
       "implements_capabilities": ["candidate_selection_structural_discriminator_synthesis"],
       "auto_promote": true,
       "requires_regression_cases": true,
-      "minimum_confirmed_cases": 3
+      "minimum_confirmed_cases": 3,
+      "maximum_reproduction_refinements": 4,
+      "regression_verification_repetitions": 3
     },
     {
       "id": "executable_adapter_admission",

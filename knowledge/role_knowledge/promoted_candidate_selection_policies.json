@@ -72,6 +72,68 @@
       ]
     },
     {
+      "activation_state": "active",
+      "candidate_ordering": "executable_fixture_readiness",
+      "id": "first_slice_reselection_required:measured_candidate_reselection:structural_4c1718cf07",
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "alternatives": [
+          {
+            "min_argument_count": 2
+          },
+          {
+            "max_argument_count": 0
+          },
+          {
+            "max_argument_usage_count": 0
+          },
+          {
+            "any_ranking_reason_tokens": [
+              "bounded_transform_boundary"
+            ]
+          },
+          {
+            "any_ranking_reason_tokens": [
+              "direct_memory_state_boundary",
+              "read_or_mapping_boundary"
+            ]
+          }
+        ],
+        "common_requirements": {
+          "dependency_status": [
+            "missing_external"
+          ],
+          "min_argument_count": 9
+        }
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "artyukhov__client-reporting-showcase",
+          "insatiatedsoulcode__cloudnotes",
+          "quantumlib__OpenFermion-PySCF"
+        ],
+        "holdout_project": "cote3804__ase-kf",
+        "holdout_score_delta": 0.9,
+        "ordinary_route_reproduction": "passed",
+        "regression_refinement": "exclude_reproduction_only_execution_cost"
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_ranking_reason_tokens": [
+          "bounded_transform_boundary",
+          "direct_memory_state_boundary",
+          "read_or_mapping_boundary"
+        ],
+        "max_argument_count": 1,
+        "min_argument_count": 1,
+        "min_argument_usage_count": 1
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
       "id": "side_effectful_target:measured_candidate_reselection",
       "numeric_bonus": false,
       "preflight_trigger_requirements": {

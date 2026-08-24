@@ -76,8 +76,17 @@ def compact_candidate_quality(value: Any) -> dict[str, Any]:
     structural = dict(row.get("structural_evidence") or {})
     result["structural_evidence"] = {
         key: structural.get(key)
-        for key in ("literal_return_only", "observed_side_effects", "state_mutation")
+        for key in (
+            "argument_count", "argument_usage_types", "literal_return_only",
+            "observed_side_effects", "output_inference_basis", "return_paths", "state_mutation",
+        )
         if structural.get(key) not in (None, "", [])
+    }
+    selection = dict(row.get("selection_evidence") or {})
+    result["selection_evidence"] = {
+        "kind": selection.get("kind"),
+        "ranking_reasons": list(selection.get("ranking_reasons") or [])[:6],
+        "dependency_readiness": dict(selection.get("dependency_readiness") or {}),
     }
     return result
 

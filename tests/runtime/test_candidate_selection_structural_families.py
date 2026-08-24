@@ -104,3 +104,21 @@ def test_low_arity_successes_form_portable_fixture_readiness_family():
     assert family["policy"]["structural_requirements"]["max_argument_count"] == 1
     assert "forbidden_output_inference_basis" not in family["policy"]["structural_requirements"]
     assert family["policy"]["preflight_trigger_requirements"]["min_argument_count"] == 2
+
+
+def test_persistent_execution_cost_becomes_structural_discriminator():
+    records = []
+    for project in ("alpha", "beta", "gamma"):
+        row = _record(project, "return_expression", "return_expression")
+        row["failed_contract"]["execution_cost_rules"] = ["runtime_global", "receiver"]
+        row["successful_contract"]["execution_cost_rules"] = ["receiver"]
+        records.append(row)
+
+    policy = admission._structural_families([_group(records)])[0]["policy"]
+
+    assert policy["structural_requirements"]["forbidden_ranking_reason_tokens"] == [
+        "runtime_global",
+    ]
+    assert policy["preflight_trigger_requirements"]["any_ranking_reason_tokens"] == [
+        "runtime_global",
+    ]

@@ -377,17 +377,21 @@ def test_trial_requests_strategy_extension_after_registered_plugin_exhaustion(mo
 
 def test_curriculum_resumes_latest_critical_report_for_same_corpus(tmp_path: Path):
     cases = [{"project": "first"}, {"project": "second"}]
+    fingerprint = "engine-v2"
     directory = tmp_path / "artifacts" / "self_improvement"
     directory.mkdir(parents=True)
     (directory / "self_improving_foundation_trial_1.json").write_text(json.dumps({
         "status": "critical_intervention_required",
+        "improvement_engine_fingerprint": fingerprint,
         "baseline": {"cases": [{"project": "first"}, {"project": "second"}]},
         "training": [{"project": "first"}],
     }), encoding="utf-8")
     (directory / "self_improving_foundation_trial_2.json").write_text(json.dumps({
         "status": "critical_intervention_required",
+        "improvement_engine_fingerprint": fingerprint,
         "baseline": {"cases": [{"project": "first"}, {"project": "second"}]},
         "training": [{"project": "second"}],
     }), encoding="utf-8")
 
-    assert _prior_attempted_projects(tmp_path, cases) == {"first", "second"}
+    assert _prior_attempted_projects(tmp_path, cases, fingerprint) == {"first", "second"}
+    assert _prior_attempted_projects(tmp_path, cases, "engine-v3") == set()

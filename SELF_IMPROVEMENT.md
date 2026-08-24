@@ -129,12 +129,17 @@ Support-path exceptions require a declarative AST contract family with an explic
 Candidate-selection policy synthesis compares failed and successful contracts pairwise. It may learn a persistent
 removed effect such as `memory_state`; it does not require every successful candidate to be side-effect free.
 Promotion requires regression projects. The admission plugin snapshots promotion state, evaluates the controls,
-applies the policy, and rolls it back on any score or status regression. One bounded refinement may exclude an effect
-seen only in regressing controls; a second failure rejects the policy. Hypothesis discovery clones its frozen pool
+applies the policy, and rolls it back on any score or status regression. A config-bounded sequence of evidence-derived
+refinements may add execution-cost, dependency, argument-shape, or effect discriminators. Conditions that must hold
+for every OR branch are stored as `common_requirements`; exhausting the refinement budget rejects the policy.
+Each regression project is re-evaluated the configured number of times. Hypothesis discovery clones its frozen pool
 with bounded parallel workers and isolates individual clone failures.
 Before regression evaluation, the promoted policy must also reproduce the measured treatment through the ordinary
-untargeted role route. A structural family is applicable only when its preflight trigger matches the failed control,
-the control does not satisfy its successful requirements, and the measured challenger does.
+untargeted role route. Holdout reproduction and regression controls use the same full execution-feedback evaluator as
+the outer corpus gate. A structural family is applicable only when its preflight trigger matches the failed control,
+the control does not satisfy its successful requirements, and the measured challenger does. Missing shadow evidence
+is enriched through the same static dependency and viability analysis used by Architect; unknown is not treated as a
+negative discriminator.
 Legacy policies without an activation state remain quarantined until revalidated through `reproduction_trial` and
 then explicitly moved to `active` after ordinary-route reproduction passes.
 During revalidation, the current project's staged contrast is holdout evidence only and is removed from every
@@ -146,7 +151,13 @@ When an active or reproduction-trial policy selects a source-backed target outsi
 Architect artifact is revised to own that same target before semantic scoring. The policy identity is carried through
 `TechnicalSpec.extraction_contract`, and executable admission remains bounded by
 `foundation_evidence.promoted_selection_policy_admission`; policy selection alone cannot waive effect, source-body,
-state-mutation, or process-isolation checks.
+state-mutation, or process-isolation checks. Architect may consume configured Project Analyzer `analysis_tasks` while
+expanding its candidate window. A deferred callable remains closed unless an active learned policy explicitly marks it,
+and that policy provenance survives the bounded execution-feedback rebuild.
+
+Checkpoint reuse is tied to the self-improvement engine fingerprint. Changes to runtime or policy/config inputs
+invalidate stale attempted-project state, so a repaired engine can retry the same failed corpus without manual artifact
+deletion.
 
 Foundation executable evidence may exercise direct in-memory state transitions only when the acceptance runner uses
 a separate process and every declared and observed effect is allowed by

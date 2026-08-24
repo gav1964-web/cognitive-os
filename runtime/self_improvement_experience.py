@@ -95,6 +95,7 @@ def _selection_contrast(
 def _portable_contract(case: dict[str, Any]) -> dict[str, Any]:
     quality = dict(case.get("selected_candidate_quality") or {})
     structural = dict(quality.get("structural_evidence") or {})
+    selection = dict(quality.get("selection_evidence") or {})
     downstream = dict(case.get("downstream_evidence") or {})
     return {
         "semantic_status": quality.get("status"),
@@ -106,10 +107,28 @@ def _portable_contract(case: dict[str, Any]) -> dict[str, Any]:
         "literal_return_only": bool(structural.get("literal_return_only")),
         "state_mutation": bool(structural.get("state_mutation")),
         "observed_side_effects": list(structural.get("observed_side_effects") or []),
+        "argument_shape_families": sorted({
+            str(value) for value in dict(structural.get("argument_usage_types") or {}).values()
+            if value
+        }),
+        "execution_cost_rules": _execution_cost_rules(selection.get("ranking_reasons")),
+        "dependency_status": str(
+            dict(selection.get("dependency_readiness") or {}).get("status") or "unknown"
+        ),
         "acceptance_signal": downstream.get("acceptance_signal"),
         "acceptance_status": downstream.get("status"),
         "acceptance_reason": downstream.get("reason"),
     }
+
+
+def _execution_cost_rules(reasons: Any) -> list[str]:
+    prefix = "execution cost requires reselection:"
+    values = []
+    for reason in reasons or []:
+        text = str(reason).strip()
+        if text.lower().startswith(prefix):
+            values.extend(part.strip() for part in text[len(prefix):].split(","))
+    return sorted({value for value in values if value})
 
 
 def generalized_profile_record(profile: dict[str, Any]) -> dict[str, Any]:

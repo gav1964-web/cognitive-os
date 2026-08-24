@@ -11,7 +11,7 @@ from .architect_semantic_admission import (
 from .architecture_target_priority import architecture_contract_has_priority, architecture_target_score
 from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
-from .promoted_candidate_selection_policies import apply_selection_policies
+from .promoted_candidate_selection_policies import apply_selection_policies, selected_policy_ids, selection_request_with_candidate
 from .role_source_context import build_source_context
 from .source_target_policy import is_context_only_implementation_target
 from .spec_writer_target_binding import standalone_target_eligibility
@@ -68,8 +68,9 @@ def reselect_architecture_first_slice(
         architecture_decision,
         limit=max(1, int(policy.get("selected_target_limit") or 8)),
         minimum_semantic_score=int(dict(request.get("blocking_evidence") or {}).get("minimum_semantic_score") or 0),
-        selection_request=request,
+        selection_request=selection_request_with_candidate(request, expanded_context.get(str(request.get("current_target") or ""))),
     )
+    selection_policy_ids = selected_policy_ids(viability, selected)
     _mark_manifest_declared_context(selected, expanded_context, declared, policy)
     evidence = {
         "artifact_type": "FirstSliceReselectionOutcome",
@@ -79,10 +80,15 @@ def reselect_architecture_first_slice(
         "expanded_candidate_count": len(sources),
         "environment_ready_candidate_count": len(ready),
         "declared_dependency_candidate_count": len(set(eligible) - set(ready)),
-        "viability_deferred_candidate_count": len(eligible) - len(viability),
+        "viability_deferred_candidate_count": sum(
+            str(row.get("target") or "") in set(eligible)
+            and not row.get("viability_eligible") and not row.get("selection_policy_ids")
+            for row in viability
+        ),
         "semantic_qualified_candidate_count": len(selected),
         "candidate_viability": viability,
         "selected_targets": selected,
+        "selection_policy_ids": selection_policy_ids,
         "authority": "architect",
         "source": "ProjectMapReport expanded candidate evidence",
     }
@@ -100,7 +106,6 @@ def reselect_architecture_first_slice(
         outcome=evidence,
     )
     return {"status": "selected", "architecture_decision": revised, "outcome": evidence}
-
 
 def _expanded_candidate_sources(
     project_report: dict[str, Any],
@@ -121,6 +126,10 @@ def _expanded_candidate_sources(
             sources.extend(_row_sources(readiness.get(key)))
     if "project_callable_inventory" in enabled:
         sources.extend(str(item) for item in list(project_report.get("reselection_candidate_inventory") or []))
+    if "analysis_tasks" in enabled:
+        analysis_tasks = project_report.get("analysis_tasks")
+        task_rows = dict(analysis_tasks).get("tasks") if isinstance(analysis_tasks, dict) else analysis_tasks
+        sources.extend(str(row.get("target") or "") for row in _rows(task_rows))
     if "dataflows" in enabled:
         sources.extend(str(row.get("entrypoint") or "") for row in _rows(readiness.get("dataflows")))
     if "minimal_extraction_plan" in enabled:
@@ -146,7 +155,6 @@ def _domain_aligned_sources(
     aligned = [source for source in sources if any(token in source.lower() for token in tokens)]
     return aligned or sources
 
-
 def _previous_primary_targets(architecture_decision: dict[str, Any]) -> set[str]:
     rejected = set()
     for outcome in list(architecture_decision.get("first_slice_reselection_history") or []):
@@ -154,7 +162,6 @@ def _previous_primary_targets(architecture_decision: dict[str, Any]) -> set[str]
         if targets:
             rejected.add(str(targets[0]))
     return rejected
-
 
 def _viable_candidates(
     sources: list[str],
@@ -171,28 +178,31 @@ def _viable_candidates(
     for index, source in enumerate(sources):
         source_context = context.get(source)
         profile = first_slice_viability(source, source_context, knowledge_rule=knowledge_rule)
-        if profile["status"] == "eligible" and not profile.get("reselection_required"):
-            snippet = dict(dict(source_context or {}).get("snippet") or {})
-            structural = dict(snippet.get("structural_contract") or {})
-            ranked.append({
-                "target": source,
-                "index": index,
-                "architecture_significance": (
-                    architecture_target_score(source) if architecture_contract_has_priority(source, structural) else 0
-                ),
-                "environment_ready": _environment_ready_callable(source_context),
-                "receiver_independent": (
-                    snippet.get("target_binding") == "function_symbol"
-                    or bool({"staticmethod", "classmethod"} & set(snippet.get("decorators") or []))
-                ),
-                **contract_quality(source, source_context, sources),
-                **profile,
-                "return_paths": int(structural.get("return_paths") or 0),
-                "typed_argument_count": int(structural.get("typed_argument_count") or 0),
-                "state_mutation": bool(structural.get("state_mutation")),
-                "observed_side_effects": list(structural.get("observed_side_effects") or []),
-                "output_inference_basis": str(structural.get("output_inference_basis") or ""),
-            })
+        snippet = dict(dict(source_context or {}).get("snippet") or {})
+        structural = dict(snippet.get("structural_contract") or {})
+        rules = [str(row.get("rule_id") or "") for row in profile.get("matched_rules") or []]
+        ranked.append({
+            "source": source, "target": source, "index": index,
+            "architecture_significance": (
+                architecture_target_score(source) if architecture_contract_has_priority(source, structural) else 0
+            ),
+            "environment_ready": _environment_ready_callable(source_context),
+            "receiver_independent": (
+                snippet.get("target_binding") == "function_symbol"
+                or bool({"staticmethod", "classmethod"} & set(snippet.get("decorators") or []))
+            ),
+            **contract_quality(source, source_context, sources), **profile,
+            "viability_eligible": profile["status"] == "eligible" and not profile.get("reselection_required"),
+            "argument_count": len(list(dict(snippet.get("signature") or {}).get("args") or [])),
+            "argument_usage_types": dict(structural.get("argument_usage_types") or {}),
+            "dependency_readiness": dict(dict(source_context or {}).get("dependency_readiness") or {}),
+            "ranking_reasons": [f"execution cost requires reselection: {', '.join(rules)}"] if rules else [],
+            "return_paths": int(structural.get("return_paths") or 0),
+            "typed_argument_count": int(structural.get("typed_argument_count") or 0),
+            "state_mutation": bool(structural.get("state_mutation")),
+            "observed_side_effects": list(structural.get("observed_side_effects") or []),
+            "output_inference_basis": str(structural.get("output_inference_basis") or ""),
+        })
     ranked.sort(key=lambda row: (
         -int(row["architecture_significance"]),
         -int(bool(row["environment_ready"])),
@@ -206,7 +216,8 @@ def _viable_candidates(
     ranked = apply_selection_policies(ranked, dict(selection_request or {}))
     qualified = [
         row for row in ranked
-        if _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)
+        if (row["viability_eligible"] or row.get("selection_policy_ids")) and
+        _semantic_threshold_satisfied(row, context.get(str(row["target"])), minimum_semantic_score)
     ]
     return [str(row["target"]) for row in qualified[:limit]], ranked
 

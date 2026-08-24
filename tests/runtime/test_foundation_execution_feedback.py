@@ -63,6 +63,17 @@ def test_foundation_feedback_rebuilds_roles_and_retests(monkeypatch, tmp_path):
     assert result["execution_reselection_history"][0]["rejected_target"] == "pkg/core.py:first"
 
 
+def test_feedback_carries_learned_policy_provenance_to_rebuilt_spec():
+    result = _result("pkg/core.py:second")
+
+    feedback._attach_selection_policy_provenance(
+        result, "pkg/core.py:second", ["learned-policy"],
+    )
+
+    contract = result["artifact_contents"]["technical_spec"]["extraction_contract"]
+    assert contract["selection_policy_ids"] == ["learned-policy"]
+
+
 def test_foundation_feedback_stops_at_configured_limit(monkeypatch, tmp_path):
     monkeypatch.setattr(
         feedback, "collect_foundation_executable_evidence", lambda **kwargs: _evidence("meta_only")

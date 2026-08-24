@@ -13,6 +13,29 @@ from typing import Any
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "role_knowledge" / "promoted_candidate_selection_policies.json"
 
 
+def selected_policy_ids(rows: list[dict[str, Any]], targets: list[str]) -> list[str]:
+    selected = set(targets)
+    return sorted({
+        str(policy_id) for row in rows if str(row.get("target") or "") in selected
+        for policy_id in row.get("selection_policy_ids") or []
+    })
+
+
+def selection_request_with_candidate(
+    request: dict[str, Any], context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    row = dict(context or {})
+    snippet = dict(row.get("snippet") or {})
+    structural = dict(snippet.get("structural_contract") or {})
+    return {**request, "trigger_candidate": {
+        **structural,
+        "argument_count": int(structural.get("argument_count") or len(
+            list(dict(snippet.get("signature") or {}).get("args") or [])
+        )),
+        "dependency_readiness": dict(row.get("dependency_readiness") or {}),
+    }}
+
+
 @lru_cache(maxsize=4)
 def load_selection_policies(path: str | None = None) -> dict[str, Any]:
     payload = json.loads(Path(path or DEFAULT_PATH).read_text(encoding="utf-8"))
@@ -49,10 +72,16 @@ def apply_selection_policies(
     if request.get("trigger") != "executable_acceptance_rejected":
         return ranked
     signal = str(dict(request.get("blocking_evidence") or {}).get("acceptance_signal") or "meta_only")
+    if signal == "not_measured":
+        signal = "meta_only"
     policies = [
         dict(row) for row in load_selection_policies(path)["policies"]
         if _policy_enabled(row)
         and signal in {str(item) for item in row.get("trigger_signals") or []}
+        and (
+            not request.get("trigger_candidate")
+            or _matches_preflight_trigger(dict(request["trigger_candidate"]), dict(row))
+        )
     ]
     if not policies:
         return ranked
@@ -75,7 +104,8 @@ def apply_selection_policies(
 
 
 def apply_preflight_selection_policies(
-    ranked: list[dict[str, Any]], *, path: str | None = None
+    ranked: list[dict[str, Any]], *, path: str | None = None,
+    trigger_candidate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Apply learned contrasts before a predicted rejected candidate is selected."""
     if len(ranked) < 2:
@@ -84,10 +114,11 @@ def apply_preflight_selection_policies(
     if not policies:
         return ranked
     evidence = [_candidate_evidence(row) for row in ranked]
+    trigger_evidence = _candidate_evidence(trigger_candidate) if trigger_candidate else evidence[0]
     applicable = [
         policy for policy in policies
-        if _matches_preflight_trigger(evidence[0], policy)
-        and not candidate_matches_policy(evidence[0], policy)
+        if _matches_preflight_trigger(trigger_evidence, policy)
+        and not candidate_matches_policy(trigger_evidence, policy)
         and any(candidate_matches_policy(item, policy) for item in evidence[1:])
     ]
     if not applicable:
@@ -151,7 +182,38 @@ def _policy_enabled(policy: dict[str, Any]) -> bool:
 
 def _matches_preflight_trigger(candidate: dict[str, Any], policy: dict[str, Any]) -> bool:
     required = dict(policy.get("preflight_trigger_requirements") or {})
+    common = dict(required.pop("common_requirements", {}) or {})
+    alternatives = list(required.pop("alternatives", []) or [])
+    if alternatives:
+        return any(
+            _matches_preflight_requirements(candidate, {**common, **required, **dict(row or {})})
+            for row in alternatives
+        )
+    return _matches_preflight_requirements(candidate, {**common, **required})
+
+
+def _matches_preflight_requirements(
+    candidate: dict[str, Any], required: dict[str, Any]
+) -> bool:
     if int(candidate.get("argument_count") or 0) < int(required.get("min_argument_count") or 0):
+        return False
+    maximum_trigger_args = required.get("max_argument_count")
+    if maximum_trigger_args is not None and int(candidate.get("argument_count") or 0) > int(maximum_trigger_args):
+        return False
+    maximum_usage = required.get("max_argument_usage_count")
+    if maximum_usage is not None and len(dict(candidate.get("argument_usage_types") or {})) > int(maximum_usage):
+        return False
+    reason_text = " ".join(str(item).lower() for item in candidate.get("ranking_reasons") or [])
+    reason_tokens = {
+        str(item).lower() for item in required.get("any_ranking_reason_tokens") or []
+    }
+    if reason_tokens and not any(token in reason_text for token in reason_tokens):
+        return False
+    dependency_statuses = {
+        str(item) for item in required.get("dependency_status") or []
+    }
+    dependency_status = _dependency_status(candidate)
+    if dependency_statuses and dependency_status not in dependency_statuses:
         return False
     if required.get("literal_return_only") is True and not candidate.get("literal_return_only"):
         return False
@@ -196,10 +258,19 @@ def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) 
     }
     if any(token in reason_text for token in forbidden_reasons):
         return False
+    forbidden_dependencies = {
+        str(item) for item in required.get("forbidden_dependency_status") or []
+    }
+    if _dependency_status(candidate) in forbidden_dependencies:
+        return False
     if int(candidate.get("return_paths") or 0) < int(required.get("min_return_paths") or 0):
         return False
     maximum_args = required.get("max_argument_count")
     if maximum_args is not None and int(candidate.get("argument_count") or 0) > int(maximum_args):
+        return False
+    if int(candidate.get("argument_count") or 0) < int(required.get("min_argument_count") or 0):
+        return False
+    if len(dict(candidate.get("argument_usage_types") or {})) < int(required.get("min_argument_usage_count") or 0):
         return False
     if required.get("state_mutation") is False and bool(candidate.get("state_mutation")):
         return False
@@ -215,6 +286,11 @@ def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) 
         return False
     minimum_typed = int(required.get("min_typed_argument_count") or 0)
     return int(candidate.get("typed_argument_count") or 0) >= minimum_typed
+
+
+def _dependency_status(candidate: dict[str, Any]) -> str:
+    direct = str(candidate.get("dependency_status") or "")
+    return direct or str(dict(candidate.get("dependency_readiness") or {}).get("status") or "")
 
 
 def contrast_matches_policy(

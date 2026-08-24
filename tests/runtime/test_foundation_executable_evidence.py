@@ -266,3 +266,25 @@ def test_promoted_selection_policy_admits_safe_reselection_in_production():
 
     assert result["status"] == "eligible"
     assert result["selection_policy_target_admitted"] is True
+
+
+def test_promoted_policy_admits_conservative_memory_effect_in_process():
+    spec = _spec()
+    spec["extraction_contract"].update({
+        "selection_policy_ids": ["verified_policy"],
+        "side_effects": {"declared": ["memory_state"]},
+        "structural_evidence": {
+            "source_body_available": True,
+            "source_body_complete": True,
+            "observed_side_effects": [],
+            "state_mutation": False,
+        },
+    })
+    spec["first_slice_reselection_request"] = {
+        "status": "required", "trigger": "low_first_slice_viability",
+    }
+
+    result = evidence._eligibility(spec, process_isolated=True)
+
+    assert result["status"] == "eligible"
+    assert result["selection_policy_target_admitted"] is True

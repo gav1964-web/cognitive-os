@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +10,13 @@ from runtime.knowledge_admission import load_kb_candidates
 from runtime.improvement_plugins.candidate_selection_holdout import (
     contrast_evidence_matches, inactive_legacy_families,
     partition_holdout_project,
+)
+from runtime.improvement_plugins.candidate_selection_refinement import (
+    policy_signature, portable_execution_discriminators, refine_preflight, refine_reproduction,
+)
+from runtime.improvement_plugins.candidate_selection_evidence import attach_ordinary_challenger_evidence
+from runtime.improvement_plugins.candidate_selection_regression import (
+    evaluate_project, evaluate_projects, regression_failures,
 )
 from runtime.self_improvement_iteration import capture_promotion_state, rollback_promotion_state
 from runtime.promoted_candidate_selection_policies import (
@@ -56,6 +62,9 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     effect = dict(diagnosis.get("measured_selection_effect") or {})
     if not effect:
         effect = _holdout_effect(root, project_dir, source, challenger)
+    effect["treatment"] = attach_ordinary_challenger_evidence(
+        effect["control"], effect["treatment"], challenger, project_dir=project_dir,
+    )
     control_structural = dict(
         dict(effect.get("control", {}).get("selected_candidate_quality") or {}).get("structural_evidence") or {}
     )
@@ -90,6 +99,8 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
             return {"status": "blocked", "reason": "regression_projects_required"}
         promotion = _promote_with_regression_gate(
             root, policy, group, project_dir, effect, regressions,
+            int(dict(context.get("plugin_config") or {}).get("maximum_reproduction_refinements") or 1),
+            int(dict(context.get("plugin_config") or {}).get("regression_verification_repetitions") or 1),
         )
     applied = bool(promotion.get("applied"))
     rejected = promotion.get("status") == "rejected"
@@ -113,9 +124,10 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     }
 def _promote_with_regression_gate(
     root: Path, policy: dict[str, Any], group: dict[str, Any], project_dir: Path,
-    effect: dict[str, Any], regression_projects: list[Path],
+    effect: dict[str, Any], regression_projects: list[Path], maximum_refinements: int,
+    regression_repetitions: int = 1,
 ) -> dict[str, Any]:
-    before = _evaluate_projects(root, regression_projects)
+    before = evaluate_projects(root, regression_projects)
     evidence = {
         "confirmed_projects": sorted(group["projects"]),
         "holdout_project": project_dir.name,
@@ -123,48 +135,78 @@ def _promote_with_regression_gate(
     }
     candidate = dict(policy)
     refinement = None
-    for attempt in range(2):
+    reproduction_refinements = 0
+    regression_refinements = 0
+    reproduction_history = []
+    regression_history = []
+    for _attempt in range(max(0, maximum_refinements) + 2):
         snapshot = capture_promotion_state(root)
         promoted = promote_selection_policy(
             root=root, policy={**candidate, "activation_state": "reproduction_trial"},
             promotion_evidence={**evidence, **({"regression_refinement": refinement} if refinement else {})},
         )
         reproduction = _holdout_reproduction_failure(root, project_dir, effect)
+        reproduction_history.append({
+            "target": reproduction.get("selected_candidate") or dict(effect.get("treatment") or {}).get("selected_extraction_candidate"),
+            "score": reproduction.get("actual_score") or dict(effect.get("treatment") or {}).get("project_min_score"),
+            "acceptance_signal": reproduction.get("actual_acceptance_signal") or "executable_callable",
+        })
         if reproduction:
             rollback_promotion_state(root, snapshot)
+            refined = refine_reproduction(candidate, effect, reproduction)
+            if refined and reproduction_refinements < maximum_refinements:
+                candidate = refined
+                reproduction_refinements += 1
+                refinement = "exclude_reproduction_only_execution_cost"
+                continue
             return {
                 "applied": False, "status": "rejected",
                 "reason": "holdout_reproduction_failed",
                 "holdout_reproduction": reproduction,
+                "reproduction_history": reproduction_history,
                 "rollback_applied": True,
             }
         activated = activate_selection_policy(root, str(candidate["id"]))
-        regressions = _regression_failures(root, before)
+        regressions = regression_failures(root, before, regression_repetitions)
         if not regressions:
             return {
                 "applied": promoted["status"] in {"promoted", "already_promoted"},
                 **promoted, "activation": activated, "regression_gate": "passed",
                 "regression_case_count": len(before),
+                "reproduction_history": reproduction_history,
+                "regression_history": regression_history,
                 **({"refinement": refinement} if refinement else {}),
             }
+        regression_history.append({
+            "trigger": dict(candidate.get("preflight_trigger_requirements") or {}),
+            "failures": [{
+                "project": row.get("project"), "before_score": row.get("before_score"),
+                "after_score": row.get("after_score"), "after_target": row.get("after_target"),
+            } for row in regressions],
+        })
         rollback_promotion_state(root, snapshot)
-        if attempt or not (candidate := _refine_preflight(candidate, effect, regressions)):
+        refined = refine_preflight(candidate, effect, regressions)
+        if regression_refinements >= maximum_refinements or not refined:
             return {
                 "applied": False, "status": "rejected",
                 "reason": "regression_gate_failed", "regressions": regressions,
+                "regression_history": regression_history,
                 "rollback_applied": True,
             }
+        candidate = refined
         refinement = "exclude_regression_only_effects"
-    return {"applied": False, "status": "rejected", "reason": "regression_gate_failed"}
+        regression_refinements += 1
+    return {
+        "applied": False, "status": "rejected", "reason": "regression_gate_failed",
+        "regression_history": regression_history,
+    }
 
 
 def _holdout_reproduction_failure(
     root: Path, project_dir: Path, effect: dict[str, Any]
 ) -> dict[str, Any]:
-    from runtime.self_improvement_training import _evaluate
-
     expected = dict(effect.get("treatment") or {})
-    current = _evaluate(root, project_dir, write=True)
+    current = evaluate_project(root, project_dir)
     expected_score = float(expected.get("project_min_score") or 0.0)
     current_score = float(current.get("project_min_score") or 0.0)
     expected_signal = str(dict(expected.get("downstream_evidence") or {}).get("acceptance_signal") or "")
@@ -180,55 +222,10 @@ def _holdout_reproduction_failure(
         "expected_acceptance_signal": expected_signal,
         "actual_acceptance_signal": current_signal,
         "selected_candidate": current.get("selected_extraction_candidate"),
+        "selected_candidate_quality": current.get("selected_candidate_quality", {}),
     }
 
 
-def _evaluate_projects(root: Path, projects: list[Path]) -> list[dict[str, Any]]:
-    from runtime.self_improvement_training import _evaluate
-
-    return [
-        {"project": path.name, "project_dir": path, "result": _evaluate(root, path, write=True)}
-        for path in projects
-    ]
-
-
-def _regression_failures(root: Path, before: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    from runtime.self_improvement_training import _evaluate
-
-    failures = []
-    for row in before:
-        prior = dict(row["result"])
-        current = _evaluate(root, Path(row["project_dir"]), write=True)
-        if (
-            float(current.get("project_min_score") or 0) < float(prior.get("project_min_score") or 0)
-            or _status_rank(str(current.get("status"))) < _status_rank(str(prior.get("status")))
-        ):
-            failures.append({
-                "project": row["project"],
-                "before_score": prior.get("project_min_score"),
-                "after_score": current.get("project_min_score"),
-                "selected_candidate_quality": prior.get("selected_candidate_quality", {}),
-            })
-    return failures
-
-
-def _refine_preflight(
-    policy: dict[str, Any], effect: dict[str, Any], regressions: list[dict[str, Any]]
-) -> dict[str, Any]:
-    holdout = dict(effect.get("control", {}).get("selected_candidate_quality") or {})
-    holdout_effects = set(dict(holdout.get("structural_evidence") or {}).get("observed_side_effects") or [])
-    regression_effects = {
-        str(value) for row in regressions
-        for value in dict(dict(row.get("selected_candidate_quality") or {}).get("structural_evidence") or {}).get("observed_side_effects") or []
-    }
-    extra = sorted(regression_effects - holdout_effects)
-    if not extra:
-        return {}
-    trigger = dict(policy.get("preflight_trigger_requirements") or {})
-    trigger["forbidden_observed_side_effects"] = sorted({
-        *[str(value) for value in trigger.get("forbidden_observed_side_effects") or []], *extra,
-    })
-    return {**policy, "preflight_trigger_requirements": trigger}
 def _status_rank(status: str) -> int:
     return {"needs_review": 0, "blocked_ok": 1, "ok": 2}.get(status, 0)
 def _contrast_groups(root: Path) -> list[dict[str, Any]]:
@@ -256,7 +253,7 @@ def _structural_families(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
             policy = _synthesize_policy({"id": group["id"], "records": [record]})
             if not policy:
                 continue
-            signature = _policy_signature(policy)
+            signature = policy_signature(policy)
             key = (str(group["id"]), signature)
             family = families.setdefault(key, {
                 "id": str(group["id"]), "records": [], "projects": set(), "policy": policy,
@@ -273,15 +270,6 @@ def _structural_families(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
             family["policy"] = {**family["policy"], "id": family["id"]}
         result.append(family)
     return sorted(result, key=lambda row: (-len(row["projects"]), row["id"]))
-
-
-def _policy_signature(policy: dict[str, Any]) -> str:
-    return json.dumps({
-        "trigger_signals": policy["trigger_signals"],
-        "structural_requirements": policy["structural_requirements"],
-        "preflight_trigger_requirements": policy["preflight_trigger_requirements"],
-        "candidate_ordering": policy.get("candidate_ordering"),
-    }, sort_keys=True, separators=(",", ":"))
 
 
 def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
@@ -334,6 +322,10 @@ def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
     bounded_arity = maximum_successful_args <= 1 and minimum_failed_args >= 2
     if bounded_arity:
         requirements = {"max_argument_count": 1}
+    portable_requirements, portable_preflight = portable_execution_discriminators(
+        failed, successful,
+    )
+    requirements.update(portable_requirements)
     if not requirements and minimum_typed > max(
         [int(row.get("typed_argument_count") or 0) for row in failed] or [0]
     ):
@@ -354,6 +346,7 @@ def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
         preflight["output_inference_basis"] = failed_outputs
     if requirements.get("max_argument_count") == 1:
         preflight["min_argument_count"] = 2
+    preflight.update(portable_preflight)
     signals = sorted({str(row.get("acceptance_signal") or "meta_only") for row in failed})
     return {
         "id": str(group["id"]),

@@ -47,18 +47,23 @@ def run_foundation_execution_feedback(
             iteration=iteration,
         )
         targets = list(dict(resolution.get("outcome") or {}).get("selected_targets") or [])
+        selection_policy_ids = list(
+            dict(resolution.get("outcome") or {}).get("selection_policy_ids") or []
+        )
         history.append({
             "iteration": iteration,
             "rejected_target": request.get("current_target"),
             "blocking_evidence": request.get("blocking_evidence"),
             "resolution_status": resolution.get("status"),
             "selected_targets": targets,
+            "selection_policy_ids": selection_policy_ids,
         })
         if resolution.get("status") != "selected" or not targets:
             architecture = dict(resolution.get("architecture_decision") or rejected)
             break
         architecture = dict(resolution.get("architecture_decision") or rejected)
         current = rerun(str(targets[0]))
+        _attach_selection_policy_provenance(current, str(targets[0]), selection_policy_ids)
         if current.get("status") != "ok":
             break
         evidence = _collect(root, project_dir, current)
@@ -72,6 +77,20 @@ def run_foundation_execution_feedback(
     if history:
         _attach_feedback(current, evidence, history)
     return current, evidence
+
+
+def _attach_selection_policy_provenance(
+    result: dict[str, Any], target: str, policy_ids: list[str],
+) -> None:
+    if not policy_ids:
+        return
+    spec = _artifact(result, "technical_spec")
+    contract = dict(spec.get("extraction_contract") or {})
+    if str(contract.get("candidate") or "") != target:
+        return
+    contract["selection_policy_ids"] = sorted({str(value) for value in policy_ids if value})
+    spec["extraction_contract"] = contract
+    result.setdefault("artifact_contents", {})["technical_spec"] = spec
 
 
 def _collect(root: Path, project_dir: Path, result: dict[str, Any]) -> dict[str, Any]:

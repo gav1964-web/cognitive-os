@@ -175,7 +175,7 @@ def _extraction_contract(
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [], architecture_contract_only=True)
     else:
         ranked = promote_environment_ready_candidate(ranked)
-    ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
+    ranked = _append_read_only_ranked_context(ranked, apply_preflight_selection_policies(read_only_ranked_context, trigger_candidate=ranked[0]) if apply_preflight and read_only_ranked_context and ranked else read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
     ranked = apply_preflight_selection_policies(ranked) if apply_preflight else ranked
     if not ranked:
