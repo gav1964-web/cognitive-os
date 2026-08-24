@@ -18,9 +18,11 @@ from .test_plan_builder import build_test_plan
 
 def collect_foundation_executable_evidence(
     *, root: Path, project_dir: Path, technical_spec: dict[str, Any],
-    process_isolated: bool = False,
+    process_isolated: bool = False, shadow_target: str | None = None,
 ) -> dict[str, Any]:
-    eligibility = _eligibility(technical_spec, process_isolated=process_isolated)
+    eligibility = _eligibility(
+        technical_spec, process_isolated=process_isolated, shadow_target=shadow_target,
+    )
     if eligibility["status"] != "eligible":
         return eligibility
     implementation_plan = build_implementation_plan(technical_spec=technical_spec)
@@ -57,6 +59,7 @@ def collect_foundation_executable_evidence(
 
 def _eligibility(
     spec: dict[str, Any], *, process_isolated: bool = False,
+    shadow_target: str | None = None,
 ) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract") or {})
     target = str(contract.get("candidate") or "")
@@ -99,10 +102,20 @@ def _eligibility(
         and set(effects) <= set(allowed)
         for archetype, allowed in delegated_profiles.items()
     )
+    shadow_admitted = _shadow_target_admitted(
+        target=target,
+        requested_target=shadow_target,
+        request=request,
+        structural=structural,
+        effects=effects,
+        direct_effects=direct_effects,
+        process_isolated=process_isolated,
+        policy=dict(evidence_policy["shadow_target_admission"]),
+    )
     reason = ""
     if spec.get("artifact_type") != "TechnicalSpec":
         reason = "technical_spec_missing"
-    elif request.get("status") == "required":
+    elif request.get("status") == "required" and not shadow_admitted:
         reason = "first_slice_reselection_required"
     elif not target or contract.get("status") == "blocked_no_safe_candidate":
         reason = "safe_target_missing"
@@ -121,7 +134,32 @@ def _eligibility(
         "reason": reason or None,
         "target": target or None,
         "acceptance_signal": "",
+        "shadow_target_admitted": shadow_admitted,
     }
+
+
+def _shadow_target_admitted(
+    *, target: str, requested_target: str | None, request: dict[str, Any],
+    structural: dict[str, Any], effects: list[str], direct_effects: list[str],
+    process_isolated: bool, policy: dict[str, Any],
+) -> bool:
+    if not policy.get("enabled") or not requested_target or target != requested_target:
+        return False
+    if request.get("status") != "required":
+        return False
+    if str(request.get("trigger") or "") not in set(policy["allowed_reselection_triggers"]):
+        return False
+    checks = (
+        not policy.get("require_process_isolation") or process_isolated,
+        not policy.get("require_complete_source_body") or (
+            structural.get("source_body_available") is True
+            and structural.get("source_body_complete") is True
+        ),
+        not policy.get("require_no_declared_effects") or not effects,
+        not policy.get("require_no_direct_effects") or not direct_effects,
+        not policy.get("require_no_state_mutation") or structural.get("state_mutation") is not True,
+    )
+    return all(checks)
 
 
 def _work_dir(root: Path, project_dir: Path, target: str) -> Path:

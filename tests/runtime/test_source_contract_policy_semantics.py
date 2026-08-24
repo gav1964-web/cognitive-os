@@ -42,3 +42,19 @@ def test_mapping_subscript_selector_is_inferred_as_key_like():
     })
 
     assert evidence["argument_usage_types"]["by_key"] == "KeyLike"
+
+
+def test_or_coalesce_returns_operand_shape_instead_of_boolean():
+    evidence = infer_source_contract({
+        "signature": {"args": [{"name": "cls"}, {"name": "token"}]},
+        "snippet": (
+            "@classmethod\n"
+            "def require_token(cls, token=None):\n"
+            "    token = token or cls.default_token\n"
+            "    if not token:\n"
+            "        raise ValueError('token required')\n"
+            "    return token\n"
+        ),
+    })
+
+    assert evidence["inferred_output_type"] == "AttributeValue"

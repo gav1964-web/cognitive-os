@@ -46,6 +46,7 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
         "selected_challenger": best["challenger"],
         "promotion_applied": False,
         "implements_capability": "candidate_selection_discriminator_plugin",
+        "implements_capabilities": list(config.get("implements_capabilities") or []),
         "evolution": {
             "status": "passed",
             "decision": "shadow_challenger_confirmed",

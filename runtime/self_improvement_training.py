@@ -260,9 +260,9 @@ def _evaluate(
     downstream = {}
     if result.get("status") == "ok":
         downstream = collect_foundation_executable_evidence(
-            root=root, project_dir=project_dir,
-            technical_spec=dict(loaded["artifacts"].get("technical_spec") or {}),
+            root=root, project_dir=project_dir, technical_spec=dict(loaded["artifacts"].get("technical_spec") or {}),
             process_isolated=True,
+            shadow_target=evaluation_target,
         )
         result["downstream_evidence"] = downstream
     scored = {**result, "artifacts": loaded["artifacts"]}

@@ -152,6 +152,7 @@ def execution_context_policy() -> dict[str, Any]:
 
 def foundation_evidence_policy() -> dict[str, Any]:
     policy = dict(_policy().get("foundation_evidence") or {})
+    shadow = dict(policy.get("shadow_target_admission") or {})
     return {
         "isolated_process_timeout_seconds": max(
             1, int(policy.get("isolated_process_timeout_seconds") or 180)
@@ -173,6 +174,17 @@ def foundation_evidence_policy() -> dict[str, Any]:
         "isolated_delegated_effect_profiles": {
             str(name): tuple(str(item) for item in effects if item)
             for name, effects in dict(policy.get("isolated_delegated_effect_profiles") or {}).items()
+        },
+        "shadow_target_admission": {
+            "enabled": bool(shadow.get("enabled")),
+            "allowed_reselection_triggers": tuple(
+                str(item) for item in shadow.get("allowed_reselection_triggers", []) if item
+            ),
+            "require_process_isolation": bool(shadow.get("require_process_isolation", True)),
+            "require_complete_source_body": bool(shadow.get("require_complete_source_body", True)),
+            "require_no_declared_effects": bool(shadow.get("require_no_declared_effects", True)),
+            "require_no_direct_effects": bool(shadow.get("require_no_direct_effects", True)),
+            "require_no_state_mutation": bool(shadow.get("require_no_state_mutation", True)),
         },
     }
 

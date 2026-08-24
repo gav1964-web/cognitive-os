@@ -25,6 +25,15 @@
       "filesystem_typed_object_loader": ["filesystem_read"],
       "logging_adapter_factory": ["observability"],
       "observability_render_command": ["observability"]
+    },
+    "shadow_target_admission": {
+      "enabled": true,
+      "allowed_reselection_triggers": ["low_first_slice_viability"],
+      "require_process_isolation": true,
+      "require_complete_source_body": true,
+      "require_no_declared_effects": true,
+      "require_no_direct_effects": true,
+      "require_no_state_mutation": true
     }
   },
   "structural_sample_policy": {

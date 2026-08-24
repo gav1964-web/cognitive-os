@@ -201,3 +201,47 @@ def test_foundation_evidence_uses_process_boundary_when_requested(monkeypatch, t
     assert observed["timeout_seconds"] == 180
     assert observed["executable_policy"]["schema_version"] == "executable_acceptance_policy.v1"
     assert result["acceptance_signal"] == "executable_callable"
+
+
+def test_shadow_target_admits_only_exact_low_risk_isolated_candidate():
+    spec = _spec()
+    contract = spec["extraction_contract"]
+    contract["structural_evidence"].update({
+        "source_body_available": True,
+        "source_body_complete": True,
+    })
+    spec["first_slice_reselection_request"] = {
+        "status": "required",
+        "trigger": "low_first_slice_viability",
+    }
+
+    production = evidence._eligibility(spec, process_isolated=True)
+    shadow = evidence._eligibility(
+        spec, process_isolated=True, shadow_target="app.py:normalize",
+    )
+
+    assert production["reason"] == "first_slice_reselection_required"
+    assert shadow["status"] == "eligible"
+    assert shadow["shadow_target_admitted"] is True
+
+
+def test_shadow_target_rejects_effectful_or_mismatched_candidate():
+    spec = _spec(effects=["network"], observed_effects=["network"])
+    spec["extraction_contract"]["structural_evidence"].update({
+        "source_body_available": True,
+        "source_body_complete": True,
+    })
+    spec["first_slice_reselection_request"] = {
+        "status": "required",
+        "trigger": "low_first_slice_viability",
+    }
+
+    effectful = evidence._eligibility(
+        spec, process_isolated=True, shadow_target="app.py:normalize",
+    )
+    mismatched = evidence._eligibility(
+        spec, process_isolated=True, shadow_target="app.py:other",
+    )
+
+    assert effectful["reason"] == "first_slice_reselection_required"
+    assert mismatched["reason"] == "first_slice_reselection_required"

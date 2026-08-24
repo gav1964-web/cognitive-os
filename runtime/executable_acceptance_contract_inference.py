@@ -85,8 +85,33 @@ def _collect_declared_defaults(
             value = ast.literal_eval(default)
         except (ValueError, TypeError):
             continue
+        if value is None and _rejects_falsy_parameter(node, argument.arg):
+            continue
         if _json_safe(value):
             candidates[argument.arg].append((priority, value, "ast_declared_default"))
+
+
+def _rejects_falsy_parameter(
+    node: ast.FunctionDef | ast.AsyncFunctionDef, parameter: str,
+) -> bool:
+    for branch in ast.walk(node):
+        if not isinstance(branch, ast.If) or not any(
+            isinstance(item, ast.Raise)
+            for statement in branch.body
+            for item in ast.walk(statement)
+        ):
+            continue
+        test = branch.test
+        if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+            if isinstance(test.operand, ast.Name) and test.operand.id == parameter:
+                return True
+        if isinstance(test, ast.Compare) and isinstance(test.left, ast.Name) and test.left.id == parameter:
+            rejects_none = any(isinstance(operator, (ast.Eq, ast.Is)) for operator in test.ops)
+            if rejects_none and any(
+                isinstance(item, ast.Constant) and item.value is None for item in test.comparators
+            ):
+                return True
+    return False
 
 
 def _collect_upstream_test_calls(

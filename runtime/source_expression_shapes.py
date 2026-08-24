@@ -46,7 +46,11 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
         shapes = {expression_shape(branch, assignments) for branch in (node.body, node.orelse)} - {""}
         ordered = sorted(shapes)
         return ordered[0] if len(ordered) == 1 else f"Union[{', '.join(ordered)}]" if ordered else ""
-    if isinstance(node, (ast.BoolOp, ast.Compare)):
+    if isinstance(node, ast.BoolOp):
+        shapes = {expression_shape(value, assignments) for value in node.values} - {""}
+        ordered = sorted(shapes)
+        return ordered[0] if len(ordered) == 1 else f"Union[{', '.join(ordered)}]" if ordered else ""
+    if isinstance(node, ast.Compare):
         return "bool"
     if isinstance(node, ast.Await):
         return expression_shape(node.value, assignments)

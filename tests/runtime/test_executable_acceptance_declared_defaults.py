@@ -43,3 +43,31 @@ def test_declared_default_overrides_generic_positive_sample(tmp_path: Path):
     assert result["summary"]["argument_overrides"] == {
         "module.py:build_description": {"node": None}
     }
+
+
+def test_rejected_nullable_default_is_not_used_for_positive_sample(tmp_path: Path):
+    path = tmp_path / "module.py"
+    path.write_text(
+        "def require_token(token=None):\n"
+        "    if not token:\n"
+        "        raise ValueError('token required')\n"
+        "    return token\n",
+        encoding="utf-8",
+    )
+
+    assert infer_argument_samples(path, "require_token") == {}
+
+
+def test_nullable_default_is_kept_when_non_null_value_is_rejected(tmp_path: Path):
+    path = tmp_path / "module.py"
+    path.write_text(
+        "def require_empty(token=None):\n"
+        "    if token is not None:\n"
+        "        raise ValueError('token must be empty')\n"
+        "    return token\n",
+        encoding="utf-8",
+    )
+
+    assert infer_argument_samples(path, "require_empty") == {
+        "token": {"source": "ast_declared_default", "value": None},
+    }

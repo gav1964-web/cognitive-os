@@ -24,12 +24,15 @@
     },
     {
       "id": "candidate_selection_discriminator",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "enabled": true,
       "priority": 25,
       "entrypoint": "runtime.improvement_plugins.candidate_selection_discriminator:run",
       "change_types": ["foundation_selection_contrast"],
-      "implements_capabilities": ["candidate_selection_discriminator_plugin"],
+      "implements_capabilities": [
+        "candidate_selection_discriminator_plugin",
+        "bounded_executable_target_discovery_or_sandbox_adapter"
+      ],
       "failure_classes": [
         "executable_sample_contract",
         "first_slice_reselection_required",

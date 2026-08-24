@@ -30,3 +30,20 @@ def test_foundry_never_claims_unregistered_capability():
 
     assert report["status"] == "implementation_required"
     assert report["runtime_patch_auto_promotion"] is False
+
+
+def test_foundry_routes_bounded_target_discovery_to_measured_plugin():
+    report = resolve_plugin_requests([{
+        "request_id": "cdr_target_discovery",
+        "missing_capability": "bounded_executable_target_discovery_or_sandbox_adapter",
+    }], [{
+        "project": "holdout",
+        "improvement_plugin_cycle": {"attempts": [{
+            "plugin_id": "candidate_selection_discriminator",
+            "status": "trial_passed",
+        }]},
+    }])
+
+    assert report["status"] == "trial_passed"
+    assert report["resolutions"][0]["plugin_id"] == "candidate_selection_discriminator"
+    assert report["resolutions"][0]["plugin_version"] == "1.2.0"
