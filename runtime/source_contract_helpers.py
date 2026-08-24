@@ -59,4 +59,7 @@ def is_file_extension_policy(function: ast.AST | None) -> bool:
 def binary_result_shape(operand_shapes: set[str]) -> str:
     if "str" in operand_shapes:
         return "str"
+    for shape in ("StringSequenceLike", "SequenceLike", "TupleLike", "bytes"):
+        if shape in operand_shapes:
+            return shape
     return "ArrayLike" if "ArrayLike" in operand_shapes else "NumberLike"

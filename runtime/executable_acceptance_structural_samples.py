@@ -14,6 +14,8 @@ from .executable_acceptance_policy import structural_sample_policy
 from .executable_acceptance_parameter_strategies import add_parameter_strategy_samples
 from .executable_acceptance_protocol_samples import add_iterated_literal_domain_samples, add_mapping_protocol_samples, add_parameter_method_samples
 from .executable_acceptance_qualified_samples import add_qualified_call_samples
+from .executable_acceptance_arithmetic_samples import add_numeric_arithmetic_sample
+from .source_expression_shapes import assignment_shapes
 
 Candidates = dict[str, list[tuple[int, Any, str]]]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -45,12 +47,16 @@ def collect_structural_samples(
         samples=dict(_settings().get("qualified_call_argument_samples") or {}),
     )
     string_sequences = _string_sequence_parameters(node, parameters)
+    assignments = assignment_shapes(node)
     for item in ast.walk(node):
         _conversion(item, parameters, candidates)
         _strptime(item, parameters, candidates)
         _comparison(item, parameters, candidates)
         _numeric_sequence(item, parameters, candidates)
-        _numeric_arithmetic(item, parameters, candidates)
+        add_numeric_arithmetic_sample(
+            item, parameters, candidates, assignments,
+            priority=_priority("numeric_arithmetic"), sample=_settings()["numeric_arithmetic_sample"],
+        )
         _length_constraint(item, parameters, candidates, string_sequences)
     _required_mapping_keys(node, parameters, candidates)
     _parameter_unpack_samples(node, parameters, candidates)
@@ -128,17 +134,6 @@ def _numeric_sequence(node: ast.AST, parameters: set[str], candidates: Candidate
     policy = _settings()
     if name and called in set(policy.get("numeric_sequence_calls") or []):
         candidates[name].append((_priority("numeric_sequence"), policy["numeric_sequence_sample"], f"ast_numeric_sequence:{called}"))
-
-
-def _numeric_arithmetic(node: ast.AST, parameters: set[str], candidates: Candidates) -> None:
-    if not isinstance(node, ast.BinOp):
-        return
-    if isinstance(node.op, ast.Mod) and any(isinstance(_literal(value), str) for value in (node.left, node.right)):
-        return
-    for expression in (node.left, node.right):
-        name = _direct_parameter(expression, parameters)
-        if name:
-            candidates[name].append((_priority("numeric_arithmetic"), _settings()["numeric_arithmetic_sample"], "ast_numeric_arithmetic"))
 
 
 def _length_constraint(

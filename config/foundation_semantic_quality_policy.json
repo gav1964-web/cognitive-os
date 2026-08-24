@@ -26,7 +26,8 @@
       "project_analyzer": 7.5,
       "architect": 6.5
     },
-    "executable_confirmation_signals": ["executable_callable", "effect_stubbed_callable"]
+    "executable_confirmation_signals": ["executable_callable", "effect_stubbed_callable"],
+    "executable_confirmation_resolves_reselection": true
   },
   "specific_text": {
     "min_length": 32,

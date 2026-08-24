@@ -58,3 +58,21 @@ def test_or_coalesce_returns_operand_shape_instead_of_boolean():
     })
 
     assert evidence["inferred_output_type"] == "AttributeValue"
+
+
+def test_string_line_concatenation_infers_executable_string_contract():
+    evidence = infer_source_contract({
+        "signature": {"args": [
+            {"name": "prefix"}, {"name": "string"}, {"name": "plain_prefix"},
+        ]},
+        "snippet": (
+            "def indented_lines(prefix, string, plain_prefix=None):\n"
+            "    lines = str(string).splitlines() or ['']\n"
+            "    return [prefix + lines[0]] + [\n"
+            "        ' ' * len(plain_prefix or prefix) + line for line in lines[1:]\n"
+            "    ]\n"
+        ),
+    })
+
+    assert evidence["argument_usage_types"]["prefix"] == "str"
+    assert evidence["inferred_output_type"] == "SequenceLike"

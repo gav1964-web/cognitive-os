@@ -38,6 +38,10 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
     literals = {ast.Dict: "MappingLike", ast.List: "SequenceLike", ast.ListComp: "SequenceLike", ast.Tuple: "TupleLike", ast.Set: "SetLike"}
     if isinstance(node, ast.JoinedStr):
         return "str"
+    if isinstance(node, ast.List) and node.elts and all(
+        isinstance(item, ast.Constant) and isinstance(item.value, str) for item in node.elts
+    ):
+        return "StringSequenceLike"
     if type(node) in literals:
         return literals[type(node)]
     if isinstance(node, ast.Name):
@@ -68,6 +72,8 @@ def expression_shape(node: ast.AST, assignments: dict[str, str]) -> str:
             return "str"
         if base == "ArrayLike":
             return "ArrayLike"
+        if base == "StringSequenceLike":
+            return "str"
         if base in {"SequenceLike", "TupleLike"}:
             return "ItemLike"
         if isinstance(node.slice, ast.Name) and assignments.get(node.slice.id) in {"KeyLike", "SequenceLike"}:
@@ -94,7 +100,7 @@ def _call_shape(node: ast.Call, assignments: dict[str, str]) -> str:
     if operation in ARRAY_CALL_SUFFIXES and assignments.get(owner.split(".", 1)[0]) == "ArrayLike": return "ArrayLike"
     if operation == "get" and any(token in owner.split(".") for token in ("crud", "repo", "repository")): return "EntityLike"
     if name.endswith(("list", "all")): return "SequenceLike"
-    if name.endswith(("split", "rsplit", "splitlines")): return "SequenceLike"
+    if name.endswith(("split", "rsplit", "splitlines")): return "StringSequenceLike"
     if name.startswith("self.") and any(expression_shape(arg, assignments) == "ArrayLike" for arg in node.args): return "ArrayLike"
     if name.endswith(("numpy", "array", "astype", "tile", "reshape", "transpose", "stack", "concatenate", "hstack", "vstack", "split")): return "ArrayLike"
     if name.startswith(ARRAY_PREFIXES) and name.endswith(ARRAY_CALL_SUFFIXES): return "ArrayLike"

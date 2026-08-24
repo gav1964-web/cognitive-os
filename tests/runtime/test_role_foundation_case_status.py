@@ -123,3 +123,43 @@ def test_executable_callable_preserves_published_role_caps():
         "architect": 9.7,
         "spec_writer": 9.8,
     }
+
+
+def test_matching_executable_confirmation_resolves_prior_reselection():
+    result = {
+        "status": "ok",
+        "selected_extraction_candidate": "app.py:normalize",
+        "foundation_semantic_quality": {
+            "role_scores": {"project_analyzer": 10.0, "architect": 10.0, "spec_writer": 10.0}
+        },
+        "artifacts": {"technical_spec": {
+            "first_slice_reselection_request": {
+                "status": "required", "terminal": True, "resolution_status": "iteration_limit",
+            },
+        }},
+        "downstream_evidence": {
+            "status": "passed", "acceptance_signal": "executable_callable",
+            "target": "app.py:normalize", "source_code_changes": False,
+        },
+    }
+
+    assert _case_status(result) == "ok"
+    assert role_score_evaluation(result)["role_scores"] == {
+        "project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.8,
+    }
+
+
+def test_executable_confirmation_for_different_target_does_not_resolve_reselection():
+    result = {
+        "status": "ok",
+        "selected_extraction_candidate": "app.py:write",
+        "artifacts": {"technical_spec": {"first_slice_reselection_request": {
+            "status": "required", "terminal": True, "resolution_status": "iteration_limit",
+        }}},
+        "downstream_evidence": {
+            "status": "passed", "acceptance_signal": "executable_callable",
+            "target": "app.py:normalize", "source_code_changes": False,
+        },
+    }
+
+    assert _case_status(result) == "needs_review"

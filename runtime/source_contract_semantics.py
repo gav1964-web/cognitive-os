@@ -291,6 +291,7 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
         return {}
     known = set(names)
     inferred = qualified_call_argument_types(function, known)
+    assignments = assignment_shapes(function)
     numerical_context = any(
         isinstance(node, ast.Call) and _call_name(node.func).lower().startswith(("np.", "numpy.", "torch.", "tf.", "tensorflow."))
         for node in callable_scope_walk(function)
@@ -355,9 +356,10 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
             if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Constant) and isinstance(node.left.value, str):
                 for name in _format_argument_names(node.right, known):
                     inferred.setdefault(name, "ScalarLike")
+            result_shape = expression_shape(node, assignments)
             for value in (node.left, node.right):
                 if isinstance(value, ast.Name) and value.id in known:
-                    inferred.setdefault(value.id, "NumberLike")
+                    inferred[value.id] = "str" if result_shape == "str" else inferred.get(value.id, "NumberLike")
         elif isinstance(node, ast.BoolOp):
             if all(isinstance(value, ast.Name) for value in node.values):
                 for value in node.values:
@@ -367,10 +369,10 @@ def _argument_usage_types(function: ast.AST | None, names: list[str]) -> dict[st
             for value in (node.left, *node.comparators):
                 if isinstance(value, ast.Name) and value.id in known:
                     inferred.setdefault(value.id, "ScalarLike")
-        elif isinstance(node, ast.Call) and _call_name(node.func) == "range":
+        elif isinstance(node, ast.Call) and _call_name(node.func) in {"len", "range"}:
             for arg in node.args:
-                if isinstance(arg, ast.Name) and arg.id in known:
-                    inferred.setdefault(arg.id, "int")
+                for name in _argument_names([arg], known):
+                    inferred.setdefault(name, "SequenceLike" if _call_name(node.func) == "len" else "int")
     return inferred
 
 
