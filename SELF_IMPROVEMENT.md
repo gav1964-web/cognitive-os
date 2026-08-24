@@ -220,6 +220,12 @@ Unrelated argument-count changes, output annotations, and contrasts without a pr
 jointly satisfy the three-project threshold. A mixed family receives a stable derived policy ID and still requires an
 independent holdout plus the normal regression gate.
 
+When complete policies differ, the system also synthesizes shared atomic discriminators from paired contrasts. These
+atoms may guide bounded shadow search after support from two independent projects, with the current project removed
+from support. They grant trial priority only. Admission still requires three confirmed projects, a measured holdout,
+ordinary-route reproduction, and regression checks before an atom can become an active selection policy. Candidates
+matching the same prior are ordered by static fixture readiness rather than project or symbol names.
+
 Evaluation-only target clamps and ordinary Architect artifacts preserve a bounded, non-scoring candidate pool from the
 available architecture source context. The pool prefers side-effect-free standalone returning contracts before
 instance-bound candidates, but this ordering only chooses shadow trials: promotion still requires a measured positive

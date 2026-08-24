@@ -314,6 +314,10 @@ Repeated unresolved candidate-selection attempts across that semantic family emi
 a `CapabilityDevelopmentRequest` for a bounded discriminator plugin.
 The plugin catalog resolves that request through `ImprovementPluginFoundryReport`.
 The discriminator may shadow-test only existing ranked, reselection, or ADR targets.
+Confirmed contrast records now act as a non-authoritative prior for that bounded search: shared atomic structural
+differences prioritize candidates with complete bodies, bounded inputs, and fewer runtime calls. The current project is
+excluded from prior support, and every candidate still has to win an executable shadow trial. The lower search-support
+threshold does not weaken the independent holdout, reproduction, regression, or promotion thresholds.
 Validation requires at least one newly discovered match and trains it before prior
 evidence projects. Clone work uses a bounded four-worker pool; one failed clone does
 not block the remaining frozen selection.

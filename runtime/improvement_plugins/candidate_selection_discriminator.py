@@ -18,7 +18,10 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     source = _canonical_target(packet.get("selected_candidate"))
     if not source:
         return {"status": "not_applicable", "reason": "selected_candidate_missing"}
-    candidates = _candidate_sources(packet, diagnosis, source, config)
+    candidates, prior_trace = _candidate_sources_with_prior(
+        Path(context["root"]), Path(context["project_dir"]),
+        packet, diagnosis, source, config,
+    )
     if not candidates:
         return {"status": "blocked", "reason": "bounded_challenger_pool_empty"}
     control = _control(packet)
@@ -47,6 +50,7 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
         "promotion_applied": False,
         "implements_capability": "candidate_selection_discriminator_plugin",
         "implements_capabilities": list(config.get("implements_capabilities") or []),
+        "shadow_prior": prior_trace,
         "evolution": {
             "status": "passed",
             "decision": "shadow_challenger_confirmed",
@@ -109,6 +113,25 @@ def _candidate_sources(
         if value and value != source and value in eligible and value not in blocked_sources
     ))
     return _diverse_candidates(bounded, maximum)
+
+
+def _candidate_sources_with_prior(
+    root: Path, project_dir: Path, packet: dict[str, Any], diagnosis: dict[str, Any],
+    source: str, config: dict[str, Any],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    maximum = max(1, int(config.get("maximum_shadow_challengers") or 4))
+    expanded = {**config, "maximum_shadow_challengers": 1000}
+    candidates = _candidate_sources(packet, diagnosis, source, expanded)
+    from runtime.improvement_plugins.candidate_selection_shadow_prior import (
+        prioritize_shadow_candidates,
+    )
+
+    ordered, trace = prioritize_shadow_candidates(
+        root=root, project_dir=project_dir, candidates=candidates, packet=packet,
+        failure_class=str(diagnosis.get("failure_class") or ""),
+        minimum_support=int(config.get("minimum_shadow_prior_support") or 2),
+    )
+    return _diverse_candidates(ordered, maximum), trace
 
 
 def _canonical_target(value: object) -> str:

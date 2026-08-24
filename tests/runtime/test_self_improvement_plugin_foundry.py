@@ -46,7 +46,7 @@ def test_foundry_routes_bounded_target_discovery_to_measured_plugin():
 
     assert report["status"] == "trial_passed"
     assert report["resolutions"][0]["plugin_id"] == "candidate_selection_discriminator"
-    assert report["resolutions"][0]["plugin_version"] == "1.2.0"
+    assert report["resolutions"][0]["plugin_version"] == "1.3.0"
 
 
 def test_foundry_routes_structural_synthesis_to_admission_plugin():
@@ -63,4 +63,4 @@ def test_foundry_routes_structural_synthesis_to_admission_plugin():
 
     assert report["status"] == "trial_passed"
     assert report["resolutions"][0]["plugin_id"] == "candidate_selection_admission"
-    assert report["resolutions"][0]["plugin_version"] == "1.1.0"
+    assert report["resolutions"][0]["plugin_version"] == "1.2.0"

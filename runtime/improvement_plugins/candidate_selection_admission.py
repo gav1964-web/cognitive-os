@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from runtime.knowledge_admission import load_kb_candidates
+from runtime.improvement_plugins.candidate_selection_contrast_store import contrast_groups
 from runtime.improvement_plugins.candidate_selection_holdout import (
     contrast_evidence_matches, inactive_legacy_families,
     partition_holdout_project,
@@ -17,6 +17,9 @@ from runtime.improvement_plugins.candidate_selection_refinement import (
 from runtime.improvement_plugins.candidate_selection_evidence import attach_ordinary_challenger_evidence
 from runtime.improvement_plugins.candidate_selection_regression import (
     evaluate_project, evaluate_projects, regression_failures,
+)
+from runtime.improvement_plugins.candidate_selection_synthesis import (
+    synthesized_discriminator_families,
 )
 from runtime.self_improvement_iteration import capture_promotion_state, rollback_promotion_state
 from runtime.promoted_candidate_selection_policies import (
@@ -42,7 +45,11 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     groups, holdout_records = partition_holdout_project(
         _contrast_groups(root), project_dir.name, failure_class,
     )
-    families = [*_structural_families(groups), *inactive_legacy_families(root, failure_class)]
+    families = [
+        *_structural_families(groups),
+        *synthesized_discriminator_families(groups),
+        *inactive_legacy_families(root, failure_class),
+    ]
     eligible = [group for group in families if len(group["projects"]) >= minimum]
     if not families:
         if not groups:
@@ -228,24 +235,12 @@ def _holdout_reproduction_failure(
 
 def _status_rank(status: str) -> int:
     return {"needs_review": 0, "blocked_ok": 1, "ok": 2}.get(status, 0)
+
+
 def _contrast_groups(root: Path) -> list[dict[str, Any]]:
-    groups: dict[str, dict[str, Any]] = {}
-    for candidate in load_kb_candidates(root=root):
-        record = dict(candidate.get("proposed_record") or {})
-        if candidate.get("record_type") != RECORD_TYPE or not record.get("contrast_id"):
-            continue
-        group = groups.setdefault(str(record["contrast_id"]), {
-            "id": str(record["contrast_id"]), "records": [], "projects": set(),
-        })
-        confirmed_projects = set()
-        for case in list(candidate.get("source_cases") or []):
-            row = dict(case or {})
-            if row.get("status") in {"confirmed", "accepted", "verified"} and row.get("project"):
-                confirmed_projects.add(str(row["project"]))
-        record["_confirmed_projects"] = sorted(confirmed_projects)
-        group["records"].append(record)
-        group["projects"].update(confirmed_projects)
-    return sorted(groups.values(), key=lambda row: (-len(row["projects"]), row["id"]))
+    return contrast_groups(root)
+
+
 def _structural_families(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     families: dict[tuple[str, str], dict[str, Any]] = {}
     for group in groups:
