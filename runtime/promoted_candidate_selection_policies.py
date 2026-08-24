@@ -151,6 +151,8 @@ def _policy_enabled(policy: dict[str, Any]) -> bool:
 
 def _matches_preflight_trigger(candidate: dict[str, Any], policy: dict[str, Any]) -> bool:
     required = dict(policy.get("preflight_trigger_requirements") or {})
+    if int(candidate.get("argument_count") or 0) < int(required.get("min_argument_count") or 0):
+        return False
     if required.get("literal_return_only") is True and not candidate.get("literal_return_only"):
         return False
     effects = list(candidate.get("observed_side_effects") or [])
@@ -195,6 +197,9 @@ def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) 
     if any(token in reason_text for token in forbidden_reasons):
         return False
     if int(candidate.get("return_paths") or 0) < int(required.get("min_return_paths") or 0):
+        return False
+    maximum_args = required.get("max_argument_count")
+    if maximum_args is not None and int(candidate.get("argument_count") or 0) > int(maximum_args):
         return False
     if required.get("state_mutation") is False and bool(candidate.get("state_mutation")):
         return False

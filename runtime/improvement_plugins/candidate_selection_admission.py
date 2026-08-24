@@ -23,8 +23,6 @@ from runtime.promoted_candidate_selection_policies import (
 
 
 RECORD_TYPE = "foundation_selection_contrast"
-
-
 def run(context: dict[str, Any]) -> dict[str, Any]:
     root = Path(context["root"])
     project_dir = Path(context["project_dir"])
@@ -113,8 +111,6 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
             },
         },
     }
-
-
 def _promote_with_regression_gate(
     root: Path, policy: dict[str, Any], group: dict[str, Any], project_dir: Path,
     effect: dict[str, Any], regression_projects: list[Path],
@@ -233,12 +229,8 @@ def _refine_preflight(
         *[str(value) for value in trigger.get("forbidden_observed_side_effects") or []], *extra,
     })
     return {**policy, "preflight_trigger_requirements": trigger}
-
-
 def _status_rank(status: str) -> int:
     return {"needs_review": 0, "blocked_ok": 1, "ok": 2}.get(status, 0)
-
-
 def _contrast_groups(root: Path) -> list[dict[str, Any]]:
     groups: dict[str, dict[str, Any]] = {}
     for candidate in load_kb_candidates(root=root):
@@ -257,8 +249,6 @@ def _contrast_groups(root: Path) -> list[dict[str, Any]]:
         group["records"].append(record)
         group["projects"].update(confirmed_projects)
     return sorted(groups.values(), key=lambda row: (-len(row["projects"]), row["id"]))
-
-
 def _structural_families(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     families: dict[tuple[str, str], dict[str, Any]] = {}
     for group in groups:
@@ -339,6 +329,11 @@ def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
         if persistent:
             requirements["forbidden_observed_side_effects"] = sorted(persistent)
     minimum_typed = min([int(row.get("typed_argument_count") or 0) for row in successful] or [0])
+    maximum_successful_args = max([int(row.get("argument_count") or 0) for row in successful] or [0])
+    minimum_failed_args = min([int(row.get("argument_count") or 0) for row in failed] or [0])
+    bounded_arity = maximum_successful_args <= 1 and minimum_failed_args >= 2
+    if bounded_arity:
+        requirements = {"max_argument_count": 1}
     if not requirements and minimum_typed > max(
         [int(row.get("typed_argument_count") or 0) for row in failed] or [0]
     ):
@@ -355,8 +350,10 @@ def _synthesize_policy(group: dict[str, Any]) -> dict[str, Any]:
         preflight["required_observed_side_effects"] = list(
             requirements["forbidden_observed_side_effects"]
         )
-    if failed_outputs:
+    if failed_outputs and not bounded_arity:
         preflight["output_inference_basis"] = failed_outputs
+    if requirements.get("max_argument_count") == 1:
+        preflight["min_argument_count"] = 2
     signals = sorted({str(row.get("acceptance_signal") or "meta_only") for row in failed})
     return {
         "id": str(group["id"]),

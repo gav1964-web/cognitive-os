@@ -86,3 +86,21 @@ def test_policy_uses_minimal_discriminator_before_typed_count():
     assert policy["structural_requirements"]["forbidden_output_inference_basis"] == [
         "explicit_none_annotation",
     ]
+
+
+def test_low_arity_successes_form_portable_fixture_readiness_family():
+    records = []
+    for project, failed_args, successful_args in (
+        ("alpha", 2, 0), ("beta", 7, 1), ("gamma", 3, 1),
+    ):
+        row = _record(project, "explicit_return_annotation", "return_expression")
+        row["failed_contract"]["argument_count"] = failed_args
+        row["successful_contract"]["argument_count"] = successful_args
+        records.append(row)
+
+    family = admission._structural_families([_group(records)])[0]
+
+    assert family["projects"] == {"alpha", "beta", "gamma"}
+    assert family["policy"]["structural_requirements"]["max_argument_count"] == 1
+    assert "forbidden_output_inference_basis" not in family["policy"]["structural_requirements"]
+    assert family["policy"]["preflight_trigger_requirements"]["min_argument_count"] == 2

@@ -17,11 +17,27 @@ def test_extracts_exact_top_level_callable(tmp_path):
     assert "await client.fetch" in evidence["snippet"]["text"]
 
 
-def test_rejects_path_escape_and_nested_ambiguous_symbol(tmp_path):
-    (tmp_path / "worker.py").write_text("class Worker:\n    def run(self):\n        return 1\n", encoding="utf-8")
+def test_rejects_path_escape_and_ambiguous_method_symbol(tmp_path):
+    (tmp_path / "worker.py").write_text(
+        "class Worker:\n    def run(self):\n        return 1\n"
+        "class Other:\n    def run(self):\n        return 2\n",
+        encoding="utf-8",
+    )
 
     assert source_target_evidence(tmp_path, "../outside.py:run") == {}
     assert source_target_evidence(tmp_path, "worker.py:run") == {}
+
+
+def test_extracts_unique_unqualified_method(tmp_path):
+    (tmp_path / "worker.py").write_text(
+        "class Worker:\n    @staticmethod\n    def normalize(value):\n        return value.strip()\n",
+        encoding="utf-8",
+    )
+
+    evidence = source_target_evidence(tmp_path, "worker.py:normalize")
+
+    assert evidence["node_kind"] == "method"
+    assert evidence["snippet"]["owner_class"] == "Worker"
 
 
 def test_extracts_class_qualified_method(tmp_path):

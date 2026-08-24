@@ -11,7 +11,7 @@
     "program_name": "acceptance-probe"
   },
   "foundation_evidence": {
-    "isolated_process_timeout_seconds": 180,
+    "isolated_process_timeout_seconds": 20,
     "isolated_transitive_effects": ["memory_state", "observability"],
     "process_isolated_direct_effects": ["memory_state"],
     "process_isolated_direct_effect_profiles": {

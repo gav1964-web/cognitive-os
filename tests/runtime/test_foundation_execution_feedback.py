@@ -139,3 +139,41 @@ def test_foundation_feedback_keeps_best_safe_handoff_when_later_candidate_regres
 
     assert result["artifact_contents"]["technical_spec"]["extraction_contract"]["candidate"] == "pkg/core.py:second"
     assert final_evidence["reason"] == "side_effectful_target"
+
+
+def test_process_timeout_evidence_is_returned_to_architect():
+    executor = feedback._executor({
+        "status": "failed",
+        "target": "pkg/client.py:connect",
+        "summary": {"reason": "isolated_process_failed", "detail": "timed out"},
+    })
+
+    summary = executor["test_result"]["executable_acceptance_result"]["summary"]
+    assert summary["skipped_targets"] == [{
+        "target": "pkg/client.py:connect", "reason": "isolated_process_failed",
+    }]
+
+
+def test_repeated_process_timeouts_open_resource_circuit_breaker(monkeypatch, tmp_path):
+    evidence = iter([
+        {"status": "failed", "reason": "isolated_process_failed", "target": "pkg/core.py:first"},
+        {"status": "failed", "reason": "isolated_process_failed", "target": "pkg/core.py:second"},
+    ])
+    monkeypatch.setattr(feedback, "collect_foundation_executable_evidence", lambda **kwargs: next(evidence))
+    monkeypatch.setattr(feedback, "feedback_iteration_limit", lambda: 4)
+    monkeypatch.setattr(feedback, "feedback_resource_failure_limit", lambda: 2)
+    monkeypatch.setattr(feedback, "reselect_architecture_first_slice", lambda **kwargs: {
+        "status": "selected",
+        "architecture_decision": kwargs["architecture_decision"],
+        "outcome": {"selected_targets": ["pkg/core.py:second"]},
+    })
+    targets = []
+
+    result, final_evidence = feedback.run_foundation_execution_feedback(
+        root=tmp_path, project_dir=tmp_path, initial_result=_result("pkg/core.py:first"),
+        rerun=lambda target: targets.append(target) or _result(target),
+    )
+
+    assert targets == ["pkg/core.py:second"]
+    assert final_evidence["reason"] == "isolated_process_failed"
+    assert result["execution_reselection_status"] == "iteration_limit"

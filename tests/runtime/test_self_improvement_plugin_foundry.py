@@ -47,3 +47,20 @@ def test_foundry_routes_bounded_target_discovery_to_measured_plugin():
     assert report["status"] == "trial_passed"
     assert report["resolutions"][0]["plugin_id"] == "candidate_selection_discriminator"
     assert report["resolutions"][0]["plugin_version"] == "1.2.0"
+
+
+def test_foundry_routes_structural_synthesis_to_admission_plugin():
+    report = resolve_plugin_requests([{
+        "request_id": "cdr_structural",
+        "missing_capability": "candidate_selection_structural_discriminator_synthesis",
+    }], [{
+        "project": "holdout",
+        "improvement_plugin_cycle": {"attempts": [{
+            "plugin_id": "candidate_selection_admission",
+            "status": "trial_passed",
+        }]},
+    }])
+
+    assert report["status"] == "trial_passed"
+    assert report["resolutions"][0]["plugin_id"] == "candidate_selection_admission"
+    assert report["resolutions"][0]["plugin_version"] == "1.1.0"

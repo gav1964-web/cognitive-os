@@ -168,3 +168,35 @@ def test_shadow_selected_challenger_becomes_applied_training_attempt(monkeypatch
     assert attempts[0]["parameter_applied"] is True
     assert attempts[0]["plugin_evidence"]["promotion_applied"] is False
     assert attempts[0]["parameter_changes"]["spec_writer_candidate_preference"] == "app.py:better"
+
+
+def test_shadow_challenger_is_chained_into_admission_context(monkeypatch, tmp_path):
+    plugins = [
+        {"id": "discover", "version": "1", "entrypoint": "discover:run", "auto_promote": False},
+        {"id": "admit", "version": "1", "entrypoint": "admit:run", "auto_promote": True},
+    ]
+    seen = {}
+
+    def load(entrypoint):
+        if entrypoint == "discover:run":
+            return lambda _context: {
+                "status": "trial_passed", "selected_challenger": "app.py:better",
+                "evolution": {
+                    "baseline": {"project_min_score": 7.5},
+                    "shadow": {"project_min_score": 9.7},
+                },
+            }
+        return lambda context: seen.update(context) or {"status": "trial_passed"}
+
+    monkeypatch.setattr("runtime.self_improvement_plugin_cycle.enabled_improvement_plugins", lambda: plugins)
+    monkeypatch.setattr("runtime.self_improvement_plugin_cycle.load_improvement_entrypoint", load)
+    result = run_improvement_plugin_cycle(
+        root=tmp_path, project_dir=tmp_path / "weak",
+        failure_packet={"selected_candidate": "app.py:weak"}, diagnosis={},
+        regression_projects=[tmp_path / "stable"],
+    )
+
+    effect = seen["diagnosis"]["measured_selection_effect"]
+    assert result["status"] == "trial_passed"
+    assert seen["diagnosis"]["recommended_source"] == "app.py:better"
+    assert effect["score_delta"] == 2.2

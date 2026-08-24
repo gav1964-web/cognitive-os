@@ -56,11 +56,21 @@ def _callable_matches(
 ) -> tuple[list[ast.AsyncFunctionDef | ast.FunctionDef], str, str]:
     owner_name, separator, member_name = symbol.partition(".")
     if not separator:
-        return ([
+        top_level = [
             node for node in tree.body
             if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
             and node.name == symbol
-        ], "function", "")
+        ]
+        if top_level:
+            return top_level, "function", ""
+        methods = [
+            (member, owner.name)
+            for owner in tree.body if isinstance(owner, ast.ClassDef)
+            for member in owner.body
+            if isinstance(member, (ast.AsyncFunctionDef, ast.FunctionDef))
+            and member.name == symbol
+        ]
+        return ([methods[0][0]], "method", methods[0][1]) if len(methods) == 1 else ([], "method", "")
     owners = [
         node for node in tree.body
         if isinstance(node, ast.ClassDef) and node.name == owner_name

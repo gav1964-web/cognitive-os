@@ -117,6 +117,10 @@ proves `no_structural_discriminator`. The requested capability is then a bounded
 ranked candidates, reselection targets, and ADR first-slice targets. A shadow result is treatment evidence even when
 it is not yet a durable promotion. Post-training admission consumes that frozen measured effect instead of rerunning
 an unstable A/B trial.
+The cycle orchestrator passes a confirmed shadow challenger and its frozen control/treatment pair to later admission
+plugins in the same cycle. Plugins remain isolated and do not call each other. Structural synthesis keeps the smallest
+shared discriminator; a low-arity rule is rejected and rolled back when ordinary routing selects a different candidate
+than the measured shadow, even if the shadow itself reached the target score.
 Recovery ordering prefers side-effect-free, receiver-free callables before dependency readiness because executable
 isolation can stub bounded imports while receiver construction remains a separate proof obligation. Constant-return
 policy hooks are structurally marked and cannot become strong first slices merely because they are easy to execute.
@@ -149,6 +153,9 @@ a separate process and every declared and observed effect is allowed by
 `foundation_evidence.process_isolated_direct_effects`. This permission does not cover filesystem writes, network,
 database, or subprocess effects. Resource-return methods are classified by both method name and class owner, so an
 object-pool `release_*` transition is not confused with project release/build support.
+Repeated isolated-process timeouts use the config-owned execution-feedback resource limit. Reaching that limit stops
+further target retries while preserving the best role artifacts, rejection history, and executable failure reason for
+the next self-improvement cycle; the outer field-trial watchdog should not erase that diagnostic state.
 Source-isolated method fixtures also infer numeric receiver fields when the method body proves their use in a
 configured numeric call or arithmetic expression. The sample value remains policy-owned; unknown receiver fields do
 not become arbitrary numbers.

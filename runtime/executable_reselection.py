@@ -76,6 +76,11 @@ def feedback_iteration_limit() -> int:
     return max(0, int(policy.get("execution_feedback_max_iterations") or 0))
 
 
+def feedback_resource_failure_limit() -> int:
+    policy = dict(load_technical_spec_policy().get("first_slice_reselection") or {})
+    return max(1, int(policy.get("execution_feedback_max_resource_failures") or 1))
+
+
 def _acceptance_summary(executor: dict[str, Any]) -> dict[str, Any]:
     test_result = dict(executor.get("test_result") or {})
     acceptance = dict(test_result.get("executable_acceptance_result") or {})

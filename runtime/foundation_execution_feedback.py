@@ -9,6 +9,7 @@ from .architect_first_slice_reselection import reselect_architecture_first_slice
 from .executable_reselection import (
     build_execution_reselection_request,
     feedback_iteration_limit,
+    feedback_resource_failure_limit,
     record_rejected_target,
 )
 from .foundation_executable_evidence import collect_foundation_executable_evidence
@@ -31,6 +32,7 @@ def run_foundation_execution_feedback(
     history: list[dict[str, Any]] = []
     architecture = _artifact(current, "architecture_decision")
     project_report = dict(_artifact(current, "project_map_report").get("content") or {})
+    resource_failures = int(_evidence_reason(evidence) == "isolated_process_failed")
     for iteration in range(1, feedback_iteration_limit() + 1):
         spec = _artifact(current, "technical_spec")
         request = build_execution_reselection_request(_executor(evidence), spec)
@@ -60,8 +62,11 @@ def run_foundation_execution_feedback(
         if current.get("status") != "ok":
             break
         evidence = _collect(root, project_dir, current)
+        resource_failures += int(_evidence_reason(evidence) == "isolated_process_failed")
         if _evidence_rank(evidence) > _evidence_rank(best_evidence):
             best_result, best_evidence = current, evidence
+        if resource_failures >= feedback_resource_failure_limit():
+            break
     if _evidence_rank(best_evidence) > _evidence_rank(evidence):
         current, evidence = best_result, best_evidence
     if history:
@@ -87,10 +92,10 @@ def _artifact(result: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _executor(evidence: dict[str, Any]) -> dict[str, Any]:
     summary = dict(evidence.get("summary") or {})
-    reason = str(evidence.get("reason") or "")
+    reason = str(evidence.get("reason") or summary.get("reason") or "")
     target = str(evidence.get("target") or "")
-    if not summary and reason and target:
-        summary = {
+    if reason and target and not summary.get("skipped_targets"):
+        summary = {**summary,
             "signal_strength": "not_measured",
             "callable_harness_count": 0,
             "skipped_reason_counts": {reason: 1},
@@ -119,6 +124,10 @@ def _evidence_rank(evidence: dict[str, Any]) -> int:
     if evidence.get("status") == "passed":
         return 1
     return 0
+
+
+def _evidence_reason(evidence: dict[str, Any]) -> str:
+    return str(evidence.get("reason") or dict(evidence.get("summary") or {}).get("reason") or "")
 
 
 def _attach_feedback(

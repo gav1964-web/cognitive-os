@@ -198,7 +198,9 @@ def test_foundation_evidence_uses_process_boundary_when_requested(monkeypatch, t
         process_isolated=True,
     )
 
-    assert observed["timeout_seconds"] == 180
+    assert observed["timeout_seconds"] == evidence.foundation_evidence_policy()[
+        "isolated_process_timeout_seconds"
+    ]
     assert observed["executable_policy"]["schema_version"] == "executable_acceptance_policy.v1"
     assert result["acceptance_signal"] == "executable_callable"
 

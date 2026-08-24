@@ -137,10 +137,12 @@
     "semantic_override_viability_rules": ["static_time_format_boundary"],
     "execution_feedback_enabled": true,
     "execution_feedback_max_iterations": 4,
+    "execution_feedback_max_resource_failures": 2,
     "execution_rejection_reasons": [
       "import_failed_import_error",
       "import_failed_missing_module",
       "import_failed_runtime_error",
+      "isolated_process_failed",
       "first_slice_reselection_required",
       "method_target_needs_instance_fixture",
       "positive_sample_execution_failed",

@@ -1,9 +1,10 @@
 {
   "schema_version": "github_blind_corpus_strata.v1",
   "projects_per_stratum": 8,
-  "minimum_stars": 300,
+  "minimum_stars": 100,
   "maximum_size_kb": 30000,
   "maximum_search_pages": 5,
+  "search_page_start": 1,
   "excluded_name_tokens": ["awesome", "blogs", "boilerplate", "cookiecutter", "example", "examples", "interview-questions", "projects", "resources", "starter", "template", "tutorial", "udacity"],
   "excluded_description_tokens": ["awesome list", "books, papers", "collection of", "course", "curated list", "example end to end", "examples of", "interview questions", "learning resource", "starter template", "tutorial", "udacity"],
   "production_signal_tokens": ["api", "automation", "client", "command-line", "data", "framework", "library", "machine learning", "platform", "production", "sdk", "server", "service", "tool", "toolkit"],

@@ -28,7 +28,10 @@ def build_technical_spec(
     if first_slice.get("reselection_iteration"):
         preferred_targets = preferred_targets[:1]
     extraction_contract = _extraction_contract(
-        evidence, preferred_targets=preferred_targets, advisory_config=advisory_config
+        evidence,
+        preferred_targets=preferred_targets,
+        advisory_config=advisory_config,
+        apply_preflight=not bool(architecture_decision.get("evaluation_target_clamp")),
     )
     extraction_contract = bind_requested_contract_profile(architecture_decision, extraction_contract)
     candidate = str(extraction_contract.get("candidate") or "")

@@ -14,6 +14,9 @@ from tools.self_improvement_project_discovery import holdout_discoverer
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--projects-dir", action="append", required=True)

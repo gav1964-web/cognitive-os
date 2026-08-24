@@ -145,7 +145,6 @@ def _implementation_source(source: str) -> bool:
 
 def _context_only_implementation_source(lowered: str) -> bool:
     return is_context_only_implementation_target(lowered)
-
 def _normalize_source_ref(source: str) -> str:
     return re.sub(r"\s*\(\d+\s+loc\)\s*$", "", str(source or "").strip(), flags=re.IGNORECASE)
 
@@ -159,7 +158,8 @@ def _dedupe(values: list[str]) -> list[str]:
         rows.append(value)
     return rows
 def _extraction_contract(
-    evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None
+    evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None,
+    apply_preflight: bool = True,
 ) -> dict[str, Any]:
     ranked = _rank_extraction_candidates(evidence); read_only_ranked_context = []
     binding_rejections = [item for item in ranked if item.get("standalone_eligible") is False]
@@ -177,7 +177,7 @@ def _extraction_contract(
         ranked = promote_environment_ready_candidate(ranked)
     ranked = _append_read_only_ranked_context(ranked, read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
-    ranked = apply_preflight_selection_policies(ranked)
+    ranked = apply_preflight_selection_policies(ranked) if apply_preflight else ranked
     if not ranked:
         blocked_codes = _dedupe([str(item.get("blocked_reason") or "") for item in binding_rejections])
         rejection_rows = _binding_rejection_rows(binding_rejections)

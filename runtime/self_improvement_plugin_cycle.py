@@ -51,6 +51,7 @@ def run_improvement_plugin_cycle(
             **dict(result or {}),
         }
         attempts.append(attempt)
+        diagnosis = _chain_trial_result(diagnosis, failure_packet, attempt)
         if attempt.get("status") == "promoted" and cycle_policy.get("stop_after_promotion", True):
             break
     return {
@@ -70,3 +71,26 @@ def _cycle_status(attempts: list[dict[str, Any]]) -> str:
     if any(row.get("status") == "blocked" for row in attempts):
         return "blocked"
     return "not_applicable"
+
+
+def _chain_trial_result(
+    diagnosis: dict[str, Any], packet: dict[str, Any], attempt: dict[str, Any]
+) -> dict[str, Any]:
+    challenger = str(attempt.get("selected_challenger") or "")
+    evolution = dict(attempt.get("evolution") or {})
+    control, shadow = dict(evolution.get("baseline") or {}), dict(evolution.get("shadow") or {})
+    if attempt.get("status") != "trial_passed" or not challenger or not shadow:
+        return diagnosis
+    return {**diagnosis,
+        "recommended_source": challenger,
+        "measured_selection_effect": {
+            "status": "confirmed_selection_effect",
+            "source": packet.get("selected_candidate"),
+            "challenger": challenger,
+            "score_delta": round(
+                float(shadow.get("project_min_score") or 0)
+                - float(control.get("project_min_score") or 0), 2,
+            ),
+            "role_regressions": [], "control": control, "treatment": shadow,
+        },
+    }
