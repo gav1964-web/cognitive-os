@@ -100,6 +100,30 @@ def test_discriminator_does_not_force_viability_rejected_candidate(monkeypatch, 
     assert "app.py:build" not in attempted
 
 
+def test_discriminator_shadow_trials_pure_method_binding_candidate(monkeypatch, tmp_path):
+    context = _context(tmp_path)
+    ranked = context["failure_packet"]["artifact_evidence"]["technical_spec"]["ranked_candidates"]
+    ranked[1]["reasons"] = [
+        "execution cost requires reselection: read_or_mapping_boundary, "
+        "method_runtime_global_dependency, static_method_boundary"
+    ]
+    attempted = []
+
+    def evaluate(_root, _project, **kwargs):
+        attempted.append(kwargs["evaluation_target"])
+        return {
+            "status": "ok", "project_min_score": 9.7,
+            "role_scores": {"project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.7},
+            "selected_extraction_candidate": kwargs["evaluation_target"],
+            "downstream_evidence": {"acceptance_signal": "executable_callable"},
+        }
+
+    monkeypatch.setattr("runtime.self_improvement_training._evaluate", evaluate)
+
+    assert plugin.run(context)["status"] == "trial_passed"
+    assert attempted[0] == "app.py:build"
+
+
 def test_discriminator_confirms_convergent_emergent_candidate(monkeypatch, tmp_path):
     context = _context(tmp_path)
 
@@ -225,3 +249,31 @@ def test_discriminator_probes_structural_recovery_target_first(monkeypatch, tmp_
 
     assert plugin.run(context)["status"] == "trial_passed"
     assert attempted[0] == "pkg/core.py:recover"
+
+
+def test_discriminator_canonicalizes_display_source_references(monkeypatch, tmp_path):
+    context = _context(tmp_path)
+    context["failure_packet"]["artifact_evidence"] = {
+        "architecture_decision": {
+            "source_candidate_pool": ["pkg/core.py:build(9 loc)"],
+            "first_slice": {"targets": ["app.py:write(14 loc)"]},
+        },
+        "technical_spec": {"ranked_candidates": [{"source": "app.py:write"}]},
+    }
+    attempted = []
+
+    def evaluate(_root, _project, **kwargs):
+        attempted.append(kwargs["evaluation_target"])
+        return {
+            "status": "ok", "project_min_score": 9.7,
+            "role_scores": {"project_analyzer": 9.7, "architect": 9.7, "spec_writer": 9.7},
+            "selected_extraction_candidate": kwargs["evaluation_target"],
+            "downstream_evidence": {"acceptance_signal": "executable_callable"},
+        }
+
+    monkeypatch.setattr("runtime.self_improvement_training._evaluate", evaluate)
+
+    result = plugin.run(context)
+
+    assert result["status"] == "trial_passed"
+    assert attempted == ["pkg/core.py:build"]

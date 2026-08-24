@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -162,10 +163,15 @@ def _source_candidate_pool(context: dict[str, Any]) -> list[str]:
             int(dependency.get("status") not in {"", "ready"}),
             int(int(structural.get("return_paths") or 0) < 1),
             int(output in {"", "insufficient_structural_evidence", "no_value_return"}),
-            str(source),
+            _canonical_source_ref(source),
         ))
     rows.sort()
     return [row[-1] for row in rows[:12]]
+
+
+def _canonical_source_ref(value: object) -> str:
+    text = str(value or "").strip().replace("\\", "/")
+    return re.sub(r"\s*\(\d+\s+loc\)\s*$", "", text, flags=re.IGNORECASE)
 
 
 def _compact_risk(value: Any) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     supported = {str(value) for value in config.get("failure_classes") or []}
     if supported and failure_class not in supported:
         return {"status": "not_applicable", "reason": "failure_class_not_supported"}
-    source = str(packet.get("selected_candidate") or "")
+    source = _canonical_target(packet.get("selected_candidate"))
     if not source:
         return {"status": "not_applicable", "reason": "selected_candidate_missing"}
     candidates = _candidate_sources(packet, diagnosis, source, config)
@@ -73,27 +74,27 @@ def _candidate_sources(
     ranked = [dict(row) for row in list(spec.get("ranked_candidates") or []) if isinstance(row, dict)]
     reselection = dict(spec.get("reselection") or {})
     blocked_sources = {
-        str(row.get("source") or "")
+        _canonical_target(row.get("source"))
         for row in ranked
         if _candidate_trial_blocked(row)
     }
     ranked_sources = [
-        str(row.get("source") or "")
+        _canonical_target(row.get("source"))
         for row in sorted(ranked, key=_candidate_rank)
         if str(row.get("source") or "") not in blocked_sources
     ]
-    selected_targets = [str(value) for value in reselection.get("selected_targets") or []]
+    selected_targets = [_canonical_target(value) for value in reselection.get("selected_targets") or []]
     first_slice_targets = [
-        str(value) for value in dict(adr.get("first_slice") or {}).get("targets") or []
+        _canonical_target(value) for value in dict(adr.get("first_slice") or {}).get("targets") or []
     ]
-    clamped_candidates = [str(value) for value in clamp.get("candidate_pool") or []]
-    source_candidates = [str(value) for value in adr.get("source_candidate_pool") or []]
-    recovery_candidates = [str(value) for value in packet.get("retrieval_recovery_candidates") or []]
+    clamped_candidates = [_canonical_target(value) for value in clamp.get("candidate_pool") or []]
+    source_candidates = [_canonical_target(value) for value in adr.get("source_candidate_pool") or []]
+    recovery_candidates = [_canonical_target(value) for value in packet.get("retrieval_recovery_candidates") or []]
     eligible = set(
         ranked_sources + selected_targets + first_slice_targets + clamped_candidates
         + source_candidates + recovery_candidates
     )
-    values = [str(diagnosis.get("recommended_source") or "")]
+    values = [_canonical_target(diagnosis.get("recommended_source"))]
     values.extend(value for value in recovery_candidates if ":" in value)
     values.extend(value for value in source_candidates if ":" in value)
     values.extend(value for value in ranked_sources if ":" in value)
@@ -107,6 +108,11 @@ def _candidate_sources(
         if value and value != source and value in eligible and value not in blocked_sources
     ))
     return _diverse_candidates(bounded, maximum)
+
+
+def _canonical_target(value: object) -> str:
+    text = str(value or "").strip().replace("\\", "/")
+    return re.sub(r"\s*\(\d+\s+loc\)\s*$", "", text, flags=re.IGNORECASE)
 
 
 def _diverse_candidates(candidates: list[str], maximum: int) -> list[str]:
@@ -141,7 +147,13 @@ def _candidate_rank(row: dict[str, Any]) -> tuple[int, int, int, str]:
 
 def _candidate_trial_blocked(row: dict[str, Any]) -> bool:
     reasons = " ".join(str(value).lower() for value in row.get("reasons") or [])
-    return "execution cost requires reselection" in reasons
+    effects = {str(value) for value in row.get("side_effects") or []}
+    unsafe_rules = {
+        "direct_memory_state_boundary",
+        "external_effect_boundary",
+        "stateful_method_effects",
+    }
+    return bool(effects) or any(rule in reasons for rule in unsafe_rules)
 
 
 def _control(packet: dict[str, Any]) -> dict[str, Any]:
