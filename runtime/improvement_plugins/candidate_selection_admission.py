@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from runtime.knowledge_admission import load_kb_candidates
+from runtime.improvement_plugins.candidate_selection_holdout import (
+    contrast_evidence_matches, inactive_legacy_families,
+    partition_holdout_project,
+)
 from runtime.self_improvement_iteration import capture_promotion_state, rollback_promotion_state
 from runtime.promoted_candidate_selection_policies import (
     activate_selection_policy,
@@ -30,19 +34,19 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     if not source or not challenger or source == challenger:
         return {"status": "not_applicable", "reason": "measured_challenger_missing"}
     minimum = int(dict(context.get("plugin_config") or {}).get("minimum_confirmed_cases") or 3)
-    groups = _contrast_groups(root)
     failure_class = str(diagnosis.get("failure_class") or "")
-    if failure_class:
-        groups = [group for group in groups if group["id"].split(":", 1)[0] == failure_class]
-    families = _structural_families(groups)
+    groups, holdout_records = partition_holdout_project(
+        _contrast_groups(root), project_dir.name, failure_class,
+    )
+    families = [*_structural_families(groups), *inactive_legacy_families(root, failure_class)]
     eligible = [group for group in families if len(group["projects"]) >= minimum]
-    if not groups:
-        return {
-            "status": "blocked", "reason": "confirmed_cases_required",
-            "maximum_confirmed_case_count": 0,
-            "minimum_confirmed_cases": minimum,
-        }
     if not families:
+        if not groups:
+            return {
+                "status": "blocked", "reason": "confirmed_cases_required",
+                "maximum_confirmed_case_count": 0,
+                "minimum_confirmed_cases": minimum,
+            }
         return {"status": "blocked", "reason": "no_structural_discriminator"}
     if not eligible:
         return {
@@ -64,7 +68,10 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
         row for row in synthesized
         if row[1]
         and signal in set(row[1]["trigger_signals"])
-        and contrast_matches_policy(control_structural, treatment_structural, row[1])
+        and contrast_evidence_matches(
+            holdout_records, row[0]["id"], row[1], control_structural,
+            treatment_structural, contrast_matches_policy,
+        )
     ]
     if not applicable:
         return {"status": "blocked", "reason": "no_structural_discriminator", "failure_signal": signal}

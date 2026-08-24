@@ -34,6 +34,15 @@
       "require_no_declared_effects": true,
       "require_no_direct_effects": true,
       "require_no_state_mutation": true
+    },
+    "promoted_selection_policy_admission": {
+      "enabled": true,
+      "allowed_reselection_triggers": ["low_first_slice_viability"],
+      "require_process_isolation": true,
+      "require_complete_source_body": true,
+      "require_no_declared_effects": true,
+      "require_no_direct_effects": true,
+      "require_no_state_mutation": true
     }
   },
   "structural_sample_policy": {

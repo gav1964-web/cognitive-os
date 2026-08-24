@@ -33,6 +33,12 @@ def load_selection_policies(path: str | None = None) -> dict[str, Any]:
             raise ValueError(f"selection policy lacks structural requirements: {policy_id}")
         if policy.get("numeric_bonus") not in {None, False, 0}:
             raise ValueError(f"numeric selection bonus is forbidden: {policy_id}")
+        forbidden = set(dict(policy.get("structural_requirements") or {}).get(
+            "forbidden_output_inference_basis") or [])
+        preflight = set(dict(policy.get("preflight_trigger_requirements") or {}).get(
+            "output_inference_basis") or [])
+        if _policy_enabled(policy) and preflight and forbidden and not preflight & forbidden:
+            raise ValueError(f"selection policy has unreachable output preflight: {policy_id}")
         seen.add(policy_id)
     return payload
 

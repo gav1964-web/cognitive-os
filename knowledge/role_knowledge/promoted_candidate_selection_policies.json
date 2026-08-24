@@ -1,13 +1,18 @@
 {
   "policies": [
     {
+      "activation_state": "active",
       "id": "executable_sample_contract:measured_candidate_reselection",
+      "legacy_revalidation_repairs": [
+        "include_forbidden_output_in_preflight"
+      ],
       "numeric_bonus": false,
       "preflight_trigger_requirements": {
         "output_inference_basis": [
           "explicit_none_annotation",
           "explicit_return_annotation",
           "insufficient_structural_evidence",
+          "no_value_return",
           "return_expression"
         ]
       },
@@ -19,8 +24,9 @@
           "rohfle__doip-simulator",
           "tanelpoder__0xtools"
         ],
-        "holdout_project": "instacart__lore",
-        "holdout_score_delta": 2.2
+        "holdout_project": "stochasticai__xTuring",
+        "holdout_score_delta": 2.2,
+        "ordinary_route_reproduction": "passed"
       },
       "selection_mode": "stable_partition_existing_candidates",
       "structural_requirements": {

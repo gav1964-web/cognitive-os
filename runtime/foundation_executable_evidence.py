@@ -112,10 +112,15 @@ def _eligibility(
         process_isolated=process_isolated,
         policy=dict(evidence_policy["shadow_target_admission"]),
     )
+    policy_admitted = bool(contract.get("selection_policy_ids")) and _shadow_target_admitted(
+        target=target, requested_target=target, request=request, structural=structural,
+        effects=effects, direct_effects=direct_effects, process_isolated=process_isolated,
+        policy=dict(evidence_policy["promoted_selection_policy_admission"]),
+    )
     reason = ""
     if spec.get("artifact_type") != "TechnicalSpec":
         reason = "technical_spec_missing"
-    elif request.get("status") == "required" and not shadow_admitted:
+    elif request.get("status") == "required" and not (shadow_admitted or policy_admitted):
         reason = "first_slice_reselection_required"
     elif not target or contract.get("status") == "blocked_no_safe_candidate":
         reason = "safe_target_missing"
@@ -135,6 +140,7 @@ def _eligibility(
         "target": target or None,
         "acceptance_signal": "",
         "shadow_target_admitted": shadow_admitted,
+        "selection_policy_target_admitted": policy_admitted,
     }
 
 

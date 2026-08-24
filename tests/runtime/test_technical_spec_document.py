@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from runtime.technical_spec_document import render_technical_spec_document
 from runtime.technical_spec_builder import _extraction_contract, _rank_extraction_candidates
+from runtime._parts import technical_spec_builder_part2 as spec_part2
 
 
 def test_network_flow_is_deferred_below_local_property_context() -> None:
@@ -78,6 +79,22 @@ def test_extraction_contract_preserves_multi_file_effect_handoff() -> None:
 
     assert contract["supporting_sources"] == ["service.py:publish"]
     assert contract["effect_handoff_chains"][0]["effect"] == "network"
+
+
+def test_extraction_contract_preserves_promoted_selection_evidence(monkeypatch) -> None:
+    def apply(ranked):
+        ranked[0]["selection_policy_ids"] = ["verified_policy"]
+        return ranked
+
+    monkeypatch.setattr(spec_part2, "apply_preflight_selection_policies", apply)
+    contract = spec_part2._extraction_contract([{
+        "source": "app.py:normalize",
+        "signature": {"args": [{"name": "value", "annotation": "str"}]},
+        "snippet": "def normalize(value):\n    return value.strip()\n",
+        "side_effects": [],
+    }])
+
+    assert contract["selection_policy_ids"] == ["verified_policy"]
 
 
 def test_technical_spec_document_renders_human_tz_sections() -> None:

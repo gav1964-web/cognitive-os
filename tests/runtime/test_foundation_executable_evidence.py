@@ -245,3 +245,22 @@ def test_shadow_target_rejects_effectful_or_mismatched_candidate():
 
     assert effectful["reason"] == "first_slice_reselection_required"
     assert mismatched["reason"] == "first_slice_reselection_required"
+
+
+def test_promoted_selection_policy_admits_safe_reselection_in_production():
+    spec = _spec()
+    spec["extraction_contract"].update({
+        "selection_policy_ids": ["verified_policy"],
+        "structural_evidence": {
+            "source_body_available": True, "source_body_complete": True,
+            "observed_side_effects": [], "state_mutation": False,
+        },
+    })
+    spec["first_slice_reselection_request"] = {
+        "status": "required", "trigger": "low_first_slice_viability",
+    }
+
+    result = evidence._eligibility(spec, process_isolated=True)
+
+    assert result["status"] == "eligible"
+    assert result["selection_policy_target_admitted"] is True

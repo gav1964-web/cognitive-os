@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from runtime.architecture_analysis_document import write_architecture_analysis_document
+from runtime.architecture_policy_alignment import align_policy_selected_architecture
 from runtime.architect_red_team import red_team_architecture_decision
 from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from runtime.contract_registry import load_artifact_contracts
@@ -179,6 +180,7 @@ def run_role_foundation_pipeline(
     }
     if active_root_decision["status"] == "selected":
         artifacts["active_root_decision"] = _active_root_decision_artifact(project_dir, goal, active_root_decision)
+    artifacts = align_policy_selected_architecture(artifacts, project_map_report)
     adr = artifact_by_type(artifacts, "ArchitectureDecisionRecord")
     spec = artifact_by_type(artifacts, "TechnicalSpec")
     paths = _write_artifacts(root, artifacts) if write else {}

@@ -127,6 +127,16 @@ untargeted role route. A structural family is applicable only when its preflight
 the control does not satisfy its successful requirements, and the measured challenger does.
 Legacy policies without an activation state remain quarantined until revalidated through `reproduction_trial` and
 then explicitly moved to `active` after ordinary-route reproduction passes.
+During revalidation, the current project's staged contrast is holdout evidence only and is removed from every
+training family before the repeated-case count is evaluated. Full measured `failed_contract` and
+`successful_contract` records remain authoritative when the compact runtime score report omits structural fields.
+An inactive legacy policy whose forbidden output can never trigger its preflight may be repaired only inside the
+revalidation candidate; the repair, fresh holdout, ordinary-route replay, and regression cases are recorded together.
+When an active or reproduction-trial policy selects a source-backed target outside the old Architect slice, the
+Architect artifact is revised to own that same target before semantic scoring. The policy identity is carried through
+`TechnicalSpec.extraction_contract`, and executable admission remains bounded by
+`foundation_evidence.promoted_selection_policy_admission`; policy selection alone cannot waive effect, source-body,
+state-mutation, or process-isolation checks.
 
 Foundation executable evidence may exercise direct in-memory state transitions only when the acceptance runner uses
 a separate process and every declared and observed effect is allowed by

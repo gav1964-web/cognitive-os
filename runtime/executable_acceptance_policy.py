@@ -186,6 +186,9 @@ def foundation_evidence_policy() -> dict[str, Any]:
             "require_no_direct_effects": bool(shadow.get("require_no_direct_effects", True)),
             "require_no_state_mutation": bool(shadow.get("require_no_state_mutation", True)),
         },
+        "promoted_selection_policy_admission": _clone(dict(
+            policy.get("promoted_selection_policy_admission") or {}
+        )),
     }
 
 

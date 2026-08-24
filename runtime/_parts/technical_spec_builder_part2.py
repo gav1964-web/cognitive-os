@@ -158,7 +158,6 @@ def _dedupe(values: list[str]) -> list[str]:
         seen.add(value)
         rows.append(value)
     return rows
-
 def _extraction_contract(
     evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None
 ) -> dict[str, Any]:
@@ -243,6 +242,7 @@ def _extraction_contract(
         "candidate_advisory": candidate_advisory,
         "dependency_readiness": dict(candidate.get("dependency_readiness") or {}),
     }
+    contract.update({"selection_policy_ids": list(ranked[0]["selection_policy_ids"])} if ranked[0].get("selection_policy_ids") else {})
     if binding_rejections:
         contract["binding_rejections"] = _binding_rejection_rows(binding_rejections)
     supporting_sources = [
