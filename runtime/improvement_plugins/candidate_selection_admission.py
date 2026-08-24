@@ -148,33 +148,37 @@ def _promote_with_regression_gate(
     regression_history = []
     for _attempt in range(max(0, maximum_refinements) + 2):
         snapshot = capture_promotion_state(root)
-        promoted = promote_selection_policy(
-            root=root, policy={**candidate, "activation_state": "reproduction_trial"},
-            promotion_evidence={**evidence, **({"regression_refinement": refinement} if refinement else {})},
-        )
-        reproduction = _holdout_reproduction_failure(root, project_dir, effect)
-        reproduction_history.append({
-            "target": reproduction.get("selected_candidate") or dict(effect.get("treatment") or {}).get("selected_extraction_candidate"),
-            "score": reproduction.get("actual_score") or dict(effect.get("treatment") or {}).get("project_min_score"),
-            "acceptance_signal": reproduction.get("actual_acceptance_signal") or "executable_callable",
-        })
-        if reproduction:
+        try:
+            promoted = promote_selection_policy(
+                root=root, policy={**candidate, "activation_state": "reproduction_trial"},
+                promotion_evidence={**evidence, **({"regression_refinement": refinement} if refinement else {})},
+            )
+            reproduction = _holdout_reproduction_failure(root, project_dir, effect)
+            reproduction_history.append({
+                "target": reproduction.get("selected_candidate") or dict(effect.get("treatment") or {}).get("selected_extraction_candidate"),
+                "score": reproduction.get("actual_score") or dict(effect.get("treatment") or {}).get("project_min_score"),
+                "acceptance_signal": reproduction.get("actual_acceptance_signal") or "executable_callable",
+            })
+            if reproduction:
+                rollback_promotion_state(root, snapshot)
+                refined = refine_reproduction(candidate, effect, reproduction)
+                if refined and reproduction_refinements < maximum_refinements:
+                    candidate = refined
+                    reproduction_refinements += 1
+                    refinement = "exclude_reproduction_only_execution_cost"
+                    continue
+                return {
+                    "applied": False, "status": "rejected",
+                    "reason": "holdout_reproduction_failed",
+                    "holdout_reproduction": reproduction,
+                    "reproduction_history": reproduction_history,
+                    "rollback_applied": True,
+                }
+            activated = activate_selection_policy(root, str(candidate["id"]))
+            regressions = regression_failures(root, before, regression_repetitions)
+        except BaseException:
             rollback_promotion_state(root, snapshot)
-            refined = refine_reproduction(candidate, effect, reproduction)
-            if refined and reproduction_refinements < maximum_refinements:
-                candidate = refined
-                reproduction_refinements += 1
-                refinement = "exclude_reproduction_only_execution_cost"
-                continue
-            return {
-                "applied": False, "status": "rejected",
-                "reason": "holdout_reproduction_failed",
-                "holdout_reproduction": reproduction,
-                "reproduction_history": reproduction_history,
-                "rollback_applied": True,
-            }
-        activated = activate_selection_policy(root, str(candidate["id"]))
-        regressions = regression_failures(root, before, regression_repetitions)
+            raise
         if not regressions:
             return {
                 "applied": promoted["status"] in {"promoted", "already_promoted"},

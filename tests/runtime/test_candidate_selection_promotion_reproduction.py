@@ -3,6 +3,7 @@ from runtime.improvement_plugins.candidate_selection_refinement import (
     refine_preflight,
     refine_reproduction,
 )
+import pytest
 
 
 def _effect(score=9.7, signal="executable_callable"):
@@ -44,6 +45,42 @@ def test_holdout_reproduction_accepts_equal_ordinary_route(monkeypatch, tmp_path
     )
 
     assert admission._holdout_reproduction_failure(tmp_path, tmp_path, _effect()) == {}
+
+
+def test_promotion_rolls_back_when_regression_gate_is_interrupted(monkeypatch, tmp_path):
+    snapshot = {"knowledge/policy.json": b"before"}
+    rollbacks = []
+    monkeypatch.setattr(admission, "evaluate_projects", lambda *_args: [])
+    monkeypatch.setattr(admission, "capture_promotion_state", lambda _root: snapshot)
+    monkeypatch.setattr(admission, "promote_selection_policy", lambda **_kwargs: {
+        "status": "promoted",
+    })
+    monkeypatch.setattr(admission, "_holdout_reproduction_failure", lambda *_args: {})
+    monkeypatch.setattr(admission, "activate_selection_policy", lambda *_args: {
+        "status": "activated",
+    })
+    monkeypatch.setattr(
+        admission, "regression_failures",
+        lambda *_args: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+    monkeypatch.setattr(
+        admission, "rollback_promotion_state",
+        lambda root, state: rollbacks.append((root, state)) or [],
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        admission._promote_with_regression_gate(
+            tmp_path,
+            {"id": "policy"},
+            {"projects": {"alpha", "beta", "gamma"}},
+            tmp_path / "holdout",
+            {"score_delta": 1.0, "treatment": {}},
+            [],
+            maximum_refinements=1,
+            regression_repetitions=3,
+        )
+
+    assert rollbacks == [(tmp_path, snapshot)]
 
 
 def test_reproduction_refinement_excludes_only_new_execution_cost():

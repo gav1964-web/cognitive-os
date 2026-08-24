@@ -251,7 +251,8 @@ to every pure helper or method stored below a `cli` package.
 Promotion must reproduce the measured holdout treatment through the ordinary untargeted role route after the candidate
 policy is applied. The reproduced minimum score, status, and executable acceptance signal must be at least as strong as
 the shadow treatment before regression checks begin. Failure rolls the candidate policy back; a targeted shadow alone
-is not production evidence.
+is not production evidence. Process interruption and cancellation also roll back the in-flight promotion snapshot, so
+a partially completed repeated regression gate cannot leave a policy active.
 
 An ordinary-route failure after target selection may indicate missing execution knowledge rather than a bad candidate.
 Typed sample recipes belong in `executable_acceptance_policy.json`; pure-call exclusions belong in the declarative
