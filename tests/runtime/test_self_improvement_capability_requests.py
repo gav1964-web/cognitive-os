@@ -57,5 +57,52 @@ def test_repeated_discriminator_blocks_request_a_plugin_across_void_syntaxes(tmp
     )
 
     assert len(requests) == 1
-    assert requests[0]["missing_capability"] == "candidate_selection_discriminator_plugin"
+    assert requests[0]["missing_capability"] == "candidate_selection_structural_discriminator_synthesis"
     assert requests[0]["observed_projects"] == ["project_0", "project_1", "project_2"]
+
+
+def test_shadow_success_with_blocked_post_admission_requests_discriminator(tmp_path: Path):
+    reports = []
+    for index in range(3):
+        report = _report(
+            f"project_{index}", "", "explicit_return_annotation", {
+                "plugin_id": "candidate_selection_discriminator",
+                "status": "trial_passed",
+            },
+        )
+        report["post_training_admission"] = {"attempts": [{
+            "plugin_id": "candidate_selection_admission",
+            "status": "blocked",
+            "reason": "no_structural_discriminator",
+        }]}
+        reports.append(report)
+
+    requests = capability_development_requests(tmp_path, reports, minimum_projects=3)
+
+    assert len(requests) == 1
+    assert requests[0]["missing_capability"] == "candidate_selection_structural_discriminator_synthesis"
+
+
+def test_discriminator_request_keeps_executable_failure_families_separate(tmp_path: Path):
+    reports = []
+    details = [
+        "mismatched embedding dimensions (2 != 3)",
+        "got _SafeMethodAttribute instead of str",
+        "unsupported operand type(s) for |: '_StubObject'",
+    ]
+    for index, detail in enumerate(details):
+        report = _report(
+            f"project_{index}", "", "explicit_return_annotation", {
+                "plugin_id": "candidate_selection_admission",
+                "status": "blocked",
+                "reason": "no_structural_discriminator",
+            },
+        )
+        report["baseline"]["downstream_evidence"]["summary"] = {
+            "skipped_targets": [{
+                "reason": "positive_sample_execution_failed", "detail": detail,
+            }],
+        }
+        reports.append(report)
+
+    assert capability_development_requests(tmp_path, reports, minimum_projects=3) == []

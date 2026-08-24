@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .knowledge_admission import capability_gap_report, load_kb_candidates
-from .self_improvement_signatures import portable_failure_signature
+from .self_improvement_signatures import portable_failure_signature, semantic_context
 
 
 def capability_development_requests(
@@ -109,9 +109,11 @@ def _parameter_search_requests(
             continue
         failure_class = str(dict(report.get("diagnosis") or {}).get("failure_class") or "unknown")
         signature = _parameter_search_signature(report)
-        group_key = f"{failure_class}:{signature}"
+        context = ",".join(semantic_context(report))
+        group_key = f"{failure_class}:{signature}:{context}"
         group = groups.setdefault(group_key, {
             "failure_class": failure_class, "signature": signature,
+            "semantic_context": context,
             "projects": set(), "role_scope": set(), "strategy_plugin_attempted": False,
         })
         group["projects"].add(str(report.get("project") or ""))
@@ -125,8 +127,14 @@ def _parameter_search_requests(
         if len(projects) < minimum_projects:
             continue
         gap = {
-            "gap_id": f"training_search:{failure_class}:{signature}:continue_bounded_parameter_search",
-            "label": f"Bounded parameter search exhausted for {failure_class} ({signature})",
+            "gap_id": (
+                f"training_search:{failure_class}:{signature}:"
+                f"{group['semantic_context'] or 'context_free'}:continue_bounded_parameter_search"
+            ),
+            "label": (
+                f"Bounded parameter search exhausted for {failure_class} ({signature}; "
+                f"{group['semantic_context'] or 'context_free'})"
+            ),
             "projects": projects,
             "role_scope": sorted(group["role_scope"]),
         }
@@ -178,23 +186,28 @@ def _structural_discriminator_requests(
 ) -> list[dict[str, Any]]:
     groups: dict[str, dict[str, Any]] = {}
     for report in training:
-        if not report.get("knowledge_candidate_path") or _has_supported_plugin(report):
+        if not report.get("knowledge_candidate_path") or _has_promoted_plugin(report):
             continue
         failure_class = str(dict(report.get("diagnosis") or {}).get("failure_class") or "unknown")
         if failure_class == "unknown":
             continue
         signature = portable_failure_signature(report, normalization)
-        key = f"{failure_class}:{signature}"
+        context = ",".join(semantic_context(report))
+        key = f"{failure_class}:{signature}:{context}"
         group = groups.setdefault(key, {
             "failure_class": failure_class, "signature": signature,
+            "semantic_context": context,
             "projects": set(), "role_scope": set(),
             "unresolved_selections": 0, "blocked_discriminators": 0,
         })
         group["projects"].add(str(report.get("project") or ""))
         group["role_scope"].update(dict(report.get("diagnosis") or {}).get("target_roles") or [])
-        cycle = dict(report.get("improvement_plugin_cycle") or {})
+        cycles = [
+            dict(report.get("improvement_plugin_cycle") or {}),
+            dict(report.get("post_training_admission") or {}),
+        ]
         selection_attempts = [
-            row for row in list(cycle.get("attempts") or [])
+            row for cycle in cycles for row in list(cycle.get("attempts") or [])
             if isinstance(row, dict) and row.get("plugin_id") == "candidate_selection_admission"
         ]
         unresolved_reasons = {"measured_challenger_missing", "no_structural_discriminator"}
@@ -214,13 +227,29 @@ def _structural_discriminator_requests(
         gap = {
             "gap_id": (
                 f"training_search:{group['failure_class']}:{group['signature']}:"
-                "structural_discriminator_missing"
+                f"{group['semantic_context'] or 'context_free'}:structural_discriminator_missing"
             ),
-            "label": f"Structural discriminator missing for {group['signature']}",
+            "label": (
+                f"Structural discriminator missing for {group['signature']}"
+                f" ({group['semantic_context'] or 'context_free'})"
+            ),
             "projects": projects,
             "role_scope": sorted(group["role_scope"]),
         }
         request = _request(gap)
-        request["missing_capability"] = "candidate_selection_discriminator_plugin"
+        request["missing_capability"] = "candidate_selection_structural_discriminator_synthesis"
         requests.append(request)
     return requests
+
+
+def _has_promoted_plugin(report: dict[str, Any]) -> bool:
+    cycles = [
+        dict(report.get("improvement_plugin_cycle") or {}),
+        dict(report.get("post_training_admission") or {}),
+    ]
+    return any(
+        row.get("status") == "promoted" or row.get("promotion_applied") is True
+        for cycle in cycles
+        for row in list(cycle.get("attempts") or [])
+        if isinstance(row, dict)
+    )

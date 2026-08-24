@@ -56,7 +56,32 @@ def semantic_context(report: dict[str, Any]) -> list[str]:
         *list(quality.get("contract_archetype_ids") or []),
         *list(quality.get("semantic_profile_ids") or []),
     ]
+    failure_family = executable_failure_family(report)
+    if failure_family:
+        values.append(f"executable_failure:{failure_family}")
     return sorted({str(value) for value in values if value})
+
+
+def executable_failure_family(report: dict[str, Any]) -> str:
+    baseline = dict(report.get("baseline") or {})
+    downstream = dict(baseline.get("downstream_evidence") or {})
+    summary = dict(downstream.get("summary") or {})
+    skipped = [dict(row) for row in summary.get("skipped_targets") or [] if isinstance(row, dict)]
+    reasons = {str(row.get("reason") or "") for row in skipped}
+    details = " ".join(str(row.get("detail") or "").lower() for row in skipped)
+    if "import_failed_runtime_error" in reasons:
+        return "import_runtime_error"
+    if "requested unknown topic" in details:
+        return "domain_fixture_missing"
+    if "_safemethodattribute" in details:
+        return "receiver_materialization_mismatch"
+    if "_stubobject" in details and "unsupported operand" in details:
+        return "dependency_stub_operation_mismatch"
+    if ("dimension" in details or "shape" in details) and (
+        "mismatch" in details or "!=" in details
+    ):
+        return "sample_shape_mismatch"
+    return ""
 
 
 def normalize_portable_signature(signature: str, normalization: dict[str, Any]) -> str:

@@ -1,6 +1,7 @@
 from runtime.self_improvement_hypothesis_validation import build_validation_plan
 from runtime.self_improvement_signatures import (
     assess_signature_match, diagnosis_envelope, portable_failure_signature, recovery_metrics,
+    semantic_context,
 )
 
 
@@ -120,4 +121,23 @@ def test_diagnosis_envelope_preserves_measured_semantic_context():
 
     assert diagnosis_envelope(report)["semantic_context"] == [
         "logging_output_format_boundary", "logging_record_projection",
+    ]
+
+
+def test_semantic_context_separates_executable_failure_families():
+    def report(detail: str):
+        return {"baseline": {"downstream_evidence": {"summary": {
+            "skipped_targets": [{
+                "reason": "positive_sample_execution_failed", "detail": detail,
+            }],
+        }}}}
+
+    assert semantic_context(report("mismatched embedding dimensions (2 != 3)")) == [
+        "executable_failure:sample_shape_mismatch",
+    ]
+    assert semantic_context(report("got _SafeMethodAttribute instead of str")) == [
+        "executable_failure:receiver_materialization_mismatch",
+    ]
+    assert semantic_context(report("unsupported operand type(s) for |: '_StubObject'")) == [
+        "executable_failure:dependency_stub_operation_mismatch",
     ]

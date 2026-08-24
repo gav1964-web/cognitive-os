@@ -150,7 +150,8 @@ def _source_candidate_pool(context: dict[str, Any]) -> list[str]:
         if ":" not in str(source):
             continue
         row = dict(value or {})
-        snippet = dict(row.get("snippet") or {})
+        snippet_value = row.get("snippet")
+        snippet = dict(snippet_value) if isinstance(snippet_value, dict) else {}
         structural = dict(snippet.get("structural_contract") or row.get("structural_contract") or {})
         dependency = dict(row.get("dependency_readiness") or {})
         effects = set(str(item) for item in row.get("side_effects") or [])

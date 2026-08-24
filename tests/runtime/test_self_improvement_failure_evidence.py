@@ -52,3 +52,23 @@ def test_architecture_evidence_carries_safety_ranked_source_candidate_pool(tmp_p
     assert evidence["architecture_decision"]["source_candidate_pool"] == [
         "app.py:build", "app.py:write",
     ]
+
+
+def test_architecture_evidence_accepts_source_text_snippets(tmp_path):
+    adr = tmp_path / "ArchitectureDecisionRecord.json"
+    adr.write_text(json.dumps({
+        "source_context": {
+            "app.py:build": {
+                "snippet": "def build(value):\n    return value",
+                "target_binding": "function_symbol",
+                "structural_contract": {
+                    "return_paths": 1,
+                    "output_inference_basis": "return_expression",
+                },
+            },
+        },
+    }), encoding="utf-8")
+
+    evidence = artifact_evidence({"architecture_decision": {"path": str(adr)}})
+
+    assert evidence["architecture_decision"]["source_candidate_pool"] == ["app.py:build"]
