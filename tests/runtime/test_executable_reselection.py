@@ -171,7 +171,7 @@ def test_stage_marks_iteration_limit_when_all_replacements_fail(monkeypatch, tmp
 
     stages.stage_after_build(state)
 
-    assert len(calls) == 3
+    assert len(calls) == stages.feedback_iteration_limit() + 1
     assert state["executor"]["execution_reselection_status"] == "iteration_limit"
     assert state["executor"]["status"] == "needs_review"
     assert state["test_result"]["status"] == "failed"

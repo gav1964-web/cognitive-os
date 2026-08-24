@@ -178,11 +178,22 @@ def _candidate_evidence(row: dict[str, Any]) -> dict[str, Any]:
             *list(inferred.get("observed_side_effects") or []),
         ] if value
     })
-    return {**source, **inferred, "observed_side_effects": effects}
+    return {
+        **source,
+        **inferred,
+        "observed_side_effects": effects,
+        "ranking_reasons": list(row.get("reasons") or []),
+    }
 
 
 def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) -> bool:
     required = dict(policy.get("structural_requirements") or {})
+    reason_text = " ".join(str(item).lower() for item in candidate.get("ranking_reasons") or [])
+    forbidden_reasons = {
+        str(item).lower() for item in required.get("forbidden_ranking_reason_tokens") or []
+    }
+    if any(token in reason_text for token in forbidden_reasons):
+        return False
     if int(candidate.get("return_paths") or 0) < int(required.get("min_return_paths") or 0):
         return False
     if required.get("state_mutation") is False and bool(candidate.get("state_mutation")):

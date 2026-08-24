@@ -136,14 +136,17 @@
     "minimum_semantic_score": 95,
     "semantic_override_viability_rules": ["static_time_format_boundary"],
     "execution_feedback_enabled": true,
-    "execution_feedback_max_iterations": 2,
+    "execution_feedback_max_iterations": 4,
     "execution_rejection_reasons": [
       "import_failed_import_error",
       "import_failed_missing_module",
       "import_failed_runtime_error",
+      "first_slice_reselection_required",
       "method_target_needs_instance_fixture",
       "positive_sample_execution_failed",
-      "positive_signature_mismatch"
+      "positive_signature_mismatch",
+      "side_effectful_target",
+      "state_mutating_target"
     ],
     "allow_declared_dependency_candidates": true,
   "max_iterations": 3,

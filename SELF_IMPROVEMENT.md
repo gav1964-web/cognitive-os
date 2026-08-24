@@ -20,6 +20,12 @@ The source project, score threshold, evaluator, role caps, and active knowledge 
 10. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile or a typed capability-development request.
 11. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
 
+Foundation field trials close the same bounded executable-feedback loop as the production role workflow. An actionable
+acceptance or eligibility rejection returns the target to Architect, rebuilds the role artifacts, and reruns acceptance
+within `first_slice_reselection.execution_feedback_max_iterations`. Every attempted target remains in the report. If no
+candidate reaches callable evidence, the loop returns the strongest safe intermediate handoff instead of the last trial,
+so self-correction is monotonic with respect to measured downstream evidence.
+
 A shadow trial may clamp evaluation to an existing candidate, but it must not override deterministic first-slice
 viability evidence. Candidates marked as requiring reselection are excluded from discriminator trials even when an LLM
 recommends them or a forced run would raise the score. This prevents lifecycle wrappers and no-op callables from

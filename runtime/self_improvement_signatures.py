@@ -58,7 +58,7 @@ def semantic_context(report: dict[str, Any]) -> list[str]:
     ]
     failure_family = executable_failure_family(report)
     if failure_family:
-        values.append(f"executable_failure:{failure_family}")
+        return [f"executable_failure:{failure_family}"]
     return sorted({str(value) for value in values if value})
 
 
@@ -73,14 +73,38 @@ def executable_failure_family(report: dict[str, Any]) -> str:
         return "import_runtime_error"
     if "requested unknown topic" in details:
         return "domain_fixture_missing"
-    if "_safemethodattribute" in details:
+    if "working outside of application context" in details:
+        return "framework_context_missing"
+    if "_safemethodattribute" in details or (
+        "object has no attribute '_" in details
+    ):
         return "receiver_materialization_mismatch"
     if "_stubobject" in details and "unsupported operand" in details:
         return "dependency_stub_operation_mismatch"
+    if "filenotfounderror" in details and (
+        "library not found" in details or "compile the library" in details
+    ):
+        return "external_runtime_artifact_missing"
     if ("dimension" in details or "shape" in details) and (
         "mismatch" in details or "!=" in details
     ):
         return "sample_shape_mismatch"
+    if (
+        "number of splits" in details or "n_splits=" in details
+    ) and (
+        "number of samples" in details or "n_samples=" in details
+    ):
+        return "sample_shape_mismatch"
+    if any(pattern in details for pattern in (
+        "object has no attribute 'value'",
+        "object has no attribute 'items'",
+        "'nonetype' object has no attribute",
+        "object of type 'nonetype' has no len()",
+        "bytes-like object is required, not 'nonetype'",
+    )):
+        return "argument_materialization_mismatch"
+    if "filenotfounderror" in details and ("none/" in details or "none\\" in details):
+        return "argument_materialization_mismatch"
     return ""
 
 

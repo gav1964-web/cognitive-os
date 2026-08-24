@@ -81,9 +81,14 @@ def test_opt_in_acceptance_lifts_unverified_score_caps(monkeypatch, tmp_path):
         "artifacts": {"technical_spec": {"path": None}},
         "artifact_contents": {"technical_spec": {"artifact_type": "TechnicalSpec"}},
     })
-    monkeypatch.setattr(field_trial, "collect_foundation_executable_evidence", lambda **kwargs: {
-        "status": "passed", "acceptance_signal": "executable_callable",
-    })
+    monkeypatch.setattr(
+        field_trial,
+        "run_foundation_execution_feedback",
+        lambda **kwargs: (
+            kwargs["initial_result"],
+            {"status": "passed", "acceptance_signal": "executable_callable"},
+        ),
+    )
 
     case = field_trial._run_case(
         root=tmp_path, project_dir=tmp_path, write=False, executable_acceptance=True

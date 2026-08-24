@@ -20,21 +20,19 @@ def screen_projects(
 ) -> dict[str, Any]:
     """Return a bounded shortlist; this is retrieval evidence, never admission evidence."""
     target_effects, target_output = _signature_parts(portable_signature)
-    rows = [
-        _screen_project(Path(project), target_effects, target_output, policy)
-        for project in projects
-    ]
+    target_context = [str(value) for value in policy.get("semantic_context") or []]
+    static_context = [value for value in target_context if not value.startswith("executable_failure:")]
+    screen_policy = {**policy, "semantic_context": static_context}
+    rows = [_screen_project(Path(project), target_effects, target_output, screen_policy)
+            for project in projects]
     ranked = sorted(rows, key=_rank_key)
     maximum = max(1, int(policy.get("maximum_shortlist_projects") or len(rows) or 1))
     minimum = min(maximum, max(0, int(policy.get("minimum_shortlist_projects") or 0)))
-    recovery_required = bool(policy.get("recovery_contract"))
-    context_required = bool(policy.get("semantic_context"))
-    matches = [
-        row for row in ranked
-        if row["structural_match_count"]
-        and (not recovery_required or row["recovery_match_count"])
-        and (not context_required or row["semantic_context_structural_match_count"])
-    ]
+    recovery_required = bool(screen_policy.get("recovery_contract"))
+    context_required = bool(static_context)
+    matches = [row for row in ranked if row["structural_match_count"]
+               and (not recovery_required or row["recovery_match_count"])
+               and (not context_required or row["semantic_context_structural_match_count"])]
     selected = matches[:maximum]
     if len(selected) < minimum and not recovery_required and not context_required:
         selected_names = {row["project"] for row in selected}
@@ -49,7 +47,9 @@ def screen_projects(
         "portable_signature": portable_signature,
         "target_effects": sorted(target_effects),
         "target_output_basis": target_output,
-        "target_semantic_context": list(policy.get("semantic_context") or []),
+        "target_semantic_context": target_context,
+        "static_semantic_context": static_context,
+        "runtime_only_semantic_context": sorted(set(target_context) - set(static_context)),
         "candidate_project_count": len(rows),
         "structural_match_project_count": len(matches),
         "selected_project_count": len(selected),

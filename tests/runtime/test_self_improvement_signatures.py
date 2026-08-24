@@ -141,3 +141,27 @@ def test_semantic_context_separates_executable_failure_families():
     assert semantic_context(report("unsupported operand type(s) for |: '_StubObject'")) == [
         "executable_failure:dependency_stub_operation_mismatch",
     ]
+
+
+def test_semantic_context_groups_portable_materialization_failures():
+    def context(detail: str):
+        report = {"baseline": {"downstream_evidence": {"summary": {
+            "skipped_targets": [{
+                "reason": "positive_sample_execution_failed", "detail": detail,
+            }],
+        }}}}
+        return semantic_context(report)
+
+    expected = ["executable_failure:argument_materialization_mismatch"]
+    assert context("AttributeError: 'str' object has no attribute 'value'") == expected
+    assert context("AttributeError: 'list' object has no attribute 'items'") == expected
+    assert context("TypeError: a bytes-like object is required, not 'NoneType'") == expected
+    assert context("AttributeError: 'NoneType' object has no attribute 'days'") == expected
+    assert context("TypeError: object of type 'NoneType' has no len()") == expected
+    assert context("FileNotFoundError: missing 'None/resources/geometry'") == expected
+    assert context("n_splits=5 greater than the number of samples: n_samples=0") == [
+        "executable_failure:sample_shape_mismatch",
+    ]
+    assert context("FileNotFoundError: CUDA library not found; compile the library") == [
+        "executable_failure:external_runtime_artifact_missing",
+    ]

@@ -54,6 +54,31 @@ def test_semantic_context_disables_unrelated_minimum_shortlist_fallback(tmp_path
     assert report["selected_projects"] == []
 
 
+def test_runtime_failure_context_is_deferred_to_full_probe(tmp_path):
+    project = tmp_path / "sample"
+    project.mkdir()
+    (project / "app.py").write_text(
+        "def normalize(value: str) -> str:\n    return value.strip()\n",
+        encoding="utf-8",
+    )
+    policy = {
+        "maximum_shortlist_projects": 2,
+        "semantic_context": [
+            "executable_failure:argument_materialization_mismatch",
+        ],
+    }
+
+    report = screen_projects(
+        [project], "meta_only|pure|explicit_return_annotation", policy,
+    )
+
+    assert report["selected_projects"] == ["sample"]
+    assert report["static_semantic_context"] == []
+    assert report["runtime_only_semantic_context"] == [
+        "executable_failure:argument_materialization_mismatch",
+    ]
+
+
 def _policy(**overrides):
     return {
         "maximum_shortlist_projects": 3,

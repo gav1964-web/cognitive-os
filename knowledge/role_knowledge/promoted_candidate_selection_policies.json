@@ -33,6 +33,9 @@
         "forbidden_output_inference_basis": [
           "no_value_return"
         ],
+        "forbidden_ranking_reason_tokens": [
+          "health/status/ping probe"
+        ],
         "min_return_paths": 1
       },
       "trigger": "executable_acceptance_rejected",

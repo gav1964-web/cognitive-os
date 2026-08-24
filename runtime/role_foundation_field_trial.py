@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
-from .foundation_executable_evidence import collect_foundation_executable_evidence
+from .foundation_execution_feedback import run_foundation_execution_feedback
 from ._parts.role_foundation_field_trial_scope import _child_python_projects, _has_project_manifest, _is_python_project, _primary_language_scope
 from .role_foundation_pipeline import run_role_foundation_pipeline
 from .role_foundation_feedback_scores import (
@@ -18,16 +18,12 @@ from .role_foundation_feedback_scores import (
     role_score_evaluation,
     role_scores as _role_scores,
 )
-from .role_foundation_trial_status import (
-    case_status as _case_status,
-)
+from .role_foundation_trial_status import case_status as _case_status
 from .python_module_transaction import python_module_transaction
 from .role_foundation_case_runner import run_bounded_foundation_case
 
 
 DEFAULT_GOAL = "Produce ADR and TechnicalSpec for first safe transformation"
-
-
 def run_role_foundation_field_trial(
     *,
     root: Path,
@@ -144,16 +140,23 @@ def _run_case(
         write=write,
         include_artifact_contents=True,
     )
-    loaded_result = _result_with_loaded_artifacts(result)
     downstream_evidence = {}
     if executable_acceptance and result.get("status") == "ok":
-        downstream_evidence = collect_foundation_executable_evidence(
+        result, downstream_evidence = run_foundation_execution_feedback(
             root=root,
             project_dir=project_dir,
-            technical_spec=dict(loaded_result["artifacts"].get("technical_spec") or {}),
-            process_isolated=True,
+            initial_result=result,
+            rerun=lambda target: run_role_foundation_pipeline(
+                root=root,
+                project_dir=project_dir,
+                goal=f"{DEFAULT_GOAL} in {project_dir.name}",
+                write=write,
+                include_artifact_contents=True,
+                _evaluation_target=target,
+            ),
         )
         result["downstream_evidence"] = downstream_evidence
+    loaded_result = _result_with_loaded_artifacts(result)
     semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})
     if not semantic_quality:
         semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
@@ -173,6 +176,8 @@ def _run_case(
         "score_adjustments": score_evaluation["adjustments"],
         "acceptance_signal": score_evaluation["acceptance_signal"],
         "downstream_evidence": downstream_evidence,
+        "execution_reselection_status": result.get("execution_reselection_status"),
+        "execution_reselection_history": result.get("execution_reselection_history", []),
         "semantic_quality": semantic_quality,
         "project_min_score": round(min(available_scores), 2) if available_scores else 0.0,
         "selected_extraction_candidate": result.get("selected_extraction_candidate"),
@@ -385,7 +390,6 @@ def _min_available(values: list[float | None]) -> float:
 
 def _ratio(numerator: float, denominator: float) -> float:
     return round(numerator / denominator, 3) if denominator else 0.0
-
 def _write_report(root: Path, report: dict[str, Any]) -> Path:
     out_dir = root / "artifacts" / "field_trials"
     out_dir.mkdir(parents=True, exist_ok=True)
