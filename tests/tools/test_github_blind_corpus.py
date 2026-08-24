@@ -7,6 +7,7 @@ from tools.github_blind_corpus import (
     _eligible,
     _export_compatible_tree,
     _project_row,
+    _repo_key,
     _search_stratum,
     _search_with_gh,
     _windows_compatible_path,
@@ -14,19 +15,23 @@ from tools.github_blind_corpus import (
 )
 
 
-def test_known_projects_reads_only_frozen_top_level_selections(tmp_path):
+def test_known_projects_reads_frozen_release_and_hypothesis_selections(tmp_path):
     corpus = tmp_path / "corpus"
     corpus.mkdir()
     (corpus / "selection.json").write_text(
         json.dumps({"projects": [{"full_name": "Owner/Repo"}]}), encoding="utf-8"
     )
-    nested = corpus / "src" / "other"
-    nested.mkdir(parents=True)
-    (nested / "selection.json").write_text(
-        json.dumps({"projects": [{"full_name": "Ignored/Nested"}]}), encoding="utf-8"
+    hypothesis = tmp_path / "hypothesis_holdouts" / "case"
+    hypothesis.mkdir(parents=True)
+    (hypothesis / "selection.json").write_text(
+        json.dumps({"projects": [{"full_name": "Holdout/Nested"}]}), encoding="utf-8"
     )
 
-    assert known_projects(tmp_path) == {"owner/repo"}
+    assert known_projects(tmp_path) == {"owner/repo", "holdout/nested"}
+
+
+def test_repo_key_excludes_cross_forge_namespace_aliases():
+    assert _repo_key("github-owner/Shared-Repo.git") == "shared-repo"
 
 
 def test_known_projects_includes_historical_foundation_trials(tmp_path):

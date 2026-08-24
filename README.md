@@ -268,6 +268,11 @@ the complete chain is reported as a blocked discovery capability, not as a dispr
 hypothesis. Every completed or blocked validation is persisted under
 `artifacts/self_improvement/hypothesis_validation_*.json`. Use
 `--no-hypothesis-discovery` only for fixed-corpus diagnostics.
+Use `tools/foundation_transfer_exam.py` for an independent transfer check. Its
+`freeze` phase creates a deterministic stratified train/holdout manifest with
+repository and engine fingerprints; `run` records pre-training scores, permits
+autonomous learning only from the train partition, and evaluates the unchanged
+holdout afterward.
 If one reserve has fewer than two class-and-signature matches, Cognitive OS starts
 the next bounded discovery round with a new frozen selection and excludes every
 already probed repository. CLI progress reports every discovery round, probe and

@@ -41,6 +41,16 @@ active learning step selected from the portable failure class and structural sig
 hypothesis generalizes. A 20-40 project multi-type blind corpus remains a release/calibration exam and must not be
 reused as routine training evidence for every hypothesis.
 
+For a transfer exam, freeze the train/holdout split before measuring either partition. The manifest records the
+selection hash, project commits, self-improvement engine fingerprint, and promotion-state digest. The `run` phase
+measures both baselines, trains only on the train partition, and then remeasures the sealed holdout; it refuses reuse
+of an existing result or any engine, promotion-state, or project-commit drift after freeze:
+
+```powershell
+python tools\foundation_transfer_exam.py freeze --root . --corpus-dir PATH
+python tools\foundation_transfer_exam.py run --root . --corpus-dir PATH --target-score 9.7
+```
+
 Project discovery is a replaceable external capability. The current CLI adapter uses the ordered provider chain
 `GitLab -> GitHub`, records every provider attempt, freezes selection and commit metadata under
 `artifacts/hypothesis_holdouts/<hypothesis_id>/`, and excludes every previously selected repository across both forges.

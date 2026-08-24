@@ -49,17 +49,21 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
     blacklist = known_projects(root / "artifacts")
     selected: list[dict[str, Any]] = []
     claimed = set(blacklist)
+    claimed_repos = {_repo_key(name) for name in claimed}
     for stratum in policy["strata"]:
         count = int(policy["projects_per_stratum"])
         print(f"searching stratum={stratum['id']} needed={count}", file=sys.stderr, flush=True)
-        candidates = _search_stratum(stratum, policy, excluded=claimed, needed=count)
-        rows = [row for row in candidates if row["full_name"].lower() not in claimed and _eligible(row, policy)]
+        candidates = _search_stratum(
+            stratum, policy, excluded=claimed, excluded_repos=claimed_repos, needed=count,
+        )
+        rows = [row for row in candidates if _unseen(row, claimed, claimed_repos) and _eligible(row, policy)]
         if len(rows) < count:
             raise RuntimeError(f"not enough unseen projects for {stratum['id']}: {len(rows)} < {count}")
         for row in rows[:count]:
             row["stratum"] = str(stratum["id"])
             selected.append(row)
             claimed.add(row["full_name"].lower())
+            claimed_repos.add(_repo_key(row["full_name"]))
         print(f"selected stratum={stratum['id']} count={count}", file=sys.stderr, flush=True)
     corpus.mkdir(parents=True, exist_ok=False)
     payload = {
@@ -103,10 +107,14 @@ def clone_corpus(corpus: Path, *, force: bool = False) -> dict[str, Any]:
 
 def known_projects(artifacts: Path) -> set[str]:
     known: set[str] = set()
-    for child in artifacts.iterdir() if artifacts.is_dir() else []:
-        selection = child / "selection.json"
-        if not selection.is_file():
-            continue
+    selections = []
+    if artifacts.is_dir():
+        for pattern in (
+            "*/selection.json", "*/effective_selection.json",
+            "hypothesis_holdouts/*/selection.json",
+        ):
+            selections.extend(artifacts.glob(pattern))
+    for selection in selections:
         try:
             payload = json.loads(selection.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -132,10 +140,12 @@ def _search_stratum(
     policy: dict[str, Any],
     *,
     excluded: set[str] | None = None,
+    excluded_repos: set[str] | None = None,
     needed: int = 0,
 ) -> list[dict[str, Any]]:
     by_name: dict[str, dict[str, Any]] = {}
     excluded = excluded or set()
+    excluded_repos = excluded_repos or {_repo_key(name) for name in excluded}
     qualifiers = (
         f"language:Python stars:>={int(policy['minimum_stars'])} "
         f"size:<={int(policy['maximum_size_kb'])} archived:false fork:false"
@@ -152,7 +162,10 @@ def _search_stratum(
             for item in payload.get("items", []):
                 row = _project_row(item)
                 by_name.setdefault(row["full_name"].lower(), row)
-            eligible = [row for key, row in by_name.items() if key not in excluded and _eligible(row, policy)]
+            eligible = [
+                row for row in by_name.values()
+                if _unseen(row, excluded, excluded_repos) and _eligible(row, policy)
+            ]
             print(
                 f"search progress stratum={stratum.get('id', 'unknown')} page={page} eligible={len(eligible)}",
                 file=sys.stderr,
@@ -219,6 +232,14 @@ def _eligible(row: dict[str, Any], policy: dict[str, Any]) -> bool:
     signals = " ".join([name, description, *row.get("topics", [])])
     required = policy.get("production_signal_tokens", [])
     return not required or any(token in signals for token in required)
+
+
+def _unseen(row: dict[str, Any], names: set[str], repos: set[str]) -> bool:
+    return row["full_name"].lower() not in names and _repo_key(row["full_name"]) not in repos
+
+
+def _repo_key(full_name: str) -> str:
+    return full_name.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower().removesuffix(".git")
 
 
 def _clone_one(source_dir: Path, project: dict[str, Any], *, force: bool) -> dict[str, Any]:
