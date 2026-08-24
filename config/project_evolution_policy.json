@@ -37,6 +37,10 @@
     "teacher_confidence_threshold": 0.78,
     "max_external_calls_per_iteration": 1,
     "maximum_field_trial_case_seconds": 60,
+    "training_priority": {
+      "actionable_acceptance_signals": ["meta_only"],
+      "actionable_downstream_statuses": ["failed"]
+    },
     "hypothesis_holdout": {
       "enabled": true,
       "plan_version": "hypothesis_holdout.v29",

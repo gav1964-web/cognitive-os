@@ -44,6 +44,7 @@ def run_self_improving_foundation_trial(
 ) -> dict[str, Any]:
     """Let Cognitive OS train, verify, promote, and roll back until convergence."""
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
+    training_priority_policy = dict(policy.get("training_priority") or {})
     case_timeout = float(policy.get("maximum_field_trial_case_seconds") or 0.0)
     iteration_limit = max(1, int(max_iterations or policy.get("max_training_iterations") or 1))
     _emit(_progress, "baseline_started")
@@ -65,7 +66,7 @@ def run_self_improving_foundation_trial(
                 if _trainable_failure(case, target_score)
                 and str(case.get("project") or "") not in attempted_projects
             ),
-            key=_training_priority,
+            key=lambda case: _training_priority(case, training_priority_policy),
         )[:max(0, max_training_projects)]
         if not failures:
             if any(_requires_training(case, target_score) for case in cases):
@@ -278,13 +279,23 @@ def _resource_capability_requests(cases: list[dict[str, Any]]) -> list[dict[str,
     }]
 
 
-def _training_priority(case: dict[str, Any]) -> tuple[float, str]:
+def _training_priority(
+    case: dict[str, Any], policy: dict[str, Any] | None = None,
+) -> tuple[int, float, str]:
+    priority = dict(policy or {})
+    downstream = dict(case.get("downstream_evidence") or {})
+    actionable = (
+        str(downstream.get("acceptance_signal") or "")
+        in set(priority.get("actionable_acceptance_signals") or [])
+        or str(downstream.get("status") or "")
+        in set(priority.get("actionable_downstream_statuses") or [])
+    )
     score = float(case.get("project_min_score") or 0.0)
     if case.get("status") == "blocked_ok":
         score = min(score, 7.0)
     elif case.get("status") != "ok":
         score = min(score, 5.0)
-    return score, str(case.get("project") or "")
+    return int(not actionable), score, str(case.get("project") or "")
 
 
 def _prior_attempted_projects(root: Path, cases: list[dict[str, Any]]) -> set[str]:
