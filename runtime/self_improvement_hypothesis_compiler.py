@@ -279,6 +279,15 @@ def _candidate_type(cluster: dict[str, Any]) -> str:
         return "fixture_strategy"
     if any(row.get("semantic_context") for row in positives):
         return "semantic_contract_profile"
+    plugin_confirmations = sum(
+        any(outcome.get("status") in {"trial_passed", "promoted"}
+            for outcome in row.get("plugin_outcomes") or [])
+        for row in positives
+    )
+    minimum = int(dict(load_hypothesis_compiler_config().get("evidence_planner") or {}).get(
+        "minimum_consistent_action_cases") or 2)
+    if plugin_confirmations < minimum:
+        return "evidence_collection_plan"
     return "improvement_plugin_contract"
 
 
@@ -296,6 +305,7 @@ def _desired_effect(candidate_type: str) -> str:
         "fixture_strategy": "Materialize bounded inputs that satisfy the measured callable contract.",
         "executable_adapter": "Represent the dependency boundary inside the acceptance sandbox only.",
         "semantic_contract_profile": "Recognize the recurring contract family from source evidence.",
+        "evidence_collection_plan": "Acquire the missing independent evidence before implementing a plugin.",
         "improvement_plugin_contract": "Produce a bounded shadow-trial candidate for the recurring failure class.",
     }[candidate_type]
 
@@ -344,6 +354,9 @@ def _validate_config(payload: dict[str, Any]) -> None:
     multipliers = [float(value) for value in trial.get("timeout_retry_multipliers") or []]
     if retries < 0 or retries > len(multipliers) or any(value <= 1.0 for value in multipliers):
         raise ValueError("hypothesis compiler timeout retry policy is invalid")
+    evidence = dict(payload.get("evidence_planner") or {})
+    if int(evidence.get("minimum_consistent_action_cases") or 0) < 2:
+        raise ValueError("hypothesis compiler evidence planner threshold is invalid")
     repository_gate = dict(trial.get("repository_regression_gate") or {})
     command = repository_gate.get("command") or []
     if repository_gate.get("enabled") and (

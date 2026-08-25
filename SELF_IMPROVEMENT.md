@@ -45,6 +45,12 @@ promotion. Compile the existing evidence corpus without rerunning projects with:
 python tools\hypothesis_compiler.py --root . --limit 2500
 ```
 
+Repeated failure does not by itself justify a new runtime plugin. If fewer than two independent projects confirm one
+consistent action, Hypothesis Compiler emits `evidence_collection_plan`. The registered read-only
+`hypothesis_evidence_planner` distinguishes missing target evidence, contradictory transfer, a single existing-plugin
+effect and a general shortage of measured actions. Its completion gate must be satisfied before recompilation can
+produce `improvement_plugin_contract`; the planner cannot generate runtime code or promote KB.
+
 Use `--use-model --model-limit N` only for bounded abstraction of the strongest `N` clusters. Compiler artifacts live
 under `artifacts/hypothesis_compiler/`; they are evidence and requests, not active KB.
 

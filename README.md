@@ -279,6 +279,9 @@ promotion state and requires a fresh exam run.
 portable failure signatures, requires three independent projects, attaches existing-corpus counterexamples, and emits
 typed `HypothesisCandidate` records for the plugin foundry. Optional local-LLM abstraction is hypothesis-only; strict
 contracts reject code, patches, scoring changes and unbound evidence before any plugin trial.
+Clusters without two consistent measured actions compile to a read-only `HypothesisEvidenceCollectionPlan`, not a
+speculative runtime plugin. The evidence planner records the next bounded measurement and completion gate; only a
+subsequent recompilation with sufficient independent support may request plugin implementation.
 `tools/hypothesis_compiler_trial.py` dispatches compiled hypotheses through existing admission plugins and the plugin
 foundry. Without `--promote` it performs read-only preflight; with `--promote` it requires a measured holdout, repeated
 counterexamples and rollback on regression or incomplete execution before a candidate can enter KB. Timeout retries

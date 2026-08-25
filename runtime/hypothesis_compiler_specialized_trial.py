@@ -15,6 +15,7 @@ from .self_improvement_plugin_foundry import resolve_plugin_requests
 
 
 DIRECT_TRIAL_TYPES = {"semantic_contract_profile", "executable_adapter"}
+EVIDENCE_PLAN_TYPE = "evidence_collection_plan"
 
 
 def run_specialized_trials(
@@ -50,10 +51,9 @@ def _resolve_one(
     promote: bool, maximum_holdouts: int, progress=None,
 ) -> dict[str, Any]:
     request = capability_request(hypothesis)
-    bound_projects = {
-        str(value) for key in ("evidence_refs", "counterexample_refs")
-        for value in hypothesis.get(key) or []
-    }
+    evidence_projects = {str(value) for value in hypothesis.get("evidence_refs") or []}
+    counterexample_projects = {str(value) for value in hypothesis.get("counterexample_refs") or []}
+    bound_projects = evidence_projects | counterexample_projects
     bound_history = [row for row in history if str(row.get("project") or "") in bound_projects]
     foundry = resolve_plugin_requests([request], bound_history)
     resolution = dict(next(iter(foundry.get("resolutions") or []), {}))
@@ -67,6 +67,18 @@ def _resolve_one(
         return {**base, "status": "implementation_required",
                 "reason": "bounded_improvement_plugin_missing"}
     candidate_type = str(hypothesis.get("candidate_type") or "")
+    if candidate_type == EVIDENCE_PLAN_TYPE:
+        from .improvement_plugins.hypothesis_evidence_planner import run
+        outcome = run({
+            "compiled_hypothesis": hypothesis,
+            "evidence_reports": [
+                row for row in bound_history if str(row.get("project") or "") in evidence_projects
+            ],
+            "counterexample_reports": [
+                row for row in bound_history if str(row.get("project") or "") in counterexample_projects
+            ],
+        })
+        return {**base, **outcome}
     if candidate_type not in DIRECT_TRIAL_TYPES:
         return {**base, "status": str(resolution.get("status") or "trial_required")}
     holdouts = _independent_holdouts(hypothesis, history)[:max(1, maximum_holdouts)]

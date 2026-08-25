@@ -31,6 +31,7 @@
     "fixture_strategy",
     "executable_adapter",
     "semantic_contract_profile",
+    "evidence_collection_plan",
     "improvement_plugin_contract"
   ],
   "capability_routes": {
@@ -38,7 +39,13 @@
     "fixture_strategy": "bounded_parameter_strategy_extension",
     "executable_adapter": "bounded_executable_target_discovery_or_sandbox_adapter",
     "semantic_contract_profile": "semantic_contract_profile_synthesis",
+    "evidence_collection_plan": "bounded_hypothesis_evidence_collection",
     "improvement_plugin_contract": "new_bounded_improvement_plugin"
+  },
+  "evidence_planner": {
+    "minimum_consistent_action_cases": 2,
+    "maximum_plan_projects": 12,
+    "negative_transfer_requires_resolution": true
   },
   "validation_gates": [
     "independent_holdout",

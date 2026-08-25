@@ -73,6 +73,17 @@
       "minimum_confirmed_cases": 3
     },
     {
+      "id": "hypothesis_evidence_planner",
+      "version": "1.0.0",
+      "enabled": true,
+      "priority": 45,
+      "entrypoint": "runtime.improvement_plugins.hypothesis_evidence_planner:run",
+      "change_types": ["compiled_hypothesis_evidence_gap"],
+      "implements_capabilities": ["bounded_hypothesis_evidence_collection"],
+      "auto_promote": false,
+      "requires_regression_cases": false
+    },
+    {
       "id": "bounded_parameter_strategy",
       "version": "1.2.0",
       "enabled": true,

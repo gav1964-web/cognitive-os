@@ -167,6 +167,24 @@ def test_compiler_prefers_selection_rule_for_repeated_measured_reselection(tmp_p
     )
 
 
+def test_compiler_plans_evidence_before_requesting_new_plugin(tmp_path):
+    reports = [_report(name, selected=None, trained=None) for name in ("one", "two", "three")]
+    for report in reports:
+        report["diagnosis"]["failure_class"] = "role_quality"
+        report["baseline"]["downstream_evidence"] = {}
+    _write_history(tmp_path, reports[1:])
+
+    result = compile_hypothesis(
+        root=tmp_path, report=reports[0], write=False, use_model=False,
+    )
+
+    candidate = result["candidates"][0]
+    assert candidate["candidate_type"] == "evidence_collection_plan"
+    assert candidate["required_plugin_contract"]["capability"] == (
+        "bounded_hypothesis_evidence_collection"
+    )
+
+
 def test_candidate_contract_rejects_executable_model_output():
     candidate = build_candidate(
         candidate_type="fixture_strategy",
