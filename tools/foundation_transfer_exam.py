@@ -19,9 +19,13 @@ from runtime.self_improvement_iteration import (
     assess_iteration,
     capture_promotion_state,
     changed_promotion_paths,
+    rollback_promotion_state,
     snapshot_digest,
 )
 from runtime.self_improving_foundation_trial import run_self_improving_foundation_trial
+from tools.foundation_transfer_checkpoint import (
+    checkpoint_path, load_checkpoint, load_reports, save_checkpoint,
+)
 from tools.self_improvement_project_discovery import holdout_discoverer
 
 
@@ -35,6 +39,7 @@ def main() -> int:
     parser.add_argument("--target-score", type=float, default=9.7)
     parser.add_argument("--max-training-projects", type=int, default=3)
     parser.add_argument("--max-iterations", type=int)
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     corpus = _resolve(root, args.corpus_dir)
@@ -48,6 +53,7 @@ def main() -> int:
             root, corpus, target_score=args.target_score,
             max_training_projects=args.max_training_projects,
             max_iterations=args.max_iterations,
+            resume=args.resume,
         )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] in {"frozen", "transfer_verified"} else 1
@@ -89,27 +95,68 @@ def run_exam(
     root: Path, corpus: Path, *, target_score: float,
     max_training_projects: int, max_iterations: int | None,
     trainer: Callable[..., dict[str, Any]] = run_self_improving_foundation_trial,
+    resume: bool = False,
 ) -> dict[str, Any]:
     manifest_path = corpus / "transfer_exam.json"
     result_path = corpus / "transfer_exam_result.json"
     if result_path.exists():
         raise RuntimeError("transfer exam result already exists")
     manifest = _read_json(manifest_path)
-    _verify_frozen_state(root, corpus, manifest)
+    checkpoint = load_checkpoint(corpus, manifest_path)
+    if checkpoint and not resume:
+        raise RuntimeError("transfer exam checkpoint exists; pass --resume")
+    if resume and not checkpoint:
+        raise RuntimeError("transfer exam checkpoint is missing")
+    if checkpoint and not checkpoint.get("resume_allowed"):
+        raise RuntimeError(str(checkpoint.get("reason") or "transfer exam resume is blocked"))
+    expected_snapshot = str(
+        checkpoint.get("promotion_snapshot_sha256") if checkpoint
+        else manifest.get("promotion_snapshot_sha256")
+    )
+    _verify_frozen_state(root, corpus, manifest, expected_snapshot)
+    reports = load_reports(checkpoint) if checkpoint else {}
+    promotion_changes = list(checkpoint.get("promotion_paths_changed") or [])
     train = _paths(corpus, manifest, "train")
     holdout = _paths(corpus, manifest, "holdout")
     before_snapshot = capture_promotion_state(root)
-    _progress("train_baseline_started", len(train))
-    train_baseline = _measure(root, train, target_score)
-    _progress("sealed_holdout_baseline_started", len(holdout))
-    holdout_baseline = _measure(root, holdout, target_score)
-    _progress("autonomous_training_started", len(train))
-    training = trainer(
-        root=root, project_roots=train, target_score=target_score,
-        max_training_projects=max_training_projects, max_iterations=max_iterations,
-        write=True, executable_acceptance=True,
-        _holdout_discoverer=holdout_discoverer(root), _progress=_training_progress,
-    )
+    train_baseline = reports.get("train_baseline")
+    if not train_baseline:
+        _progress("train_baseline_started", len(train))
+        train_baseline = _measure(root, train, target_score)
+        reports["train_baseline"] = train_baseline
+        _checkpoint(root, corpus, manifest_path, "train_baseline_completed", reports)
+    holdout_baseline = reports.get("holdout_baseline")
+    if not holdout_baseline:
+        _progress("sealed_holdout_baseline_started", len(holdout))
+        holdout_baseline = _measure(root, holdout, target_score)
+        reports["holdout_baseline"] = holdout_baseline
+        _checkpoint(root, corpus, manifest_path, "holdout_baseline_completed", reports)
+    training = reports.get("training")
+    if not training:
+        _progress("autonomous_training_started", len(train))
+        training_snapshot = capture_promotion_state(root)
+        try:
+            training = trainer(
+                root=root, project_roots=train, target_score=target_score,
+                max_training_projects=max_training_projects, max_iterations=max_iterations,
+                write=True, executable_acceptance=True,
+                _holdout_discoverer=holdout_discoverer(root), _progress=_training_progress,
+            )
+        except BaseException:
+            rollback_promotion_state(root, training_snapshot)
+            save_checkpoint(
+                corpus, manifest_path, stage="training_interrupted",
+                promotion_snapshot_sha256=snapshot_digest(training_snapshot),
+                reports=reports, resume_allowed=False,
+                reason="training_stage_interrupted_restart_required",
+            )
+            raise
+        reports["training"] = training
+        promotion_changes = changed_promotion_paths(root, before_snapshot)
+        _checkpoint(
+            root, corpus, manifest_path, "training_completed", reports,
+            metadata={"promotion_paths_changed": promotion_changes},
+        )
     _progress("sealed_holdout_verification_started", len(holdout))
     holdout_final = _measure(root, holdout, target_score)
     assessment = assess_iteration(holdout_baseline, holdout_final, target_score=target_score)
@@ -128,7 +175,7 @@ def run_exam(
         "manifest_sha256": _file_digest(manifest_path),
         "engine_fingerprint_before": manifest["engine_fingerprint"],
         "engine_fingerprint_after": improvement_engine_fingerprint(root),
-        "promotion_paths_changed": changed_promotion_paths(root, before_snapshot),
+        "promotion_paths_changed": promotion_changes,
         "train_baseline": _report_reference(train_baseline),
         "holdout_baseline": _report_reference(holdout_baseline),
         "training": _training_reference(training),
@@ -144,6 +191,7 @@ def run_exam(
     result_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
     )
+    checkpoint_path(corpus).unlink(missing_ok=True)
     return {**result, "result_path": result_path.as_posix()}
 
 
@@ -171,12 +219,14 @@ def _freeze_projects(
     return frozen
 
 
-def _verify_frozen_state(root: Path, corpus: Path, manifest: dict[str, Any]) -> None:
+def _verify_frozen_state(
+    root: Path, corpus: Path, manifest: dict[str, Any], expected_snapshot: str,
+) -> None:
     if manifest.get("status") != "frozen":
         raise RuntimeError("transfer exam manifest is not frozen")
     if improvement_engine_fingerprint(root) != manifest.get("engine_fingerprint"):
         raise RuntimeError("self-improvement engine changed after exam freeze")
-    if snapshot_digest(capture_promotion_state(root)) != manifest.get("promotion_snapshot_sha256"):
+    if snapshot_digest(capture_promotion_state(root)) != expected_snapshot:
         raise RuntimeError("promotion state changed after exam freeze")
     for row in manifest.get("projects") or []:
         path = corpus / str(row["path"])
@@ -210,6 +260,17 @@ def _training_reference(report: dict[str, Any]) -> dict[str, Any]:
         "status": report.get("status"), "report_path": report.get("report_path"),
         "summary": report.get("summary"),
     }
+
+
+def _checkpoint(
+    root: Path, corpus: Path, manifest_path: Path, stage: str,
+    reports: dict[str, dict[str, Any]], metadata: dict[str, Any] | None = None,
+) -> None:
+    save_checkpoint(
+        corpus, manifest_path, stage=stage,
+        promotion_snapshot_sha256=snapshot_digest(capture_promotion_state(root)),
+        reports=reports, metadata=metadata,
+    )
 
 
 def _split_summary(projects: list[dict[str, Any]]) -> dict[str, Any]:

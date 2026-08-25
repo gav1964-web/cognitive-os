@@ -272,7 +272,9 @@ Use `tools/foundation_transfer_exam.py` for an independent transfer check. Its
 `freeze` phase creates a deterministic stratified train/holdout manifest with
 repository and engine fingerprints; `run` records pre-training scores, permits
 autonomous learning only from the train partition, and evaluates the unchanged
-holdout afterward.
+holdout afterward. Interrupted measurement stages leave a hash-checked checkpoint;
+resume them with `run --resume`. An interruption during training rolls back its
+promotion state and requires a fresh exam run.
 If one reserve has fewer than two class-and-signature matches, Cognitive OS starts
 the next bounded discovery round with a new frozen selection and excludes every
 already probed repository. CLI progress reports every discovery round, probe and

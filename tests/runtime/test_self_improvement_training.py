@@ -139,7 +139,7 @@ def test_training_marks_ignored_candidate_preference(monkeypatch, tmp_path):
 def test_post_trial_admission_uses_only_confirmed_measured_reselection(monkeypatch, tmp_path):
     captured = {}
 
-    def admit(root, project_dir, packet, diagnosis, regressions, *, promote):
+    def admit(root, project_dir, packet, diagnosis, regressions, *, promote, progress=None):
         captured.update({"diagnosis": diagnosis, "promote": promote})
         return {"status": "blocked", "reason": "confirmed_cases_required"}
 

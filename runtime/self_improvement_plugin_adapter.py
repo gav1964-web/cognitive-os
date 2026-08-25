@@ -16,6 +16,7 @@ def run_training_improvement_plugins(
     regression_projects: list[Path],
     *,
     promote: bool | None,
+    progress=None,
 ) -> tuple[dict[str, Any], dict[str, Any] | None, list[dict[str, Any]]]:
     cycle = run_improvement_plugin_cycle(
         root=root,
@@ -24,6 +25,7 @@ def run_training_improvement_plugins(
         diagnosis=diagnosis,
         regression_projects=regression_projects,
         promote=promote,
+        progress=progress,
     )
     return cycle, _config_evolution_result(cycle), _training_attempts(cycle)
 
@@ -36,6 +38,7 @@ def run_post_training_admission(
     regression_projects: list[Path],
     *,
     promote: bool | None,
+    progress=None,
 ) -> dict[str, Any]:
     """Admit a measured reselection after trials, before staging its evidence."""
     return run_improvement_plugin_cycle(
@@ -46,6 +49,7 @@ def run_post_training_admission(
         regression_projects=regression_projects,
         promote=promote,
         plugin_ids={"candidate_selection_admission"},
+        progress=progress,
     )
 
 

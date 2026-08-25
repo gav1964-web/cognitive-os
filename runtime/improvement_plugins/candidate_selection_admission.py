@@ -12,22 +12,19 @@ from runtime.improvement_plugins.candidate_selection_holdout import (
     partition_holdout_project,
 )
 from runtime.improvement_plugins.candidate_selection_refinement import (
-    policy_signature, portable_execution_discriminators, refine_preflight, refine_reproduction,
+    policy_signature, portable_execution_discriminators,
 )
 from runtime.improvement_plugins.candidate_selection_evidence import attach_ordinary_challenger_evidence
-from runtime.improvement_plugins.candidate_selection_regression import (
-    evaluate_project, evaluate_projects, regression_failures,
+from runtime.improvement_plugins.candidate_selection_promotion import (
+    promote_with_regression_gate as _promote_with_regression_gate,
 )
 from runtime.improvement_plugins.candidate_selection_synthesis import (
     synthesized_discriminator_families,
 )
-from runtime.self_improvement_iteration import capture_promotion_state, rollback_promotion_state
 from runtime.promoted_candidate_selection_policies import (
-    activate_selection_policy,
     candidate_matches_policy,
     contrast_matches_policy,
     load_selection_policies,
-    promote_selection_policy,
 )
 
 
@@ -108,6 +105,9 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
             root, policy, group, project_dir, effect, regressions,
             int(dict(context.get("plugin_config") or {}).get("maximum_reproduction_refinements") or 1),
             int(dict(context.get("plugin_config") or {}).get("regression_verification_repetitions") or 1),
+            float(dict(context.get("plugin_config") or {}).get("regression_case_timeout_seconds") or 60),
+            float(dict(context.get("plugin_config") or {}).get("regression_total_timeout_seconds") or 480),
+            context.get("progress"),
         )
     applied = bool(promotion.get("applied"))
     rejected = promotion.get("status") == "rejected"
@@ -129,118 +129,6 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
             },
         },
     }
-def _promote_with_regression_gate(
-    root: Path, policy: dict[str, Any], group: dict[str, Any], project_dir: Path,
-    effect: dict[str, Any], regression_projects: list[Path], maximum_refinements: int,
-    regression_repetitions: int = 1,
-) -> dict[str, Any]:
-    before = evaluate_projects(root, regression_projects)
-    evidence = {
-        "confirmed_projects": sorted(group["projects"]),
-        "holdout_project": project_dir.name,
-        "holdout_score_delta": effect["score_delta"],
-    }
-    candidate = dict(policy)
-    refinement = None
-    reproduction_refinements = 0
-    regression_refinements = 0
-    reproduction_history = []
-    regression_history = []
-    for _attempt in range(max(0, maximum_refinements) + 2):
-        snapshot = capture_promotion_state(root)
-        try:
-            promoted = promote_selection_policy(
-                root=root, policy={**candidate, "activation_state": "reproduction_trial"},
-                promotion_evidence={**evidence, **({"regression_refinement": refinement} if refinement else {})},
-            )
-            reproduction = _holdout_reproduction_failure(root, project_dir, effect)
-            reproduction_history.append({
-                "target": reproduction.get("selected_candidate") or dict(effect.get("treatment") or {}).get("selected_extraction_candidate"),
-                "score": reproduction.get("actual_score") or dict(effect.get("treatment") or {}).get("project_min_score"),
-                "acceptance_signal": reproduction.get("actual_acceptance_signal") or "executable_callable",
-            })
-            if reproduction:
-                rollback_promotion_state(root, snapshot)
-                refined = refine_reproduction(candidate, effect, reproduction)
-                if refined and reproduction_refinements < maximum_refinements:
-                    candidate = refined
-                    reproduction_refinements += 1
-                    refinement = "exclude_reproduction_only_execution_cost"
-                    continue
-                return {
-                    "applied": False, "status": "rejected",
-                    "reason": "holdout_reproduction_failed",
-                    "holdout_reproduction": reproduction,
-                    "reproduction_history": reproduction_history,
-                    "rollback_applied": True,
-                }
-            activated = activate_selection_policy(root, str(candidate["id"]))
-            regressions = regression_failures(root, before, regression_repetitions)
-        except BaseException:
-            rollback_promotion_state(root, snapshot)
-            raise
-        if not regressions:
-            return {
-                "applied": promoted["status"] in {"promoted", "already_promoted"},
-                **promoted, "activation": activated, "regression_gate": "passed",
-                "regression_case_count": len(before),
-                "reproduction_history": reproduction_history,
-                "regression_history": regression_history,
-                **({"refinement": refinement} if refinement else {}),
-            }
-        regression_history.append({
-            "trigger": dict(candidate.get("preflight_trigger_requirements") or {}),
-            "failures": [{
-                "project": row.get("project"), "before_score": row.get("before_score"),
-                "after_score": row.get("after_score"), "after_target": row.get("after_target"),
-            } for row in regressions],
-        })
-        rollback_promotion_state(root, snapshot)
-        refined = refine_preflight(candidate, effect, regressions)
-        if regression_refinements >= maximum_refinements or not refined:
-            return {
-                "applied": False, "status": "rejected",
-                "reason": "regression_gate_failed", "regressions": regressions,
-                "regression_history": regression_history,
-                "rollback_applied": True,
-            }
-        candidate = refined
-        refinement = "exclude_regression_only_effects"
-        regression_refinements += 1
-    return {
-        "applied": False, "status": "rejected", "reason": "regression_gate_failed",
-        "regression_history": regression_history,
-    }
-
-
-def _holdout_reproduction_failure(
-    root: Path, project_dir: Path, effect: dict[str, Any]
-) -> dict[str, Any]:
-    expected = dict(effect.get("treatment") or {})
-    current = evaluate_project(root, project_dir)
-    expected_score = float(expected.get("project_min_score") or 0.0)
-    current_score = float(current.get("project_min_score") or 0.0)
-    expected_signal = str(dict(expected.get("downstream_evidence") or {}).get("acceptance_signal") or "")
-    current_signal = str(dict(current.get("downstream_evidence") or {}).get("acceptance_signal") or "")
-    reproduced = (
-        current_score >= expected_score
-        and _status_rank(str(current.get("status"))) >= _status_rank(str(expected.get("status")))
-        and (expected_signal != "executable_callable" or current_signal == expected_signal)
-    )
-    return {} if reproduced else {
-        "expected_score": expected_score,
-        "actual_score": current_score,
-        "expected_acceptance_signal": expected_signal,
-        "actual_acceptance_signal": current_signal,
-        "selected_candidate": current.get("selected_extraction_candidate"),
-        "selected_candidate_quality": current.get("selected_candidate_quality", {}),
-    }
-
-
-def _status_rank(status: str) -> int:
-    return {"needs_review": 0, "blocked_ok": 1, "ok": 2}.get(status, 0)
-
-
 def _contrast_groups(root: Path) -> list[dict[str, Any]]:
     return contrast_groups(root)
 

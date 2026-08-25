@@ -1,6 +1,7 @@
 """Discover and validate a measured hypothesis on small independent holdouts."""
 from __future__ import annotations
 import hashlib
+import inspect
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -153,6 +154,8 @@ def run_hypothesis_validation(
         )
         if prepared is not None:
             kwargs["prepared_probe"] = prepared
+        if "progress" in inspect.signature(trainer).parameters:
+            kwargs["progress"] = progress
         report = trainer(**kwargs)
         reports.append(report)
         _emit(progress, "holdout_training_completed", index=index, project=project_dir.name, status=report.get("status"))

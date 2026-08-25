@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -83,7 +84,7 @@ def run_self_improving_foundation_trial(
                 _progress, "training_started", iteration=iteration,
                 index=index, project=case["project"],
             )
-            report = _trainer(
+            trainer_kwargs = dict(
                 root=root,
                 project_dir=Path(str(case["project_dir"])),
                 target_score=target_score,
@@ -94,6 +95,9 @@ def run_self_improving_foundation_trial(
                 promote_config=promote_config,
                 write=write,
             )
+            if "progress" in inspect.signature(_trainer).parameters:
+                trainer_kwargs["progress"] = _progress
+            report = _trainer(**trainer_kwargs)
             round_training.append(report); training.append(report)
             if write:
                 _write_checkpoint(root, baseline, training, target_score)

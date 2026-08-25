@@ -21,6 +21,7 @@ def run_improvement_plugin_cycle(
     regression_projects: list[Path],
     promote: bool | None = None,
     plugin_ids: set[str] | None = None,
+    progress=None,
 ) -> dict[str, Any]:
     """Run applicable plugins and stop after the first proven promotion."""
     catalog = load_improvement_plugin_catalog()
@@ -43,6 +44,7 @@ def run_improvement_plugin_cycle(
             "promote": promotion_requested,
             "requires_regression_cases": bool(plugin.get("requires_regression_cases")),
             "plugin_config": plugin,
+            "progress": progress,
         })
         attempt = {
             "plugin_id": plugin["id"],

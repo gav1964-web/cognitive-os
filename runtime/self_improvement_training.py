@@ -44,6 +44,7 @@ def train_on_project(
     promote_config: bool | None = None,
     write: bool = True,
     prepared_probe: dict[str, Any] | None = None,
+    progress=None,
 ) -> dict[str, Any]:
     policy = dict(load_project_evolution_policy().get("self_improvement") or {})
     target = float(target_score or policy.get("trigger_score_below") or 9.7)
@@ -60,7 +61,8 @@ def train_on_project(
     failure_packet = _failure_packet(baseline, target)
     diagnosis = dict(probe["diagnosis"])
     plugin_cycle, config_evolution, plugin_attempts = run_training_improvement_plugins(
-        root, project_dir, failure_packet, diagnosis, regression_projects or [], promote=promote_config
+        root, project_dir, failure_packet, diagnosis, regression_projects or [],
+        promote=promote_config, progress=progress,
     )
     selected = teacher if dict(diagnosis.get("model_trace") or {}).get("tier") == "external_teacher" else local
     sources = challenger_sources(
@@ -98,7 +100,7 @@ def train_on_project(
     outcome = _outcome(baseline, trained, target, source_changed=source_changed)
     post_admission = _run_post_trial_admission(
         root, project_dir, failure_packet, diagnosis, baseline, trained, outcome,
-        regression_projects or [], promote_config,
+        regression_projects or [], promote_config, progress,
     )
     candidate_path = stage_training_experience(
         root, project_dir, diagnosis, baseline, trained, outcome, attempts, conclusion
@@ -150,6 +152,7 @@ def _run_post_trial_admission(
     outcome: dict[str, Any],
     regression_projects: list[Path],
     promote: bool | None,
+    progress=None,
 ) -> dict[str, Any]:
     challenger = str(trained.get("selected_extraction_candidate") or "")
     source = str(baseline.get("selected_extraction_candidate") or "")
@@ -169,8 +172,8 @@ def _run_post_trial_admission(
         },
     }
     return run_post_training_admission(
-        root, project_dir, failure_packet, enriched, regression_projects, promote=promote
-    )
+        root, project_dir, failure_packet, enriched, regression_projects,
+        promote=promote, progress=progress)
 
 def _run_contract_profile_attempt(
     root: Path,
@@ -315,7 +318,6 @@ def _training_context(diagnosis: dict[str, Any], baseline: dict[str, Any], targe
         "forbidden": ["invent source targets", "change score thresholds", "weaken safety gates"],
     }
 
-
 def _outcome(
     before: dict[str, Any], after: dict[str, Any], target: float, *, source_changed: bool = False
 ) -> dict[str, Any]:
@@ -333,7 +335,6 @@ def _outcome(
         "role_regressions": regressions,
         "source_project_changed": source_changed,
     }
-
 
 def _report(
     project_dir: Path,
@@ -360,7 +361,6 @@ def _report(
             "active_kb_promotion_mode": "gated_improvement_plugins",
         },
     }
-
 
 def _write_report(root: Path, report: dict[str, Any]) -> Path:
     directory = root / "artifacts" / "self_improvement"

@@ -1,6 +1,7 @@
 import json
 from runtime import architect_first_slice_reselection as reselection
 from runtime.improvement_plugins import candidate_selection_admission as admission
+from runtime.improvement_plugins import candidate_selection_promotion as promotion
 from runtime.knowledge_admission import build_kb_candidate, write_kb_candidate
 from runtime.promoted_candidate_selection_policies import (
     apply_preflight_selection_policies,
@@ -81,7 +82,7 @@ def test_selection_admission_promotes_structural_policy(monkeypatch, tmp_path):
     holdout = root / "holdout"
     holdout.mkdir()
     monkeypatch.setattr(admission, "_holdout_effect", lambda *_args: _effect())
-    monkeypatch.setattr(admission, "_holdout_reproduction_failure", lambda *_args: {})
+    monkeypatch.setattr(promotion, "holdout_reproduction_failure", lambda *_args: {})
 
     result = admission.run({
         "root": root,
@@ -295,7 +296,7 @@ def test_admission_learns_side_effect_free_selection_without_relaxing_execution_
     })
     effect["control"]["selected_candidate_quality"]["structural_evidence"]["observed_side_effects"] = ["memory_state"]
     monkeypatch.setattr(admission, "_holdout_effect", lambda *_args: effect)
-    monkeypatch.setattr(admission, "_holdout_reproduction_failure", lambda *_args: {})
+    monkeypatch.setattr(promotion, "holdout_reproduction_failure", lambda *_args: {})
 
     result = admission.run({
         "root": root,

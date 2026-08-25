@@ -49,7 +49,12 @@ of an existing result or any engine, promotion-state, or project-commit drift af
 ```powershell
 python tools\foundation_transfer_exam.py freeze --root . --corpus-dir PATH
 python tools\foundation_transfer_exam.py run --root . --corpus-dir PATH --target-score 9.7
+python tools\foundation_transfer_exam.py run --root . --corpus-dir PATH --target-score 9.7 --resume
 ```
+
+Completed baseline and training stages are stored in a hash-checked checkpoint. A final-holdout interruption can
+resume without retraining. A training interruption first rolls back the promotion snapshot and blocks checkpoint
+reuse, because partially observed training is not valid sealed-exam evidence.
 
 Project discovery is a replaceable external capability. The current CLI adapter uses the ordered provider chain
 `GitLab -> GitHub`, records every provider attempt, freezes selection and commit metadata under
@@ -177,6 +182,9 @@ object-pool `release_*` transition is not confused with project release/build su
 Repeated isolated-process timeouts use the config-owned execution-feedback resource limit. Reaching that limit stops
 further target retries while preserving the best role artifacts, rejection history, and executable failure reason for
 the next self-improvement cycle; the outer field-trial watchdog should not erase that diagnostic state.
+Candidate-selection promotion also shares one regression budget across baseline and repeated verification. Per-case
+and total limits come from `regression_case_timeout_seconds` and `regression_total_timeout_seconds`; progress events
+identify the current project and completed evaluation count, and budget exhaustion rejects the promotion explicitly.
 Source-isolated method fixtures also infer numeric receiver fields when the method body proves their use in a
 configured numeric call or arithmetic expression. The sample value remains policy-owned; unknown receiver fields do
 not become arbitrary numbers.

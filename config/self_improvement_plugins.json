@@ -56,7 +56,9 @@
       "requires_regression_cases": true,
       "minimum_confirmed_cases": 3,
       "maximum_reproduction_refinements": 4,
-      "regression_verification_repetitions": 3
+      "regression_verification_repetitions": 3,
+      "regression_case_timeout_seconds": 60,
+      "regression_total_timeout_seconds": 480
     },
     {
       "id": "executable_adapter_admission",

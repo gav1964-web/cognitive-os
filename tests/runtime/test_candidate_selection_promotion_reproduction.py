@@ -1,4 +1,4 @@
-from runtime.improvement_plugins import candidate_selection_admission as admission
+from runtime.improvement_plugins import candidate_selection_promotion as promotion
 from runtime.improvement_plugins.candidate_selection_refinement import (
     refine_preflight,
     refine_reproduction,
@@ -18,7 +18,7 @@ def _effect(score=9.7, signal="executable_callable"):
 
 def test_holdout_reproduction_requires_untargeted_score_and_acceptance(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "runtime.improvement_plugins.candidate_selection_admission.evaluate_project",
+        "runtime.improvement_plugins.candidate_selection_promotion.evaluate_project",
         lambda *_args, **_kwargs: {
             "status": "ok",
             "project_min_score": 8.4,
@@ -27,7 +27,7 @@ def test_holdout_reproduction_requires_untargeted_score_and_acceptance(monkeypat
         },
     )
 
-    failure = admission._holdout_reproduction_failure(tmp_path, tmp_path, _effect())
+    failure = promotion.holdout_reproduction_failure(tmp_path, tmp_path, _effect())
 
     assert failure["expected_score"] == 9.7
     assert failure["actual_score"] == 8.4
@@ -36,7 +36,7 @@ def test_holdout_reproduction_requires_untargeted_score_and_acceptance(monkeypat
 
 def test_holdout_reproduction_accepts_equal_ordinary_route(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "runtime.improvement_plugins.candidate_selection_admission.evaluate_project",
+        "runtime.improvement_plugins.candidate_selection_promotion.evaluate_project",
         lambda *_args, **_kwargs: {
             "status": "ok",
             "project_min_score": 9.7,
@@ -44,32 +44,32 @@ def test_holdout_reproduction_accepts_equal_ordinary_route(monkeypatch, tmp_path
         },
     )
 
-    assert admission._holdout_reproduction_failure(tmp_path, tmp_path, _effect()) == {}
+    assert promotion.holdout_reproduction_failure(tmp_path, tmp_path, _effect()) == {}
 
 
 def test_promotion_rolls_back_when_regression_gate_is_interrupted(monkeypatch, tmp_path):
     snapshot = {"knowledge/policy.json": b"before"}
     rollbacks = []
-    monkeypatch.setattr(admission, "evaluate_projects", lambda *_args: [])
-    monkeypatch.setattr(admission, "capture_promotion_state", lambda _root: snapshot)
-    monkeypatch.setattr(admission, "promote_selection_policy", lambda **_kwargs: {
+    monkeypatch.setattr(promotion, "evaluate_projects", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(promotion, "capture_promotion_state", lambda _root: snapshot)
+    monkeypatch.setattr(promotion, "promote_selection_policy", lambda **_kwargs: {
         "status": "promoted",
     })
-    monkeypatch.setattr(admission, "_holdout_reproduction_failure", lambda *_args: {})
-    monkeypatch.setattr(admission, "activate_selection_policy", lambda *_args: {
+    monkeypatch.setattr(promotion, "holdout_reproduction_failure", lambda *_args: {})
+    monkeypatch.setattr(promotion, "activate_selection_policy", lambda *_args: {
         "status": "activated",
     })
     monkeypatch.setattr(
-        admission, "regression_failures",
-        lambda *_args: (_ for _ in ()).throw(KeyboardInterrupt()),
+        promotion, "regression_failures",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
     )
     monkeypatch.setattr(
-        admission, "rollback_promotion_state",
+        promotion, "rollback_promotion_state",
         lambda root, state: rollbacks.append((root, state)) or [],
     )
 
     with pytest.raises(KeyboardInterrupt):
-        admission._promote_with_regression_gate(
+        promotion.promote_with_regression_gate(
             tmp_path,
             {"id": "policy"},
             {"projects": {"alpha", "beta", "gamma"}},
