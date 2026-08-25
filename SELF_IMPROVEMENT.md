@@ -48,6 +48,18 @@ python tools\hypothesis_compiler.py --root . --limit 2500
 Use `--use-model --model-limit N` only for bounded abstraction of the strongest `N` clusters. Compiler artifacts live
 under `artifacts/hypothesis_compiler/`; they are evidence and requests, not active KB.
 
+Screen compiled candidate-selection hypotheses without changing KB with:
+
+```powershell
+python tools\hypothesis_compiler_trial.py --root .
+```
+
+Add `--promote` to run the existing shadow, repeated counterexample and rollback gates. Use repeatable
+`--hypothesis-id ID` arguments to evaluate a bounded subset. A `promoted` result is written to KB only after the
+regression gate passes; `blocked` with a timeout means the hypothesis was not fully measured, while a regression
+failure restores the previous promotion state. The trial report is written to
+`artifacts/hypothesis_compiler/candidate_selection_trials.json`.
+
 A shadow trial may clamp evaluation to an existing candidate, but it must not override deterministic first-slice
 viability evidence. Candidates marked as requiring reselection are excluded from discriminator trials even when an LLM
 recommends them or a forced run would raise the score. This prevents lifecycle wrappers and no-op callables from

@@ -134,6 +134,41 @@
       ]
     },
     {
+      "activation_state": "active",
+      "candidate_ordering": "executable_fixture_readiness",
+      "id": "first_slice_reselection_required:measured_candidate_reselection:structural_6404ffeba3",
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "observed_side_effects": "nonempty",
+        "output_inference_basis": [
+          "explicit_none_annotation"
+        ]
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "Flushot__activity_tracker",
+          "eludris-community__velum-sail",
+          "huaq___compact-representation-fluorescence",
+          "karolinepauls__logstruct"
+        ],
+        "holdout_project": "aravind-manoj__Kratos",
+        "holdout_score_delta": 4.7,
+        "ordinary_route_reproduction": "passed"
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_output_inference_basis": [
+          "explicit_none_annotation"
+        ],
+        "min_return_paths": 1,
+        "no_observed_side_effects": true
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
       "id": "side_effectful_target:measured_candidate_reselection",
       "numeric_bonus": false,
       "preflight_trigger_requirements": {

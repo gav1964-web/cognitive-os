@@ -279,6 +279,9 @@ promotion state and requires a fresh exam run.
 portable failure signatures, requires three independent projects, attaches existing-corpus counterexamples, and emits
 typed `HypothesisCandidate` records for the plugin foundry. Optional local-LLM abstraction is hypothesis-only; strict
 contracts reject code, patches, scoring changes and unbound evidence before any plugin trial.
+`tools/hypothesis_compiler_trial.py` screens compiled candidate-selection rules through the existing admission path.
+Without `--promote` it performs read-only preflight; with `--promote` it requires a measured holdout, repeated
+counterexamples and rollback on regression or incomplete execution before a rule can enter KB.
 If one reserve has fewer than two class-and-signature matches, Cognitive OS starts
 the next bounded discovery round with a new frozen selection and excludes every
 already probed repository. CLI progress reports every discovery round, probe and
