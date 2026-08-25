@@ -1,0 +1,41 @@
+{
+  "schema_version": "hypothesis_compiler.v1",
+  "enabled": true,
+  "minimum_cluster_projects": 3,
+  "maximum_history_reports": 2500,
+  "maximum_evidence_cases": 12,
+  "maximum_counterexamples": 3,
+  "model_enabled_in_training": true,
+  "model_profile": "local_l35",
+  "model_support_milestones": [3, 5, 8, 12],
+  "allowed_candidate_types": [
+    "candidate_selection_rule",
+    "fixture_strategy",
+    "executable_adapter",
+    "semantic_contract_profile",
+    "improvement_plugin_contract"
+  ],
+  "capability_routes": {
+    "candidate_selection_rule": "candidate_selection_structural_discriminator_synthesis",
+    "fixture_strategy": "bounded_parameter_strategy_extension",
+    "executable_adapter": "bounded_executable_target_discovery_or_sandbox_adapter",
+    "semantic_contract_profile": "semantic_contract_profile_synthesis",
+    "improvement_plugin_contract": "new_bounded_improvement_plugin"
+  },
+  "validation_gates": [
+    "independent_holdout",
+    "existing_corpus_counterexamples",
+    "no_role_regression",
+    "source_project_unchanged",
+    "sandbox_execution_only"
+  ],
+  "forbidden_output_fields": [
+    "code",
+    "diff",
+    "patch",
+    "source",
+    "entrypoint",
+    "evaluation_threshold",
+    "score_override"
+  ]
+}

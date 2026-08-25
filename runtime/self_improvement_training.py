@@ -29,8 +29,12 @@ from .self_improvement_failure_evidence import (
     minimal_artifact_evidence as _minimal_artifact_evidence,
     reselection_exhausted as _reselection_exhausted,
 )
+from .self_improvement_hypothesis_compiler import compile_hypothesis, enrich_diagnosis
 from .self_improvement_profile_trial import run_profile_trial
-from .self_improvement_plugin_adapter import run_post_training_admission, run_training_improvement_plugins
+from .self_improvement_plugin_adapter import (
+    run_post_trial_admission as _run_post_trial_admission,
+    run_training_improvement_plugins,
+)
 from .self_improvement_trials import best_attempt, challenger_sources, finalize_profile_conclusion, trial_conclusion
 
 def train_on_project(
@@ -58,8 +62,17 @@ def train_on_project(
         return _report(project_dir, target, baseline, None, None, status="already_at_target")
     local = local_config or LocalInferenceConfig.from_env()
     teacher = teacher_config or LocalInferenceConfig.from_l45_env()
+    local = local_config or LocalInferenceConfig.from_env()
+    teacher = teacher_config or LocalInferenceConfig.from_l45_env()
     failure_packet = _failure_packet(baseline, target)
     diagnosis = dict(probe["diagnosis"])
+    compilation = compile_hypothesis(
+        root=root,
+        report={"project": project_dir.name, "baseline": baseline, "diagnosis": diagnosis},
+        write=write,
+        model_config=local,
+    )
+    diagnosis = enrich_diagnosis(diagnosis, compilation)
     plugin_cycle, config_evolution, plugin_attempts = run_training_improvement_plugins(
         root, project_dir, failure_packet, diagnosis, regression_projects or [],
         promote=promote_config, progress=progress,
@@ -112,6 +125,7 @@ def train_on_project(
     report["config_evolution"] = config_evolution
     report["improvement_plugin_cycle"] = plugin_cycle
     report["post_training_admission"] = post_admission
+    report["hypothesis_compilation"] = compilation
     report["knowledge_candidate_path"] = candidate_path.as_posix() if candidate_path else None
     if write:
         report["report_path"] = _write_report(root, report).as_posix()
@@ -141,39 +155,6 @@ def probe_project(
         "source_fingerprint": source_fingerprint,
     }
 
-
-def _run_post_trial_admission(
-    root: Path,
-    project_dir: Path,
-    failure_packet: dict[str, Any],
-    diagnosis: dict[str, Any],
-    baseline: dict[str, Any],
-    trained: dict[str, Any],
-    outcome: dict[str, Any],
-    regression_projects: list[Path],
-    promote: bool | None,
-    progress=None,
-) -> dict[str, Any]:
-    challenger = str(trained.get("selected_extraction_candidate") or "")
-    source = str(baseline.get("selected_extraction_candidate") or "")
-    if outcome.get("status") != "candidate_improvement_confirmed" or not challenger or challenger == source:
-        return {"status": "not_applicable", "reason": "confirmed_reselection_missing", "attempts": []}
-    enriched = {
-        **diagnosis,
-        "recommended_source": challenger,
-        "measured_selection_effect": {
-            "status": "confirmed_selection_effect",
-            "source": source,
-            "challenger": challenger,
-            "score_delta": outcome.get("score_delta"),
-            "role_regressions": list(outcome.get("role_regressions") or []),
-            "control": baseline,
-            "treatment": trained,
-        },
-    }
-    return run_post_training_admission(
-        root, project_dir, failure_packet, enriched, regression_projects,
-        promote=promote, progress=progress)
 
 def _run_contract_profile_attempt(
     root: Path,

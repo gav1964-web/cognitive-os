@@ -10,3 +10,14 @@ def test_engine_fingerprint_changes_with_plugin_content(tmp_path):
     plugin.write_text("VALUE = 2\n", encoding="utf-8")
 
     assert improvement_engine_fingerprint(tmp_path) != before
+
+
+def test_engine_fingerprint_changes_with_hypothesis_compiler_policy(tmp_path):
+    policy = tmp_path / "config" / "hypothesis_compiler.json"
+    policy.parent.mkdir(parents=True)
+    policy.write_text('{"minimum_cluster_projects":3}\n', encoding="utf-8")
+    before = improvement_engine_fingerprint(tmp_path)
+
+    policy.write_text('{"minimum_cluster_projects":4}\n', encoding="utf-8")
+
+    assert improvement_engine_fingerprint(tmp_path) != before

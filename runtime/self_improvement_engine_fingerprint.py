@@ -10,11 +10,13 @@ def improvement_engine_fingerprint(root: Path) -> str:
     root = root.resolve()
     paths = [
         *sorted((root / "runtime").glob("self_improvement*.py")),
+        *sorted((root / "runtime").glob("hypothesis_compiler*.py")),
         *sorted((root / "runtime" / "improvement_plugins").glob("*.py")),
         root / "runtime" / "promoted_candidate_selection_policies.py",
         root / "runtime" / "selected_candidate_quality.py",
         root / "config" / "project_evolution_policy.json",
         root / "config" / "self_improvement_plugins.json",
+        root / "config" / "hypothesis_compiler.json",
         root / "config" / "technical_spec_policy.json",
     ]
     digest = hashlib.sha256()

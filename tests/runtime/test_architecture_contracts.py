@@ -57,4 +57,8 @@ def test_hypothesis_driven_self_improvement_docs_match_runtime():
     assert "GitLab -> GitHub" in self_improvement
     assert "large blind corpora remain release/calibration" in readme
     assert (ROOT / "runtime" / "self_improvement_hypothesis_validation.py").exists()
+    assert (ROOT / "runtime" / "self_improvement_hypothesis_compiler.py").exists()
+    assert (ROOT / "config" / "hypothesis_compiler.json").exists()
+    assert "Hypothesis Compiler" in self_improvement
+    assert "HypothesisCandidate" in baseline
     assert (ROOT / "tools" / "self_improvement_project_discovery.py").exists()

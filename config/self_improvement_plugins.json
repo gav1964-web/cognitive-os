@@ -18,6 +18,7 @@
       "priority": 20,
       "entrypoint": "runtime.improvement_plugins.semantic_profile_admission:run",
       "change_types": ["semantic_contract_profile_template"],
+      "implements_capabilities": ["semantic_contract_profile_synthesis"],
       "auto_promote": true,
       "requires_regression_cases": false,
       "minimum_confirmed_cases": 3

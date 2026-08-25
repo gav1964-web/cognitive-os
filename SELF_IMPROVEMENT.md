@@ -13,18 +13,40 @@ The source project, score threshold, evaluator, role caps, and active knowledge 
 3. Escalate once to the external teacher only when the local result fails, is uncertain, or is not actionable.
 4. Test a configured bounded set of source candidates already discovered by the deterministic analyzer, taking one candidate from each structural/name family before spending budget on near-duplicates.
 5. Select the best attempt using measured role scores, never an LLM claim.
-6. Stage the measured experience as a KB candidate and run post-training admission with the best confirmed challenger.
-7. If the hypothesis is portable but evidence is still insufficient, build a `HypothesisValidationPlan` and ask the configured discovery capability for a bounded reserve of unseen similar Python projects.
-8. Probe the reserve, retain the configured matching projects, and require at least one newly discovered match. Train the new holdout first while prior matches act as regression evidence. A policy may be promoted only after earlier projects supplied repeated evidence.
-9. Re-evaluate the original corpus. Roll back every changed promotion path when the corpus gate finds a regression or no attributable improvement.
-10. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile or a typed capability-development request.
-11. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
+6. Compile repeated same-signature failures into a typed `HypothesisCandidate` with positive evidence, existing-corpus counterexamples, a required plugin contract, and explicit validation gates.
+7. Stage the measured experience as a KB candidate and run post-training admission with the best confirmed challenger.
+8. If the hypothesis is portable but evidence is still insufficient, build a `HypothesisValidationPlan` and ask the configured discovery capability for a bounded reserve of unseen similar Python projects.
+9. Probe the reserve, retain the configured matching projects, and require at least one newly discovered match. Train the new holdout first while prior matches act as regression evidence. A policy may be promoted only after earlier projects supplied repeated evidence.
+10. Re-evaluate the original corpus. Roll back every changed promotion path when the corpus gate finds a regression or no attributable improvement.
+11. When several target choices produce no gain, stop target search and propose a reusable semantic contract profile or a typed capability-development request.
+12. Synthesize at most one temporary profile from AST evidence, evaluate it in an isolated context, and discard it after the trial.
 
 Foundation field trials close the same bounded executable-feedback loop as the production role workflow. An actionable
 acceptance or eligibility rejection returns the target to Architect, rebuilds the role artifacts, and reruns acceptance
 within `first_slice_reselection.execution_feedback_max_iterations`. Every attempted target remains in the report. If no
 candidate reaches callable evidence, the loop returns the strongest safe intermediate handoff instead of the last trial,
 so self-correction is monotonic with respect to measured downstream evidence.
+
+## Hypothesis Compiler
+
+`runtime/self_improvement_hypothesis_compiler.py` converts accumulated experience into a verifiable unit of learning.
+It groups reports by normalized failure signature and semantic context, requires at least three independent projects,
+and selects up to three existing-corpus counterexamples. Its `HypothesisCandidate` names the invariant, applicability,
+desired effect, required plugin capability and validation plan. It never contains source code, a patch, an evaluator
+change or promotion authority.
+
+At configured support milestones, local L3.5 may refine only three abstraction fields. The strict compiler contract
+discards unknown or executable fields, and deterministic synthesis remains available when the model fails. Repeated
+calls are bounded by evidence milestones. Compiled hypotheses enter the existing plugin foundry as typed
+`CapabilityDevelopmentRequest` records; registered plugins still perform shadow trials, regression checks and
+promotion. Compile the existing evidence corpus without rerunning projects with:
+
+```powershell
+python tools\hypothesis_compiler.py --root . --limit 2500
+```
+
+Use `--use-model --model-limit N` only for bounded abstraction of the strongest `N` clusters. Compiler artifacts live
+under `artifacts/hypothesis_compiler/`; they are evidence and requests, not active KB.
 
 A shadow trial may clamp evaluation to an existing candidate, but it must not override deterministic first-slice
 viability evidence. Candidates marked as requiring reselection are excluded from discriminator trials even when an LLM

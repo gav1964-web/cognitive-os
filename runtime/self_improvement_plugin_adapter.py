@@ -53,6 +53,42 @@ def run_post_training_admission(
     )
 
 
+def run_post_trial_admission(
+    root: Path,
+    project_dir: Path,
+    failure_packet: dict[str, Any],
+    diagnosis: dict[str, Any],
+    baseline: dict[str, Any],
+    trained: dict[str, Any],
+    outcome: dict[str, Any],
+    regression_projects: list[Path],
+    promote: bool | None,
+    progress=None,
+) -> dict[str, Any]:
+    """Admit only a measured reselection that improved without regression."""
+    challenger = str(trained.get("selected_extraction_candidate") or "")
+    source = str(baseline.get("selected_extraction_candidate") or "")
+    if outcome.get("status") != "candidate_improvement_confirmed" or not challenger or challenger == source:
+        return {"status": "not_applicable", "reason": "confirmed_reselection_missing", "attempts": []}
+    enriched = {
+        **diagnosis,
+        "recommended_source": challenger,
+        "measured_selection_effect": {
+            "status": "confirmed_selection_effect",
+            "source": source,
+            "challenger": challenger,
+            "score_delta": outcome.get("score_delta"),
+            "role_regressions": list(outcome.get("role_regressions") or []),
+            "control": baseline,
+            "treatment": trained,
+        },
+    }
+    return run_post_training_admission(
+        root, project_dir, failure_packet, enriched, regression_projects,
+        promote=promote, progress=progress,
+    )
+
+
 def _config_evolution_result(cycle: dict[str, Any]) -> dict[str, Any] | None:
     for attempt in list(cycle.get("attempts") or []):
         if attempt.get("plugin_id") == "config_mutation" and isinstance(attempt.get("evolution"), dict):

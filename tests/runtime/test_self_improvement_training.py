@@ -143,7 +143,7 @@ def test_post_trial_admission_uses_only_confirmed_measured_reselection(monkeypat
         captured.update({"diagnosis": diagnosis, "promote": promote})
         return {"status": "blocked", "reason": "confirmed_cases_required"}
 
-    monkeypatch.setattr("runtime.self_improvement_training.run_post_training_admission", admit)
+    monkeypatch.setattr("runtime.self_improvement_plugin_adapter.run_post_training_admission", admit)
     result = _run_post_trial_admission(
         tmp_path,
         tmp_path / "holdout",
@@ -165,7 +165,7 @@ def test_post_trial_admission_uses_only_confirmed_measured_reselection(monkeypat
 
 def test_post_trial_admission_skips_unconfirmed_reselection(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "runtime.self_improvement_training.run_post_training_admission",
+        "runtime.self_improvement_plugin_adapter.run_post_training_admission",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected admission")),
     )
 

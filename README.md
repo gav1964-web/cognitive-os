@@ -275,6 +275,10 @@ autonomous learning only from the train partition, and evaluates the unchanged
 holdout afterward. Interrupted measurement stages leave a hash-checked checkpoint;
 resume them with `run --resume`. An interruption during training rolls back its
 promotion state and requires a fresh exam run.
+`tools/hypothesis_compiler.py` reuses accumulated self-improvement reports without rerunning their projects. It groups
+portable failure signatures, requires three independent projects, attaches existing-corpus counterexamples, and emits
+typed `HypothesisCandidate` records for the plugin foundry. Optional local-LLM abstraction is hypothesis-only; strict
+contracts reject code, patches, scoring changes and unbound evidence before any plugin trial.
 If one reserve has fewer than two class-and-signature matches, Cognitive OS starts
 the next bounded discovery round with a new frozen selection and excludes every
 already probed repository. CLI progress reports every discovery round, probe and

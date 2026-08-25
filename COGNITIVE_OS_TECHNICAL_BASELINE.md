@@ -394,7 +394,15 @@ Dialog Memory не имеет права напрямую менять Capabilit
 4. `REGISTER`: Capability Registry получает паспорт инструмента, determinism grade, side-effect manifest и hash версии.
 5. `PROMOTE`: инструмент становится доступен runtime только после успешной проверки.
 
-### 9. On-Demand Capability Quarantine
+### 9. Hypothesis Compiler
+
+Hypothesis Compiler находится между диагностикой и Capability Foundry. Он группирует накопленные project trials по
+переносимой сигнатуре отказа, отделяет положительные случаи от контрпримеров и выпускает только типизированный
+`HypothesisCandidate`: инвариант, область применимости, требуемый plugin contract и проверяемый validation plan.
+LLM может уточнить абстракцию, но не может включить в кандидат код, diff, evaluator/score changes или authority на
+promotion. Кандидат становится способностью только через существующий цикл `sandbox -> test -> register -> promote`.
+
+### 10. On-Demand Capability Quarantine
 Система не запускает постоянный фоновый аудит всех capabilities. Карантин включается только по факту реального сбоя во время исполнения pipeline.
 
 При падении плагина ядро классифицирует ошибку:

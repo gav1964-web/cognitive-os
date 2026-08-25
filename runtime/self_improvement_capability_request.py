@@ -34,7 +34,26 @@ def capability_development_requests(
         *_structural_discriminator_requests(
             training, minimum_projects, signature_normalization or {}
         ),
+        *_compiled_hypothesis_requests(training),
     ]
+
+
+def _compiled_hypothesis_requests(
+    training: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    from .hypothesis_compiler_contract import capability_request
+
+    candidates: dict[str, dict[str, Any]] = {}
+    for report in training:
+        compilation = dict(report.get("hypothesis_compilation") or {})
+        if compilation.get("status") != "compiled":
+            continue
+        for value in compilation.get("candidates") or []:
+            candidate = dict(value or {})
+            hypothesis_id = str(candidate.get("hypothesis_id") or "")
+            if hypothesis_id:
+                candidates[hypothesis_id] = candidate
+    return [capability_request(candidates[key]) for key in sorted(candidates)]
 
 
 def _unsupported_gap_ids(training: list[dict[str, Any]]) -> set[str]:
