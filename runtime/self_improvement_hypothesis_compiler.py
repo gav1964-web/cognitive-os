@@ -339,3 +339,16 @@ def _validate_config(payload: dict[str, Any]) -> None:
     routes = {str(key) for key in dict(payload.get("capability_routes") or {})}
     if not types or types != routes:
         raise ValueError("hypothesis compiler candidate types and routes must match")
+    trial = dict(payload.get("trial_policy") or {})
+    retries = int(trial.get("maximum_timeout_retries") or 0)
+    multipliers = [float(value) for value in trial.get("timeout_retry_multipliers") or []]
+    if retries < 0 or retries > len(multipliers) or any(value <= 1.0 for value in multipliers):
+        raise ValueError("hypothesis compiler timeout retry policy is invalid")
+    repository_gate = dict(trial.get("repository_regression_gate") or {})
+    command = repository_gate.get("command") or []
+    if repository_gate.get("enabled") and (
+        not isinstance(command, list) or not command
+        or any(not str(value).strip() for value in command)
+        or float(repository_gate.get("timeout_seconds") or 0) <= 0
+    ):
+        raise ValueError("hypothesis compiler repository regression gate is invalid")

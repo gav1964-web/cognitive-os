@@ -8,6 +8,24 @@
   "model_enabled_in_training": true,
   "model_profile": "local_l35",
   "model_support_milestones": [3, 5, 8, 12],
+  "trial_policy": {
+    "timeout_retry_multipliers": [2.0],
+    "maximum_timeout_retries": 1,
+    "repository_regression_gate": {
+      "enabled": true,
+      "timeout_seconds": 180,
+      "command": [
+        "-m", "pytest",
+        "tests/runtime/test_role_project_analysis.py",
+        "tests/runtime/test_role_spec_writer_ranking.py",
+        "tests/runtime/test_role_spec_writer_ranking_part2.py",
+        "tests/runtime/test_role_spec_writer_ranking_part3.py",
+        "tests/runtime/test_role_spec_writer_ranking_part4.py",
+        "tests/runtime/test_role_spec_writer_ranking_part5.py",
+        "-q"
+      ]
+    }
+  },
   "allowed_candidate_types": [
     "candidate_selection_rule",
     "fixture_strategy",

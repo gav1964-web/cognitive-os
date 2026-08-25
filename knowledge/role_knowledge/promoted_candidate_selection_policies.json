@@ -72,6 +72,81 @@
       ]
     },
     {
+      "activation_state": "quarantined",
+      "candidate_ordering": "executable_fixture_readiness",
+      "id": "executable_sample_contract:measured_candidate_reselection:structural_4c1718cf07",
+      "quarantine_evidence": {
+        "reason": "repository_regression_gate_failed",
+        "tests": [
+          "test_spec_writer_prefers_product_domain_core_over_release_support_surface",
+          "test_spec_writer_prefers_promise_error_contract_over_subclasshook"
+        ]
+      },
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "min_argument_count": 2
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "akitayamado__avito-parser-com-nedvizemost",
+          "aniketmaurya__chitra",
+          "cote3804__ase-kf",
+          "ergonomica__ergonomica",
+          "globocom__m3u8",
+          "instacart__lore"
+        ],
+        "holdout_project": "Galileo-Galilei__kedro-mlflow",
+        "holdout_score_delta": 2.2,
+        "ordinary_route_reproduction": "passed"
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "max_argument_count": 1
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
+      "activation_state": "quarantined",
+      "candidate_ordering": "executable_fixture_readiness",
+      "id": "executable_sample_contract:measured_candidate_reselection:synthesized_42894bff57",
+      "quarantine_evidence": {
+        "reason": "repository_regression_gate_failed",
+        "tests": [
+          "test_interpreter_synthesis_remains_advisory_to_configured_architect",
+          "test_spec_writer_prefers_ml_generation_boundary_over_ad_hoc_evaluator"
+        ]
+      },
+      "numeric_bonus": false,
+      "preflight_trigger_requirements": {
+        "output_inference_basis": [
+          "insufficient_structural_evidence"
+        ]
+      },
+      "promotion_evidence": {
+        "confirmed_projects": [
+          "akitayamado__avito-parser-com-nedvizemost",
+          "mkuurstra-works__python__pylnms",
+          "rohfle__doip-simulator"
+        ],
+        "holdout_project": "hoadaknong__cv-parser-ner",
+        "holdout_score_delta": 2.2,
+        "ordinary_route_reproduction": "passed"
+      },
+      "selection_mode": "stable_partition_existing_candidates",
+      "structural_requirements": {
+        "forbidden_output_inference_basis": [
+          "insufficient_structural_evidence"
+        ]
+      },
+      "trigger": "executable_acceptance_rejected",
+      "trigger_signals": [
+        "meta_only"
+      ]
+    },
+    {
       "activation_state": "active",
       "candidate_ordering": "executable_fixture_readiness",
       "id": "first_slice_reselection_required:measured_candidate_reselection:structural_4c1718cf07",

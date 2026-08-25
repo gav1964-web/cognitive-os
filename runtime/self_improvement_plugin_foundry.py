@@ -63,11 +63,21 @@ def resolve_plugin_requests(
 
 
 def _plugin_attempts(reports: list[dict[str, Any]], plugin_id: str) -> list[dict[str, Any]]:
-    attempts = []
+    attempts: dict[str, dict[str, Any]] = {}
     for report in reports:
         project = str(report.get("project") or "")
-        cycle = dict(report.get("improvement_plugin_cycle") or {})
-        for row in list(cycle.get("attempts") or []):
-            if isinstance(row, dict) and row.get("plugin_id") == plugin_id:
-                attempts.append({"project": project, **row})
-    return attempts
+        for cycle_name in ("improvement_plugin_cycle", "post_training_admission"):
+            cycle = dict(report.get(cycle_name) or {})
+            for row in list(cycle.get("attempts") or []):
+                if not isinstance(row, dict) or row.get("plugin_id") != plugin_id:
+                    continue
+                candidate = {"project": project, **row}
+                if project not in attempts or _attempt_rank(candidate) > _attempt_rank(attempts[project]):
+                    attempts[project] = candidate
+    return [attempts[key] for key in sorted(attempts)]
+
+
+def _attempt_rank(attempt: dict[str, Any]) -> int:
+    return {
+        "promoted": 4, "trial_passed": 3, "blocked": 2, "not_applicable": 1,
+    }.get(str(attempt.get("status") or ""), 0)

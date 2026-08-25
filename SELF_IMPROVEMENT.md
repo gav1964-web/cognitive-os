@@ -55,10 +55,17 @@ python tools\hypothesis_compiler_trial.py --root .
 ```
 
 Add `--promote` to run the existing shadow, repeated counterexample and rollback gates. Use repeatable
-`--hypothesis-id ID` arguments to evaluate a bounded subset. A `promoted` result is written to KB only after the
-regression gate passes; `blocked` with a timeout means the hypothesis was not fully measured, while a regression
-failure restores the previous promotion state. The trial report is written to
-`artifacts/hypothesis_compiler/candidate_selection_trials.json`.
+`--hypothesis-id ID` or `--candidate-type TYPE` arguments to evaluate a bounded subset. Candidate-selection rules use
+measured regression admission; semantic profiles and executable adapters are routed to their registered plugins;
+improvement-plugin contracts enter the plugin foundry without generating runtime code. A `promoted` result is written
+to KB only after the regression gate passes. A timeout may repeat the complete unchanged gate with the bounded
+multipliers in `hypothesis_compiler.trial_policy`; exhausted retries remain `blocked`. Regression failure restores the
+previous promotion state. Every provisional promotion then runs the configured repository regression command against
+a snapshot of all promotion KB files. A failure quarantines or rolls back the candidate before the trial can report
+success. Quarantined policy ids are not retried by routine runs; `--retry-quarantined` is an explicit revalidation
+request after the hypothesis or gate has changed. The report is written to
+`artifacts/hypothesis_compiler/compiled_hypothesis_trials_<timestamp>.json`; the unsuffixed path points to the latest
+run and an existing latest report is archived before replacement.
 
 A shadow trial may clamp evaluation to an existing candidate, but it must not override deterministic first-slice
 viability evidence. Candidates marked as requiring reselection are excluded from discriminator trials even when an LLM
