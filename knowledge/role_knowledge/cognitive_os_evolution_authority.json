@@ -34,7 +34,10 @@
     "narrow_certificate_receipt": "sha256:ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657",
     "narrow_holdout_lineages": 2,
     "narrow_generated_stub_count": 0,
-    "durable_input_receipts": 7
+    "durable_input_receipts": 7,
+    "bounded_experiment_queue_status": "waiting_for_candidate",
+    "bounded_experiment_ready_candidates": 0,
+    "bounded_experiment_queue_receipt": "sha256:614904cb8cf361533519162f348da9c7bf57d0c828960432ec30e8384a42bc15"
   },
   "required_negative_controls": [
     "target_reselection",
@@ -46,7 +49,7 @@
   ],
   "deferred": {
     "web_ui": "after stable architecture",
-    "broad_project_types": "after narrow certification",
+    "broad_project_types": "after a prospective narrow-type experiment; framework_plugin_build currently has subthreshold prospective signals only",
     "L2": "proposal and test only with external review",
     "L3_L4": "external architecture authority required"
   },

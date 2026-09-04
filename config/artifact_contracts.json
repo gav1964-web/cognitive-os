@@ -31,6 +31,11 @@
       "consumers": ["self_development_l0_lifecycle", "architect", "reviewer", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "change_class", "target_metric", "comparisons", "generated_stub_count", "evaluation_receipt", "checks", "failed_checks", "active_apply_authorized", "promotion_applied", "experiment_digest"]
     },
+    "SelfDevelopmentExperimentQueue": {
+      "producer": "self_development_experiment_queue",
+      "consumers": ["researcher", "architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "checks", "failed_checks", "detection", "certification", "ready_count", "ready", "deferred_count", "deferred", "next_action", "safety", "queue_digest"]
+    },
     "CorpusEvaluationPlan": {
       "producer": "corpus_evaluation_factory",
       "consumers": ["project_analyzer", "researcher", "evaluation", "human"],

@@ -88,6 +88,41 @@ def build_narrow_type_certification(
     return {**body, "certificate_digest": _digest(body)}
 
 
+def verify_narrow_type_certification(
+    certification: dict[str, Any], *, evidence_root: Path | None = None
+) -> bool:
+    body = {key: value for key, value in certification.items() if key != "certificate_digest"}
+    receipt_checks = dict(certification.get("receipt_checks") or {})
+    required_receipt_checks = {
+        "ledger_receipt_verified", "holdout_report_passed", "independent_holdout",
+        "lineage_disjoint", "no_role_regression", "role_chain_continuity",
+        "generated_stub_gate", "inputs_digest_bound", "multiple_holdout_lineages",
+    }
+    structurally_valid = (
+        certification.get("artifact_type") == "NarrowTypeCertification"
+        and certification.get("schema_version") == "narrow_type_certification.v1"
+        and certification.get("status") == "certified"
+        and certification.get("promotion_eligible") is True
+        and certification.get("promotion_applied") is False
+        and bool(certification.get("project_strata"))
+        and bool(certification.get("cell_checks"))
+        and all(
+            dict(row).get("status") == "passed"
+            for row in certification.get("cell_checks") or []
+        )
+        and required_receipt_checks.issubset(receipt_checks)
+        and all(receipt_checks[name] is True for name in required_receipt_checks)
+        and certification.get("certificate_digest") == _digest(body)
+    )
+    if not structurally_valid or evidence_root is None:
+        return structurally_valid
+    receipt = verify_evidence_entry(
+        root=evidence_root,
+        ledger_path=Path(str(certification.get("receipt") or "")),
+    )
+    return receipt.get("status") == "verified"
+
+
 def _digest(value: Any) -> str:
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
