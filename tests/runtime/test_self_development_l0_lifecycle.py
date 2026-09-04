@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from runtime.evidence_ledger import promote_evidence
 from runtime.self_development_change import (
     build_self_development_change_proposal,
     build_shadow_change_dossier,
@@ -12,6 +13,7 @@ from runtime.self_development_l0_lifecycle import (
     load_l0_lifecycle_policy,
     run_l0_staging_transaction,
 )
+from runtime.self_development_experiment import evaluate_self_development_experiment
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,11 +53,40 @@ def _candidate() -> dict:
     }
 
 
-def _verification() -> dict:
+def _verification(root: Path) -> dict:
+    source = root / "l0_experiment_evidence.json"
+    source.write_text(json.dumps({
+        "artifact_type": "SelfDevelopmentExperimentEvidence",
+        "status": "passed",
+        "checks": {
+            "independent_holdout": True,
+            "independent_evaluator": True,
+            "no_role_regression": True,
+            "generated_stub_gate": True,
+        },
+        "generated_stub_count": 0,
+    }), encoding="utf-8")
+    receipt = promote_evidence(
+        root=root,
+        source=source,
+        producer_fingerprint="l0-runner:v1",
+        evaluator_fingerprint="blind-reviewer:v1",
+        replay_command=["python", "tools/l0_trial.py"],
+    )
+    experiment = evaluate_self_development_experiment(
+        change_class="L0",
+        target_metric="recognition_accuracy",
+        baseline={"recognition_accuracy": 0.8, "role_continuity": 1.0},
+        candidate={"recognition_accuracy": 0.9, "role_continuity": 1.0},
+        generated_stub_count=0,
+        evidence_root=root,
+        evaluation_receipt=str(receipt["ledger_path"]),
+    )
     return {
         "unseen_project_holdout": True,
         "no_role_regression": True,
         "independent_evaluator": True,
+        "experiment": experiment,
     }
 
 
@@ -78,9 +109,11 @@ def test_new_l0_candidate_requires_unseen_holdout_before_review() -> None:
     assert admission["promotion_applied"] is False
 
 
-def test_verified_candidate_requires_digest_bound_reviewer_decision() -> None:
+def test_verified_candidate_requires_digest_bound_reviewer_decision(tmp_path: Path) -> None:
     candidate = _candidate()
-    admission = evaluate_l0_candidate(candidate, verification=_verification())
+    admission = evaluate_l0_candidate(
+        candidate, verification=_verification(tmp_path), evidence_root=tmp_path
+    )
 
     assert admission["status"] == "review_required"
     assert admission["checks"]["reviewer_artifact"] is False
@@ -91,7 +124,7 @@ def test_staging_transaction_rehearses_real_rollback(tmp_path: Path) -> None:
     transaction = run_l0_staging_transaction(
         root=tmp_path,
         candidate=candidate,
-        verification=_verification(),
+        verification=_verification(tmp_path),
         reviewer_decision=_review(candidate),
         write=True,
         rehearse_rollback=True,
@@ -109,7 +142,7 @@ def test_rejected_candidate_is_quarantined_outside_active_kb(tmp_path: Path) -> 
     transaction = run_l0_staging_transaction(
         root=tmp_path,
         candidate=candidate,
-        verification=_verification(),
+        verification=_verification(tmp_path),
         reviewer_decision=_review(candidate, "quarantine"),
         write=True,
         rehearse_rollback=False,

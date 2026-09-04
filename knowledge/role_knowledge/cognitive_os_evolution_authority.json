@@ -1,0 +1,53 @@
+{
+  "artifact_type": "CognitiveOSEvolutionAuthorityKnowledge",
+  "schema_version": "cognitive_os_evolution_authority_knowledge.v1",
+  "status": "active",
+  "principles": [
+    "An interpreter decision is authoritative only when its inputs, evidence, alternatives, selected rule and transition are digest-bound.",
+    "A role return may preserve or reduce scope, but may not change the selected target or authorize an automatic retry.",
+    "A 9.7 role score is not a certification without disjoint independent holdout evidence and zero generated function stubs.",
+    "L0 and L1 self-development requires a baseline-versus-candidate experiment with no metric or role regression.",
+    "Existing local corpus must be deduplicated and split before targeted external acquisition is allowed.",
+    "Unknown project clusters remain research candidates and never promote automatically.",
+    "Broad Python project strata remain development debt after narrow-type certification.",
+    "Web UI is deferred until the architecture and authority contracts are stable."
+  ],
+  "current_sequence": [
+    "interpreter_authority",
+    "role_chain_recovery",
+    "narrow_type_holdout",
+    "narrow_type_certification",
+    "bounded_L0_L1_experiment",
+    "external_review_for_staging"
+  ],
+  "narrow_project_types": ["cli_local_tool", "library_pure_transform"],
+  "promotion_target_score": 9.7,
+  "current_evidence": {
+    "role_matrix_required_cells_eligible": 12,
+    "role_pipeline_cases_passed": 8,
+    "role_pipeline_handoff_loss": 0,
+    "local_corpus_unique_projects": 4321,
+    "local_corpus_untouched_target_candidates": 644,
+    "narrow_certification_status": "evidence_required",
+    "narrow_certification_blockers": ["lineage_disjoint", "generated_stub_gate"]
+  },
+  "required_negative_controls": [
+    "target_reselection",
+    "scope_expansion",
+    "metric_regression",
+    "generated_function_stub",
+    "single_lineage_unknown_cluster",
+    "local_corpus_shortage"
+  ],
+  "deferred": {
+    "web_ui": "after stable architecture",
+    "broad_project_types": "after narrow certification",
+    "L2": "proposal and test only with external review",
+    "L3_L4": "external architecture authority required"
+  },
+  "safety": {
+    "source_apply": false,
+    "automatic_promotion": false,
+    "raw_llm_output_is_authority": false
+  }
+}

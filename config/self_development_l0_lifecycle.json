@@ -7,7 +7,8 @@
   "required_verification": [
     "unseen_project_holdout",
     "no_role_regression",
-    "independent_evaluator"
+    "independent_evaluator",
+    "baseline_candidate_experiment"
   ],
   "allowed_reviewer_decisions": ["approve_staging", "reject", "quarantine"],
   "invariants": {

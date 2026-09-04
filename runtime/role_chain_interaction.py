@@ -6,6 +6,8 @@ import hashlib
 import json
 from typing import Any
 
+from .role_recovery_contract import build_role_recovery_contract
+
 
 PRIMARY_ROLE_SEQUENCE = (
     "project_analyzer",
@@ -33,6 +35,7 @@ def build_role_chain_trace(
     build_reselections = list(telemetry.get("build_reselection_history") or [])
     execution_reselections = list(telemetry.get("execution_reselection_history") or [])
     recovery = dict(telemetry.get("no_safe_candidate_recovery") or {})
+    recovery_contract = _recovery_contract(dict(telemetry.get("role_return_request") or {}))
     controlled_block = bool(
         quality.get("implementation_blocked_no_safe_candidate") is True
         and quality.get("test_blocked_no_safe_candidate") is True
@@ -103,6 +106,7 @@ def build_role_chain_trace(
         "terminal_reason": "no_safe_candidate_after_bounded_reselection" if controlled_block else None,
         "recovery_status": recovery.get("status"),
         "recovery_candidate_status": recovery.get("candidate_status"),
+        "recovery_contract": recovery_contract,
     }
 
 
@@ -191,6 +195,14 @@ def summarize_role_chain_traces(traces: list[dict[str, Any]]) -> dict[str, Any]:
         "bounded_recovery_ready_count": sum(
             row.get("recovery_status") == "bounded_rework_ready" for row in traces
         ),
+        "bounded_role_return_count": sum(
+            dict(row.get("recovery_contract") or {}).get("status") == "return_ready"
+            for row in traces
+        ),
+        "blocked_role_return_count": sum(
+            dict(row.get("recovery_contract") or {}).get("status") == "controlled_stop"
+            for row in traces
+        ),
     }
 
 
@@ -250,3 +262,19 @@ def _unresolved_uncertainties(
 def _digest(value: Any) -> str:
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _recovery_contract(request: dict[str, Any]) -> dict[str, Any] | None:
+    if not request:
+        return None
+    return build_role_recovery_contract(
+        producer=str(request.get("producer") or ""),
+        return_to=str(request.get("return_to") or ""),
+        outcome=str(request.get("outcome") or ""),
+        reason_code=str(request.get("reason_code") or ""),
+        target=str(request.get("target") or ""),
+        scope=[str(value) for value in request.get("scope") or []],
+        original_target=str(request.get("original_target") or ""),
+        original_scope=[str(value) for value in request.get("original_scope") or []],
+        previous_returns=int(request.get("previous_returns") or 0),
+    )

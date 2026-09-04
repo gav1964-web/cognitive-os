@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .self_development_change import interpret_self_development_change
+from .self_development_experiment import verify_self_development_experiment
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,7 +33,8 @@ def load_l0_lifecycle_policy(path: str | None = None) -> dict[str, Any]:
     if int(payload.get("minimum_independent_projects") or 0) < 3:
         raise L0LifecycleError("L0 lifecycle requires three independent projects")
     if set(payload.get("required_verification") or []) != {
-        "unseen_project_holdout", "no_role_regression", "independent_evaluator"
+        "unseen_project_holdout", "no_role_regression", "independent_evaluator",
+        "baseline_candidate_experiment",
     }:
         raise L0LifecycleError("L0 lifecycle verification gates are incomplete")
     invariants = dict(payload.get("invariants") or {})
@@ -52,6 +54,7 @@ def evaluate_l0_candidate(
     *,
     verification: dict[str, Any] | None = None,
     reviewer_decision: dict[str, Any] | None = None,
+    evidence_root: Path | None = None,
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rules = policy or load_l0_lifecycle_policy()
@@ -74,6 +77,9 @@ def evaluate_l0_candidate(
         "unseen_project_holdout": verification.get("unseen_project_holdout") is True,
         "no_role_regression": verification.get("no_role_regression") is True,
         "independent_evaluator": verification.get("independent_evaluator") is True,
+        "baseline_candidate_experiment": verify_self_development_experiment(
+            dict(verification.get("experiment") or {}), evidence_root=evidence_root
+        ),
     }
     decision = str(reviewer.get("decision") or "")
     reviewer_checks = {
@@ -123,6 +129,7 @@ def run_l0_staging_transaction(
         candidate,
         verification=verification,
         reviewer_decision=reviewer_decision,
+        evidence_root=base,
         policy=rules,
     )
     dossier = dict(candidate.get("dossier") or {})

@@ -1212,6 +1212,18 @@ The third independent defect comes from pytest-socket fix `2bf8608adfc79f0e4ba1e
 
 The 400-line source gate is now enforced by Config Doctor through `source_line_limit_gate`. Latest report `artifacts/project_development/source_line_limit_audit_20260903T230204065085Z.json` scanned 1513 authoritative Python files across runtime, tools, plugins and tests with zero violations. Post-split design debt is tracked separately by `artifacts/project_development/post_split_audit_20260903T230640450590Z.json`: 24 mechanical split facades and 55 helper-backed split tests remain visible as refactoring backlog, not as release blockers.
 
+## Interpreter Authority
+
+Interpreter Authority v1 makes the decision path independently inspectable. `InterpreterDecisionTrace` binds the goal, target, scope, evidence, complete candidate set, selected rule, transition and prior trace by SHA-256. Recovery is a typed `RoleRecoveryContract`: at most two role returns, no target replacement, no scope expansion and no automatic retry or execution authority.
+
+Narrow maturity is separate from certification. `NarrowTypeCertification` covers only `cli_local_tool` and `library_pure_transform`; every required role cell must be at least `9.7`, promotion eligible and backed by a disjoint multi-lineage holdout receipt with zero generated function stubs and zero role regression. Broad strata remain explicitly deferred. `SelfDevelopmentExperiment` compares baseline and candidate metrics for L0/L1 and rejects any regression or generated function stub before L0 reviewer staging can begin.
+
+`CorpusEvaluationPlan` reuses the local corpus first, removes exposed and content-duplicate records, freezes lineage/content-disjoint holdout before acquisition, and enables network fallback only for a measured per-type shortage. Unknown clusters require multiple projects, lineages, content digests and markers, remain research-only and never promote automatically. The consolidated `CognitiveOSEvolutionAuthorityReport` reports `ready_for_narrow_evaluation` until independent certification evidence actually exists.
+
+Web UI is not a current milestone. It remains deferred until interpreter authority, role recovery, narrow certification and bounded self-development operate on a stable architecture; see `config/interpreter_authority.json` and `knowledge/role_knowledge/cognitive_os_evolution_authority.json`.
+
+Current narrow-lane audit (2026-09-04): the rebuilt 120-report matrix has all 12 required CLI/pure-transform role cells promotion eligible at `9.7+`; the deterministic role benchmark passes `8/8` with interaction score `1.0` and handoff loss `0`. Local corpus reuse remains sufficient at 4321 unique projects and 644 untouched target candidates, so no network acquisition is currently justified. Formal certification is still `evidence_required`: historical blind reports do not preserve enough lineage identity to prove acquisition/holdout disjointness, and their transformations lack a bound generated-function-stub audit. These are evidence tasks, not reasons to inflate the score.
+
 ## License
 
 MIT License. See `LICENSE`.

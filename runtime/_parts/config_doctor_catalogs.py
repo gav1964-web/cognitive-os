@@ -16,6 +16,7 @@ from runtime.executor_solution_patterns import load_executor_solution_patterns
 from runtime.foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from runtime.greenfield_architecture_patterns import load_greenfield_architecture_patterns
 from runtime.interface_contracts import load_interface_contracts
+from runtime.interpreter_authority import load_interpreter_authority_policy
 from runtime.knowledge_import import load_pypi_archetype_rules
 from runtime.l4_decision_table import load_l4_decision_rules
 from runtime.local_inference import load_llm_profiles
@@ -40,6 +41,8 @@ from runtime.runtime_interpreter_policy import load_runtime_interpreter_policy
 from runtime.sandbox_programmer_profiles import load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import load_sandbox_release_policy
 from runtime.self_improvement_profile_families import load_contract_families
+from runtime.self_development_l0_lifecycle import load_l0_lifecycle_policy
+from runtime.corpus_evaluation_factory import load_corpus_evaluation_policy
 from runtime.semantic_resolution_rules import load_semantic_resolution_rules
 from runtime.semantic_target_profiles import load_semantic_target_profiles
 from runtime.source_target_policy import load_role_source_policy
@@ -55,6 +58,9 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
     return {
         "role_directory": load_role_directory(str(root / "config" / "role_directory.json")),
         "runtime_interpreter_policy": load_runtime_interpreter_policy(str(root / "config" / "runtime_interpreter_policy.json")),
+        "interpreter_authority_policy": load_interpreter_authority_policy(str(root / "config" / "interpreter_authority.json")),
+        "corpus_evaluation_factory_policy": load_corpus_evaluation_policy(str(root / "config" / "corpus_evaluation_factory.json")),
+        "self_development_l0_lifecycle": load_l0_lifecycle_policy(str(root / "config" / "self_development_l0_lifecycle.json")),
         "prompt_intake_rules": load_prompt_intake_rules(str(root / "config" / "prompt_intake_rules.json")),
         "semantic_resolution_rules": load_semantic_resolution_rules(str(root / "config" / "semantic_resolution_rules.json")),
         "semantic_target_profiles": load_semantic_target_profiles(str(root / "config" / "semantic_target_profiles.json")),

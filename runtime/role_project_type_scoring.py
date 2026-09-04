@@ -80,6 +80,16 @@ def _cell(role_id: str, stratum: dict[str, Any], rows: list[dict[str, Any]], pol
         for row in rows
         if row.get("transformation_evaluated") is True and row.get("source_lineage")
     })
+    blind_lineages = sorted({
+        str(row["source_lineage"])
+        for row in rows
+        if row.get("blind") is True and row.get("source_lineage")
+    })
+    acquisition_lineages = sorted({
+        str(row["source_lineage"])
+        for row in rows
+        if row.get("blind") is not True and row.get("source_lineage")
+    })
     transformation_subtypes = sorted({
         str(row["project_subtype"])
         for row in rows
@@ -163,6 +173,11 @@ def _cell(role_id: str, stratum: dict[str, Any], rows: list[dict[str, Any]], pol
         "transformation_project_count": len(transformation_projects),
         "project_native_transformation_count": len(native_transformation_projects),
         "independent_transformation_lineage_count": len(transformation_lineages),
+        "blind_source_lineages": blind_lineages,
+        "acquisition_source_lineages": acquisition_lineages,
+        "lineage_disjoint": bool(blind_lineages)
+        and bool(acquisition_lineages)
+        and not set(blind_lineages).intersection(acquisition_lineages),
         "transformation_subtype_count": len(transformation_subtypes),
         "transformation_subtypes": transformation_subtypes,
         "transformation_evidence_scopes": sorted({

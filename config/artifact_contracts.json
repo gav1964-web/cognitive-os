@@ -1,6 +1,41 @@
 {
   "schema_version": "artifact_contracts.v1",
   "contracts": {
+    "InterpreterDecisionTrace": {
+      "producer": "interpreter_authority",
+      "consumers": ["role_pipeline", "reviewer", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "stage", "outcome", "next_stage", "goal_digest", "target", "scope", "input_digest", "evidence_digest", "alternatives", "selected_candidate_id", "authority", "trace_digest"]
+    },
+    "RoleRecoveryContract": {
+      "producer": "role_recovery_interpreter",
+      "consumers": ["architect", "implementer", "tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "producer", "return_to", "outcome", "reason_code", "target", "scope", "return_number", "checks", "failed_checks", "execution_authorized", "automatic_retry"]
+    },
+    "NarrowTypeCertification": {
+      "producer": "narrow_type_certification",
+      "consumers": ["architect", "promotion_controller", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "project_strata", "required_roles", "cell_checks", "receipt", "receipt_checks", "broad_strata", "promotion_eligible", "promotion_applied", "certificate_digest"]
+    },
+    "NarrowTypeHoldoutEvidence": {
+      "producer": "narrow_type_holdout_evaluator",
+      "consumers": ["narrow_type_certification", "architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_chain_report", "stub_audit", "source_apply", "promotion_applied", "evidence_digest"]
+    },
+    "SelfDevelopmentExperiment": {
+      "producer": "self_development_experiment",
+      "consumers": ["self_development_l0_lifecycle", "architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "change_class", "target_metric", "comparisons", "generated_stub_count", "evaluation_receipt", "checks", "failed_checks", "active_apply_authorized", "promotion_applied", "experiment_digest"]
+    },
+    "CorpusEvaluationPlan": {
+      "producer": "corpus_evaluation_factory",
+      "consumers": ["project_analyzer", "researcher", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "target_project_types", "splits", "shortages", "unknown_clusters", "network_fallback", "checks", "failed_checks", "safety"]
+    },
+    "CognitiveOSEvolutionAuthorityReport": {
+      "producer": "evolution_authority",
+      "consumers": ["architect", "reviewer", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "checks", "failed_checks", "interpreter", "role_chain", "narrow_certification", "self_development_experiment", "corpus", "next_action", "product_surface", "safety", "report_digest"]
+    },
     "PromotedEvidenceLedgerEntry": {
       "producer": "evidence_ledger",
       "consumers": ["architect", "tester", "reviewer", "promotion_controller", "human"],
