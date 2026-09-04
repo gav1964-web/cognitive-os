@@ -25,6 +25,10 @@ def main() -> int:
         help="Prior evaluation whose source reports and blind flags are reused",
     )
     parser.add_argument(
+        "--exclude-baseline-blind", action="store_true",
+        help="Reuse only ordinary sources from the baseline and replace its blind evidence",
+    )
+    parser.add_argument(
         "--blind-report", action="append", default=[],
         help="Field-trial JSON report whose cases are independent blind evidence",
     )
@@ -37,6 +41,8 @@ def main() -> int:
     baseline_ordinary, baseline_blind = _baseline_sources(
         root, Path(args.baseline_evaluation) if args.baseline_evaluation else None
     )
+    if args.exclude_baseline_blind:
+        baseline_blind = []
     ordinary = [*baseline_ordinary, *[Path(value) for value in args.report]]
     blind = [*baseline_blind, *[Path(value) for value in args.blind_report]]
     blind_keys = {_source_key(root, path) for path in blind}

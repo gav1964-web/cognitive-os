@@ -18,6 +18,7 @@ def _receipt(root: Path, **check_overrides: bool) -> str:
         "no_role_regression": True,
         "role_chain_continuity": True,
         "generated_stub_gate": True,
+        "inputs_digest_bound": True,
         **check_overrides,
     }
     source = root / "holdout.json"
@@ -91,3 +92,17 @@ def test_narrow_type_certification_rejects_role_regression(tmp_path: Path):
 
     assert certification["status"] == "evidence_required"
     assert certification["receipt_checks"]["no_role_regression"] is False
+
+
+def test_narrow_type_certification_rejects_cell_evidence_gap(tmp_path: Path):
+    evaluation = _evaluation()
+    evaluation["cells"][0]["evidence_gaps"] = ["minimum_blind_cases"]
+
+    certification = build_narrow_type_certification(
+        evaluation=evaluation,
+        evidence_root=tmp_path,
+        holdout_receipt=_receipt(tmp_path),
+    )
+
+    assert certification["status"] == "evidence_required"
+    assert certification["cell_checks"][0]["checks"]["evidence_complete"] is False

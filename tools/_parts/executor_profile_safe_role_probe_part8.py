@@ -77,6 +77,10 @@ def _adr(target: str, row: dict[str, Any]) -> dict[str, Any]:
         "artifact_type": "ArchitectureDecisionRecord",
         "role": "architect",
         "goal": f"Implement verified {row['operator_id']} transform in the profile-safe role chain",
+        "non_goals": [
+            "Do not modify the source corpus project or any callable outside the selected sandbox target."
+        ],
+        "open_questions": [],
         "chosen_option": {"id": "minimal_safe_extraction"},
         "spec_writer_brief": {
             "scope": ["Prepare profile-safe transform."],

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 def _role_evidence(
     *,
+    row: dict[str, Any],
+    architecture_decision: dict[str, Any],
+    technical_spec: dict[str, Any],
     plan: dict[str, Any],
     test_plan: dict[str, Any],
     test_result: dict[str, Any],
@@ -16,7 +19,9 @@ def _role_evidence(
     async_evidence: dict[str, Any] | None,
     io_evidence: dict[str, Any] | None,
     framework_evidence: dict[str, Any] | None,
+    stub_admission: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
+    spec_quality = evaluate_technical_spec(technical_spec)
     implementation_quality = evaluate_implementation_plan(plan)
     test_plan_quality = evaluate_test_plan(test_plan)
     passing_review_quality = evaluate_review_findings(passing_review)
@@ -30,6 +35,27 @@ def _role_evidence(
     }
     failing_codes = {str(row.get("code")) for row in failing_review.get("findings", [])}
     checks = {
+        "project_analyzer": {
+            "source_project_identified": bool(row.get("project")),
+            "source_target_bound": ".py:" in str(row.get("source_target") or ""),
+            "source_callable_parsed": bool(row.get("source") and row.get("symbol")),
+            "contract_profile_identified": bool(row.get("profile_id") and row.get("operator_id")),
+            "source_lineage_bound": bool(row.get("source_lineage")),
+        },
+        "architect": {
+            "bounded_option_selected": dict(architecture_decision.get("chosen_option") or {}).get("id") == "minimal_safe_extraction",
+            "target_carried_to_brief": str(row.get("symbol") or "") in str(architecture_decision.get("spec_writer_brief") or ""),
+            "source_context_bound": bool(architecture_decision.get("source_context")),
+            "contract_profile_carried": str(row.get("profile_id") or "") in str(architecture_decision.get("spec_writer_brief") or ""),
+            "traceability_present": bool(architecture_decision.get("traceability")),
+        },
+        "spec_writer": {
+            "technical_spec_quality_passed": spec_quality.get("passed") is True,
+            "implementation_delta_ready": dict(technical_spec.get("implementation_delta") or {}).get("status") == "ready",
+            "extraction_target_bound": str(row.get("symbol") or "") in str(technical_spec.get("extraction_contract") or ""),
+            "contract_profile_preserved": str(row.get("profile_id") or "") in str(technical_spec.get("extraction_contract") or ""),
+            "implementation_handoff_bounded": bool(technical_spec.get("implementation_handoff")),
+        },
         "implementer": {
             "plan_quality_passed": implementation_quality.get("passed") is True,
             "delta_ready": transformation_quality.get("delta_status") == "ready",
@@ -37,6 +63,7 @@ def _role_evidence(
             "transform_matches_contract": transformation_quality.get("checks", {}).get("transform_matches") is True,
             "verified_candidate_completed": transformation_quality.get("checks", {}).get("executor_completed") is True,
             "sandbox_source_preserved": transformation_quality.get("checks", {}).get("source_unchanged") is True,
+            "generated_function_stubs_absent": stub_admission.get("status") == "passed",
         },
         "tester": {
             "test_plan_quality_passed": test_plan_quality.get("passed") is True,

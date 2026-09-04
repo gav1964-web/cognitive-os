@@ -9,6 +9,15 @@ from tools.executor_profile_safe_role_probe import (
     run_profile_safe_role_probe,
 )
 
+EXPECTED_ROLE_SCORES = {
+    "project_analyzer": 10.0,
+    "architect": 10.0,
+    "spec_writer": 10.0,
+    "implementer": 10.0,
+    "tester": 10.0,
+    "reviewer": 10.0,
+}
+
 
 def test_executor_profile_safe_role_probe_runs_role_chain(tmp_path: Path):
     projects = tmp_path / "projects"
@@ -30,7 +39,9 @@ def test_executor_profile_safe_role_probe_runs_role_chain(tmp_path: Path):
     assert report["summary"]["patch_transforms"] == {"strip_lower": 1}
     assert report["source_lineage"] == projects.resolve().as_posix()
     case = report["cases"][0]
-    assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+    assert case["role_scores"] == EXPECTED_ROLE_SCORES
+    assert case["generated_function_stub_admission"]["status"] == "passed"
+    assert report["summary"]["generated_stub_count"] == 0
     assert case["control_test_result_status"] == "failed"
     assert case["control_acceptance_status"] == "passed"
     assert case["passing_review_recommendation"] in {"approve", "approve_with_risks"}
@@ -185,7 +196,7 @@ def test_cli_stratum_requires_process_level_behavior_change(tmp_path: Path):
         assert case["cli_evidence"]["patched"]["invalid_returncode"] == 2
         assert "Traceback" not in case["cli_evidence"]["patched"]["invalid_stderr_tail"]
         assert case["cli_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_web_stratum_requires_http_behavior_change(tmp_path: Path):
@@ -213,7 +224,7 @@ def test_web_stratum_requires_http_behavior_change(tmp_path: Path):
         assert case["web_evidence"]["patched"]["status"] == "passed"
         assert case["web_evidence"]["patched"]["invalid_status_code"] == 400
         assert case["web_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_provider_stratum_requires_fixture_transport_behavior_change(tmp_path: Path):
@@ -245,7 +256,7 @@ def test_provider_stratum_requires_fixture_transport_behavior_change(tmp_path: P
         assert case["provider_evidence"]["patched"]["invalid_returncode"] == 2
         assert "Traceback" not in case["provider_evidence"]["patched"]["invalid_stderr_tail"]
         assert case["provider_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_stateful_stratum_requires_persisted_behavior_change(tmp_path: Path):
@@ -274,7 +285,7 @@ def test_stateful_stratum_requires_persisted_behavior_change(tmp_path: Path):
         assert case["stateful_evidence"]["patched"]["row_count"] == 1
         assert case["stateful_evidence"]["patched"]["invalid_row_count"] == 0
         assert case["stateful_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_async_stratum_requires_scheduled_behavior_change(tmp_path: Path):
@@ -303,7 +314,7 @@ def test_async_stratum_requires_scheduled_behavior_change(tmp_path: Path):
         assert case["async_evidence"]["patched"]["task_count"] == 1
         assert case["async_evidence"]["patched"]["timeout_returncode"] == 2
         assert case["async_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_external_io_stratum_requires_boundary_behavior_change(tmp_path: Path):
@@ -332,7 +343,7 @@ def test_external_io_stratum_requires_boundary_behavior_change(tmp_path: Path):
         assert case["io_evidence"]["patched"]["operation_count"] == 1
         assert case["io_evidence"]["patched"]["invalid_returncode"] == 2
         assert case["io_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
 def test_framework_stratum_requires_extension_or_artifact_behavior_change(tmp_path: Path):
@@ -364,4 +375,4 @@ def test_framework_stratum_requires_extension_or_artifact_behavior_change(tmp_pa
         assert case["framework_evidence"]["patched"]["effect_count"] == 1
         assert case["framework_evidence"]["patched"]["invalid_returncode"] == 2
         assert case["framework_evidence"]["identity_control"]["status"] == "failed"
-        assert case["role_scores"] == {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0}
+        assert case["role_scores"] == EXPECTED_ROLE_SCORES

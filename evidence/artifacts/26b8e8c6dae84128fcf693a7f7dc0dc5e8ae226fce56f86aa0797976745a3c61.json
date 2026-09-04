@@ -1,0 +1,193 @@
+{
+  "artifact_type": "ExecutorProfileSafeRoleProbe",
+  "case_count": 1,
+  "cases": [
+    {
+      "acceptance_status": "passed",
+      "async_evidence": null,
+      "checks": {
+        "delta_operator_matches": true,
+        "delta_ready": true,
+        "executable_acceptance_passed": true,
+        "executor_completed": true,
+        "patch_prepared": true,
+        "profile_matches": true,
+        "single_target_patch": true,
+        "source_unchanged": true,
+        "transform_matches": true
+      },
+      "cli_evidence": null,
+      "control_acceptance_status": "passed",
+      "control_test_result_status": "failed",
+      "delta_intent": {
+        "kind": "apply_verified_contract_profile",
+        "operator_id": "strip",
+        "profile_id": "strip_string",
+        "statement": "Implement verified strip transform in the profile-safe role chain"
+      },
+      "delta_status": "ready",
+      "executor_status": "ok",
+      "failing_review_recommendation": "request_rework",
+      "framework_evidence": null,
+      "generated_function_stub_admission": {
+        "artifact_type": "GeneratedFunctionStubAdmission",
+        "checked_files": [
+          "trial_strip_tail_pipe.py"
+        ],
+        "parse_failures": [],
+        "policy": {
+          "existing_functions_may_be_replaced_with_stubs": false,
+          "new_function_stubs_allowed": false,
+          "pre_existing_stubs_are_violations": false
+        },
+        "status": "passed",
+        "violations": []
+      },
+      "io_evidence": null,
+      "operator_id": "strip",
+      "passing_review_recommendation": "approve",
+      "patch_count": 1,
+      "patch_reason": "contract_transform_identity_return_synthesized",
+      "patch_transform": "strip",
+      "profile_id": "strip_string",
+      "programmer_evidence": {
+        "checks": {
+          "delta_operator_matches": true,
+          "delta_ready": true,
+          "executable_acceptance_passed": true,
+          "executor_completed": true,
+          "patch_prepared": true,
+          "profile_matches": true,
+          "single_target_patch": true,
+          "source_unchanged": true,
+          "transform_matches": true
+        },
+        "transformation_evaluated": true
+      },
+      "project": "rusiaaman__wcgw",
+      "project_classification": {
+        "contract_family": "pure_transform",
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": "derived_mutation_benchmark",
+        "project_shape": "single_callable_sandbox",
+        "project_stratum": "library_pure_transform",
+        "project_subtype": "operator:strip",
+        "risk_profiles": [
+          "deterministic"
+        ],
+        "schema_version": "role_project_classification.v1"
+      },
+      "provider_evidence": null,
+      "role_evidence": {
+        "architect": {
+          "checks": {
+            "bounded_option_selected": true,
+            "contract_profile_carried": true,
+            "source_context_bound": true,
+            "target_carried_to_brief": true,
+            "traceability_present": true
+          },
+          "score": 10.0
+        },
+        "implementer": {
+          "checks": {
+            "delta_ready": true,
+            "generated_function_stubs_absent": true,
+            "patch_prepared": true,
+            "plan_quality_passed": true,
+            "sandbox_source_preserved": true,
+            "transform_matches_contract": true,
+            "verified_candidate_completed": true
+          },
+          "score": 10.0
+        },
+        "project_analyzer": {
+          "checks": {
+            "contract_profile_identified": true,
+            "source_callable_parsed": true,
+            "source_lineage_bound": true,
+            "source_project_identified": true,
+            "source_target_bound": true
+          },
+          "score": 10.0
+        },
+        "reviewer": {
+          "checks": {
+            "failing_control_has_test_finding": true,
+            "failing_control_requests_rework": true,
+            "failing_review_quality_passed": true,
+            "passing_candidate_not_reworked": true,
+            "passing_review_quality_passed": true
+          },
+          "score": 10.0
+        },
+        "spec_writer": {
+          "checks": {
+            "contract_profile_preserved": true,
+            "extraction_target_bound": true,
+            "implementation_delta_ready": true,
+            "implementation_handoff_bounded": true,
+            "technical_spec_quality_passed": true
+          },
+          "score": 10.0
+        },
+        "tester": {
+          "checks": {
+            "control_failure_is_oracle_backed": true,
+            "identity_control_rejected": true,
+            "patched_candidate_accepted": true,
+            "patched_signal_is_executable": true,
+            "test_plan_quality_passed": true
+          },
+          "score": 10.0
+        }
+      },
+      "role_scores": {
+        "architect": 10.0,
+        "implementer": 10.0,
+        "project_analyzer": 10.0,
+        "reviewer": 10.0,
+        "spec_writer": 10.0,
+        "tester": 10.0
+      },
+      "score": 10.0,
+      "source_code_changes": false,
+      "source_lineage": "F:/ubuntu/test/9/artifacts/github_blind_iteration_26_40_20260822/src",
+      "source_target": "src/wcgw/types_.py:strip_tail_pipe",
+      "stateful_evidence": null,
+      "status": "ok",
+      "web_evidence": null
+    }
+  ],
+  "generated_at": "2026-09-04T08:05:58.917553+00:00",
+  "invariants": {
+    "maturity_scope": "library_pure_transform",
+    "mode": "derived_mutation_benchmark",
+    "source_projects_modified": 0
+  },
+  "milestone": "narrow_holdout_library_lineage26",
+  "source_lineage": "F:/ubuntu/test/9/artifacts/github_blind_iteration_26_40_20260822/src",
+  "status": "ok",
+  "summary": {
+    "accepted": 1,
+    "generated_stub_count": 0,
+    "minimum_score": 10.0,
+    "needs_review": 0,
+    "operators": {
+      "strip": 1
+    },
+    "patch_reasons": {
+      "contract_transform_identity_return_synthesized": 1
+    },
+    "patch_transforms": {
+      "strip": 1
+    },
+    "profiles": {
+      "strip_string": 1
+    },
+    "project_count": 1,
+    "source_code_changes": 0,
+    "stub_admission_passed": true,
+    "stub_parse_failure_count": 0
+  }
+}

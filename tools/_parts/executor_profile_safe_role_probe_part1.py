@@ -22,6 +22,7 @@ from runtime.architecture_decision_policy import load_architecture_decision_poli
 from runtime.contract_transform_contract_profiles import contract_profile_for_operator, contract_profile_hint
 from runtime.contract_transform_mutation import identity_mutation_source, observed_operator
 from runtime.implementation_plan_builder import build_implementation_plan
+from runtime.generated_stub_admission import inspect_generated_function_stubs
 from runtime.programmer_acceptance_gate import enforce_prepared_patch_acceptance
 from runtime.programmer_executor import run_programmer_executor
 from runtime.programmer_transformation_trial_quality import evaluate_transformation_case, transformation_summary
@@ -30,6 +31,7 @@ from runtime.project_benchmark import analyze_project
 from runtime.review_findings_builder import build_review_findings
 from runtime.role_project_type_evaluation import load_role_project_type_policy
 from runtime.role_artifact_quality import (
+    evaluate_technical_spec,
     evaluate_implementation_plan,
     evaluate_review_findings,
     evaluate_test_plan,
@@ -139,6 +141,7 @@ def run_profile_safe_role_probe(
         projects_dir, limit=limit, max_per_project=max_per_project,
         project_names=project_names,
     )
+    rows = [{**row, "source_lineage": projects_dir.resolve().as_posix()} for row in rows]
     if project_stratum in DOMAIN_BENCHMARK_RECIPES:
         requested = set(project_names or set())
         if requested:
@@ -162,9 +165,20 @@ def run_profile_safe_role_probe(
         for row in rows
     ]
     summary = transformation_summary(cases)
+    stub_admissions = [dict(case.get("generated_function_stub_admission") or {}) for case in cases]
+    summary["generated_stub_count"] = sum(
+        len(admission.get("violations") or []) for admission in stub_admissions
+    )
+    summary["stub_parse_failure_count"] = sum(
+        len(admission.get("parse_failures") or []) for admission in stub_admissions
+    )
+    summary["stub_admission_passed"] = bool(stub_admissions) and all(
+        admission.get("status") == "passed" for admission in stub_admissions
+    )
     return {
         "artifact_type": "ExecutorProfileSafeRoleProbe",
-        "status": "ok" if cases and summary["accepted"] == len(cases) else "needs_review",
+        "status": "ok" if cases and summary["accepted"] == len(cases)
+        and summary["stub_admission_passed"] else "needs_review",
         "milestone": label,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_lineage": projects_dir.resolve().as_posix(),

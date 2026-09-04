@@ -28,8 +28,13 @@
     "role_pipeline_handoff_loss": 0,
     "local_corpus_unique_projects": 4321,
     "local_corpus_untouched_target_candidates": 644,
-    "narrow_certification_status": "evidence_required",
-    "narrow_certification_blockers": ["lineage_disjoint", "generated_stub_gate"]
+    "narrow_certification_status": "certified",
+    "narrow_certification_blockers": [],
+    "narrow_holdout_receipt": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
+    "narrow_certificate_receipt": "sha256:ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657",
+    "narrow_holdout_lineages": 2,
+    "narrow_generated_stub_count": 0,
+    "durable_input_receipts": 7
   },
   "required_negative_controls": [
     "target_reselection",

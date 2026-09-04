@@ -36,7 +36,7 @@ def build_narrow_type_certification(
             checks = {
                 "measured": isinstance(score, (int, float)),
                 "score_at_least_9_7": isinstance(score, (int, float)) and float(score) >= target_score,
-                "evidence_complete": not list(cell.get("gaps") or []),
+                "evidence_complete": not list(cell.get("evidence_gaps") or cell.get("gaps") or []),
                 "promotion_eligible": cell.get("promotion_eligible") is True,
             }
             cell_checks.append({
@@ -59,6 +59,7 @@ def build_narrow_type_certification(
         "role_chain_continuity": evidence_checks.get("role_chain_continuity") is True,
         "generated_stub_gate": evidence_checks.get("generated_stub_gate") is True
         and int(payload.get("generated_stub_count") or 0) == 0,
+        "inputs_digest_bound": evidence_checks.get("inputs_digest_bound") is True,
         "multiple_holdout_lineages": int(holdout.get("source_lineages") or 0) > 1,
     }
     all_cells_passed = bool(cell_checks) and all(row["status"] == "passed" for row in cell_checks)

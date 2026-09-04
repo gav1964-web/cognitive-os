@@ -14,6 +14,7 @@ def evaluate_narrow_type_holdout(
     evaluation: dict[str, Any],
     role_pipeline_report: dict[str, Any],
     stub_audit: dict[str, Any] | None = None,
+    input_provenance: dict[str, Any] | None = None,
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rules = policy or load_role_project_type_policy()
@@ -37,6 +38,10 @@ def evaluate_narrow_type_holdout(
         else None
     )
     target_score = float(lane.get("target_score") or 9.7)
+    provenance = dict(input_provenance or {})
+    required_inputs = {"evaluation", "role_pipeline", "stub_audit"}
+    core_inputs = [dict(provenance.get(name) or {}) for name in sorted(required_inputs)]
+    blind_receipts = [dict(row) for row in provenance.get("blind_reports") or []]
     checks = {
         "all_required_cells_present": len(selected) == len(required) and all(selected),
         "scores_at_promotion_target": all(
@@ -53,6 +58,8 @@ def evaluate_narrow_type_holdout(
         and audit.get("status") == "passed"
         and generated_stub_count == 0,
         "independent_evaluator": True,
+        "inputs_digest_bound": required_inputs.issubset(provenance)
+        and all(row.get("verified") is True for row in core_inputs),
     }
     lineages = {
         lineage
@@ -62,6 +69,17 @@ def evaluate_narrow_type_holdout(
     source_reports = [
         str(row.get("path")) for row in evaluation.get("sources") or [] if row.get("blind") is True
     ]
+    audited_reports = {str(path).replace("\\", "/").lower() for path in dict(audit.get("report_digests") or {})}
+    required_reports = {path.replace("\\", "/").lower() for path in source_reports}
+    audit_covers_holdout = bool(required_reports) and audited_reports == required_reports
+    audited_digests = set(dict(audit.get("report_digests") or {}).values())
+    receipt_digests = {
+        row.get("content_digest") for row in blind_receipts if row.get("verified") is True
+    }
+    blind_inputs_durable = bool(audited_digests) and receipt_digests == audited_digests
+    checks["stub_audit_covers_holdout"] = audit_covers_holdout
+    checks["generated_stub_gate"] = checks["generated_stub_gate"] and audit_covers_holdout
+    checks["blind_inputs_durable"] = blind_inputs_durable
     body = {
         "artifact_type": "NarrowTypeHoldoutEvidence",
         "schema_version": "narrow_type_holdout_evidence.v1",
@@ -79,6 +97,7 @@ def evaluate_narrow_type_holdout(
         },
         "role_chain_report": role_pipeline_report.get("report_path"),
         "stub_audit": audit or {"status": "not_provided"},
+        "input_provenance": provenance,
         "source_apply": False,
         "promotion_applied": False,
     }

@@ -19,7 +19,12 @@
     "NarrowTypeHoldoutEvidence": {
       "producer": "narrow_type_holdout_evaluator",
       "consumers": ["narrow_type_certification", "architect", "reviewer", "human"],
-      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_chain_report", "stub_audit", "source_apply", "promotion_applied", "evidence_digest"]
+      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_chain_report", "stub_audit", "input_provenance", "source_apply", "promotion_applied", "evidence_digest"]
+    },
+    "GeneratedFunctionStubAudit": {
+      "producer": "generated_function_stub_audit",
+      "consumers": ["narrow_type_holdout_evaluator", "tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "report_digests", "case_count", "generated_stub_count", "violations", "parse_failures", "missing_admissions", "checks", "failed_checks", "audit_digest"]
     },
     "SelfDevelopmentExperiment": {
       "producer": "self_development_experiment",

@@ -145,7 +145,15 @@ def _run_case(
         patch_package=patch,
         test_result=test_result,
     )
+    stub_admission = inspect_generated_function_stubs(
+        original_project=project_dir,
+        sandbox_project=Path(str(result["execution_project"])),
+        patch=patch,
+    )
     role_evidence = _role_evidence(
+        row=row,
+        architecture_decision=_adr(target, row),
+        technical_spec=spec,
         plan=plan,
         test_plan=test_plan,
         test_result=test_result,
@@ -160,8 +168,9 @@ def _run_case(
         async_evidence=async_evidence,
         io_evidence=io_evidence,
         framework_evidence=framework_evidence,
+        stub_admission=stub_admission,
     )
-    accepted = quality["status"] == "ok" and all(
+    accepted = quality["status"] == "ok" and stub_admission["status"] == "passed" and all(
         evidence["score"] == 10.0 for evidence in role_evidence.values()
     )
     return {
@@ -175,6 +184,8 @@ def _run_case(
             "transformation_evaluated": True,
             "checks": quality["checks"],
         },
+        "source_lineage": row.get("source_lineage"),
+        "generated_function_stub_admission": stub_admission,
         "project_classification": {
             "schema_version": "role_project_classification.v1",
             "policy_version": load_role_project_type_policy()["classification_version"],

@@ -3,6 +3,15 @@ from runtime.narrow_type_holdout_evaluator import evaluate_narrow_type_holdout
 
 ROLES = ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"]
 STRATA = ["cli_local_tool", "library_pure_transform"]
+PROVENANCE = {
+    "evaluation": {"verified": True},
+    "role_pipeline": {"verified": True},
+    "stub_audit": {"verified": True},
+    "blind_reports": [
+        {"verified": True, "content_digest": "sha256:a"},
+        {"verified": True, "content_digest": "sha256:b"},
+    ],
+}
 
 
 def _evaluation():
@@ -35,21 +44,25 @@ def _pipeline():
 
 def test_holdout_evidence_requires_explicit_stub_audit():
     report = evaluate_narrow_type_holdout(
-        evaluation=_evaluation(), role_pipeline_report=_pipeline()
+        evaluation=_evaluation(), role_pipeline_report=_pipeline(), input_provenance=PROVENANCE
     )
 
     assert report["status"] == "evidence_required"
-    assert report["failed_checks"] == ["generated_stub_gate"]
+    assert report["failed_checks"] == [
+        "generated_stub_gate", "stub_audit_covers_holdout", "blind_inputs_durable"
+    ]
 
 
 def test_holdout_evidence_passes_with_bound_zero_stub_audit():
     report = evaluate_narrow_type_holdout(
         evaluation=_evaluation(),
         role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE,
         stub_audit={
             "artifact_type": "GeneratedFunctionStubAudit",
             "status": "passed",
             "generated_stub_count": 0,
+            "report_digests": {"blind-a.json": "sha256:a", "blind-b.json": "sha256:b"},
         },
     )
 
@@ -63,12 +76,32 @@ def test_holdout_evidence_rejects_shared_lineage():
     report = evaluate_narrow_type_holdout(
         evaluation=evaluation,
         role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE,
         stub_audit={
             "artifact_type": "GeneratedFunctionStubAudit",
             "status": "passed",
             "generated_stub_count": 0,
+            "report_digests": {"blind-a.json": "sha256:a", "blind-b.json": "sha256:b"},
         },
     )
 
     assert report["status"] == "evidence_required"
     assert report["checks"]["lineage_disjoint"] is False
+
+
+def test_holdout_evidence_rejects_partial_stub_audit_coverage():
+    report = evaluate_narrow_type_holdout(
+        evaluation=_evaluation(),
+        role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE,
+        stub_audit={
+            "artifact_type": "GeneratedFunctionStubAudit",
+            "status": "passed",
+            "generated_stub_count": 0,
+            "report_digests": {"blind-a.json": "sha256:a"},
+        },
+    )
+
+    assert report["status"] == "evidence_required"
+    assert report["checks"]["stub_audit_covers_holdout"] is False
+    assert report["checks"]["blind_inputs_durable"] is False

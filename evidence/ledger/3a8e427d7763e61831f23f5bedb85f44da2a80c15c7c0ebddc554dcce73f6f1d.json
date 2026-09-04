@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/dae056124de644defaefd9c73d06e4fc68b2b2c48dd1821d53c7a4c22bd90296.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:dae056124de644defaefd9c73d06e4fc68b2b2c48dd1821d53c7a4c22bd90296",
+  "entry_digest": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
+  "evaluator_fingerprint": "narrow_type_holdout_evaluator:v3",
+  "producer_fingerprint": "narrow_type_holdout:v3",
+  "replay_command": [
+    "python",
+    "tools/narrow_type_holdout.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/verification/narrow_type_holdout_certification_candidate.json",
+  "status": "promoted"
+}
