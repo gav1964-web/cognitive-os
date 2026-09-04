@@ -115,6 +115,31 @@
       "failure_modes": ["unsupported_source_shape", "field_projection_failure", "key_normalization_collision"],
       "reason": "AST proves a bounded object-to-mapping projection"
     },
+    "receiver_object_mapping_projection": {
+      "input_contract": {"receiver_state": "SerializableModelState(fields, values)"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "receiver projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["declared fields map deterministically", "nested model and enum values use explicit projection rules", "receiver and nested values are not mutated"],
+      "failure_modes": ["unsupported_nested_value", "field_projection_failure", "missing_declared_field"],
+      "reason": "AST proves a bounded receiver-model to mapping projection"
+    },
+    "receiver_state_predicate": {
+      "input_contract": {"receiver_state": "ReceiverState(signals)"},
+      "output_contract": {"decision": "bool"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "state inspection is read-only", "requires_validation_gate": true},
+      "validation_gates": ["ready and not-ready state combinations return explicit booleans", "missing optional state is handled deterministically", "receiver state is not mutated"],
+      "failure_modes": ["malformed_receiver_state", "state_signal_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded read-only receiver-state predicate"
+    },
+    "optional_type_annotation_normalization": {
+      "input_contract": {"annotation": "TypeAnnotation"},
+      "output_contract": {"normalized_annotation": "TypeAnnotation"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "annotation normalization is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["Optional[T] unwraps to T", "non-Optional annotations preserve identity", "input annotation metadata is not mutated"],
+      "failure_modes": ["malformed_optional_metadata", "unsupported_union_shape"],
+      "reason": "AST proves a bounded Optional type-annotation normalization"
+    },
     "protocol_string_fallback_projection": {
       "input_contract": {"source": "ProtocolLike"},
       "output_contract": {"result": "str"},

@@ -1,5 +1,24 @@
 import runtime.role_pipeline_min_field_trial as field_trial
-from runtime.role_pipeline_min_field_trial import _gate_score, _programmer_score, _report
+from runtime.role_pipeline_min_field_trial import (
+    _gate_score,
+    _programmer_score,
+    _report,
+    project_classifications_from_foundation_reports,
+)
+
+
+def test_foundation_classifications_are_recomputed_for_downstream_reports(tmp_path):
+    report = tmp_path / "foundation.json"
+    report.write_text(
+        '{"cases":[{"project":"cachelib","project_classification":'
+        '{"schema_version":"role_project_classification.v1","policy_version":"stale",'
+        '"project_stratum":"library_pure_transform","project_archetype":"cache_backend_library"}}]}',
+        encoding="utf-8",
+    )
+
+    classifications = project_classifications_from_foundation_reports([report])
+
+    assert classifications["cachelib"]["project_stratum"] == "stateful_service_database"
 
 
 def test_gate_score_uses_worst_case_role_criteria_ratio():

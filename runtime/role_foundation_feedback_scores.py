@@ -7,6 +7,7 @@ from typing import Any
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .role_foundation_trial_status import (
     evidence_bound_exhaustion,
+    matching_executable_confirmation,
     spec_writer_blocked_no_safe_candidate,
     unresolved_reselection,
 )
@@ -76,6 +77,8 @@ def _local_role_scores(result: dict[str, Any]) -> dict[str, float | None]:
 
 def _feedback_caps(result: dict[str, Any]) -> list[tuple[str, float, str]]:
     policy = dict(load_foundation_semantic_quality_policy().get("feedback_scoring") or {})
+    if _scorable_evidence_bound_exhaustion(result) or _scorable_scope_selection_stop(result):
+        return []
     signal = _acceptance_signal(result)
     confirmed = signal in set(policy.get("executable_confirmation_signals") or [])
     rows: list[tuple[str, float, str]] = []
@@ -97,6 +100,33 @@ def _feedback_caps(result: dict[str, Any]) -> list[tuple[str, float, str]]:
             "Architect exhausted the reselection iteration budget",
         ))
     return rows
+
+
+def _scorable_evidence_bound_exhaustion(result: dict[str, Any]) -> bool:
+    spec = dict(dict(result.get("artifacts") or {}).get("technical_spec") or {})
+    contract = dict(spec.get("extraction_contract") or {})
+    return bool(
+        contract.get("status") == "blocked_no_safe_candidate"
+        and not contract.get("candidate")
+        and evidence_bound_exhaustion(result)
+    )
+
+
+def _scorable_scope_selection_stop(result: dict[str, Any]) -> bool:
+    if result.get("blocker") != "scope_selection_required":
+        return False
+    scope = dict(result.get("scope_selection_report") or {})
+    checks = dict(dict(result.get("score") or {}).get("checks") or {})
+    safety = dict(result.get("safety") or {})
+    return bool(
+        scope.get("status") == "blocked_until_scope_selected"
+        and len(scope.get("candidate_roots") or []) >= 2
+        and scope.get("preferred_candidate") is None
+        and checks
+        and all(checks.values())
+        and safety.get("source_code_changes") is False
+        and safety.get("registry_changes") is False
+    )
 
 
 def _cap_rows(value: Any, reason: str) -> list[tuple[str, float, str]]:
@@ -127,6 +157,21 @@ def _semantic_candidate_score(result: dict[str, Any]) -> float | None:
     if review.get("status") == "approved_with_constraints" and checks and all(checks.values()):
         policy = load_foundation_semantic_quality_policy()
         floor = float(dict(policy.get("spec_writer") or {}).get("semantic_review_floor_score") or 9.2)
+        semantic = max(semantic or 0.0, floor)
+    quality = dict(value or {})
+    semantic_quality = dict(result.get("foundation_semantic_quality") or {})
+    spec_checks = list(dict(semantic_quality.get("checks") or {}).get("spec_writer") or [])
+    if (
+        quality.get("status") == "strong"
+        and spec_checks
+        and all(dict(row or {}).get("passed") is True for row in spec_checks)
+        and matching_executable_confirmation(result)
+    ):
+        policy = load_foundation_semantic_quality_policy()
+        floor = float(
+            dict(policy.get("spec_writer") or {}).get("executable_confirmation_floor_score")
+            or 9.7
+        )
         semantic = max(semantic or 0.0, floor)
     return semantic
 

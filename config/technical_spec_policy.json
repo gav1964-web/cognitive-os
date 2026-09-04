@@ -132,9 +132,16 @@
   },
   "first_slice_reselection": {
     "enabled": true,
-    "production_triggers": ["low_first_slice_viability", "first_slice_semantic_quality_below_threshold"],
+    "production_triggers": [
+      "low_first_slice_viability",
+      "first_slice_semantic_quality_below_threshold",
+      "no_semantically_safe_candidate_in_approved_first_slice"
+    ],
     "minimum_semantic_score": 95,
-    "semantic_override_viability_rules": ["static_time_format_boundary"],
+    "semantic_override_viability_rules": [
+      "static_time_format_boundary",
+      "read_or_mapping_boundary"
+    ],
     "execution_feedback_enabled": true,
     "execution_feedback_max_iterations": 4,
     "execution_feedback_max_resource_failures": 2,
@@ -144,6 +151,7 @@
       "import_failed_runtime_error",
       "isolated_process_failed",
       "first_slice_reselection_required",
+      "executable_acceptance_failed",
       "method_target_needs_instance_fixture",
       "positive_sample_execution_failed",
       "positive_signature_mismatch",

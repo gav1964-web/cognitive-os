@@ -10,10 +10,38 @@ from .promoted_executable_adapters import load_executable_adapters
 from .promoted_semantic_contract_profiles import load_promoted_profiles
 from .self_improvement_plugin_loader import load_improvement_plugin_catalog
 from .self_improvement_evidence_proposals import load_proposal_recipes
+from .self_development_change import load_self_development_change_policy
+from .self_development_shadow_trial import load_self_development_shadow_trial_policy
+from .self_development_prospective_detection import load_prospective_detection_policy
+from .self_development_l0_lifecycle import load_l0_lifecycle_policy
+from .self_development_fresh_blind_trial import load_fresh_blind_trial_policy
+from .self_development_corpus_eligibility import load_corpus_eligibility_policy
+from .classification_consistency import load_classification_consistency_policy
 
 
 def load_self_improvement_catalogs(root: Path) -> dict[str, Any]:
     return {
+        "self_development_change_policy": load_self_development_change_policy(
+            str(root / "config" / "self_development_change_policy.json")
+        ),
+        "self_development_shadow_trial_policy": load_self_development_shadow_trial_policy(
+            str(root / "config" / "self_development_shadow_trial.json")
+        ),
+        "self_development_prospective_detection_policy": load_prospective_detection_policy(
+            str(root / "config" / "self_development_prospective_detection.json")
+        ),
+        "self_development_l0_lifecycle_policy": load_l0_lifecycle_policy(
+            str(root / "config" / "self_development_l0_lifecycle.json")
+        ),
+        "self_development_fresh_blind_trial_policy": load_fresh_blind_trial_policy(
+            str(root / "config" / "self_development_fresh_blind_trial.json")
+        ),
+        "self_development_corpus_eligibility_policy": load_corpus_eligibility_policy(
+            str(root / "config" / "self_development_corpus_eligibility.json")
+        ),
+        "classification_consistency_policy": load_classification_consistency_policy(
+            str(root / "config" / "classification_consistency.json")
+        ),
         "self_improvement_plugins": load_improvement_plugin_catalog(
             str(root / "config" / "self_improvement_plugins.json")
         ),

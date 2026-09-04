@@ -2,6 +2,7 @@
   "policies": [
     {
       "activation_state": "active",
+      "candidate_ordering": "executable_fixture_readiness",
       "id": "executable_sample_contract:measured_candidate_reselection",
       "legacy_revalidation_repairs": [
         "include_forbidden_output_in_preflight"

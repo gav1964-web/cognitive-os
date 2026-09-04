@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-TEXT_EXTENSIONS = {".bat", ".css", ".example", ".html", ".js", ".json", ".md", ".py", ".ps1", ".rst", ".sh", ".txt", ".toml", ".yaml", ".yml"}
+TEXT_EXTENSIONS = {".bat", ".cfg", ".css", ".example", ".html", ".ini", ".js", ".json", ".md", ".py", ".ps1", ".rst", ".sh", ".txt", ".toml", ".yaml", ".yml"}
 EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
 DISCOVERY_EXCLUDED_DIRS = {"artifacts", "fixlog", "generated", "reports", "scratch", "workspace"}
 HIGH_VALUE_NAMES = {
@@ -21,6 +21,7 @@ HIGH_VALUE_NAMES = {
     "readme.rst",
     "requirements.txt",
     "run_map.bat",
+    "setup.cfg",
     "setup.py",
 }
 HIGH_VALUE_PREFIXES = ("readme", "start_", "run_")
@@ -81,7 +82,7 @@ def _candidate_score(path: Path) -> int:
         score -= 40
     if name in {"pyproject.toml", "requirements.txt", "package.json", "readme.md", "readme.rst"}:
         score -= 20
-    if name in {"api_server.py", "app.py", "main.py", "server.py"}:
+    if name in {"api_server.py", "app.py", "main.py", "plugin.py", "server.py"}:
         score -= 15
     if path.suffix.lower() in {".bat", ".ps1", ".sh"}:
         score -= 10

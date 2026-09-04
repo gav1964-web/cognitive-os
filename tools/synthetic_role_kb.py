@@ -15,6 +15,7 @@ from runtime.synthetic_role_kb import (
     load_synthetic_role_qa,
     record_role_qa_feedback,
     search_synthetic_role_qa,
+    synthetic_role_qa_audit,
     synthetic_probe_report,
     synthetic_role_qa_summary,
     write_llm_role_qa,
@@ -52,6 +53,9 @@ def main() -> int:
 
     probe = sub.add_parser("probe")
     probe.add_argument("--corpus", default=None)
+
+    audit = sub.add_parser("audit")
+    audit.add_argument("--corpus", default=None)
 
     feedback = sub.add_parser("feedback")
     feedback.add_argument("--corpus", default=None)
@@ -122,6 +126,11 @@ def main() -> int:
         corpus = load_synthetic_role_qa(Path(args.corpus) if args.corpus else None)
         print(json.dumps(synthetic_probe_report(corpus), ensure_ascii=False, indent=2, sort_keys=True))
         return 0
+    if args.command == "audit":
+        corpus = load_synthetic_role_qa(Path(args.corpus) if args.corpus else None)
+        report = synthetic_role_qa_audit(corpus)
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0 if report["status"] == "ok" else 1
     if args.command == "feedback":
         report = record_role_qa_feedback(
             qa_id=args.qa_id,

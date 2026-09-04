@@ -75,3 +75,29 @@ def test_clamp_candidate_pool_prioritizes_standalone_returning_contract():
     assert result["evaluation_target_clamp"]["candidate_pool"] == [
         "app.py:function", "app.py:method",
     ]
+
+
+def test_clamp_candidate_pool_demotes_property_accessor():
+    artifact = _adr()
+    artifact["source_context"] = {
+        "app.py:run": {},
+        "app.py:property_value": {"candidate_score": 100, "snippet": {
+            "decorators": ["property"],
+            "structural_contract": {
+                "return_paths": 1,
+                "output_inference_basis": "return_expression",
+            },
+        }},
+        "app.py:normalize": {"candidate_score": 80, "snippet": {
+            "structural_contract": {
+                "return_paths": 1,
+                "output_inference_basis": "return_expression",
+            },
+        }},
+    }
+
+    result = clamp_architecture_target(artifact, "app.py:run")
+
+    assert result["evaluation_target_clamp"]["candidate_pool"] == [
+        "app.py:normalize", "app.py:property_value",
+    ]

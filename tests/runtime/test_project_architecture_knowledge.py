@@ -1,4 +1,17 @@
-from runtime.project_architecture_knowledge import load_architecture_knowledge, match_architecture_rule
+from runtime.project_architecture_knowledge import (
+    _contains_marker,
+    load_architecture_knowledge,
+    match_architecture_rule,
+)
+
+
+def test_short_marker_does_not_match_inside_identifier():
+    assert not _contains_marker("lsp", "client.py:callspec")
+    assert not _contains_marker("qt", "request_queue")
+
+
+def test_compound_marker_accepts_common_token_separators():
+    assert _contains_marker("api client", "typed-api_client runtime")
 
 
 def test_domain_profile_rule_beats_generic_config_parser_text_match():
@@ -15,6 +28,23 @@ def test_domain_profile_rule_beats_generic_config_parser_text_match():
     match = match_architecture_rule(facts, load_architecture_knowledge())
 
     assert match["rule"]["rule_id"] == "protocol_api_client"
+
+
+def test_reinforcement_learning_profile_carries_deterministic_reward_slice() -> None:
+    facts = {
+        "root": "policy-lab",
+        "domain_profile": {"kind": "reinforcement_learning_training_pipeline"},
+        "inputs": ["observations", "actions", "rewards", "discount factor"],
+        "central": ["common/utils.py:discount_rewards"],
+        "capabilities": ["common/utils.py:eligibility_traces"],
+        "scenarios": ["Train a policy from finite rollouts."],
+        "weak_contracts": ["environment effects", "checkpoint state"],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] == "reinforcement_learning_training_pipeline"
+    assert match["rule"]["first_slice"]["name"] == "reward_return_update_slice"
 
 
 def test_document_cleanup_rule_beats_generic_structured_converter_text_match():
@@ -180,3 +210,31 @@ def test_scientific_domain_profile_beats_generic_converter_markers():
     match = match_architecture_rule(facts, load_architecture_knowledge())
 
     assert match["rule"]["rule_id"] == "scientific_compute_library"
+
+
+def test_incidental_markdown_does_not_claim_docs_site_archetype():
+    facts = {
+        "root": "llm-evaluation-sdk",
+        "domain_profile": {"kind": "generic"},
+        "inputs": ["prompt", "model response", "configuration"],
+        "central": ["sdk/evaluators.py:grade_using_llm"],
+        "capabilities": ["evaluate model response", "render markdown report"],
+        "scenarios": ["Run evaluator cases and emit a markdown result."],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] != "docs_site_generator"
+
+
+def test_llm_project_name_and_model_evidence_select_generic_llm_runtime():
+    facts = {
+        "root": "simonw__llm",
+        "inputs": ["prompt", "model configuration"],
+        "central": ["llm/models.py:execute_tool_calls"],
+        "capabilities": ["resolve model provider", "execute prompt"],
+    }
+
+    match = match_architecture_rule(facts, load_architecture_knowledge())
+
+    assert match["rule"]["rule_id"] == "llm_application_runtime"

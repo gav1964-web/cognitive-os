@@ -37,6 +37,22 @@ def test_infers_string_suffix_without_fixture(tmp_path):
     assert len(inferred["value"]) == 32
 
 
+def test_negated_assert_avoids_forbidden_prefix(tmp_path):
+    source = tmp_path / "contents.py"
+    source.write_text(
+        "def parse(contents):\n"
+        "    assert not contents.startswith(' ')\n"
+        "    return contents\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "parse")["contents"]
+
+    assert inferred["source"] == "ast_literal_buffer:assert_not_startswith"
+    assert not inferred["value"].startswith(" ")
+
+
+
 def test_bytes_predicate_contract_executes_with_inferred_override(tmp_path):
     project = tmp_path / "project"
     project.mkdir()

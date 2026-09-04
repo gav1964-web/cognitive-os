@@ -39,3 +39,21 @@ def test_source_target_values_normalizes_analyzer_capability_rows():
         "pkg/api.py:create_item",
         {"path": "pkg/service.py", "name": "resolve"},
     ]) == ["pkg/api.py:create_item", "pkg/service.py:resolve"]
+
+
+def test_semantic_contract_profile_affects_architect_initial_order():
+    rows = [
+        "src/pluggy/_hooks.py:varnames",
+        "src/pluggy/_hooks.py:call_extra",
+    ]
+
+    assert rank_architecture_targets(rows, POLICY)[0] == "src/pluggy/_hooks.py:call_extra"
+
+
+def test_package_identity_parser_outranks_import_coupled_publishing_helper():
+    rows = [
+        "attestations.py:compose_attestation_mapping",
+        "print-pkg-names.py:safe_parse_pkg_name",
+    ]
+
+    assert rank_architecture_targets(rows, POLICY)[0] == "print-pkg-names.py:safe_parse_pkg_name"

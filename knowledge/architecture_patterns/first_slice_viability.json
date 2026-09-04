@@ -5,7 +5,7 @@
     "append", "casefold", "decode", "encode", "endswith", "format", "get",
     "items", "join", "keys", "lower", "lstrip", "partition", "removeprefix",
     "removesuffix", "replace", "rsplit", "rstrip", "shape", "split", "startswith",
-    "strip", "upper", "values"
+    "status_code", "strip", "upper", "values"
   ],
   "rules": [
     {
@@ -131,7 +131,7 @@
       "score_delta": -70,
       "reselection_required": true,
       "match": {
-        "symbol_in": ["close", "execute", "flush", "force_flush", "launch", "retry", "_kill_process", "kill_process", "shutdown", "terminate"]
+        "symbol_in": ["aclose_client", "close", "close_client", "execute", "flush", "force_flush", "launch", "retry", "_kill_process", "kill_process", "shutdown", "terminate"]
       },
       "reason": "runtime lifecycle entrypoint requires environment orchestration rather than first-slice execution"
     },
@@ -180,6 +180,14 @@
         "input_complexity_in": ["object_protocol"]
       },
       "reason": "input requires an unknown object protocol and must be replaced or explicitly fixture-bound before executable handoff"
+    },
+    {
+      "rule_id": "declared_protocol_input",
+      "score_delta": 35,
+      "match": {
+        "input_complexity_in": ["declared_protocol"]
+      },
+      "reason": "signature or docstring declares the object protocol, allowing a contract-bound acceptance fixture"
     },
     {
       "rule_id": "stateful_method_effects",

@@ -3,6 +3,7 @@ import ast
 from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
+from runtime.architecture_decision_summary import decision_summary as _decision_summary, source_strata as _source_strata
 from runtime.architecture_advisory_policy import trusted_architecture_advisory
 from runtime.architecture_slice_naming import semantic_first_slice_name
 from runtime.contract_archetype_inference import contract_archetype_for_target
@@ -266,6 +267,9 @@ def _callable_transform_fallback_target(target: str, item: dict[str, Any], *, po
     path_match = any(token and token in lowered for token in path_tokens)
     if symbol_match and path_match:
         return True
+    pathless_prefixes = [str(value).lower() for value in list(policy.get("pathless_allowed_symbol_prefixes") or [])]
+    if any(symbol.startswith(prefix) for prefix in pathless_prefixes):
+        return bool(item.get("args")) and bool(item.get("returns"))
     return bool(policy.get("allow_contract_profile_without_path_match")) and _profile_compatible_transform(target, item, policy)
 
 def _profile_compatible_transform(target: str, item: dict[str, Any], policy: dict[str, Any]) -> bool:
@@ -384,17 +388,3 @@ def _plan_capability_refs(readiness: dict[str, Any]) -> list[str]:
     if not isinstance(rows, list):
         return []
     return [str(row.get("capability")) for row in rows if isinstance(row, dict) and row.get("capability")]
-def _decision_summary(summary: dict[str, Any], capabilities: list[dict[str, Any]], risks: list[dict[str, Any]]) -> str:
-    project = summary.get("root", "project")
-    return f"Treat {project} as a candidate for bounded capability extraction: {len(capabilities)} capability candidates, {len(risks)} architecture risks."
-def _source_strata(readiness: dict[str, Any]) -> dict[str, Any]:
-    strata = readiness.get("source_strata", {})
-    if not isinstance(strata, dict):
-        return {}
-    return {
-        "active_core": list(strata.get("active_core", []))[:24],
-        "legacy_noise": list(strata.get("legacy_noise", []))[:24],
-        "context_only": list(strata.get("context_only", []))[:24],
-        "packaged_copy": list(strata.get("packaged_copy", []))[:24],
-        "policy": "Use active_core for first extraction candidates; keep legacy_noise/context_only as evidence, not first targets.",
-    }

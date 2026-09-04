@@ -10,6 +10,8 @@ from .technical_spec_policy import load_technical_spec_policy
 def semantic_threshold_satisfied(
     candidate: dict[str, Any], source_context: dict[str, Any] | None, minimum: int
 ) -> bool:
+    if minimum > 0 and str(candidate.get("semantic_status") or "") in {"poor", "suspicious"}:
+        return False
     if int(candidate.get("semantic_score") or 0) >= minimum:
         return True
     if _has_policy_override(candidate):

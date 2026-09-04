@@ -32,6 +32,28 @@ def test_nested_mapping_strategy_preserves_required_path(tmp_path: Path):
     }
 
 
+def test_nested_mapping_strategy_combines_subscript_get_paths_and_annotations(tmp_path: Path):
+    result = _infer(
+        tmp_path,
+        "from typing import List\n"
+        "def target(payload):\n"
+        "    rows: List = payload['data'].get('search').get('edges')\n"
+        "    remaining: int = payload['data'].get('rateLimit').get('remaining')\n"
+        "    return rows, remaining\n",
+        "nested_mapping_paths",
+    )
+
+    assert result["payload"] == {
+        "value": {
+            "data": {
+                "rateLimit": {"remaining": 0},
+                "search": {"edges": []},
+            }
+        },
+        "source": "ast_strategy:nested_mapping_paths",
+    }
+
+
 def test_callable_arity_strategy_uses_zero_argument_fixture(tmp_path: Path):
     result = _infer(
         tmp_path,

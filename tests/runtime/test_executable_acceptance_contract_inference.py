@@ -1,15 +1,6 @@
-from pathlib import Path
+from __future__ import annotations
 
-from runtime.executable_acceptance import run_executable_acceptance
-from runtime.executable_acceptance_contract_inference import infer_argument_samples
-from tests.runtime.test_executable_acceptance import _plan
-
-
-def _source(tmp_path: Path, text: str) -> Path:
-    path = tmp_path / "module.py"
-    path.write_text(text, encoding="utf-8")
-    return path
-
+from tests.runtime.executable_acceptance_contract_inference_helpers import *
 
 def test_infers_numeric_string_from_runtime_conversion(tmp_path: Path):
     path = _source(tmp_path, "def parse(value):\n    return float(value)\n")
@@ -133,6 +124,18 @@ def test_infers_value_from_local_allowed_collection(tmp_path: Path):
     }
 
 
+def test_infers_value_from_literal_membership_after_normalization(tmp_path: Path):
+    path = _source(
+        tmp_path,
+        "def validate(level):\n"
+        "    assert level.lower() in ['low', 'medium', 'high']\n",
+    )
+
+    assert infer_argument_samples(path, "validate") == {
+        "level": {"value": "high", "source": "ast_literal_membership_domain"}
+    }
+
+
 def test_numeric_arithmetic_overrides_string_conversion_sample(tmp_path: Path):
     path = _source(
         tmp_path,
@@ -162,6 +165,21 @@ def test_infers_minimal_object_from_parameter_attribute_reads(tmp_path: Path):
             },
             "source": "ast_parameter_attributes",
         }
+    }
+
+
+def test_preserves_none_for_guarded_optional_callable(tmp_path: Path):
+    path = _source(
+        tmp_path,
+        "def transform(values, encoder=None):\n"
+        "    if encoder is not None:\n"
+        "        return encoder().fit(values)\n"
+        "    return values\n",
+    )
+
+    assert infer_argument_samples(path, "transform")["encoder"] == {
+        "value": None,
+        "source": "ast_declared_default",
     }
 
 
@@ -325,65 +343,3 @@ def test_rejects_upstream_factory_expression(tmp_path: Path):
     assert infer_argument_samples(path, "parse", project_root=project) == {
         "value": {"value": "1.0", "source": "ast_conversion:float"}
     }
-
-
-def test_executable_acceptance_uses_inferred_sample_and_records_evidence(tmp_path: Path):
-    project = tmp_path / "project"
-    project.mkdir()
-    _source(project, "def schedule(epoch):\n    return 1 if epoch < 6 else 2\n")
-
-    result = run_executable_acceptance(
-        root=tmp_path,
-        project_dir=project,
-        test_plan=_plan("module.py:schedule", {"epoch": "sample"}, malformed=False),
-        work_dir=tmp_path / "work",
-    )
-
-    assert result["status"] == "passed"
-    assert result["summary"]["argument_overrides"] == {"module.py:schedule": {"epoch": 5}}
-    assert result["summary"]["argument_sample_evidence"] == {
-        "module.py:schedule": {
-            "epoch": {"value": 5, "source": "ast_comparison_literal"}
-        }
-    }
-
-
-def test_executable_acceptance_materializes_upstream_local_model_recipe(tmp_path: Path):
-    project = tmp_path / "project"
-    project.mkdir()
-    _source(project, "def greet(request):\n    return request.name.upper()\n")
-    (project / "test_greet.py").write_text(
-        "def test_greet():\n    assert greet(CreateRequest(name='Ada')) == 'ADA'\n", encoding="utf-8"
-    )
-
-    result = run_executable_acceptance(
-        root=tmp_path,
-        project_dir=project,
-        test_plan=_plan("module.py:greet", {"request": "sample"}, malformed=False),
-        work_dir=tmp_path / "work-model",
-    )
-
-    assert result["status"] == "passed"
-    evidence = result["summary"]["argument_sample_evidence"]["module.py:greet"]["request"]
-    assert evidence["source"] == "upstream_test_call:constructor"
-    assert evidence["value"]["fields"] == {"name": "Ada"}
-
-
-def test_import_error_falls_back_to_source_isolated_callable(tmp_path: Path):
-    project = tmp_path / "project"
-    project.mkdir()
-    _source(
-        project,
-        "from typing import DefinitelyUnavailable\n\n"
-        "def normalize(value):\n    return value.strip()\n",
-    )
-
-    result = run_executable_acceptance(
-        root=tmp_path,
-        project_dir=project,
-        test_plan=_plan("module.py:normalize", {"value": " sample "}, malformed=False),
-        work_dir=tmp_path / "work",
-    )
-
-    assert result["status"] == "passed"
-    assert result["summary"]["source_isolated_targets"] == ["module.py:normalize"]

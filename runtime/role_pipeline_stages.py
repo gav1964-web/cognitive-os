@@ -14,6 +14,9 @@ from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 from .technical_spec_policy import load_technical_spec_policy
 from .architect_first_slice_reselection import reselect_architecture_first_slice
+from .no_safe_candidate_recovery import run_no_safe_candidate_recovery
+from .programmer_patch_synthesizer import synthesize_recovery_patch_package
+from .recovery_patch_verification import verify_recovery_patch_package
 from .executable_reselection import (
     build_execution_reselection_request,
     feedback_iteration_limit,
@@ -156,8 +159,43 @@ def stage_after_review(state: dict[str, Any]) -> None:
     state["role_gates"] = outputs["role_gates"]
     state["paths"] = dict(outputs["artifact_writer"].get("paths") or {})
     state["human_documents"] = dict(outputs["human_document_writer"].get("documents") or {})
+    state["no_safe_candidate_recovery"] = run_no_safe_candidate_recovery(
+        project_root=state["project_dir"],
+        project=state["project_dir"].name,
+        technical_spec=state["spec"],
+        control_plane=state["control_plane"],
+    )
+    _run_recovery_developer_stage(state)
     transition = dict(state["control_plane"].get("role_transition", {}))
     state["next_action"] = str(transition.get("next_action") or _next_action(state["review"]))
+
+
+def _run_recovery_developer_stage(state: dict[str, Any]) -> None:
+    recovery = state["no_safe_candidate_recovery"]
+    if not state.get("run_executor") or recovery.get("status") != "bounded_rework_ready":
+        recovery["developer_execution"] = {
+            "status": "skipped",
+            "reason": "run_executor flag is false"
+            if not state.get("run_executor")
+            else "recovery route is not ready",
+        }
+        return
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    execution_dir = state["root"] / "artifacts" / "programmer_executor" / f"recovery_{stamp}"
+    package = synthesize_recovery_patch_package(
+        execution_dir=execution_dir,
+        project_dir=state["project_dir"],
+        recovery_route=recovery,
+    )
+    if package.get("status") == "prepared":
+        verification = verify_recovery_patch_package(
+            project_dir=state["project_dir"],
+            patch_package=package,
+            verification_dir=execution_dir / "differential_verification",
+        )
+        package["differential_verification"] = verification
+        package["verification"]["tester_differential_status"] = verification.get("status")
+    recovery["developer_execution"] = package
 
 
 def stage_after_decision(state: dict[str, Any]) -> None:
@@ -189,6 +227,8 @@ def stage_assemble_result(state: dict[str, Any]) -> None:
         "cognitive_control_plane": control_plane,
         "role_gates": state["role_gates"],
         "role_quality": _role_quality(state["spec"], state["implementation"], state["test_plan"], state["review"]),
+        "chain_telemetry": _chain_telemetry(state),
+        "no_safe_candidate_recovery": state["no_safe_candidate_recovery"],
         "artifacts": _artifact_summary(state["artifacts"], state["paths"]),
         "human_documents": state["human_documents"],
         "transform": transform,
@@ -199,6 +239,42 @@ def stage_assemble_result(state: dict[str, Any]) -> None:
             "foundry_invoked": transform.get("status") in {"promotion_ready", "promoted"},
             "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
             "l4_5_required": bool(dict(control_plane.get("semantic_escalation", {})).get("l4_5_required")),
+        },
+    }
+
+
+def _chain_telemetry(state: dict[str, Any]) -> dict[str, Any]:
+    request = dict(state["spec"].get("first_slice_reselection_request") or {})
+    build_history = []
+    if request.get("resolution_status"):
+        build_history.append({
+            "trigger": request.get("trigger"),
+            "resolution_status": request.get("resolution_status"),
+            "terminal": request.get("terminal"),
+            "outcome": request.get("outcome"),
+        })
+    risks = [dict(row) for row in state["review"].get("risk_assessment", []) if isinstance(row, dict)]
+    return {
+        "build_reselection_history": build_history,
+        "execution_reselection_history": list(state.get("execution_reselection_history") or []),
+        "role_transition": dict(state["control_plane"].get("role_transition") or {}),
+        "no_safe_candidate_recovery": {
+            "status": state["no_safe_candidate_recovery"].get("status"),
+            "route": list(state["no_safe_candidate_recovery"].get("route") or []),
+            "architect_gate_status": dict(
+                state["no_safe_candidate_recovery"].get("architect_reentry_gate") or {}
+            ).get("status"),
+            "candidate_status": dict(
+                state["no_safe_candidate_recovery"].get("provisional_candidate") or {}
+            ).get("status"),
+            "developer_execution_status": dict(
+                state["no_safe_candidate_recovery"].get("developer_execution") or {}
+            ).get("status"),
+        },
+        "review_risk_summary": {
+            "controlled": sum(row.get("disposition") == "controlled_by_verified_plan" for row in risks),
+            "requires_human_review": sum(row.get("disposition") == "requires_human_review" for row in risks),
+            "requires_rework": sum(row.get("disposition") == "requires_rework" for row in risks),
         },
     }
 

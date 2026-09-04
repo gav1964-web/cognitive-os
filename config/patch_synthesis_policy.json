@@ -1,6 +1,30 @@
 {
   "schema_version": "patch_synthesis_policy.v1",
   "recipes": {
+    "guard_empty_theme_config": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "empty_theme_config_guard_synthesized",
+      "operation_kind": "guard_empty_theme_config",
+      "required_symbol": "Theme._load_theme_config",
+      "automatic_source_mutation_allowed": false
+    },
+    "order_extra_hooks_after_wrappers": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "hook_extra_wrapper_order_synthesized",
+      "operation_kind": "order_extra_hooks_after_wrappers",
+      "required_symbol": "HookCaller.call_extra",
+      "automatic_source_mutation_allowed": false
+    },
+    "derive_dist_info_from_wheel_contents": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "wheel_dist_info_content_synthesized",
+      "operation_kind": "derive_dist_info_from_wheel_contents",
+      "required_symbol": "ProjectBuilder.metadata_path",
+      "automatic_source_mutation_allowed": false
+    },
     "return_literal_stub": {
       "enabled": true,
       "status": "prepared",
@@ -56,7 +80,110 @@
         "split_slash",
         "lower_split_words",
         "lib_name",
-        "values_choice_mapping"
+        "values_choice_mapping",
+        "mean_center_values",
+        "square_values",
+        "minmax_scale_values",
+        "threshold_binary",
+        "argmax_index",
+        "clamp_probabilities",
+        "clip_signed_unit",
+        "decay_rate",
+        "discount_returns"
+      ]
+    },
+    "extract_append_mapping_helper": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "append_mapping_helper_extracted",
+      "operation_kind": "extract_append_mapping_helper",
+      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+      "required_candidate_symbol": "normalize_record",
+      "target_cluster": "append_mapping_inside_effectful_loop",
+      "maximum_mapping_fields": 12,
+      "automatic_source_mutation_allowed": false,
+      "differential_verification": {
+        "profile": "legacy_process_all_fixture",
+        "case_inputs": ["name,value\nalice,1\n bob , 2 ", "", "   ,   "],
+        "timeout_seconds": 10,
+        "observations": ["return_value", "subprocess_calls", "written_files"]
+      },
+      "required_verification": [
+        "patched_source_compiles",
+        "tester_differential_verification_passes",
+        "origin_callable_remains_source_backed",
+        "proposed_callable_becomes_source_backed",
+        "normal_architect_reselection_selects_proposed_callable"
+      ]
+    },
+    "extract_json_dumps_helper": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "json_dumps_helper_extracted",
+      "operation_kind": "extract_json_dumps_helper",
+      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+      "required_candidate_symbol": "serialize_json",
+      "target_cluster": "serialize_json_inside_filesystem_boundary",
+      "maximum_free_variables": 1,
+      "automatic_source_mutation_allowed": false,
+      "differential_verification": {
+        "case_variants": ["normal", "empty"],
+        "timeout_seconds": 10,
+        "profile": "callable_file_output",
+        "observations": ["return_value", "subprocess_calls", "written_files"]
+      },
+      "required_verification": [
+        "patched_source_compiles",
+        "tester_differential_verification_passes",
+        "origin_callable_remains_source_backed",
+        "proposed_callable_becomes_source_backed",
+        "normal_architect_reselection_selects_proposed_callable"
+      ]
+    },
+    "extract_json_loads_helper": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "json_loads_helper_extracted",
+      "operation_kind": "extract_json_loads_helper",
+      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+      "required_candidate_symbol": "parse_json",
+      "target_cluster": "parse_json_inside_filesystem_boundary",
+      "automatic_source_mutation_allowed": false,
+      "differential_verification": {
+        "case_variants": ["normal", "empty"],
+        "timeout_seconds": 10,
+        "profile": "callable_json_input",
+        "observations": ["return_value", "subprocess_calls", "written_files"]
+      },
+      "required_verification": [
+        "patched_source_compiles",
+        "tester_differential_verification_passes",
+        "origin_callable_remains_source_backed",
+        "proposed_callable_becomes_source_backed",
+        "normal_architect_reselection_selects_proposed_callable"
+      ]
+    },
+    "extract_splitlines_helper": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "splitlines_helper_extracted",
+      "operation_kind": "extract_splitlines_helper",
+      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+      "required_candidate_symbol": "split_lines",
+      "target_cluster": "parse_text_inside_io_boundary",
+      "automatic_source_mutation_allowed": false,
+      "differential_verification": {
+        "case_variants": ["normal", "empty"],
+        "timeout_seconds": 10,
+        "profile": "callable_text_input",
+        "observations": ["return_value", "subprocess_calls", "written_files"]
+      },
+      "required_verification": [
+        "patched_source_compiles",
+        "tester_differential_verification_passes",
+        "origin_callable_remains_source_backed",
+        "proposed_callable_becomes_source_backed",
+        "normal_architect_reselection_selects_proposed_callable"
       ]
     },
     "required_input_guard": {
@@ -83,6 +210,131 @@
       "kwargs_guard": [
         "if \"{key}\" not in {kwargs}:",
         "    raise ValueError(\"{key} required\")"
+      ]
+    },
+    "missing_registry_env_fallback": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "missing_registry_env_fallback_synthesized",
+      "operation_kind": "fallback_missing_registry_to_env",
+      "required_exception": "FileNotFoundError",
+      "required_call_attribute": "QueryValueEx",
+      "fallback_function": "get_win_folder_from_env_vars",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "timestamp_range_error_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "timestamp_range_error_contract_synthesized",
+      "operation_kind": "normalize_timestamp_range_error",
+      "required_exceptions": ["OverflowError", "OSError"],
+      "raised_exception": "ValueError",
+      "replacement_message": "timestamp out of range",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "falsy_primitive_empty_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "falsy_primitive_empty_contract_synthesized",
+      "operation_kind": "preserve_falsy_primitive_override",
+      "required_symbol_suffix": "strategy_override_if_not_empty",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "incomplete_import_token_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "incomplete_import_token_contract_synthesized",
+      "operation_kind": "guard_incomplete_import_tokens",
+      "required_symbol": "extract_package_name",
+      "required_token_index": 1,
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "duplicate_cli_short_option_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "duplicate_cli_short_option_contract_synthesized",
+      "operation_kind": "replace_duplicate_cli_short_option",
+      "required_symbol": "main",
+      "option_to_change": "--emoji",
+      "peer_option": "--json",
+      "duplicate_short_flag": "-j",
+      "replacement_short_flag": "-J",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "strict_default_string_comparison_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "strict_default_string_comparison_contract_synthesized",
+      "operation_kind": "guard_empty_string_comparison_type",
+      "required_symbol_suffix": "Option.get_help_extra",
+      "value_name": "default_value",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "escaped_fstring_brace_offset_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "escaped_fstring_brace_offset_contract_synthesized",
+      "operation_kind": "adjust_fstring_middle_brace_offsets",
+      "required_symbol": "FileProcessor.build_logical_line_tokens",
+      "offset_name": "brace_offset",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
+    },
+    "trailing_backslash_index_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "trailing_backslash_index_contract_synthesized",
+      "operation_kind": "guard_trailing_backslash_index",
+      "required_symbol": "file_contents",
+      "index_name": "index",
+      "count_name": "line_count",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
       ]
     }
   }

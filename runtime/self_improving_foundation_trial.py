@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import inspect
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -22,6 +21,9 @@ from .self_improvement_iteration import (
 from .self_improvement_hypothesis_validation import HoldoutDiscoverer, run_hypothesis_validation
 from .self_improvement_engine_fingerprint import improvement_engine_fingerprint
 from .self_improvement_training import probe_project, train_on_project
+from .self_development_change import build_capability_change_dossier
+from .self_improving_foundation_trial_io import write_checkpoint as _write_checkpoint
+from .self_improving_foundation_trial_io import write_report as _write_report
 
 
 Trainer = Callable[..., dict[str, Any]]
@@ -190,6 +192,13 @@ def run_self_improving_foundation_trial(
         ),
         *_resource_capability_requests(list(verification.get("cases") or [])),
     ]
+    shadow_dossiers = [
+        build_capability_change_dossier(
+            request,
+            evaluator_fingerprint=engine_fingerprint,
+        )
+        for request in capability_requests
+    ]
     remaining_unattempted = any(
         _trainable_failure(case, target_score)
         and str(case.get("project") or "") not in attempted_projects
@@ -219,6 +228,7 @@ def run_self_improving_foundation_trial(
         },
         "capability_gaps": capability_gap_report(load_kb_candidates(root=root)),
         "capability_development_requests": capability_requests,
+        "self_development_shadow_dossiers": shadow_dossiers,
         "summary": {
             "eligible_failure_count": len(initial_failures),
             "resource_blocked_project_count": len(_resource_blocked_projects(initial_cases)),
@@ -244,6 +254,7 @@ def run_self_improving_foundation_trial(
             "active_kb_promotion_mode": "gated_improvement_plugins",
             "manual_project_repair_allowed": False,
             "critical_intervention_repairs_loop_only": True,
+            "self_development_dossiers_are_shadow_only": True,
             "config_promotion_mode": "plugin_policy" if promote_config is None else "enabled" if promote_config else "disabled",
         },
     }
@@ -368,31 +379,3 @@ def _measure(
 def _emit(sink: ProgressSink | None, stage: str, **details: Any) -> None:
     if sink:
         sink({"stage": stage, **details})
-
-
-def _write_report(root: Path, report: dict[str, Any]) -> Path:
-    directory = root / "artifacts" / "self_improvement"
-    directory.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    path = directory / f"self_improving_foundation_trial_{stamp}.json"
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
-
-
-def _write_checkpoint(
-    root: Path, baseline: dict[str, Any], training: list[dict[str, Any]], target_score: float
-) -> Path:
-    payload = {
-        "artifact_type": "SelfImprovingFoundationCheckpoint",
-        "status": "verification_pending",
-        "target_score": target_score,
-        "baseline_report_path": baseline.get("report_path"),
-        "training": [{
-            "project": row.get("project"), "status": row.get("status"),
-            "report_path": row.get("report_path"), "outcome": row.get("outcome"),
-        } for row in training],
-    }
-    path = root / "artifacts" / "self_improvement" / "self_improving_foundation_checkpoint.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path

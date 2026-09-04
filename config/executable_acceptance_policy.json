@@ -37,11 +37,14 @@
     },
     "promoted_selection_policy_admission": {
       "enabled": true,
-      "allowed_reselection_triggers": ["low_first_slice_viability"],
+      "allowed_reselection_triggers": [
+        "low_first_slice_viability",
+        "executable_acceptance_rejected"
+      ],
       "require_process_isolation": true,
       "require_complete_source_body": true,
       "require_no_declared_effects": false,
-      "require_no_direct_effects": true,
+      "require_no_direct_effects": false,
       "require_no_state_mutation": true
     }
   },
@@ -52,15 +55,18 @@
       "derived_conversion": false,
       "directory_path": false,
       "indexed_sequence": false,
-      "nested_mapping_paths": false
+      "nested_mapping_paths": true
     },
     "priorities": {
       "allowed_collection_domain": 105,
+      "array_axis": 116,
       "comparison_literal": 70,
       "conversion": 80,
       "declared_default": 110,
+      "dynamic_type_check": 114,
       "importable_module_path": 110,
       "iterated_literal_domain": 106,
+      "allowed_collection_domain": 105,
       "keyword_payload": 95,
       "length_constraint": 88,
       "literal_buffer_method": 109,
@@ -73,9 +79,11 @@
       "required_mapping_keys": 90,
       "strptime_format": 100,
       "split_unpack": 108,
+      "tensor_window_contract": 118,
       "validation_format_hint": 98
     },
     "conversion_samples": {"float": "1.0", "int": "1", "sorted": []},
+    "dynamic_type_check_sample": "sample",
     "numeric_sequence_calls": ["absolute", "array", "asarray", "flipud", "mean", "std"],
     "numeric_sequence_sample": [0.0, 1.0],
     "numeric_arithmetic_sample": 1,
@@ -84,11 +92,16 @@
       "datetime.datetime.utcfromtimestamp": 0,
       "datetime.fromtimestamp": 0,
       "datetime.utcfromtimestamp": 0,
+      "inspect.isclass": {"__fixture__": "callable_identity"},
+      "inspect.ismethod": {"__fixture__": "callable_identity"},
+      "inspect.isroutine": {"__fixture__": "callable_identity"},
+      "inspect.signature": {"__fixture__": "callable_identity"},
+      "inspect.unwrap": {"__fixture__": "callable_identity"},
       "torch.from_numpy": {"__fixture__": "numpy_array", "items": [0.0, 1.0]}
     },
     "parameter_callable_fixture": "callable_identity",
     "protocol_method_prefixes": ["collect_", "fetch_", "find_", "get_", "iter_", "list_", "load_", "query_", "read_", "resolve_", "select_"],
-    "mapping_protocol_methods": ["items", "keys", "values"],
+    "mapping_protocol_methods": ["get", "items", "keys", "values"],
     "mapping_protocol_sample": {"__fixture__": "empty_mapping"},
     "maximum_inferred_length": 32,
     "literal_buffer_methods": {
@@ -104,6 +117,10 @@
       "maximum_items": 16,
       "split_methods": ["rsplit", "split"],
       "split_part": "sample"
+    },
+    "tensor_window_contract": {
+      "enabled": true,
+      "dimension": 2
     },
     "attribute_samples": {
       "callable_protocol_fixtures": {
@@ -185,12 +202,15 @@
           "gradio_client.data_classes": {"attrs": {"ParameterInfo": {"__fixture__": "stub_class"}}},
           "gradio_client.exceptions": {"attrs": {"AppError": {"__fixture__": "stub_class"}, "AuthenticationError": {"__fixture__": "stub_class"}, "ValidationError": {"__fixture__": "stub_class"}}},
           "jupyter_core.paths": {"attrs": {"ENV_CONFIG_PATH": [], "SYSTEM_CONFIG_PATH": [], "jupyter_config_dir": {"__fixture__": "callable_empty_string"}, "jupyter_config_path": {"__fixture__": "callable_empty_list"}, "jupyter_path": {"__fixture__": "callable_empty_list"}}},
+          "lightning_utilities.core.enums": {"attrs": {"StrEnum": {"__fixture__": "str_enum_class"}}},
           "mcp_types": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
           "mcp_types.jsonrpc": {"attrs": {"__all__": ["INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
           "mcp_types.methods": {"attrs": {"__all__": [], "__getattr__": {"__fixture__": "module_getattr_stub"}}},
           "mcp_types.version": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "LATEST_PROTOCOL_VERSION", "is_version_at_least"], "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "LATEST_PROTOCOL_VERSION": "2025-06-18", "is_version_at_least": {"__fixture__": "callable_true"}}},
           "pants.engine.internals.native_engine": {"attrs": {"__getattr__": {"__fixture__": "module_getattr_stub"}, "EngineError": {"__fixture__": "stub_class"}, "ProcessExecutionEnvironment": {"__fixture__": "stub_class"}}},
           "passlib.context": {"attrs": {"CryptContext": {"__fixture__": "crypt_context_class"}}},
+          "platformdirs.version": {"attrs": {"__version__": "0.0.0", "__version_tuple__": [0, 0, 0]}},
+          "status": {"attrs": {"HTTP_401_UNAUTHORIZED": 401, "HTTP_403_FORBIDDEN": 403, "HTTP_404_NOT_FOUND": 404, "is_client_error": {"__fixture__": "callable_false"}, "is_server_error": {"__fixture__": "callable_false"}}},
           "semantic_version": {"attrs": {"__all__": ["Version", "SimpleSpec"], "Version": {"__fixture__": "stub_class"}, "SimpleSpec": {"__fixture__": "stub_class"}}},
           "traitlets.config.loader": {"attrs": {"Config": {"__fixture__": "stub_class"}, "ConfigFileNotFound": {"__fixture__": "stub_class"}}},
           "tox.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
@@ -217,6 +237,7 @@
     "delegated_transport_fixture": "callable_transport_result",
     "numeric_receiver_calls": ["arange", "range"],
     "numeric_receiver_attribute_sample": 1,
+    "comparison_receiver_attribute_sample": 16,
     "required_mapping_key_sample": "0000000000000000000000000000000000000000000000000000000000000000",
     "required_mapping_value_fixture": "safe_method_attribute",
     "callable_attribute_fixtures": {
@@ -289,6 +310,15 @@
         "get_table_column_names": {"__fixture__": "callable_column_names"},
         "get_validator": {"__fixture__": "callable_ge_validator"},
         "semantic_type_filter": {"__fixture__": "ge_semantic_filter"}
+      },
+      "MultinomialHMM.decode": {
+        "parameters": {
+          "A": {"__fixture__": "numpy_array", "items": [[0.8, 0.2], [0.3, 0.7]]},
+          "B": {"__fixture__": "numpy_array", "items": [[0.6, 0.4], [0.2, 0.8]]},
+          "pi": {"__fixture__": "numpy_array", "items": [0.5, 0.5]}
+        },
+        "hyperparameters": {"eps": 2.220446049250313e-16},
+        "derived_variables": {"N": 2, "V": 2}
       }
     },
     "recipes": {
@@ -393,12 +423,14 @@
       "arity": 1,
       "is_path_param": false,
       "image": [[1.0, 2.0], [3.0, 4.0]],
+      "ignore_update_check": true,
       "inputs": [],
       "flag": false,
       "js": null,
       "key": null,
       "many": false,
       "n": 8,
+      "o": {"__fixture__": "numpy_array", "items": [0, 1, 1, 0]},
       "markup_mode": "rich",
       "name": "value",
       "node_id": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -411,10 +443,11 @@
       "parse_context": {},
       "parse_float": {"__fixture__": "callable_float"},
       "param_name": "value",
+      "path": {"__fixture__": "readable_temp_path"},
       "pos": 0,
       "query_filter": null,
       "query_vector": [1.0, 0.0],
-      "response": "sample",
+      "response": {"__fixture__": "http_response_ok"},
       "request": {"__fixture__": "asgi_request_no_accept"},
       "receive": {"__fixture__": "asgi_receive_empty"},
       "renderable": null,
@@ -443,6 +476,8 @@
       "time_limit": null,
       "tokens": ["2026", "-", "01", "-", "02"],
       "transform_fn": {"__fixture__": "callable_identity"},
+      "training_dataframe": {"__fixture__": "pandas_dataframe"},
+      "testing_dataframe": {"__fixture__": "pandas_dataframe"},
       "trigger_mode": "once",
       "unknown": false,
       "body": {"__fixture__": "bytes_io_empty"},
@@ -470,7 +505,8 @@
       "datetime": "datetime_utc",
       "id_of": "callable_id_of",
       "logging.logrecord": "declared_model",
-      "source": "pytest_source_minimal"
+      "source": "pytest_source_minimal",
+      "type[": "python_type_str"
     },
       "type_contains": {
       "array": [],

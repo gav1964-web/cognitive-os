@@ -2,25 +2,38 @@
 
 from __future__ import annotations
 
-import inspect, sys
+import sys
 from pathlib import Path
 from typing import Any
 
-from .executable_acceptance_loading import cleanup_dependency_stubs, import_path, install_dependency_profile_modules, load_supported_callable
-from .executable_acceptance_module_path import package_import_target
+from .executable_acceptance_contract_inference import infer_argument_samples
 from .executable_acceptance_isolation import load_source_isolated_callable
+from .executable_acceptance_loading import (
+    cleanup_dependency_stubs,
+    import_path,
+    install_dependency_profile_modules,
+    load_supported_callable,
+)
 from .executable_acceptance_methods import load_method_callable, method_detail
-from .executable_acceptance_negative_case import missing_input_case_required
+from .executable_acceptance_module_path import package_import_target
+from .executable_acceptance_policy import execution_context_policy, skipped_recovery_hint
 from .executable_acceptance_samples import positive_samples_execute
-from .executable_acceptance_policy import dependency_stub_policy, execution_context_policy, sample_value, skipped_recovery_hint
+from .executable_acceptance_support_binding import (
+    ACCEPTED_PARAM_KINDS,
+    _adapt_given_to_signature,
+    _linked_contract_sources_requiring_override,
+    _missing_required_samples,
+    _signature_sample_value,
+    _weaker_than_configured_fixture,
+    positive_case_binding,
+    signature_needs_negative_case,
+)
 from .executable_acceptance_support_results import module_profile_attrs as _module_profile_attrs
 from .executable_acceptance_support_results import reason_counts as _reason_counts
 from .executable_acceptance_support_results import unsupported as _unsupported
-from .executable_acceptance_target_shape import ast_skip_reason
 from .executable_acceptance_target_resolution import resolve_target_path
-from .executable_acceptance_contract_inference import infer_argument_samples
+from .executable_acceptance_target_shape import ast_skip_reason
 
-ACCEPTED_PARAM_KINDS = {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 
 def harness_summary(project_dir: Path, obligations: list[dict[str, Any]]) -> dict[str, Any]:
     targets: list[str] = []
@@ -165,7 +178,9 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
             cleanup_dependency_stubs(loaded)
             return {
                 "supported": True,
-                "strict_negative": signature_needs_negative_case(func, target, obligations),
+                "strict_negative": signature_needs_negative_case(
+                    func, target, obligations, synthetic_input_keys={"receiver_state"}
+                ),
                 "reason": "",
                 "method": method["method"],
                 "method_instance_attributes": method.get("instance_attributes", {}),
@@ -229,7 +244,12 @@ def callable_target_support(project_dir: Path, target: str, obligations: list[di
     cleanup_dependency_stubs(loaded)
     return {
         "supported": True,
-        "strict_negative": signature_needs_negative_case(func, target, obligations),
+        "strict_negative": signature_needs_negative_case(
+            func,
+            target,
+            obligations,
+            synthetic_input_keys={"receiver_state"} if loaded.get("method") else set(),
+        ),
         "reason": "",
         "method": dict(loaded.get("method") or {}),
         "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}),
@@ -270,7 +290,8 @@ def _source_isolated_support(
     diagnostics: list[str] = []
     if not binding["accepted"] or not positive_samples_execute(func, target, obligations, dict(binding["mapping"]), dict(binding["defaults"]), bool(binding.get("drop_surplus_payload")), diagnostics, dict(binding["overrides"])):
         return _unsupported("positive_sample_execution_failed", diagnostics[0] if diagnostics else "")
-    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "argument_overrides": binding["overrides"], "argument_sample_evidence": binding["evidence"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+    return {"supported": True, "strict_negative": signature_needs_negative_case(func, target, obligations, synthetic_input_keys={"receiver_state"} if loaded.get("method") else set()), "reason": "", "method": dict(loaded.get("method") or {}), "method_instance_attributes": dict(loaded.get("method_instance_attributes") or {}), "source_isolated": True, "effect_module_stubs": [*list(loaded.get("effect_module_stubs") or []), *[f"wildcard:{name}" for name in loaded.get("wildcard_import_stubs") or []]], "argument_mapping": binding["mapping"], "argument_defaults": binding["defaults"], "argument_overrides": binding["overrides"], "argument_sample_evidence": binding["evidence"], "drop_surplus_payload": bool(binding.get("drop_surplus_payload"))}
+
 
 def _isolated_retry(
     path: Path,
@@ -284,98 +305,10 @@ def _isolated_retry(
         return _unsupported(str(isolated.get("reason") or "target_not_callable"), str(isolated.get("detail") or ""))
     return _source_isolated_support(isolated, target, obligations, inferred)
 
-def positive_case_binding(func: object, target: str, obligations: list[dict[str, Any]], inferred: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
-    try:
-        signature = inspect.signature(func)
-    except (TypeError, ValueError):
-        return {"accepted": False, "mapping": {}, "defaults": {}, "overrides": {}, "evidence": {}, "drop_surplus_payload": False}
-    mapping: dict[str, str] = {}
-    defaults: dict[str, Any] = {}
-    drop_surplus = False
-    for row in obligations:
-        if row.get("target") != target or row.get("kind") != "positive_contract_case":
-            continue
-        given = dict(row.get("given", {}))
-        try:
-            signature.bind(**given)
-            mapping.update({key: key for key in given})
-        except TypeError:
-            adapted = _adapt_given_to_signature(signature, given)
-            if adapted is None:
-                return {"accepted": False, "mapping": {}, "defaults": {}, "overrides": {}, "evidence": {}, "drop_surplus_payload": False}
-            drop_surplus = drop_surplus or (not adapted and bool(given))
-            mapping.update({actual: source for actual, source in adapted.items()})
-        defaults.update(_missing_required_samples(signature, mapping))
-    accepts_keywords = any(
-        param.kind == inspect.Parameter.VAR_KEYWORD
-        for param in signature.parameters.values()
-    )
-    configured = dict(defaults)
-    for row in obligations:
-        if row.get("target") != target or row.get("kind") != "positive_contract_case":
-            continue
-        configured.update(dict(row.get("given") or {}))
-    evidence = {
-        name: dict(row)
-        for name, row in dict(inferred or {}).items()
-        if (name in signature.parameters or accepts_keywords)
-        and not _weaker_than_configured_fixture(name, row, configured)
-    }
-    overrides = {name: row["value"] for name, row in evidence.items()}
-    return {"accepted": True, "mapping": mapping, "defaults": defaults, "overrides": overrides, "evidence": evidence, "drop_surplus_payload": drop_surplus}
 
-
-def _weaker_than_configured_fixture(
-    name: str, inferred: dict[str, Any], defaults: dict[str, Any]
-) -> bool:
-    if name not in defaults:
-        return False
-    configured = defaults.get(name)
-    inferred_value = inferred.get("value")
-    source = str(inferred.get("source") or "")
-    if source.startswith("ast_mapping_protocol:") or source == "ast_required_mapping_keys":
-        return False
-    if configured == "sample" or isinstance(configured, (dict, list)) and not configured:
-        return False
-    return configured != inferred_value
-
-
-def signature_needs_negative_case(func: object, target: str, obligations: list[dict[str, Any]]) -> bool:
-    binding = positive_case_binding(func, target, obligations)
-    return missing_input_case_required(
-        func, target, obligations,
-        drops_surplus_payload=bool(binding.get("drop_surplus_payload")),
-    )
-
-
-def _adapt_given_to_signature(signature: inspect.Signature, given: dict[str, Any]) -> dict[str, str] | None:
-    params = [name for name, param in signature.parameters.items() if param.kind in ACCEPTED_PARAM_KINDS]
-    if not params:
-        return {}
-    if set(given) <= set(params):
-        return {key: key for key in given}
-    exact = {name: name for name in params if name in given}
-    required = {
-        name
-        for name, param in signature.parameters.items()
-        if param.kind in ACCEPTED_PARAM_KINDS and param.default is inspect.Parameter.empty
-    }
-    if required <= set(exact):
-        return exact
-    if len(params) < len(given):
-        return None
-    return dict(zip(params, given))
-
-def _missing_required_samples(signature: inspect.Signature, mapping: dict[str, str]) -> dict[str, Any]:
-    defaults: dict[str, Any] = {}
-    for name, param in signature.parameters.items():
-        if name in mapping or param.default is not inspect.Parameter.empty:
-            continue
-        if param.kind not in ACCEPTED_PARAM_KINDS:
-            continue
-        defaults[name] = _signature_sample_value(name, str(param.annotation or ""))
-    return defaults
-
-
-def _signature_sample_value(name: str, annotation: str) -> Any:
-    return sample_value(annotation, name, signature_mode=True)
+__all__ = [
+    "callable_target_support",
+    "harness_summary",
+    "positive_case_binding",
+    "signature_needs_negative_case",
+]

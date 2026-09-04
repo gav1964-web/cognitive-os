@@ -1,11 +1,6 @@
-import runtime.architect_first_slice_reselection as architect_reselection
-import runtime.configured_role_pipeline as configured_pipeline
-from runtime.architect_first_slice_reselection import reselect_architecture_first_slice
-from runtime.first_slice_reselection_request import build_first_slice_reselection_request
-from runtime.role_source_context import build_source_context
-from runtime.spec_writer_target_binding import execution_cost_adjustment, promote_environment_ready_candidate
-from runtime.technical_spec_builder import build_technical_spec
+from __future__ import annotations
 
+from tests.runtime.first_slice_reselection_request_helpers import *
 
 def test_environment_ready_candidate_is_promoted_within_score_slack():
     missing = _ranked("pkg/adapter.py:run", 80, "missing_external")
@@ -95,8 +90,6 @@ def test_reselection_request_rejects_candidate_without_bound_source_body():
     assert request["trigger"] == "source_body_not_bound_in_approved_first_slice"
 
 
-
-
 def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()
@@ -134,6 +127,117 @@ def test_architect_expands_candidate_window_and_rebuilds_ready_spec(tmp_path):
     assert second_spec["extraction_contract"]["candidate"] == "pkg/core.py:normalize"
     assert second_spec["first_slice_reselection_request"]["status"] == "not_required"
     assert resolution["architecture_decision"]["architecture_synthesis"]["project_profile"]["archetype"]
+
+
+def test_architect_reselection_prefers_callable_over_property_accessor(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "adapter.py").write_text(
+        "import optional_sdk\n\ndef convert_value(value):\n    return optional_sdk.convert(value)\n",
+        encoding="utf-8",
+    )
+    (package / "core.py").write_text(
+        "class Service:\n"
+        "    @property\n"
+        "    def current_value(self) -> str:\n"
+        "        return 'value'\n\n"
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip()\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
+        {"path": "pkg/core.py", "name": "current_value"},
+        {"path": "pkg/core.py", "name": "normalize"},
+    ]
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "selected"
+    assert resolution["outcome"]["selected_targets"][0] == "pkg/core.py:normalize"
+    property_row = next(
+        row for row in resolution["outcome"]["candidate_viability"]
+        if row["target"] == "pkg/core.py:current_value"
+    )
+    assert property_row["property_accessor"] is True
+
+
+def test_architect_reselection_prefers_pure_callable_over_filesystem_write(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "core.py").write_text(
+        "from pathlib import Path\n\n"
+        "def write_value(value: str, path: str) -> str:\n"
+        "    Path(path).write_text(value)\n"
+        "    return path\n\n"
+        "def normalize(value: str) -> str:\n"
+        "    return value.strip()\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
+        {"path": "pkg/core.py", "name": "write_value"},
+        {"path": "pkg/core.py", "name": "normalize"},
+    ]
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "selected"
+    assert resolution["outcome"]["selected_targets"][0] == "pkg/core.py:normalize"
+
+
+def test_execution_feedback_keeps_configured_semantic_floor(monkeypatch, tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "core.py").write_text(
+        "def get_value(value):\n    return value\n",
+        encoding="utf-8",
+    )
+    project_report = _project_report(tmp_path, include_ready=False)
+    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
+        {"path": "pkg/core.py", "name": "get_value"}
+    ]
+    adr = _architecture_decision(tmp_path, project_report)
+    spec = build_technical_spec(architecture_decision=adr)
+    spec["first_slice_reselection_request"] = {
+        "status": "required",
+        "trigger": "executable_acceptance_rejected",
+        "current_target": "pkg/adapter.py:convert_value",
+        "blocking_evidence": {},
+    }
+    monkeypatch.setattr(
+        architect_reselection,
+        "contract_quality",
+        lambda *_args: {
+            "semantic_score": 71,
+            "semantic_status": "suspicious",
+            "contract_shape_score": 100,
+        },
+    )
+
+    resolution = reselect_architecture_first_slice(
+        architecture_decision=adr,
+        technical_spec=spec,
+        project_report=project_report,
+        iteration=1,
+    )
+
+    assert resolution["status"] == "exhausted"
+    assert resolution["outcome"]["semantic_qualified_candidate_count"] == 0
 
 
 def test_architect_reports_exhausted_without_environment_ready_candidate(tmp_path):
@@ -222,173 +326,3 @@ def test_architect_defers_runtime_method_even_with_declared_dependency(tmp_path)
     assert resolution["status"] == "exhausted"
     assert resolution["outcome"]["viability_deferred_candidate_count"] == 1
     assert resolution["outcome"]["selected_targets"] == []
-
-
-def test_architect_qualifies_ambiguous_methods_during_reselection(tmp_path):
-    package = tmp_path / "pkg"
-    package.mkdir()
-    (package / "adapter.py").write_text(
-        "class JsonAdapter:\n    def transform(self, value):\n        return {'value': value}\n\n"
-        "class CsvAdapter:\n    def transform(self, value):\n        return [value]\n",
-        encoding="utf-8",
-    )
-    project_report = _project_report(tmp_path, include_ready=False)
-    project_report["answers"]["3_capabilities"]["pure_transforms"] = [
-        {"path": "pkg/adapter.py", "name": "transform"}
-    ]
-    adr = _architecture_decision(tmp_path, project_report)
-    spec = build_technical_spec(architecture_decision=adr)
-    spec["first_slice_reselection_request"] = {
-        "status": "required",
-        "trigger": "ambiguous_method_symbol",
-    }
-
-    resolution = reselect_architecture_first_slice(
-        architecture_decision=adr,
-        technical_spec=spec,
-        project_report=project_report,
-        iteration=1,
-    )
-
-    assert resolution["status"] == "selected"
-    assert resolution["outcome"]["selected_targets"] == [
-        "pkg/adapter.py:CsvAdapter.transform",
-        "pkg/adapter.py:JsonAdapter.transform",
-    ]
-
-
-def test_configured_pipeline_rebuilds_spec_once_after_architect_reselection(monkeypatch):
-    initial = {
-        "architecture_decision": {"artifact_type": "ArchitectureDecisionRecord", "role": "architect"},
-        "technical_spec": {
-            "artifact_type": "TechnicalSpec",
-            "role": "spec_writer",
-            "first_slice_reselection_request": {"status": "required"},
-        },
-        "implementation_plan": {
-            "artifact_type": "ImplementationPlan",
-            "first_slice_reselection_request": {"status": "required"},
-        },
-    }
-    revised = {
-        "artifact_type": "ArchitectureDecisionRecord",
-        "role": "architect",
-        "first_slice_reselection_history": [{"status": "selected"}],
-    }
-    calls = []
-
-    monkeypatch.setattr(
-        architect_reselection,
-        "reselect_architecture_first_slice",
-        lambda **kwargs: {"status": "selected", "architecture_decision": revised, "outcome": {"status": "selected"}},
-    )
-
-    def rerun(**kwargs):
-        calls.append(kwargs)
-        transform = kwargs["artifact_transform"]
-        return {
-            "architecture_decision": transform(
-                {"artifact_type": "ArchitectureDecisionRecord", "role": "architect", "fresh": True}
-            ),
-            "technical_spec": transform(
-                {
-                    "artifact_type": "TechnicalSpec",
-                    "role": "spec_writer",
-                    "first_slice_reselection_request": {"status": "not_required"},
-                }
-            ),
-            "implementation_plan": {
-                "artifact_type": "ImplementationPlan",
-                "first_slice_reselection_request": {"status": "not_required"},
-            },
-        }
-
-    monkeypatch.setattr(configured_pipeline, "run_role_artifact_pipeline", rerun)
-    result = configured_pipeline._close_first_slice_reselection_loop(
-        artifacts=initial,
-        goal="Select a ready slice",
-        project_report={},
-        pipeline={"steps": []},
-        pipeline_kwargs={},
-    )
-
-    assert len(calls) == 1
-    assert result["architecture_decision"] == revised
-    request = result["technical_spec"]["first_slice_reselection_request"]
-    assert request["status"] == "not_required"
-    assert request["resolution_status"] == "selected"
-    assert request["terminal"] is False
-    assert result["implementation_plan"]["first_slice_reselection_request"] == request
-
-
-def test_reselection_applies_user_transform_to_revised_architecture_decision():
-    revised = {"artifact_type": "ArchitectureDecisionRecord", "reselected": True}
-
-    def clamp(artifact):
-        return {**artifact, "evaluation_target_clamp": {"target": "pkg/state.py:update"}}
-
-    transform = configured_pipeline._replacement_transform(revised, clamp)
-    result = transform({"artifact_type": "ArchitectureDecisionRecord", "original": True})
-
-    assert result == {
-        "artifact_type": "ArchitectureDecisionRecord",
-        "reselected": True,
-        "evaluation_target_clamp": {"target": "pkg/state.py:update"},
-    }
-
-
-def _ranked(source: str, score: int, status: str, *, semantic_score: int = 0) -> dict:
-    return {
-        "source": source,
-        "score": score,
-        "semantic_score": semantic_score,
-        "index": 0 if status == "missing_external" else 1,
-        "reasons": [],
-        "evidence": {"dependency_readiness": {"status": status}},
-    }
-
-
-def _project_report(root, *, include_ready: bool) -> dict:
-    pure = [{"path": "pkg/core.py", "name": "normalize"}] if include_ready else []
-    return {
-        "summary": {"root": root.as_posix()},
-        "answers": {
-            "3_capabilities": {"pure_transforms": pure},
-            "6_runtime_extraction_readiness": {
-                "minimal_extraction_plan": {
-                    "capabilities_to_extract": [{"capability": "pkg/adapter.py:convert_value"}]
-                }
-            },
-        },
-    }
-
-
-def _architecture_decision(root, project_report: dict) -> dict:
-    target = "pkg/adapter.py:convert_value"
-    first_slice = {
-        "name": "adapter_slice",
-        "goal": "Specify one callable.",
-        "targets": [target],
-        "steps": ["Specify the callable contract."],
-    }
-    return {
-        "artifact_type": "ArchitectureDecisionRecord",
-        "role": "architect",
-        "status": "ok",
-        "goal": "Prepare a safe first slice",
-        "project": root.as_posix(),
-        "chosen_option": {"id": "minimal_safe_extraction"},
-        "first_slice_contract": first_slice,
-        "source_context": build_source_context(
-            project_root=root.as_posix(),
-            project_report=project_report,
-            sources=[target],
-        ),
-        "spec_writer_brief": {
-            "scope": ["Specify one callable."],
-            "files_or_symbols": [target],
-            "acceptance_targets": ["Callable contract is explicit."],
-            "first_slice": first_slice,
-        },
-        "traceability": [{"source": target, "requirement": "Capability requires TechnicalSpec."}],
-    }

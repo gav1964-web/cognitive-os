@@ -17,6 +17,15 @@ def test_lint_rejects_python_file_over_400_lines(tmp_path):
         lint_plugin(plugin, "too_big")
 
 
+def test_lint_leaves_test_module_size_to_pytest(tmp_path):
+    plugin = tmp_path / "plugins" / "large_test_corpus"
+    tests = plugin / "tests"
+    tests.mkdir(parents=True)
+    (tests / "test_large.py").write_text("\n".join(["x = 1"] * 401), encoding="utf-8")
+
+    lint_plugin(plugin, "large_test_corpus")
+
+
 def test_lint_rejects_plugin_to_plugin_import(tmp_path):
     plugin = tmp_path / "plugins" / "alpha"
     src = plugin / "src"
@@ -25,4 +34,3 @@ def test_lint_rejects_plugin_to_plugin_import(tmp_path):
 
     with pytest.raises(PluginLintError, match="plugin-to-plugin"):
         lint_plugin(plugin, "alpha")
-

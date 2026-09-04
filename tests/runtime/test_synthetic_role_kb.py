@@ -11,6 +11,7 @@ from runtime.synthetic_role_kb import (
     generate_synthetic_role_qa,
     record_role_qa_feedback,
     search_synthetic_role_qa,
+    synthetic_role_qa_audit,
     synthetic_probe_report,
     synthetic_role_qa_summary,
     write_synthetic_role_qa,
@@ -67,6 +68,31 @@ def test_provider_interface_seed_answers_openai_api_question():
     assert top["source_template"] == "provider_interface_mapping"
     assert top["answer"]["answer_type"] == "provider_interface_mapping_advisory"
     assert "native_direct" in top["answer"]["expected_output_shape"]
+    assert "llm" in result["query_tokens"]
+    assert "match_details" in top
+
+
+def test_token_aware_search_expands_tz_to_technical_spec_contracts():
+    corpus = generate_synthetic_role_qa(records_per_role=20)
+
+    result = search_synthetic_role_qa("ТЗ acceptance contract", role_id="spec_writer", corpus=corpus, limit=5)
+
+    assert result["matches"]
+    assert result["matches"][0]["role_id"] == "spec_writer"
+    assert "technicalspec" in result["query_tokens"]
+    assert result["matches"][0]["match_details"]["matched_tokens"]
+
+
+def test_synthetic_role_qa_audit_reports_policy_and_probe_health():
+    corpus = generate_synthetic_role_qa(records_per_role=20)
+
+    audit = synthetic_role_qa_audit(corpus)
+
+    assert audit["artifact_type"] == "SyntheticRoleQAAudit"
+    assert audit["record_count"] == corpus["record_count"]
+    assert audit["duplicate_qa_id_count"] == 0
+    assert audit["invalid_policy_count"] == 0
+    assert audit["probe_report"]["covered"] == audit["probe_report"]["probe_count"]
 
 
 def test_positive_feedback_updates_record_state(tmp_path):

@@ -332,3 +332,66 @@ def test_foundation_semantic_quality_normalizes_adr_location_suffix_for_spec_can
     )
 
     assert "spec_writer.candidate_backed_by_adr" not in quality["warnings"]
+
+
+def test_foundation_semantic_quality_credits_evidence_bound_candidate_exhaustion() -> None:
+    spec = {
+        "extraction_contract": {"status": "blocked_no_safe_candidate", "candidate": None},
+        "first_slice_reselection_request": {
+            "status": "required",
+            "terminal": True,
+            "resolution_status": "exhausted",
+            "outcome": {
+                "status": "exhausted",
+                "authority": "architect",
+                "expanded_candidate_count": 7,
+                "environment_ready_candidate_count": 5,
+                "candidate_viability": [{"target": "pkg/core.py:build", "status": "deferred"}],
+                "semantic_qualified_candidate_count": 0,
+                "selected_targets": [],
+            },
+        },
+    }
+
+    quality = evaluate_foundation_semantic_quality({
+        "artifacts": {
+            "project_map_report": {},
+            "architecture_decision": {"first_slice_contract": {"targets": ["pkg/core.py:build"]}},
+            "technical_spec": spec,
+        }
+    })
+
+    assert "architect.spec_target_is_within_architect_slice" not in quality["warnings"]
+    assert "spec_writer.candidate_ranked_first" not in quality["warnings"]
+    assert "spec_writer.candidate_backed_by_adr" not in quality["warnings"]
+    assert "spec_writer.io_contract_shapes_specific" not in quality["warnings"]
+
+
+def test_foundation_semantic_quality_rejects_unproven_candidate_exhaustion() -> None:
+    spec = {
+        "extraction_contract": {"status": "blocked_no_safe_candidate", "candidate": None},
+        "first_slice_reselection_request": {
+            "status": "required",
+            "terminal": True,
+            "resolution_status": "exhausted",
+            "outcome": {
+                "status": "exhausted",
+                "expanded_candidate_count": 7,
+                "semantic_qualified_candidate_count": 0,
+                "selected_targets": [],
+            },
+        },
+    }
+
+    quality = evaluate_foundation_semantic_quality({
+        "artifacts": {
+            "project_map_report": {},
+            "architecture_decision": {"first_slice_contract": {"targets": ["pkg/core.py:build"]}},
+            "technical_spec": spec,
+        }
+    })
+
+    assert "architect.spec_target_is_within_architect_slice" in quality["warnings"]
+    assert "spec_writer.candidate_ranked_first" in quality["warnings"]
+    assert "spec_writer.candidate_backed_by_adr" in quality["warnings"]
+    assert "spec_writer.io_contract_shapes_specific" in quality["warnings"]

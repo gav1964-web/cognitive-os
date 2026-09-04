@@ -1200,7 +1200,10 @@
         "_multicall",
         "run_old_style_hookwrapper",
         "add_hookspecs",
-        "register"
+        "register",
+        "call_extra",
+        "call_historic",
+        "__call__"
       ],
       "validation_gates": [
         "normal hook call, firstresult and no-plugin cases are covered",
@@ -2442,6 +2445,40 @@
         "matching and mismatched array shapes are covered",
         "zero denominator and uncertainty policies are explicit",
         "render backend failures preserve diagnostics"
+      ]
+    },
+    {
+      "contract_family": "package_distribution_name_parser",
+      "failure_modes": [
+        "invalid_distribution_filename",
+        "ambiguous_name_delimiter",
+        "unsupported_archive_suffix"
+      ],
+      "id": "package_distribution_name_parser",
+      "input_contract": {
+        "filename": "DistributionFilename(str)"
+      },
+      "output_contract": {
+        "normalized_name": "NormalizedDistributionName(str)"
+      },
+      "path_contains_any": [
+        "print-pkg-names.py",
+        "print_pkg_names.py"
+      ],
+      "ranking_bonus": 40,
+      "ranking_reason": "distribution-name parsing is representative package publishing behavior",
+      "reason": "package distribution identity parsing is a bounded publishing contract",
+      "score_bonus": 24,
+      "side_effect_policy": {
+        "declared": [],
+        "requires_validation_gate": true
+      },
+      "symbols": [
+        "safe_parse_pkg_name"
+      ],
+      "validation_gates": [
+        "wheel and source distribution filenames normalize deterministically",
+        "malformed and unsupported filenames return bounded failure evidence"
       ]
     },
     {

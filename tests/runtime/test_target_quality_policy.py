@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-import json
-
-from runtime.role_spec_writer_ranking import name_and_contract_score
-from runtime.target_structural_families import load_structural_family_rules, structural_contract_family
-from runtime.target_quality import semantic_target_quality_report
-from runtime.target_quality_policy import load_target_quality_policy
-
+from tests.runtime.target_quality_policy_helpers import *
 
 def test_target_quality_policy_loads_required_sections():
     policy = load_target_quality_policy()
@@ -335,60 +329,3 @@ def test_external_authorization_policy_requires_async_network_boolean_contract()
 
     assert report["contract_archetype_ids"] == ["external_authorization_policy"]
     assert report["score"] >= 97
-
-
-def test_response_ordering_and_cached_analysis_structures_are_bounded_families():
-    ordering = semantic_target_quality_report(
-        "sdk/database.py:sort",
-        ranked_candidates=["sdk/database.py:sort"],
-        source_evidence=["sdk/database.py:sort"],
-        structural_evidence={
-            "source_body_complete": True,
-            "inferred_output_type": "ResponseLike",
-            "argument_usage_types": {"origin": "ProtocolLike", "by_key": "KeyLike"},
-        },
-        input_contract={"origin": "ProtocolLike", "by_key": "KeyLike"},
-        output_contract={"result": "ResponseLike"},
-        side_effect_contract={"declared": []},
-    )
-    cached = semantic_target_quality_report(
-        "analysis/pipeline.py:propagate",
-        ranked_candidates=["analysis/pipeline.py:propagate"],
-        source_evidence=["analysis/pipeline.py:propagate"],
-        structural_evidence={
-            "source_body_complete": True,
-            "return_paths": 2,
-            "inferred_output_type": "Union[SequenceLike, TupleLike]",
-            "argument_usage_types": {"left": "PathLike", "right": "PathLike", "signals": "MappingLike"},
-            "observed_side_effects": ["filesystem_read", "observability"],
-        },
-        input_contract={"left": "PathLike", "right": "PathLike", "signals": "MappingLike"},
-        output_contract={"result": "Union[SequenceLike, TupleLike]"},
-        side_effect_contract={"declared": ["filesystem_read", "observability"]},
-    )
-
-    assert ordering["contract_archetype_ids"] == ["response_collection_ordering_transform"]
-    assert ordering["score"] >= 97
-    assert cached["contract_archetype_ids"] == ["cached_analysis_transform"]
-    assert cached["score"] >= 97
-
-
-def test_non_implementation_and_example_targets_are_not_strong_first_slices():
-    abstract = semantic_target_quality_report(
-        "pkg/hooks.py:Hook.process",
-        structural_evidence={"source_body_complete": True, "decorators": ["abstractmethod"]},
-    )
-    example = semantic_target_quality_report(
-        "pkg/progress.py:example1",
-        structural_evidence={"source_body_complete": True},
-    )
-    stub = semantic_target_quality_report(
-        "pkg/hooks.py:Hook.value",
-        structural_evidence={
-            "source_body_complete": True, "raises": ["NotImplementedError"], "return_paths": 0,
-        },
-    )
-
-    assert abstract["status"] in {"suspicious", "poor"}
-    assert example["status"] != "strong"
-    assert stub["status"] in {"suspicious", "poor"}

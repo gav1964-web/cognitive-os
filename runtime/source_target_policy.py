@@ -68,6 +68,11 @@ def is_context_only_implementation_target(source: str, policy: dict[str, Any] | 
     return implementation_target_violation(source, policy).get("status") != "allowed"
 
 
+def is_protocol_dunder_target(source: str) -> bool:
+    symbol = source.replace("\\", "/").partition(":")[2].split(".")[-1]
+    return len(symbol) > 4 and symbol.startswith("__") and symbol.endswith("__")
+
+
 def is_fallback_product_target(source: str, policy: dict[str, Any] | None = None) -> bool:
     row = dict((policy or load_role_source_policy()).get("implementation_target_policy") or {})
     normalized = "/" + source.replace("\\", "/").lower().lstrip("/")

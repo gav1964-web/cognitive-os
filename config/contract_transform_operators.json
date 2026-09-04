@@ -46,6 +46,15 @@
     {"id": "split_slash", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.split('/')"},
     {"id": "lower_split_words", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.lower().split()"},
     {"id": "lib_name", "input_kind": "integer", "output_kind": "string", "expression_template": "'lib_' + str({arg})"},
-    {"id": "values_choice_mapping", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{value: value for value in {arg}.values()}"}
+    {"id": "values_choice_mapping", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{value: value for value in {arg}.values()}"},
+    {"id": "mean_center_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[value - (sum({arg}) / len({arg})) for value in {arg}]"},
+    {"id": "square_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[value * value for value in {arg}]"},
+    {"id": "minmax_scale_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[(value - min({arg})) / (max({arg}) - min({arg})) for value in {arg}]"},
+    {"id": "threshold_binary", "input_kind": "list[number]", "output_kind": "list[integer]", "expression_template": "[1 if value >= 0.5 else 0 for value in {arg}]"},
+    {"id": "argmax_index", "input_kind": "list[number]", "output_kind": "integer", "expression_template": "max(range(len({arg})), key={arg}.__getitem__)"},
+    {"id": "clamp_probabilities", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[min(1.0, max(0.0, value)) for value in {arg}]"},
+    {"id": "clip_signed_unit", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[min(1.0, max(-1.0, value)) for value in {arg}]"},
+    {"id": "decay_rate", "input_kind": "number", "output_kind": "number", "expression_template": "{arg} * 0.5"},
+    {"id": "discount_returns", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[sum(reward * (0.9 ** offset) for offset, reward in enumerate({arg}[index:])) for index in range(len({arg}))]"}
   ]
 }

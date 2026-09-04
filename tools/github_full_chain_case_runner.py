@@ -17,12 +17,17 @@ def run_case_with_timeout(
     run_verification: bool,
     timeout_seconds: int,
     termination_grace_seconds: int = 5,
+    recognition_profile: dict[str, Any] | None = None,
+    stop_outside_recognition_profile: bool = False,
 ) -> dict[str, Any]:
     context = multiprocessing.get_context("spawn")
     output = context.Queue(maxsize=1)
     process = context.Process(
         target=_case_worker,
-        args=(output, project, root, run_executor, run_verification),
+        args=(
+            output, project, root, run_executor, run_verification,
+            recognition_profile, stop_outside_recognition_profile,
+        ),
         daemon=False,
     )
     process.start()
@@ -45,7 +50,8 @@ def run_case_with_timeout(
 
 
 def _case_worker(
-    output: Any, project: Path, root: Path, run_executor: bool, run_verification: bool
+    output: Any, project: Path, root: Path, run_executor: bool, run_verification: bool,
+    recognition_profile: dict[str, Any] | None, stop_outside_recognition_profile: bool,
 ) -> None:
     from tools.github_full_chain_probe import _run_case
 
@@ -55,6 +61,8 @@ def _case_worker(
             root=root,
             run_executor=run_executor,
             run_verification=run_verification,
+            recognition_profile=recognition_profile,
+            stop_outside_recognition_profile=stop_outside_recognition_profile,
         )
     except BaseException as exc:  # noqa: BLE001 - child failure becomes field evidence.
         result = _timeout_case(project, f"{type(exc).__name__}: {exc}"[:1000])

@@ -111,6 +111,38 @@
       {"field": "source_body_complete", "op": "truthy"},
       {"field": "state_mutation", "op": "falsy"}
     ]},
+    {"family_id": "receiver_object_mapping_projection", "score_bonus": 8, "all": [
+      {"field": "output_type", "op": "equals", "value": "MappingLike"},
+      {"field": "argument_count", "op": "equals", "value": 0},
+      {"field": "owner_class", "op": "truthy"},
+      {"field": "called_operations", "op": "contains_all", "value": ["getattr", "isinstance"]},
+      {"field": "accessed_attributes", "op": "contains", "value": "items"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "receiver_state_predicate", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "bool"},
+      {"field": "argument_count", "op": "equals", "value": 0},
+      {"field": "owner_class", "op": "truthy"},
+      {"field": "accessed_attributes", "op": "truthy"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "optional_type_annotation_normalization", "score_bonus": 8, "all": [
+      {"field": "output_type", "op": "equals", "value": "T"},
+      {"field": "explicit_return_annotation", "op": "equals", "value": "T"},
+      {"field": "argument_count", "op": "equals", "value": 1},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "called_operations", "op": "contains_all", "value": ["getattr", "type"]},
+      {"field": "accessed_attributes", "op": "contains", "value": "__args__"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
     {"family_id": "protocol_string_fallback_projection", "score_bonus": 8, "benign_support_path": true, "all": [
       {"field": "output_type", "op": "equals", "value": "str"},
       {"field": "argument_count", "op": "equals", "value": 1},

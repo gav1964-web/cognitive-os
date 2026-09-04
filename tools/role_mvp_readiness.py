@@ -15,8 +15,12 @@ from runtime.architect_curriculum import run_architect_curriculum
 from runtime.implementer_curriculum import run_implementer_curriculum
 from runtime.role_pipeline_benchmark import run_role_pipeline_benchmark
 from runtime.reviewer_curriculum import run_reviewer_curriculum
+from runtime.reviewer_adversarial import run_reviewer_adversarial_trial
+from runtime.recovery_boundary_research import build_recovery_boundary_research
+from runtime.recovery_pattern_audit import run_recovery_pattern_audit
 from runtime.spec_writer_curriculum import run_spec_writer_curriculum
 from runtime.tester_curriculum import run_tester_curriculum
+from runtime.unknown_archetype_field_trial import run_unknown_archetype_field_trial
 from tools.github_architect_probe import run_probe as run_github_architect
 from tools.github_implementer_probe import run_probe as run_github_implementer
 from tools.github_reviewer_probe import run_probe as run_github_reviewer
@@ -51,6 +55,7 @@ def build_report(*, root: Path, github_dir: Path) -> dict[str, Any]:
         "programmer_executor": _programmer_executor_readiness(runs, root),
         "tester": _tester_readiness(runs),
         "reviewer": _reviewer_readiness(runs),
+        "researcher": _researcher_readiness(runs),
     }
     return {
         "status": "ok" if all(role["mvp_ready"] for role in roles.values()) else "needs_work",
@@ -70,7 +75,7 @@ def build_report(*, root: Path, github_dir: Path) -> dict[str, Any]:
 
 
 def _run_trials(root: Path, github_dir: Path) -> dict[str, Any]:
-    return {
+    runs = {
         "architect_local": run_architect_curriculum(root=root, curriculum_dir=root / "curricula" / "architect_local_3"),
         "architect_external": run_architect_curriculum(root=root, curriculum_dir=root / "curricula" / "architect_external_local_3"),
         "architect_github": run_github_architect(root=root, projects_dir=github_dir, label="role_readiness_architect"),
@@ -86,8 +91,21 @@ def _run_trials(root: Path, github_dir: Path) -> dict[str, Any]:
         "reviewer_local": run_reviewer_curriculum(root=root, curriculum_dir=root / "curricula" / "reviewer_local_3"),
         "reviewer_external": run_reviewer_curriculum(root=root, curriculum_dir=root / "curricula" / "reviewer_external_local_3"),
         "reviewer_github": run_github_reviewer(root=root, projects_dir=github_dir, label="role_readiness_reviewer"),
+        "reviewer_adversarial": run_reviewer_adversarial_trial(root=root),
+        "researcher_unknown": run_unknown_archetype_field_trial(root=root),
         "pipeline": run_role_pipeline_benchmark(root, benchmarks_dir=root / "benchmarks" / "project_analyzer"),
     }
+    audit = run_recovery_pattern_audit(
+        root,
+        corpus_roots=[
+            root / "benchmarks" / "project_analyzer" / "projects",
+            root / "benchmarks" / "nasty_local_projects" / "projects",
+            root / "benchmarks" / "github_architect_10",
+            root / "plugins",
+        ],
+    )
+    runs["researcher_boundary"] = build_recovery_boundary_research(audit)
+    return runs
 
 
 def _project_analyzer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
@@ -219,6 +237,7 @@ def _reviewer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
     external = runs["reviewer_external"]
     github = runs["reviewer_github"]
     pipeline = runs["pipeline"]
+    adversarial = runs["reviewer_adversarial"]
     gh = dict(github.get("summary", {}))
     pipe = dict(pipeline.get("summary", {}))
     local_summary = dict(local.get("summary", {}))
@@ -234,6 +253,8 @@ def _reviewer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
         "no_contract_violations": gh.get("contract_violations") == 0,
         "no_architecture_drift": gh.get("architecture_drift") == 0,
         "review_target_matches_runnable": gh.get("review_target_matches_implementation") == runnable,
+        "adversarial_mutations_detected": adversarial.get("status") == "ok"
+        and dict(adversarial.get("summary") or {}).get("failed") == 0,
     }
     return _role(
         "reviewer",
@@ -243,8 +264,43 @@ def _reviewer_readiness(runs: dict[str, Any]) -> dict[str, Any]:
             _metric("external_worst_case", external_summary.get("worst_case_score")),
             _metric("github_quality", gh.get("avg_quality_score")),
             _metric("pipeline_qa", pipe.get("qa_score")),
+            _metric("adversarial_cases", dict(adversarial.get("summary") or {}).get("case_count")),
         ],
     )
+
+
+def _researcher_readiness(runs: dict[str, Any]) -> dict[str, Any]:
+    unknown = runs["researcher_unknown"]
+    boundary = runs["researcher_boundary"]
+    summary = dict(unknown.get("summary") or {})
+    rehearsal = dict(dict(unknown.get("unknown_holdout") or {}).get("promotion_rehearsal") or {})
+    gate = dict(boundary.get("architect_gate") or {})
+    hypotheses = list(boundary.get("hypotheses") or [])
+    checks = {
+        "unknown_holdout_ok": unknown.get("status") == "ok",
+        "controlled_unknown_stops_present": int(summary.get("controlled_unknown_stop_count") or 0) >= 4,
+        "promotion_rehearsal_passed": rehearsal.get("status") == "passed",
+        "unknown_trial_is_non_mutating": summary.get("source_code_changes") == 0 and summary.get("kb_mutations") == 0,
+        "boundary_hypotheses_are_bounded": not hypotheses or all(row.get("status") == "bounded_hypothesis" for row in hypotheses),
+        "architect_gate_blocks_automatic_handoff": not hypotheses or (
+            gate.get("automatic_admission") is False and gate.get("developer_handoff_allowed") is False
+        ),
+    }
+    role = _role(
+        "researcher",
+        checks,
+        [
+            _metric("evidence_mode", unknown.get("evidence_mode")),
+            _metric("unknown_scenarios", summary.get("unknown_scenario_count")),
+            _metric("boundary_hypotheses", len(hypotheses)),
+            _metric("production_confidence", "low_until_external_blind_corpus"),
+        ],
+    )
+    role["definition"] = (
+        "Produces bounded evidence plans and provisional hypotheses for unknown archetypes and semantic boundaries. "
+        "MVP readiness covers controlled planning and quarantine, not production-grade external research accuracy."
+    )
+    return role
 
 
 def _role(name: str, checks: dict[str, bool], metrics: list[dict[str, Any]]) -> dict[str, Any]:

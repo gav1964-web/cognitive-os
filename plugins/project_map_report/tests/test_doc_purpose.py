@@ -99,3 +99,14 @@ PyInquirer is a collection of common interactive command line user interfaces.
 """
 
     assert purpose_sentence(docs) == "PyInquirer is a collection of common interactive command line user interfaces."
+
+
+def test_purpose_heading_does_not_treat_badges_before_blank_line_as_rst_heading() -> None:
+    docs = """.. image:: https://example.test/banner.png
+
+|build-status| |coverage| |license|
+
+:Version: 1.0
+"""
+
+    assert purpose_heading(docs) == ""

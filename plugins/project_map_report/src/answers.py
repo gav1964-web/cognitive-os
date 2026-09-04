@@ -113,7 +113,9 @@ def build_answers(
             "process_boundary_candidates": process_boundary_candidates(python_structure),
             "contract_test_strategy": contract_test_strategy(python_structure),
             "resume_reuse_plan": resume_reuse_plan(routes, commands, imports),
-            "minimal_extraction_plan": minimal_extraction_plan(python_structure, routes, commands),
+            "minimal_extraction_plan": minimal_extraction_plan(
+                python_structure, routes, commands, domain_profile=domain_profile
+            ),
             "source_strata": source_strata(python_structure),
         },
     }

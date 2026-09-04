@@ -13,9 +13,13 @@ from .first_slice_viability import first_slice_viability
 from .project_probe_env import declared_package_satisfies_module, declared_project_packages
 from .promoted_candidate_selection_policies import apply_selection_policies, selected_policy_ids, selection_request_with_candidate
 from .role_source_context import build_source_context
-from .source_target_policy import is_context_only_implementation_target
+from .source_target_policy import is_context_only_implementation_target, is_protocol_dunder_target
 from .spec_writer_target_binding import standalone_target_eligibility
 from .technical_spec_policy import load_technical_spec_policy
+from .architect_reselection_decision import (
+    attach_outcome as _attach_outcome,
+    revised_architecture_decision as _revised_architecture_decision,
+)
 
 
 def reselect_architecture_first_slice(
@@ -67,7 +71,15 @@ def reselect_architecture_first_slice(
         expanded_context,
         architecture_decision,
         limit=max(1, int(policy.get("selected_target_limit") or 8)),
-        minimum_semantic_score=int(dict(request.get("blocking_evidence") or {}).get("minimum_semantic_score") or 0),
+        minimum_semantic_score=int(
+            dict(request.get("blocking_evidence") or {}).get("minimum_semantic_score")
+            or (
+                policy.get("minimum_semantic_score")
+                if request.get("trigger") == "executable_acceptance_rejected"
+                else 0
+            )
+            or 0
+        ),
         selection_request=selection_request_with_candidate(request, expanded_context.get(str(request.get("current_target") or ""))),
     )
     selection_policy_ids = selected_policy_ids(viability, selected)
@@ -135,11 +147,17 @@ def _expanded_candidate_sources(
     if "minimal_extraction_plan" in enabled:
         sources.extend(_row_sources(plan.get("capabilities_to_extract")))
     sources.extend(str(item) for item in dict(architecture_decision.get("source_context") or {}))
+    decision_context = dict(project_report.get("project_development_context") or {})
+    if decision_context.get("authority") == "ProjectDevelopmentDecision":
+        allowed = [str(source) for source in decision_context.get("allowed_targets") or []]
+        sources = [*allowed, *(source for source in sources if source in set(allowed))]
     limit = max(1, int(policy.get("expanded_candidate_limit") or 64))
     return list(dict.fromkeys(
         source
         for source in sources
-        if ".py:" in source and not is_context_only_implementation_target(source)
+        if ".py:" in source
+        and not is_context_only_implementation_target(source)
+        and not is_protocol_dunder_target(source)
     ))[:limit]
 
 
@@ -180,6 +198,10 @@ def _viable_candidates(
         profile = first_slice_viability(source, source_context, knowledge_rule=knowledge_rule)
         snippet = dict(dict(source_context or {}).get("snippet") or {})
         structural = dict(snippet.get("structural_contract") or {})
+        decorators = {
+            str(value).strip().lower().removeprefix("@").split("(", 1)[0]
+            for value in list(snippet.get("decorators") or structural.get("decorators") or [])
+        }
         rules = [str(row.get("rule_id") or "") for row in profile.get("matched_rules") or []]
         ranked.append({
             "source": source, "target": source, "index": index,
@@ -191,6 +213,7 @@ def _viable_candidates(
                 snippet.get("target_binding") == "function_symbol"
                 or bool({"staticmethod", "classmethod"} & set(snippet.get("decorators") or []))
             ),
+            "property_accessor": "property" in decorators,
             **contract_quality(source, source_context, sources), **profile,
             "viability_eligible": profile["status"] == "eligible" and not profile.get("reselection_required"),
             "argument_count": len(list(dict(snippet.get("signature") or {}).get("args") or [])),
@@ -204,11 +227,13 @@ def _viable_candidates(
             "output_inference_basis": str(structural.get("output_inference_basis") or ""),
         })
     ranked.sort(key=lambda row: (
-        -int(row["architecture_significance"]),
         -int(bool(row["environment_ready"])),
+        int(bool(row["property_accessor"])),
+        int(bool(row["state_mutation"] or row["observed_side_effects"])),
         -int(row["semantic_score"]),
         -int(row["contract_shape_score"]),
-        -int(row["score"]),
+        -(int(row["score"]) + int(row["architecture_significance"])),
+        -int(row["architecture_significance"]),
         -int(bool(row["receiver_independent"])),
         str(row["target"]),
         int(row["index"]),
@@ -314,87 +339,3 @@ def _mark_manifest_declared_context(
         })
         row["dependency_readiness"] = readiness
         expanded_context[source] = row
-
-
-def _revised_architecture_decision(
-    architecture_decision: dict[str, Any],
-    *,
-    project_report: dict[str, Any],
-    expanded_context: dict[str, dict[str, Any]],
-    selected_targets: list[str],
-    outcome: dict[str, Any],
-) -> dict[str, Any]:
-    revised = dict(architecture_decision)
-    old_slice = dict(revised.get("first_slice_contract") or {})
-    old_targets = [str(item) for item in list(old_slice.get("targets") or [])]
-    first_slice = {
-        **old_slice,
-        "targets": selected_targets,
-        "deferred_targets": list(dict.fromkeys(old_targets + list(old_slice.get("deferred_targets") or []))),
-        "steps": _reselection_steps(selected_targets[0]),
-        "source": "FirstSliceReselectionRequest + ProjectMapReport expanded evidence",
-        "selection_policy": "environment-ready or manifest-backed callable within Architect-expanded candidate window",
-        "reselection_iteration": outcome["iteration"],
-    }
-    source_context = dict(revised.get("source_context") or {})
-    source_context.update(expanded_context)
-    brief = dict(revised.get("spec_writer_brief") or {})
-    brief["first_slice"] = first_slice
-    brief["acceptance_targets"] = [
-        f"Reselected first slice verifies step {index}: {step}"
-        for index, step in enumerate(first_slice["steps"], start=1)
-    ]
-    brief["files_or_symbols"] = list(dict.fromkeys(selected_targets + list(brief.get("files_or_symbols") or [])))
-    revised.update({
-        "first_slice_contract": first_slice,
-        "source_context": source_context,
-        "spec_writer_brief": brief,
-    })
-    if not dict(revised.get("architecture_synthesis") or {}):
-        revised["architecture_synthesis"] = _reselection_synthesis(project_report, selected_targets)
-    return _attach_outcome(revised, outcome)
-
-
-def _reselection_synthesis(
-    project_report: dict[str, Any], selected_targets: list[str]
-) -> dict[str, Any]:
-    summary = dict(project_report.get("summary") or {})
-    scope = dict(dict(project_report.get("answers") or {}).get("1_scope") or {})
-    domain = dict(scope.get("domain_profile") or {})
-    archetype = str(domain.get("kind") or summary.get("project_shape") or "python_project")
-    return {
-        "artifact_type": "ProjectArchitectureSynthesis",
-        "source": "Architect.first_slice_reselection",
-        "synthesis_id": "reselection_source_backed_synthesis",
-        "confidence": 0.82,
-        "project_profile": {
-            "archetype": archetype,
-            "entrypoints": list(summary.get("entrypoints") or [])[:6],
-            "languages": list(summary.get("languages") or [])[:6],
-            "evidence": selected_targets[:8],
-            "domain_profile": domain,
-        },
-        "project_diagnosis": "Initial slice had no safe callable; Architect selected a source-backed expanded candidate window.",
-        "target_architecture_shape": [
-            "Keep the reselected callable boundary explicit.",
-            "Isolate declared external dependencies behind validation gates.",
-            "Preserve deferred targets outside the first writable scope.",
-        ],
-    }
-
-
-def _reselection_steps(target: str) -> list[str]:
-    return [
-        f"Confirm `{target}` has a stable input/output contract from source evidence.",
-        f"Keep writable scope limited to `{target}` until TechnicalSpec acceptance passes.",
-        "Map caller and callee context before implementation handoff.",
-        "Add contract tests for the selected capability before promotion.",
-    ]
-
-
-def _attach_outcome(architecture_decision: dict[str, Any], outcome: dict[str, Any]) -> dict[str, Any]:
-    revised = dict(architecture_decision)
-    history = list(revised.get("first_slice_reselection_history") or [])
-    history.append(outcome)
-    revised["first_slice_reselection_history"] = history
-    return revised

@@ -19,6 +19,15 @@ def test_first_slice_flattens_list_valued_task_targets() -> None:
     assert result["targets"] == ["app.py:primary", "app.py:parse", "app.py:validate"]
 
 
+def test_first_slice_keeps_synthesis_target_ahead_of_higher_ranked_fallback() -> None:
+    first_slice = {"targets": ["pkg/helpers.py:should_remove_content_length"], "target_limit": 1}
+    tasks = [{"type": "EXTRACT_CAPABILITY", "target": "pkg/abc.py:resolve"}]
+
+    result = _first_slice_with_source_targets(first_slice, tasks)
+
+    assert result["targets"] == ["pkg/helpers.py:should_remove_content_length"]
+
+
 def test_first_slice_uses_analyzer_extraction_plan_when_advisory_has_no_targets() -> None:
     plan = {"capabilities_to_extract": [{"capability": "pkg/core.py:normalize"}]}
 

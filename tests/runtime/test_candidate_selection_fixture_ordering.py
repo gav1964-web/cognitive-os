@@ -64,6 +64,68 @@ def test_fixture_readiness_orders_post_acceptance_reselection(tmp_path):
     assert [row["source"] for row in result] == ["app.py:is_ready", "app.py:normalize_ts"]
 
 
+def test_fixture_readiness_does_not_promote_property_over_callable(tmp_path):
+    path = _policy_path(tmp_path)
+    property_row = _candidate(
+        "app.py:current", "def current() -> dict:\n    return {'ready': True}"
+    )
+    property_row["property_accessor"] = True
+    callable_row = _candidate(
+        "app.py:normalize", "def normalize(value: str) -> str:\n    return value.strip()"
+    )
+
+    result = apply_selection_policies(
+        [property_row, callable_row],
+        {"trigger": "executable_acceptance_rejected", "blocking_evidence": {}},
+        path=str(path),
+    )
+
+    assert [row["source"] for row in result] == [
+        "app.py:normalize", "app.py:current",
+    ]
+    assert not property_row.get("selection_policy_ids")
+
+
+def test_fixture_readiness_prefers_independent_callable_over_receiver_fixture(tmp_path):
+    path = _policy_path(tmp_path)
+    receiver = _candidate(
+        "app.py:Dialog.render", "def render() -> str:\n    return 'ready'"
+    )
+    receiver["receiver_independent"] = False
+    function = _candidate(
+        "app.py:transform", "def transform() -> str:\n    return 'ready'"
+    )
+    function["receiver_independent"] = True
+
+    result = apply_selection_policies(
+        [receiver, function],
+        {"trigger": "executable_acceptance_rejected", "blocking_evidence": {}},
+        path=str(path),
+    )
+
+    assert [row["source"] for row in result] == ["app.py:transform", "app.py:Dialog.render"]
+
+
+def test_fixture_readiness_prefers_projection_over_complex_protocol_input(tmp_path):
+    path = _policy_path(tmp_path)
+    parser = _candidate(
+        "app.py:parse", "def parse(node) -> list:\n    return list(node.children)"
+    )
+    parser["argument_usage_types"] = {"node": "ProtocolLike"}
+    projection = _candidate(
+        "app.py:Parser.classes", "def classes() -> list:\n    return []"
+    )
+    projection["receiver_independent"] = False
+
+    result = apply_selection_policies(
+        [parser, projection],
+        {"trigger": "executable_acceptance_rejected", "blocking_evidence": {}},
+        path=str(path),
+    )
+
+    assert [row["source"] for row in result] == ["app.py:Parser.classes", "app.py:parse"]
+
+
 def _policy_path(tmp_path):
     path = tmp_path / "policies.json"
     path.write_text(json.dumps({

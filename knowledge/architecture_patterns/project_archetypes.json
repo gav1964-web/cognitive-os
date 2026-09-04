@@ -116,6 +116,191 @@
       "output_summary": ["encoded bytes", "decoded values", "extension results", "typed codec failures"]
     },
     {
+      "rule_id": "classification_metrics_library",
+      "record_type": "project_archetype_rule",
+      "priority": 109,
+      "archetype": "classification_metrics_library",
+      "architect_consumable": true,
+      "label": "classification evaluation metrics library",
+      "purpose_summary": "Compute confusion matrices and deterministic classification statistics from actual and predicted labels or caller-provided count matrices.",
+      "match": {
+        "project_name_contains_any": ["pycm", "confusion-matrix", "confusion_matrix"],
+        "require_project_name_match": true,
+        "required_source_contains_any": ["confusion matrix", "confusion_matrix", "overall statistics", "class statistics"],
+        "text_contains_any": ["confusion matrix", "classification", "actual vector", "predict vector", "statistics", "accuracy", "f1"],
+        "required_contains_any": ["confusion matrix", "confusion_matrix"],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "broad"],
+        "primary_target_prefer": ["confusion_matrix", "score", "stat", "accuracy", "f1", "normalize"],
+        "template": "{label} with entrypoint {entrypoints}; the first bounded slice should preserve label domain, matrix shape, zero-division policy, and metric definitions around {target}."
+      },
+      "target_architecture_shape": ["Label normalization is separated from matrix construction and metric calculation.", "Matrix shape and class ordering are explicit contracts.", "Zero-division and absent-class behavior are deterministic.", "Reports and renderers consume metric records without redefining formulas."],
+      "first_slice": {
+        "name": "classification_metric_transform_slice",
+        "goal": "Stabilize one deterministic labels-to-metric or matrix-to-statistic transformation.",
+        "target_sources": ["domain_anchors", "central", "broad"],
+        "targets_prefer": ["confusion_matrix", "score", "stat", "accuracy", "f1", "normalize"],
+        "steps": ["Define label-vector or count-matrix input contracts.", "Specify class ordering and zero-division behavior.", "Separate metric formulas from report formatting.", "Verify balanced, missing-class, empty, and malformed inputs."]
+      },
+      "defer": ["Do not treat documentation/report rendering as the primary computation.", "Do not infer metric semantics from names when formula evidence is unavailable."],
+      "verification_extra": "Use tiny label vectors and hand-calculated confusion matrices as deterministic oracles.",
+      "scenario_summary": ["Accept actual/predicted labels or a count matrix.", "Normalize classes and construct a confusion matrix.", "Compute deterministic class and overall metrics.", "Return metric records or controlled validation errors."],
+      "input_summary": ["actual labels", "predicted labels", "confusion matrix counts", "class ordering", "zero-division policy"],
+      "output_summary": ["confusion matrix", "per-class metrics", "overall statistics", "controlled validation errors"]
+    },
+    {
+      "rule_id": "mlops_pipeline_generator",
+      "record_type": "project_archetype_rule",
+      "priority": 110,
+      "archetype": "mlops_pipeline_generator",
+      "architect_consumable": true,
+      "label": "MLOps pipeline generator",
+      "purpose_summary": "Generate, build, and deploy reproducible ML pipeline components and infrastructure manifests from bounded orchestration configuration.",
+      "match": {
+        "project_name_contains_any": ["automlops", "auto mlops"],
+        "require_project_name_match": true,
+        "required_source_contains_any": ["git_workflow", "resources_generation_manifest", "pipeline", "component"],
+        "text_contains_any": ["mlops", "pipeline generation", "orchestration", "deploy", "component", "vertex ai"],
+        "required_contains_any": ["mlops", "pipeline", "orchestration"],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "process_boundary", "broad"],
+        "primary_target_prefer": ["generate", "build", "component", "manifest", "workflow", "deploy"],
+        "template": "{label} with entrypoint {entrypoints}; the first bounded slice should preserve component metadata, generated artifacts, deployment policy, and process boundaries around {target}."
+      },
+      "target_architecture_shape": ["Pipeline declarations are separated from generated files and deployment adapters.", "Component metadata and generated manifests are explicit versioned contracts.", "Cloud, Git, and subprocess effects remain injectable boundaries.", "Dry-run fixtures verify deterministic generation without deployment credentials."],
+      "first_slice": {
+        "name": "mlops_manifest_generation_slice",
+        "goal": "Stabilize one deterministic component or manifest generation path without deploying infrastructure.",
+        "target_sources": ["domain_anchors", "central", "broad"],
+        "targets_prefer": ["generate", "build", "component", "manifest", "workflow", "deploy"],
+        "steps": ["Define component input and generated-artifact contracts.", "Separate pure generation from Git, cloud, and subprocess adapters.", "Make defaults and deployment policy explicit.", "Verify deterministic generation, invalid configuration, dry-run, and adapter failure cases."]
+      },
+      "defer": ["Do not classify incidental pandas usage as the product domain.", "Do not require cloud credentials for first verification."],
+      "verification_extra": "Use temporary output directories and fake deployment adapters.",
+      "scenario_summary": ["Declare ML pipeline components.", "Generate workflow and infrastructure artifacts.", "Build or deploy through controlled adapters.", "Report invalid configuration or deployment failures explicitly."],
+      "input_summary": ["component declarations", "pipeline configuration", "deployment target", "artifact templates", "CI/CD policy"],
+      "output_summary": ["generated pipeline files", "component manifests", "deployment plans", "controlled generation or adapter errors"]
+    },
+    {
+      "rule_id": "streaming_dataset_library",
+      "record_type": "project_archetype_rule",
+      "priority": 110,
+      "archetype": "streaming_dataset_library",
+      "architect_consumable": true,
+      "label": "streaming dataset and shard library",
+      "purpose_summary": "Encode datasets into indexed shards and stream deterministic sample partitions from local or remote storage for data-intensive model workloads.",
+      "match": {
+        "project_name_contains_any": ["mosaicml streaming", "streaming dataset"],
+        "require_project_name_match": true,
+        "required_source_contains_any": ["class StreamingDataset", "MDSWriter", "streaming dataset shards", "mds_encode"],
+        "text_contains_any": ["streaming dataset", "Mosaic Dataset Shard", "MDSWriter", "cloud-native model training", "download shards"],
+        "required_contains_any": ["streaming dataset", "MDSWriter", "Mosaic Dataset Shard"],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "broad", "process_boundary"],
+        "primary_target_prefer": ["mds_encode", "mds_decode", "infer_dataframe_schema", "encode", "decode", "write", "read", "get_item", "generate_work", "partition"],
+        "template": "{label} with entrypoint {entrypoints}; the first bounded slice should preserve sample schema, shard index, partition order, cache ownership, and retry behavior around {target}."
+      },
+      "target_architecture_shape": ["Sample encoding is separated from shard IO and remote transport.", "Shard index and sample schema are explicit versioned contracts.", "Partitioning and shuffle behavior are deterministic under a supplied seed.", "Remote downloads, cache eviction, and retries remain adapter-owned."],
+      "first_slice": {
+        "name": "streaming_dataset_codec_slice",
+        "goal": "Stabilize one deterministic sample encode/decode or shard-index transformation without remote storage.",
+        "target_sources": ["domain_anchors", "central", "broad"],
+        "targets_prefer": ["mds_encode", "mds_decode", "infer_dataframe_schema", "encode", "decode", "write", "read", "get_item", "generate_work", "partition"],
+        "steps": ["Define sample schema and encoded-record contracts.", "Separate codec logic from shard files and remote download adapters.", "Specify deterministic partition and ordering behavior.", "Verify round trip, malformed record, missing shard, and stable ordering fixtures."]
+      },
+      "defer": ["Do not require cloud credentials or remote downloads for first verification.", "Do not classify internal worker coordination as the product archetype."],
+      "verification_extra": "Use tiny in-memory records and hand-authored shard indexes as deterministic fixtures.",
+      "scenario_summary": ["Encode samples into indexed dataset shards.", "Read and decode samples from local or cached shards.", "Partition and order samples for distributed consumers.", "Report malformed records, unavailable shards, or cache failures explicitly."],
+      "input_summary": ["sample records", "column encoding schema", "shard indexes", "partition and shuffle policy", "local or remote locations"],
+      "output_summary": ["encoded shards", "decoded samples", "deterministic partitions", "cache/download state", "controlled data errors"]
+    },
+    {
+      "rule_id": "out_of_distribution_detection_library",
+      "record_type": "project_archetype_rule",
+      "priority": 109,
+      "archetype": "out_of_distribution_detection_library",
+      "architect_consumable": true,
+      "label": "out-of-distribution detector library",
+      "purpose_summary": "Apply calibrated or parameter-free detectors to model logits/features and return out-of-distribution scores through a consistent prediction API.",
+      "match": {
+        "project_name_contains_any": ["pytorch-ood", "out-of-distribution", "out_of_distribution"],
+        "require_project_name_match": true,
+        "required_source_contains_any": ["class detector", "predict_features", "out-of-distribution", "ood detector"],
+        "text_contains_any": ["out-of-distribution", "ood detection", "detector", "predict_features", "pretrained", "logits"],
+        "required_contains_any": ["out-of-distribution", "ood detection", "predict_features"],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "broad"],
+        "primary_target_prefer": ["predict_features", "predict", "score", "detector"],
+        "template": "{label} with entrypoint {entrypoints}; the first bounded slice should preserve feature/logit shape, detector calibration state, score direction, and threshold semantics around {target}."
+      },
+      "target_architecture_shape": ["Feature extraction is separated from detector scoring.", "Logit/feature shape and score direction are explicit contracts.", "Optional calibration state is versioned and reproducible.", "Pretrained model downloads and devices remain adapter-owned."],
+      "first_slice": {
+        "name": "ood_score_transform_slice",
+        "goal": "Stabilize one logits/features-to-OOD-score transformation without downloading or training a model.",
+        "target_sources": ["domain_anchors", "central", "broad"],
+        "targets_prefer": ["predict_features", "predict", "score", "detector"],
+        "steps": ["Define logits/features and detector-state contracts.", "Specify score direction and threshold semantics.", "Separate model execution from detector scoring.", "Verify in-distribution, outlier, malformed-shape, and uncalibrated cases."]
+      },
+      "defer": ["Do not download pretrained weights for first verification.", "Do not classify optional calibration as end-to-end model training."],
+      "verification_extra": "Use tiny deterministic logits/features and hand-calculated detector scores.",
+      "scenario_summary": ["Receive logits or feature tensors.", "Apply a configured OOD detector.", "Return normalized outlier scores.", "Handle malformed shape or missing calibration explicitly."],
+      "input_summary": ["logits or feature tensors", "detector configuration", "optional calibration state", "threshold policy"],
+      "output_summary": ["OOD scores", "in/out decisions", "detector metadata", "controlled detector errors"]
+    },
+    {
+      "rule_id": "model_inference_api",
+      "record_type": "project_archetype_rule",
+      "priority": 110,
+      "archetype": "model_inference_api",
+      "architect_consumable": true,
+      "label": "model inference API",
+      "purpose_summary": "Load versioned model artifacts, accept prediction inputs through an API boundary, execute bounded inference, and return normalized predictions or controlled failures.",
+      "match": {
+        "project_name_contains_any": ["inference-api", "inference_api"],
+        "require_project_name_match": true,
+        "required_source_contains_any": ["inference", "predict", "object detection", "model"],
+        "text_contains_any": ["inference api", "object detection", "predict", "pretrained model", "model artifact", "tensorflow", "pytorch"],
+        "required_contains_any": ["inference", "predict", "object detection"],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["routes", "domain_anchors", "central", "process_boundary"],
+        "primary_target_prefer": ["predict", "infer", "detect", "preprocess", "postprocess"],
+        "template": "{label} with entrypoint {entrypoints}; the primary pressure is request-to-prediction flow around {target}, where input shape, model artifact identity, device policy, and response schema need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Transport parsing is separated from preprocessing, model invocation, and postprocessing.",
+        "Input shape, dtype, range, and prediction schema are explicit contracts.",
+        "Model artifacts and device placement are adapter-owned and fixture-replaceable.",
+        "Timeout, unavailable model, malformed input, and inference failure are controlled outcomes."
+      ],
+      "first_slice": {
+        "name": "prediction_transform_slice",
+        "goal": "Stabilize one deterministic preprocessing or postprocessing path without loading a production model.",
+        "target_sources": ["domain_anchors", "central", "routes"],
+        "targets_prefer": ["predict", "infer", "detect", "preprocess", "postprocess"],
+        "steps": [
+          "Define prediction request and response contracts with shape and dtype.",
+          "Separate transport and model loading from deterministic preprocessing/postprocessing.",
+          "Inject a fake model boundary for first executable verification.",
+          "Verify valid input, malformed shape, unavailable model, and normalized prediction output."
+        ]
+      },
+      "defer": ["Do not require GPU or production checkpoints for first verification.", "Do not let the HTTP framework define the project archetype when inference is the product behavior."],
+      "verification_extra": "Use tiny tensor/image fixtures and a fake model returning deterministic scores.",
+      "scenario_summary": ["Accept a prediction request.", "Validate and preprocess model input.", "Invoke a versioned model boundary.", "Normalize predictions or controlled inference errors."],
+      "input_summary": ["image, tensor, or feature input", "model/version selector", "thresholds", "request metadata"],
+      "output_summary": ["predictions", "scores or detections", "model metadata", "controlled inference errors"]
+    },
+    {
       "rule_id": "computer_vision_tracking_application",
       "record_type": "project_archetype_rule",
       "priority": 107,
@@ -376,6 +561,68 @@
         "configuration diagnostics",
         "typed plugin-loading failures"
       ]
+    },
+    {
+      "rule_id": "reinforcement_learning_training_pipeline",
+      "record_type": "project_archetype_rule",
+      "priority": 103,
+      "archetype": "reinforcement_learning_training_pipeline",
+      "architect_consumable": true,
+      "label": "reinforcement-learning training pipeline",
+      "purpose_summary": "Train and evaluate policies from observations, actions, rewards, and reproducible environment transitions.",
+      "match": {
+        "text_contains_any": [
+          "reinforcement learning",
+          "multi-agent reinforcement learning",
+          "policy network",
+          "discount_rewards",
+          "eligibility_traces",
+          "ppo"
+        ],
+        "required_contains_any": [
+          "reinforcement learning",
+          "multi-agent reinforcement learning",
+          "discount_rewards",
+          "eligibility_traces"
+        ],
+        "min_score": 36
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "extraction", "broad", "bottlenecks"],
+        "primary_target_prefer": ["discount_rewards", "eligibility_traces", "reward", "advantage", "policy", "action"],
+        "template": "{label} with entrypoint {entrypoints}; the main pressure is the observation-action-reward update around {target}, where tensor shapes, discounting, randomness, environment effects, and checkpoint boundaries need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Environment I/O and simulator effects are separated from deterministic reward, return, and advantage calculations.",
+        "Observation, action, reward, done, and policy-output shapes are explicit contracts.",
+        "Seeds, discount factors, rollout length, and normalization state are reproducible inputs.",
+        "Model and optimizer checkpoints are versioned external artifacts rather than implicit process state."
+      ],
+      "first_slice": {
+        "name": "reward_return_update_slice",
+        "goal": "Stabilize one deterministic reward-to-return or advantage calculation before exercising an environment or full training loop.",
+        "target_sources": ["extraction", "central", "broad"],
+        "targets_prefer": ["discount_rewards", "eligibility_traces", "reward", "advantage", "squash_action", "clip_action"],
+        "steps": [
+          "Define bounded reward, value, terminal, discount, and output-shape contracts.",
+          "Separate deterministic return/advantage math from environment and model execution.",
+          "Make seed, dtype, numerical tolerance, and empty-rollout behavior explicit.",
+          "Verify a tiny normal rollout plus terminal, malformed-shape, and invalid-discount cases."
+        ]
+      },
+      "defer": [
+        "Do not require a simulator, GPU, full policy training, or checkpoint download for first verification.",
+        "Do not select environment lifecycle methods while a deterministic reward or action transform is available."
+      ],
+      "verification_extra": "Use tiny NumPy reward/value fixtures and fake environment boundaries; no simulator or convergence run is required.",
+      "scenario_summary": [
+        "Transform observations into policy action distributions or bounded actions.",
+        "Collect rewards and value estimates from finite rollouts.",
+        "Compute discounted returns, eligibility traces, or policy advantages.",
+        "Update or evaluate policy/value models behind explicit artifact boundaries."
+      ],
+      "input_summary": ["observations and actions", "reward and value sequences", "terminal flags", "discount and trace factors", "seed and policy configuration"],
+      "output_summary": ["bounded actions", "discounted returns or advantages", "policy/value metrics", "checkpoint metadata", "explicit shape or numeric errors"]
     },
     {
       "rule_id": "neural_network_training_pipeline",
@@ -1369,8 +1616,9 @@
       "archetype": "wheel_package_tool",
       "label": "Python wheel packaging tool",
       "match": {
-        "project_name_contains_any": [
-          "wheel"
+      "project_name_contains_any": [
+          "wheel",
+          "auditwheel"
         ],
         "text_contains_any": [
           "wheel",
@@ -1658,14 +1906,95 @@
       "verification_extra": "Use fake LLM responses and fixture prompt-lab workspaces to verify run artifact creation and analysis without live provider calls."
     },
     {
+      "rule_id": "llm_application_runtime",
+      "record_type": "project_archetype_rule",
+      "priority": 91,
+      "archetype": "llm_application_runtime",
+      "label": "LLM application and agent runtime",
+      "match": {
+        "require_project_name_match": true,
+        "project_name_contains_any": [
+          "llm",
+          "whichllm",
+          "gpt",
+          "agent"
+        ],
+        "required_contains_any": [
+          "llm",
+          "language model",
+          "openai",
+          "prompt",
+          "agent"
+        ],
+        "text_contains_any": [
+          "model",
+          "prompt",
+          "provider",
+          "agent",
+          "tool call",
+          "embedding"
+        ]
+      },
+      "purpose_summary": "Run model-backed prompts, tools, agents, or model-selection workflows behind explicit provider and execution contracts.",
+      "scenario_summary": [
+        "Resolve model and provider configuration.",
+        "Build a prompt or agent request from caller inputs.",
+        "Execute the model-backed operation through a bounded adapter.",
+        "Return structured output, usage metadata, and explicit failures."
+      ],
+      "input_summary": [
+        "prompt or agent task",
+        "model/provider configuration",
+        "tool and attachment inputs",
+        "runtime secret references"
+      ],
+      "output_summary": [
+        "model or agent result",
+        "tool execution results",
+        "usage and run metadata",
+        "structured provider failures"
+      ],
+      "architect_consumable": true,
+      "first_slice": {
+        "name": "llm_request_execution_slice",
+        "goal": "Stabilize one model-backed request from validated input to structured result.",
+        "target_prefer": [
+          "prompt",
+          "execute",
+          "run",
+          "model",
+          "agent"
+        ],
+        "steps": [
+          "Define request, provider selection, result, and failure contracts.",
+          "Separate deterministic request construction from provider execution.",
+          "Execute through a fake provider before enabling live network calls.",
+          "Verify invalid configuration, provider failure, tool failure, and successful structured output."
+        ]
+      },
+      "defer": [
+        "Do not require live provider credentials for the first executable slice.",
+        "Do not combine provider routing, prompt rendering, and persistence in one contract."
+      ],
+      "verification_extra": "Use a deterministic fake provider and assert request serialization, structured output, and mapped failure states."
+    },
+    {
       "rule_id": "llm_gateway_service",
       "record_type": "project_archetype_rule",
-      "priority": 90,
+      "priority": 92,
       "archetype": "llm_provider_gateway",
       "label": "FastAPI LLM gateway/proxy",
       "match": {
+        "project_name_contains_any": [
+          "llm-gateway",
+          "llm_gateway",
+          "gateway",
+          "proxy"
+        ],
         "text_contains_any": [
           "provider",
+          "gateway",
+          "proxy",
           "forward",
           "chat_completions",
           "_handle_chat_request"
@@ -2761,7 +3090,14 @@
         "negative_contains_any": [
           "flask",
           "fastapi",
-          "http requests"
+          "http requests",
+          "api client",
+          "api sdk",
+          "rest client",
+          "simple_rest_client",
+          "reinforcement learning",
+          "policy network",
+          "discount_rewards"
         ],
         "negative_domain_profile_kinds": [
           "desktop_gui_ide",
@@ -3269,8 +3605,9 @@
       "archetype": "backup_archive_tool",
       "label": "backup/archive tool",
       "match": {
-        "project_name_contains_any": [
-          "borg"
+      "project_name_contains_any": [
+          "borg",
+          "borgbackup"
         ],
         "text_contains_any": [
           "archive",
@@ -3287,9 +3624,8 @@
           "chunk",
           "dedup"
         ],
-        "negative_contains_any": [
-          "poetry",
-          "pyproject.toml"
+      "negative_contains_any": [
+          "poetry"
         ],
         "min_score": 80
       },
@@ -3464,10 +3800,12 @@
       "label": "proxy/security inspection tool",
       "architect_consumable": true,
       "match": {
-        "project_name_contains_any": [
+      "project_name_contains_any": [
           "mitmproxy",
-          "decept"
-        ],
+          "decept",
+          "proxy.py"
+      ],
+      "project_name_overrides_negative": true,
         "text_contains_any": [
           "proxy",
           "tls",
@@ -3611,8 +3949,12 @@
         ],
         "required_contains_any": [
           "spyder",
-          "qt",
-          "lsp"
+          "pyqt",
+          "pyside",
+          "qtpy",
+          "qwidget",
+          "qapplication",
+          "spyder.api"
         ]
       },
       "diagnosis": {
@@ -4094,6 +4436,16 @@
       "archetype": "terminal_rendering_library",
       "label": "terminal rendering library",
       "match": {
+        "project_name_contains_any": [
+          "rich",
+          "textual"
+        ],
+        "required_source_contains_any": [
+          "console.py",
+          "pretty.py:traverse",
+          "export_svg",
+          "print_json"
+        ],
         "text_contains_any": [
           "rich",
           "console.py",
@@ -4442,12 +4794,72 @@
       ]
     },
     {
+      "rule_id": "cache_backend_library",
+      "record_type": "project_archetype_rule",
+      "priority": 92,
+      "archetype": "cache_backend_library",
+      "label": "cache backend library",
+      "match": {
+        "require_project_name_match": true,
+        "project_name_contains_any": ["cachelib", "diskcache", "python-memcache"],
+        "required_contains_any": ["cache", "get", "set"],
+        "text_contains_any": ["cache key", "expiration", "timeout", "delete", "backend"]
+      },
+      "purpose_summary": "Expose bounded key/value cache operations across memory, filesystem, or remote backends.",
+      "scenario_summary": ["Create or configure a cache backend.", "Store a value under a cache key.", "Read or delete cached state.", "Report misses, invalid values, and backend failures explicitly."],
+      "input_summary": ["cache key", "serializable value", "expiration policy", "backend configuration"],
+      "output_summary": ["cached value or miss", "operation status", "backend failure"],
+      "architect_consumable": true,
+      "first_slice": {
+        "name": "cache_key_value_slice",
+        "goal": "Stabilize one set/get cache round trip with explicit miss and expiration behavior.",
+        "target_prefer": ["set", "get", "delete", "cache"],
+        "steps": ["Define key, value, expiration, miss, and failure contracts.", "Use an isolated in-memory or temporary-directory backend.", "Execute set followed by get through the public API.", "Verify miss, expiration, invalid key, and successful round trip."]
+      },
+      "defer": ["Do not require a live remote cache service for the first slice."],
+      "verification_extra": "Use deterministic time and an isolated backend fixture."
+    },
+    {
+      "rule_id": "platform_directory_resolver",
+      "record_type": "project_archetype_rule",
+      "priority": 92,
+      "archetype": "platform_directory_resolver",
+      "label": "platform directory resolver",
+      "match": {
+        "require_project_name_match": true,
+        "project_name_contains_any": ["platformdirs"],
+        "required_contains_any": ["user_data_dir", "user_config_dir", "site_data_dir", "platformdirs"],
+        "text_contains_any": ["xdg", "windows", "macos", "application directory", "user directory"]
+      },
+      "purpose_summary": "Resolve application-specific user and site directories according to operating-system conventions.",
+      "scenario_summary": ["Accept application identity and platform context.", "Resolve a requested data, config, cache, state, or log directory.", "Return a normalized path without creating it unless requested.", "Handle missing environment values and platform-specific fallbacks."],
+      "input_summary": ["application name", "application author", "platform", "environment variables", "create flag"],
+      "output_summary": ["resolved Path or string", "created directory when requested", "explicit invalid-input failure"],
+      "architect_consumable": true,
+      "first_slice": {
+        "name": "platform_directory_resolution_slice",
+        "goal": "Resolve one user data directory from explicit application and environment inputs.",
+        "target_prefer": ["user_data_dir", "user_config_dir", "user_cache_dir"],
+        "steps": ["Define application identity, environment, platform, and output path contracts.", "Bind the public helper with explicit arguments.", "Resolve without filesystem creation first.", "Verify Linux, Windows, missing environment, and create-enabled cases."]
+      },
+      "defer": ["Do not cover every platform directory kind in the first slice."],
+      "verification_extra": "Patch platform and environment values and assert normalized paths without touching user directories."
+    },
+    {
       "rule_id": "env_config_library",
       "record_type": "project_archetype_rule",
       "priority": 71,
       "archetype": "env_config_library",
       "label": "environment configuration library",
       "match": {
+        "require_project_name_match": true,
+        "project_name_contains_any": [
+          "dotenv",
+          "environs",
+          "dynaconf",
+          "python-decouple",
+          "env-config"
+        ],
         "domain_profile_kind": [
           "env_config_library"
         ],
@@ -4822,6 +5234,11 @@
       "archetype": "dataframe_pipeline",
       "label": "dataframe/ETL pipeline",
       "match": {
+        "purpose_contains_any": [
+          "tabular data pipeline",
+          "dataframe pipeline",
+          "etl pipeline"
+        ],
         "text_contains_any": [
           "pandas",
           "dataframe",
@@ -5087,6 +5504,104 @@
         "filesystem/API side effects when present",
         "logs or reports"
       ]
+    },
+    {
+      "rule_id": "owned_packaging_build_backend",
+      "record_type": "project_archetype_rule",
+      "priority": 140,
+      "archetype": "packaging_build_backend",
+      "label": "owned packaging/build backend",
+      "purpose_summary": "Implement a project-owned Python packaging build backend that exposes PEP 517 artifact and metadata hooks.",
+      "match": {
+        "required_source_contains_any": [
+          "build_meta.py",
+          "pep517",
+          "build_backend"
+        ],
+        "required_source_contains_all": [
+          "build_wheel",
+          "build_sdist",
+          "prepare_metadata_for_build_wheel"
+        ],
+        "min_score": 100
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "orchestrators", "process_boundary", "bottlenecks"],
+        "primary_target_prefer": ["build_wheel", "build_sdist", "prepare_metadata_for_build_wheel", "get_requires_for_build_wheel"],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the owned PEP 517 hook contract around {target}, where metadata, artifact generation, isolation, and failure reporting need explicit boundaries."
+      },
+      "target_architecture_shape": [
+        "PEP 517 hook ownership is distinguished from merely declaring an external backend.",
+        "Metadata preparation and wheel/sdist generation use explicit contracts.",
+        "Build subprocesses and temporary trees are bounded and observable.",
+        "Artifact outputs are validated against manifests and controlled failures."
+      ],
+      "first_slice": {
+        "name": "owned_build_backend_hook_slice",
+        "goal": "Stabilize one owned PEP 517 hook path from metadata to a validated artifact.",
+        "target_sources": ["central", "orchestrators", "process_boundary"],
+        "targets_prefer": ["build_wheel", "build_sdist", "prepare_metadata_for_build_wheel"],
+        "steps": [
+          "Bind the local backend module to its exported PEP 517 hooks.",
+          "Separate metadata preparation from artifact generation.",
+          "Capture output paths, logs, and typed build failures.",
+          "Verify wheel, sdist, metadata-only, and failure cases."
+        ]
+      },
+      "defer": [
+        "Do not classify projects that only declare an external backend as backend implementations.",
+        "Do not execute unbounded builds during project recognition."
+      ],
+      "verification_extra": "Contrast an owned build_meta module with a consumer-only pyproject declaration.",
+      "scenario_summary": [
+        "Invoke project-owned PEP 517 hooks for metadata, wheel, or sdist generation.",
+        "Translate project configuration into build requirements and artifact outputs.",
+        "Report controlled hook failures and generated artifact paths."
+      ],
+      "input_summary": ["project source tree", "build configuration", "PEP 517 hook arguments"],
+      "output_summary": ["wheel or sdist artifact", "prepared metadata", "build requirements", "typed build failure"]
+    },
+    {
+      "rule_id": "owned_pytest_plugin",
+      "record_type": "project_archetype_rule",
+      "priority": 138,
+      "archetype": "pytest_plugin",
+      "label": "owned pytest plugin",
+      "purpose_summary": "Provide a project-owned pytest plugin through a pytest11 entry point and production plugin module.",
+      "match": {
+        "required_source_contains_any": ["pytest.fixture", "pytest_addoption", "pytest_configure", "pytest_sessionstart"],
+        "required_source_contains_all": ["pytest11"],
+        "min_score": 100
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "orchestrators", "process_boundary", "bottlenecks"],
+        "primary_target_prefer": ["pytest_configure", "pytest_addoption", "pytest_sessionstart", "fixture"],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is the pytest registration and hook/fixture boundary around {target}."
+      },
+      "target_architecture_shape": [
+        "pytest11 registration is bound to a project-owned hook or fixture module.",
+        "Hook and fixture contracts are separated from test-suite conftest helpers.",
+        "Plugin state and lifecycle callbacks have explicit testable boundaries."
+      ],
+      "first_slice": {
+        "name": "owned_pytest_plugin_contract_slice",
+        "goal": "Stabilize one registered pytest hook or fixture boundary.",
+        "target_sources": ["central", "orchestrators"],
+        "targets_prefer": ["pytest_configure", "pytest_addoption", "pytest_sessionstart", "fixture"],
+        "steps": [
+          "Bind pytest11 registration to its production module.",
+          "Separate hook lifecycle state from fixture payload construction.",
+          "Verify plugin loading, hook invocation, fixture scope, and controlled failure."
+        ]
+      },
+      "defer": [
+        "Do not classify projects that only use pytest or define test-local conftest fixtures as pytest plugins.",
+        "Do not load external pytest plugins during recognition."
+      ],
+      "verification_extra": "Contrast a registered production plugin with a consumer project containing only conftest fixtures.",
+      "scenario_summary": ["Load a project-owned pytest plugin.", "Invoke registered hooks or fixtures during a pytest lifecycle."],
+      "input_summary": ["pytest configuration", "session or item context", "fixture request"],
+      "output_summary": ["registered hooks", "fixture values", "controlled plugin failures"]
     },
     {
       "rule_id": "packaging_build_backend",
@@ -6037,6 +6552,74 @@
       ]
     },
     {
+      "rule_id": "atomistic_simulation_toolkit",
+      "record_type": "project_archetype_rule",
+      "priority": 104,
+      "archetype": "atomistic_simulation_toolkit",
+      "architect_consumable": true,
+      "label": "atomistic simulation and geometry toolkit",
+      "purpose_summary": "Set up, transform, run, and analyze atomistic simulations with explicit coordinate, cell, species, and numerical-result contracts.",
+      "match": {
+        "project_name_contains_any": [
+          "ase-abacus",
+          "atomic-simulation-environment"
+        ],
+        "required_source_contains_any": [
+          "atomistic simulations",
+          "atomic positions",
+          "chemical symbols",
+          "pseudopotential"
+        ],
+        "text_contains_any": [
+          "atomistic",
+          "simulation",
+          "atomic",
+          "coordinates",
+          "cell",
+          "numpy",
+          "scipy",
+          "pseudopotential"
+        ],
+        "min_score": 65
+      },
+      "diagnosis": {
+        "primary_sources": ["domain_anchors", "central", "broad"],
+        "primary_target_prefer": ["centering_as_array", "string2vector", "distance", "angle", "cell", "position"],
+        "template": "{label} with entrypoint {entrypoints}; the first bounded slice should preserve coordinate shape, units, periodic-cell semantics, and numerical tolerance around {target}."
+      },
+      "target_architecture_shape": [
+        "Coordinate, cell, species, unit, and periodic-boundary inputs are explicit contracts.",
+        "Deterministic geometry kernels are separated from calculators, databases, plotting, and subprocess execution.",
+        "Numerical results declare shape, units, tolerance, and invalid-geometry behavior.",
+        "External simulation engines remain adapter-owned and fixture-replaceable."
+      ],
+      "first_slice": {
+        "name": "atomistic_geometry_transform_slice",
+        "goal": "Stabilize one deterministic coordinate or geometry transformation without invoking an external calculator.",
+        "target_sources": ["domain_anchors", "central", "broad"],
+        "targets_prefer": ["centering_as_array", "string2vector", "distance", "angle", "cell", "position"],
+        "steps": [
+          "Define coordinate, cell, unit, and periodic-boundary input contracts.",
+          "Separate the numerical transform from calculator, database, plotting, and filesystem adapters.",
+          "Specify result shape and floating-point tolerance.",
+          "Verify valid geometry, malformed shape, degenerate geometry, and tolerance boundaries."
+        ]
+      },
+      "defer": [
+        "Do not invoke external simulation engines in the first contract test.",
+        "Do not treat an optional database or web interface as the package's primary architecture."
+      ],
+      "verification_extra": "Use small deterministic coordinate arrays and explicit tolerances for geometry assertions.",
+      "scenario_summary": [
+        "Construct or receive atoms, coordinates, and periodic-cell metadata.",
+        "Apply a deterministic geometry or coordinate transformation.",
+        "Return shape- and unit-aware numerical results.",
+        "Reject malformed or degenerate geometry explicitly."
+      ],
+      "input_summary": ["coordinate arrays", "cell vectors", "species metadata", "periodic-boundary flags", "units and tolerances"],
+      "output_summary": ["transformed coordinates", "distances or angles", "cell-aware arrays", "controlled geometry errors"]
+    },
+    {
       "rule_id": "scientific_compute_library",
       "record_type": "project_archetype_rule",
       "priority": 65,
@@ -6161,12 +6744,22 @@
       "archetype": "protocol_api_client",
       "architect_consumable": true,
       "label": "protocol/API client library",
+      "purpose_summary": "Provide a client SDK that authenticates with an external API, sends protocol requests, and normalizes remote responses and failures.",
       "match": {
+        "project_name_contains_any": [
+          "rest-client",
+          "rest_client",
+          "python sdk",
+          "python-sdk"
+        ],
         "domain_profile_kind": [
           "protocol_api_client"
         ],
         "required_source_contains_any": [
           "client.py:",
+          "request.py:make_request",
+          "request.py:make_async_request",
+          "api.py:add_resource",
           ":send",
           ":login",
           ":request",
@@ -6176,6 +6769,7 @@
         ],
         "text_contains_any": [
           "api client",
+          "api sdk",
           "transport",
           "retry",
           "rate limit",
@@ -6558,16 +7152,109 @@
       ]
     },
     {
+      "rule_id": "package_publish_action",
+      "record_type": "project_archetype_rule",
+      "priority": 106,
+      "archetype": "package_publish_action",
+      "label": "package publishing CI action",
+      "purpose_summary": "Publish built Python distributions from a CI action while preserving artifact, identity, attestation, and release contracts.",
+      "match": {
+        "require_project_name_match": true,
+        "project_name_contains_any": [
+          "gh_action_pypi_publish",
+          "github_action_pypi_publish"
+        ],
+        "required_contains_any": [
+          "pypi",
+          "publish",
+          "oidc",
+          "attestation"
+        ],
+        "text_contains_any": [
+          "pypi",
+          "publish",
+          "oidc",
+          "attestation",
+          "action.yml"
+        ],
+        "min_score": 100
+      },
+      "diagnosis": {
+        "primary_sources": ["central", "orchestrators", "process_boundary", "bottlenecks"],
+        "primary_target_prefer": ["compose_attestation", "safe_parse", "normalize", "publish"],
+        "template": "{label} with entrypoint {entrypoints}; the main risk is artifact-to-release flow around {target}, where package identity, attestations, and publishing failures need explicit contracts."
+      },
+      "target_architecture_shape": [
+        "Distribution discovery and package-name parsing are deterministic boundaries.",
+        "OIDC, attestation, and upload operations are isolated behind CI adapters.",
+        "Release inputs and produced attestations are recorded as replayable artifacts.",
+        "Invalid distributions and provider failures produce explicit diagnostics."
+      ],
+      "first_slice": {
+        "name": "package_publish_contract_slice",
+        "goal": "Stabilize one deterministic package or attestation transform before exercising provider boundaries.",
+        "target_sources": ["extraction", "central", "bottlenecks"],
+        "targets_prefer": ["compose_attestation_mapping", "safe_parse_pkg_name", "get_normalized_input"],
+        "steps": [
+          "Define package identity and attestation mapping contracts.",
+          "Keep CI environment and provider access behind adapters.",
+          "Preserve invalid filename and missing claim evidence.",
+          "Verify wheel, sdist, malformed artifact, and missing input cases."
+        ]
+      },
+      "defer": [
+        "Do not invoke a live package index in the first slice.",
+        "Do not combine deterministic artifact parsing with token exchange changes."
+      ],
+      "verification_extra": "Use local wheel/sdist names and fixture claims without network access.",
+      "scenario_summary": [
+        "Discover built Python distributions in a CI workspace.",
+        "Normalize package and trusted-publishing inputs.",
+        "Compose attestations for release artifacts.",
+        "Publish through an isolated package-index adapter."
+      ],
+      "input_summary": ["wheel and sdist paths", "CI action inputs", "OIDC claims", "attestation metadata"],
+      "output_summary": ["normalized package identities", "attestation mappings", "publish result", "typed release failures"]
+    },
+    {
       "rule_id": "docs_site_generator",
       "record_type": "project_archetype_rule",
       "priority": 72,
       "archetype": "docs_site_generator",
       "label": "documentation/static site generator",
       "match": {
+        "require_project_name_or_purpose_match": true,
+        "project_name_contains_any": [
+          "mkdocs",
+          "sphinx",
+          "pelican",
+          "pdoc",
+          "pydoc_markdown"
+        ],
+        "purpose_contains_any": [
+          "api documentation",
+          "documentation generator",
+          "documentation tool",
+          "generate documentation",
+          "markdown documentation",
+          "static site generator"
+        ],
+        "required_contains_any": [
+          "mkdocs",
+          "sphinx",
+          "pelican",
+          "pdoc",
+          "pydoc_markdown",
+          "documentation generator",
+          "site_dir",
+          "static site"
+        ],
         "text_contains_any": [
           "mkdocs",
           "sphinx",
           "pelican",
+          "pdoc",
+          "pydoc_markdown",
           "markdown",
           "documentation generator",
           "site_dir",
@@ -6942,6 +7629,11 @@
       "archetype": "code_generation_toolkit",
       "label": "code generation/plugin factory",
       "match": {
+        "required_source_contains_any": [
+          "build_plugin",
+          "build_plugin_metadata",
+          "generate_code"
+        ],
         "text_contains_any": [
           "render_",
           "generate_code"

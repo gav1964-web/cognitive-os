@@ -38,3 +38,17 @@ def test_case_batch_isolates_project_exception(tmp_path: Path):
     assert cases[0]["status"] == "needs_review"
     assert cases[0]["executor"]["executor_status"] == "evaluation_error"
     assert "RuntimeError: boom" in cases[0]["evaluation_error"]
+
+
+def test_case_batch_runs_only_recognition_qualified_project_names(tmp_path: Path):
+    projects = tmp_path / "projects"
+    for name in ("qualified", "rejected"):
+        (projects / name / ".git").mkdir(parents=True)
+
+    cases = run_case_batch(
+        projects_dir=projects,
+        runner=lambda path: {"project": path.name, "status": "ok"},
+        project_names={"qualified"},
+    )
+
+    assert [case["project"] for case in cases] == ["qualified"]

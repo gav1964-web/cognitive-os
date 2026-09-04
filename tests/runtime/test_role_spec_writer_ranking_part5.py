@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 from runtime.configured_role_pipeline import producer_for_artifact_type
+from runtime._parts.technical_spec_builder_part2 import _first_slice_target_can_override
 from runtime.role_skills import run_role_skill
 
 
 def _run_spec_writer(architecture_decision: dict):
     return run_role_skill(producer_for_artifact_type("TechnicalSpec"), architecture_decision=architecture_decision)
+
+
+def test_suspicious_architecture_target_cannot_override_stronger_candidate():
+    assert not _first_slice_target_can_override(
+        {
+            "source": "pkg/crawler.py:get_addon",
+            "score": 100,
+            "semantic_status": "suspicious",
+        },
+        best_score=90,
+    )
 
 
 def test_spec_writer_demotes_arguments_builder_when_domain_target_exists():

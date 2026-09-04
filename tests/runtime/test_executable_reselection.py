@@ -1,14 +1,16 @@
 from runtime.executable_reselection import (
     build_execution_reselection_request,
+    feedback_iteration_limit,
     record_rejected_target,
 )
 import runtime.role_pipeline_stages as stages
 
 
-def _executor(signal="meta_only", count=0, reason="positive_sample_execution_failed"):
+def _executor(signal="meta_only", count=0, reason="positive_sample_execution_failed", status="passed"):
     return {
         "test_result": {
             "executable_acceptance_result": {
+                "status": status,
                 "summary": {
                     "signal_strength": signal,
                     "callable_harness_count": count,
@@ -26,6 +28,10 @@ def _spec():
     return {"extraction_contract": {"candidate": "pkg/core.py:parse"}}
 
 
+def test_feedback_budget_remains_bounded():
+    assert feedback_iteration_limit() == 4
+
+
 def test_meta_only_acceptance_returns_target_to_architect():
     request = build_execution_reselection_request(_executor(), _spec())
 
@@ -41,6 +47,15 @@ def test_callable_acceptance_does_not_request_reselection():
     )
 
     assert request["status"] == "not_required"
+
+
+def test_failed_callable_acceptance_returns_target_to_architect():
+    request = build_execution_reselection_request(
+        _executor(signal="executable_callable", count=1, status="failed"), _spec()
+    )
+
+    assert request["status"] == "required"
+    assert request["blocking_evidence"]["skipped_targets"][-1]["reason"] == "executable_acceptance_failed"
 
 
 def test_non_actionable_skip_does_not_expand_architect_scope():

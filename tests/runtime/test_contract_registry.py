@@ -72,8 +72,12 @@ def test_contract_registry_validates_artifact_api(registry):
         {
             "artifact_type": "ReviewFindings",
             "findings": [],
-            "risk_assessment": [],
-            "recommendation": "approve",
+                "risk_assessment": [],
+                "recommendation": "approve",
+                "promotion_policy": {
+                    "automatic_promotion_forbidden": True,
+                    "human_release_approval_required": True,
+                },
         }
     )
     contracts.validate_artifact(

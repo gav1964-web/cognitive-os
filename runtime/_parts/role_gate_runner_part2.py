@@ -159,7 +159,11 @@ def _contract_violations_checked(artifact: dict[str, Any], artifacts: dict[str, 
     return isinstance(artifact.get("contract_violations"), list), "contract violations list exists"
 
 def _promotion_requires_human_review(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
-    return "human" in str(artifact).lower() or artifact.get("recommendation") in {"approve_with_risks", "request_rework"}, "human review/promotion caution is represented"
+    policy = dict(artifact.get("promotion_policy") or {})
+    return bool(
+        policy.get("automatic_promotion_forbidden") is True
+        and policy.get("human_release_approval_required") is True
+    ), "human release approval and automatic-promotion prohibition are represented"
 
 def _recommendation_explicit(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
     return artifact.get("recommendation") in {"approve", "approve_with_risks", "request_rework"}, "review recommendation is explicit"

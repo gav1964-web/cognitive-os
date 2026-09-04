@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .architecture_synthesis_policy import load_architecture_synthesis_policy
+from .semantic_target_profiles import semantic_ranking_adjustments
 
 
 def rank_architecture_targets(
@@ -32,6 +33,7 @@ def architecture_target_score(target: str, policy: dict[str, Any] | None = None)
     score += _weighted_prefixes(symbol, policy.get("symbol_prefixes"))
     score -= _weighted_matches(path, policy.get("low_value_path_contains"))
     score -= _weighted_prefixes(symbol, policy.get("low_value_symbol_prefixes"))
+    score += int(semantic_ranking_adjustments(target).get("score_delta") or 0)
     return score
 
 

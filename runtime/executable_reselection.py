@@ -15,13 +15,26 @@ def build_execution_reselection_request(
     if not policy.get("execution_feedback_enabled", False):
         return {"status": "not_required", "reason": "execution_feedback_disabled"}
     summary = _acceptance_summary(executor)
+    acceptance_status = _acceptance_status(executor)
     target = str(dict(technical_spec.get("extraction_contract") or {}).get("candidate") or "")
     callable_count = int(summary.get("callable_harness_count") or 0)
     signal = str(summary.get("signal_strength") or "")
     skipped = [dict(row) for row in summary.get("skipped_targets") or [] if isinstance(row, dict)]
     allowed = {str(reason) for reason in policy.get("execution_rejection_reasons") or []}
     actionable = [row for row in skipped if str(row.get("reason") or "") in allowed]
-    if not target or callable_count > 0 or signal == "executable_callable" or not actionable:
+    if acceptance_status == "failed" and target and "executable_acceptance_failed" in allowed:
+        actionable.append({
+            "target": target,
+            "reason": "executable_acceptance_failed",
+            "detail": "callable harness executed but executable acceptance failed",
+            "recovery": "reject the failed target and select a lower-cost executable contract",
+        })
+    callable_passed = (
+        acceptance_status == "passed"
+        and callable_count > 0
+        and signal == "executable_callable"
+    )
+    if not target or callable_passed or not actionable:
         return {
             "artifact_type": "ExecutableReselectionRequest",
             "status": "not_required",
@@ -85,3 +98,9 @@ def _acceptance_summary(executor: dict[str, Any]) -> dict[str, Any]:
     test_result = dict(executor.get("test_result") or {})
     acceptance = dict(test_result.get("executable_acceptance_result") or {})
     return dict(acceptance.get("summary") or {})
+
+
+def _acceptance_status(executor: dict[str, Any]) -> str:
+    test_result = dict(executor.get("test_result") or {})
+    acceptance = dict(test_result.get("executable_acceptance_result") or {})
+    return str(acceptance.get("status") or "")

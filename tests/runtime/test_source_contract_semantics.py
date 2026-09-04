@@ -1,6 +1,6 @@
-from runtime.source_contract_semantics import infer_source_contract, structural_quality_adjustment
-from runtime.target_quality import semantic_target_quality_report
+from __future__ import annotations
 
+from tests.runtime.source_contract_semantics_helpers import *
 
 def test_explicit_none_annotation_produces_void_contract():
     evidence = infer_source_contract(
@@ -78,6 +78,22 @@ def test_structural_quality_does_not_reward_generic_inferred_shapes():
 
     assert score == 0
     assert reasons == []
+
+
+def test_structural_quality_does_not_call_observed_effects_side_effect_free():
+    score, reasons = structural_quality_adjustment(
+        {
+            "source_body_complete": True,
+            "observed_side_effects": ["memory_state"],
+            "state_mutation": False,
+        },
+        input_contract={"module": "ModuleLike"},
+        output_contract={"result": "VoidSideEffect"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert score >= 4
+    assert "complete source proves a bounded side-effect-free transform" not in reasons
 
 
 def test_truncated_callable_retains_docstring_but_marks_body_incomplete():
@@ -178,6 +194,7 @@ def test_generator_body_produces_iterator_contract():
     assert evidence["inferred_output_type"] == "IteratorLike"
     assert evidence["output_inference_basis"] == "yield_expression"
     assert evidence["yield_paths"] == 1
+
 
 def test_returned_local_class_is_inferred_as_type_factory():
     evidence = infer_source_contract(
@@ -339,62 +356,3 @@ def test_value_return_overrides_incorrect_none_annotation():
 
     assert evidence["inferred_output_type"] == "AttributeValue"
     assert evidence["output_inference_basis"] == "return_expression"
-
-
-def test_session_add_proves_database_side_effect():
-    evidence = infer_source_contract({
-        "signature": {"args": [{"name": "session"}, {"name": "value"}]},
-        "snippet": "def add_value(session, value):\n    record = Record(value=value)\n    session.add(record)",
-    })
-
-    assert evidence["observed_side_effects"] == ["database"]
-
-
-def test_receiver_request_dispatch_proves_delegated_result():
-    evidence = infer_source_contract({
-        "signature": {"args": [{"name": "method"}]},
-        "snippet": "def execute(self, method=None):\n    return getattr(self, method)(**self.request.get_values())",
-    })
-
-    assert evidence["inferred_output_type"] == "DispatchedResult"
-    assert evidence["output_inference_basis"] == "return_expression"
-    assert evidence["dynamic_dispatch"] is True
-
-
-def test_receiver_request_dispatch_is_visible_when_response_is_returned_separately():
-    evidence = infer_source_contract({
-        "snippet": (
-            "def execute(self, method=None):\n"
-            "    getattr(self, method)(**self.request.get_values())\n"
-            "    return self.response"
-        ),
-    })
-
-    assert evidence["inferred_output_type"] == "AttributeValue"
-    assert evidence["dynamic_dispatch"] is True
-
-def test_recursive_xml_serializer_proves_root_and_nested_output_shapes():
-    evidence = infer_source_contract({
-        "snippet": (
-            "def serialize(self, model, tag='event', level=0):\n"
-            "    xml = Element(tag)\n"
-            "    return etree.tostring(xml) if level == 0 else xml"
-        ),
-    })
-
-    assert evidence["inferred_output_type"] == "Union[XMLNodeLike, bytes]"
-    assert evidence["output_inference_basis"] == "return_expression"
-
-
-def test_read_only_session_and_local_append_do_not_prove_database_write():
-    query = infer_source_contract({
-        "signature": {"args": [{"name": "session"}]},
-        "snippet": "def rows(session):\n    return session.query(Record).all()",
-    })
-    local = infer_source_contract({
-        "signature": {"args": [{"name": "values"}, {"name": "value"}]},
-        "snippet": "def append(values, value):\n    values.append(value)",
-    })
-
-    assert query["observed_side_effects"] == []
-    assert local["observed_side_effects"] == ["memory_state"]

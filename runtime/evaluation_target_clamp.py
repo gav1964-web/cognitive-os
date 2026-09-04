@@ -80,11 +80,16 @@ def _clamped_slice(value: dict[str, Any], target: str) -> dict[str, Any]:
 
 def _candidate_pool_rank(
     source: str, context: dict[str, Any]
-) -> tuple[int, int, int, int, int, str]:
+) -> tuple[int, int, int, int, int, int, str]:
     evidence = dict(context.get(source) or {})
     snippet = dict(evidence.get("snippet") or {})
     structural = dict(snippet.get("structural_contract") or {})
     effects = list(snippet.get("side_effects") or structural.get("observed_side_effects") or [])
+    decorators = [
+        str(value).strip().lower()
+        for value in list(snippet.get("decorators") or structural.get("decorators") or [])
+    ]
+    property_accessor = any(value.removeprefix("@").split("(", 1)[0] == "property" for value in decorators)
     instance_bound = bool(
         snippet.get("owner_class") or structural.get("owner_class")
         or snippet.get("target_binding") == "method_symbol"
@@ -92,7 +97,7 @@ def _candidate_pool_rank(
     output_basis = str(structural.get("output_inference_basis") or "")
     return_paths = int(structural.get("return_paths") or 0)
     return (
-        int(bool(effects)), int(instance_bound),
+        int(bool(effects)), int(property_accessor), int(instance_bound),
         int(output_basis in {"", "insufficient_structural_evidence", "no_value_return"}),
         -return_paths, -int(evidence.get("candidate_score") or 0), source,
     )

@@ -194,7 +194,7 @@ def test_programmer_patch_sandbox_copy_tolerates_disappearing_files(tmp_path: Pa
     def fake_walk(path, onerror=None):
         yield str(project), [], ["main.py", "missing.py"]
 
-    import runtime.programmer_patch_synthesizer as module
+    import runtime.programmer_patch_synthesizer_common as module
 
     module.os.walk = fake_walk
     try:

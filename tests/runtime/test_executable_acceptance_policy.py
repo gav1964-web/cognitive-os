@@ -3,6 +3,9 @@ from __future__ import annotations
 import gc
 from pathlib import Path
 
+import pytest
+
+from runtime.executable_acceptance_methods import _method_instance
 from runtime.executable_acceptance_policy import (
     dependency_stub_policy,
     external_call_tokens,
@@ -16,6 +19,37 @@ from runtime.executable_acceptance_policy import (
 )
 from runtime.executable_acceptance_effect_stubs import configured_effect_stubs
 from runtime.executable_acceptance_materializers import materialize
+
+
+class _ControlledConstructorFailure(BaseException):
+    pass
+
+
+class _RejectingConstructor:
+    def __new__(cls):
+        raise _ControlledConstructorFailure("use the framework factory")
+
+
+class _InterruptingConstructor:
+    def __new__(cls):
+        raise KeyboardInterrupt
+
+
+def test_method_fixture_contains_framework_controlled_constructor_failure():
+    instance = _method_instance(
+        _RejectingConstructor,
+        {"default_constructor_first": True, "safe_uninitialized_instance": False},
+    )
+
+    assert instance is None
+
+
+def test_method_fixture_does_not_swallow_process_control_exceptions():
+    with pytest.raises(KeyboardInterrupt):
+        _method_instance(
+            _InterruptingConstructor,
+            {"default_constructor_first": True, "safe_uninitialized_instance": False},
+        )
 
 
 def test_executable_acceptance_policy_drives_samples_dependency_tokens_and_stubs():
@@ -87,6 +121,8 @@ def test_temporary_policy_is_scoped_and_restored():
     assert sample_value("bytes", "payload") == {"__fixture__": "bytes_empty"}
     assert sample_value("IndexableLike", "data") == {}
     assert sample_value("", "function") == {"__fixture__": "callable_identity"}
+    assert sample_value("type[T]", "of_type", signature_mode=True) == {"__fixture__": "python_type_str"}
+    assert materialize(sample_value("type[T]", "of_type", signature_mode=True)) is str
 
 
 def test_socket_effect_stub_preserves_hostname_read():
@@ -112,6 +148,22 @@ def test_crypt_context_fixture_preserves_password_helper_return_shapes():
     assert isinstance(context.hash("plain"), str)
 
 
+def test_dataframe_fields_materialize_bounded_matching_frames():
+    training = materialize(sample_value("pandas.DataFrame", "training_dataframe"))
+    testing = materialize(sample_value("pandas.DataFrame", "testing_dataframe"))
+
+    assert list(training.columns) == ["numeric", "category"]
+    assert list(testing.columns) == list(training.columns)
+    assert training is not testing
+    assert sample_value("bool", "ignore_update_check") is True
+
+
+def test_response_field_materializes_success_status():
+    response = materialize(sample_value("ProtocolLike", "response"))
+
+    assert response.status_code == 200
+
+
 def test_readable_temp_path_fixture_is_ephemeral():
     fixture = materialize(sample_value("PathLike", "image_path"))
     path = Path(fixture)
@@ -120,3 +172,7 @@ def test_readable_temp_path_fixture_is_ephemeral():
     del fixture
     gc.collect()
     assert not path.exists()
+
+
+def test_string_path_parameter_uses_ephemeral_file_fixture():
+    assert sample_value("str", "path") == {"__fixture__": "readable_temp_path"}

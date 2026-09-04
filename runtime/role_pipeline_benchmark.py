@@ -9,6 +9,8 @@ from typing import Any
 
 from .local_inference import LocalInferenceConfig
 from .role_pipeline import run_role_pipeline
+from .role_project_type_evaluation import classify_project_case
+from .role_chain_interaction import build_role_chain_trace, summarize_role_chain_traces
 
 
 REQUIRED_ARTIFACTS = [
@@ -66,6 +68,12 @@ def run_role_pipeline_case(
     score = score_role_pipeline(result, allow_llm=allow_llm, expected_candidate=expected_candidate)
     advisory = dict(result.get("architect_advisory", {}))
     role_quality = dict(result.get("role_quality", {}))
+    project_classification = classify_project_case({
+        "project": project_dir.name,
+        "artifacts": result.get("artifacts", {}),
+        "role_quality": role_quality,
+    })
+    chain_trace = build_role_chain_trace(project=project_dir.name, result=result)
     return {
         "project": project_dir.name,
         "status": "ok" if score["passed"] else "failed",
@@ -76,6 +84,9 @@ def run_role_pipeline_case(
         "expected_best_extraction_candidate": expected_candidate,
         "next_action": result.get("next_action"),
         "recommendation": result.get("recommendation"),
+        "project_classification": project_classification,
+        "role_chain_interaction": chain_trace,
+        "no_safe_candidate_recovery": dict(result.get("no_safe_candidate_recovery") or {}),
     }
 
 
@@ -170,6 +181,9 @@ def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
     safety_score = _ratio(sum(case["score"]["safety_score"] for case in cases), len(cases))
     advisories = [dict(case.get("architect_advisory", {})) for case in cases]
     qualities = [dict(case.get("advisory_quality", {})) for case in cases]
+    chain_summary = summarize_role_chain_traces([
+        dict(case.get("role_chain_interaction") or {}) for case in cases
+    ])
     delta_score = _ratio(sum(int(item.get("advisory_delta_score") or 0) for item in advisories), len(cases))
     return {
         "status": "ok" if passed == len(cases) else "failed",
@@ -187,6 +201,21 @@ def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "advisory_quality": _merge_quality(qualities),
             "llm_invoked": sum(1 for item in advisories if item.get("llm_invoked") is True),
             "warnings": sum(len(case["score"]["warnings"]) for case in cases),
+            "role_chain": chain_summary,
+            "no_safe_candidate_recovery": {
+                "applicable": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") != "not_applicable"
+                    for case in cases
+                ),
+                "bounded_rework_ready": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") == "bounded_rework_ready"
+                    for case in cases
+                ),
+                "controlled_stop": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") == "controlled_stop"
+                    for case in cases
+                ),
+            },
         },
         "cases": cases,
     }

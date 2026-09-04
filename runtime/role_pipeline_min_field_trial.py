@@ -11,6 +11,8 @@ from typing import Any
 
 from .project_execution_isolation import isolated_project_execution
 from .role_pipeline import run_role_pipeline
+from .role_project_type_evaluation import classify_project_case
+from .role_chain_interaction import build_role_chain_trace, summarize_role_chain_traces
 
 
 ROLE_IDS = ("implementer", "task_tree_builder", "programmer_executor", "tester", "reviewer")
@@ -21,6 +23,7 @@ def run_role_pipeline_min_field_trial(
     root: Path,
     projects_dir: Path,
     eligible_projects: set[str] | None = None,
+    project_classifications: dict[str, dict[str, Any]] | None = None,
     limit: int = 0,
     target_score: float = 9.7,
     write: bool = False,
@@ -30,8 +33,8 @@ def run_role_pipeline_min_field_trial(
         projects = [path for path in projects if path.name in eligible_projects]
     if limit:
         projects = projects[:limit]
-    cases = [_run_case(root, project) for project in projects]
-    report = _report(cases, target_score)
+    cases = [_run_case(root, project, (project_classifications or {}).get(project.name)) for project in projects]
+    report = _report(cases, target_score, source_lineage=projects_dir.resolve().as_posix())
     if write:
         out_dir = root / "artifacts" / "field_trials"
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,7 +54,18 @@ def eligible_projects_from_foundation_report(path: Path) -> set[str]:
     }
 
 
-def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
+def project_classifications_from_foundation_reports(paths: list[Path]) -> dict[str, dict[str, Any]]:
+    classifications: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for case in payload.get("cases", []):
+            if not isinstance(case, dict) or case.get("status") in {"out_of_scope", "failed"}:
+                continue
+            classifications[str(case.get("project") or "")] = classify_project_case(case)
+    return classifications
+
+
+def _run_case(root: Path, project_dir: Path, inherited_classification: dict[str, Any] | None = None) -> dict[str, Any]:
     captured_stdout = io.StringIO()
     captured_stderr = io.StringIO()
     try:
@@ -82,6 +96,13 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
         "tester": _gate_score(gate_cases.get("tester", {})),
         "reviewer": _gate_score(gate_cases.get("reviewer", {})),
     }
+    project_classification = inherited_classification or classify_project_case({
+        "project": project_dir.name,
+        "artifacts": result.get("artifacts", {}),
+        "role_quality": result.get("role_quality", {}),
+        "programmer_evidence": _programmer_evidence(result),
+    })
+    chain_trace = build_role_chain_trace(project=project_dir.name, result=result)
     return {
         "project": project_dir.name,
         "status": "ok" if min(role_scores.values()) >= 9.7 else "needs_work",
@@ -96,6 +117,8 @@ def _run_case(root: Path, project_dir: Path) -> dict[str, Any]:
         "next_action": result.get("next_action"),
         "safety": result.get("safety", {}),
         "runtime_output": _captured_output(captured_stdout, captured_stderr),
+        "project_classification": project_classification,
+        "role_chain_interaction": chain_trace,
     }
 
 
@@ -176,7 +199,9 @@ def _read_json(path: object) -> dict[str, Any]:
     return json.loads(target.read_text(encoding="utf-8"))
 
 
-def _report(cases: list[dict[str, Any]], target_score: float) -> dict[str, Any]:
+def _report(
+    cases: list[dict[str, Any]], target_score: float, *, source_lineage: str | None = None
+) -> dict[str, Any]:
     minima = {
         role_id: min((case["role_scores"][role_id] for case in cases), default=0.0)
         for role_id in ROLE_IDS
@@ -190,11 +215,17 @@ def _report(cases: list[dict[str, Any]], target_score: float) -> dict[str, Any]:
         case for case in cases
         if dict(case.get("programmer_evidence") or {}).get("transformation_evaluated") is True
     ]
+    chain_summary = summarize_role_chain_traces([
+        dict(case.get("role_chain_interaction") or {})
+        for case in cases
+        if case.get("role_chain_interaction")
+    ])
     return {
         "artifact_type": "RolePipelineMinimumFieldTrialReport",
         "status": "ok" if not below_target else "needs_work",
         "milestone": "Implementer -> TaskTree -> Programmer -> Tester -> Reviewer minimum field trial",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source_lineage": source_lineage,
         "project_count": len(cases),
         "target_score": target_score,
         "summary": {
@@ -209,6 +240,7 @@ def _report(cases: list[dict[str, Any]], target_score: float) -> dict[str, Any]:
                 (case["role_scores"]["programmer_executor"] for case in transformation_cases),
                 default=None,
             ),
+            "role_chain": chain_summary,
         },
         "below_target": below_target,
         "cases": cases,

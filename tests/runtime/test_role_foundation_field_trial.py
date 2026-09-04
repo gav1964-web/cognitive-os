@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import patch
-
-from runtime.role_artifact_quality import evaluate_technical_spec
-from runtime.role_foundation_field_trial import _apply_role_score_caps, _case_status, _primary_language_scope, _report, _role_scores, discover_python_projects
-
+from tests.runtime.role_foundation_field_trial_helpers import *
 
 def test_field_trial_report_uses_project_and_role_minimums():
     report = _report(
@@ -354,46 +349,3 @@ def test_primary_language_scope_marks_single_notebook_export_out_of_scope(tmp_pa
     (project / "Getting Started.py").write_text("print('notebook export')\n", encoding="utf-8")
 
     assert _primary_language_scope(project)["status"] == "out_of_scope"
-
-
-def test_primary_language_scope_marks_repo_without_python_out_of_scope(tmp_path: Path):
-    project = tmp_path / "javascript"
-    project.mkdir()
-    (project / "main.js").write_text("console.log('ok')\n", encoding="utf-8")
-
-    scope = _primary_language_scope(project)
-
-    assert scope["status"] == "out_of_scope"
-    assert scope["reason_code"] == "no_python_owned_product_boundary"
-
-
-def test_primary_language_scope_keeps_python_package_in_scope(tmp_path: Path):
-    project = tmp_path / "pkg"
-    (project / "pkg").mkdir(parents=True)
-    (project / "pkg" / "__init__.py").write_text("", encoding="utf-8")
-    (project / "pkg" / "core.py").write_text("def normalize(value): return value\n", encoding="utf-8")
-    (project / "pyproject.toml").write_text("[project]\nname='pkg'\n", encoding="utf-8")
-
-    assert _primary_language_scope(project)["status"] == "in_scope"
-
-
-def test_primary_language_scope_tolerates_inaccessible_subtree(tmp_path: Path):
-    project = tmp_path / "pkg"
-    (project / "pkg").mkdir(parents=True)
-    (project / "broken").mkdir()
-    (project / "pkg" / "__init__.py").write_text("", encoding="utf-8")
-    real_walk = __import__("os").walk
-
-    def noisy_walk(path, *args, **kwargs):
-        for current, dirs, files in real_walk(path, *args, **kwargs):
-            if Path(current).name == "broken":
-                onerror = kwargs.get("onerror")
-                if onerror:
-                    onerror(OSError("broken subtree"))
-                continue
-            yield current, dirs, files
-
-    with patch("runtime._parts.role_foundation_field_trial_scope.os.walk", side_effect=noisy_walk):
-        scope = _primary_language_scope(project)
-
-    assert scope["status"] == "in_scope"

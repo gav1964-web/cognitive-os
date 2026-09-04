@@ -24,4 +24,4 @@ def generate_llm_role_qa(*args, **kwargs):
     _sync_part_globals()
     return _GENERATE_LLM_ROLE_QA(*args, **kwargs)
 
-__all__ = ['SyntheticRoleKbError', 'SyntheticRoleQaRecord', 'load_synthetic_policy', 'generate_synthetic_role_qa', 'write_synthetic_role_qa', 'write_llm_role_qa', 'generate_llm_role_qa', 'load_synthetic_role_qa', 'role_qa_records_from_kb', 'synthetic_role_qa_summary', 'search_synthetic_role_qa', 'record_role_qa_feedback', 'synthetic_probe_report']
+__all__ = ['SyntheticRoleKbError', 'SyntheticRoleQaRecord', 'load_synthetic_policy', 'generate_synthetic_role_qa', 'write_synthetic_role_qa', 'write_llm_role_qa', 'generate_llm_role_qa', 'load_synthetic_role_qa', 'role_qa_records_from_kb', 'synthetic_role_qa_summary', 'search_synthetic_role_qa', 'record_role_qa_feedback', 'synthetic_probe_report', 'synthetic_role_qa_audit']

@@ -154,6 +154,7 @@
     "weak_contract_shapes": ["", "any", "none", "object"]
     ,
     "semantic_review_floor_score": 9.2,
+    "executable_confirmation_floor_score": 9.7,
     "check_weights": {
       "io_contract_shapes_specific": 4,
       "requirements_and_acceptance_are_implementable": 3,

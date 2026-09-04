@@ -76,6 +76,8 @@ def add_mapping_protocol_samples(
         if not isinstance(item, ast.Call) or not isinstance(item.func, ast.Attribute):
             continue
         owner = item.func.value
+        if item.func.attr == "get" and (len(item.args) > 2 or item.keywords):
+            continue
         if isinstance(owner, ast.Name) and owner.id in parameters and item.func.attr in methods:
             candidates[owner.id].append(
                 (priority, dict(sample), f"ast_mapping_protocol:{item.func.attr}")

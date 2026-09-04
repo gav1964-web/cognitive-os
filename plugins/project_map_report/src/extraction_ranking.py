@@ -44,6 +44,7 @@ def extraction_candidate_score(item: dict[str, Any], level: str) -> int:
     call_count = int(item.get("call_count") or len(item.get("calls", [])) or 0)
     effects = set(item.get("side_effects", []) or [])
     score = {
+        "domain_preferred": 110,
         "bounded_policy": 88,
         "core_flow": 80,
         "boundary": 70,
@@ -289,6 +290,7 @@ def _domain_signal_score(name: str, path: str, groups: dict[str, tuple[str, ...]
 
 def level_rank(level: str) -> int:
     return {
+        "domain_preferred": 0,
         "bounded_policy": 0,
         "core_flow": 1,
         "boundary": 1,

@@ -141,7 +141,9 @@ def apply_preflight_selection_policies(
     return [*preferred_rows, *[row for row in ranked if id(row) not in preferred_ids]]
 
 
-def _fixture_readiness_rank(row: dict[str, Any], evidence: dict[str, Any]) -> tuple[int, int, int, str]:
+def _fixture_readiness_rank(
+    row: dict[str, Any], evidence: dict[str, Any]
+) -> tuple[int, int, int, int, int, int, int, str]:
     output = str(
         evidence.get("explicit_return_annotation")
         or evidence.get("inferred_output_type") or ""
@@ -150,8 +152,16 @@ def _fixture_readiness_rank(row: dict[str, Any], evidence: dict[str, Any]) -> tu
         "bool", "bytes", "dict", "float", "int", "list", "mapping",
         "number", "scalar", "sequence", "set", "str", "tuple",
     ))
+    complex_inputs = sum(
+        str(kind) not in {"", "BooleanLike", "NumericLike", "ScalarLike", "StringLike"}
+        for kind in dict(evidence.get("argument_usage_types") or {}).values()
+    )
     return (
+        int(bool(row.get("property_accessor") or evidence.get("property_accessor"))),
+        int(bool(evidence.get("state_mutation") or evidence.get("observed_side_effects"))),
         int(not simple),
+        complex_inputs,
+        int(row.get("receiver_independent") is False),
         int(evidence.get("argument_count") or 0),
         -int(evidence.get("return_paths") or 0),
         str(row.get("source") or ""),
@@ -251,6 +261,8 @@ def _candidate_evidence(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def candidate_matches_policy(candidate: dict[str, Any], policy: dict[str, Any]) -> bool:
+    if candidate.get("property_accessor") is True:
+        return False
     required = dict(policy.get("structural_requirements") or {})
     reason_text = " ".join(str(item).lower() for item in candidate.get("ranking_reasons") or [])
     forbidden_reasons = {

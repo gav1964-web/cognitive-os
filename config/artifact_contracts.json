@@ -1,6 +1,66 @@
 {
   "schema_version": "artifact_contracts.v1",
   "contracts": {
+    "SelfDevelopmentChangeProposal": {
+      "producer": "self_improvement",
+      "consumers": ["architect", "tester", "reviewer", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "proposal_id", "status", "schema_version", "problem", "hypothesis", "change", "classification", "evidence", "impact_map", "verification", "rollback_plan", "constraints"]
+    },
+    "SelfDevelopmentChangeAdmission": {
+      "producer": "self_development_change_interpreter",
+      "consumers": ["architect", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "proposal_id", "action", "status", "change_class", "required_authority", "required_gates", "gate_results", "blocking_reasons", "execution_authorized", "promotion_applied"]
+    },
+    "SelfDevelopmentShadowDossier": {
+      "producer": "self_improvement",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "proposal", "architectural_delta", "admissions", "constraints"]
+    },
+    "SelfDevelopmentShadowTrialReport": {
+      "producer": "self_development_shadow_trial",
+      "consumers": ["architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "maturity_matrix", "checks", "failed_checks", "summary", "cases", "catalog_digests", "safety"]
+    },
+    "SelfDevelopmentProspectiveDetectionReport": {
+      "producer": "self_development_prospective_detection",
+      "consumers": ["researcher", "architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "evidence_cutoff", "eligible_project_types", "minimum_independent_projects", "checks", "failed_checks", "audit", "watchlist_count", "watchlist", "candidate_count", "candidates", "source_digests", "safety"]
+    },
+    "SelfDevelopmentProspectiveCollectorReceipt": {
+      "producer": "self_development_collector",
+      "consumers": ["researcher", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "source", "source_sha256", "checkpoint", "detector_run", "promotion_applied"]
+    },
+    "SelfDevelopmentL0CandidateAdmission": {
+      "producer": "self_development_l0_lifecycle",
+      "consumers": ["tester", "reviewer", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "status", "proposal_id", "checks", "failed_checks", "reviewer_decision", "active_kb_write", "promotion_applied"]
+    },
+    "SelfDevelopmentL0StagingTransaction": {
+      "producer": "self_development_l0_lifecycle",
+      "consumers": ["reviewer", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "status", "proposal_id", "admission", "target", "candidate_digest", "write_requested", "written", "quarantined", "rollback_rehearsal", "active_kb_write", "promotion_applied"]
+    },
+    "SelfDevelopmentFreshBlindTrialReport": {
+      "producer": "self_development_fresh_blind_trial",
+      "consumers": ["researcher", "architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "evidence_cutoff", "checks", "failed_checks", "coverage", "summary", "cases", "prospective_report", "safety"]
+    },
+    "SelfDevelopmentCorpusEligibilityIndex": {
+      "producer": "self_development_corpus_eligibility",
+      "consumers": ["researcher", "architect", "project_analyzer", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "target", "acquisition", "holdout", "shortage", "network_fallback", "projects", "checks", "failed_checks", "safety"]
+    },
+    "OwnedPytestPluginHoldoutSelection": {
+      "producer": "owned_pytest_plugin_holdout",
+      "consumers": ["project_analyzer", "architect", "human"],
+      "required_fields": ["artifact_type", "schema_version", "selection_frozen", "contract_id", "minimum_independent_projects", "local_corpus_shortage", "projects", "invariants"]
+    },
+    "OwnedPytestPluginHoldoutReport": {
+      "producer": "owned_pytest_plugin_holdout",
+      "consumers": ["architect", "role_project_type_evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "contract_id", "selection_path", "foundation_report", "summary", "role_min_scores", "cases", "checks", "safety"]
+    },
     "GoalSpec": {
       "producer": "goal_intake",
       "consumers": ["L4"],
@@ -10,6 +70,161 @@
       "producer": "project_analyzer",
       "consumers": ["architect"],
       "required_fields": ["artifact_type", "project", "summary"]
+    },
+    "ProjectDevelopmentDiagnosis": {
+      "producer": "project_development",
+      "consumers": ["architect", "researcher", "human"],
+      "required_fields": ["artifact_type", "status", "project", "issues", "evidence_authority"]
+    },
+    "ProjectDevelopmentOptionPortfolio": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "options"]
+    },
+    "ProjectDevelopmentDecision": {
+      "producer": "project_development",
+      "consumers": ["architect", "spec_writer", "researcher", "human"],
+      "required_fields": ["artifact_type", "status", "selected_option"]
+    },
+    "ProjectDevelopmentOutcomeContract": {
+      "producer": "project_development",
+      "consumers": ["tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "baseline_evidence", "required_checks", "reassessment"]
+    },
+    "ProjectDevelopmentExperiment": {
+      "producer": "project_development",
+      "consumers": ["tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "admission", "checks", "source_invariant", "apply_source"]
+    },
+    "ProjectDevelopmentReassessment": {
+      "producer": "project_development",
+      "consumers": ["reviewer", "memory", "human"],
+      "required_fields": ["artifact_type", "status", "issue_id", "checks", "failed_checks", "verification_scope"]
+    },
+    "ProjectDevelopmentValidatedMemory": {
+      "producer": "project_development",
+      "consumers": ["project_development", "human"],
+      "required_fields": ["artifact_type", "status", "authority", "model_claim_is_evidence"]
+    },
+    "ProjectDevelopmentExecutionFeedback": {
+      "producer": "project_development",
+      "consumers": ["researcher", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "decision", "reason", "next_roles", "evidence", "constraints"]
+    },
+    "ProjectDevelopmentResearchHypothesis": {
+      "producer": "researcher",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "origin_target", "hypothesis_kind", "confidence", "evidence", "proposed_next_experiment", "constraints"]
+    },
+    "ProjectDevelopmentArchitectFeedbackDecision": {
+      "producer": "architect",
+      "consumers": ["project_development", "researcher", "human"],
+      "required_fields": ["artifact_type", "status", "decision", "authority", "checks", "allowed_targets", "next_role", "executor_rerun_allowed"]
+    },
+    "ProjectDevelopmentReplanRevision": {
+      "producer": "architect",
+      "consumers": ["project_development", "human"],
+      "required_fields": ["artifact_type", "status", "revision", "authority", "origin", "checks", "revised_decision", "revised_outcome_contract", "constraints"]
+    },
+    "ProjectDevelopmentBoundedExperimentProposal": {
+      "producer": "architect",
+      "consumers": ["researcher", "project_development", "human"],
+      "required_fields": ["artifact_type", "status", "proposal_id", "revision", "target", "contrast_source", "hypothesis_kind", "strategy", "objective", "evidence_requirements", "budget", "allowed_actions", "stop_conditions", "constraints"]
+    },
+    "ProjectDevelopmentBoundedExperimentAdmission": {
+      "producer": "project_development",
+      "consumers": ["researcher", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "checks", "blocking_reasons", "proposal_id", "next_role", "execution_authorized"]
+    },
+    "ProjectDevelopmentBoundedExperimentEvidence": {
+      "producer": "researcher",
+      "consumers": ["architect", "project_development", "human"],
+      "required_fields": ["artifact_type", "status", "proposal_id", "target", "collector", "source_snapshot", "observations", "requirement_results", "failed_requirements", "checks", "constraints"]
+    },
+    "ProjectDevelopmentArchitectEvidenceDecision": {
+      "producer": "architect",
+      "consumers": ["project_development", "researcher", "human"],
+      "required_fields": ["artifact_type", "status", "decision", "authority", "checks", "blocking_reasons", "proposal_id", "next_step", "execution_authorized"]
+    },
+    "ProjectDevelopmentImplementationApprovalRequest": {
+      "producer": "project_development",
+      "consumers": ["human", "architect"],
+      "required_fields": ["artifact_type", "status", "request_id", "proposal_id", "evidence_digest", "target", "requested_decisions", "risk_summary", "constraints"]
+    },
+    "ProjectDevelopmentHumanApprovalDecision": {
+      "producer": "human",
+      "consumers": ["project_development", "architect"],
+      "required_fields": ["artifact_type", "status", "decision", "request_id", "proposal_id", "evidence_digest", "authority", "reason"]
+    },
+    "ProjectDevelopmentImplementationApprovalValidation": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "checks", "blocking_reasons", "request_id", "decision", "candidate_allowed", "execution_authorized"]
+    },
+    "ProjectDevelopmentBoundedImplementationCandidate": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "candidate_id", "proposal_id", "target", "hypothesis_kind", "implementation_intent", "evidence_digest", "approval_binding", "acceptance_requirements", "constraints"]
+    },
+    "ProjectDevelopmentImplementationDesignRequest": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "request_id", "candidate_id", "proposal_id", "evidence_digest", "target", "design_scope", "required_outputs", "forbidden_outputs", "constraints"]
+    },
+    "ProjectDevelopmentImplementationDesignAdmission": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "checks", "blocking_reasons", "request_id", "candidate_id", "next_role", "automatic_role_invocation", "execution_authorized"]
+    },
+    "ProjectDevelopmentImplementationDesign": {
+      "producer": "architect",
+      "consumers": ["project_development", "human"],
+      "required_fields": ["artifact_type", "status", "authority", "request_id", "candidate_id", "proposal_id", "evidence_digest", "hypothesis_kind", "target", "source_sha256", "interface_boundary", "transformation_steps", "acceptance_mapping", "rollback_strategy", "constraints"]
+    },
+    "ProjectDevelopmentImplementationDesignValidation": {
+      "producer": "project_development",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "checks", "blocking_reasons", "request_id", "candidate_id", "design_digest", "design_accepted", "next_gate", "execution_authorized"]
+    },
+    "ProjectDevelopmentImplementationAuthorizationRequest": {
+      "producer": "project_development",
+      "consumers": ["human", "architect"],
+      "required_fields": ["artifact_type", "status", "request_id", "candidate_id", "proposal_id", "design_digest", "execution_policy_digest", "evidence_digest", "target", "source_sha256", "requested_decisions", "prerequisites", "constraints"]
+    },
+    "ProjectDevelopmentImplementationAuthorizationDecision": {
+      "producer": "human",
+      "consumers": ["project_development", "programmer_executor"],
+      "required_fields": ["artifact_type", "status", "decision", "request_id", "candidate_id", "design_digest", "execution_policy_digest", "evidence_digest", "target", "authority", "reason"]
+    },
+    "ProjectDevelopmentImplementationAuthorizationValidation": {
+      "producer": "project_development",
+      "consumers": ["programmer_executor", "human"],
+      "required_fields": ["artifact_type", "status", "checks", "blocking_reasons", "request_id", "decision", "sandbox_implementation_authorized", "source_apply_authorized"]
+    },
+    "ProjectDevelopmentAuthorizedImplementationResult": {
+      "producer": "programmer_executor",
+      "consumers": ["tester", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "target", "operator_id", "sandbox_project", "patch_package", "stub_admission", "project_native_verification", "checks", "failed_checks", "source_invariant", "sandbox_changed_python_files", "source_apply", "memory_promotion"]
+    },
+    "ProjectDevelopmentAuthorizedImplementationRun": {
+      "producer": "project_development",
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "status", "authorization_request", "human_decision", "authorization_validation", "implementation_result", "source_apply", "memory_promotion"]
+    },
+    "ProjectDevelopmentFeedbackContinuation": {
+      "producer": "project_development",
+      "consumers": ["project_development", "human"],
+      "required_fields": ["artifact_type", "status", "research_hypothesis", "architect_decision", "replan_revision", "bounded_experiment_proposal", "planning_admission", "bounded_experiment_evidence", "architect_evidence_decision", "implementation_approval_request", "human_approval_decision", "implementation_approval_validation", "bounded_implementation_candidate", "implementation_design_request", "implementation_design_admission", "implementation_design", "implementation_design_validation", "source_changes", "executor_rerun"]
+    },
+    "ProjectDevelopmentRun": {
+      "producer": "project_development",
+      "consumers": ["human", "evaluation"],
+      "required_fields": ["artifact_type", "schema_version", "status", "project", "classification_consistency", "diagnosis", "option_portfolio", "decision", "outcome_contract", "role_chain_handoff", "experiment", "outcome_reassessment", "execution_feedback", "feedback_continuation", "validated_memory", "safety"]
+    },
+    "ClassificationConsistencyEvidence": {
+      "producer": "classification_consistency",
+      "consumers": ["project_development", "project_analyzer", "researcher", "architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "authority", "observed_classification", "contracts", "contradictions", "scan", "safety"]
     },
     "ScopeSelectionReport": {
       "producer": "project_analyzer",
@@ -129,7 +344,7 @@
     "ReviewFindings": {
       "producer": "reviewer",
       "consumers": ["human", "release_gate"],
-      "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation"]
+      "required_fields": ["artifact_type", "findings", "risk_assessment", "recommendation", "promotion_policy"]
     },
     "CognitiveControlPlaneDecision": {
       "producer": "cognitive_control_plane",
@@ -220,6 +435,151 @@
       "producer": "prompt_boundary_classifier",
       "consumers": ["prompt_adequacy", "cognitive_control_plane", "human"],
       "required_fields": ["artifact_type", "status", "boundary", "confidence", "reasons", "recommended_action"]
+    },
+    "UnknownProjectIntake": {
+      "producer": "role_project_type_evaluation",
+      "consumers": ["researcher", "human"],
+      "required_fields": ["artifact_type", "project", "status", "knowledge_gap", "research_plan", "routing"]
+    },
+    "ProvisionalArchetypeCandidate": {
+      "producer": "researcher",
+      "consumers": ["knowledge_admission", "human"],
+      "required_fields": ["artifact_type", "hypothesis_id", "status", "candidate", "promotion_gate"]
+    },
+    "RoleChainInteractionTrace": {
+      "producer": "role_chain_evaluation",
+      "consumers": ["evaluation", "human"],
+      "required_fields": ["artifact_type", "project", "status", "route", "checks", "interaction_score"]
+    },
+    "UnknownArchetypeFieldTrialReport": {
+      "producer": "unknown_archetype_field_trial",
+      "consumers": ["evaluation", "researcher", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "unknown_holdout", "role_chain_traces", "policy"]
+    },
+    "NoSafeCandidateFailurePacket": {
+      "producer": "reviewer",
+      "consumers": ["researcher", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "project", "trigger", "rejected_candidates", "research_question", "return_to_role"]
+    },
+    "SemanticDecompositionHypothesis": {
+      "producer": "researcher",
+      "consumers": ["architect", "human"],
+      "required_fields": ["artifact_type", "status", "origin_target", "confidence", "evidence", "risks", "return_to_gate"]
+    },
+    "ArchitectRecoveryGate": {
+      "producer": "architect",
+      "consumers": ["developer", "human"],
+      "required_fields": ["artifact_type", "status", "authority", "checks", "can_replace_controlled_stop", "required_reentry"]
+    },
+    "ProvisionalExtractionCandidate": {
+      "producer": "architect",
+      "consumers": ["developer", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "candidate", "origin_target", "verification_scope", "source_backed", "selection_eligible", "promotion_gate"]
+    },
+    "NoSafeCandidateRecoveryRoute": {
+      "producer": "cognitive_control_plane",
+      "consumers": ["evaluation", "human"],
+      "required_fields": ["artifact_type", "status", "project", "source_changes", "kb_changes"]
+    },
+    "RecoveryPatchPackage": {
+      "producer": "developer",
+      "consumers": ["tester", "architect", "human"],
+      "required_fields": ["artifact_type", "status", "sandbox_project", "patches", "source_code_changes", "registry_changes", "verification", "policy"]
+    },
+    "NoSafeCandidateRecoveryFieldTrialReport": {
+      "producer": "no_safe_candidate_recovery_field_trial",
+      "consumers": ["evaluation", "developer", "architect", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "project", "candidate", "checks", "before", "developer", "after", "admission", "safety"]
+    },
+    "RecoveryDifferentialVerification": {
+      "producer": "tester",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "role", "status", "patch_digest", "observations", "cases", "summary", "safety"]
+    },
+    "RecoveryPatchAdmission": {
+      "producer": "reviewer",
+      "consumers": ["human", "developer"],
+      "required_fields": ["artifact_type", "status", "candidate", "patch_digest", "source_precondition_sha256", "checks", "required_approval", "automatic_apply", "rollback_required"]
+    },
+    "RecoveryPatchApplyReceipt": {
+      "producer": "developer",
+      "consumers": ["reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "patch_digest", "rollback_available", "source_code_changes"]
+    },
+    "RecoveryPatchRollbackReceipt": {
+      "producer": "developer",
+      "consumers": ["reviewer", "human"],
+      "required_fields": ["artifact_type", "status"]
+    },
+    "RecoveryPatchSessionReport": {
+      "producer": "recovery_patch_session",
+      "consumers": ["developer", "tester", "architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "status", "project", "candidate", "patch_digest", "preflight", "apply_requested", "apply_receipt", "post_apply_verification", "rollback_receipt", "safety"]
+    },
+    "RecoveryPatternAuditReport": {
+      "producer": "recovery_pattern_audit",
+      "consumers": ["researcher", "architect", "developer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "scope", "summary", "clusters", "findings", "recommendation", "policy"]
+    },
+    "RecoveryBoundaryResearch": {
+      "producer": "researcher",
+      "consumers": ["architect", "developer", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "role", "status", "hypotheses", "architect_gate", "safety"]
+    },
+    "ReviewerAdversarialTrialReport": {
+      "producer": "reviewer",
+      "consumers": ["architect", "human", "role_mvp_readiness"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "cases", "invariants"]
+    },
+    "RecoveryBoundaryExperimentReport": {
+      "producer": "researcher",
+      "consumers": ["architect", "developer", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "experiments", "architect_gate", "safety"]
+    },
+    "PilotAdmissionDecision": {
+      "producer": "pilot_admission",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "profile_id", "status", "checks", "blocking_reasons", "execution_policy"]
+    },
+    "PilotTransferTrialReport": {
+      "producer": "pilot_transfer_trial",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "profile_id", "checks", "transfer_evidence", "cases", "candidate_admissions", "blocking_reasons", "safety"]
+    },
+    "PilotRunRecord": {
+      "producer": "pilot_supervised_run",
+      "consumers": ["reviewer", "human", "pilot_telemetry"],
+      "required_fields": ["artifact_type", "schema_version", "run_id", "profile_id", "status", "execution_status", "cases", "summary", "human_review", "safety", "evidence", "evidence_digest"]
+    },
+    "PilotRunBatchReport": {
+      "producer": "pilot_supervised_run",
+      "consumers": ["reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "run_count", "records", "safety"]
+    },
+    "PilotTelemetryReport": {
+      "producer": "pilot_telemetry",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "profile_id", "status", "checks", "summary", "handoff_loss_by_check", "run_ids", "policy", "safety"]
+    },
+    "PilotReviewQueueReport": {
+      "producer": "pilot_review_queue",
+      "consumers": ["human", "reviewer"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "items", "policy"]
+    },
+    "ProjectRecognitionDecision": {
+      "producer": "project_analyzer_recognition_gate",
+      "consumers": ["architect", "researcher", "pilot_supervised_run", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "project", "confidence", "classification", "evidence", "ambiguity_reasons", "role_route", "pilot_route", "authority"]
+    },
+    "ProjectRecognitionCorpusReport": {
+      "producer": "project_corpus_qualification",
+      "consumers": ["github_full_chain_probe", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "expected_stratum", "minimum_qualified", "replacement_count", "qualified_projects", "project_count", "summary", "cases"]
+    },
+    "ProjectDevelopmentBoundaryFieldTrialReport": {
+      "producer": "project_development_boundary_field_trial",
+      "consumers": ["researcher", "architect", "role_project_type_evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "split", "summary", "promotion", "cases"]
     }
   }
 }

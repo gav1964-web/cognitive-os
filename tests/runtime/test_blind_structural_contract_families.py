@@ -1,5 +1,6 @@
 from runtime.source_contract_semantics import infer_source_contract
 from runtime.target_quality import semantic_target_quality_report
+from runtime.technical_spec_domain_contract import domain_extraction_contract
 
 
 def test_nested_callable_return_is_inferred():
@@ -8,6 +9,76 @@ def test_nested_callable_return_is_inferred():
     )
 
     assert evidence["inferred_output_type"] == "Callable"
+
+
+def test_optional_annotation_normalizer_is_profiled_from_source_structure():
+    snippet = """\
+def normalize(annotation: T) -> T:
+    if getattr(annotation, '__origin__', None) is Union and annotation.__args__[1] is type(None):
+        return annotation.__args__[0]
+    return annotation
+"""
+    candidate = {
+        "source": "pkg/typing_support.py:normalize",
+        "signature": {"args": [{"name": "annotation", "annotation": "T"}], "returns": "T"},
+        "snippet": snippet,
+    }
+
+    evidence = infer_source_contract(candidate)
+    contract = domain_extraction_contract(candidate["source"], candidate)
+    report = semantic_target_quality_report(
+        candidate["source"],
+        structural_evidence=evidence,
+        input_contract={"annotation": "T"},
+        output_contract={"result": "T"},
+        side_effect_contract={"declared": []},
+    )
+
+    assert evidence["accessed_attributes"] == ["__args__"]
+    assert report["contract_archetype_ids"] == ["optional_type_annotation_normalization"]
+    assert contract["contract_family"] == "optional_type_annotation_normalization"
+    assert contract["input_contract"] == {"annotation": "TypeAnnotation"}
+    assert contract["output_contract"] == {"normalized_annotation": "TypeAnnotation"}
+
+
+def test_generic_protocol_transform_does_not_gain_optional_annotation_contract():
+    candidate = {
+        "source": "pkg/domain.py:convert",
+        "signature": {"args": [{"name": "value", "annotation": "T"}], "returns": "T"},
+        "snippet": "def convert(value: T) -> T:\n    return getattr(value, 'payload', value)\n",
+    }
+
+    assert domain_extraction_contract(candidate["source"], candidate) == {}
+
+
+def test_receiver_projection_and_state_predicate_have_structural_contracts():
+    cases = [
+        (
+            {
+                "source": "pkg/model.py:project",
+                "signature": {"args": [{"name": "self"}]},
+                "snippet": "def project(self):\n    result = {}\n    for key, _ in self.fields.items():\n        value = getattr(self, key)\n        if isinstance(value, str):\n            result[key] = value\n    return result\n",
+                "owner_class": "Model",
+            },
+            "receiver_object_mapping_projection",
+        ),
+        (
+            {
+                "source": "pkg/session.py:ready",
+                "signature": {"args": [{"name": "self"}], "returns": "bool"},
+                "snippet": "def ready(self) -> bool:\n    if not self.prepared or self.task is None:\n        return False\n    return not self.task.done()\n",
+                "owner_class": "Session",
+            },
+            "receiver_state_predicate",
+        ),
+    ]
+
+    for candidate, family in cases:
+        evidence = infer_source_contract(candidate)
+        assert evidence["owner_class"] == candidate["owner_class"]
+        candidate["structural_contract"] = evidence
+        contract = domain_extraction_contract(candidate["source"], candidate)
+        assert contract["contract_family"] == family
 
 
 def test_blind_corpus_structures_are_profiled_without_project_names():

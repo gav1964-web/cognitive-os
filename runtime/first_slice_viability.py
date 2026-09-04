@@ -218,6 +218,17 @@ def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> 
     usage = {str(name): str(value) for name, value in dict(structural.get("argument_usage_types") or {}).items()}
     protocol_names = {name for name, value in usage.items() if value == "ProtocolLike"}
     if protocol_names:
+        materializable = {
+            str(item) for item in payload.get("materializable_parameter_attributes") or []
+        }
+        source_complexity = _input_complexity(str(snippet.get("text") or ""), materializable)
+        if source_complexity == "scalar_or_structural":
+            return "scalar_or_structural"
+        documented = {
+            str(name): str(value).strip()
+            for name, value in dict(structural.get("docstring_argument_types") or {}).items()
+            if str(value).strip()
+        }
         signature = dict(snippet.get("signature") or {})
         annotations = {
             str(row.get("name")): str(row.get("annotation") or "").strip()
@@ -226,7 +237,7 @@ def _input_complexity_fact(snippet: dict[str, Any], payload: dict[str, Any]) -> 
         }
         if not annotations:
             annotations = _text_parameter_annotations(str(snippet.get("text") or ""))
-        if all(annotations.get(name) for name in protocol_names):
+        if all(annotations.get(name) or documented.get(name) for name in protocol_names):
             return "declared_protocol"
         return "object_protocol"
     return _input_complexity(

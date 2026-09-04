@@ -54,7 +54,9 @@ def _inferred_attribute_fixture(name: str, nodes: list[ast.AST]) -> Any:
     if policy.get("nullable_comparison_enabled") and _compared_to_none(name, nodes):
         return None
     if _used_as_boolean_condition(name, nodes):
-        return policy.get("boolean_condition_value", False)
+        return _successful_boolean_branch_value(
+            name, nodes, bool(policy.get("boolean_condition_value", False))
+        )
     if _used_as_mapping_value(name, nodes):
         return policy.get("mapping_value_sample", "sample")
     mapping_argument = _required_mapping_argument(name, nodes)
@@ -66,6 +68,10 @@ def _inferred_attribute_fixture(name: str, nodes: list[ast.AST]) -> Any:
         return {key: {"__fixture__": fixture}}
     if _used_as_numeric_value(name, nodes, set(policy.get("numeric_receiver_calls") or [])):
         return int(policy.get("numeric_receiver_attribute_sample") or 1)
+    if _used_in_ordering_comparison(name, nodes):
+        return int(policy.get("comparison_receiver_attribute_sample") or 16)
+    if _used_as_numpy_array_input(name, nodes):
+        return {"__fixture__": "numpy_array", "items": list(range(16))}
     if _used_as_text_value(name, nodes):
         return "sample"
     operations = {
@@ -102,10 +108,56 @@ def _used_as_boolean_condition(name: str, nodes: list[ast.AST]) -> bool:
         for item in ast.walk(node):
             if (
                 isinstance(item, (ast.If, ast.IfExp, ast.While))
-                and name in _loaded_self_attributes(item.test)
+                and _direct_boolean_attribute(item.test) == name
             ):
                 return True
     return False
+
+
+def _successful_boolean_branch_value(name: str, nodes: list[ast.AST], default: bool) -> bool:
+    for node in nodes:
+        for item in ast.walk(node):
+            if not isinstance(item, ast.If) or _direct_boolean_attribute(item.test) != name:
+                continue
+            body_raises = any(isinstance(part, ast.Raise) for statement in item.body for part in ast.walk(statement))
+            else_raises = any(isinstance(part, ast.Raise) for statement in item.orelse for part in ast.walk(statement))
+            if else_raises and not body_raises:
+                return True
+            if body_raises and not else_raises:
+                return False
+    return default
+
+
+def _direct_boolean_attribute(node: ast.AST) -> str:
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        node = node.operand
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+    ):
+        return node.attr
+    return ""
+
+
+def _used_in_ordering_comparison(name: str, nodes: list[ast.AST]) -> bool:
+    return any(
+        isinstance(item, ast.Compare)
+        and name in _loaded_self_attributes(item)
+        and any(isinstance(operator, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)) for operator in item.ops)
+        for node in nodes for item in ast.walk(node)
+    )
+
+
+def _used_as_numpy_array_input(name: str, nodes: list[ast.AST]) -> bool:
+    return any(
+        isinstance(item, ast.Call)
+        and isinstance(item.func, ast.Attribute)
+        and item.func.attr in {"array", "asarray"}
+        and bool(item.args)
+        and name in _loaded_self_attributes(item.args[0])
+        for node in nodes for item in ast.walk(node)
+    )
 
 
 def _compared_to_none(name: str, nodes: list[ast.AST]) -> bool:

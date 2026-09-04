@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from .runtime_resume_plan import resume_reuse_plan
-
 from .core_paths import classify_source_path, is_core_path
 from .extraction_plan_filters import suppress_whole_workflow_wrappers
 from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
@@ -22,7 +21,6 @@ from .runtime_readiness_helpers import (
     safe_node_id,
     weak_contract_zones,
 )
-
 
 def data_lifecycle(
     project_type: str,
@@ -319,9 +317,16 @@ def minimal_extraction_plan(
     python_structure: dict[str, Any],
     routes: list[dict[str, Any]],
     commands: list[dict[str, Any]],
+    *,
+    domain_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidates: dict[str, dict[str, Any]] = {}
     route_functions = {str(route.get("function")) for route in routes if route.get("function")}
+    target_markers = [str(item).lower() for item in dict(domain_profile or {}).get("target_markers", [])]
+    for item in python_structure.get("pure_transform_candidates", []):
+        name = str(item.get("name") or "").lower()
+        if target_markers and any(marker in name for marker in target_markers) and is_safe_extraction_candidate(item):
+            add_extraction_candidate(candidates, item, "domain_preferred", "domain-specific deterministic contract")
     for item in preferred_first_slice_candidates(python_structure):
         if str(item.get("name")) in route_functions:
             continue

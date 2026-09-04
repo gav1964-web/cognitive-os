@@ -111,6 +111,53 @@ def synthetic_probe_report(corpus: dict[str, Any] | None = None) -> dict[str, An
         "policy": dict(corpus.get("policy") or {}),
     }
 
+def synthetic_role_qa_audit(corpus: dict[str, Any] | None = None) -> dict[str, Any]:
+    corpus = corpus or load_synthetic_role_qa()
+    records = [dict(row) for row in corpus.get("records", []) if isinstance(row, dict)]
+    qa_ids = [str(row.get("qa_id") or "") for row in records if row.get("qa_id")]
+    duplicate_ids = sorted([qa_id for qa_id, count in Counter(qa_ids).items() if count > 1])
+    missing_fields = []
+    invalid_policy = []
+    empty_token_records = []
+    token_counts = []
+    for row in records:
+        qa_id = str(row.get("qa_id") or "<missing>")
+        missing = [field for field in ("qa_id", "role_id", "question", "answer", "policy", "trust_level") if not row.get(field)]
+        if missing:
+            missing_fields.append({"qa_id": qa_id, "missing": missing})
+        policy = dict(row.get("policy") or {})
+        if policy.get("auto_promote") is not False or policy.get("authority") != "advisory_only":
+            invalid_policy.append(qa_id)
+        tokens = _record_tokens(row)
+        token_counts.append(len(tokens))
+        if not tokens:
+            empty_token_records.append(qa_id)
+    probe = synthetic_probe_report(corpus)
+    weak_probes = [row for row in probe["rows"] if row["quality"] in {"weak", "miss"}]
+    avg_tokens = round(sum(token_counts) / max(1, len(token_counts)), 2)
+    status = "ok"
+    if duplicate_ids or missing_fields or invalid_policy or empty_token_records or weak_probes:
+        status = "needs_review"
+    return {
+        "artifact_type": "SyntheticRoleQAAudit",
+        "schema_version": "synthetic_role_qa_audit.v1",
+        "status": status,
+        "record_count": len(records),
+        "role_count": len({str(row.get("role_id")) for row in records if row.get("role_id")}),
+        "average_record_token_count": avg_tokens,
+        "duplicate_qa_ids": duplicate_ids[:20],
+        "duplicate_qa_id_count": len(duplicate_ids),
+        "missing_field_count": len(missing_fields),
+        "missing_fields": missing_fields[:20],
+        "invalid_policy_count": len(invalid_policy),
+        "invalid_policy_qa_ids": invalid_policy[:20],
+        "empty_token_record_count": len(empty_token_records),
+        "empty_token_qa_ids": empty_token_records[:20],
+        "probe_report": probe,
+        "weak_probe_count": len(weak_probes),
+        "policy": dict(corpus.get("policy") or {}),
+    }
+
 def _records_for_role(
     *,
     role_id: str,

@@ -1,0 +1,129 @@
+{
+  "patterns": [
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "incomplete_import_token_contract",
+      "id": "incomplete_import_token_contract",
+      "operator_id": "guard_incomplete_import_tokens",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique traceback-bound production target",
+        "the failing nodeid explicitly characterizes an incomplete import statement",
+        "target assignment is exactly the second token of a parameter split without arguments",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original failing pytest nodeid passes in the patch sandbox",
+        "full project-native pytest suite passes",
+        "patch remains inside the selected function",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "package-name extractor indexing the second token of a split import statement",
+      "validated_evidence": {
+        "failing_nodeid": "test_autoflake.py::UnitTests::test_extract_package_name_with_incomplete_import",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T001848719989Z.json",
+        "project": "autoflake",
+        "project_development_report": "artifacts/project_development/project_development_20260830T001954206841Z.json",
+        "regression_result": "172 passed",
+        "target": "autoflake.py:extract_package_name",
+        "target_binding": "traceback_production_frame",
+        "targeted_result": "1 passed"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "escaped_fstring_brace_offset_contract",
+      "id": "escaped_fstring_brace_offset_contract",
+      "operator_id": "adjust_fstring_middle_brace_offsets",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "Python 3.12 runtime is explicitly resolved without version fallback",
+        "same failure signature in two independent sandbox copies",
+        "one unique assertion-causal production target",
+        "FSTRING_MIDDLE branch contains exactly text = x multiplied by len(text)",
+        "token loop exposes token_type, text, start, end and line",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "adapted processor-level contract witness passes in the patch sandbox",
+        "upstream end-to-end escaped-brace regression passes in the full suite",
+        "full project-native pytest suite passes under Python 3.12",
+        "generated-function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "Flake8 logical-line processor compensating Python 3.12 FSTRING_MIDDLE escaped-brace offsets",
+      "validated_evidence": {
+        "failing_nodeid": "tests/00_contract/test_fstring_offsets.py::test_escaped_fstring_braces_preserve_logical_token_offsets",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T090908287073Z.json",
+        "project": "flake8",
+        "project_development_report": "artifacts/project_development/project_development_20260830T091122601066Z.json",
+        "regression_result": "465 passed",
+        "runtime": "Python 3.12.9",
+        "stub_gate": "passed",
+        "target": "src/flake8/processor.py:FileProcessor.build_logical_line_tokens",
+        "target_binding": "unique_assertion_causal_call",
+        "targeted_result": "1 passed",
+        "upstream_nodeid": "tests/integration/test_plugins.py::test_escaping_of_fstrings_in_string_redacter"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "trailing_backslash_index_contract",
+      "id": "trailing_backslash_index_contract",
+      "operator_id": "guard_trailing_backslash_index",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique traceback-bound production target",
+        "the target loop checks line.strip().endswith a continuation backslash",
+        "the loop body reads in_lines[index] and increments index by one",
+        "line_count and index are local target-function names",
+        "target-scoped admission finds no direct write, process, network or persistent-state call",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original upstream regression nodeid passes in the patch sandbox",
+        "full local project-native suite passes with network-only integration excluded",
+        "generated-function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "isort parser continuation loop bounded by the input line count",
+      "validated_evidence": {
+        "failing_nodeid": "tests/unit/test_regressions.py::test_unrecoverable_exception_on_valid_input_ending_with_backslash_issue_1893",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T102317789661Z.json",
+        "project": "isort",
+        "project_development_report": "artifacts/project_development/project_development_20260830T103915501988Z.json",
+        "regression_result": "548 passed, 5 skipped",
+        "runtime": "Python 3.10.11",
+        "stub_gate": "passed",
+        "target": "isort/parse.py:file_contents",
+        "target_binding": "traceback_production_frame",
+        "target_scope_admission": "admitted",
+        "targeted_result": "1 passed"
+      }
+    }
+  ],
+  "promotion_policy": {
+    "activation": "explicit_transaction_only",
+    "automatic_promotion": false,
+    "minimum_independent_lineages": 3,
+    "minimum_project_native_transformations": 3,
+    "minimum_transformation_subtypes": 3,
+    "no_regression_required": true,
+    "project_stratum": "cli_local_tool",
+    "promoted_at": "2026-08-30T10:46:14.246823+00:00",
+    "promotion_authority": "explicit_verified_transaction",
+    "promotion_matrix": "artifacts/field_trials/role_project_type_evaluation_20260830T104433802113Z.json",
+    "source_apply_allowed": false,
+    "status": "active"
+  },
+  "schema_version": "project_native_cli_failure_repair_patterns.v1",
+  "status": "active"
+}

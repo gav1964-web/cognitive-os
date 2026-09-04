@@ -10,40 +10,20 @@ from typing import Any
 from runtime.local_inference import LocalInferenceConfig, call_json_chat
 from runtime.project_architecture_knowledge import load_all_knowledge_records
 from runtime.role_definitions import load_role_definitions
+from runtime.synthetic_role_kb_matcher import (
+    STOPWORDS,
+    TOKEN_ALIASES,
+    _jaccard,
+    _query_coverage_score,
+    _record_tokens,
+    _token_aware_match_score,
+    _tokens,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / "config" / "synthetic_role_kb_policy.json"
 DEFAULT_CORPUS_PATH = ROOT / "artifacts" / "synthetic_kb_seed" / "synthetic_role_qa.json"
 DEFAULT_KB_CORPUS_PATH = ROOT / "knowledge" / "role_qa" / "synthetic_role_qa.json"
-STOPWORDS = {
-    "что",
-    "как",
-    "какие",
-    "какой",
-    "какую",
-    "если",
-    "для",
-    "при",
-    "или",
-    "это",
-    "есть",
-    "нужно",
-    "нужны",
-    "нужен",
-    "перед",
-    "после",
-    "через",
-    "with",
-    "what",
-    "how",
-    "the",
-    "and",
-    "for",
-    "from",
-    "that",
-    "this",
-}
-
 def _provider_interface_questions() -> list[str]:
     subjects = [
         "какие LLM не используют OpenAI API",
@@ -308,22 +288,3 @@ def _quality_band(score: float) -> str:
 def _qa_id(role_id: str, question: str, answer: dict[str, Any]) -> str:
     seed = f"{role_id}:{question}:{json.dumps(answer, ensure_ascii=False, sort_keys=True)}"
     return "sqa_" + hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:16]
-
-def _tokens(text: str) -> set[str]:
-    normalized = "".join(ch.lower() if ch.isalnum() else " " for ch in text)
-    return {token for token in normalized.split() if len(token) > 2 and token not in STOPWORDS}
-
-def _query_coverage_score(query_tokens: set[str], row_tokens: set[str]) -> float:
-    if not query_tokens or not row_tokens:
-        return 0.0
-    intersection = query_tokens & row_tokens
-    if not intersection:
-        return 0.0
-    query_coverage = len(intersection) / len(query_tokens)
-    precision = len(intersection) / len(row_tokens)
-    return (query_coverage * 0.85) + (precision * 0.15)
-
-def _jaccard(left: set[str], right: set[str]) -> float:
-    if not left or not right:
-        return 0.0
-    return len(left & right) / len(left | right)

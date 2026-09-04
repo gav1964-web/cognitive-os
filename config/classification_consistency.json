@@ -1,0 +1,35 @@
+{
+  "schema_version": "classification_consistency.v1",
+  "status": "active",
+  "maximum_python_files": 500,
+  "excluded_path_parts": [".git", ".tox", ".venv", "build", "dist", "docs", "examples", "node_modules", "site-packages", "tests", "vendor", "venv"],
+  "contract_profiles": [
+    {
+      "id": "owned_packaging_build_backend",
+      "required_function_names": ["build_wheel", "build_sdist", "prepare_metadata_for_build_wheel"],
+      "supporting_function_names": ["get_requires_for_build_wheel", "get_requires_for_build_sdist", "prepare_metadata_for_build_editable", "build_editable"],
+      "source_path_markers": ["build_meta.py", "build_backend", "pep517"],
+      "minimum_supporting_functions": 0,
+      "expected_project_stratum": "framework_plugin_build",
+      "expected_project_archetype": "packaging_build_backend"
+    },
+    {
+      "id": "owned_pytest_plugin",
+      "required_function_names": [],
+      "required_function_prefixes_any": ["pytest_"],
+      "required_decorator_contains_any": ["pytest.fixture"],
+      "required_manifest_contains_all": ["pytest11"],
+      "manifest_path_markers": ["pyproject.toml", "setup.cfg", "setup.py"],
+      "source_path_markers": [".py"],
+      "minimum_code_signals": 1,
+      "expected_project_stratum": "framework_plugin_build",
+      "expected_project_archetype": "pytest_plugin"
+    }
+  ],
+  "invariants": {
+    "independent_from_matcher_result": true,
+    "recognized_only_contradiction": true,
+    "source_apply": false,
+    "promotion_applied": false
+  }
+}

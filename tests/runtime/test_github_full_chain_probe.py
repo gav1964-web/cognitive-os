@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.github_full_chain_probe import _quality_score, _run_case, run_probe
+from tools.github_full_chain_probe import (
+    _ephemeral_python_cache_status,
+    _quality_score,
+    _run_case,
+    _target_is_advised,
+    run_probe,
+)
 from tools.github_full_chain_scoring import (
     bounded_quality_score,
     executor_evidence_ready,
     is_controlled_block,
     selected_target_quality,
 )
+import tools.github_full_chain_probe as probe
 
 
 def test_github_full_chain_probe_marks_rust_workspace_out_of_scope(tmp_path):
@@ -111,3 +118,44 @@ def test_meta_only_acceptance_is_not_executable_evidence():
 
     assert executor_evidence_ready(meta) is False
     assert executor_evidence_ready(callable_result) is True
+
+
+def test_owner_qualified_method_preserves_adr_advice_identity():
+    advised = {"src/pkg/interfaces.py:load_modules"}
+
+    assert _target_is_advised("src/pkg/interfaces.py:PydocMarkdown.load_modules", advised)
+    assert not _target_is_advised("src/pkg/other.py:PydocMarkdown.load_modules", advised)
+
+
+def test_full_chain_ignores_only_ephemeral_python_cache_status():
+    assert _ephemeral_python_cache_status("?? package/__pycache__/") is True
+    assert _ephemeral_python_cache_status("?? package/__pycache__/module.pyc") is True
+    assert _ephemeral_python_cache_status(" M package/module.py") is False
+    assert _ephemeral_python_cache_status("?? package/generated.json") is False
+
+
+def test_pilot_recognition_stops_unsupported_project_before_role_chain(tmp_path, monkeypatch):
+    project = tmp_path / "async-jobs"
+    (project / ".git").mkdir(parents=True)
+    (project / "worker.py").write_text("async def run():\n    return None\n", encoding="utf-8")
+    monkeypatch.setattr(probe, "_git_porcelain", lambda _project: [])
+    monkeypatch.setattr(probe, "analyze_role_project", lambda **_kwargs: {
+        "project_map_report": {
+            "answers": {"1_scope": {"domain_profile": {"kind": "async_worker_queue"}}}
+        }
+    })
+
+    def roles_must_not_run(**_kwargs):
+        raise AssertionError("role chain ran after recognition stop")
+
+    monkeypatch.setattr(probe, "run_configured_role_prefix", roles_must_not_run)
+
+    case = _run_case(
+        project,
+        stop_outside_recognition_profile=True,
+    )
+
+    assert case["status"] == "blocked_ok"
+    assert case["project_recognition"]["status"] == "recognized"
+    assert case["executor"]["executor_status"] == "not_run"
+    assert "risk_profile_allowed" in case["recognition_blocking_reasons"]

@@ -1,3 +1,4 @@
+import runtime.architect_first_slice_reselection as reselection
 from runtime.architect_first_slice_reselection import (
     _domain_aligned_sources,
     _expanded_candidate_sources,
@@ -55,6 +56,33 @@ def test_expanded_reselection_can_use_analyzer_callable_inventory():
     policy = {"candidate_sources": ["project_callable_inventory"], "expanded_candidate_limit": 8}
 
     assert _expanded_candidate_sources(report, {}, policy) == ["pkg/features.py:extract_features"]
+
+
+def test_project_development_decision_clamps_reselection_window():
+    report = {
+        "reselection_candidate_inventory": [
+            "pkg/selected.py:weak_contract",
+            "pkg/unrelated.py:easy_transform",
+        ],
+        "project_development_context": {
+            "authority": "ProjectDevelopmentDecision",
+            "allowed_targets": ["pkg/selected.py:weak_contract"],
+        },
+    }
+    policy = {"candidate_sources": ["project_callable_inventory"], "expanded_candidate_limit": 8}
+
+    assert _expanded_candidate_sources(report, {}, policy) == ["pkg/selected.py:weak_contract"]
+
+
+def test_expanded_reselection_excludes_protocol_dunder_methods():
+    report = {"reselection_candidate_inventory": [
+        "pkg/model.py:__eq__",
+        "pkg/session.py:__aexit__",
+        "pkg/model.py:to_dict",
+    ]}
+    policy = {"candidate_sources": ["project_callable_inventory"], "expanded_candidate_limit": 8}
+
+    assert _expanded_candidate_sources(report, {}, policy) == ["pkg/model.py:to_dict"]
 
 
 def test_expanded_reselection_can_use_analyzer_analysis_tasks():
@@ -124,6 +152,12 @@ def test_reselection_accepts_strong_candidate_at_semantic_policy_floor():
     )
 
 
+def test_reselection_rejects_suspicious_candidate_even_above_semantic_policy_floor():
+    assert not _semantic_threshold_satisfied(
+        {"semantic_status": "suspicious", "semantic_score": 100}, None, 95
+    )
+
+
 def test_reselection_accepts_only_strong_configured_viability_override():
     matched = [{"rule_id": "static_time_format_boundary"}]
 
@@ -134,6 +168,21 @@ def test_reselection_accepts_only_strong_configured_viability_override():
     )
     assert not _semantic_threshold_satisfied(
         {"semantic_status": "suspicious", "semantic_score": 89, "matched_rules": matched},
+        None,
+        95,
+    )
+
+
+def test_reselection_accepts_strong_fixture_backed_read_boundary_override():
+    matched = [{"rule_id": "read_or_mapping_boundary"}]
+
+    assert _semantic_threshold_satisfied(
+        {"semantic_status": "strong", "semantic_score": 90, "matched_rules": matched},
+        None,
+        95,
+    )
+    assert not _semantic_threshold_satisfied(
+        {"semantic_status": "suspicious", "semantic_score": 90, "matched_rules": matched},
         None,
         95,
     )
@@ -197,3 +246,53 @@ def test_reselection_prefers_strong_method_contract_over_weak_convenience_functi
 
     assert selected[0] == formatter
     assert evidence[0]["semantic_score"] >= evidence[1]["semantic_score"]
+
+
+def test_reselection_architecture_bonus_does_not_override_much_stronger_viability(monkeypatch):
+    architectural = "pkg/execute.py:build_instance"
+    bounded = "pkg/validate.py:validate"
+    context = {
+        source: {
+            "node_kind": "function",
+            "dependency_readiness": {"status": "ready"},
+            "snippet": {
+                "target_binding": "function_symbol",
+                "signature": {"args": [{"name": "value", "annotation": "str"}]},
+                "structural_contract": {
+                    "source_body_complete": True,
+                    "argument_count": 1,
+                    "typed_argument_count": 1,
+                    "explicit_return_annotation": "str",
+                    "inferred_output_type": "str",
+                    "return_paths": 1,
+                },
+            },
+        }
+        for source in (architectural, bounded)
+    }
+
+    monkeypatch.setattr(
+        reselection,
+        "first_slice_viability",
+        lambda source, *_args, **_kwargs: {
+            "status": "eligible",
+            "reselection_required": False,
+            "score": 5 if source == architectural else 45,
+            "matched_rules": [],
+        },
+    )
+    monkeypatch.setattr(
+        reselection,
+        "contract_quality",
+        lambda *_args, **_kwargs: {
+            "semantic_score": 100,
+            "semantic_status": "strong",
+            "contract_shape_score": 100,
+        },
+    )
+
+    selected, _evidence = _viable_candidates(
+        [architectural, bounded], context, {}, limit=2, minimum_semantic_score=95
+    )
+
+    assert selected[0] == bounded

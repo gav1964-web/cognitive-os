@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 from typing import Any
 from runtime.architecture_decision_policy import load_architecture_decision_policy, policy_list, policy_rules
+from runtime.architecture_decision_ledger import fact_judgment_ledger as _fact_judgment_ledger
+from runtime.architecture_decision_summary import decision_summary as _decision_summary, source_strata as _source_strata
 from runtime.architecture_slice_naming import semantic_first_slice_name
 from runtime.architecture_target_priority import analyzer_capability_targets, rank_architecture_targets
 from runtime.local_inference import LocalInferenceConfig
@@ -125,12 +127,15 @@ def _first_slice_with_source_targets(
     first_slice: dict[str, Any], tasks: list[dict[str, Any]], *, plan: dict[str, Any] | None = None,
     capability_targets: list[str] | None = None,
 ) -> dict[str, Any]:
-    synthesis_targets = [str(target) for target in list(first_slice.get("targets") or [])]
+    synthesis_targets = rank_architecture_targets(
+        [str(target) for target in list(first_slice.get("targets") or [])]
+    )
     fallback_targets = _task_source_targets(tasks)
     fallback_targets.extend(capability_targets or [])
     if not synthesis_targets:
         fallback_targets.extend(_plan_source_targets(plan or {}))
-    targets = rank_architecture_targets(_dedupe_strings(synthesis_targets + fallback_targets))
+    ranked_fallbacks = rank_architecture_targets(_dedupe_strings(fallback_targets))
+    targets = _dedupe_strings([*synthesis_targets, *ranked_fallbacks])
     if not targets:
         return first_slice
     row = dict(first_slice)
@@ -309,64 +314,6 @@ def _spec_writer_brief(
         "external_boundaries": external_boundaries,
         "first_slice": first_slice,
         "contract_targets": contract_targets,
-    }
-
-def _fact_judgment_ledger(
-    *,
-    summary: dict[str, Any],
-    boundaries: list[dict[str, Any]],
-    capabilities: list[dict[str, Any]],
-    risks: list[dict[str, Any]],
-    first_slice: dict[str, Any],
-) -> dict[str, Any]:
-    facts: list[dict[str, Any]] = [
-        {
-            "claim": f"Project root is `{summary.get('root')}` with {summary.get('file_count')} files.",
-            "evidence_source": "ProjectMapReport.summary",
-        }
-    ]
-    for boundary in boundaries[:3]:
-        facts.append(
-            {
-                "claim": f"Subsystem boundary `{boundary.get('id')}` owns {boundary.get('owned_files')}.",
-                "evidence_source": "ProjectMapReport.execution/readiness",
-            }
-        )
-    for capability in capabilities[:4]:
-        facts.append(
-            {
-                "claim": f"Capability candidate `{capability.get('source')}` is present in analysis evidence.",
-                "evidence_source": capability.get("source") or "ProjectMapReport.capabilities",
-            }
-        )
-    judgments = [
-        {
-            "judgment": "Use a bounded first slice before broader subsystem redesign.",
-            "based_on": [capability.get("source") for capability in capabilities[:3] if capability.get("source")],
-            "confidence": 0.82 if capabilities else 0.55,
-            "validation_gate": "SpecWriter must bind the selected target to input/output contracts and negative acceptance.",
-        },
-        {
-            "judgment": f"First slice `{first_slice.get('name')}` is the preferred handoff candidate.",
-            "based_on": list(first_slice.get("targets", []) or [])[:4],
-            "confidence": 0.86 if first_slice.get("targets") else 0.45,
-            "validation_gate": "Implementer handoff is blocked unless the first slice has source-backed targets.",
-        },
-    ]
-    for risk in risks[:3]:
-        judgments.append(
-            {
-                "judgment": f"Risk `{risk.get('category')}` must be carried into TechnicalSpec acceptance.",
-                "based_on": [risk.get("evidence_source")],
-                "confidence": 0.78,
-                "validation_gate": risk.get("acceptance_gate"),
-            }
-        )
-    return {
-        "artifact_type": "FactJudgmentLedger",
-        "facts": facts,
-        "judgments": judgments,
-        "principle": "facts are copied from evidence; judgments are decisions with confidence and validation gates",
     }
 
 def _spec_writer_handoff_readiness(

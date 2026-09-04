@@ -63,6 +63,36 @@ def test_fully_annotated_contract_does_not_reselect_for_missing_docstring_points
     assert request["status"] == "not_required"
 
 
+def test_complete_viable_callable_can_reach_controlled_dependency_probe():
+    contract = {
+        "candidate": "pkg/clean.py:clean_frame",
+        "semantic_quality": {"status": "strong", "score": 100},
+        "structural_evidence": {
+            "source_body_available": True,
+            "source_body_complete": True,
+            "argument_count": 1,
+            "typed_argument_count": 0,
+            "explicit_return_annotation": "",
+        },
+        "first_slice_viability": {
+            "status": "eligible",
+            "reselection_required": False,
+            "matched_rules": [{"rule_id": "declared_protocol_input"}],
+        },
+    }
+
+    request = build_first_slice_reselection_request(
+        contract,
+        {
+            "status": "resolution_required",
+            "missing_modules": ["optional_helper"],
+            "ranked_alternatives": [],
+        },
+    )
+
+    assert request["status"] == "not_required"
+
+
 def test_spec_writer_returns_deferred_candidate_without_explicit_rule_flag():
     contract = {
         "candidate": "pkg/core.py:load_data",

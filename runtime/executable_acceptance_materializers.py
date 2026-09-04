@@ -1,8 +1,41 @@
 """Materialize config-backed executable acceptance fixtures."""
 
 from __future__ import annotations
+
 from typing import Any
-from .executable_acceptance_policy import sample_value
+
+from .executable_acceptance_materializer_fixtures import (
+    _AcceptanceStrEnum,
+    _ContainsAll,
+    _NoopCondition,
+    _PantsTarget,
+    _SafeMethodAttribute,
+    _SafeSymbolicAttribute,
+    _TensorShapeProxy,
+    _asgi_body_empty,
+    _asgi_receive_empty,
+    _asgi_send_noop,
+    _chroma_search_client,
+    _coerced_field_value,
+    _datasette_minimal,
+    _domain_coerced_payload,
+    _gradio_block_function_init,
+    _hash_secret,
+    _hatch_environment_minimal,
+    _multinode_host_inventory,
+    _networkx_graph_path,
+    _optuna_study_empty,
+    _PARSERINFO_METHODS,
+    _qdrant_collection_config,
+    _qdrant_deleted_false,
+    _resource_collection_client,
+    _source_text,
+    _stub_init,
+    _verify_secret,
+    _YMD_METHODS,
+)
+
+
 def materialize(value: Any) -> Any:
     if isinstance(value, dict):
         value = _domain_coerced_payload(value)
@@ -21,6 +54,8 @@ def materialize(value: Any) -> Any:
             return lambda value, *args, **kwargs: float(value)
         if fixture == "callable_true":
             return lambda *args, **kwargs: True
+        if fixture == "callable_false":
+            return lambda *args, **kwargs: False
         if fixture == "callable_empty_list":
             return lambda *args, **kwargs: []
         if fixture == "callable_empty_string":
@@ -68,6 +103,8 @@ def materialize(value: Any) -> Any:
             return lambda name: type(str(name), (), {})
         if fixture == "stub_class":
             return type("AcceptanceStub", (), {"__init__": _stub_init, "model_dump_json": lambda self, *args, **kwargs: "{}"})
+        if fixture == "str_enum_class":
+            return _AcceptanceStrEnum
         if fixture == "stub_request_class":
             return type("JSONRPCRequest", (), {"method": "", "params": {}, "id": "1"})
         if fixture == "declared_model":
@@ -105,10 +142,23 @@ def materialize(value: Any) -> Any:
             return __import__("io").BytesIO(b"")
         if fixture == "datetime_utc":
             return __import__("datetime").datetime(2026, 1, 2, 3, 4, 5, tzinfo=__import__("datetime").timezone.utc)
+        if fixture == "python_type_str":
+            return str
         if fixture in {"bytes_empty", "bytes_literal"}:
             return bytes.fromhex(str(value.get("hex") or ""))
         if fixture == "numpy_array":
             return __import__("numpy").asarray(value.get("items") or [0.0, 1.0])
+        if fixture == "pandas_dataframe":
+            pandas = __import__("pandas")
+            return pandas.DataFrame({"numeric": [1.0, 2.0], "category": ["a", "b"]})
+        if fixture == "http_response_ok":
+            return type("AcceptanceResponse", (), {"status_code": 200})()
+        if fixture == "torch_tensor_zeros":
+            shape = tuple(int(item) for item in value.get("shape") or [1])
+            try:
+                return __import__("torch").zeros(shape)
+            except (ImportError, RuntimeError):
+                return _TensorShapeProxy(shape)
         if fixture == "dateutil_parserinfo_minimal":
             return type("Info", (), _PARSERINFO_METHODS)()
         if fixture == "dateutil_result":
@@ -170,231 +220,6 @@ def materialize(value: Any) -> Any:
     if isinstance(value, list):
         return [materialize(item) for item in value]
     return value
-def _stub_init(self: Any, *args: Any, **kwargs: Any) -> None:
-    self.__dict__.update(kwargs)
 
 
-def _verify_secret(self: Any, plain: Any, encoded: Any, *args: Any, **kwargs: Any) -> bool:
-    return bool(plain) and bool(encoded)
-
-
-def _hash_secret(self: Any, value: Any, *args: Any, **kwargs: Any) -> str:
-    return f"acceptance-hash:{value}"
-
-
-def _gradio_block_function_init(self: Any, fn: Any = None, inputs: Any = None, outputs: Any = None, *args: Any, **kwargs: Any) -> None:
-    self.fn, self.inputs, self.outputs = fn, inputs, outputs
-    self.__dict__.update(kwargs)
-
-
-async def _asgi_receive_empty(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return {"type": "http.request", "body": b"", "more_body": False}
-
-
-async def _asgi_body_empty(*args: Any, **kwargs: Any) -> bytes:
-    return b"{}"
-
-
-async def _asgi_send_noop(*args: Any, **kwargs: Any) -> None:
-    return None
-
-
-def _domain_coerced_payload(value: dict[str, Any]) -> dict[str, Any]:
-    if value.get("template") == "sample" and "image" in value:
-        value = {**value, "template": [[1.0]], "pad_input": False, "mode": "constant", "constant_values": 0}
-    if "image" in value and "template" in value:
-        np = __import__("numpy")
-        value = {**value, "image": np.array(value["image"], dtype="float32"), "template": np.array(value["template"], dtype="float32")}
-    return value
-
-
-def _coerced_field_value(field_name: str, value: Any) -> Any:
-    placeholder = value == "sample" if isinstance(value, str) else isinstance(value, (dict, list)) and not value
-    if not placeholder:
-        return value
-    replacement = sample_value("", field_name)
-    configured = replacement != "sample" if isinstance(replacement, str) else not (
-        isinstance(replacement, (dict, list)) and not replacement
-    )
-    return replacement if configured else value
-
-
-def _source_text(self: Any) -> str:
-    return "\n".join(self.lines)
-
-
-def _networkx_graph_path() -> Any:
-    graph = __import__("networkx").Graph()
-    graph.add_edge("a", "b", label="edge")
-    graph.nodes["a"]["label"] = "a"
-    graph.nodes["b"]["label"] = "b"
-    return graph
-
-
-def _hatch_environment_minimal() -> Any:
-    virtual_environment = _install_hatch_virtual_profile()
-    return type(
-        "Environment",
-        (virtual_environment,),
-        {
-            "features": (),
-            "dependency_groups": (),
-            "dependencies": ("sample>=1",),
-            "additional_dependencies": (),
-            "skip_install": False,
-            "use_uv": False,
-            "root": __import__("pathlib").Path("."),
-        },
-    )()
-
-
-def _install_hatch_virtual_profile() -> type:
-    import sys
-    import types
-
-    module = types.ModuleType("hatch.env.virtual")
-    cls = type("VirtualEnvironment", (), {})
-    module.VirtualEnvironment = cls
-    sys.modules["hatch.env.virtual"] = module
-    parent = sys.modules.get("hatch.env")
-    if parent is not None:
-        setattr(parent, "virtual", module)
-    return cls
-
-
-def _optuna_study_empty() -> Any:
-    return type("Study", (), {"get_trials": lambda self, *args, **kwargs: []})()
-
-
-async def _noop_execute_write(*args: Any, **kwargs: Any) -> None:
-    return None
-
-
-def _datasette_minimal() -> Any:
-    database = type("Database", (), {"execute_write": _noop_execute_write})()
-    return type("Datasette", (), {"get_internal_database": lambda self: database})()
-
-
-async def _noop_chroma_search(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return {"ids": [], "documents": [], "metadatas": [], "scores": []}
-
-
-def _chroma_search_client() -> Any:
-    return type("ChromaSearchClient", (), {"_search": _noop_chroma_search})()
-
-
-def _resource_collection_client() -> Any:
-    projects = type("Projects", (), {"list": lambda self, *args, **kwargs: []})()
-    group = type("Group", (), {"projects": projects})()
-    groups = type("Groups", (), {"get": lambda self, group_id: group})()
-    return type("ResourceClient", (), {"groups": groups})()
-
-
-def _multinode_host_inventory() -> dict[str, dict[str, str]]:
-    return {
-        f"node-{index}": {
-            "public": f"192.0.2.{index}",
-            "internal": f"10.0.0.{index}",
-            "data": f"10.1.0.{index}",
-        }
-        for index in range(1, 4)
-    }
-
-
-def _qdrant_collection_config() -> Any:
-    try:
-        distance = __import__("qdrant_client.http.models", fromlist=["Distance"]).Distance.COSINE
-    except ModuleNotFoundError:
-        distance = "Cosine"
-    params = type("VectorParams", (), {"distance": distance})()
-    return type("CollectionConfig", (), {"vectors": {"": params}, "sparse_vectors": None})()
-
-
-def _qdrant_deleted_false() -> Any:
-    return __import__("numpy").array([False], dtype=bool)
-
-
-_PARSERINFO_METHODS = {
-    "hms": lambda self, value: None,
-    "jump": lambda self, value: False,
-    "ampm": lambda self, value: None,
-    "month": lambda self, value: None,
-}
-_YMD_METHODS = {
-    "append": lambda self, value, label=None: list.append(self, value),
-    "could_be_day": lambda self, value: True,
-}
-
-
-class _NoopCondition:
-    def __enter__(self) -> "_NoopCondition":
-        return self
-
-    def __exit__(self, *args: Any) -> bool:
-        return False
-
-    def notify_all(self) -> None:
-        return None
-
-
-class _SafeMethodAttribute:
-    def __init__(self, operation: str = "") -> None:
-        self.operation = operation
-
-    def __call__(self, *args: Any, **kwargs: Any) -> "_SafeMethodAttribute":
-        if self.operation in {"read", "recv", "receive"}:
-            return None
-        return self
-
-    def __getattr__(self, name: str) -> "_SafeMethodAttribute":
-        return _SafeMethodAttribute(name)
-
-    def __getitem__(self, key: Any) -> "_SafeMethodAttribute":
-        return self
-
-    def __iter__(self):
-        return iter(())
-
-    def __next__(self):
-        raise StopIteration
-
-    def __bool__(self) -> bool:
-        return False
-
-    def __await__(self):
-        async def completed() -> "_SafeMethodAttribute":
-            return self
-
-        return completed().__await__()
-
-
-class _SafeSymbolicAttribute(_SafeMethodAttribute):
-    def __call__(self, *args: Any, **kwargs: Any) -> "_SafeSymbolicAttribute":
-        return self
-
-    def __getattr__(self, name: str) -> "_SafeSymbolicAttribute":
-        return self
-
-    def __mul__(self, other: Any) -> "_SafeSymbolicAttribute":
-        return self
-
-    __rmul__ = __mul__
-    __add__ = __mul__
-    __radd__ = __mul__
-    __sub__ = __mul__
-    __rsub__ = __mul__
-    __truediv__ = __mul__
-    __rtruediv__ = __mul__
-
-
-class _ContainsAll:
-    def __contains__(self, item: Any) -> bool:
-        return True
-
-
-class _PantsTarget:
-    address = type("Address", (), {"spec": "//:local"})()
-    def has_field(self, field: Any) -> bool:
-        return True
-    def __getitem__(self, field: Any) -> Any:
-        return type("FieldValue", (), {"value": _ContainsAll()})()
+__all__ = ["materialize"]

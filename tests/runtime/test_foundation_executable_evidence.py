@@ -288,3 +288,39 @@ def test_promoted_policy_admits_conservative_memory_effect_in_process():
 
     assert result["status"] == "eligible"
     assert result["selection_policy_target_admitted"] is True
+
+
+def test_execution_feedback_policy_admits_only_effects_allowed_by_isolation_gate():
+    memory_spec = _spec(effects=["memory_state"], observed_effects=["memory_state"])
+    memory_spec["extraction_contract"].update({
+        "selection_policy_ids": ["verified_policy"],
+        "structural_evidence": {
+            "source_body_available": True,
+            "source_body_complete": True,
+            "observed_side_effects": ["memory_state"],
+            "state_mutation": False,
+        },
+    })
+    memory_spec["first_slice_reselection_request"] = {
+        "status": "required", "trigger": "executable_acceptance_rejected",
+    }
+    write_spec = _spec(effects=["filesystem_write"], observed_effects=["filesystem_write"])
+    write_spec["extraction_contract"].update({
+        "selection_policy_ids": ["verified_policy"],
+        "structural_evidence": {
+            "source_body_available": True,
+            "source_body_complete": True,
+            "observed_side_effects": ["filesystem_write"],
+            "state_mutation": False,
+        },
+    })
+    write_spec["first_slice_reselection_request"] = {
+        "status": "required", "trigger": "executable_acceptance_rejected",
+    }
+
+    admitted = evidence._eligibility(memory_spec, process_isolated=True)
+    rejected = evidence._eligibility(write_spec, process_isolated=True)
+
+    assert admitted["status"] == "eligible"
+    assert admitted["selection_policy_target_admitted"] is True
+    assert rejected["reason"] == "side_effectful_target"

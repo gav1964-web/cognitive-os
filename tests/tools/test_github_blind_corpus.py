@@ -8,6 +8,7 @@ from tools.github_blind_corpus import (
     _export_compatible_tree,
     _project_row,
     _repo_key,
+    _owner_key,
     _search_stratum,
     _search_with_gh,
     _windows_compatible_path,
@@ -32,6 +33,19 @@ def test_known_projects_reads_frozen_release_and_hypothesis_selections(tmp_path)
 
 def test_repo_key_excludes_cross_forge_namespace_aliases():
     assert _repo_key("github-owner/Shared-Repo.git") == "shared-repo"
+
+
+def test_owner_key_supports_independent_lineage_gate():
+    assert _owner_key("First-Owner/repo") == "first-owner"
+
+
+def test_stratum_project_count_may_override_global_default():
+    policy = {
+        "projects_per_stratum": 1,
+        "strata": [{"id": "one", "projects": 3, "queries": ["topic:test"]}],
+    }
+
+    assert policy["strata"][0]["projects"] == 3
 
 
 def test_known_projects_includes_historical_foundation_trials(tmp_path):
@@ -79,6 +93,22 @@ def test_production_filter_rejects_learning_collections_and_keeps_services():
     assert not _eligible({"full_name": "org/data-projects", "description": "Data platform", "topics": []}, policy)
     assert not _eligible({"full_name": "org/questions", "description": "200 interview questions", "topics": []}, policy)
     assert _eligible({"full_name": "org/payments", "description": "Production API service", "topics": []}, policy)
+
+
+def test_production_filter_rejects_explicit_holdout_owners_case_insensitively():
+    policy = {
+        "excluded_owners": ["Prior-Owner"],
+        "production_signal_tokens": ["plugin"],
+    }
+
+    assert not _eligible(
+        {"full_name": "prior-owner/new-plugin", "description": "Production plugin", "topics": []},
+        policy,
+    )
+    assert _eligible(
+        {"full_name": "fresh-owner/new-plugin", "description": "Production plugin", "topics": []},
+        policy,
+    )
 
 
 def test_search_uses_authenticated_gh_transport_when_token_exists():

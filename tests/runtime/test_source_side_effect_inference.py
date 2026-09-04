@@ -117,3 +117,15 @@ def test_pure_factory_is_excluded_without_hiding_real_observability():
 
     assert infer_ast_side_effects(factory, ast.unparse(factory)) == []
     assert infer_ast_side_effects(mixed, ast.unparse(mixed)) == ["observability"]
+
+
+def test_cache_invalidation_and_module_reload_are_memory_state_effects():
+    node = ast.parse(
+        "def invalidate(module):\n"
+        "    importlib.invalidate_caches()\n"
+        "    linecache.clearcache()\n"
+        "    cached_lookup.cache_clear()\n"
+        "    importlib.reload(module)\n"
+    ).body[0]
+
+    assert infer_ast_side_effects(node, ast.unparse(node)) == ["memory_state"]

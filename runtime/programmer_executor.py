@@ -33,6 +33,7 @@ def run_programmer_executor(
     apply_source: bool = False,
     max_commands: int = 3,
     dependency_probe_session_approval: dict[str, Any] | None = None,
+    execution_base_dir: Path | None = None,
 ) -> dict[str, Any]:
     target = dict(implementation_plan.get("implementation_target", {}))
     if target.get("status") == "blocked_no_safe_candidate":
@@ -48,7 +49,7 @@ def run_programmer_executor(
     if apply_source:
         return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, "source_edit_apply_not_enabled_in_mvp", task_tree)
 
-    execution_dir = _execution_dir(root)
+    execution_dir = _execution_dir(root, base_dir=execution_base_dir)
     execution_dir.mkdir(parents=True, exist_ok=True)
     task_tree = task_tree or build_programmer_task_tree(
         technical_spec=technical_spec,
@@ -338,6 +339,7 @@ def _patch_package(
             "status": synthesis.get("status"),
             "reason": synthesis.get("reason"),
             "sandbox_project": synthesis.get("sandbox_project"),
+            "reducer_selection": synthesis.get("reducer_selection"),
         },
         "patches": synthesis.get("patches", []),
         "policy": {
@@ -373,9 +375,10 @@ def _expected_files(implementation_plan: dict[str, Any]) -> list[str]:
     return files[:8]
 
 
-def _execution_dir(root: Path) -> Path:
+def _execution_dir(root: Path, *, base_dir: Path | None = None) -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    return root / "artifacts" / "programmer_executor" / f"execution_{stamp}"
+    parent = base_dir or root / "artifacts" / "programmer_executor"
+    return parent / f"execution_{stamp}"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> Path:

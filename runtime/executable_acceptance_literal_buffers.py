@@ -19,6 +19,14 @@ def add_literal_buffer_samples(
     minimum_length: int,
 ) -> None:
     """Add samples only when a parameter is tested against a literal buffer."""
+    asserted_negations = {
+        id(item.test.operand)
+        for item in ast.walk(node)
+        if isinstance(item, ast.Assert)
+        and isinstance(item.test, ast.UnaryOp)
+        and isinstance(item.test.op, ast.Not)
+        and isinstance(item.test.operand, ast.Call)
+    }
     for item in ast.walk(node):
         if not isinstance(item, ast.Call) or not item.args:
             continue
@@ -31,9 +39,14 @@ def add_literal_buffer_samples(
         literal = _literal_buffer(item.args[0])
         if position not in {"prefix", "suffix"} or literal is None:
             continue
-        value = _sample(literal, position, minimum_length)
+        negated = id(item) in asserted_negations
+        value = _nonmatching_sample(literal, minimum_length) if negated else _sample(literal, position, minimum_length)
         candidates[receiver.id].append(
-            (priority, value, f"ast_literal_buffer:{item.func.attr}")
+            (
+                priority,
+                value,
+                f"ast_literal_buffer:{'assert_not_' if negated else ''}{item.func.attr}",
+            )
         )
 
 
@@ -53,3 +66,11 @@ def _sample(literal: str | bytes, position: str, minimum_length: int) -> Any:
     if isinstance(value, bytes):
         return {"__fixture__": "bytes_literal", "hex": value.hex()}
     return value
+
+
+def _nonmatching_sample(literal: str | bytes, minimum_length: int) -> Any:
+    size = max(1, minimum_length)
+    padding = b"0" * size if isinstance(literal, bytes) else "0" * size
+    if isinstance(padding, bytes):
+        return {"__fixture__": "bytes_literal", "hex": padding.hex()}
+    return padding

@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
-from runtime.executable_acceptance import run_executable_acceptance
-from runtime.programmer_executor import run_programmer_executor
-
+from tests.runtime.programmer_executor_helpers import *
 
 def test_programmer_executor_writes_patch_package_and_test_result(tmp_path: Path):
     project = tmp_path / "project"
@@ -67,10 +62,12 @@ def test_programmer_executor_writes_patch_package_and_test_result(tmp_path: Path
         implementation_plan=plan,
         test_plan=test_plan,
         run_verification=True,
+        execution_base_dir=tmp_path / "custom-executions",
     )
 
     assert result["status"] == "ok"
     assert result["source_code_changes"] is False
+    assert Path(result["execution_dir"]).parent == tmp_path / "custom-executions"
     patch = json.loads(Path(result["patch_package_path"]).read_text(encoding="utf-8"))
     test_result = json.loads(Path(result["test_result_path"]).read_text(encoding="utf-8"))
     task_tree = json.loads(Path(result["task_tree_path"]).read_text(encoding="utf-8"))
@@ -350,50 +347,3 @@ def test_executable_acceptance_invokes_simple_python_target(tmp_path: Path):
 
     assert result["status"] == "passed"
     assert result["summary"]["callable_harness_count"] == 1
-
-
-def test_executable_acceptance_fails_when_callable_accepts_malformed_input(tmp_path: Path):
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / "main.py").write_text("def loose(**kwargs):\n    return 'ok'\n", encoding="utf-8")
-    result = run_executable_acceptance(
-        root=tmp_path,
-        project_dir=project,
-        test_plan={
-            "executable_acceptance": {
-                "status": "ready",
-                "obligations": [
-                    {
-                        "id": "OBL-001",
-                        "acceptance_id": "AC-001",
-                        "target": "main.py:loose",
-                        "kind": "positive_contract_case",
-                        "given": {"text": "sample"},
-                        "expect": {"result": "string"},
-                        "oracle": "output_schema_and_acceptance_criterion",
-                    },
-                    {
-                        "id": "OBL-002",
-                        "acceptance_id": "contract_negative_missing_input",
-                        "target": "main.py:loose",
-                        "kind": "malformed_input_case",
-                        "given": {},
-                        "expect": {"error": "controlled_validation_error"},
-                        "oracle": "missing_required_input_rejected",
-                    },
-                    {
-                        "id": "OBL-003",
-                        "acceptance_id": "side_effect_boundary",
-                        "target": "main.py:loose",
-                        "kind": "side_effect_scope_case",
-                        "given": {"declared_scope": "writable_scope_only"},
-                        "expect": {"no_writes_outside_declared_scope": True},
-                        "oracle": "changed_file_list_is_subset_of_writable_scope",
-                    },
-                ],
-            }
-        },
-        work_dir=tmp_path / "work",
-    )
-
-    assert result["status"] == "failed"

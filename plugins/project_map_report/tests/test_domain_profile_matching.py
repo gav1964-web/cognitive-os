@@ -1,6 +1,32 @@
 from __future__ import annotations
 
 from plugins.project_map_report.src.domain_profile import infer_domain_profile
+from plugins.project_map_report.src.runtime_readiness import minimal_extraction_plan
+
+
+def test_dataframe_pipeline_root_purpose_reaches_recognition_confidence():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/export_relay", "frameworks": [], "entrypoints": [], "routes": 0},
+        {
+            "files": [
+                {
+                    "path": "README.md",
+                    "text": "Typed tabular data pipeline for dataframe and CSV result export.",
+                },
+                {
+                    "path": "writer.py",
+                    "text": "def write_json(path, value): pass",
+                },
+            ]
+        },
+        {"files": [{"path": "writer.py", "functions": [{"name": "write_json", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "dataframe_pipeline"
+    assert profile["confidence"] >= 0.7
+    assert any(item.startswith("matched root purpose markers:") for item in profile["evidence"])
 
 
 def test_domain_profile_uses_weighted_kb_project_name_and_text_markers():
@@ -62,6 +88,141 @@ def test_domain_profile_does_not_treat_navigation_substrings_as_docs_generator()
     assert profile["kind"] != "env_config_library"
 
 
+def test_domain_profile_does_not_treat_quantization_variable_as_qt_gui():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/whichllm", "frameworks": [], "entrypoints": ["whichllm/plan.py"], "routes": 0},
+        {"files": [{"path": "whichllm/plan.py", "text": "Language model selection: for qt in quant_levels, select_model(qt)."}]},
+        {"files": [{"path": "whichllm/plan.py", "functions": [{"name": "select_model", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "llm_application_runtime"
+
+
+def test_domain_profile_does_not_treat_gui_example_as_core_desktop_app():
+    profile = infer_domain_profile(
+        {
+            "root": "F:/tmp/lark",
+            "frameworks": [],
+            "entrypoints": ["lark/__init__.py"],
+            "routes": 0,
+        },
+        {
+            "files": [
+                {"path": "README.md", "text": "Lark is a parsing toolkit for Python."},
+                {
+                    "path": "examples/advanced/editor.py",
+                    "text": "from PyQt5.QtWidgets import QApplication\nwidget = QApplication([])",
+                },
+            ]
+        },
+        {
+            "files": [
+                {"path": "lark/parser.py", "functions": [{"name": "parse", "calls": []}]},
+                {
+                    "path": "examples/advanced/editor.py",
+                    "functions": [{"name": "main", "calls": ["QApplication"]}],
+                },
+            ],
+            "imports": ["PyQt5"],
+        },
+        [],
+        {"PyQt5"},
+    )
+
+    assert profile["kind"] != "desktop_gui_ide"
+
+
+def test_domain_profile_does_not_treat_library_docs_as_site_generator():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/cachelib", "frameworks": [], "entrypoints": ["cachelib/__init__.py"], "routes": 0},
+        {"files": [{"path": "docs/conf.py", "text": "Sphinx documentation for a cache library."}]},
+        {"files": [{"path": "cachelib/base.py", "functions": [{"name": "get", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] != "docs_site_generator"
+
+
+def test_domain_profile_recognizes_pdoc_as_documentation_generator():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/mitmproxy__pdoc", "frameworks": [], "entrypoints": ["pdoc/__init__.py"], "routes": 0},
+        {"files": [{"path": "README.md", "text": "pdoc renders Python API documentation."}]},
+        {"files": [{"path": "pdoc/render.py", "functions": [{"name": "render", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "docs_site_generator"
+    assert profile["confidence"] >= 0.7
+    assert any("project name" in row for row in profile["evidence"])
+
+
+def test_domain_profile_recognizes_unknown_docs_generator_from_root_purpose():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/fresh_owner__docforge", "frameworks": [], "entrypoints": ["docforge/main.py"], "routes": 0},
+        {
+            "files": [
+                {"path": "README.md", "text": "DocForge is an API documentation generator for mixed-language source trees."},
+                {"path": "requirements.txt", "text": "rich\nconfigparser"},
+            ]
+        },
+        {
+            "files": [
+                {"path": "docforge/render.py", "functions": [{"name": "render_docs", "calls": ["load_config"]}]}
+            ],
+            "imports": ["rich", "configparser"],
+        },
+        [],
+        {"rich", "configparser"},
+    )
+
+    assert profile["kind"] == "docs_site_generator"
+    assert profile["confidence"] >= 0.7
+    assert any("root purpose" in row for row in profile["evidence"])
+
+
+def test_domain_profile_does_not_treat_incidental_rich_dependency_as_terminal_library():
+    profile = infer_domain_profile(
+        {
+            "root": "F:/tmp/gh-action-pypi-publish",
+            "frameworks": [],
+            "entrypoints": ["oidc-exchange.py", "attestations.py"],
+            "routes": 0,
+        },
+        {
+            "files": [
+                {"path": "README.md", "text": "GitHub Action to publish distributions to PyPI with OIDC attestations."},
+                {"path": "requirements.txt", "text": "rich"},
+            ]
+        },
+        {
+            "files": [
+                {"path": "attestations.py", "functions": [{"name": "compose_attestation_mapping", "calls": []}]},
+                {"path": "oidc-exchange.py", "functions": [{"name": "render_claims", "calls": []}]},
+            ]
+        },
+        [],
+        {"rich"},
+    )
+
+    assert profile["kind"] == "package_publish_action"
+
+
+def test_domain_profile_requires_codegen_source_anchor_for_render_helpers():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/render_helpers", "frameworks": [], "entrypoints": ["helpers.py"], "routes": 0},
+        {"files": [{"path": "helpers.py", "text": "def render_name(value): return value"}]},
+        {"files": [{"path": "helpers.py", "functions": [{"name": "render_name", "calls": []}]}]},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] != "code_generation_toolkit"
+
+
 def test_domain_profile_does_not_confuse_container_agent_with_multi_agent_runtime():
     profile = infer_domain_profile(
         {"root": "F:/tmp/container_manager", "frameworks": ["FastAPI"], "entrypoints": ["backend/app.py"], "routes": 8},
@@ -84,306 +245,3 @@ def test_domain_profile_requires_semantic_multi_agent_marker():
     )
 
     assert profile["kind"] == "multi_agent_orchestration_runtime"
-
-
-def test_domain_profile_can_match_routes_min_kb_rule_for_api_service():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/demo_api", "frameworks": ["FastAPI"], "entrypoints": ["app.py"], "routes": 2},
-        {"files": [{"path": "app.py", "text": "FastAPI service with JSON endpoint responses."}]},
-        {"files": [{"path": "app.py", "functions": [{"name": "create_app", "calls": []}]}], "imports": ["fastapi"]},
-        [{"route": "/items"}, {"route": "/health"}],
-        {"fastapi"},
-    )
-
-    assert profile["kind"] == "api_service"
-    assert "routes" in " ".join(profile["evidence"])
-
-
-def test_domain_profile_prefers_plugin_hook_runtime_over_ml_ui_or_archive_noise():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/pluggy", "frameworks": [], "entrypoints": ["src/pluggy/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "src/pluggy/_callers.py",
-                    "text": "def _multicall(...): pass\ndef run_old_style_hookwrapper(...): pass\n# hookspec hookimpl component",
-                },
-                {"path": "README.md", "text": "pluggy manages hookspec and hookimpl plugin dispatch."},
-            ]
-        },
-        {
-            "files": [
-                {
-                    "path": "src/pluggy/_callers.py",
-                    "functions": [
-                        {"name": "_multicall", "calls": ["run_old_style_hookwrapper"]},
-                        {"name": "run_old_style_hookwrapper", "calls": []},
-                    ],
-                }
-            ],
-            "imports": [],
-        },
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "plugin_hook_runtime"
-    assert profile["knowledge_rule"] == "plugin_hook_runtime"
-
-
-def test_domain_profile_keeps_poetry_in_packaging_not_backup_archive():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/poetry", "frameworks": [], "entrypoints": ["poetry/console/application.py"], "routes": 0},
-        {
-            "files": [
-                {"path": "poetry/console/commands/init.py", "text": "def _init_pyproject(...): pass\npyproject.toml metadata wheel"},
-                {"path": "README.md", "text": "Poetry manages Python package metadata, dependencies, pyproject.toml, build backend and wheel artifacts."},
-            ]
-        },
-        {
-            "files": [
-                {"path": "poetry/console/commands/init.py", "functions": [{"name": "_init_pyproject", "calls": []}]}
-            ],
-            "imports": [],
-        },
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "packaging_build_backend"
-
-
-def test_domain_profile_does_not_confuse_asgi_server_with_cli_framework():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/uvicorn", "frameworks": [], "entrypoints": ["uvicorn/main.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.md",
-                    "text": "Uvicorn is an ASGI web server with lifespan, server socket and graceful shutdown support.",
-                },
-                {"path": "uvicorn/main.py", "text": "import click\n\ndef main(): pass\n"},
-            ]
-        },
-        {"files": [{"path": "uvicorn/server.py", "functions": [{"name": "serve", "calls": ["startup", "shutdown"]}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "asgi_wsgi_server_runtime"
-    assert "server startup" in profile["purpose_summary"]
-
-
-def test_domain_profile_does_not_confuse_chunked_arrays_with_template_engine():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/zarr-python", "frameworks": [], "entrypoints": ["src/zarr/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.md",
-                    "text": "Zarr implements compressed, chunked, N-dimensional arrays for parallel computing.",
-                },
-                {"path": "src/zarr/core.py", "text": "class Array: pass\n# metadata templates are examples only\n"},
-            ]
-        },
-        {"files": [{"path": "src/zarr/core.py", "functions": [{"name": "open_array", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "scientific_compute_library"
-
-
-def test_domain_profile_keeps_mako_template_engine_with_wsgi_mentions():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/mako", "frameworks": [], "entrypoints": ["mako/__init__.py"], "routes": 0},
-        {"files": [{"path": "README.rst", "text": "Mako is a template library written in Python with WSGI examples."}]},
-        {"files": [{"path": "mako/template.py", "functions": [{"name": "render", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "template_rendering_engine"
-
-
-def test_domain_profile_ignores_changelog_template_noise_for_small_libraries():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/multidict", "frameworks": [], "entrypoints": ["multidict/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.rst",
-                    "text": "Multidict is dict-like collection where a key might occur more than once.",
-                },
-                {
-                    "path": "CHANGES/.TEMPLATE.rst",
-                    "text": "Internal release template mentioning Jinja and Mako rendering examples.",
-                },
-            ]
-        },
-        {"files": [{"path": "multidict/__init__.py", "functions": [{"name": "MultiDict", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "multi_value_mapping_library"
-
-
-def test_domain_profile_ignores_doc_spelling_wordlist_template_noise():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/aiosignal", "frameworks": [], "entrypoints": ["aiosignal/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {"path": "README.rst", "text": "A project to manage callbacks in asyncio projects."},
-                {"path": "docs/spelling_wordlist.txt", "text": "Jinja\nMako\n"},
-            ]
-        },
-        {"files": [{"path": "aiosignal/__init__.py", "functions": [{"name": "Signal", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "async_callback_signal_library"
-
-
-def test_domain_profile_ignores_dev_tooling_noise_for_small_libraries():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/aiosignal", "frameworks": [], "entrypoints": ["aiosignal/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {"path": "README.rst", "text": "A project to manage callbacks in asyncio projects."},
-                {"path": "pyproject.toml", "text": "[tool.ruff]\n[tool.mypy]\n"},
-            ]
-        },
-        {"files": [{"path": "aiosignal/__init__.py", "functions": [{"name": "Signal", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "async_callback_signal_library"
-
-
-def test_domain_profile_keeps_pyyaml_out_of_http_client_noise():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/pyyaml", "frameworks": [], "entrypoints": ["lib/yaml/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.md",
-                    "text": "A full-featured YAML processing framework for Python with safe_load and LibYAML bindings.",
-                }
-            ]
-        },
-        {"files": [{"path": "lib/yaml/__init__.py", "functions": [{"name": "safe_load", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "yaml_processing_framework"
-
-
-def test_domain_profile_recognizes_django_framework_without_routes():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/django", "frameworks": [], "entrypoints": ["django/__init__.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.rst",
-                    "text": "Django is a high-level Python web framework with django.conf and management/commands.",
-                }
-            ]
-        },
-        {"files": [{"path": "django/conf/__init__.py", "functions": [{"name": "configure", "calls": []}]}]},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "django_web_framework"
-
-
-def test_domain_profile_does_not_treat_infra_blueprint_text_as_web_framework():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/deployment-toolkit", "frameworks": [], "entrypoints": [], "routes": 0},
-        {"files": [{"path": "README.md", "text": "Deployment blueprint for infrastructure."}]},
-        {"files": []},
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "generic"
-
-
-def test_domain_profile_recognizes_repeated_transform_library_callables():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/sample_tool", "frameworks": [], "entrypoints": ["mod_0.py"], "routes": 0},
-        {"files": []},
-        {
-            "files": [
-                {
-                    "path": "mod_0.py",
-                    "functions": [
-                        {"name": "normalize_name", "calls": []},
-                        {"name": "normalize_email", "calls": []},
-                        {"name": "validate_value", "calls": []},
-                    ],
-                }
-            ]
-        },
-        [],
-        set(),
-    )
-
-    assert profile["kind"] == "python_transform_library"
-    assert len(profile["scenario_summary"]) >= 3
-
-
-def test_domain_profile_recognizes_deep_learning_image_pipeline():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/image_lab", "frameworks": [], "entrypoints": ["models.py"], "routes": 0},
-        {
-            "files": [
-                {
-                    "path": "README.md",
-                    "text": "Train a convolutional network for image enhancement using a paired image dataset and model checkpoints.",
-                }
-            ]
-        },
-        {"files": [{"path": "models.py", "functions": [{"name": "forward", "calls": []}]}]},
-        [],
-        {"tensorflow"},
-    )
-
-    assert profile["kind"] == "deep_learning_image_pipeline"
-    assert len(profile["scenario_summary"]) >= 3
-
-
-def test_domain_profile_recognizes_neural_network_training_pipeline():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/neural_lab", "frameworks": [], "entrypoints": [], "routes": 0},
-        {"files": [{"path": "README.md", "text": "Train a neural network with stochastic gradient descent and backpropagation."}]},
-        {"files": [{"path": "network.py", "functions": [{"name": "backprop", "calls": []}]}]},
-        [],
-        {"numpy"},
-    )
-    assert profile["kind"] == "neural_network_training_pipeline"
-    assert "gradients and updated parameters" in profile["output_summary"]
-
-
-def test_domain_profile_recognizes_blender_animation_addon():
-    profile = infer_domain_profile(
-        {"root": "F:/tmp/animtoolbox", "frameworks": [], "entrypoints": [], "routes": 0},
-        {"files": [{"path": "README.md", "text": "Animation and rigging tools for Blender."}]},
-        {
-            "files": [
-                {
-                    "path": "BakeToCtrl.py",
-                    "functions": [{"name": "constraint_add", "calls": ["bpy.ops.pose.constraint_add"]}],
-                }
-            ]
-        },
-        [],
-        {"bpy"},
-    )
-
-    assert profile["kind"] == "blender_animation_addon"
-    assert len(profile["scenario_summary"]) >= 3

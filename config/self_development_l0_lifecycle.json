@@ -1,0 +1,20 @@
+{
+  "schema_version": "self_development_l0_lifecycle.v1",
+  "status": "active",
+  "minimum_independent_projects": 3,
+  "staging_directory": "artifacts/self_development/staged_candidates",
+  "quarantine_directory": "artifacts/self_development/quarantine",
+  "required_verification": [
+    "unseen_project_holdout",
+    "no_role_regression",
+    "independent_evaluator"
+  ],
+  "allowed_reviewer_decisions": ["approve_staging", "reject", "quarantine"],
+  "invariants": {
+    "active_kb_write": false,
+    "source_apply": false,
+    "automatic_promotion": false,
+    "digest_bound_staging": true,
+    "rollback_rehearsal_required": true
+  }
+}

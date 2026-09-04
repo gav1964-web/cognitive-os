@@ -1,0 +1,206 @@
+{
+  "schema_version": "project_development_boundary_profiles.v1",
+  "promotion_policy": {
+    "active_kb_requires_promotion": true,
+    "minimum_projects": 3,
+    "minimum_cases": 5,
+    "minimum_blind_cases": 2,
+    "minimum_independent_reports": 2
+  },
+  "profiles": [
+    {
+      "id": "exception_pickle_reconstruction_boundary",
+      "status": "staged",
+      "priority": 90,
+      "match": {
+        "all": [
+          {"source": "source_facts", "path": "source_backed", "operator": "eq", "value": true},
+          {"source": "source_facts", "path": "custom_exception_constructor", "operator": "eq", "value": true},
+          {"source": "source_facts", "path": "base_exception_replays_constructor_parameters", "operator": "eq", "value": false},
+          {"source": "source_facts", "path": "has_reduce_method", "operator": "eq", "value": false},
+          {"source": "feedback", "path": "reason", "operator": "eq", "value": "no_verified_failure_reducer"}
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.88,
+        "experiment_kind": "architect_replan",
+        "strategy": "compare_exception_constructor_replay_contract"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {
+        "same_target_source_facts": {"kind": "source_backed", "authority": "source_ast"},
+        "positive_and_negative_shape_contrast": {
+          "kind": "paired_shape",
+          "authority": "paired_source_ast",
+          "primary_match": {
+            "all": [
+              {"source": "primary_facts", "path": "custom_exception_constructor", "operator": "eq", "value": true},
+              {"source": "primary_facts", "path": "base_exception_replays_constructor_parameters", "operator": "eq", "value": false},
+              {"source": "primary_facts", "path": "has_reduce_method", "operator": "eq", "value": false}
+            ]
+          },
+          "contrast_match": {
+            "all": [
+              {"source": "contrast_identity", "path": "verified", "operator": "eq", "value": true},
+              {"source": "contrast_facts", "path": "custom_exception_constructor", "operator": "eq", "value": true},
+              {"source": "contrast_facts", "path": "base_exception_replays_constructor_parameters", "operator": "eq", "value": true},
+              {"source": "contrast_facts", "path": "has_reduce_method", "operator": "eq", "value": false}
+            ]
+          },
+          "bounded_implementation_evidence": true,
+          "kb_promotion_evidence": false
+        },
+        "no_scope_expansion": {"kind": "target_identity", "authority": "proposal_and_hypothesis_identity"}
+      },
+      "evidence_state": {
+        "source_pairs": 1,
+        "independent_projects": 1,
+        "blind_cases": 0,
+        "independent_reports": 1,
+        "promotion_ready": false,
+        "same_project_contrast_only": true
+      }
+    },
+    {
+      "id": "nested_loop_mapping_boundary",
+      "status": "staged",
+      "priority": 100,
+      "applies_to_reducers": ["extract_append_mapping_helper"],
+      "match": {
+        "all": [
+          {"source": "source_facts", "path": "source_backed", "operator": "eq", "value": true},
+          {"source": "source_facts", "path": "maximum_loop_depth", "operator": "gt", "value": 1},
+          {"source": "source_facts", "path": "dict_append_sites", "operator": "gt", "value": 0},
+          {
+            "source": "reducer_attempts",
+            "where": {"path": "operation_kind", "operator": "eq", "value": "extract_append_mapping_helper"},
+            "path": "reason",
+            "operator": "suffix",
+            "value": "_pattern_not_proven"
+          }
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.93,
+        "experiment_kind": "architect_replan",
+        "strategy": "characterize_nested_loop_boundary"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {
+        "same_target_source_facts": {"kind": "source_backed", "authority": "source_ast"},
+        "positive_and_negative_shape_contrast": {
+          "kind": "paired_shape",
+          "authority": "paired_source_ast",
+          "primary_match": {
+            "all": [
+              {"source": "primary_facts", "path": "source_backed", "operator": "eq", "value": true},
+              {"source": "primary_facts", "path": "maximum_loop_depth", "operator": "gt", "value": 1},
+              {"source": "primary_facts", "path": "dict_append_sites", "operator": "gt", "value": 0}
+            ]
+          },
+          "contrast_match": {
+            "all": [
+              {"source": "contrast_identity", "path": "verified", "operator": "eq", "value": true},
+              {"source": "contrast_facts", "path": "source_backed", "operator": "eq", "value": true},
+              {"source": "contrast_facts", "path": "maximum_loop_depth", "operator": "eq", "value": 1},
+              {"source": "contrast_facts", "path": "dict_append_sites", "operator": "gt", "value": 0}
+            ]
+          },
+          "bounded_implementation_evidence": true,
+          "kb_promotion_evidence": false
+        },
+        "no_scope_expansion": {"kind": "target_identity", "authority": "proposal_and_hypothesis_identity"}
+      },
+      "evidence_state": {
+        "source_pairs": 4,
+        "independent_projects": 8,
+        "blind_cases": 2,
+        "independent_reports": 1,
+        "corpora": ["benchmark_corpora/project_development_boundaries"],
+        "promotion_ready": false
+      }
+    },
+    {
+      "id": "cross_reducer_ambiguity",
+      "status": "staged",
+      "priority": 50,
+      "match": {
+        "all": [
+          {"source": "source_facts", "path": "source_backed", "operator": "eq", "value": true},
+          {"source": "feedback", "path": "reason", "operator": "eq", "value": "ambiguous_development_helper_extraction"}
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.9,
+        "experiment_kind": "architect_replan",
+        "strategy": "narrow_target_to_one_reducer_boundary"
+      },
+      "required_evidence": ["same_target_source_facts", "positive_and_negative_shape_contrast", "no_scope_expansion"],
+      "requirement_rules": {},
+      "evidence_state": {"promotion_ready": false, "deferred_until_independent_contrasts": true}
+    },
+    {
+      "id": "unsupported_reducer_shape",
+      "status": "staged",
+      "priority": 10,
+      "match": {
+        "all": [
+          {"source": "source_facts", "path": "source_backed", "operator": "eq", "value": true},
+          {"any": [
+            {"source": "feedback", "path": "reason", "operator": "suffix", "value": "_pattern_not_proven"},
+            {"source": "feedback", "path": "reason", "operator": "eq", "value": "no_unique_development_helper_extraction"},
+            {"source": "feedback", "path": "reason", "operator": "eq", "value": "no_verified_failure_reducer"}
+          ]}
+        ]
+      },
+      "hypothesis": {
+        "status": "research_more",
+        "confidence": 0.68,
+        "experiment_kind": "bounded_research",
+        "strategy": "collect_one_positive_and_one_negative_source_shape"
+      },
+      "required_evidence": ["same_target_source_facts", "positive_and_negative_shape_contrast", "no_scope_expansion"],
+      "requirement_rules": {},
+      "evidence_state": {
+        "promotion_ready": false,
+        "deferred_until_shape_is_classified": true,
+        "observed_failure_kinds": [
+          "disabled_pytest_plugin_symbolic_seed_contract",
+          "exception_pickle_reconstruction_contract",
+          "server_start_readiness_cleanup_contract"
+        ],
+        "observed_projects": ["pytest-httpserver", "pytest-randomly", "pytest-socket"],
+        "minimum_independent_projects": 3,
+        "minimum_additional_independent_projects": 0,
+        "minimum_additional_independent_contrasts_per_failure_kind": 2
+      }
+    },
+    {
+      "id": "unsupported_reducer_shape_fallback",
+      "hypothesis_kind": "unsupported_reducer_shape",
+      "status": "staged",
+      "priority": 0,
+      "fallback": true,
+      "hypothesis": {
+        "status": "knowledge_gap",
+        "confidence": 0.0,
+        "experiment_kind": "bounded_research",
+        "strategy": "resolve_source_and_reducer_evidence"
+      },
+      "required_evidence": ["same_target_source_facts", "positive_and_negative_shape_contrast", "no_scope_expansion"],
+      "requirement_rules": {},
+      "evidence_state": {"promotion_ready": false}
+    }
+  ]
+}

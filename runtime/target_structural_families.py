@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .self_improvement_profile_families import load_contract_families
+
 
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "contract_families" / "structural_recognition.json"
 SUPPORTED_OPERATORS = {
@@ -57,6 +59,20 @@ def structural_contract_family_rule(
         if all(_matches(facts, dict(condition)) for condition in rule["all"]):
             return dict(rule)
     return {}
+
+
+def structural_contract_for_candidate(
+    evidence: dict[str, Any] | None,
+    side_effect_contract: dict[str, Any] | None = None,
+    *,
+    rules_path: str | None = None,
+) -> dict[str, Any]:
+    rule = structural_contract_family_rule(evidence, side_effect_contract, rules_path=rules_path)
+    family_id = str(rule.get("family_id") or "")
+    if not family_id:
+        return {}
+    family = dict(dict(load_contract_families().get("families") or {}).get(family_id) or {})
+    return {"contract_family": family_id, **family} if family else {}
 
 
 def _normalized_facts(

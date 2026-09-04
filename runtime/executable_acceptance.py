@@ -216,6 +216,9 @@ def _load_function(target):
             module = importlib.import_module(module_name)
             if method:
                 return _load_method(module, method, method.get("method_name", symbol), target)
+            module_file = getattr(module, "__file__", None)
+            if module_file and Path(module_file).resolve() != path:
+                return _load_source_isolated_function(path, symbol, target)
             func = getattr(module, symbol)
             assert callable(func), f"target is not callable: {{target}}"
             return func
@@ -263,10 +266,16 @@ def _install_profile_module(name):
     parts = name.split(".")
     for index in range(1, len(parts)):
         p = ".".join(parts[:index])
-        if p not in sys.modules: m = types.ModuleType(p); m.__path__ = []; sys.modules[p] = m
+        if p not in sys.modules:
+            m = types.ModuleType(p); m.__path__ = []
+            m.__file__ = f"<dependency-profile:{{p}}>"
+            m.__spec__ = importlib.util.spec_from_loader(p, loader=None, is_package=True)
+            sys.modules[p] = m
         if index > 1: setattr(sys.modules[".".join(parts[: index - 1])], parts[index - 1], sys.modules[p])
     parent_name, _, child_name = name.rpartition(".")
     module = types.ModuleType(name)
+    module.__file__ = f"<dependency-profile:{{name}}>"
+    module.__spec__ = importlib.util.spec_from_loader(name, loader=None, is_package=False)
     attrs = HARNESS_DATA.get("dependency_module_profile_attrs", {{}}).get(name, {{"__version__": "0.0.0", "version": "0.0.0"}})
     for key, value in attrs.items(): setattr(module, key, _materialize(value))
     sys.modules[name] = module
@@ -277,6 +286,8 @@ class _StubModule(types.ModuleType):
         super().__init__(name)
         self.__path__ = []
         self.__all__ = []
+        self.__file__ = f"<dependency-stub:{{name}}>"
+        self.__spec__ = importlib.util.spec_from_loader(name, loader=None, is_package=True)
 
     def __getattr__(self, name):
         value = _StubObject(f"{{self.__name__}}.{{name}}")
@@ -346,7 +357,7 @@ def _assert_expected_shape(result, expect):
         declared = str(expect.get("result") or "").lower().replace(" ", "")
         if declared in {{"any", "inferredoutput", "inferred_output"}}: return
         if declared in {{"none", "null", "void"}}: assert result is None; return
-        if result is None and (declared == "optional" or "optional[" in declared or "nonetype" in declared or "|none" in declared): return
+        if result is None and (declared == "optional" or declared.endswith(".optional") or "optional[" in declared or "nonetype" in declared or "|none" in declared): return
         assert result is not None; return
     if not isinstance(result, dict): assert any("failure" not in str(key).lower() for key in expect), "multi-field output contract expects dict result"; return
 '''

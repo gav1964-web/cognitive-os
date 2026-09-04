@@ -19,11 +19,14 @@ def lint_plugin(
 ) -> None:
     effects = side_effects or {"filesystem": "none", "network": "none", "secrets": "none"}
     for path in plugin_dir.rglob("*.py"):
+        relative = path.relative_to(plugin_dir)
+        if "tests" in relative.parts:
+            continue
         line_count = _line_count(path)
         if line_count > max_python_lines:
-            rel_path = path.relative_to(plugin_dir).as_posix()
+            rel_path = relative.as_posix()
             raise PluginLintError(f"{plugin_id} file exceeds {max_python_lines} lines: {rel_path}:{line_count}")
-        if "src" in path.relative_to(plugin_dir).parts:
+        if "src" in relative.parts:
             _lint_src_file(path, plugin_id, effects)
 
 

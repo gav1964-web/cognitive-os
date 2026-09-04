@@ -35,7 +35,8 @@
     },
     {
       "id": "memory_state",
-      "call_contains": [".set_state", ".change_state", ".update_state", ".before_request", ".after_request"]
+      "call_exact": ["importlib.invalidate_caches", "importlib.reload", "linecache.clearcache"],
+      "call_contains": [".set_state", ".change_state", ".update_state", ".before_request", ".after_request", ".cache_clear"]
     },
     {
       "id": "credential_store",

@@ -128,7 +128,8 @@ def _heading_text(lines: list[str], index: int) -> str:
     line = lines[index].strip()
     if line.startswith("#"):
         return line.strip("# ").strip()
-    if index + 1 < len(lines) and line and set(lines[index + 1].strip()) <= {"=", "-", "~"}:
+    underline = lines[index + 1].strip() if index + 1 < len(lines) else ""
+    if line and underline and set(underline) <= {"=", "-", "~"}:
         return line
     return ""
 

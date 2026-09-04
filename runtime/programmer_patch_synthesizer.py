@@ -1,400 +1,53 @@
-"""Deterministic sandbox patch synthesis for small Python function targets."""
+"""Compatibility facade for deterministic programmer patch synthesis."""
 
 from __future__ import annotations
 
-import ast
-import difflib
-import os
-import shutil
-from pathlib import Path
-from typing import Any
-
-from .patch_synthesis_policy import (
-    required_input_guard_recipe,
-    return_literal_notimplemented_recipe,
-    return_literal_stub_recipe,
-    string_transform_identity_return_recipe,
+from .programmer_patch_synthesizer_common import (
+    NO_PATCH,
+    _copy_project,
+    _expected_files,
+    _patch_result,
+    _recovery_patch_digest,
+    _remove_tree,
+    _target_symbol,
 )
-from .programmer_contract_transform_patch import contract_transform_patch
-from .programmer_literal_stub_patch import literal_return_patch, notimplemented_return_patch
-from .python_parser_compatibility import parse_compatible_source
-
-NO_PATCH = {"status": "skipped", "reason": "no_supported_patch_pattern", "patches": []}
-
-
-def synthesize_patch_package(
-    *,
-    execution_dir: Path,
-    project_dir: Path,
-    implementation_plan: dict[str, Any],
-    test_plan: dict[str, Any],
-) -> dict[str, Any]:
-    delta = dict(implementation_plan.get("implementation_delta") or {})
-    if delta.get("status") == "verification_only":
-        return {
-            "status": "verification_only",
-            "reason": "no_evidence_backed_behavior_change",
-            "patches": [],
-            "implementation_delta": delta,
-        }
-    if delta.get("status") == "semantic_synthesis_required":
-        return {
-            "status": "skipped",
-            "reason": "semantic_delta_requires_patch_hypothesis",
-            "patches": [],
-            "implementation_delta": delta,
-        }
-    target = _target_symbol(implementation_plan)
-    if not target:
-        return dict(NO_PATCH)
-    path_text, _, symbol = target.partition(":")
-    if not path_text.endswith(".py") or not symbol or "." in symbol:
-        return dict(NO_PATCH)
-    if path_text not in _expected_files(implementation_plan):
-        return {"status": "blocked", "reason": "target_file_not_in_expected_files", "patches": []}
-    recipe = required_input_guard_recipe()
-    if not recipe:
-        return dict(NO_PATCH)
-
-    sandbox_project = execution_dir / "patch_sandbox" / "project"
-    _copy_project(project_dir, sandbox_project)
-    source = (sandbox_project / path_text).resolve()
-    try:
-        source.relative_to(sandbox_project.resolve())
-    except ValueError:
-        return {"status": "blocked", "reason": "target_outside_sandbox", "patches": []}
-    if not source.is_file():
-        return {"status": "blocked", "reason": "target_file_missing_in_sandbox", "patches": []}
-
-    original = source.read_text(encoding="utf-8")
-    transform_recipe = string_transform_identity_return_recipe()
-    if transform_recipe:
-        patch = contract_transform_patch(original, symbol, target, path_text, test_plan, transform_recipe)
-        if patch:
-            source.write_text(patch["source"], encoding="utf-8")
-            return _patch_result(
-                recipe=transform_recipe,
-                sandbox_project=sandbox_project,
-                path_text=path_text,
-                target=target,
-                original=original,
-                patched=str(patch["source"]),
-                operation={
-                    "artifact_type": "PatchOperation",
-                    "kind": str(transform_recipe.get("operation_kind") or "replace_identity_return_with_contract_transform"),
-                    "target": target,
-                    "file": path_text,
-                    "transform": patch["transform"],
-                    "transform_evidence": patch["transform_evidence"],
-                },
-            )
-    literal_recipe = return_literal_stub_recipe()
-    if literal_recipe:
-        literal_patch = literal_return_patch(original, symbol, target, path_text, test_plan, literal_recipe)
-        if literal_patch:
-            source.write_text(literal_patch["source"], encoding="utf-8")
-            return _patch_result(
-                recipe=literal_recipe,
-                sandbox_project=sandbox_project,
-                path_text=path_text,
-                target=target,
-                original=original,
-                patched=str(literal_patch["source"]),
-                operation={
-                    "artifact_type": "PatchOperation",
-                    "kind": str(literal_recipe.get("operation_kind") or "replace_stub_with_literal_return"),
-                    "target": target,
-                    "file": path_text,
-                    "return_value": literal_patch["return_value"],
-                    "return_evidence": literal_patch["return_evidence"],
-                },
-            )
-    notimplemented_recipe = return_literal_notimplemented_recipe()
-    if notimplemented_recipe:
-        patch = notimplemented_return_patch(original, symbol, target, path_text, test_plan, notimplemented_recipe)
-        if patch:
-            source.write_text(patch["source"], encoding="utf-8")
-            return _patch_result(
-                recipe=notimplemented_recipe,
-                sandbox_project=sandbox_project,
-                path_text=path_text,
-                target=target,
-                original=original,
-                patched=str(patch["source"]),
-                operation={
-                    "artifact_type": "PatchOperation",
-                    "kind": str(notimplemented_recipe.get("operation_kind") or "replace_notimplemented_with_literal_return"),
-                    "target": target,
-                    "file": path_text,
-                    "return_value": patch["return_value"],
-                    "return_evidence": patch["return_evidence"],
-                },
-            )
-    signature_keys = _required_signature_keys(original, symbol, recipe)
-    contract_keys = _required_input_keys(test_plan, target, recipe)
-    required_keys = contract_keys or signature_keys
-    if not required_keys:
-        return dict(NO_PATCH)
-    guard_keys = _guard_required_keys(original, symbol, required_keys)
-    if not guard_keys and signature_keys and required_keys != signature_keys:
-        guard_keys = _guard_required_keys(original, symbol, signature_keys)
-        required_keys = signature_keys
-    if not guard_keys:
-        return dict(NO_PATCH)
-    patched = _patch_required_input_guard(original, symbol, guard_keys, recipe)
-    if patched == original:
-        return dict(NO_PATCH)
-    source.write_text(patched, encoding="utf-8")
-    return _patch_result(
-        recipe=recipe,
-        sandbox_project=sandbox_project,
-        path_text=path_text,
-        target=target,
-        original=original,
-        patched=patched,
-        operation={
-            "artifact_type": "PatchOperation",
-            "kind": str(recipe.get("operation_kind") or "insert_required_input_guard"),
-            "target": target,
-            "file": path_text,
-            "required_inputs": guard_keys,
-            "guard_evidence": _guard_evidence(contract_keys, signature_keys, guard_keys),
-        },
-    )
-
-
-def _patch_result(
-    *,
-    recipe: dict[str, Any],
-    sandbox_project: Path,
-    path_text: str,
-    target: str,
-    original: str,
-    patched: str,
-    operation: dict[str, Any],
-) -> dict[str, Any]:
-    diff = list(
-        difflib.unified_diff(
-            original.splitlines(),
-            patched.splitlines(),
-            fromfile=f"a/{path_text}",
-            tofile=f"b/{path_text}",
-            lineterm="",
-        )
-    )
-    operation["diff"] = diff
-    return {
-        "status": str(recipe.get("status") or "prepared"),
-        "reason": str(recipe.get("reason") or "deterministic_patch_synthesized"),
-        "sandbox_project": sandbox_project.as_posix(),
-        "patches": [operation],
-    }
-
-
-def _target_symbol(implementation_plan: dict[str, Any]) -> str:
-    intent = dict(implementation_plan.get("patch_intent", {}))
-    target = str(intent.get("target_symbol") or "")
-    if target:
-        return target
-    return str(dict(implementation_plan.get("implementation_target", {})).get("candidate") or "")
-
-
-def _expected_files(implementation_plan: dict[str, Any]) -> list[str]:
-    return [str(item).split(":", 1)[0] for item in implementation_plan.get("expected_files", []) if item]
-
-
-def _required_input_keys(test_plan: dict[str, Any], target: str, recipe: dict[str, Any]) -> list[str]:
-    executable = dict(test_plan.get("executable_acceptance", {}))
-    obligations = [dict(item) for item in executable.get("obligations", []) if isinstance(item, dict)]
-    keys: list[str] = []
-    missing = dict(recipe.get("missing_input_case") or {})
-    missing_kind = missing.get("kind", "malformed_input_case")
-    missing_given = missing.get("given", {})
-    has_missing_case = any(
-        row.get("target") == target and row.get("kind") == missing_kind and row.get("given") == missing_given
-        for row in obligations
-    )
-    if not has_missing_case:
-        return []
-    positive_kind = str(recipe.get("positive_case_kind") or "positive_contract_case")
-    for row in obligations:
-        if row.get("target") != target or row.get("kind") != positive_kind:
-            continue
-        given = row.get("given", {})
-        if not isinstance(given, dict):
-            continue
-        for key in given:
-            text = str(key)
-            if text.isidentifier() and text not in keys:
-                keys.append(text)
-    return keys[: int(recipe.get("max_required_inputs") or 8)]
-
-
-def _guard_evidence(contract_keys: list[str], signature_keys: list[str], guard_keys: list[str]) -> dict[str, Any]:
-    source = "contract_missing_input_case" if contract_keys else "signature_required_parameters"
-    return {"source": source, "contract_keys": contract_keys, "signature_keys": signature_keys, "guarded_keys": guard_keys}
-
-
-def _required_signature_keys(source: str, function_name: str, recipe: dict[str, Any]) -> list[str]:
-    try:
-        tree, _ = parse_compatible_source(source, "<patch-source>")
-    except SyntaxError:
-        return []
-    function = _find_patchable_function(tree, function_name)
-    if function is None:
-        return []
-    keys: list[str] = []
-    ignored = {str(item) for item in recipe.get("ignored_signature_parameters", [])}
-    defaults = len(function.args.defaults)
-    positional = function.args.posonlyargs + function.args.args
-    required_positional = positional[: len(positional) - defaults] if defaults else positional
-    for arg in required_positional:
-        if arg.arg not in ignored:
-            keys.append(arg.arg)
-    for arg, default in zip(function.args.kwonlyargs, function.args.kw_defaults):
-        if default is None:
-            keys.append(arg.arg)
-    return [key for key in keys if key.isidentifier()][: int(recipe.get("max_required_inputs") or 8)]
-
-
-def _copy_project(project_dir: Path, sandbox_project: Path) -> None:
-    if sandbox_project.exists():
-        _remove_tree(sandbox_project)
-    sandbox_project.mkdir(parents=True, exist_ok=True)
-    ignored_dirs = {".git", "__pycache__", ".pytest_cache", "artifacts", "reports", "node_modules", ".venv", "venv"}
-    for current, dirnames, filenames in os.walk(project_dir, onerror=lambda _exc: None):
-        current_path = Path(current)
-        dirnames[:] = [name for name in dirnames if name not in ignored_dirs]
-        try:
-            relative = current_path.relative_to(project_dir)
-        except ValueError:
-            continue
-        destination_dir = sandbox_project / relative
-        try:
-            destination_dir.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            dirnames[:] = []
-            continue
-        for filename in filenames:
-            source = current_path / filename
-            destination = destination_dir / filename
-            try:
-                shutil.copy2(source, destination)
-            except OSError:
-                continue
-
-
-def _remove_tree(path: Path) -> None:
-    def onerror(function: object, name: str, exc_info: object) -> None:
-        try:
-            os.chmod(name, 0o700)
-            function(name)
-        except OSError:
-            pass
-
-    shutil.rmtree(path, onerror=onerror)
-
-
-def _guard_required_keys(source: str, function_name: str, required_keys: list[str]) -> list[str]:
-    try:
-        tree, _ = parse_compatible_source(source, "<patch-source>")
-    except SyntaxError:
-        return []
-    function = _find_patchable_function(tree, function_name)
-    if function is None:
-        return []
-    defaulted = _defaulted_parameters(function)
-    named_args = {arg.arg for arg in function.args.posonlyargs + function.args.args + function.args.kwonlyargs}
-    return [key for key in required_keys if key not in defaulted and (key in named_args or function.args.kwarg)]
-
-
-def _defaulted_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    positional = function.args.posonlyargs + function.args.args
-    defaults = function.args.defaults
-    defaulted = {arg.arg for arg in positional[len(positional) - len(defaults) :]}
-    defaulted.update(arg.arg for arg, default in zip(function.args.kwonlyargs, function.args.kw_defaults) if default is not None)
-    return defaulted
-
-
-def _patch_required_input_guard(source: str, function_name: str, required_keys: list[str], recipe: dict[str, Any]) -> str:
-    try:
-        tree, _ = parse_compatible_source(source, "<patch-source>")
-    except SyntaxError:
-        return source
-    function = _find_patchable_function(tree, function_name)
-    if function is None:
-        return source
-    lines = source.splitlines()
-    if _function_already_has_guard(lines, function, required_keys, recipe):
-        return source
-    indent = _body_indent(lines, function)
-    insert_at = _guard_insert_line(function)
-    guard = _guard_lines(function, required_keys, indent, recipe)
-    if not guard:
-        return source
-    patched = lines[:insert_at] + guard + lines[insert_at:]
-    return "\n".join(patched) + ("\n" if source.endswith("\n") else "")
-
-
-def _find_top_level_function(tree: ast.Module, function_name: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-    return next(
-        (
-            node
-            for node in tree.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name
-        ),
-        None,
-    )
-
-
-def _find_patchable_function(tree: ast.Module, function_name: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-    top_level = _find_top_level_function(tree, function_name)
-    if top_level is not None:
-        return top_level
-    matches = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name
-    ]
-    return matches[0] if len(matches) == 1 else None
-
-
-def _function_already_has_guard(
-    lines: list[str],
-    function: ast.FunctionDef | ast.AsyncFunctionDef,
-    required_keys: list[str],
-    recipe: dict[str, Any],
-) -> bool:
-    body = "\n".join(lines[function.lineno - 1 : function.end_lineno or function.lineno])
-    markers = [str(item) for item in recipe.get("already_present_markers", [])]
-    return all(any(marker.format(key=key) in body for marker in markers) for key in required_keys)
-
-
-def _body_indent(lines: list[str], function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-    if function.body:
-        line = lines[function.body[0].lineno - 1]
-        return line[: len(line) - len(line.lstrip())]
-    line = lines[function.lineno - 1]
-    return line[: len(line) - len(line.lstrip())] + "    "
-
-
-def _guard_insert_line(function: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-    if function.body and isinstance(function.body[0], ast.Expr) and isinstance(function.body[0].value, ast.Constant):
-        return function.body[0].end_lineno or function.body[0].lineno
-    if function.body:
-        return function.body[0].lineno - 1
-    return function.lineno
-
-
-def _guard_lines(function: ast.FunctionDef | ast.AsyncFunctionDef, required_keys: list[str], indent: str, recipe: dict[str, Any]) -> list[str]:
-    named_args = {arg.arg for arg in function.args.posonlyargs + function.args.args + function.args.kwonlyargs}
-    kwargs_name = function.args.kwarg.arg if function.args.kwarg else None
-    lines: list[str] = []
-    named_template = [str(item) for item in recipe.get("named_argument_guard", [])]
-    kwargs_template = [str(item) for item in recipe.get("kwargs_guard", [])]
-    for key in required_keys:
-        if kwargs_name and key not in named_args:
-            lines.extend(f"{indent}{line.format(key=key, kwargs=kwargs_name)}" for line in kwargs_template)
-        elif key in named_args:
-            lines.extend(f"{indent}{line.format(key=key, kwargs=kwargs_name or '')}" for line in named_template)
-    return lines
+from .programmer_patch_synthesizer_contract_packages import (
+    _duplicate_cli_option_package,
+    _framework_contract_package,
+    _falsy_primitive_empty_package,
+    _fstring_brace_offset_package,
+    _incomplete_import_token_package,
+    _registry_fallback_package,
+    _strict_default_comparison_package,
+    _timestamp_range_error_package,
+    _trailing_backslash_bounds_package,
+)
+from .programmer_patch_synthesizer_core import synthesize_patch_package
+from .programmer_patch_synthesizer_guard import (
+    _body_indent,
+    _defaulted_parameters,
+    _find_patchable_function,
+    _function_already_has_guard,
+    _guard_evidence,
+    _guard_insert_line,
+    _guard_lines,
+    _guard_required_keys,
+    _patch_required_input_guard,
+    _required_input_keys,
+    _required_signature_keys,
+)
+from .programmer_patch_synthesizer_helper_extractors import (
+    _call_name,
+    _enclosing_loop,
+    _extract_append_mapping_helper,
+    _extract_json_dumps_helper,
+    _extract_json_loads_helper,
+    _extract_splitlines_helper,
+    _find_top_level_function,
+    _parent_map,
+    _returns_name,
+)
+from .programmer_patch_synthesizer_recovery import (
+    _development_helper_extraction_package,
+    synthesize_recovery_patch_package,
+)

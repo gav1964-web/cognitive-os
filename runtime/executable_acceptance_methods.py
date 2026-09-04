@@ -51,13 +51,15 @@ def _method_instance(cls: object, policy: dict[str, Any]) -> object | None:
     if policy.get("default_constructor_first"):
         try:
             return cls()
-        except Exception:
-            pass
+        except BaseException as exc:
+            if isinstance(exc, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                raise
     if policy.get("safe_uninitialized_instance"):
         try:
             return object.__new__(cls)
-        except Exception:
-            pass
+        except BaseException as exc:
+            if isinstance(exc, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                raise
     return None
 
 

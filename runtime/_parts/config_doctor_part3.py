@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from runtime._parts.config_doctor_part1 import _Check
+from runtime._parts.config_doctor_common import _Check
 
 
 def _check_structural_sample_policy(policy: dict[str, Any], check: _Check) -> None:

@@ -28,7 +28,8 @@
       "config/executable_acceptance_policy.json",
       "knowledge/role_knowledge/promoted_candidate_selection_policies.json",
       "knowledge/role_knowledge/promoted_executable_adapters.json",
-      "knowledge/role_knowledge/promoted_semantic_contract_profiles.json"
+      "knowledge/role_knowledge/promoted_semantic_contract_profiles.json",
+      "knowledge/role_knowledge/project_native_failure_repair_patterns.json"
     ],
     "max_challenger_attempts": 3,
     "max_temporary_profile_attempts": 1,

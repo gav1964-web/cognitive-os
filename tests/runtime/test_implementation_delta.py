@@ -55,15 +55,16 @@ def test_explicit_change_with_verified_profile_is_ready() -> None:
     assert delta["intent"]["operator_id"] == "strip_lower"
 
 
-def test_source_backed_stub_requires_semantic_synthesis() -> None:
+def test_source_backed_stub_requires_failure_evidence_before_synthesis() -> None:
     delta = build_implementation_delta(
         {"goal": "Assess module"},
         _contract("def normalize(value):\n    raise NotImplementedError"),
         [],
     )
 
-    assert delta["status"] == "semantic_synthesis_required"
-    assert delta["intent"]["kind"] == "complete_source_backed_stub"
+    assert delta["status"] == "verification_only"
+    assert delta["intent"]["kind"] == "characterize_incomplete_candidate"
+    assert "observation only" in delta["reason"]
 
 
 def test_implementer_propagates_verification_only_delta() -> None:

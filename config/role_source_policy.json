@@ -2,7 +2,7 @@
   "schema_version": "role_source_policy.v1",
   "status": "active",
   "implementation_target_policy": {
-    "implementation_evidence_scope_limit": 12,
+    "implementation_evidence_scope_limit": 20,
     "source_snippet_max_chars": 4000,
     "context_only_path_tokens": [
       "/.github/",

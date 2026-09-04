@@ -50,13 +50,20 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
     selected: list[dict[str, Any]] = []
     claimed = set(blacklist)
     claimed_repos = {_repo_key(name) for name in claimed}
+    claimed_owners: set[str] = set()
+    unique_owners = bool(policy.get("unique_owners"))
     for stratum in policy["strata"]:
-        count = int(policy["projects_per_stratum"])
+        count = int(stratum.get("projects") or policy["projects_per_stratum"])
         print(f"searching stratum={stratum['id']} needed={count}", file=sys.stderr, flush=True)
         candidates = _search_stratum(
             stratum, policy, excluded=claimed, excluded_repos=claimed_repos, needed=count,
         )
-        rows = [row for row in candidates if _unseen(row, claimed, claimed_repos) and _eligible(row, policy)]
+        rows = [
+            row for row in candidates
+            if _unseen(row, claimed, claimed_repos)
+            and _eligible(row, policy)
+            and (not unique_owners or _owner_key(row["full_name"]) not in claimed_owners)
+        ]
         if len(rows) < count:
             raise RuntimeError(f"not enough unseen projects for {stratum['id']}: {len(rows)} < {count}")
         for row in rows[:count]:
@@ -64,6 +71,7 @@ def select_corpus(root: Path, corpus: Path, iteration: int, policy_path: Path) -
             selected.append(row)
             claimed.add(row["full_name"].lower())
             claimed_repos.add(_repo_key(row["full_name"]))
+            claimed_owners.add(_owner_key(row["full_name"]))
         print(f"selected stratum={stratum['id']} count={count}", file=sys.stderr, flush=True)
     corpus.mkdir(parents=True, exist_ok=False)
     payload = {
@@ -225,6 +233,13 @@ def _project_row(item: dict[str, Any]) -> dict[str, Any]:
 def _eligible(row: dict[str, Any], policy: dict[str, Any]) -> bool:
     name = row["full_name"].lower().replace("-", "_")
     description = row["description"].lower()
+    excluded_owners = {
+        str(owner).strip().lower()
+        for owner in policy.get("excluded_owners", [])
+        if str(owner).strip()
+    }
+    if _owner_key(row["full_name"]) in excluded_owners:
+        return False
     if any(token.replace("-", "_") in name for token in policy.get("excluded_name_tokens", [])):
         return False
     if any(token in description for token in policy.get("excluded_description_tokens", [])):
@@ -240,6 +255,11 @@ def _unseen(row: dict[str, Any], names: set[str], repos: set[str]) -> bool:
 
 def _repo_key(full_name: str) -> str:
     return full_name.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower().removesuffix(".git")
+
+
+def _owner_key(full_name: str) -> str:
+    normalized = full_name.replace("\\", "/").strip("/")
+    return normalized.split("/", 1)[0].lower() if "/" in normalized else ""
 
 
 def _clone_one(source_dir: Path, project: dict[str, Any], *, force: bool) -> dict[str, Any]:

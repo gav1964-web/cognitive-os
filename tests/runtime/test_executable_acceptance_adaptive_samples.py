@@ -1,7 +1,6 @@
-from runtime.executable_acceptance_contract_inference import infer_argument_samples
-from runtime.executable_acceptance_isolation import load_source_isolated_callable
-from runtime.executable_acceptance_support import positive_samples_execute, signature_needs_negative_case
+from __future__ import annotations
 
+from tests.runtime.executable_acceptance_adaptive_samples_helpers import *
 
 def test_infers_callable_fixture_when_parameter_is_invoked(tmp_path):
     source = tmp_path / "formatter.py"
@@ -86,6 +85,46 @@ def test_source_isolated_method_infers_numeric_receiver_attribute(tmp_path):
     assert loaded["method_instance_attributes"]["_count"] == 1
 
 
+def test_source_isolated_method_infers_array_and_successful_boolean_receivers(tmp_path):
+    source = tmp_path / "strategy.py"
+    source.write_text(
+        "import numpy as np\n"
+        "class Strategy:\n"
+        "    def check(self, number):\n"
+        "        if number > self.pool_size: raise ValueError('too many')\n"
+        "    def query(self, number, embeddings):\n"
+        "        self.check(number)\n"
+        "        paths = np.array(self.path_mapping)\n"
+        "        if self.enabled:\n"
+        "            return paths[embeddings.mean(0).argsort()[:int(number)]]\n"
+        "        else:\n"
+        "            raise ValueError('disabled')\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_source_isolated_callable(source, "Strategy.query")
+
+    assert loaded["method_instance_attributes"]["enabled"] is True
+    assert loaded["method_instance_attributes"]["pool_size"] == 16
+    assert loaded["method_instance_attributes"]["path_mapping"]["__fixture__"] == "numpy_array"
+
+
+def test_infers_numpy_fixture_dimension_from_reduction_axis(tmp_path):
+    source = tmp_path / "uncertainty.py"
+    source.write_text(
+        "import numpy as np\n"
+        "def disagreement(embeddings):\n"
+        "    mean = embeddings.mean(0)\n"
+        "    return (-embeddings * np.log(embeddings)).sum(2).mean(0) - mean.sum(1)\n",
+        encoding="utf-8",
+    )
+
+    inferred = infer_argument_samples(source, "disagreement")
+
+    assert inferred["embeddings"]["source"] == "ast_array_axis:2"
+    assert inferred["embeddings"]["value"]["__fixture__"] == "numpy_array"
+
+
 def test_source_isolated_method_infers_required_mapping_key(tmp_path):
     source = tmp_path / "registry.py"
     source.write_text(
@@ -165,6 +204,73 @@ def test_optional_receiver_fallback_does_not_require_missing_input_failure():
     assert signature_needs_negative_case(invalidate, "client.py:invalidate", obligations) is False
 
 
+def test_variadic_keyword_factory_without_required_parameters_accepts_empty_input():
+    def create(**kwargs):
+        return kwargs
+
+    obligations = [
+        {"target": "client.py:create", "kind": "positive_contract_case", "given": {"kwargs": {}}},
+        {"target": "client.py:create", "kind": "malformed_input_case", "given": {}},
+    ]
+
+    assert signature_needs_negative_case(create, "client.py:create", obligations) is False
+
+
+def test_bound_method_synthetic_receiver_is_not_a_required_user_input():
+    def isolated_method(**kwargs):
+        return kwargs.get("receiver_state", "fixture-owned")
+
+    obligations = [
+        {
+            "target": "client.py:info",
+            "kind": "positive_contract_case",
+            "given": {"receiver_state": "sample"},
+        },
+        {"target": "client.py:info", "kind": "malformed_input_case", "given": {}},
+    ]
+
+    assert signature_needs_negative_case(
+        isolated_method,
+        "client.py:info",
+        obligations,
+        synthetic_input_keys={"receiver_state"},
+    ) is False
+
+
+def test_explicit_receiver_state_contract_still_requires_input():
+    def transform(receiver_state):
+        return receiver_state
+
+    obligations = [
+        {
+            "target": "client.py:transform",
+            "kind": "positive_contract_case",
+            "given": {"receiver_state": "sample"},
+        },
+        {"target": "client.py:transform", "kind": "malformed_input_case", "given": {}},
+    ]
+
+    assert signature_needs_negative_case(transform, "client.py:transform", obligations) is True
+
+
+def test_generated_platformdirs_version_profile_preserves_real_package_import(tmp_path):
+    package = tmp_path / "src" / "platformdirs"
+    package.mkdir(parents=True)
+    source = package / "__init__.py"
+    source.write_text(
+        "from .version import __version__\n"
+        "def current_version(): return __version__\n",
+        encoding="utf-8",
+    )
+
+    with import_path(tmp_path, source):
+        loaded = load_supported_callable(tmp_path, "src/platformdirs/__init__.py", "current_version", source)
+
+    assert loaded["reason"] == ""
+    assert loaded.get("source_isolated") is not True
+    assert loaded["callable"]() == "0.0.0"
+
+
 def test_infers_delimited_string_from_split_unpack(tmp_path):
     path = tmp_path / "module.py"
     path.write_text(
@@ -195,15 +301,45 @@ def test_infers_sequence_shape_from_parameter_unpack(tmp_path):
     }
 
 
-def test_string_formatting_does_not_override_literal_domain(tmp_path):
+def test_infers_sequence_shape_from_parameter_attribute_unpack(tmp_path):
     path = tmp_path / "module.py"
     path.write_text(
-        "def choose(mode):\n"
-        "    if mode == 'longest': return 1\n"
-        "    raise ValueError('unknown mode %r' % mode)\n",
+        "def ratio(image):\n"
+        "    width, height = image.size\n"
+        "    return min(width / height, height / width)\n",
         encoding="utf-8",
     )
 
-    assert infer_argument_samples(path, "choose") == {
-        "mode": {"value": "longest", "source": "ast_comparison_literal"}
+    assert infer_argument_samples(path, "ratio") == {
+        "image": {
+            "value": {
+                "__fixture__": "declared_model",
+                "type": "AcceptanceInput",
+                "fields": {"size": [1.0, 1.0]},
+            },
+            "source": "ast_parameter_attribute_unpack",
+        }
     }
+
+
+def test_structural_shape_overrides_generic_scalar_contract_sample(tmp_path):
+    from runtime.executable_acceptance_support import positive_case_binding
+
+    def reshape(values, shape):
+        rows, columns = shape
+        return values, rows, columns
+
+    obligations = [
+        {
+            "target": "module.py:reshape",
+            "kind": "positive_contract_case",
+            "given": {"values": 1, "shape": 1},
+        }
+    ]
+    inferred = {
+        "shape": {"value": [1.0, 1.0], "source": "ast_parameter_unpack"},
+    }
+
+    binding = positive_case_binding(reshape, "module.py:reshape", obligations, inferred)
+
+    assert binding["overrides"] == {"shape": [1.0, 1.0]}

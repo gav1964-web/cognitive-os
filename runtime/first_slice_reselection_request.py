@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .architect_semantic_admission import semantic_threshold_satisfied
+from .executable_acceptance_policy import dependency_stub_policy
 from .promoted_candidate_selection_policies import selection_policy_mismatches
 from .technical_spec_policy import load_technical_spec_policy
 
@@ -39,8 +40,11 @@ def build_first_slice_reselection_request(
         row for row in list(dependency_profile.get("ranked_alternatives") or [])
         if isinstance(row, dict) and row.get("readiness_status") == "ready" and ":" in str(row.get("target") or "")
     ]
+    controlled_probe_allowed = _controlled_acceptance_probe_allowed(
+        extraction_contract, dependency_profile, viability_blocked=viability_blocked
+    )
     if not semantic_block and not source_unbound and not source_context_blocked and not viability_blocked and not semantic_below_threshold and not policy_mismatches and (
-        dependency_profile.get("status") != "resolution_required" or ready
+        dependency_profile.get("status") != "resolution_required" or ready or controlled_probe_allowed
     ):
         return {
             "artifact_type": "FirstSliceReselectionRequest",
@@ -76,3 +80,32 @@ def build_first_slice_reselection_request(
         "forbidden_actions": ["expand_writable_scope", "install_dependency", "select_unproven_symbol"],
         "next_step": "return_to_architect_and_rebuild_technical_spec",
     }
+
+
+def _controlled_acceptance_probe_allowed(
+    extraction_contract: dict[str, Any],
+    dependency_profile: dict[str, Any],
+    *,
+    viability_blocked: bool,
+) -> bool:
+    if dependency_profile.get("status") != "resolution_required" or viability_blocked:
+        return False
+    target = str(extraction_contract.get("candidate") or "")
+    structural = dict(extraction_contract.get("structural_evidence") or {})
+    viability = dict(extraction_contract.get("first_slice_viability") or {})
+    viability_rules = {
+        str(row.get("rule_id") or "")
+        for row in viability.get("matched_rules") or []
+        if isinstance(row, dict)
+    }
+    missing = [str(item) for item in dependency_profile.get("missing_modules") or [] if item]
+    stubs = dependency_stub_policy()
+    return bool(
+        ":" in target
+        and "declared_protocol_input" in viability_rules
+        and structural.get("source_body_complete") is True
+        and missing
+        and stubs.get("enabled")
+        and stubs.get("stub_external_missing_modules")
+        and len(missing) <= int(stubs.get("max_missing_modules") or 0)
+    )

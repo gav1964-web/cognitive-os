@@ -37,19 +37,14 @@ def _nested_mapping_paths(
 ) -> None:
     trees: dict[str, dict[str, Any]] = {name: {} for name in parameters}
     for item in ast.walk(node):
-        if not isinstance(item, ast.Subscript):
-            continue
-        path = _subscript_path(item, parameters)
+        path = _mapping_path(item, parameters)
         if len(path) < 3:
             continue
-        current = trees[path[0]]
-        for key in path[1:-1]:
-            current = current.setdefault(key, {})
-        current.setdefault(path[-1], [])
+        _insert_mapping_path(trees[path[0]], path[1:], _expression_sample(node, item))
     for name, value in trees.items():
         if value:
             candidates[name].append(
-                (priority + 1, value, "ast_strategy:nested_mapping_paths")
+                (priority + 5, value, "ast_strategy:nested_mapping_paths")
             )
     _iterated_mapping_paths(node, parameters, candidates, priority + 2)
 
@@ -117,6 +112,63 @@ def _subscript_path(node: ast.AST, parameters: set[str]) -> tuple[str, ...]:
     if not isinstance(current, ast.Name) or current.id not in parameters:
         return ()
     return (current.id, *reversed(keys))
+
+
+def _mapping_path(node: ast.AST, parameters: set[str]) -> tuple[str, ...]:
+    keys: list[str] = []
+    current = node
+    while True:
+        if isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute):
+            if current.func.attr != "get" or not current.args:
+                return ()
+            key = _literal(current.args[0])
+            if not isinstance(key, str):
+                return ()
+            keys.append(key)
+            current = current.func.value
+            continue
+        if isinstance(current, ast.Subscript):
+            key = _literal(current.slice)
+            if not isinstance(key, str):
+                return ()
+            keys.append(key)
+            current = current.value
+            continue
+        break
+    if not isinstance(current, ast.Name) or current.id not in parameters:
+        return ()
+    return (current.id, *reversed(keys))
+
+
+def _insert_mapping_path(tree: dict[str, Any], path: tuple[str, ...], leaf: Any) -> None:
+    current = tree
+    for key in path[:-1]:
+        value = current.get(key)
+        if not isinstance(value, dict):
+            value = {}
+            current[key] = value
+        current = value
+    current.setdefault(path[-1], leaf)
+
+
+def _expression_sample(node: FunctionNode, expression: ast.AST) -> Any:
+    for item in ast.walk(node):
+        if not isinstance(item, ast.AnnAssign) or item.value is not expression:
+            continue
+        annotation = ast.unparse(item.annotation).lower()
+        if any(name in annotation for name in ("list", "iterable", "sequence", "tuple", "set")):
+            return []
+        if "bool" in annotation:
+            return False
+        if "float" in annotation:
+            return 1.0
+        if "int" in annotation:
+            return 0
+        if any(name in annotation for name in ("dict", "mapping")):
+            return {}
+        if "str" in annotation:
+            return "sample"
+    return {}
 
 
 def _callable_arity(

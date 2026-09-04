@@ -17,6 +17,8 @@ def add_parameter_attribute_samples(
     candidates: Candidates,
     *,
     priority: int,
+    unpack_priority: int,
+    unpack_policy: dict[str, Any],
     attribute_policy: dict[str, Any],
 ) -> None:
     add_inherited_method_samples(
@@ -31,6 +33,9 @@ def add_parameter_attribute_samples(
         if path
     }
     callable_fixtures = dict(attribute_policy.get("callable_protocol_fixtures") or {})
+    _add_attribute_unpack_samples(
+        node, parameters, candidates, priority=unpack_priority, policy=unpack_policy
+    )
     for path in sorted(called_paths):
         fixture = str(callable_fixtures.get(path[-1]) or "")
         if fixture:
@@ -88,3 +93,35 @@ def _leaf(name: str, policy: dict[str, Any]) -> Any:
     if name in set(policy.get("integer_names") or []):
         return policy.get("integer_value")
     return policy.get("default")
+
+
+def _add_attribute_unpack_samples(
+    node: FunctionNode,
+    parameters: set[str],
+    candidates: Candidates,
+    *,
+    priority: int,
+    policy: dict[str, Any],
+) -> None:
+    maximum = int(policy.get("maximum_items") or 0)
+    for item in ast.walk(node):
+        if not isinstance(item, (ast.Assign, ast.AnnAssign)):
+            continue
+        path = _attribute_path(item.value, parameters)
+        targets = item.targets if isinstance(item, ast.Assign) else [item.target]
+        count = max(
+            (len(target.elts) for target in targets if isinstance(target, (ast.Tuple, ast.List))),
+            default=0,
+        )
+        if len(path) < 2 or not 1 < count <= maximum:
+            continue
+        value: Any = [policy.get("element")] * count
+        for field in reversed(path[1:]):
+            value = {
+                "__fixture__": "declared_model",
+                "type": "AcceptanceInput",
+                "fields": {field: value},
+            }
+        candidates[path[0]].append(
+            (priority + 1, value, "ast_parameter_attribute_unpack")
+        )

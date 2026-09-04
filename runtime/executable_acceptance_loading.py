@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import importlib
-import importlib.metadata as importlib_metadata
 import importlib.util
 import sys
 import types
@@ -12,8 +11,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from .executable_acceptance_dependency_profiles import (
+    can_profile_module as _can_profile_module,
+    dependency_metadata_context as _dependency_metadata_context,
+    discard_synthetic_local_parent as _discard_synthetic_local_parent,
+    install_dependency_profile_modules,
+    install_profile_module as _install_profile_module,
+    preinstall_profile_modules as _preinstall_profile_modules,
+)
 from .executable_acceptance_isolation import load_source_isolated_callable
-from .executable_acceptance_materializers import materialize
 from .executable_acceptance_module_path import module_name_from_path, package_import_root
 from .executable_acceptance_policy import dependency_stub_policy
 from .executable_acceptance_stub_budget import can_stub_missing as _can_stub_missing
@@ -49,7 +55,7 @@ def load_supported_callable(project_dir: Path, path_text: str, symbol: str, path
                         "dependency_module_profiles": loaded.get("dependency_module_profiles", []),
                     }
         except (Exception, SystemExit) as exc:
-            _remove_new_modules(locals().get("before_modules", set()))
+            _remove_new_modules(locals().get("before_modules", set()), project_dir)
             if len(Path(path_text).parts) > 1:
                 loaded = _load_callable_from_file(path, symbol, project_dir)
                 if loaded.get("reason") and loaded.get("reason") != "target_not_callable":
@@ -132,22 +138,29 @@ def _import_module_with_optional_stubs(project_dir: Path, module_name: str) -> d
     policy = dependency_stub_policy()
     created_modules.extend(_preinstall_profile_modules(project_dir, module_name, policy, profile_modules))
     attempts = stub_attempt_budget(policy)
-    with _dependency_metadata_context(policy) as metadata_used:
-        for _ in range(attempts):
-            try:
-                return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
-            except ModuleNotFoundError as exc:
-                missing = str(getattr(exc, "name", "") or "")
-                if _can_profile_module(missing, policy, profile_modules):
-                    created_modules.extend(_install_profile_module(missing, policy))
-                    profile_modules.append(missing)
-                    continue
-                if not _can_stub_missing(project_dir, missing, policy, stubbed):
-                    raise
-                created_modules.extend(_install_stub_module(missing))
-                stubbed.append(missing)
-                _clear_import_tree(module_name)
-        return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
+    try:
+        with _dependency_metadata_context(policy) as metadata_used:
+            for _ in range(attempts):
+                try:
+                    return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
+                except ModuleNotFoundError as exc:
+                    missing = str(getattr(exc, "name", "") or "")
+                    if _can_profile_module(missing, policy, profile_modules):
+                        created = _install_profile_module(missing, policy)
+                        _discard_synthetic_local_parent(project_dir, missing, created)
+                        created_modules.extend(created)
+                        profile_modules.append(missing)
+                        continue
+                    if not _can_stub_missing(project_dir, missing, policy, stubbed):
+                        raise
+                    created_modules.extend(_install_stub_module(missing))
+                    stubbed.append(missing)
+                    _clear_import_tree(module_name)
+            return _loaded_module(importlib.import_module(module_name), stubbed, created_modules, metadata_used, profile_modules)
+    except BaseException:
+        for name in reversed(created_modules):
+            sys.modules.pop(name, None)
+        raise
 
 
 def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprofiled: list[str] | None = None) -> dict[str, Any]:
@@ -196,69 +209,10 @@ def _load_callable_from_file(path: Path, symbol: str, project_dir: Path, preprof
         return {"callable": None, "reason": failure["reason"], "detail": failure["detail"]}
 
 
-def _can_profile_module(missing: str, policy: dict[str, Any], profiled: list[str]) -> bool:
-    if not policy.get("generated_module_profiles_enabled") or not missing or missing in profiled:
-        return False
-    profiles = dict(policy.get("generated_module_profiles") or {})
-    return missing in profiles
-
-
 def _clear_import_tree(module_name: str) -> None:
     top = module_name.split(".", 1)[0]
     for name in [key for key in list(sys.modules) if key == top or key.startswith(f"{top}.")]:
         sys.modules.pop(name, None)
-
-
-def _preinstall_profile_modules(project_dir: Path, module_name: str, policy: dict[str, Any], profiled: list[str]) -> list[str]:
-    if not policy.get("generated_module_profiles_enabled") or not module_name:
-        return []
-    created: list[str] = []
-    top = module_name.split(".", 1)[0]
-    for name in dict(policy.get("generated_module_profiles") or {}):
-        if name in sys.modules or name in profiled or name.split(".", 1)[0] != top:
-            continue
-        if _profile_module_file_exists(project_dir, name):
-            continue
-        created.extend(_install_profile_module(name, policy))
-        profiled.append(name)
-    return created
-
-
-def _profile_module_file_exists(project_dir: Path, name: str) -> bool:
-    parts = name.split(".")
-    relative = Path(*parts)
-    candidates = [project_dir / relative.with_suffix(".py"), project_dir / "src" / relative.with_suffix(".py")]
-    return any(path.exists() for path in candidates)
-
-
-def _install_profile_module(name: str, policy: dict[str, Any]) -> list[str]:
-    created: list[str] = []
-    parts = name.split(".")
-    for index in range(1, len(parts)):
-        parent_name = ".".join(parts[:index])
-        if parent_name not in sys.modules:
-            parent = types.ModuleType(parent_name)
-            parent.__path__ = []
-            sys.modules[parent_name] = parent
-            created.append(parent_name)
-        if index > 1:
-            setattr(sys.modules[".".join(parts[: index - 1])], parts[index - 1], sys.modules[parent_name])
-    module = types.ModuleType(name)
-    attrs = dict(dict(policy.get("generated_module_profiles") or {}).get(name, {}).get("attrs") or {})
-    for key, value in attrs.items():
-        setattr(module, str(key), _profile_attr_value(value))
-    sys.modules[name] = module
-    parent_name, _, child_name = name.rpartition(".")
-    parent = sys.modules.get(parent_name)
-    if parent is not None:
-        setattr(parent, child_name, module)
-    return [*created, name]
-
-
-def _profile_attr_value(value: Any) -> Any:
-    if isinstance(value, dict) and value.get("__fixture__") == "callable_empty_string":
-        return lambda *args, **kwargs: ""
-    return materialize(value)
 
 
 def _is_stub_object(value: Any) -> bool:
@@ -270,9 +224,18 @@ def _isolated_with_loaded(path: Path, symbol: str, loaded: dict[str, Any]) -> di
     if isolated.get("reason"): return None
     isolated.update({key: loaded.get(key, []) for key in ("dependency_stubs", "dependency_stub_modules_created", "dependency_metadata_profiles", "dependency_module_profiles")})
     isolated["source_isolated"] = True; return isolated
-def _remove_new_modules(before: set[str]) -> None:
+def _remove_new_modules(before: set[str], project_dir: Path) -> None:
+    project_root = project_dir.resolve()
     for name in [name for name in list(sys.modules) if name not in before]:
-        sys.modules.pop(name, None)
+        module_file = str(getattr(sys.modules.get(name), "__file__", "") or "")
+        if not module_file:
+            continue
+        try:
+            owned = Path(module_file).resolve().is_relative_to(project_root)
+        except (OSError, ValueError):
+            owned = False
+        if owned:
+            sys.modules.pop(name, None)
 
 
 def _loaded_module(
@@ -290,65 +253,9 @@ def _loaded_module(
         "dependency_module_profiles": profile_modules,
     }
 
-
-@contextmanager
-def _dependency_metadata_context(policy: dict[str, Any]):
-    packages = {str(item).replace("-", "_").lower() for item in policy.get("metadata_packages", [])}
-    used: list[str] = []
-    if not policy.get("metadata_profiles_enabled") or not packages:
-        yield used
-        return
-    default_version = str(policy.get("metadata_default_version") or "0.0.0")
-    original_version = importlib_metadata.version
-    original_metadata = importlib_metadata.metadata
-    original_distribution = importlib_metadata.distribution
-
-    def normalize(name: str) -> str:
-        return str(name).replace("-", "_").lower()
-
-    def remember(name: str) -> str:
-        normalized = normalize(name)
-        if normalized in packages and normalized not in used:
-            used.append(normalized)
-        return normalized
-
-    def version(name: str) -> str:
-        return default_version if remember(name) in packages else original_version(name)
-
-    def metadata(name: str) -> dict[str, str]:
-        return {"Name": str(name), "Version": default_version} if remember(name) in packages else original_metadata(name)
-
-    def distribution(name: str) -> _StubDistribution:
-        return _StubDistribution(str(name), default_version) if remember(name) in packages else original_distribution(name)
-
-    importlib_metadata.version = version
-    importlib_metadata.metadata = metadata
-    importlib_metadata.distribution = distribution
-    try:
-        yield used
-    finally:
-        importlib_metadata.version = original_version
-        importlib_metadata.metadata = original_metadata
-        importlib_metadata.distribution = original_distribution
-
-
-class _StubDistribution:
-    def __init__(self, name: str, version: str):
-        self.metadata = {"Name": name, "Version": version}
-        self.version = version
-
-    def read_text(self, name: str) -> str:
-        return ""
-
-
 def cleanup_dependency_stubs(loaded: dict[str, Any]) -> None:
     for name in reversed(list(loaded.get("dependency_stub_modules_created") or [])):
         sys.modules.pop(str(name), None)
-
-
-def install_dependency_profile_modules(names: list[str]) -> list[str]:
-    policy = dependency_stub_policy()
-    return [created for name in names for created in _install_profile_module(str(name), policy)]
 
 
 def _install_stub_module(name: str) -> list[str]:
@@ -366,6 +273,8 @@ class _StubModule(types.ModuleType):
     def __init__(self, name: str):
         super().__init__(name)
         self.__path__, self.__all__ = [], []
+        self.__file__ = f"<dependency-stub:{name}>"
+        self.__spec__ = importlib.util.spec_from_loader(name, loader=None, is_package=True)
 
     def __getattr__(self, name: str) -> Any:
         value = _StubObject(f"{self.__name__}.{name}")

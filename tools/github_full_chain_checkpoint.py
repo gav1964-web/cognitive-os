@@ -16,8 +16,12 @@ def run_case_batch(
     checkpoint_path: Path | None = None,
     resume: bool = False,
     progress: bool = False,
+    project_names: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    projects = sorted(path for path in projects_dir.iterdir() if (path / ".git").exists())
+    projects = sorted(
+        path for path in projects_dir.iterdir()
+        if (path / ".git").exists() and (project_names is None or path.name in project_names)
+    )
     completed = _completed_cases(checkpoint_path) if resume else {}
     cases: list[dict[str, Any]] = []
     for index, project in enumerate(projects, 1):

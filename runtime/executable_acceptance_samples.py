@@ -95,7 +95,7 @@ def _matches_declared_result(result: Any, declared: str) -> bool:
         return _matches_declared_result(result["result"], declared)
     normalized = declared.lower()
     compact = normalized.replace(" ", "")
-    allows_none = compact == "optional" or "optional[" in compact or "nonetype" in compact or "|none" in compact
+    allows_none = compact == "optional" or compact.endswith(".optional") or "optional[" in compact or "nonetype" in compact or "|none" in compact
     if result is None and allows_none:
         return True
     if normalized in {"str", "string"}:

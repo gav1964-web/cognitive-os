@@ -292,21 +292,16 @@ def search_synthetic_role_qa(
             continue
         if role_id and str(record.get("role_id")) != role_id:
             continue
-        haystack = " ".join(
-            [
-                str(record.get("question") or ""),
-                " ".join(str(tag) for tag in record.get("tags", [])),
-                json.dumps(record.get("answer") or {}, ensure_ascii=False),
-            ]
-        )
-        score = _query_coverage_score(query_tokens, _tokens(haystack))
+        match = _token_aware_match_score(query_tokens, record)
+        score = float(match["score"])
         if score <= 0:
             continue
-        rows.append({"score": round(score, 4), **record})
+        rows.append({"score": round(score, 4), "match_details": match["details"], **record})
     rows.sort(key=lambda row: (-float(row["score"]), str(row.get("qa_id"))))
     return {
         "artifact_type": "SyntheticRoleQASearchResult",
         "query": query,
+        "query_tokens": sorted(query_tokens),
         "role_id": role_id,
         "match_count": len(rows),
         "matches": rows[:limit],

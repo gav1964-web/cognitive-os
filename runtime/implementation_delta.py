@@ -74,9 +74,15 @@ def build_implementation_delta(
     if _source_proves_incomplete(snippet):
         return {
             **base,
-            "status": "semantic_synthesis_required",
-            "intent": {"kind": "complete_source_backed_stub", "statement": f"Complete the bounded stub at {target}."},
-            "reason": "The selected source contains an explicit incomplete implementation marker.",
+            "status": "verification_only",
+            "intent": {
+                "kind": "characterize_incomplete_candidate",
+                "statement": f"Characterize the bounded stub at {target} without inventing missing behavior.",
+            },
+            "reason": (
+                "Stub syntax is an observation only; a target-bound executable failure or explicit "
+                "change request is required before synthesis."
+            ),
             "evidence": [{"source": target, "value": snippet[:500]}],
         }
     return {

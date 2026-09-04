@@ -1,0 +1,200 @@
+{
+  "schema_version": "role_project_type_evaluation.v1",
+  "classification_version": "role_project_classification.2026-08-27.14",
+  "compatible_classification_versions": ["role_project_classification.2026-08-27.13", "role_project_classification.2026-08-27.12", "role_project_classification.2026-08-27.11", "role_project_classification.2026-08-26.9", "role_project_classification.2026-08-26.8", "role_project_classification.2026-08-26.7", "role_project_classification.2026-08-26.6", "role_project_classification.2026-08-26.5"],
+  "default_risk_profiles_by_stratum": {
+    "library_pure_transform": ["deterministic"]
+  },
+  "project_report_risk_inference": {
+    "direct_effect_risks": {
+      "filesystem": "filesystem",
+      "filesystem_read": "filesystem",
+      "network": "network",
+      "subprocess": "subprocess"
+    },
+    "stateful_effect_combinations": [["filesystem", "memory_state"]],
+    "pure_candidate_risk": "deterministic"
+  },
+  "contract_family_precedence": [
+    {"marker": "dataframe", "project_stratum": "data_tabular_pipeline"},
+    {"marker": "tabular", "project_stratum": "data_tabular_pipeline"}
+  ],
+  "project_identity_overrides": [
+    {"project_contains": "automlops", "project_stratum": "framework_plugin_build"}
+  ],
+  "entrypoint_identity_precedence": {
+    "project_stratum": "cli_local_tool",
+    "when_selected": ["library_pure_transform", "stateful_service_database"],
+    "minimum_entrypoint_count": 1,
+    "project_name_patterns": ["(?:^|[_-])cli(?:$|[_-])", "cli$", "(?:^|[_-])commander(?:$|[_-])", "(?:^|[_-])runner(?:$|[_-])", "(?:^|[_-])tools?(?:$|[_-])"]
+  },
+  "target_score": 9.2,
+  "promotion_score": 9.7,
+  "usable_score": 8.0,
+  "legacy_score_ceiling": 8.9,
+  "development_priority": {
+    "current_lane": {
+      "id": "narrow_python_owned",
+      "target_score": 9.7,
+      "project_strata": ["cli_local_tool", "library_pure_transform"],
+      "required_roles": ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"],
+      "promotion_requires_no_role_regression": true
+    },
+    "deferred_lane": {
+      "id": "broad_python_boundaries",
+      "target_score": 9.7,
+      "required_later": true,
+      "project_strata": [
+        "web_api_middleware",
+        "sdk_provider_integration",
+        "framework_plugin_build",
+        "data_tabular_pipeline",
+        "scientific_compute",
+        "ml_inference",
+        "ml_training_checkpoint",
+        "async_worker_scheduler",
+        "stateful_service_database",
+        "external_process_io",
+        "llm_multi_agent"
+      ],
+      "resume_after": [
+        "narrow_lane_reaches_9_7",
+        "narrow_lane_meets_evidence_thresholds",
+        "narrow_lane_has_no_role_regression"
+      ]
+    }
+  },
+  "evidence_thresholds": {
+    "minimum_cases": 5,
+    "minimum_blind_cases": 2,
+    "minimum_independent_reports": 2
+  },
+  "demonstration_thresholds": {
+    "roles": ["implementer", "tester", "reviewer"],
+    "minimum_transformation_projects": 3,
+    "minimum_project_native_transformations": 3,
+    "minimum_independent_lineages": 2,
+    "minimum_transformation_subtypes": 3
+  },
+  "unknown_archetype_lifecycle": {
+    "minimum_confirmed_projects": 3,
+    "minimum_evidence_confidence": 0.7
+  },
+  "role_chain_evaluation": {
+    "minimum_interaction_score": 0.9,
+    "required_known_roles": ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"],
+    "conditional_roles": ["researcher"],
+    "maximum_first_pass_reselections": 0
+  },
+  "roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer",
+    "tester",
+    "reviewer",
+    "researcher"
+  ],
+  "conditional_role_applicability": {
+    "researcher": ["unknown_new_archetype"]
+  },
+  "role_impact": {
+    "project_analyzer": 1.0,
+    "architect": 1.0,
+    "spec_writer": 1.0,
+    "implementer": 1.2,
+    "tester": 1.2,
+    "reviewer": 1.1,
+    "researcher": 0.9
+  },
+  "strata": [
+    {
+      "id": "cli_local_tool",
+      "label": "CLI and local tools",
+      "markers": ["cli", "terminal", "script", "command", "release_automation", "import_sorting", "code_quality"]
+    },
+    {
+      "id": "library_pure_transform",
+      "label": "Libraries and pure transforms",
+      "markers": ["platform_directory_resolver", "library", "pure_transform", "transform", "codec", "converter", "parser", "mapping", "schema", "validation", "template_rendering", "markup", "token_utility"]
+    },
+    {
+      "id": "web_api_middleware",
+      "label": "Web/API endpoint transforms",
+      "markers": ["web", "api_service", "fastapi", "flask", "django", "asgi", "wsgi", "middleware", "route", "http_protocol"]
+    },
+    {
+      "id": "sdk_provider_integration",
+      "label": "Fixture-backed provider response adapters",
+      "markers": ["sdk", "provider", "protocol_api_client", "http_client", "cloud_api", "integration", "oauth"]
+    },
+    {
+      "id": "framework_plugin_build",
+      "label": "Plugin, package, codegen and docs primitives",
+      "markers": ["framework", "plugin", "hook", "packaging", "wheel", "build_backend", "virtual_environment", "freezer", "test_framework", "docs_site", "code_generation", "package_publish_action", "mlops_pipeline_generator"]
+    },
+    {
+      "id": "data_tabular_pipeline",
+      "label": "Tabular and data pipelines",
+      "markers": ["data_pipeline", "dataframe", "streaming_dataset_library", "tabular", "csv_pipeline", "visualization_plotting_library", "visualization", "media_processing"]
+    },
+    {
+      "id": "scientific_compute",
+      "label": "Scientific compute",
+      "markers": ["scientific_compute_library", "atomistic_simulation_toolkit", "classification_metrics_library", "scientific_compute", "scientific", "formula", "bioinformatics", "graph_algorithm"]
+    },
+    {
+      "id": "ml_inference",
+      "label": "ML inference",
+      "markers": ["model_inference", "model_inference_api", "out_of_distribution_detection_library", "inference_runtime", "neural_inference", "computer_vision_inference", "computer_vision_tracking_application", "prediction_pipeline", "feature_extraction"]
+    },
+    {
+      "id": "ml_training_checkpoint",
+      "label": "ML training and checkpoints",
+      "markers": ["model_training", "training_pipeline", "checkpoint", "reinforcement_learning", "reinforcement_learning_training_pipeline", "deep_learning", "neural_training", "traffic_simulator"]
+    },
+    {
+      "id": "async_worker_scheduler",
+      "label": "Async execution primitives",
+      "markers": ["async_worker", "async_protocol_runtime", "distributed_compute_graph", "queue", "scheduler", "workflow_orchestrator", "distributed_pytest", "automation_engine", "crawler", "scraper"]
+    },
+    {
+      "id": "stateful_service_database",
+      "label": "SQLite state transitions",
+      "markers": ["cache_backend_library", "cache_key_value_operation", "database", "orm", "migration", "embedded_database", "state_machine", "container_update", "cache", "aiocache", "aiomcache"]
+    },
+    {
+      "id": "external_process_io",
+      "label": "Filesystem, subprocess and archive I/O",
+      "markers": ["proxy", "subprocess", "filesystem", "archive", "desktop", "browser", "native_extension", "har_recording", "signing", "signing_token_utility"]
+    },
+    {
+      "id": "llm_multi_agent",
+      "label": "LLM and multi-agent orchestration",
+      "markers": ["llm_application_runtime", "llm_provider_gateway", "prompt_lab_evaluation_runtime", "prompt_to_code_compiler_pipeline", "multi_agent_orchestration_runtime", "agent_advisory_runtime", "llm_auto_repair_loop", "llm", "prompt", "multi_agent", "agent_", "consensus", "auto_repair"]
+    },
+    {
+      "id": "workspace_portfolio",
+      "label": "Workspaces and dirty portfolios",
+      "identity_only": true,
+      "applicable_roles": ["project_analyzer"],
+      "markers": ["multi_project_workspace", "dirty_portfolio", "workspace", "portfolio", "damaged"]
+    },
+    {
+      "id": "unknown_new_archetype",
+      "label": "Unknown or new archetype",
+      "maturity_allowed": false,
+      "applicable_roles": ["project_analyzer", "researcher"],
+      "markers": []
+    }
+  ],
+  "risk_profiles": [
+    {"id": "concurrent", "markers": ["async", "concurrent", "distributed", "queue", "worker", "scheduler", "thread", "process_pool"]},
+    {"id": "provider_llm", "markers": ["provider", "llm", "model", "agent", "prompt", "external api"]},
+    {"id": "network", "markers": ["network", "http", "websocket", "socket", "api", "ssh", "oauth"]},
+    {"id": "subprocess", "markers": ["subprocess", "command", "process", "cli", "shell", "native"]},
+    {"id": "filesystem", "markers": ["filesystem", "file", "path", "archive", "wheel", "document", "artifact"]},
+    {"id": "stateful", "markers": ["stateful", "state", "database", "cache", "session", "transaction", "migration", "lifecycle"]},
+    {"id": "deterministic", "markers": ["deterministic", "pure", "transform", "parser", "codec", "mapping", "normalization", "formatting"]}
+  ]
+}

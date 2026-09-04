@@ -38,9 +38,16 @@ def unresolved_reselection(result: dict[str, Any]) -> bool:
 
 
 def _resolved_by_executable_confirmation(result: dict[str, Any], spec: dict[str, Any]) -> bool:
+    return matching_executable_confirmation(result, spec=spec)
+
+
+def matching_executable_confirmation(
+    result: dict[str, Any], *, spec: dict[str, Any] | None = None
+) -> bool:
     policy = dict(load_foundation_semantic_quality_policy().get("feedback_scoring") or {})
     if not policy.get("executable_confirmation_resolves_reselection"):
         return False
+    spec = spec or dict(dict(result.get("artifacts") or {}).get("technical_spec") or {})
     evidence = dict(result.get("downstream_evidence") or {})
     signal = str(evidence.get("acceptance_signal") or "")
     selected = str(
