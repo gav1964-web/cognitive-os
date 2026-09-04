@@ -47,7 +47,7 @@ def test_recognition_stops_known_but_prohibited_risk_before_full_chain():
 
     assert decision["status"] == "recognized"
     assert decision["pilot_route"]["status"] == "analysis_only_stop"
-    assert "risk_profile_allowed" in decision["pilot_route"]["blocking_reasons"]
+    assert "risk_profile_not_allowed" in decision["pilot_route"]["blocking_reasons"]
 
 
 def test_recognition_admits_repeated_pure_target_inside_stateful_project(tmp_path):
@@ -189,6 +189,108 @@ def test_recognition_rejects_open_without_explicit_read_mode(tmp_path):
     )
 
     assert decision["pilot_route"]["status"] == "analysis_only_stop"
+
+
+def test_recognition_rejects_target_with_transitive_write_effect(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "api.py").write_text(
+        "from pkg.writer import persist\n\ndef normalize(value):\n    return persist(value.strip())\n",
+        encoding="utf-8",
+    )
+    (package / "writer.py").write_text(
+        "def persist(value):\n    open('result.txt', 'w').write(value)\n    return value\n",
+        encoding="utf-8",
+    )
+    classification = {
+        "project_stratum": "cli_local_tool",
+        "project_archetype": "import_sorting_tool",
+        "classification_source": "explicit",
+        "risk_profiles": ["deterministic", "filesystem", "stateful"],
+    }
+
+    decision = recognize_project(
+        project="formatter",
+        project_report=_report("import_sorting_tool"),
+        classification=classification,
+        project_dir=tmp_path,
+        change_request={
+            "authority": "failing_contract_test",
+            "repeat_count": 2,
+            "target": "pkg/api.py:normalize",
+        },
+    )
+
+    scoped = decision["pilot_route"]["target_scope_admission"]
+    assert decision["pilot_route"]["status"] == "analysis_only_stop"
+    assert scoped["reason"] == "target_has_prohibited_transitive_effects"
+    assert scoped["observed_transitive_effects"] == ["filesystem_write"]
+    assert scoped["transitive_effect_chains"][0]["call_chain"] == [
+        "pkg/api.py:normalize", "pkg/writer.py:persist",
+    ]
+
+
+def test_recognition_allows_configured_transitive_read_effect(tmp_path):
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "api.py").write_text(
+        "from pkg.reader import load\n\ndef normalize(path):\n    return load(path).strip()\n",
+        encoding="utf-8",
+    )
+    (package / "reader.py").write_text(
+        "def load(path):\n    return open(path, 'r').read()\n",
+        encoding="utf-8",
+    )
+    classification = {
+        "project_stratum": "cli_local_tool",
+        "project_archetype": "import_sorting_tool",
+        "classification_source": "explicit",
+        "risk_profiles": ["deterministic", "filesystem", "stateful"],
+    }
+
+    decision = recognize_project(
+        project="formatter",
+        project_report=_report("import_sorting_tool"),
+        classification=classification,
+        project_dir=tmp_path,
+        change_request={
+            "authority": "failing_contract_test",
+            "repeat_count": 2,
+            "target": "pkg/api.py:normalize",
+        },
+    )
+
+    scoped = decision["pilot_route"]["target_scope_admission"]
+    assert decision["pilot_route"]["status"] == "eligible_for_full_chain"
+    assert scoped["allowed_transitive_effects"] == ["filesystem_read"]
+
+
+def test_recognition_rejects_ambiguous_local_effect_provenance(tmp_path):
+    (tmp_path / "a.py").write_text("def persist(value):\n    return value\n", encoding="utf-8")
+    (tmp_path / "b.py").write_text("def persist(value):\n    return value\n", encoding="utf-8")
+    (tmp_path / "api.py").write_text("def normalize(value):\n    return persist(value)\n", encoding="utf-8")
+    classification = {
+        "project_stratum": "cli_local_tool",
+        "project_archetype": "import_sorting_tool",
+        "classification_source": "explicit",
+        "risk_profiles": ["deterministic", "stateful"],
+    }
+
+    decision = recognize_project(
+        project="formatter",
+        project_report=_report("import_sorting_tool"),
+        classification=classification,
+        project_dir=tmp_path,
+        change_request={
+            "authority": "failing_contract_test",
+            "repeat_count": 2,
+            "target": "api.py:normalize",
+        },
+    )
+
+    scoped = decision["pilot_route"]["target_scope_admission"]
+    assert scoped["reason"] == "target_transitive_effect_provenance_incomplete"
+    assert scoped["unresolved_local_calls"] == ["persist"]
 
 
 def test_recognition_keeps_low_confidence_analyzer_hypothesis_ambiguous():

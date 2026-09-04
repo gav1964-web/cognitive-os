@@ -78,7 +78,10 @@
   },
   "unknown_archetype_lifecycle": {
     "minimum_confirmed_projects": 3,
-    "minimum_evidence_confidence": 0.7
+    "minimum_evidence_confidence": 0.7,
+    "minimum_independent_lineages": 2,
+    "minimum_unique_evidence_digests": 3,
+    "minimum_candidate_markers": 2
   },
   "role_chain_evaluation": {
     "minimum_interaction_score": 0.9,

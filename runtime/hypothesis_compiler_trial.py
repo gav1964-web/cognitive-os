@@ -100,7 +100,7 @@ def run_compiled_hypothesis_trials(
         latest = directory / "compiled_hypothesis_trials.json"
         _archive_previous_report(latest, directory)
         stamp = _report_stamp(str(report["generated_at"]))
-        path = directory / f"compiled_hypothesis_trials_{stamp}.json"
+        path = _unique_report_path(directory, stamp)
         encoded = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         path.write_text(encoded, encoding="utf-8")
         latest.write_text(encoded, encoding="utf-8")
@@ -366,6 +366,15 @@ def _archive_previous_report(latest: Path, directory: Path) -> None:
     archive = directory / f"compiled_hypothesis_trials_{stamp}.json"
     if not archive.exists():
         archive.write_bytes(latest.read_bytes())
+
+
+def _unique_report_path(directory: Path, stamp: str) -> Path:
+    candidate = directory / f"compiled_hypothesis_trials_{stamp}.json"
+    sequence = 2
+    while candidate.exists():
+        candidate = directory / f"compiled_hypothesis_trials_{stamp}_{sequence}.json"
+        sequence += 1
+    return candidate
 
 
 def _report_stamp(value: str) -> str:

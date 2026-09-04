@@ -15,6 +15,7 @@ from runtime.self_development_change import (
     interpret_self_development_change,
     load_self_development_change_policy,
 )
+from runtime.evidence_ledger import promote_evidence
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +53,41 @@ def _proposal(
         },
         rollback_plan={"strategy": "restore promotion snapshot"},
     )
+
+
+def _verified_receipts(root: Path) -> dict:
+    source = root / "artifacts" / "independent-verification.json"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(json.dumps({
+        "artifact_type": "IndependentSelfDevelopmentVerification",
+        "status": "passed",
+        "checks": {
+            "regression": True,
+            "independent_holdout": True,
+            "generated_stub_gate": True,
+        },
+        "holdout_provenance": {
+            "selection_digest": "sha256:" + "a" * 64,
+            "case_count": 5,
+            "source_lineages": 3,
+        },
+        "generated_stub_count": 0,
+    }), encoding="utf-8")
+    entry = promote_evidence(
+        root=root,
+        source=source,
+        producer_fingerprint="self-development-runner:v1",
+        evaluator_fingerprint="independent-evaluator:v2",
+        replay_command=["python", "tools/self_development_trial.py", "--frozen"],
+    )
+    path = entry["ledger_path"]
+    return {
+        "evaluator_fingerprint": "independent-evaluator:v2",
+        "receipts": {gate: path for gate in (
+            "regression", "independent_holdout", "independent_evaluator",
+            "evaluator_fingerprint", "generated_stub_gate",
+        )},
+    }
 
 
 def test_policy_loads_complete_l0_l4_authority_matrix() -> None:
@@ -105,7 +141,7 @@ def test_evaluator_architecture_impact_overrides_shallow_declared_kind() -> None
     assert result["basis"] == "evaluator_architecture_impact"
 
 
-def test_sensitive_l1_cannot_self_promote() -> None:
+def test_sensitive_l1_cannot_self_promote(tmp_path: Path) -> None:
     proposal = _proposal(
         "promotion_threshold",
         impact={
@@ -115,13 +151,14 @@ def test_sensitive_l1_cannot_self_promote() -> None:
             "contracts": [],
             "changes_admission_or_promotion": True,
         },
+        verification=_verified_receipts(tmp_path),
     )
 
     denied = interpret_self_development_change(
         proposal, action="promote", authority="promotion_controller"
     )
     allowed = interpret_self_development_change(
-        proposal, action="promote", authority="external_architect"
+        proposal, action="promote", authority="external_architect", evidence_root=tmp_path
     )
 
     assert proposal["classification"]["variant"] == "L1-sensitive"
@@ -131,13 +168,13 @@ def test_sensitive_l1_cannot_self_promote() -> None:
     assert allowed["execution_authorized"] is False
 
 
-def test_runtime_change_can_be_proposed_but_requires_external_promotion() -> None:
-    proposal = _proposal("runtime_component")
+def test_runtime_change_can_be_proposed_but_requires_external_promotion(tmp_path: Path) -> None:
+    proposal = _proposal("runtime_component", verification=_verified_receipts(tmp_path))
 
     assert interpret_self_development_change(proposal, action="propose")["status"] == "allowed"
     pending = interpret_self_development_change(proposal, action="promote")
     approved = interpret_self_development_change(
-        proposal, action="promote", authority="external_architect"
+        proposal, action="promote", authority="external_architect", evidence_root=tmp_path
     )
 
     assert pending["status"] == "external_review_required"
@@ -167,6 +204,19 @@ def test_missing_runtime_gates_block_even_with_external_authority() -> None:
         "regression", "independent_holdout", "independent_evaluator",
         "evaluator_fingerprint", "generated_stub_gate",
     }
+
+
+def test_self_reported_verification_booleans_do_not_pass_evidence_gates() -> None:
+    admission = interpret_self_development_change(
+        _proposal("runtime_component"),
+        action="promote",
+        authority="external_architect",
+    )
+
+    assert admission["status"] == "blocked"
+    assert {"regression", "independent_holdout", "independent_evaluator"}.issubset(
+        admission["blocking_reasons"]
+    )
 
 
 def test_proposal_digest_detects_post_build_mutation() -> None:

@@ -7,5 +7,5 @@
   "expected_idempotency_risks": [],
   "expected_checkpoint_candidates": ["request_capture", "validation"],
   "expected_minimal_extraction_plan": ["price_item", "/items"],
-  "expected_best_extraction_candidate": "main.py:create_item"
+  "expected_best_extraction_candidate": "main.py:price_item"
 }

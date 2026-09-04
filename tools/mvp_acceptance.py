@@ -27,7 +27,12 @@ def main() -> int:
     _cleanup_acceptance_foundry(root, spec_id)
 
     if not args.skip_pytest:
-        report.command("all_tests", [sys.executable, "-m", "pytest"], layers=["all"], check=checks.returncode_ok)
+        report.command(
+            "all_tests",
+            [sys.executable, "-m", "pytest", "--basetemp=.pytest-tmp/mvp/all-tests"],
+            layers=["all"],
+            check=checks.returncode_ok,
+        )
     report.command(
         "compileall",
         [sys.executable, "-m", "compileall", "runtime", "tools", "plugins", "skills", "tests", "run_mvp.py"],

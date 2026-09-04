@@ -25,7 +25,7 @@ def test_project_effects_do_not_guess_ambiguous_symbols(tmp_path):
 
     report = project_transitive_effects(tmp_path)
 
-    assert report["caller.py:run"] == {}
+    assert report["caller.py:run"] == {"unresolved_local_calls": ["publish"]}
 
 
 def test_project_effects_do_not_resolve_attribute_calls_by_suffix(tmp_path):

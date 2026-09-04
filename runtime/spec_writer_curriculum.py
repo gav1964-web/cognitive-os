@@ -67,12 +67,15 @@ def run_curriculum_case(*, root: Path, reference_path: Path) -> dict[str, Any]:
 def _actual_spec(spec: dict[str, Any]) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract", {}))
     ranked = list(contract.get("ranked_candidates", []))
+    read_only_ranked = list(contract.get("read_only_ranked_context", []))
     return {
         "artifact_type": spec.get("artifact_type"),
         "role": spec.get("role"),
         "candidate": contract.get("candidate"),
         "ranked_first": dict(ranked[0]).get("source") if ranked else None,
-        "ranked_candidates": _sources(ranked, key="source"),
+        "ranked_candidates": sorted(set(
+            _sources(ranked, key="source") + _sources(read_only_ranked, key="source")
+        )),
         "source_evidence": _sources(spec.get("source_evidence", []), key="source"),
         "acceptance_sources": _sources(spec.get("acceptance_criteria", []), key="source"),
         "traceability_sources": _sources(spec.get("traceability_table", []), key="source"),

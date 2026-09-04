@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .pilot_profile import load_pilot_profile
+from .project_transitive_effects import project_transitive_effects
 from .role_project_type_evaluation import classify_project_case
 
 
@@ -155,16 +156,16 @@ def _pilot_route(
     if status != "recognized":
         reasons.append(f"recognition_status:{status}")
     if stratum not in {str(value) for value in policy.get("allowed_project_strata") or []}:
-        reasons.append("project_stratum_allowed")
+        reasons.append("project_stratum_not_allowed")
     if prohibited:
-        reasons.append("risk_profile_allowed")
+        reasons.append("risk_profile_not_allowed")
     scoped = _target_scoped_admission(
         project_dir=project_dir,
         change_request=change_request or {},
         prohibited=prohibited,
         policy=policy,
     )
-    if reasons == ["risk_profile_allowed"] and scoped.get("status") == "admitted":
+    if reasons == ["risk_profile_not_allowed"] and scoped.get("status") == "admitted":
         return {
             "profile_id": policy.get("profile_id"),
             "status": "eligible_for_full_chain",
@@ -228,6 +229,34 @@ def _target_scoped_admission(
         }
     if any(isinstance(node, (ast.Global, ast.Nonlocal)) for node in ast.walk(function)):
         return {"status": "not_admitted", "reason": "target_mutates_nonlocal_state"}
+    transitive = project_transitive_effects(
+        root,
+        max_files=int(scoped_policy.get("transitive_effect_max_files") or 80),
+        max_depth=int(scoped_policy.get("transitive_effect_max_depth") or 3),
+    ).get(target, {})
+    allowed_transitive = {
+        str(value) for value in scoped_policy.get("allowed_transitive_effects") or []
+    }
+    prohibited_transitive = sorted(
+        set(transitive.get("transitive_side_effects") or []) - allowed_transitive
+    )
+    if prohibited_transitive:
+        chains = [
+            row for row in transitive.get("transitive_effect_chains") or []
+            if dict(row).get("effect") in prohibited_transitive
+        ]
+        return {
+            "status": "not_admitted",
+            "reason": "target_has_prohibited_transitive_effects",
+            "observed_transitive_effects": prohibited_transitive,
+            "transitive_effect_chains": chains,
+        }
+    if transitive.get("unresolved_local_calls"):
+        return {
+            "status": "not_admitted",
+            "reason": "target_transitive_effect_provenance_incomplete",
+            "unresolved_local_calls": list(transitive["unresolved_local_calls"]),
+        }
     return {
         "status": "admitted",
         "authority": "repeated_failure_target_ast_scope",
@@ -235,6 +264,10 @@ def _target_scoped_admission(
         "waived_project_risks": sorted(prohibited),
         "source_apply_allowed": False,
         "direct_forbidden_effect_count": 0,
+        "transitive_effect_count": len(transitive.get("transitive_side_effects") or []),
+        "allowed_transitive_effects": sorted(
+            set(transitive.get("transitive_side_effects") or []) & allowed_transitive
+        ),
     }
 
 

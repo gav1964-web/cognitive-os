@@ -158,4 +158,4 @@ def test_pilot_recognition_stops_unsupported_project_before_role_chain(tmp_path,
     assert case["status"] == "blocked_ok"
     assert case["project_recognition"]["status"] == "recognized"
     assert case["executor"]["executor_status"] == "not_run"
-    assert "risk_profile_allowed" in case["recognition_blocking_reasons"]
+    assert "risk_profile_not_allowed" in case["recognition_blocking_reasons"]

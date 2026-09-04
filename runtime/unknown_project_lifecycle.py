@@ -16,6 +16,9 @@ def build_unknown_project_lifecycle(
     lifecycle_policy = dict(policy.get("unknown_archetype_lifecycle") or {})
     minimum_cases = int(lifecycle_policy.get("minimum_confirmed_projects") or 3)
     minimum_confidence = float(lifecycle_policy.get("minimum_evidence_confidence") or 0.7)
+    minimum_lineages = int(lifecycle_policy.get("minimum_independent_lineages") or 2)
+    minimum_digests = int(lifecycle_policy.get("minimum_unique_evidence_digests") or minimum_cases)
+    minimum_markers = int(lifecycle_policy.get("minimum_candidate_markers") or 2)
     candidate_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     intakes = []
 
@@ -64,6 +67,9 @@ def build_unknown_project_lifecycle(
             hypothesis_id, rows,
             minimum_cases=minimum_cases,
             minimum_confidence=minimum_confidence,
+            minimum_lineages=minimum_lineages,
+            minimum_digests=minimum_digests,
+            minimum_markers=minimum_markers,
         )
         for hypothesis_id, rows in sorted(candidate_groups.items())
     ]
@@ -83,6 +89,9 @@ def build_unknown_project_lifecycle(
         "policy": {
             "minimum_confirmed_projects": minimum_cases,
             "minimum_evidence_confidence": minimum_confidence,
+            "minimum_independent_lineages": minimum_lineages,
+            "minimum_unique_evidence_digests": minimum_digests,
+            "minimum_candidate_markers": minimum_markers,
             "unknown_is_quarantined": True,
             "automatic_stratum_creation_forbidden": True,
             "automatic_kb_promotion_forbidden": True,
@@ -113,6 +122,9 @@ def _build_provisional_candidate(
     *,
     minimum_cases: int,
     minimum_confidence: float,
+    minimum_lineages: int,
+    minimum_digests: int,
+    minimum_markers: int,
 ) -> dict[str, Any]:
     first = dict(rows[0]["hypothesis"])
     source_cases = []
@@ -134,8 +146,23 @@ def _build_provisional_candidate(
             "status": "confirmed" if confirmed else "observed",
             "confidence": confidence,
             "source_digests": digests,
+            "source_lineage": str(hypothesis.get("source_lineage") or ""),
         })
     markers = sorted(set(str(value) for row in rows for value in row["hypothesis"].get("candidate_markers", []) if value))
+    confirmed = [row for row in source_cases if row["status"] == "confirmed"]
+    lineages = {row["source_lineage"] for row in confirmed if row["source_lineage"]}
+    evidence_digests = {
+        str(digest["evidence_hash"])
+        for row in confirmed
+        for digest in row["source_digests"]
+    }
+    cluster_checks = {
+        "minimum_confirmed_projects": len({row["project"] for row in confirmed}) >= minimum_cases,
+        "minimum_independent_lineages": len(lineages) >= minimum_lineages,
+        "minimum_unique_evidence_digests": len(evidence_digests) >= minimum_digests,
+        "minimum_candidate_markers": len(markers) >= minimum_markers,
+    }
+    cluster_gaps = [name for name, passed in cluster_checks.items() if not passed]
     proposed_record = {
         "record_type": "project_archetype_rule",
         "rule_id": hypothesis_id,
@@ -153,17 +180,22 @@ def _build_provisional_candidate(
         teacher_reference="Researcher source digests",
         min_confirmed_cases=minimum_cases,
     )
+    gated_status = str(candidate["status"]) if not cluster_gaps else "collect_more_cases"
     return {
         "artifact_type": "ProvisionalArchetypeCandidate",
         "hypothesis_id": hypothesis_id,
-        "status": candidate["status"],
+        "status": gated_status,
         "confirmed_project_count": sum(row["status"] == "confirmed" for row in source_cases),
         "observed_project_count": len(source_cases),
+        "independent_lineage_count": len(lineages),
+        "unique_evidence_digest_count": len(evidence_digests),
+        "cluster_checks": cluster_checks,
+        "cluster_gaps": cluster_gaps,
         "candidate": candidate,
         "promotion_gate": {
-            "status": candidate["status"],
+            "status": gated_status,
             "automatic_promotion": False,
-            "next_action": _next_action(str(candidate["status"])),
+            "next_action": _next_action(gated_status),
         },
     }
 

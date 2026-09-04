@@ -121,6 +121,26 @@ def _cell(role_id: str, stratum: dict[str, Any], rows: list[dict[str, Any]], pol
     else:
         maturity = "usable"
     confidence = "not_applicable" if not applicable else "high" if not gaps else "medium" if len(projects) >= 3 and len(blind_projects) >= 1 else "low"
+    development_target = _development_target(str(stratum["id"]), policy)
+    current_lane = set(
+        dict(dict(policy.get("development_priority") or {}).get("current_lane") or {}).get("project_strata") or []
+    )
+    promotion_eligible = bool(
+        applicable
+        and worst is not None
+        and worst >= development_target
+        and not gaps
+        and str(stratum["id"]) in current_lane
+        and stratum.get("maturity_allowed") is not False
+    )
+    if str(stratum["id"]) not in current_lane:
+        promotion_status = "deferred_lane"
+    elif gaps:
+        promotion_status = "evidence_incomplete"
+    elif worst is None or worst < development_target:
+        promotion_status = "score_below_promotion_target"
+    else:
+        promotion_status = "eligible"
     risk_counts: dict[str, int] = defaultdict(int)
     for row in rows:
         for risk in row["risk_profiles"]:
@@ -131,6 +151,9 @@ def _cell(role_id: str, stratum: dict[str, Any], rows: list[dict[str, Any]], pol
         "stratum_label": str(stratum.get("label") or stratum["id"]),
         "applicable": applicable,
         "maturity": maturity,
+        "promotion_eligible": promotion_eligible,
+        "promotion_status": promotion_status,
+        "promotion_target_score": development_target,
         "confidence": confidence,
         "score": round(worst, 2) if worst is not None else None,
         "average_score": round(sum(scores) / len(scores), 2) if scores else None,
@@ -178,6 +201,7 @@ def _role_summary(role_id: str, cells: list[dict[str, Any]]) -> dict[str, Any]:
         "score": round(min(scores), 2) if scores else None,
         "measured_strata": len(measured),
         "mature_strata": sum(row["maturity"] == "mature" for row in cells),
+        "promotion_eligible_strata": sum(row.get("promotion_eligible") is True for row in cells),
         "usable_strata": sum(row["maturity"] == "usable" for row in cells),
         "weak_strata": sum(row["maturity"] == "weak" for row in cells),
         "unmeasured_strata": sum(row["maturity"] == "unmeasured" for row in cells),

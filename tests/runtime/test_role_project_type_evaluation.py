@@ -344,6 +344,9 @@ def test_evaluation_uses_worst_case_and_requires_independent_blind_evidence(tmp_
     assert analyzer["score"] == 9.3
     assert analyzer["maturity"] == "mature"
     assert analyzer["confidence"] == "high"
+    assert analyzer["promotion_eligible"] is False
+    assert analyzer["promotion_status"] == "score_below_promotion_target"
+    assert analyzer["promotion_target_score"] == 9.7
     assert implementer["score"] == 7.2
     assert implementer["maturity"] == "weak"
     assert researcher["maturity"] == "not_applicable"

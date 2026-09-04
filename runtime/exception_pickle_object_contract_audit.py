@@ -10,8 +10,7 @@ from typing import Any
 from .exception_pickle_active_application import DEFAULT_APPLICATION_LEDGER
 from .exception_pickle_holdout_transaction import DEFAULT_AUDIT
 from .exception_pickle_object_contract_advisory import (
-    ALLOWED_CONTRACT_KINDS,
-    messages as _messages,
+    llm_advisory as _llm_advisory,
 )
 from .exception_pickle_object_contract_classifier import (
     ParameterUseVisitor as _ParameterUseVisitor,
@@ -31,7 +30,7 @@ from .exception_pickle_object_contract_source import (
     read_json as _read_json,
     source_for_row as _source_for_row,
 )
-from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .local_inference import LocalInferenceConfig
 
 DEFAULT_OBJECT_CONTRACT_AUDIT = Path(
     "artifacts/project_development/exception_pickle_object_contract_audit.json"
@@ -147,48 +146,6 @@ def _case_status(contracts: list[dict[str, Any]]) -> str:
     if any(item["contract_kind"] != "opaque_hold" for item in contracts):
         return "partial_contract_candidate"
     return "object_contract_hold"
-
-
-def _llm_advisory(
-    *,
-    row: dict[str, Any],
-    source: str,
-    contracts: list[dict[str, Any]],
-    config: LocalInferenceConfig,
-) -> dict[str, Any]:
-    try:
-        response = call_json_chat(_messages(row=row, source=source, contracts=contracts), config=config)
-    except LocalInferenceError as exc:
-        return {"source": "deterministic_fallback", "llm_invoked": False, "accepted": False, "error": str(exc)}
-    suggestions = []
-    by_parameter = {item["parameter"]: item for item in contracts}
-    for item in response.get("contracts") or []:
-        if not isinstance(item, dict):
-            continue
-        parameter = str(item.get("parameter") or "")
-        kind = str(item.get("contract_kind") or "")
-        reason = str(item.get("reason") or "")[:240]
-        if parameter not in by_parameter or kind not in ALLOWED_CONTRACT_KINDS:
-            continue
-        if kind == "opaque_hold":
-            suggestions.append({"parameter": parameter, "contract_kind": kind, "accepted": True, "reason": reason})
-        elif by_parameter[parameter]["contract_kind"] == kind:
-            suggestions.append({"parameter": parameter, "contract_kind": kind, "accepted": True, "reason": reason})
-        else:
-            suggestions.append({
-                "parameter": parameter,
-                "contract_kind": kind,
-                "accepted": False,
-                "reason": "LLM suggestion conflicts with deterministic source evidence",
-            })
-    return {
-        "source": config.provider_label,
-        "model": config.model,
-        "llm_invoked": True,
-        "accepted": any(item.get("accepted") for item in suggestions),
-        "suggestions": suggestions,
-        "authority": "advisory_only",
-    }
 
 
 def _is_name(node: Any, name: str) -> bool:

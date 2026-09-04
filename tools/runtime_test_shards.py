@@ -52,9 +52,22 @@ def run_shards(*, root: Path, shard_count: int, only_shard: int | None = None) -
 
 
 def collect_tests(root: Path) -> list[str]:
+    collect_temp = root / ".pytest-tmp" / "runtime-collect"
+    collect_temp.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env.update({"TMP": str(collect_temp), "TEMP": str(collect_temp), "TMPDIR": str(collect_temp)})
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/runtime", "--collect-only", "-q"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/runtime",
+            "--collect-only",
+            "-q",
+            f"--basetemp={collect_temp / 'outer'}",
+        ],
         cwd=str(root),
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",

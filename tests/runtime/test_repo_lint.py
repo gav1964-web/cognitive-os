@@ -37,3 +37,12 @@ def test_repo_lint_does_not_recurse_into_artifact_subtrees(tmp_path: Path):
     source.write_text("x = 1\n", encoding="utf-8")
 
     assert lint_repository(tmp_path) == []
+
+
+@pytest.mark.parametrize("directory", [".pytest-tmp-run", ".nfi", ".nft"])
+def test_repo_lint_ignores_machine_local_test_directories(tmp_path: Path, directory: str):
+    source = tmp_path / directory / "nested" / "large.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("\n".join(["x = 1"] * 999), encoding="utf-8")
+
+    assert lint_repository(tmp_path) == []

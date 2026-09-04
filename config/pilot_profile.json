@@ -42,6 +42,9 @@
       "commit",
       "execute"
     ],
+    "allowed_transitive_effects": ["filesystem_read"],
+    "transitive_effect_max_depth": 3,
+    "transitive_effect_max_files": 80,
     "source_apply_allowed": false
   },
   "required_roles": [

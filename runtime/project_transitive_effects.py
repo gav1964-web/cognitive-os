@@ -16,13 +16,16 @@ def project_transitive_effects(root: Path, *, max_files: int = 80, max_depth: in
     for source, row in nodes.items():
         by_symbol.setdefault(str(row["symbol"]), []).append(source)
     edges: dict[str, set[str]] = {source: set() for source in nodes}
+    unresolved: dict[str, set[str]] = {source: set() for source in nodes}
     for source, row in nodes.items():
         for symbol in row["calls"]:
             matches = by_symbol.get(symbol, [])
             if len(matches) == 1 and matches[0] != source:
                 edges[source].add(matches[0])
+            elif len(matches) > 1:
+                unresolved[source].add(symbol)
     return {
-        source: _source_effect_report(source, nodes, edges, max_depth=max_depth)
+        source: _source_effect_report(source, nodes, edges, unresolved, max_depth=max_depth)
         for source in nodes
     }
 
@@ -74,6 +77,7 @@ def _source_effect_report(
     source: str,
     nodes: dict[str, dict[str, Any]],
     edges: dict[str, set[str]],
+    unresolved: dict[str, set[str]],
     *,
     max_depth: int,
 ) -> dict[str, Any]:
@@ -96,6 +100,11 @@ def _source_effect_report(
 
     visit(source, [source], 0)
     result: dict[str, Any] = {}
+    unresolved_calls = set(unresolved.get(source, set()))
+    for slice_source in slice_sources:
+        unresolved_calls.update(unresolved.get(slice_source, set()))
+    if unresolved_calls:
+        result["unresolved_local_calls"] = sorted(unresolved_calls)
     inherited = effects - set(nodes[source]["effects"])
     if inherited:
         result["transitive_side_effects"] = sorted(inherited)

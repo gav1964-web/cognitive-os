@@ -141,6 +141,25 @@ def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> l
             }
         )
     return rows
+
+
+def _supplement_source_evidence(
+    evidence: list[dict[str, Any]],
+    acceptance: list[dict[str, Any]],
+    source_context: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Retain traceability symbols when their source context was already resolved."""
+    rows = list(evidence)
+    seen = {str(row.get("source") or "") for row in rows}
+    for acceptance_row in acceptance:
+        source = _normalize_source_ref(str(acceptance_row.get("source") or ""))
+        if ":" not in source or source in seen or source not in source_context:
+            continue
+        additions = _source_evidence({"files_or_symbols": [source]}, source_context)
+        if additions:
+            rows.append(additions[0])
+            seen.add(source)
+    return rows
 def _implementation_source(source: str) -> bool:
     lowered = source.lower()
     if _context_only_implementation_source(lowered):
@@ -183,7 +202,13 @@ def _extraction_contract(
         ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [], architecture_contract_only=True)
     else:
         ranked = promote_environment_ready_candidate(ranked)
-    ranked = _append_read_only_ranked_context(ranked, apply_preflight_selection_policies(read_only_ranked_context, trigger_candidate=ranked[0]) if apply_preflight and read_only_ranked_context and ranked else read_only_ranked_context)
+    read_only_ranked_context = _bounded_read_only_ranked_context(
+        ranked,
+        apply_preflight_selection_policies(read_only_ranked_context, trigger_candidate=ranked[0])
+        if apply_preflight and read_only_ranked_context and ranked
+        else read_only_ranked_context,
+    )
+    ranked = _append_learned_ranked_context(ranked, read_only_ranked_context)
     ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
     ranked = apply_preflight_selection_policies(ranked) if apply_preflight else ranked
     if not ranked:
@@ -237,6 +262,16 @@ def _extraction_contract(
                 **({"selection_policy_ids": item["selection_policy_ids"]} if item.get("selection_policy_ids") else {}),
             }
             for item in ranked[:32]
+        ],
+        "read_only_ranked_context": [
+            {
+                "source": item.get("source"),
+                "kind": item.get("kind"),
+                "score": item.get("score"),
+                "reasons": item.get("reasons", []),
+                "side_effects": item.get("side_effects", []),
+            }
+            for item in read_only_ranked_context
         ],
         "input_contract": input_contract,
         "output_contract": output_contract,

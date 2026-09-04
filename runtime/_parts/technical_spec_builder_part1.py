@@ -24,6 +24,7 @@ def build_technical_spec(
     first_slice = dict(brief.get("first_slice") or architecture_decision.get("first_slice_contract") or {})
     work_plan_contract = _work_plan_contract(brief, architecture_decision)
     acceptance = _acceptance_criteria(brief, traceability)
+    evidence = _supplement_source_evidence(evidence, acceptance, source_context)
     preferred_targets = [] if work_plan_contract.get("source") == "TechnicalSpec.fallback_from_spec_writer_brief" else list(work_plan_contract.get("targets", []))
     if first_slice.get("reselection_iteration"):
         preferred_targets = preferred_targets[:1]
@@ -60,6 +61,10 @@ def build_technical_spec(
             work_plan_contract,
             extraction_contract=extraction_contract,
         ),
+        "read_only_evidence_scope": [
+            str(item) for item in brief.get("files_or_symbols", [])
+            if str(item) in source_context
+        ],
     }
     quality_gate = _engineering_quality_gate(
         extraction_contract=extraction_contract,

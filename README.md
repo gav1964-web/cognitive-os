@@ -82,6 +82,10 @@ When documents disagree, use this order of authority:
 
 Readiness, role-by-project-type maturity, and production confidence are separate measures and must not be substituted for one another.
 
+## Canonical Verification
+
+Run `python tools/canonical_verify.py --root .` before a release or architecture checkpoint. The command uses project-local temporary directories and checks registry/config integrity, the 400-line source limit, compilation, the core test suite, and plugin contract tests. Use `--skip-tests` only for a fast structural preflight; it is not release evidence.
+
 ## Architecture
 
 ```text
@@ -1181,6 +1185,10 @@ The goal is not to claim general autonomy. The goal is to make the path from hum
 Current evidence snapshot (2026-08-30): `framework_plugin_build` completed three independent project-native sandbox repairs and passed explicit KB promotion (`174` regression tests, Config Doctor `44/44`, zero source-project changes). The current role matrix is `artifacts/field_trials/role_project_type_evaluation_20260830T161442270918Z.json`: framework/plugin scores are `9.7/9.7/9.7/9.8/10.0/9.8`, and workspace portfolio analysis is `9.7` over five blind controlled scope-selection stops. Target-scoped admission passed `4/4` frozen contrasts with two positive lineages while direct writes and subprocess-risk projects remain blocked. These results apply only to the demonstrated bounded contracts; automatic source apply and broad effect-heavy autonomy remain disabled.
 
 Bounded self-development now starts with a digest-bound `SelfDevelopmentChangeProposal`. The policy interpreter classifies changes as `L0-L4` and evaluates `propose`, `sandbox`, `promote`, and `apply` authority separately. An unknown target kind fails closed to L4; evaluator architecture and sensitive admission or promotion changes cannot validate themselves. Repeated capability gaps are attached to field-trial reports as shadow dossiers, with source apply and promotion disabled.
+
+Promotion gates no longer accept self-reported verification booleans. Regression, independent holdout, evaluator identity, and generated-stub claims must resolve through a verified `PromotedEvidenceLedgerEntry`: an immutable copy under `evidence/artifacts/`, a canonical ledger record under `evidence/ledger/`, distinct producer/evaluator fingerprints, and a replay command. Historical files under ignored `artifacts/` remain diagnostic evidence until explicitly promoted into this tracked ledger.
+
+Role-chain evaluation records five digest-bound handoff contracts, arbitration usage, unresolved uncertainty, target continuity, reselections, and human decisions. A working score at `9.2+` is distinct from narrow-lane promotion: only current-lane role/project-type cells at `9.7+` with complete blind, independent, and project-native evidence are `promotion_eligible`; broad strata stay explicitly deferred. Unknown archetype clusters additionally require independent source lineages, unique evidence digests, and coherent markers before external review.
 
 The first read-only backfill trial is `artifacts/self_development/self_development_shadow_trial_20260830T175415849133Z.json`. It reconstructed three L0 dossiers from the independently promoted pure-transform, CLI and framework/plugin repair catalogs. All three scored `1.0`, all `7/7` trial checks passed, and source reports plus catalogs remained unchanged. This validates representation of known good changes; it is not prospective self-development evidence and grants no L0 promotion authority.
 

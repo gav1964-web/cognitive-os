@@ -16,6 +16,7 @@ from runtime.operation_recipe_rules import load_operation_recipe_rules
 from runtime.sandbox_operation_graph import build_sandbox_operation_graph
 from runtime.sandbox_programmer_profiles import expression_policy, load_sandbox_programmer_profiles
 from runtime.sandbox_release_policy import sandbox_implementation_policy
+from runtime.token_aware_matcher import marker_matches
 
 @dataclass
 class SandboxOperation:
@@ -173,8 +174,8 @@ def _select_operation(*, root: Path, prompt: str, use_model: bool = False) -> tu
             return operation, resolution
     for row in operations:
         markers = [str(item).lower() for item in row.get("match", [])]
-        if any(marker in lower for marker in markers):
-            evidence = [marker for marker in markers if marker in lower]
+        if any(marker_matches(lower, marker) for marker in markers):
+            evidence = [marker for marker in markers if marker_matches(lower, marker)]
             resolution.update(
                 {
                     "status": "resolved",

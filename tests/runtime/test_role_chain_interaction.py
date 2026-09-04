@@ -18,6 +18,10 @@ def test_known_role_chain_measures_target_and_gate_continuity() -> None:
     assert trace["first_pass_acceptance"] is True
     assert trace["handoff_loss_count"] == 0
     assert trace["required_human_decisions"] == ["material_risk_review"]
+    assert len(trace["handoff_contracts"]) == 5
+    assert all(row["status"] == "preserved" for row in trace["handoff_contracts"])
+    assert all(row["contract_digest"].startswith("sha256:") for row in trace["handoff_contracts"])
+    assert trace["unresolved_uncertainties"] == ["material_risk_requires_human_review"]
 
 
 def test_known_role_chain_exposes_target_drift() -> None:
@@ -28,6 +32,7 @@ def test_known_role_chain_exposes_target_drift() -> None:
 
     assert trace["status"] == "needs_work"
     assert trace["handoff_loss"] == ["implementer_to_tester_target_preserved"]
+    assert trace["handoff_contracts"][3]["loss_reason"] == "implementer_to_tester_target_preserved"
     assert trace["first_pass_acceptance"] is False
 
 
@@ -83,6 +88,7 @@ def test_role_chain_summary_separates_first_pass_from_controlled_unknown() -> No
     assert summary["known_trace_count"] == 1
     assert summary["first_pass_acceptance_count"] == 1
     assert summary["controlled_unknown_stop_count"] == 1
+    assert summary["arbitration_invoked_count"] == 0
 
 
 def test_known_chain_records_researcher_architect_recovery_loop() -> None:
@@ -126,6 +132,10 @@ def _known_result() -> dict:
             "artifact_promotion_gate": {"status": "passed"},
             "semantic_escalation": {"l4_5_required": False},
         },
-        "chain_telemetry": {"build_reselection_history": [], "execution_reselection_history": []},
+        "chain_telemetry": {
+            "build_reselection_history": [],
+            "execution_reselection_history": [],
+            "candidate_arbitration": {"source": "deterministic", "eligible": False, "llm_invoked": False},
+        },
         "next_action": "review_risks_then_run_project_transform",
     }

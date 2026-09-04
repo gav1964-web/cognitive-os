@@ -225,5 +225,6 @@ def _hypothesis(status: str, *, confidence: float, digest: bool, index: int = 0)
         "first_slice_hint": "append_and_rebuild_projection",
         "confidence": confidence,
         "status": status,
+        "source_lineage": f"independent-owner-{index % 2}",
         "source_digests": ([{"evidence_hash": f"holdout-digest-{index}", "confidence": confidence}] if digest else []),
     }

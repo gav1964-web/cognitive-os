@@ -154,7 +154,7 @@ def test_object_contract_audit_keeps_llm_advisory_non_authoritative(tmp_path: Pa
             }]
         }
 
-    monkeypatch.setattr("runtime.exception_pickle_object_contract_audit.call_json_chat", fake_chat)
+    monkeypatch.setattr("runtime.exception_pickle_object_contract_advisory.call_json_chat", fake_chat)
     report = run_exception_pickle_object_contract_audit(
         root=tmp_path,
         audit_path=audit,

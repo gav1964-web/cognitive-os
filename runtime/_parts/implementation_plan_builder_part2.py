@@ -173,11 +173,15 @@ def _implementation_evidence_scope(technical_spec: dict[str, Any], handoff: dict
     scope: list[str] = []
     for item in list(handoff.get("patch_scope") or []):
         _append_unique(scope, str(item))
-    for row in list(technical_spec.get("source_evidence") or []):
+    # Traceability rows are the reviewed requirement-to-source boundary. Keep
+    # them ahead of the broader discovery evidence when the scope is capped.
+    for row in list(technical_spec.get("traceability_table") or []):
         source = str(dict(row or {}).get("source") or "")
         if ":" in source:
             _append_unique(scope, source)
-    for row in list(technical_spec.get("traceability_table") or []):
+    for item in list(handoff.get("read_only_evidence_scope") or []):
+        _append_unique(scope, str(item))
+    for row in list(technical_spec.get("source_evidence") or []):
         source = str(dict(row or {}).get("source") or "")
         if ":" in source:
             _append_unique(scope, source)

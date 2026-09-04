@@ -116,6 +116,7 @@ def test_repeated_source_backed_unknown_hypothesis_reaches_manual_review_gate(tm
             "first_slice_hint": "append_and_rebuild_projection",
             "confidence": 0.85,
             "status": "confirmed",
+            "source_lineage": f"owner-{index % 2}",
             "source_digests": [{"evidence_hash": f"digest-{index}", "confidence": 0.85}],
         }
         source.write_text(json.dumps({"cases": [case]}), encoding="utf-8")
@@ -128,6 +129,31 @@ def test_repeated_source_backed_unknown_hypothesis_reaches_manual_review_gate(tm
     assert provisional["status"] == "needs_teacher_approval"
     assert provisional["promotion_gate"]["next_action"] == "request_external_teacher_review"
     assert provisional["candidate"]["evidence_policy"]["automatic_self_promotion_forbidden"] is True
+
+
+def test_unknown_hypothesis_from_one_lineage_cannot_reach_review_gate(tmp_path: Path) -> None:
+    sources = []
+    for index in range(3):
+        source = tmp_path / f"same-owner-{index}.json"
+        case = _unknown_case(f"novel-{index}")
+        case["unknown_archetype_evidence"] = {
+            "hypothesis_id": "event_sourced_projection",
+            "label": "Event-sourced projection",
+            "candidate_markers": ["event log", "projection"],
+            "confidence": 0.9,
+            "status": "confirmed",
+            "source_lineage": "same-owner",
+            "source_digests": [{"evidence_hash": f"digest-{index}", "confidence": 0.9}],
+        }
+        source.write_text(json.dumps({"cases": [case]}), encoding="utf-8")
+        sources.append(source)
+
+    report = build_role_project_type_evaluation(root=tmp_path, report_paths=sources)
+    provisional = report["unknown_project_lifecycle"]["provisional_candidates"][0]
+
+    assert provisional["status"] == "collect_more_cases"
+    assert provisional["independent_lineage_count"] == 1
+    assert provisional["cluster_gaps"] == ["minimum_independent_lineages"]
 
 
 def test_unknown_route_does_not_mutate_known_mature_baseline(tmp_path: Path) -> None:

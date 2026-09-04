@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .evidence_ledger import verify_evidence_entry
+
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "config" / "self_development_change_policy.json"
@@ -154,6 +156,7 @@ def interpret_self_development_change(
     *,
     action: str,
     authority: str | None = None,
+    evidence_root: Path | None = None,
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rules = policy or load_self_development_change_policy()
@@ -177,7 +180,10 @@ def interpret_self_development_change(
         if "classification_review" not in required_gates:
             required_gates.insert(0, "classification_review")
         required_authority = "external_architect"
-    gate_results = {gate: _gate_passed(gate, proposal, authority) for gate in required_gates}
+    gate_results = {
+        gate: _gate_passed(gate, proposal, authority, evidence_root=evidence_root)
+        for gate in required_gates
+    }
     failed_gates = [name for name, passed in gate_results.items() if not passed]
     authority_present = authority == required_authority
     external_authorities = {"external_architect", "human_merge_authority", "architecture_board"}
@@ -312,20 +318,57 @@ def _proposal_integrity_errors(proposal: dict[str, Any], policy: dict[str, Any])
     return errors
 
 
-def _gate_passed(gate: str, proposal: dict[str, Any], authority: str | None) -> bool:
+def _gate_passed(
+    gate: str,
+    proposal: dict[str, Any],
+    authority: str | None,
+    *,
+    evidence_root: Path | None,
+) -> bool:
     change = dict(proposal.get("change") or {})
     verification = dict(proposal.get("verification") or {})
     checks = {
         "classification_review": authority in {"external_architect", "architecture_board"},
         "patch_digest": bool(change.get("patch_digest")),
-        "regression": verification.get("regression_passed") is True,
-        "independent_holdout": verification.get("independent_holdout_passed") is True,
-        "independent_evaluator": verification.get("independent_evaluator") is True,
-        "evaluator_fingerprint": bool(verification.get("evaluator_fingerprint")),
-        "generated_stub_gate": verification.get("generated_stub_gate_passed") is True,
+        "regression": _verified_evidence_gate("regression", verification, evidence_root),
+        "independent_holdout": _verified_evidence_gate("independent_holdout", verification, evidence_root),
+        "independent_evaluator": _verified_evidence_gate("independent_evaluator", verification, evidence_root),
+        "evaluator_fingerprint": _verified_evidence_gate("evaluator_fingerprint", verification, evidence_root),
+        "generated_stub_gate": _verified_evidence_gate("generated_stub_gate", verification, evidence_root),
         "rollback_plan": bool(dict(proposal.get("rollback_plan") or {}).get("strategy")),
     }
     return checks.get(gate, False)
+
+
+def _verified_evidence_gate(gate: str, verification: dict[str, Any], root: Path | None) -> bool:
+    if root is None:
+        return False
+    receipts = dict(verification.get("receipts") or {})
+    reference = receipts.get(gate)
+    if not isinstance(reference, str) or not reference:
+        return False
+    resolved = verify_evidence_entry(root=root, ledger_path=Path(reference))
+    if resolved.get("status") != "verified":
+        return False
+    entry = dict(resolved.get("entry") or {})
+    payload = dict(resolved.get("evidence_payload") or {})
+    checks = dict(payload.get("checks") or {})
+    if gate == "independent_evaluator":
+        return entry.get("producer_fingerprint") != entry.get("evaluator_fingerprint")
+    if gate == "evaluator_fingerprint":
+        return entry.get("evaluator_fingerprint") == verification.get("evaluator_fingerprint")
+    if payload.get("status") not in {"ok", "passed"} or checks.get(gate) is not True:
+        return False
+    if gate == "independent_holdout":
+        holdout = dict(payload.get("holdout_provenance") or {})
+        return (
+            str(holdout.get("selection_digest") or "").startswith("sha256:")
+            and int(holdout.get("case_count") or 0) > 0
+            and int(holdout.get("source_lineages") or 0) > 1
+        )
+    if gate == "generated_stub_gate":
+        return int(payload.get("generated_stub_count") or 0) == 0
+    return True
 
 
 def _normalized_impact_map(impact_map: dict[str, Any]) -> dict[str, Any]:

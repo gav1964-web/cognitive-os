@@ -258,6 +258,9 @@ def _chain_telemetry(state: dict[str, Any]) -> dict[str, Any]:
         "build_reselection_history": build_history,
         "execution_reselection_history": list(state.get("execution_reselection_history") or []),
         "role_transition": dict(state["control_plane"].get("role_transition") or {}),
+        "candidate_arbitration": dict(
+            dict(state["spec"].get("extraction_contract") or {}).get("candidate_advisory") or {}
+        ),
         "no_safe_candidate_recovery": {
             "status": state["no_safe_candidate_recovery"].get("status"),
             "route": list(state["no_safe_candidate_recovery"].get("route") or []),

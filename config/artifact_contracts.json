@@ -1,6 +1,11 @@
 {
   "schema_version": "artifact_contracts.v1",
   "contracts": {
+    "PromotedEvidenceLedgerEntry": {
+      "producer": "evidence_ledger",
+      "consumers": ["architect", "tester", "reviewer", "promotion_controller", "human"],
+      "required_fields": ["artifact_type", "entry_digest", "schema_version", "status", "source", "artifact", "content_sha256", "producer_fingerprint", "evaluator_fingerprint", "replay_command"]
+    },
     "SelfDevelopmentChangeProposal": {
       "producer": "self_improvement",
       "consumers": ["architect", "tester", "reviewer", "promotion_controller", "human"],
@@ -449,7 +454,7 @@
     "RoleChainInteractionTrace": {
       "producer": "role_chain_evaluation",
       "consumers": ["evaluation", "human"],
-      "required_fields": ["artifact_type", "project", "status", "route", "checks", "interaction_score"]
+      "required_fields": ["artifact_type", "project", "status", "route", "checks", "interaction_score", "handoff_contracts", "arbitration_metrics", "unresolved_uncertainties"]
     },
     "UnknownArchetypeFieldTrialReport": {
       "producer": "unknown_archetype_field_trial",

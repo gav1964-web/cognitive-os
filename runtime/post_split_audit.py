@@ -84,7 +84,27 @@ def _is_split_facade(path: Path) -> bool:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
-    return all(marker in text for marker in FACADE_MARKERS)
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    docstring = ast.get_docstring(tree) or ""
+    has_part_names = any(
+        isinstance(node, (ast.Assign, ast.AnnAssign))
+        and any(isinstance(target, ast.Name) and target.id == "_PART_NAMES" for target in (
+            node.targets if isinstance(node, ast.Assign) else [node.target]
+        ))
+        for node in tree.body
+    )
+    has_dynamic_import = any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "importlib"
+        and node.func.attr == "import_module"
+        for node in ast.walk(tree)
+    )
+    return docstring.startswith("Stable facade for split") and has_part_names and has_dynamic_import
 
 
 def _uses_helper_import(path: Path) -> bool:

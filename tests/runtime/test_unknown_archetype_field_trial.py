@@ -15,6 +15,10 @@ def test_unknown_archetype_holdout_and_promotion_rehearsal_pass() -> None:
     assert rehearsal["status"] == "passed"
     assert rehearsal["candidate_before_review"] == "needs_teacher_approval"
     assert rehearsal["candidate_after_review"] == "ready_for_human_merge"
+    candidate = report["unknown_holdout"]["lifecycle"]["provisional_candidates"][0]
+    assert candidate["independent_lineage_count"] == 2
+    assert candidate["unique_evidence_digest_count"] == 3
+    assert candidate["cluster_gaps"] == []
     assert rehearsal["kb_mutations"] == 0
     assert report["summary"]["controlled_unknown_stop_count"] == 4
 

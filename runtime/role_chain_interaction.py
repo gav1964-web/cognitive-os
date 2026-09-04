@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 
 
@@ -61,6 +63,13 @@ def build_role_chain_trace(
         intervention_reasons.append("bounded_rework_after_no_safe_candidate")
     recovery_ready = recovery.get("status") == "bounded_rework_ready"
     handoff_loss = [name for name, passed in checks.items() if not passed]
+    handoffs = _handoff_contracts(checks=checks, selected_target=quality.get("selected_extraction_candidate"))
+    arbitration = _arbitration_metrics(dict(telemetry.get("candidate_arbitration") or {}))
+    uncertainties = _unresolved_uncertainties(
+        arbitration=arbitration,
+        semantic_escalation=dict(control.get("semantic_escalation") or {}),
+        intervention_reasons=intervention_reasons,
+    )
     status = "controlled_stop" if controlled_block and not handoff_loss else (
         "ok" if score >= minimum_score and not handoff_loss else "needs_work"
     )
@@ -78,6 +87,9 @@ def build_role_chain_trace(
         "interaction_score": score,
         "handoff_loss_count": len(handoff_loss),
         "handoff_loss": handoff_loss,
+        "handoff_contracts": handoffs,
+        "arbitration_metrics": arbitration,
+        "unresolved_uncertainties": uncertainties,
         "reselection_count": len(build_reselections) + len(execution_reselections),
         "build_reselection_history": build_reselections,
         "execution_reselection_history": execution_reselections,
@@ -111,6 +123,14 @@ def build_unknown_role_chain_trace(
         "candidate_did_not_auto_promote": promotion_gate.get("automatic_promotion") is not True,
     }
     score = round(sum(checks.values()) / len(checks), 4)
+    handoff_body = {
+        "producer": "project_analyzer",
+        "consumer": "researcher",
+        "target": dict(intake.get("knowledge_gap") or {}).get("gap_id"),
+        "producer_gate": "analyzer_detected_unknown",
+        "continuity_gate": "researcher_received_typed_gap",
+    }
+    handoff_passed = checks["analyzer_detected_unknown"] and checks["researcher_received_typed_gap"]
     return {
         "artifact_type": "RoleChainInteractionTrace",
         "project": intake.get("project"),
@@ -121,6 +141,14 @@ def build_unknown_role_chain_trace(
         "checks": checks,
         "interaction_score": score,
         "handoff_loss_count": sum(not value for value in checks.values()),
+        "handoff_contracts": [{
+            **handoff_body,
+            "status": "preserved" if handoff_passed else "lost",
+            "loss_reason": None if handoff_passed else "unknown_intake_contract_incomplete",
+            "contract_digest": _digest(handoff_body),
+        }],
+        "arbitration_metrics": _arbitration_metrics({}),
+        "unresolved_uncertainties": ["project_archetype_unresolved"],
         "reselection_count": 0,
         "required_human_decision_count": int(candidate_status in {
             "needs_teacher_approval", "needs_codex_approval", "ready_for_human_merge",
@@ -140,6 +168,16 @@ def summarize_role_chain_traces(traces: list[dict[str, Any]]) -> dict[str, Any]:
         "handoff_loss_count": sum(int(row.get("handoff_loss_count") or 0) for row in traces),
         "reselection_count": sum(int(row.get("reselection_count") or 0) for row in traces),
         "required_human_decision_count": sum(int(row.get("required_human_decision_count") or 0) for row in traces),
+        "arbitration_eligible_count": sum(
+            dict(row.get("arbitration_metrics") or {}).get("eligible") is True for row in traces
+        ),
+        "arbitration_invoked_count": sum(
+            dict(row.get("arbitration_metrics") or {}).get("invoked") is True for row in traces
+        ),
+        "arbitration_override_count": sum(
+            dict(row.get("arbitration_metrics") or {}).get("accepted_override") is True for row in traces
+        ),
+        "unresolved_uncertainty_count": sum(len(row.get("unresolved_uncertainties") or []) for row in traces),
         "first_pass_acceptance_count": sum(row.get("first_pass_acceptance") is True for row in known),
         "known_trace_count": len(known),
         "controlled_unknown_stop_count": sum(
@@ -154,3 +192,61 @@ def summarize_role_chain_traces(traces: list[dict[str, Any]]) -> dict[str, Any]:
             row.get("recovery_status") == "bounded_rework_ready" for row in traces
         ),
     }
+
+
+def _handoff_contracts(*, checks: dict[str, bool], selected_target: Any) -> list[dict[str, Any]]:
+    definitions = (
+        ("project_analyzer", "architect", "project_analyzer_gate_passed", "architect_gate_passed"),
+        ("architect", "spec_writer", "architect_gate_passed", "spec_writer_gate_passed"),
+        ("spec_writer", "implementer", "spec_writer_gate_passed", "spec_to_implementer_target_preserved"),
+        ("implementer", "tester", "implementer_gate_passed", "implementer_to_tester_target_preserved"),
+        ("tester", "reviewer", "tester_gate_passed", "tester_to_reviewer_target_preserved"),
+    )
+    rows = []
+    for producer, consumer, producer_check, continuity_check in definitions:
+        passed = checks.get(producer_check) is True and checks.get(continuity_check) is True
+        body = {
+            "producer": producer,
+            "consumer": consumer,
+            "target": selected_target,
+            "producer_gate": producer_check,
+            "continuity_gate": continuity_check,
+        }
+        rows.append({
+            **body,
+            "status": "preserved" if passed else "lost",
+            "loss_reason": None if passed else next(
+                name for name in (producer_check, continuity_check) if checks.get(name) is not True
+            ),
+            "contract_digest": _digest(body),
+        })
+    return rows
+
+
+def _arbitration_metrics(advisory: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source": advisory.get("source") or "deterministic",
+        "eligible": advisory.get("eligible") is True,
+        "invoked": advisory.get("llm_invoked") is True,
+        "accepted_override": advisory.get("accepted") is True,
+        "selected_source": advisory.get("selected_source"),
+        "fallback_used": advisory.get("source") == "deterministic_fallback",
+    }
+
+
+def _unresolved_uncertainties(
+    *, arbitration: dict[str, Any], semantic_escalation: dict[str, Any], intervention_reasons: list[str]
+) -> list[str]:
+    uncertainties = []
+    if semantic_escalation.get("l4_5_required") is True:
+        uncertainties.append("semantic_escalation_pending")
+    if arbitration.get("fallback_used") is True:
+        uncertainties.append("candidate_arbitration_unavailable")
+    if "material_risk_review" in intervention_reasons:
+        uncertainties.append("material_risk_requires_human_review")
+    return uncertainties
+
+
+def _digest(value: Any) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()

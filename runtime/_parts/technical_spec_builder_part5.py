@@ -51,32 +51,42 @@ def _acceptance_by_source(acceptance: list[dict[str, Any]]) -> dict[str, str]:
             result[source] = item_id
     return result
 
-def _append_read_only_ranked_context(scoped: list[dict[str, Any]], ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _bounded_read_only_ranked_context(scoped: list[dict[str, Any]], ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not scoped:
         return scoped
     seen = {str(item.get("source") or "") for item in scoped}
-    scoped_paths = {_source_path(source) for source in seen}
     context = []
+    limit = max(0, int(dict(TECHNICAL_SPEC_POLICY.get("first_slice_scope") or {}).get("read_only_ranked_context_limit", 12)))
     for item in ranked:
         source = str(item.get("source") or "")
         learned_context = bool(item.get("selection_policy_ids"))
-        if not source or source in seen or (
-            _source_path(source) not in scoped_paths and not learned_context
-        ):
+        if not source or source in seen:
             continue
         row = dict(item)
         reason = (
             "learned policy candidate retained as read-only context"
-            if learned_context and _source_path(source) not in scoped_paths
-            else "read-only context candidate retained after first-slice scope enforcement"
+            if learned_context
+            else "ranked candidate retained as read-only context after first-slice scope enforcement"
         )
         row["reasons"] = [*list(row.get("reasons", [])), reason]
         context.append(row)
         seen.add(source)
-    return [*scoped, *context]
+        if len(context) >= limit:
+            break
+    return context
 
-def _source_path(source: str) -> str:
-    return source.split(":", 1)[0].replace("\\", "/").lower()
+
+def _append_learned_ranked_context(
+    scoped: list[dict[str, Any]], context: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    result = list(scoped)
+    seen = {str(item.get("source") or "") for item in result}
+    for item in context:
+        source = str(item.get("source") or "")
+        if source and source not in seen and item.get("selection_policy_ids"):
+            result.append(item)
+            seen.add(source)
+    return result
 
 def _semantic_review_override(contract: dict[str, Any], quality: dict[str, Any], preferred_targets: list[Any]) -> dict[str, Any]:
     policy = dict(TECHNICAL_SPEC_POLICY.get("semantic_review_override") or {})

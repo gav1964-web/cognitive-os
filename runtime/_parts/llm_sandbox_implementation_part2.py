@@ -139,14 +139,14 @@ def _load_compositions(root: Path) -> list[dict[str, Any]]:
 
 def _composition_matches(*, prompt: str, row: dict[str, Any]) -> bool:
     match_all = [str(item).lower() for item in row.get("match_all", [])]
-    if any(marker not in prompt for marker in match_all):
+    if any(not marker_matches(prompt, marker) for marker in match_all):
         return False
     groups = row.get("match_any_groups", [])
     if not isinstance(groups, list):
         raise ValueError("composition match_any_groups must be a list")
     for group in groups:
         markers = [str(item).lower() for item in group]
-        if not markers or not any(marker in prompt for marker in markers):
+        if not markers or not any(marker_matches(prompt, marker) for marker in markers):
             return False
     return True
 

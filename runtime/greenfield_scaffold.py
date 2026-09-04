@@ -64,7 +64,7 @@ def _write_artifacts(project_dir: Path, case_name: str, prompt: str, reference: 
 
 def _clean_generated_scaffold(project_dir: Path) -> None:
     project_dir.mkdir(parents=True, exist_ok=True)
-    for relative in ("src", "tests", ".pytest_cache"):
+    for relative in ("src", "tests", ".pytest_cache", ".pytest-tmp"):
         target = (project_dir / relative).resolve()
         if _is_inside(project_dir, target) and target.exists():
             shutil.rmtree(target)
@@ -125,6 +125,9 @@ def _clean_runtime_artifacts(project_dir: Path) -> None:
         if path.is_dir():
             shutil.rmtree(path)
     for path in project_dir.rglob(".pytest_cache"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob(".pytest-tmp*"):
         if path.is_dir():
             shutil.rmtree(path)
     for path in project_dir.rglob("*.py[co]"):
