@@ -53,9 +53,12 @@ def _semantic_evidence():
         "artifact_type": "NarrowTypeRoleSemanticEvidence",
         "schema_version": "narrow_type_role_semantic_evidence.v1",
         "status": "passed",
+        "evaluation_split": "holdout",
+        "checks": {"holdout_independent_owners_per_stratum": True},
         "cases": [
             {
                 "project_stratum": project_type,
+                "source_owner": f"owner-{project_type}",
                 "role_scores": {role: 9.8 for role in ROLES},
                 "role_artifacts": artifacts,
                 "role_artifact_digests": {

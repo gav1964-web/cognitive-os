@@ -80,13 +80,20 @@ def _bind_pipeline_authority(
                 rule_id="configured_role_pipeline_entry",
                 authority_source="config/role_directory.json",
             )
-        elif (
-            verify_interpreter_decision(current)["status"] != "verified"
-            or current.get("next_stage") != incoming_stage
-            or current.get("target") != bound_target
-            or list(current.get("scope") or []) != sorted(set(bound_scope))
-        ):
-            raise ValueError("configured role pipeline received invalid interpreter authority")
+        else:
+            authority_checks = {
+                "trace_verified": verify_interpreter_decision(current)["status"] == "verified",
+                "next_stage_matches": current.get("next_stage") == incoming_stage,
+                "target_matches": current.get("target") == bound_target,
+                "scope_matches": list(current.get("scope") or []) == sorted(set(bound_scope)),
+            }
+            if not all(authority_checks.values()):
+                failed = ",".join(name for name, passed in authority_checks.items() if not passed)
+                raise ValueError(
+                    "configured role pipeline received invalid interpreter authority "
+                    f"at {step.get('step_id')}: {failed}; "
+                    f"expected_stage={incoming_stage}; actual_stage={current.get('next_stage')}"
+                )
         artifact["interpreter_decision_trace"] = current
         if index + 1 < len(steps):
             next_stage = role_stage(str(steps[index + 1].get("role_id") or ""))

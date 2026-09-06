@@ -17,6 +17,7 @@ from .project_development_experiment_feedback import (
     build_project_development_execution_feedback,
     not_requested_artifacts as _not_requested_artifacts,
 )
+from .project_native_failure_process import _project_version_hint
 
 
 IGNORED_DIGEST_PARTS = {".git", ".pytest_cache", "__pycache__", ".mypy_cache", ".ruff_cache"}
@@ -81,7 +82,10 @@ def run_project_development_experiment(
     )
     from .project_native_failure_intake import run_project_native_verification
     native_verification = (
-        run_project_native_verification(root=root, project=sandbox, failing_nodeids=nodeids, policy=policy)
+        run_project_native_verification(
+            root=root, project=sandbox, failing_nodeids=nodeids, policy=policy,
+            project_version_hint=_project_version_hint(project_dir),
+        )
         if patch.get("status") == "prepared" and sandbox.is_dir() and nodeids and stub_admission.get("status") == "passed"
         else {
             "artifact_type": "ProjectNativeVerificationResult",
@@ -323,4 +327,3 @@ def _read_artifact(value: Any) -> dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
-

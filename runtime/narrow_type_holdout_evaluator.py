@@ -123,7 +123,10 @@ def _semantic_evidence_checks(
         evidence.get("artifact_type") == "NarrowTypeRoleSemanticEvidence"
         and evidence.get("schema_version") == "narrow_type_role_semantic_evidence.v1"
         and evidence.get("status") == "passed"
+        and evidence.get("evaluation_split") == "holdout"
         and bool(cases)
+        and dict(evidence.get("checks") or {}).get("holdout_independent_owners_per_stratum") is True
+        and all(bool(row.get("source_owner")) for row in cases)
     )
     covered_strata = {str(row.get("project_stratum")) for row in cases}
     semantic_quality = structure_valid and set(project_strata).issubset(covered_strata) and all(

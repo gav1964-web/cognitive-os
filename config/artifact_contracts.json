@@ -29,7 +29,7 @@
     "NarrowTypeRoleSemanticEvidence": {
       "producer": "narrow_role_semantic_evaluator",
       "consumers": ["narrow_type_holdout_evaluator", "architect", "reviewer", "human"],
-      "required_fields": ["artifact_type", "schema_version", "status", "cases"]
+      "required_fields": ["artifact_type", "schema_version", "status", "evaluation_split", "checks", "failed_checks", "role_scores", "strata", "cases", "source_apply", "promotion_applied", "evidence_digest"]
     },
     "GeneratedFunctionStubAudit": {
       "producer": "generated_function_stub_audit",

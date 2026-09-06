@@ -23,6 +23,7 @@ from .project_development_selection import (
 from .project_development_source_evidence import collect_source_incompleteness_evidence
 from .project_recognition import recognize_project
 from .role_project_analysis import analyze_role_project
+from .role_pipeline_stages import artifact_by_type
 from .role_project_type_evaluation import classify_project_case
 
 
@@ -135,7 +136,7 @@ def run_project_development(
                 "research_required": "research_required",
                 "controlled_stop": "controlled_stop",
             }.get(str(feedback_continuation.get("status")), "controlled_stop")
-    return {
+    result = {
         "artifact_type": "ProjectDevelopmentRun",
         "schema_version": "project_development_run.v1",
         "status": status,
@@ -167,3 +168,12 @@ def run_project_development(
             "replan_execution_authorized": False,
         },
     }
+    if role_artifacts:
+        result["role_artifacts"] = {
+            "project_map_report": report,
+            "architecture_decision": artifact_by_type(
+                role_artifacts, "ArchitectureDecisionRecord"
+            ),
+            "technical_spec": artifact_by_type(role_artifacts, "TechnicalSpec"),
+        }
+    return result

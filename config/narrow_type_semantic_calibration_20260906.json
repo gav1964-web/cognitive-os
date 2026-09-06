@@ -1,0 +1,38 @@
+{
+  "schema_version": "narrow_type_semantic_manifest.v1",
+  "evaluation_split": "calibration",
+  "cases": [
+    {
+      "project": "platformdirs",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "platformdirs",
+      "source_owner": "platformdirs",
+      "role_report": "artifacts/project_development/project_development_20260906T184431053306Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260906T174940231914Z.json"
+    },
+    {
+      "project": "marshmallow",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "marshmallow-code",
+      "source_owner": "marshmallow-code",
+      "role_report": "artifacts/project_development/project_development_20260906T184437984322Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260906T175029844931Z.json"
+    },
+    {
+      "project": "autoflake_incomplete_import",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "PyCQA",
+      "source_owner": "PyCQA",
+      "role_report": "artifacts/project_development/project_development_20260906T184443812505Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260906T175119120509Z.json"
+    },
+    {
+      "project": "isort_trailing_backslash",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "PyCQA-isort",
+      "source_owner": "PyCQA",
+      "role_report": "artifacts/project_development/project_development_20260906T184452981682Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260906T175406851564Z.json"
+    }
+  ]
+}

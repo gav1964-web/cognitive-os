@@ -198,7 +198,10 @@ def test_failure_repair_transform_binds_effectful_target_without_extraction_rera
             "signature": {"args": [{"name": "csidl_name", "annotation": "str"}], "returns": "str"},
             "snippet": "def get_win_folder_from_registry(csidl_name: str) -> str:\n    return csidl_name",
         }],
-        "acceptance_criteria": [],
+        "acceptance_criteria": [
+            {"id": f"OLD-{index}", "criterion": "generic", "verification": "review"}
+            for index in range(30)
+        ],
         "implementation_handoff": {},
     })
 
@@ -208,6 +211,18 @@ def test_failure_repair_transform_binds_effectful_target_without_extraction_rera
     assert contract["allowed_operator_ids"] == ["fallback_missing_registry_to_env"]
     assert spec["first_slice_reselection_request"]["status"] == "not_required"
     assert spec["acceptance_criteria"][0]["authority"] == "failing_contract_test"
+    assert len(spec["acceptance_criteria"]) == 3
+    assert spec["acceptance_criteria"][1]["id"] == "AC-FAILURE-BOUNDARY"
+    assert spec["acceptance_criteria"][2]["id"] == "AC-FAILURE-REGRESSION"
+    assert {row["target"] for row in spec["requirements"]} == {contract["candidate"]}
+    assert {row["acceptance_id"] for row in spec["traceability_table"]} == {
+        row["id"] for row in spec["acceptance_criteria"]
+    }
+    assert all(
+        row["target"] == contract["candidate"]
+        for rows in spec["verification_strategy"].values()
+        for row in rows
+    )
 
 
 def test_failure_repair_transform_preserves_research_target_without_reducer():
@@ -241,6 +256,8 @@ def test_failure_repair_transform_preserves_research_target_without_reducer():
 
     assert spec["extraction_contract"]["candidate"] == "src/plugin.py:Server.start"
     assert spec["extraction_contract"]["allowed_operator_ids"] == []
+    assert spec["extraction_contract"]["side_effects"]["declared"]
+    assert spec["extraction_contract"]["side_effects"]["requires_validation_gate"] is True
     assert spec["implementation_delta"]["status"] == "semantic_synthesis_required"
     assert spec["implementation_handoff"]["patch_scope"] == ["src/plugin.py:Server.start"]
 

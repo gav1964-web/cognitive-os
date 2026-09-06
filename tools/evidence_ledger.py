@@ -9,16 +9,7 @@ from pathlib import Path
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--root", default=".")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    promote = subparsers.add_parser("promote")
-    promote.add_argument("--source", required=True)
-    promote.add_argument("--producer", required=True)
-    promote.add_argument("--evaluator", required=True)
-    promote.add_argument("--replay", nargs="+", required=True)
-    verify = subparsers.add_parser("verify")
-    verify.add_argument("--entry", required=True)
+    parser = _parser()
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -40,6 +31,20 @@ def main() -> int:
         status = result["status"]
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if status in {"promoted", "verified"} else 1
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", default=".")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    promote = subparsers.add_parser("promote")
+    promote.add_argument("--source", required=True)
+    promote.add_argument("--producer", required=True)
+    promote.add_argument("--evaluator", required=True)
+    promote.add_argument("--replay", nargs=argparse.REMAINDER, required=True)
+    verify = subparsers.add_parser("verify")
+    verify.add_argument("--entry", required=True)
+    return parser
 
 
 if __name__ == "__main__":

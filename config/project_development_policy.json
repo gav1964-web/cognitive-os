@@ -47,6 +47,7 @@
     },
     "project_pytest_plugins": {
       "isort": ["pytest_benchmark.plugin", "hypothesis.extra.pytestplugin"],
+      "platformdirs": ["pytest_mock.plugin"],
       "pytest-socket": ["pytest_benchmark.plugin"]
     },
     "project_nested_pytest_plugins": {

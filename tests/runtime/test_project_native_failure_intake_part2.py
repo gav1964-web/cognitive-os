@@ -100,6 +100,23 @@ def test_project_version_hint_prefers_exact_git_tag(tmp_path, monkeypatch):
     assert _project_version_hint(tmp_path) == "3.1.0"
 
 
+def test_project_version_hint_uses_hermetic_fallback_for_vcs_backend(tmp_path, monkeypatch):
+    class Completed:
+        returncode = 1
+        stdout = ""
+
+    monkeypatch.setattr(
+        "runtime.project_native_failure_process.subprocess.run",
+        lambda *args, **kwargs: Completed(),
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        "[build-system]\nrequires = ['hatch-vcs']\n[project]\ndynamic = ['version']\n",
+        encoding="utf-8",
+    )
+
+    assert _project_version_hint(tmp_path) == "0.0.0"
+
+
 def test_git_build_metadata_is_copied_only_for_declared_version_backend(tmp_path):
     project = tmp_path / "source"
     sandbox = tmp_path / "sandbox"

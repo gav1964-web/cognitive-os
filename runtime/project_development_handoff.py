@@ -24,10 +24,11 @@ def _role_chain_handoff(
     target, scope = _handoff_target_scope(project_report, issue)
     route = str(option.get("route") or "")
     next_stage = "architecture" if route == "role_chain" else "research" if route == "research" else "controlled_stop"
+    chain_goal = _chain_goal(goal, issue)
     trace = build_verified_runtime_transition(
         stage="project_analysis",
         next_stage=next_stage,
-        goal=goal,
+        goal=chain_goal,
         target=target,
         scope=scope,
         evidence=[
@@ -46,10 +47,6 @@ def _role_chain_handoff(
         return {"status": "ready", "executed": False, "route": "architect->spec_writer->implementer->tester->reviewer", "interpreter_decision_trace": trace}
     focused = _focused_project_report(project_report, issue, dict(decision.get("selected_option") or {}))
     enriched = attach_project_recognition(focused, recognition)
-    chain_goal = (
-        f"{goal}. Fix the selected {issue.get('rule_id')} within ProjectDevelopmentDecision evidence: "
-        f"{', '.join(issue.get('evidence') or [])}"
-    )
     artifacts = run_configured_role_prefix(
         goal=chain_goal,
         project_report=enriched,
@@ -78,6 +75,14 @@ def _role_chain_handoff(
         "interpreter_decision_trace": trace,
         "_artifacts": artifacts,
     }
+
+
+def _chain_goal(goal: str, issue: dict[str, Any]) -> str:
+    rule_id = str(issue.get("rule_id") or "").strip()
+    evidence = ", ".join(str(value) for value in issue.get("evidence") or [] if value)
+    if not rule_id:
+        return goal
+    return f"{goal}. Fix the selected {rule_id} within ProjectDevelopmentDecision evidence: {evidence}"
 
 
 def _handoff_target_scope(

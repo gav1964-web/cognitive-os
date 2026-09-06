@@ -97,7 +97,10 @@ def _project_version_hint(project: Path) -> str | None:
     except OSError:
         return None
     match = re.search(r"(?m)^version\s*=\s*['\"]([^'\"]+)['\"]\s*$", content)
-    return match.group(1) if match else None
+    if match:
+        return match.group(1)
+    vcs_markers = ("hatch-vcs", "[tool.setuptools_scm]", "setuptools-git-versioning")
+    return "0.0.0" if any(marker in content for marker in vcs_markers) else None
 
 def _copy_git_build_metadata(project: Path, sandbox: Path, intake: dict[str, Any]) -> bool:
     if not bool(intake.get("preserve_bounded_git_build_metadata", True)):

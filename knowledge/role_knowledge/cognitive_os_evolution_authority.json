@@ -12,14 +12,16 @@
     "Declared distribution scripts are project-identity evidence and must not depend on CLI tokens in a repository name.",
     "Declared project-owned plugin entry points outrank incidental parser or CLI signals when classifying project identity.",
     "Artifact presence, target continuity and a recognized project never create a role score; semantic role evidence is required.",
+    "Failure-repair specifications must replace stale generic requirements, acceptance traceability and verification plans with one target-bound contract.",
+    "Repository lineage and source ownership are separate evidence dimensions; a holdout needs independent owners in every promoted project stratum.",
     "Verification-only execution proves callable acceptance, not project development or architecture quality.",
     "Unknown project clusters remain research candidates and never promote automatically.",
     "Broad Python project strata remain development debt after narrow-role semantic revalidation.",
     "Web UI is deferred until the architecture and authority contracts are stable."
   ],
   "current_sequence": [
-    "semantic_ground_truth_holdout_for_project_analyzer_architect_spec_writer",
-    "narrow_role_revalidation",
+    "freeze_owner_independent_ground_truth_defect_holdout",
+    "narrow_role_independent_holdout_evaluation",
     "framework_plugin_role_revalidation",
     "prospective_narrow_candidate_collection",
     "bounded_L0_L1_experiment_when_candidate_is_ready",
@@ -28,6 +30,8 @@
   ],
   "completed_sequence": [
     "interpreter_boundary_integration",
+    "narrow_known_case_semantic_calibration",
+    "failure_repair_spec_target_binding",
     "framework_plugin_certification_reassessment",
     "narrow_type_certification_reassessment"
   ],
@@ -43,10 +47,23 @@
     "local_corpus_untouched_target_candidates": 634,
     "narrow_certification_status": "revoked_semantic_revalidation_required",
     "narrow_certification_blockers": [
-      "first_three_role_semantic_evidence",
-      "auditable_full_role_artifacts",
-      "project_development_evaluated"
+      "unseen_owner_independent_defect_holdout",
+      "second_cli_source_owner",
+      "independent_holdout_evaluator"
     ],
+    "narrow_calibration_status": "passed_not_certification_authority",
+    "narrow_calibration_projects": 4,
+    "narrow_calibration_role_scores": {
+      "project_analyzer": 10.0,
+      "architect": 10.0,
+      "spec_writer": 10.0,
+      "implementer": 10.0,
+      "tester": 10.0,
+      "reviewer": 10.0
+    },
+    "narrow_calibration_cli_source_owners": 1,
+    "narrow_calibration_library_source_owners": 2,
+    "narrow_calibration_receipt": "sha256:a6a9830866fc751599075f3b985349bc730c7236b1e2b1d3849f7b07f673cb82",
     "narrow_holdout_receipt": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
     "narrow_revoked_certificate_receipt": "sha256:ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657",
     "narrow_reassessment_receipt": "sha256:51c039cec3a6f65acef3dd88dc9286abe2923c95b5a71458098b70dbddbac3d8",
