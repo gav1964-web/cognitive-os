@@ -11,6 +11,7 @@ from .role_project_type_cases import (
     _case_with_loaded_artifacts,
     _classification_debt,
     _foundation_case_is_current,
+    _github_full_chain_evaluation_case,
     _latest_foundation_reports,
     _project_development_evaluation_case,
     _resolved,
@@ -57,6 +58,13 @@ def build_role_project_type_evaluation(
         cases = [dict(row) for row in payload.get("cases", []) if isinstance(row, dict)]
         if payload.get("artifact_type") == "ProjectDevelopmentRun":
             cases = [_project_development_evaluation_case(payload)]
+        legacy_full_chain = (
+            not payload.get("artifact_type")
+            and "execution_in_scope" in dict(payload.get("invariants") or {})
+            and all("project_classification" in case and "executor" in case for case in cases)
+        )
+        if payload.get("artifact_type") == "GitHubFullChainProbeReport" or legacy_full_chain:
+            cases = [_github_full_chain_evaluation_case(case) for case in cases]
         effective_cases = [
             case for case in cases
             if _foundation_case_is_current(payload, case, report_id, foundation_winners)

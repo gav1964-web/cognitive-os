@@ -10,19 +10,20 @@
     "Existing local corpus must be deduplicated and split before targeted external acquisition is allowed.",
     "Prospective errors are evaluated from the latest post-cutoff snapshot of each project; a later clean report retracts stale project evidence.",
     "Declared distribution scripts are project-identity evidence and must not depend on CLI tokens in a repository name.",
+    "Declared project-owned plugin entry points outrank incidental parser or CLI signals when classifying project identity.",
     "Unknown project clusters remain research candidates and never promote automatically.",
     "Broad Python project strata remain development debt after narrow-type certification.",
     "Web UI is deferred until the architecture and authority contracts are stable."
   ],
   "current_sequence": [
     "prospective_narrow_candidate_collection",
-    "framework_plugin_independent_certification",
     "bounded_L0_L1_experiment_when_candidate_is_ready",
     "external_review_for_staging",
     "broad_project_type_hardening"
   ],
   "completed_sequence": [
-    "interpreter_boundary_integration"
+    "interpreter_boundary_integration",
+    "framework_plugin_independent_certification"
   ],
   "narrow_project_types": ["cli_local_tool", "library_pure_transform"],
   "promotion_target_score": 9.7,
@@ -31,7 +32,7 @@
     "role_pipeline_cases_passed": 8,
     "role_pipeline_handoff_loss": 0,
     "local_corpus_unique_projects": 4321,
-    "local_corpus_untouched_target_candidates": 644,
+    "local_corpus_untouched_target_candidates": 634,
     "narrow_certification_status": "certified",
     "narrow_certification_blockers": [],
     "narrow_holdout_receipt": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
@@ -60,11 +61,17 @@
     "prospective_detection_receipt": "sha256:fea5bc684bb0393cd7451ab483c9a65bbd682388626520a71b532a60004a429f",
     "bounded_experiment_queue_receipt": "sha256:881aa221306e21bca1c0ced74d38e8e25a761d1ce36f1cae035b0460db547e2f",
     "framework_plugin_prospective_candidate_projects": 4,
-    "framework_plugin_readiness": "holdout_required",
-    "framework_plugin_certification_granted": false,
+    "framework_plugin_readiness": "certified_after_independent_holdout",
+    "framework_plugin_certification_granted": true,
     "framework_plugin_readiness_receipt": "sha256:d18873738e2cb6b8a3a299aa5d4dc63bacbcaca277676acb3a32a8bb5de51766",
-    "framework_plugin_certification_status": "evidence_required",
-    "framework_plugin_certification_receipt": "sha256:7f9b2efb4825a039efa3fba1438a5bdacfcc11d4916c6442ed2867893e86937c"
+    "framework_plugin_certification_status": "certified",
+    "framework_plugin_holdout_projects": 3,
+    "framework_plugin_holdout_lineages": 3,
+    "framework_plugin_generated_stub_count": 0,
+    "framework_plugin_role_regression_count": 0,
+    "framework_plugin_protected_role_cells": 49,
+    "framework_plugin_holdout_receipt": "sha256:c641cc575c989f30286fe3693ab59ba29e0be8cead6f3173fd2c520be6a551f8",
+    "framework_plugin_certification_receipt": "sha256:2b753d022452ef95039e308a6048e3c89aea7eb256a71a4d883e90106f5d0ace"
   },
   "required_negative_controls": [
     "target_reselection",
@@ -77,7 +84,7 @@
   "deferred": {
     "web_ui": "after stable architecture",
     "broad_project_types": "after a prospective narrow-type experiment and framework certification; they remain explicit development debt",
-    "framework_plugin_build": "separate lane; repeated recognition gap is real but certification requires an independent holdout, generated-stub receipt and no-role-regression receipt",
+    "framework_plugin_expansion": "the bounded plugin/build lane is certified; broader stateful and effect-heavy framework behavior still requires separate evidence",
     "L2": "proposal and test only with external review",
     "L3_L4": "external architecture authority required"
   },

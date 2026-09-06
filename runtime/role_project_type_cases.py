@@ -54,6 +54,61 @@ def _project_development_evaluation_case(payload: dict[str, Any]) -> dict[str, A
     }
 
 
+def _github_full_chain_evaluation_case(case: dict[str, Any]) -> dict[str, Any]:
+    classification = dict(case.get("project_classification") or {})
+    recognition = dict(case.get("project_recognition") or {})
+    artifacts = dict(case.get("artifact_status") or {})
+    executor = dict(case.get("executor") or {})
+    stub = dict(case.get("generated_function_stub_admission") or {})
+    targets = dict(case.get("target_chain") or {})
+    target_values = [
+        targets.get(name)
+        for name in ("spec_target", "implementation_target", "test_target", "review_target")
+    ]
+    recognized = recognition.get("status") == "recognized"
+    chain_ready = (
+        case.get("status") == "ok"
+        and not case.get("failed_checks")
+        and all(artifacts.get(name) for name in (
+            "architecture_decision", "technical_spec", "implementation_plan",
+            "test_plan", "review_findings",
+        ))
+        and bool(target_values[0])
+        and len(set(target_values)) == 1
+        and case.get("conformance_status") == "passed"
+        and int(case.get("contract_violations") or 0) == 0
+        and int(case.get("architecture_drift") or 0) == 0
+    )
+    execution_ready = (
+        chain_ready
+        and executor.get("executor_status") == "ok"
+        and executor.get("executable_acceptance") == "passed"
+        and int(executor.get("callable_harness_count") or 0) > 0
+        and executor.get("source_code_changes") is False
+        and stub.get("status") == "passed"
+    )
+    role_scores: dict[str, float] = {}
+    if recognized:
+        role_scores["project_analyzer"] = 9.7
+    if chain_ready:
+        role_scores.update({"architect": 9.7, "spec_writer": 9.7})
+    if execution_ready:
+        role_scores.update({"implementer": 9.8, "tester": 10.0, "reviewer": 9.8})
+    project = str(case.get("project") or "unknown-project")
+    return {
+        **case,
+        "project": project,
+        "project_stratum": classification.get("project_stratum"),
+        "project_classification": classification,
+        "source_lineage": f"github_owner:{project.split('__', 1)[0].lower()}",
+        "role_scores": role_scores,
+        "programmer_evidence": {
+            "transformation_evaluated": False,
+            "verification_authority": "github_full_chain_executable_acceptance",
+        },
+    }
+
+
 def _classification_debt(
     role_observations: Iterable[list[dict[str, Any]]],
 ) -> dict[str, Any]:

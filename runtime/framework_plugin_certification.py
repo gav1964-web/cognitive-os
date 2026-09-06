@@ -45,7 +45,8 @@ def build_framework_plugin_certification(
             "evidence_complete": not list(
                 cell.get("evidence_gaps") or cell.get("gaps") or []
             ),
-            "promotion_eligible": cell.get("promotion_eligible") is True,
+            "dedicated_lane_ready": cell.get("maturity") == "mature"
+            and not list(cell.get("evidence_gaps") or []),
         }
         cell_checks.append({
             "role_id": role,

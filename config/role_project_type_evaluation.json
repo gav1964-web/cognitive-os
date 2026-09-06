@@ -1,7 +1,7 @@
 {
   "schema_version": "role_project_type_evaluation.v1",
-  "classification_version": "role_project_classification.2026-08-27.15",
-  "compatible_classification_versions": ["role_project_classification.2026-08-27.14", "role_project_classification.2026-08-27.13", "role_project_classification.2026-08-27.12", "role_project_classification.2026-08-27.11", "role_project_classification.2026-08-26.9", "role_project_classification.2026-08-26.8", "role_project_classification.2026-08-26.7", "role_project_classification.2026-08-26.6", "role_project_classification.2026-08-26.5"],
+  "classification_version": "role_project_classification.2026-09-06.16",
+  "compatible_classification_versions": ["role_project_classification.2026-08-27.15", "role_project_classification.2026-08-27.14", "role_project_classification.2026-08-27.13", "role_project_classification.2026-08-27.12", "role_project_classification.2026-08-27.11", "role_project_classification.2026-08-26.9", "role_project_classification.2026-08-26.8", "role_project_classification.2026-08-26.7", "role_project_classification.2026-08-26.6", "role_project_classification.2026-08-26.5"],
   "default_risk_profiles_by_stratum": {
     "library_pure_transform": ["deterministic"]
   },
@@ -22,6 +22,10 @@
   "project_identity_overrides": [
     {"project_contains": "automlops", "project_stratum": "framework_plugin_build"}
   ],
+  "plugin_identity_precedence": {
+    "project_stratum": "framework_plugin_build",
+    "minimum_entrypoint_count": 1
+  },
   "entrypoint_identity_precedence": {
     "project_stratum": "cli_local_tool",
     "when_selected": ["library_pure_transform", "stateful_service_database"],

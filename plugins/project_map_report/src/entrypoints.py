@@ -12,7 +12,52 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 runtime
 from .core_paths import is_core_path
 
 
+PLUGIN_GROUPS = {
+    "babel.extractors",
+    "flake8.extension",
+    "flake8.report",
+    "hatch",
+    "mkdocs.plugins",
+    "mypy.plugins",
+    "pytest11",
+    "sphinx.html_themes",
+    "tox",
+}
+
+
 def declared_script_entrypoints(files: dict[str, Any]) -> list[str]:
+    payload = _pyproject_payload(files)
+    if not payload:
+        return []
+    scripts = dict(dict(payload.get("project") or {}).get("scripts") or {})
+    poetry = dict(dict(dict(payload.get("tool") or {}).get("poetry") or {}).get("scripts") or {})
+    return [
+        f"pyproject.toml:[project.scripts]:{name}={target}"
+        for name, target in sorted({**poetry, **scripts}.items())
+        if isinstance(target, str) and target.strip()
+    ][:40]
+
+
+def declared_plugin_entrypoints(files: dict[str, Any]) -> list[str]:
+    payload = _pyproject_payload(files)
+    if not payload:
+        return []
+    project = dict(dict(payload.get("project") or {}).get("entry-points") or {})
+    poetry = dict(dict(dict(payload.get("tool") or {}).get("poetry") or {}).get("plugins") or {})
+    declared = {**poetry, **project}
+    entries = []
+    for group, values in sorted(declared.items()):
+        if str(group) not in PLUGIN_GROUPS or not isinstance(values, dict):
+            continue
+        entries.extend(
+            f"pyproject.toml:[plugin:{group}]:{name}={target}"
+            for name, target in sorted(values.items())
+            if isinstance(target, str) and target.strip()
+        )
+    return entries[:40]
+
+
+def _pyproject_payload(files: dict[str, Any]) -> dict[str, Any]:
     row = next(
         (
             dict(item)
@@ -22,18 +67,12 @@ def declared_script_entrypoints(files: dict[str, Any]) -> list[str]:
         None,
     )
     if not row or not isinstance(row.get("text"), str):
-        return []
+        return {}
     try:
         payload = tomllib.loads(str(row["text"]))
     except (tomllib.TOMLDecodeError, ValueError):
-        return []
-    scripts = dict(dict(payload.get("project") or {}).get("scripts") or {})
-    poetry = dict(dict(dict(payload.get("tool") or {}).get("poetry") or {}).get("scripts") or {})
-    return [
-        f"pyproject.toml:[project.scripts]:{name}={target}"
-        for name, target in sorted({**poetry, **scripts}.items())
-        if isinstance(target, str) and target.strip()
-    ][:40]
+        return {}
+    return payload
 
 
 def project_entrypoints(

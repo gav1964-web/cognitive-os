@@ -4,6 +4,7 @@ from pathlib import Path
 
 from tools.github_full_chain_probe import (
     _ephemeral_python_cache_status,
+    _generated_stub_admission,
     _quality_score,
     _run_case,
     _target_is_advised,
@@ -132,6 +133,36 @@ def test_full_chain_ignores_only_ephemeral_python_cache_status():
     assert _ephemeral_python_cache_status("?? package/__pycache__/module.pyc") is True
     assert _ephemeral_python_cache_status(" M package/module.py") is False
     assert _ephemeral_python_cache_status("?? package/generated.json") is False
+
+
+def test_full_chain_stub_admission_checks_generated_sandbox_delta(tmp_path):
+    project = tmp_path / "project"
+    sandbox = tmp_path / "execution" / "patch_sandbox" / "project"
+    project.mkdir()
+    sandbox.mkdir(parents=True)
+    (project / "module.py").write_text("def value():\n    return 1\n", encoding="utf-8")
+    (sandbox / "module.py").write_text("def value():\n    pass\n", encoding="utf-8")
+
+    admission = _generated_stub_admission(
+        project,
+        {"execution_dir": str(tmp_path / "execution")},
+        {"patches": [{"file": "module.py"}]},
+    )
+
+    assert admission["status"] == "blocked"
+    assert admission["violations"][0]["change"] == "function_replaced_with_stub"
+
+
+def test_full_chain_stub_admission_passes_empty_generated_delta(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+
+    admission = _generated_stub_admission(
+        project, {"execution_dir": str(tmp_path / "execution")}, {"patches": []}
+    )
+
+    assert admission["status"] == "passed"
+    assert admission["checked_files"] == []
 
 
 def test_pilot_recognition_stops_unsupported_project_before_role_chain(tmp_path, monkeypatch):

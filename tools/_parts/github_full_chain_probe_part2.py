@@ -135,6 +135,9 @@ def _run_case(
         "contract_violations": len(review.get("contract_violations", [])),
         "architecture_drift": len(review.get("architecture_drift", [])),
         "executor": executor,
+        "generated_function_stub_admission": dict(
+            executor.get("generated_function_stub_admission") or {}
+        ),
         "execution_reselection": execution_feedback,
         "forbidden_sources": sorted(set(forbidden)),
         "llm_invoked": False,

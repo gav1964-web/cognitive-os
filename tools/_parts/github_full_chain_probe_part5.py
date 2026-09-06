@@ -18,6 +18,7 @@ def _run_executor(
     acceptance = dict(executable.get("summary") or {})
     patch = _read_json(result.get("patch_package_path"))
     synthesis = dict(patch.get("patch_synthesis") or {})
+    stub_admission = _generated_stub_admission(project_dir, result, patch)
     return {
         "executor_status": result.get("status"),
         "execution_dir": result.get("execution_dir"),
@@ -31,12 +32,51 @@ def _run_executor(
         "acceptance_skipped_reasons": acceptance.get("skipped_reason_counts"),
         "acceptance_skipped_targets": acceptance.get("skipped_targets"),
         "source_code_changes": bool(result.get("source_code_changes")),
+        "generated_function_stub_admission": stub_admission,
     }
+
+
+def _generated_stub_admission(
+    project_dir: Path, result: dict[str, Any], patch: dict[str, Any]
+) -> dict[str, Any]:
+    execution_dir = Path(str(result.get("execution_dir") or ""))
+    candidates = [
+        execution_dir / "patch_sandbox" / "project",
+        execution_dir / "recovery_patch_sandbox" / "project",
+    ]
+    sandbox = next((path for path in candidates if path.is_dir()), None)
+    has_python_patch = any(
+        isinstance(row, dict)
+        and str(row.get("file") or row.get("path") or "").endswith(".py")
+        for row in patch.get("patches") or []
+    )
+    if has_python_patch and sandbox is None:
+        return {
+            "artifact_type": "GeneratedFunctionStubAdmission",
+            "status": "blocked",
+            "checked_files": [],
+            "violations": [],
+            "parse_failures": [{
+                "file": "",
+                "side": "sandbox",
+                "error": "generated patch sandbox is unavailable",
+            }],
+        }
+    return inspect_generated_function_stubs(
+        original_project=project_dir,
+        sandbox_project=sandbox or project_dir,
+        patch=patch,
+    )
 
 
 def _executor_not_run() -> dict[str, Any]:
     keys = ["patch_package_status", "patch_synthesis_status", "test_result_status", "executable_acceptance", "callable_harness_count", "acceptance_signal", "acceptance_skipped_reasons", "acceptance_skipped_targets"]
-    return {"executor_status": "not_run", **{key: None for key in keys}, "source_code_changes": False}
+    return {
+        "executor_status": "not_run",
+        **{key: None for key in keys},
+        "source_code_changes": False,
+        "generated_function_stub_admission": {},
+    }
 
 
 def _read_json(path: object) -> dict[str, Any]:

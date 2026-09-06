@@ -6,7 +6,11 @@ from typing import Any
 
 from .answers import build_answers, inline_value
 from .core_paths import is_core_path
-from .entrypoints import declared_script_entrypoints, project_entrypoints
+from .entrypoints import (
+    declared_plugin_entrypoints,
+    declared_script_entrypoints,
+    project_entrypoints,
+)
 from .language_scope import language_scope
 from .source_health import source_health as build_source_health
 
@@ -21,10 +25,12 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     python_structure = dict(payload["python_structure"])  # type: ignore[index]
     runtime_commands = dict(payload["runtime_commands"])  # type: ignore[index]
     declared_scripts = declared_script_entrypoints(files)
+    declared_plugins = declared_plugin_entrypoints(files)
     stack_with_scripts = {
         **stack,
         "declared_script_entrypoints": declared_scripts,
-        "entrypoints": [*list(stack.get("entrypoints") or []), *declared_scripts],
+        "declared_plugin_entrypoints": declared_plugins,
+        "entrypoints": [*list(stack.get("entrypoints") or []), *declared_scripts, *declared_plugins],
     }
     source_health = build_source_health(tree, stack_with_scripts, files, python_structure, runtime_commands)
     security_health = _security_health(files)
@@ -43,6 +49,7 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "analysis_scope": analysis_scope,
     }
     summary["declared_script_entrypoints"] = declared_scripts
+    summary["declared_plugin_entrypoints"] = declared_plugins
     risks = _risks(tree, stack, files, python_structure, runtime_commands, source_health)
     answers = build_answers(summary, risks, stack, files, python_structure, runtime_commands)
     answers["0_source_health"] = source_health

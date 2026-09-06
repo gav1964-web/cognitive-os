@@ -71,6 +71,21 @@
       "consumers": ["architect", "promotion_controller", "evaluation", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "project_stratum", "target_score", "required_roles", "cell_checks", "holdout_receipt", "receipt_status", "receipt_checks", "failed_cell_roles", "failed_receipt_checks", "promotion_eligible", "promotion_applied", "next_action", "certificate_digest"]
     },
+    "FrameworkPluginHoldoutSelection": {
+      "producer": "framework_plugin_holdout_selection",
+      "consumers": ["project_analyzer", "researcher", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "generated_at", "eligibility_generated_at", "scanned_untouched_projects", "qualified_project_count", "acquisition", "holdout", "shortage", "network_fallback", "checks", "failed_checks", "safety", "selection_digest"]
+    },
+    "FrameworkPluginHoldoutEvidence": {
+      "producer": "framework_plugin_holdout_evaluator",
+      "consumers": ["framework_plugin_certification", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "checks", "generated_stub_count", "holdout_provenance", "input_digests", "evidence_digest"]
+    },
+    "RoleEvaluationRegression": {
+      "producer": "role_evaluation_regression",
+      "consumers": ["framework_plugin_holdout_evaluator", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "protected_cell_count", "regression_count", "checks", "regression_digest"]
+    },
     "CorpusEvaluationPlan": {
       "producer": "corpus_evaluation_factory",
       "consumers": ["project_analyzer", "researcher", "evaluation", "human"],

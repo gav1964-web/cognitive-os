@@ -81,12 +81,12 @@ def test_framework_certification_rejects_regression(tmp_path: Path) -> None:
     assert report["receipt_checks"]["no_role_regression"] is False
 
 
-def test_framework_certification_requires_cell_promotion_eligibility(tmp_path: Path) -> None:
+def test_framework_certification_is_independent_of_generic_lane_deferral(tmp_path: Path) -> None:
     report = build_framework_plugin_certification(
         evaluation=_evaluation(promotion_eligible=False),
         evidence_root=tmp_path,
         holdout_receipt=_receipt(tmp_path),
     )
 
-    assert report["status"] == "evidence_required"
-    assert set(report["failed_cell_roles"]) == set(REQUIRED_ROLES)
+    assert report["status"] == "certified"
+    assert report["promotion_eligible"] is True

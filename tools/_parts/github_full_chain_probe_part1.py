@@ -16,6 +16,7 @@ sys.dont_write_bytecode = True
 from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from runtime.configured_execution_feedback import close_configured_execution_feedback
 from runtime.programmer_executor import run_programmer_executor
+from runtime.generated_stub_admission import inspect_generated_function_stubs
 from runtime.project_recognition import attach_project_recognition, recognize_project
 from runtime.role_foundation_field_trial import _primary_language_scope
 from runtime.role_project_analysis import analyze_role_project
@@ -112,6 +113,8 @@ def run_probe(
     worst_case = min((float(case["quality_score"]) for case in scored), default=0.0)
     ready_by_worst_case = bool(scored) and worst_case >= READY_THRESHOLD and not any(case["status"] == "needs_review" for case in scored)
     return {
+        "artifact_type": "GitHubFullChainProbeReport",
+        "schema_version": "github_full_chain_probe_report.v1",
         "status": "ok" if ready_by_worst_case and all(case["status"] in {"ok", "blocked_ok", "out_of_scope"} for case in cases) else "needs_review",
         "milestone": label,
         "generated_at": datetime.now(timezone.utc).isoformat(),

@@ -294,6 +294,25 @@ def test_declared_script_overrides_low_confidence_packaging_text_profile() -> No
     assert classification["project_archetype_scope"] == "internal_capability"
 
 
+def test_declared_plugin_identity_wins_over_script_entrypoint() -> None:
+    classification = classify_project_case({
+        "project": "sample__tool",
+        "artifacts": {"project_map_report": {"content": {
+            "source_health": {
+                "entrypoint_count": 2,
+                "declared_script_entrypoint_count": 1,
+                "declared_plugin_entrypoint_count": 1,
+            },
+            "answers": {"1_scope": {"domain_profile": {
+                "kind": "configuration_file_parser_library", "confidence": 0.63,
+            }}},
+        }}},
+    })
+
+    assert classification["project_stratum"] == "framework_plugin_build"
+    assert classification["matched_markers"][0] == "declared_plugin_entrypoint"
+
+
 def test_declared_script_does_not_override_source_backed_packaging_backend() -> None:
     classification = classify_project_case({
         "project": "pypa__build",

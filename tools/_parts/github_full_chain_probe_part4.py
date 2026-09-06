@@ -56,6 +56,11 @@ def _chain_checks(
                 _check("executable_acceptance_passed", executor.get("executable_acceptance") == "passed"),
                 _check("executable_acceptance_callable", executor_evidence_ready(executor)),
                 _check("executor_kept_source_clean", executor.get("source_code_changes") is False),
+                _check(
+                    "generated_function_stub_admission_passed",
+                    dict(executor.get("generated_function_stub_admission") or {}).get("status")
+                    == "passed",
+                ),
             ]
         )
     return checks

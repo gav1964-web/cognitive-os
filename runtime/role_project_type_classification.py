@@ -78,7 +78,7 @@ def classify_project_case(
         )
 
     pre_entrypoint_stratum = str(selected["id"])
-    entrypoint_override = _entrypoint_identity_override(
+    entrypoint_override = _plugin_identity_override(evidence, config) or _entrypoint_identity_override(
         case=case,
         evidence=evidence,
         selected_id=str(selected["id"]),
@@ -154,6 +154,22 @@ def _classification_evidence(case: dict[str, Any]) -> dict[str, Any]:
         if key in artifacts:
             evidence[key] = artifacts[key]
     return evidence
+
+
+def _plugin_identity_override(
+    evidence: dict[str, Any], policy: dict[str, Any]
+) -> dict[str, str] | None:
+    rule = dict(policy.get("plugin_identity_precedence") or {})
+    project_map = dict(evidence.get("project_map_report") or {})
+    content = dict(project_map.get("content") or project_map)
+    source_health = dict(content.get("source_health") or {})
+    count = int(source_health.get("declared_plugin_entrypoint_count") or 0)
+    if count < int(rule.get("minimum_entrypoint_count") or 1):
+        return None
+    target = str(rule.get("project_stratum") or "")
+    if not target:
+        return None
+    return {"project_stratum": target, "evidence_marker": "declared_plugin_entrypoint"}
 
 
 def _entrypoint_identity_override(
