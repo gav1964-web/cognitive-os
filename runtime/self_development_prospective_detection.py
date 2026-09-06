@@ -54,6 +54,7 @@ def load_prospective_detection_policy(path: str | None = None) -> dict[str, Any]
         "pre_cutoff_evidence_forbidden",
         "cross_project_independence_required",
         "candidate_requires_future_holdout",
+        "latest_project_snapshot_required",
     )
     if not all(invariants.get(key) is True for key in required_true):
         raise ProspectiveDetectionError("prospective detection invariants are incomplete")
@@ -80,6 +81,7 @@ def run_prospective_detection(
     audit = {
         "files_seen": 0,
         "post_cutoff_files": 0,
+        "superseded_project_reports": 0,
         "pre_cutoff_excluded": 0,
         "out_of_scope_project_type": 0,
         "eligible_project_reports": 0,
@@ -88,6 +90,7 @@ def run_prospective_detection(
         "eligible_observations": 0,
     }
     source_digests: dict[str, str] = {}
+    latest_reports: dict[str, tuple[datetime, str, Path, dict[str, Any]]] = {}
     for path in sorted(source_dir.glob(str(rules["source_glob"]))):
         audit["files_seen"] += 1
         report = _read_json(path)
@@ -97,10 +100,24 @@ def run_prospective_detection(
             continue
         audit["post_cutoff_files"] += 1
         project = str(report.get("project") or "")
+        if not project:
+            audit["out_of_scope_project_type"] += 1
+            continue
+        report_key = (generated_at, path.as_posix())
+        current = latest_reports.get(project)
+        if current is None or report_key > current[:2]:
+            if current is not None:
+                audit["superseded_project_reports"] += 1
+            latest_reports[project] = (generated_at, path.as_posix(), path, report)
+        else:
+            audit["superseded_project_reports"] += 1
+
+    for project in sorted(latest_reports):
+        generated_at, _, path, report = latest_reports[project]
         project_type = str(
             dict(dict(report.get("recognition") or {}).get("classification") or {}).get("project_stratum") or ""
         )
-        if not project or project_type not in eligible_types:
+        if project_type not in eligible_types:
             audit["out_of_scope_project_type"] += 1
             continue
         audit["eligible_project_reports"] += 1
@@ -194,7 +211,8 @@ def run_prospective_detection(
     checks = {
         "temporal_boundary_enforced": audit["pre_cutoff_excluded"] + audit["post_cutoff_files"] == audit["files_seen"],
         "mature_scope_configured": bool(eligible_types),
-        "source_digests_captured": len(source_digests) == audit["post_cutoff_files"] - audit["out_of_scope_project_type"],
+        "latest_project_snapshot_enforced": audit["eligible_project_reports"] <= len(latest_reports),
+        "source_digests_captured": len(source_digests) == audit["eligible_project_reports"],
         "no_source_apply": True,
         "no_promotion_applied": True,
     }

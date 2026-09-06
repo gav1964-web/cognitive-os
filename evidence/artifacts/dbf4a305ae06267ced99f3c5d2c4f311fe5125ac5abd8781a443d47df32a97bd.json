@@ -1,0 +1,325 @@
+{
+  "artifact_type": "SelfDevelopmentChallengeCampaignReport",
+  "campaign_digest": "sha256:7d7257d3b030f4e39fbe52c8a8d5557e999ee044ed081021f7633459cfb8b667",
+  "cases": [
+    {
+      "actual_project_type": "cli_local_tool",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "cli_local_tool",
+      "issue_rules": [],
+      "matched": true,
+      "project": "kootenpv__cliche",
+      "recognition_status": "recognized",
+      "source": "artifacts/project_development/project_development_20260906T052405627616Z.json"
+    },
+    {
+      "actual_project_type": "framework_plugin_build",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "cli_local_tool",
+      "issue_rules": [
+        "recognition_gap"
+      ],
+      "matched": false,
+      "project": "pypa__sampleproject",
+      "recognition_status": "ambiguous",
+      "source": "artifacts/project_development/project_development_20260906T052408319597Z.json"
+    },
+    {
+      "actual_project_type": "cli_local_tool",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "cli_local_tool",
+      "issue_rules": [],
+      "matched": true,
+      "project": "contextforge-org__contextforge-cli",
+      "recognition_status": "recognized",
+      "source": "artifacts/project_development/project_development_20260906T052412842307Z.json"
+    },
+    {
+      "actual_project_type": "library_pure_transform",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "library_pure_transform",
+      "issue_rules": [],
+      "matched": true,
+      "project": "finaprins-public__simple-date-parser",
+      "recognition_status": "recognized",
+      "source": "artifacts/project_development/project_development_20260906T052415491007Z.json"
+    },
+    {
+      "actual_project_type": "web_api_middleware",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "library_pure_transform",
+      "issue_rules": [
+        "recognition_gap"
+      ],
+      "matched": false,
+      "project": "han-aim__template__main",
+      "recognition_status": "ambiguous",
+      "source": "artifacts/project_development/project_development_20260906T052418392175Z.json"
+    },
+    {
+      "actual_project_type": "async_worker_scheduler",
+      "collector_status": "candidate_detected",
+      "expected_project_type": "library_pure_transform",
+      "issue_rules": [
+        "recognition_gap"
+      ],
+      "matched": false,
+      "project": "Alex1232__parser-shop",
+      "recognition_status": "ambiguous",
+      "source": "artifacts/project_development/project_development_20260906T052421592475Z.json"
+    }
+  ],
+  "coverage": {
+    "cli_local_tool": {
+      "executed": 3,
+      "recognition_failures": 1,
+      "recognized_as_expected": 2,
+      "systematic_issue_cases": 1
+    },
+    "library_pure_transform": {
+      "executed": 3,
+      "recognition_failures": 2,
+      "recognized_as_expected": 1,
+      "systematic_issue_cases": 2
+    }
+  },
+  "detection": {
+    "report_path": "F:/ubuntu/test/9/artifacts/self_development/self_development_prospective_detection_20260906T052421804737Z.json",
+    "status": "candidate_detected"
+  },
+  "experiment_queue": {
+    "artifact_type": "SelfDevelopmentExperimentQueue",
+    "certification": {
+      "project_strata": [
+        "cli_local_tool",
+        "library_pure_transform"
+      ],
+      "receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
+      "status": "certified"
+    },
+    "checks": {
+      "certification_receipt_verified": true,
+      "certified_scope_nonempty": true,
+      "detection_verified": true,
+      "no_active_apply": true,
+      "no_automatic_promotion": true
+    },
+    "deferred": [
+      {
+        "candidate_digest": "sha256:bc94c5c942c22f46e3d6544f5994180822b8babda1dcf3777c4d960b115b277d",
+        "change_class": "L0",
+        "project_types": [
+          "framework_plugin_build"
+        ],
+        "proposal_id": "sdcp_8250913714b9d6315332",
+        "reasons": [
+          "project_type_not_certified"
+        ],
+        "signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build",
+        "status": "deferred"
+      }
+    ],
+    "deferred_count": 1,
+    "detection": {
+      "candidate_count": 1,
+      "report_digest": "sha256:403052b9d6d9cdaf7d4c6755668a6620bd786a78dce493e7306fbcee605977e7",
+      "status": "candidate_detected"
+    },
+    "failed_checks": [],
+    "next_action": "collect_or_certify_matching_project_type",
+    "queue_digest": "sha256:202275de355cd68ea3918c9e7528c89b9a6d3d9f33665824151356f52b30af64",
+    "ready": [],
+    "ready_count": 0,
+    "safety": {
+      "active_kb_write": false,
+      "promotion_applied": false,
+      "source_apply": false
+    },
+    "schema_version": "self_development_experiment_queue.v1",
+    "status": "waiting_for_certified_candidate"
+  },
+  "generated_at": "2026-09-06T05:24:21.809741+00:00",
+  "manifest_digest": "sha256:fe43983ac326f0feae15130d34a7a0fcdfe20c7e66510fefb145dd3402311058",
+  "manifest_snapshot": {
+    "candidate_counts": {
+      "cli_local_tool": 2,
+      "library_pure_transform": 21
+    },
+    "checks": {
+      "all_selected_untouched": true,
+      "external_only_after_local_shortage": true,
+      "external_revisions_bound": true,
+      "holdout_not_consumed": true,
+      "no_promotion_applied": true,
+      "no_source_apply": true,
+      "source_index_is_local_and_sufficient": true,
+      "split_content_independent": true,
+      "split_owner_independent": true
+    },
+    "safety": {
+      "holdout_consumed": false,
+      "promotion_applied": false,
+      "source_apply": false
+    },
+    "scanned_projects": 1382,
+    "source_index": "artifacts/self_development/self_development_corpus_eligibility_20260831T052410743974Z.json",
+    "splits": [
+      {
+        "acquisition": [
+          {
+            "acquisition_reason": "measured_local_cli_shortage",
+            "canonical_project": "kootenpv__cliche",
+            "content_digest": "sha256:726f63e2d9392c71f16655ebffbf37bdf29853fde426255f34e762ad725cc9a7",
+            "expected_project_type": "cli_local_tool",
+            "owner": "kootenpv",
+            "project": "kootenpv__cliche",
+            "project_root": "artifacts/challenge_external_acquisition/src/kootenpv__cliche",
+            "revision": "09c3b192d94d184f5b0e93a4c6cdac790cc758b3",
+            "source_kind": "targeted_external_acquisition",
+            "source_url": "https://github.com/kootenpv/cliche.git"
+          },
+          {
+            "acquisition_reason": "measured_local_cli_shortage",
+            "canonical_project": "pypa__sampleproject",
+            "content_digest": "sha256:b656928494cfca0c1b328dd42f44b7e73e55d5543bbddd918b785aac7fbe3226",
+            "expected_project_type": "cli_local_tool",
+            "owner": "pypa",
+            "project": "pypa__sampleproject",
+            "project_root": "artifacts/challenge_external_acquisition/src/pypa__sampleproject",
+            "revision": "621e4974ca25ce531773def586ba3ed8e736b3fc",
+            "source_kind": "targeted_external_acquisition",
+            "source_url": "https://github.com/pypa/sampleproject.git"
+          },
+          {
+            "acquisition_reason": "measured_local_cli_shortage",
+            "canonical_project": "contextforge-org__contextforge-cli",
+            "content_digest": "sha256:77a1eb687ccae2a0a2a7915eaf5eeb22a674369b931c3fc86867800707d46221",
+            "expected_project_type": "cli_local_tool",
+            "owner": "contextforge-org",
+            "project": "contextforge-org__contextforge-cli",
+            "project_root": "artifacts/challenge_external_acquisition/src/contextforge-org__contextforge-cli",
+            "revision": "348f6316a2877cb227536c4cbb9a0e2439a2ab8d",
+            "source_kind": "targeted_external_acquisition",
+            "source_url": "https://github.com/contextforge-org/contextforge-cli.git"
+          }
+        ],
+        "checks": {
+          "content_disjoint": true,
+          "owner_disjoint": true
+        },
+        "holdout": [
+          {
+            "canonical_project": "dagimg-dot__cjx-cli-tool",
+            "content_digest": "sha256:e5674cd235c8e41dac4ed4224c79f7bf1aede8f99798386ea450e53dae0a0551",
+            "expected_project_type": "cli_local_tool",
+            "owner": "dagimg-dot",
+            "project": "dagimg-dot__cjx-cli-tool",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/dagimg-dot__cjx-cli-tool",
+            "signal_scores": {
+              "cli_local_tool": 2,
+              "library_pure_transform": 0
+            }
+          },
+          {
+            "canonical_project": "mulaza__organizer-cli",
+            "content_digest": "sha256:0392f94ac172029ef1624703f65d1ad856c978f6a14393195ffebc166d6eb50e",
+            "expected_project_type": "cli_local_tool",
+            "owner": "mulaza",
+            "project": "Mulaza__Organizer-Cli",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/Mulaza__Organizer-Cli",
+            "signal_scores": {
+              "cli_local_tool": 4,
+              "library_pure_transform": 0
+            }
+          }
+        ],
+        "project_type": "cli_local_tool"
+      },
+      {
+        "acquisition": [
+          {
+            "canonical_project": "finaprins-public__simple-date-parser",
+            "content_digest": "sha256:2361fe32ac251636375ea753e15ecbd578afbb4506331cf0b23d3074e27e44a6",
+            "expected_project_type": "library_pure_transform",
+            "owner": "finaprins-public",
+            "project": "finaprins-public__simple-date-parser",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_r3_w9007ab6d/src/finaprins-public__simple-date-parser",
+            "signal_scores": {
+              "cli_local_tool": 1,
+              "library_pure_transform": 2
+            }
+          },
+          {
+            "canonical_project": "han-aim__template__main",
+            "content_digest": "sha256:cb8ec245cbc2b79a5471c9092183717220790cbfd10239687b87f6916e686c35",
+            "expected_project_type": "library_pure_transform",
+            "owner": "han-aim",
+            "project": "han-aim__template__main",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_6fd68980fa8e_w6ad5706b/src/han-aim__template__main",
+            "signal_scores": {
+              "cli_local_tool": 2,
+              "library_pure_transform": 3
+            }
+          },
+          {
+            "canonical_project": "alex1232__parser-shop",
+            "content_digest": "sha256:78860f355b286e5f26aeba4f08bde5e93c70ef37c4c2fce6d38c53883bd85de4",
+            "expected_project_type": "library_pure_transform",
+            "owner": "alex1232",
+            "project": "Alex1232__parser-shop",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_7ed6a0c2dbc6_r3_w4f87cd2c/src/Alex1232__parser-shop",
+            "signal_scores": {
+              "cli_local_tool": 0,
+              "library_pure_transform": 2
+            }
+          }
+        ],
+        "checks": {
+          "content_disjoint": true,
+          "owner_disjoint": true
+        },
+        "holdout": [
+          {
+            "canonical_project": "aphp-carpem__llm-data-parser",
+            "content_digest": "sha256:7bed109cb3873e2651835bd961d1a2a4faf206efcc0c8a028e4b002cdc5bdee4",
+            "expected_project_type": "library_pure_transform",
+            "owner": "aphp-carpem",
+            "project": "aphp-carpem__llm-data-parser",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_w36c03f7b/src/aphp-carpem__llm-data-parser",
+            "signal_scores": {
+              "cli_local_tool": 2,
+              "library_pure_transform": 6
+            }
+          },
+          {
+            "canonical_project": "combobulator__warcraftlogs-parser",
+            "content_digest": "sha256:fb6f2846890b7635e4bbda11a53898d9f3bb2e9fc1d93792b76a23d263a7527a",
+            "expected_project_type": "library_pure_transform",
+            "owner": "combobulator",
+            "project": "Combobulator__warcraftlogs-parser",
+            "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_w36c03f7b/src/Combobulator__warcraftlogs-parser",
+            "signal_scores": {
+              "cli_local_tool": 0,
+              "library_pure_transform": 2
+            }
+          }
+        ],
+        "project_type": "library_pure_transform"
+      }
+    ]
+  },
+  "safety": {
+    "holdout_consumed": false,
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "schema_version": "self_development_challenge_campaign_report.v1",
+  "status": "completed_with_classification_mismatches",
+  "summary": {
+    "detected_candidates": 1,
+    "executed": 6,
+    "expected_type_matches": 3,
+    "experiment_ready_candidates": 0,
+    "systematic_issue_cases": 3
+  }
+}

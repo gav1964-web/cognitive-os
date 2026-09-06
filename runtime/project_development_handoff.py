@@ -5,6 +5,11 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from .interpreter_runtime_governance import (
+    build_verified_runtime_transition,
+    evidence_record,
+    project_target_scope,
+)
 from .project_development_delta import development_delta_transform
 from .project_recognition import attach_project_recognition
 from .role_pipeline_stages import artifact_by_type, run_configured_role_prefix
@@ -15,11 +20,30 @@ def _role_chain_handoff(
     goal: str, run_role_chain: bool, policy: dict[str, Any],
 ) -> dict[str, Any]:
     option = dict(decision.get("selected_option") or {})
-    if option.get("route") != "role_chain":
-        return {"status": "research_required", "executed": False, "route": option.get("route")}
-    if not run_role_chain:
-        return {"status": "ready", "executed": False, "route": "architect->spec_writer->implementer->tester->reviewer"}
     issue = dict(decision.get("selected_issue") or {})
+    target, scope = _handoff_target_scope(project_report, issue)
+    route = str(option.get("route") or "")
+    next_stage = "architecture" if route == "role_chain" else "research" if route == "research" else "controlled_stop"
+    trace = build_verified_runtime_transition(
+        stage="project_analysis",
+        next_stage=next_stage,
+        goal=goal,
+        target=target,
+        scope=scope,
+        evidence=[
+            evidence_record("ProjectRecognitionDecision", recognition, kind="recognition"),
+            evidence_record("ProjectDevelopmentDecision", decision, kind="development_decision"),
+        ],
+        rule_id="project_development_role_chain_handoff",
+        authority_source="config/project_development.json",
+        outcome="controlled_stop" if next_stage == "controlled_stop" else "accepted",
+    )
+    if trace["status"] != "accepted":
+        return {"status": "controlled_stop", "executed": False, "route": route or None, "interpreter_decision_trace": trace}
+    if option.get("route") != "role_chain":
+        return {"status": "research_required", "executed": False, "route": option.get("route"), "interpreter_decision_trace": trace}
+    if not run_role_chain:
+        return {"status": "ready", "executed": False, "route": "architect->spec_writer->implementer->tester->reviewer", "interpreter_decision_trace": trace}
     focused = _focused_project_report(project_report, issue, dict(decision.get("selected_option") or {}))
     enriched = attach_project_recognition(focused, recognition)
     chain_goal = (
@@ -31,6 +55,9 @@ def _role_chain_handoff(
         project_report=enriched,
         until_artifact_type="ReviewFindings",
         artifact_transform=development_delta_transform(decision, policy),
+        prior_interpreter_trace=trace,
+        interpreter_target=target,
+        interpreter_scope=scope,
     )
     spec = artifact_by_type(artifacts, "TechnicalSpec")
     target = str(dict(spec.get("extraction_contract") or {}).get("candidate") or "")
@@ -48,8 +75,19 @@ def _role_chain_handoff(
         "issue_target_aligned": aligned,
         "alignment_policy": "selected target must be the issue evidence target or share its source file",
         "review_recommendation": artifact_by_type(artifacts, "ReviewFindings").get("recommendation"),
+        "interpreter_decision_trace": trace,
         "_artifacts": artifacts,
     }
+
+
+def _handoff_target_scope(
+    project_report: dict[str, Any], issue: dict[str, Any]
+) -> tuple[str, list[str]]:
+    values = [str(value) for value in issue.get("affected_targets") or [] if value]
+    values.extend(str(value) for value in issue.get("evidence") or [] if ".py" in str(value))
+    if values:
+        return values[0], sorted(set(values[:8]))
+    return project_target_scope(project_report)
 
 
 def _target_issue_aligned(target: str, evidence: list[str]) -> bool:

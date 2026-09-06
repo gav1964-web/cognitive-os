@@ -1,3 +1,4 @@
+from runtime.interpreter_authority import verify_interpreter_decision
 from runtime.role_recovery_contract import build_role_recovery_contract
 
 
@@ -16,6 +17,8 @@ def test_role_return_is_bounded_and_never_authorizes_retry():
     assert contract["status"] == "return_ready"
     assert contract["execution_authorized"] is False
     assert contract["automatic_retry"] is False
+    assert contract["interpreter_decision_trace"]["next_stage"] == "implementation"
+    assert verify_interpreter_decision(contract["interpreter_decision_trace"])["status"] == "verified"
 
 
 def test_role_return_blocks_target_reselection_and_scope_expansion():

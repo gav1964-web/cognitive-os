@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase, run_configured_role_prefix
+from .interpreter_authority import verify_interpreter_decision
 from .role_project_analysis import analyze_role_project
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
@@ -167,7 +168,14 @@ def stage_after_review(state: dict[str, Any]) -> None:
     )
     _run_recovery_developer_stage(state)
     transition = dict(state["control_plane"].get("role_transition", {}))
-    state["next_action"] = str(transition.get("next_action") or _next_action(state["review"]))
+    trace = dict(state["control_plane"].get("interpreter_decision_trace") or {})
+    verification = verify_interpreter_decision(trace) if trace else {"status": "invalid"}
+    state["interpreter_decision_verification"] = verification
+    state["next_action"] = (
+        str(transition.get("next_action") or _next_action(state["review"]))
+        if verification.get("status") == "verified" and trace.get("status") == "accepted"
+        else "controlled_stop"
+    )
 
 
 def _run_recovery_developer_stage(state: dict[str, Any]) -> None:
@@ -199,6 +207,14 @@ def _run_recovery_developer_stage(state: dict[str, Any]) -> None:
 
 
 def stage_after_decision(state: dict[str, Any]) -> None:
+    if state.get("next_action") == "controlled_stop":
+        state["transform"] = {
+            "artifact_type": "ProjectTransformResult",
+            "status": "controlled_stop",
+            "reason": "interpreter_authority_not_verified",
+            "source_changes": False,
+        }
+        return
     context = state["lifecycle_context"]
     context.update(
         {

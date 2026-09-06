@@ -32,7 +32,12 @@ def load_interpreter_coverage_policy(path: str | None = None) -> dict[str, Any]:
 
 
 def run_interpreter_coverage_audit(*, root: Path, policy: dict[str, Any]) -> dict[str, Any]:
-    authority_calls = set(policy.get("authority_calls") or [])
+    required_calls_by_module = dict(policy.get("required_authority_calls") or {})
+    authority_calls = set(policy.get("authority_calls") or []) | {
+        str(call)
+        for calls in required_calls_by_module.values()
+        for call in calls
+    }
     transition_markers = set(policy.get("transition_markers") or [])
     modules = []
     for relative in policy.get("required_modules") or []:
@@ -44,12 +49,20 @@ def run_interpreter_coverage_audit(*, root: Path, policy: dict[str, Any]) -> dic
         strings = {node.value for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)}
         observed_transitions = sorted(marker for marker in transition_markers if marker in names or marker in strings or marker in source)
         observed_authority = sorted(authority_calls.intersection(names))
+        required_authority = sorted(
+            str(call) for call in required_calls_by_module.get(str(relative).replace("\\", "/"), [])
+        )
         requires_trace = bool(observed_transitions)
-        covered = bool(observed_authority) if requires_trace else True
+        covered = (
+            set(required_authority).issubset(observed_authority)
+            if required_authority
+            else bool(observed_authority)
+        ) if requires_trace else True
         modules.append({
             "module": str(relative).replace("\\", "/"),
             "requires_interpreter_trace": requires_trace,
             "transition_markers": observed_transitions,
+            "required_authority_calls": required_authority,
             "authority_calls": observed_authority,
             "status": "covered" if covered else "bypass_gap",
             "source_sha256": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
@@ -60,6 +73,9 @@ def run_interpreter_coverage_audit(*, root: Path, policy: dict[str, Any]) -> dic
     checks = {
         "all_required_modules_read": len(modules) == len(policy.get("required_modules") or []),
         "transition_producers_identified": bool(required),
+        "authority_requirements_bound": all(
+            row["required_authority_calls"] or row["authority_calls"] for row in required
+        ),
         "minimum_coverage_met": coverage >= float(policy.get("minimum_coverage") or 1.0),
         "report_only": dict(policy.get("invariants") or {}).get("report_only") is True,
         "no_source_apply": True,

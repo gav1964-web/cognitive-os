@@ -66,6 +66,11 @@
       "consumers": ["architect", "evaluation", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "target_score", "role_checks", "prospective_candidates", "checks", "failed_checks", "next_action", "certification_granted", "promotion_applied", "report_digest"]
     },
+    "FrameworkPluginCertification": {
+      "producer": "framework_plugin_certification",
+      "consumers": ["architect", "promotion_controller", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "project_stratum", "target_score", "required_roles", "cell_checks", "holdout_receipt", "receipt_status", "receipt_checks", "failed_cell_roles", "failed_receipt_checks", "promotion_eligible", "promotion_applied", "next_action", "certificate_digest"]
+    },
     "CorpusEvaluationPlan": {
       "producer": "corpus_evaluation_factory",
       "consumers": ["project_analyzer", "researcher", "evaluation", "human"],

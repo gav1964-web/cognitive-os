@@ -37,6 +37,7 @@ def _policy() -> dict:
             "source_apply": False,
             "promotion_applied": False,
             "candidate_requires_future_holdout": True,
+            "latest_project_snapshot_required": True,
         },
     }
 
@@ -127,6 +128,30 @@ def test_repeated_reports_for_one_project_do_not_fake_independence(tmp_path: Pat
     assert watch["additional_independent_projects_required"] == 2
     assert watch["projects"] == ["same-project"]
     assert len(watch["evidence"]) == 1
+    assert report["audit"]["superseded_project_reports"] == 2
+
+
+def test_newer_clean_report_retracts_old_project_error(tmp_path: Path) -> None:
+    _workspace(tmp_path)
+    for index, project in enumerate(("alpha", "beta", "gamma"), start=1):
+        _write_report(tmp_path, index, project)
+    _write_report(
+        tmp_path,
+        4,
+        "gamma",
+        generated_at="2026-09-01T00:00:00+00:00",
+        rule_id="resolved_issue",
+    )
+
+    report = run_prospective_detection(root=tmp_path, policy=_policy(), write=False)
+
+    assert report["status"] == "waiting_for_evidence"
+    assert report["candidate_count"] == 0
+    assert report["watchlist_count"] == 1
+    assert report["watchlist"][0]["projects"] == ["alpha", "beta"]
+    assert report["audit"]["superseded_project_reports"] == 1
+    assert report["audit"]["eligible_reports_without_systematic_issue"] == 1
+    assert report["checks"]["latest_project_snapshot_enforced"] is True
 
 
 def test_pre_cutoff_and_non_systematic_reports_are_excluded(tmp_path: Path) -> None:
@@ -218,3 +243,4 @@ def test_current_policy_is_fail_closed() -> None:
     assert policy["minimum_independent_projects"] == 3
     assert policy["invariants"]["pre_cutoff_evidence_forbidden"] is True
     assert policy["invariants"]["promotion_applied"] is False
+    assert policy["invariants"]["latest_project_snapshot_required"] is True

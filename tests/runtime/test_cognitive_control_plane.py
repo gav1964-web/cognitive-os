@@ -36,6 +36,8 @@ def test_control_plane_decides_known_role_transition_without_l45():
     assert result["layer"] == "L4.0"
     assert result["artifact_promotion_gate"]["status"] == "passed"
     assert result["role_transition"]["next_action"] == "run_project_transform"
+    assert result["interpreter_decision_trace"]["next_stage"] == "implementation"
+    assert result["interpreter_decision_trace"]["status"] == "accepted"
     assert result["semantic_escalation"]["l4_5_required"] is False
     assert result["crystallization_backlog"]
 
@@ -99,6 +101,7 @@ def test_prompt_product_control_plane_routes_ready_prompt_to_build():
     assert result["mode"] == "prompt_to_product"
     assert result["prompt_product_gate"]["status"] == "passed"
     assert result["role_transition"]["next_action"] == "build_verified_system_package"
+    assert result["interpreter_decision_trace"]["next_stage"] == "project_analysis"
     assert result["semantic_escalation"]["l4_5_required"] is False
     assert result["crystallization_backlog"]
 

@@ -64,6 +64,7 @@
     "cross_project_independence_required": true,
     "source_apply": false,
     "promotion_applied": false,
-    "candidate_requires_future_holdout": true
+    "candidate_requires_future_holdout": true,
+    "latest_project_snapshot_required": true
   }
 }

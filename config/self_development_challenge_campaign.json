@@ -37,6 +37,30 @@
       "expected_project_type": "cli_local_tool",
       "source_url": "https://github.com/ott2/isabelle-layout.git",
       "revision": "f8b3f72f4fb41e3c9094c4745556bb07d804c696"
+    },
+    {
+      "project": "kootenpv__cliche",
+      "owner": "kootenpv",
+      "project_root": "artifacts/challenge_external_acquisition/src/kootenpv__cliche",
+      "expected_project_type": "cli_local_tool",
+      "source_url": "https://github.com/kootenpv/cliche.git",
+      "revision": "09c3b192d94d184f5b0e93a4c6cdac790cc758b3"
+    },
+    {
+      "project": "pypa__sampleproject",
+      "owner": "pypa",
+      "project_root": "artifacts/challenge_external_acquisition/src/pypa__sampleproject",
+      "expected_project_type": "cli_local_tool",
+      "source_url": "https://github.com/pypa/sampleproject.git",
+      "revision": "621e4974ca25ce531773def586ba3ed8e736b3fc"
+    },
+    {
+      "project": "contextforge-org__contextforge-cli",
+      "owner": "contextforge-org",
+      "project_root": "artifacts/challenge_external_acquisition/src/contextforge-org__contextforge-cli",
+      "expected_project_type": "cli_local_tool",
+      "source_url": "https://github.com/contextforge-org/contextforge-cli.git",
+      "revision": "348f6316a2877cb227536c4cbb9a0e2439a2ab8d"
     }
   ],
   "invariants": {

@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from .interpreter_authority import verify_interpreter_decision
+from .interpreter_runtime_governance import (
+    build_verified_runtime_transition,
+    evidence_record,
+    project_target_scope,
+    role_stage,
+)
 from .role_artifact_interpreter import load_role_artifact_pipeline, run_role_artifact_pipeline
 from .role_directory import load_role_directory
 from .technical_spec_policy import load_technical_spec_policy
@@ -16,6 +23,9 @@ def run_configured_role_prefix(
     until_artifact_type: str | None = None,
     until_output_key: str | None = None,
     reselection_triggers: set[str] | None = None,
+    prior_interpreter_trace: dict[str, Any] | None = None,
+    interpreter_target: str | None = None,
+    interpreter_scope: list[str] | None = None,
     **kwargs: Any,
 ) -> dict[str, dict[str, Any]]:
     pipeline = configured_pipeline_prefix(
@@ -24,8 +34,13 @@ def run_configured_role_prefix(
     )
     artifacts = run_role_artifact_pipeline(goal=goal, project_report=project_report, pipeline=pipeline, **kwargs)
     if not _pipeline_produces(pipeline, "TechnicalSpec"):
+        _bind_pipeline_authority(
+            artifacts=artifacts, pipeline=pipeline, goal=goal,
+            project_report=project_report, prior_trace=prior_interpreter_trace,
+            target=interpreter_target, scope=interpreter_scope,
+        )
         return artifacts
-    return _close_first_slice_reselection_loop(
+    artifacts = _close_first_slice_reselection_loop(
         artifacts=artifacts,
         goal=goal,
         project_report=project_report,
@@ -33,6 +48,59 @@ def run_configured_role_prefix(
         pipeline_kwargs=kwargs,
         reselection_triggers=reselection_triggers,
     )
+    _bind_pipeline_authority(
+        artifacts=artifacts, pipeline=pipeline, goal=goal,
+        project_report=project_report, prior_trace=prior_interpreter_trace,
+        target=interpreter_target, scope=interpreter_scope,
+    )
+    return artifacts
+
+
+def _bind_pipeline_authority(
+    *, artifacts: dict[str, dict[str, Any]], pipeline: dict[str, Any], goal: str,
+    project_report: dict[str, Any], prior_trace: dict[str, Any] | None,
+    target: str | None, scope: list[str] | None,
+) -> None:
+    derived_target, derived_scope = project_target_scope(project_report)
+    bound_target = target or derived_target
+    bound_scope = scope or derived_scope
+    steps = [dict(step) for step in pipeline.get("steps") or []]
+    current = dict(prior_trace or {}) or None
+    for index, step in enumerate(steps):
+        incoming_stage = role_stage(str(step.get("role_id") or ""))
+        artifact = artifacts[str(step["output_key"])]
+        if current is None:
+            current = build_verified_runtime_transition(
+                stage="project_analysis",
+                next_stage=incoming_stage,
+                goal=goal,
+                target=bound_target,
+                scope=bound_scope,
+                evidence=[evidence_record("ProjectMapReport", project_report, kind="project_report")],
+                rule_id="configured_role_pipeline_entry",
+                authority_source="config/role_directory.json",
+            )
+        elif (
+            verify_interpreter_decision(current)["status"] != "verified"
+            or current.get("next_stage") != incoming_stage
+            or current.get("target") != bound_target
+            or list(current.get("scope") or []) != sorted(set(bound_scope))
+        ):
+            raise ValueError("configured role pipeline received invalid interpreter authority")
+        artifact["interpreter_decision_trace"] = current
+        if index + 1 < len(steps):
+            next_stage = role_stage(str(steps[index + 1].get("role_id") or ""))
+            current = build_verified_runtime_transition(
+                stage=incoming_stage,
+                next_stage=next_stage,
+                goal=goal,
+                target=bound_target,
+                scope=bound_scope,
+                evidence=[evidence_record(str(artifact.get("artifact_type") or step["output_key"]), artifact, kind="role_artifact")],
+                rule_id=f"configured_role_pipeline:{step.get('step_id')}",
+                authority_source="config/role_directory.json",
+                prior_trace=current,
+            )
 
 
 def _close_first_slice_reselection_loop(

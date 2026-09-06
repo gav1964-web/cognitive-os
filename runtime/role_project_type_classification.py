@@ -6,7 +6,13 @@ import json
 import re
 from typing import Any
 
+from .project_type_token_matcher import marker_matches, match_project_stratum
 from .role_project_type_evaluation_policy import load_role_project_type_policy
+
+
+# Compatibility exports for the evaluation facade; new code should use the matcher module.
+_marker_matches = marker_matches
+_matched_stratum = match_project_stratum
 
 
 def classify_project_case(
@@ -62,7 +68,7 @@ def classify_project_case(
         matched = [contract_override["marker"]]
     else:
         matcher_text = authoritative_text if (archetype or contract_family) else identity_text
-        selected, matched = _matched_stratum(
+        selected, matched = match_project_stratum(
             config["strata"], matcher_text, identity_text, authoritative_text
         )
         source = (
@@ -90,7 +96,7 @@ def classify_project_case(
     risk_profiles = []
     for row in config.get("risk_profiles", []):
         markers = [str(item).lower() for item in row.get("markers", [])]
-        if any(_marker_matches(marker, risk_text) for marker in markers):
+        if any(marker_matches(marker, risk_text) for marker in markers):
             risk_profiles.append(str(row["id"]))
     if not risk_profiles:
         risk_profiles = [
@@ -98,7 +104,7 @@ def classify_project_case(
             dict(config.get("default_risk_profiles_by_stratum") or {}).get(str(selected["id"]), [])
         ] or ["unspecified"]
     project_name_text = _normalized_text({"project": case.get("project")})
-    name_stratum, name_markers = _matched_stratum(
+    name_stratum, name_markers = match_project_stratum(
         config["strata"], project_name_text, project_name_text, ""
     )
     name_stratum_id = str(name_stratum["id"]) if name_markers else None
@@ -155,7 +161,13 @@ def _entrypoint_identity_override(
 ) -> dict[str, str] | None:
     rule = dict(policy.get("entrypoint_identity_precedence") or {})
     target = str(rule.get("project_stratum") or "")
-    if not target or selected_id not in {str(value) for value in rule.get("when_selected") or []}:
+    direct_selected = selected_id in {str(value) for value in rule.get("when_selected") or []}
+    low_confidence_selected = (
+        selected_id in {str(value) for value in rule.get("when_selected_low_confidence") or []}
+        and _project_archetype_confidence(evidence)
+        <= float(rule.get("maximum_archetype_confidence") or 0.0)
+    )
+    if not target or not (direct_selected or low_confidence_selected):
         return None
     project_map = dict(evidence.get("project_map_report") or {})
     content = dict(project_map.get("content") or project_map)
@@ -168,6 +180,8 @@ def _entrypoint_identity_override(
         rule.get("declared_script_entrypoint_precedence") is True
         and int(source_health.get("declared_script_entrypoint_count") or 0) > 0
     )
+    if low_confidence_selected and not declared_script:
+        return None
     project_name_match = any(re.search(pattern, project_name, re.IGNORECASE) for pattern in patterns)
     if not declared_script and not project_name_match:
         return None
@@ -175,6 +189,15 @@ def _entrypoint_identity_override(
         "project_stratum": target,
         "evidence_marker": "declared_script_entrypoint" if declared_script else "project_name",
     }
+
+
+def _project_archetype_confidence(evidence: dict[str, Any]) -> float:
+    project_map = dict(evidence.get("project_map_report") or {})
+    content = dict(project_map.get("content") or project_map)
+    answers = dict(content.get("answers") or {})
+    scope = dict(answers.get("1_scope") or answers.get("scope") or {})
+    profile = dict(scope.get("domain_profile") or content.get("domain_profile") or {})
+    return float(profile.get("confidence") or 0.0)
 
 
 def _project_archetype(evidence: dict[str, Any], case: dict[str, Any]) -> str:
@@ -301,7 +324,7 @@ def _contract_family_override(
         row = dict(raw)
         target = str(row.get("project_stratum") or "")
         marker = str(row.get("marker") or "")
-        if target in strata and _marker_matches(marker, text):
+        if target in strata and marker_matches(marker, text):
             return {"project_stratum": target, "marker": marker}
     return None
 
@@ -346,43 +369,3 @@ def _normalized_text(value: Any) -> str:
     except (TypeError, ValueError):
         return str(value).lower().replace("-", "_")
 
-
-def _matched_stratum(
-    strata: list[dict[str, Any]], text: str, identity_text: str, authoritative_text: str
-) -> tuple[dict[str, Any], list[str]]:
-    candidates = []
-    fallback = None
-    for index, raw in enumerate(strata):
-        row = dict(raw)
-        if row["id"] == "unknown_new_archetype":
-            fallback = row
-            continue
-        search_text = identity_text if row.get("identity_only") is True else text
-        matched = [
-            str(marker) for marker in row.get("markers", [])
-            if _marker_matches(str(marker), search_text)
-        ]
-        if matched:
-            identity_hits = sum(
-                _marker_matches(str(marker), identity_text) for marker in row.get("markers", [])
-            )
-            authoritative_hits = sum(
-                _marker_matches(str(marker), authoritative_text) for marker in row.get("markers", [])
-            )
-            candidates.append((
-                authoritative_hits, identity_hits, len(matched), max(map(len, matched)),
-                -index, row, matched,
-            ))
-    if not candidates:
-        return fallback or {"id": "unknown_new_archetype", "label": "Unknown"}, []
-    _, _, _, _, _, selected, matched = max(candidates, key=lambda item: item[:5])
-    return selected, matched
-
-
-def _marker_matches(marker: str, text: str) -> bool:
-    normalized = marker.lower().replace("-", "_").replace(" ", "_").strip("_")
-    if not normalized:
-        return False
-    parts = [re.escape(part) for part in normalized.split("_") if part]
-    pattern = r"(?<![a-z0-9])" + r"[_\s-]+".join(parts) + r"(?![a-z0-9])"
-    return re.search(pattern, text) is not None

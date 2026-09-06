@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+from runtime.interpreter_runtime_governance import (
+    build_verified_runtime_transition,
+    evidence_record,
+)
 from runtime.l4_decision_table import (
     match_prompt_product_rule,
     match_prompt_product_transition_rule,
@@ -29,6 +33,14 @@ def run_cognitive_control_plane(
         prompt_adequacy=prompt_adequacy,
         llm_invoked=llm_invoked,
     )
+    interpreter_trace = _role_transition_trace(goal, artifacts, review, promotion, transition)
+    if interpreter_trace["status"] != "accepted":
+        transition = {
+            "status": "controlled_stop",
+            "next_action": "controlled_stop",
+            "reason_code": "interpreter_authority_rejected_transition",
+            "controller": "interpreter_authority.v1",
+        }
     return {
         "artifact_type": "CognitiveControlPlaneDecision",
         "layer": "L4.0",
@@ -38,6 +50,7 @@ def run_cognitive_control_plane(
         "prompt_adequacy": prompt_adequacy or {"status": "not_evaluated", "reason": "role_pipeline_goal"},
         "artifact_promotion_gate": promotion,
         "role_transition": transition,
+        "interpreter_decision_trace": interpreter_trace,
         "semantic_escalation": escalation,
         "crystallization_backlog": _crystallization_backlog(transition, promotion, escalation),
         "principle": "code controls known repeatable decisions; L4.5 is reserved for semantic uncertainty",
@@ -53,6 +66,22 @@ def run_prompt_product_control_plane(
     gate = _prompt_product_gate(prompt_adequacy, supported_template)
     transition = _prompt_product_transition(prompt_adequacy, gate)
     escalation = _prompt_product_escalation(prompt, prompt_adequacy, gate, llm_invoked)
+    next_stage = (
+        "project_analysis" if transition.get("next_action") == "build_verified_system_package"
+        else "research" if transition.get("next_action") in {"ask_clarification", "request_l45_semantic_hypothesis"}
+        else "controlled_stop"
+    )
+    interpreter_trace = build_verified_runtime_transition(
+        stage="goal_intake",
+        next_stage=next_stage,
+        goal=prompt,
+        target=str(prompt_adequacy.get("system_type") or "unknown_product"),
+        scope=["prompt_product"],
+        evidence=[evidence_record("PromptAdequacyGate", prompt_adequacy, kind="prompt_adequacy")],
+        rule_id=str(transition.get("rule_id") or transition.get("reason_code") or "prompt_product_route"),
+        authority_source="config/l4_decision_rules.json",
+        outcome="controlled_stop" if next_stage == "controlled_stop" else "accepted",
+    )
     return {
         "artifact_type": "CognitiveControlPlaneDecision",
         "layer": "L4.0",
@@ -64,10 +93,35 @@ def run_prompt_product_control_plane(
         "artifact_promotion_gate": {"status": "not_applicable", "reason": "prompt_to_product_uses_prompt_product_gate"},
         "prompt_product_gate": gate,
         "role_transition": transition,
+        "interpreter_decision_trace": interpreter_trace,
         "semantic_escalation": escalation,
         "crystallization_backlog": _prompt_product_crystallization_backlog(transition, gate, escalation),
         "principle": "Prompt-to-product advances only through explicit gates; L4.5 is a bounded hypothesis source, not a free executor",
     }
+
+
+def _role_transition_trace(
+    goal: str, artifacts: dict[str, dict[str, Any]], review: dict[str, Any],
+    promotion: dict[str, Any], transition: dict[str, Any],
+) -> dict[str, Any]:
+    next_action = str(transition.get("next_action") or "")
+    next_stage = "architecture" if next_action == "rework_role_artifacts" else "implementation"
+    spec = dict(artifacts.get("technical_spec") or {})
+    target = str(dict(spec.get("extraction_contract") or {}).get("candidate") or "role_artifacts")
+    scope = [target.split(":", 1)[0] if ":" in target else target]
+    return build_verified_runtime_transition(
+        stage="review",
+        next_stage=next_stage,
+        goal=goal,
+        target=target,
+        scope=scope,
+        evidence=[
+            evidence_record("ReviewFindings", review, kind="review"),
+            evidence_record("ArtifactPromotionGate", promotion, kind="promotion_gate"),
+        ],
+        rule_id=str(transition.get("reason_code") or "role_transition"),
+        authority_source="config/role_directory.json",
+    )
 
 def _artifact_promotion_gate(artifacts: dict[str, dict[str, Any]], review: dict[str, Any]) -> dict[str, Any]:
     required = {

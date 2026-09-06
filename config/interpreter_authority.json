@@ -12,12 +12,12 @@
     "evaluation"
   ],
   "transitions": {
-    "goal_intake": ["project_analysis"],
+    "goal_intake": ["project_analysis", "research", "controlled_stop"],
     "project_analysis": ["architecture", "research", "controlled_stop"],
     "research": ["architecture", "controlled_stop"],
     "architecture": ["specification", "research", "controlled_stop"],
     "specification": ["implementation", "architecture", "controlled_stop"],
-    "implementation": ["verification", "specification", "controlled_stop"],
+    "implementation": ["verification", "review", "specification", "controlled_stop"],
     "verification": ["review", "implementation", "architecture", "controlled_stop"],
     "review": ["evaluation", "implementation", "architecture", "controlled_stop"],
     "evaluation": ["completed", "research", "controlled_stop"]

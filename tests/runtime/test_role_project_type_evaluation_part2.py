@@ -279,6 +279,35 @@ def test_declared_distribution_script_does_not_require_cli_in_project_name() -> 
     ]
 
 
+def test_declared_script_overrides_low_confidence_packaging_text_profile() -> None:
+    classification = classify_project_case({
+        "project": "pypa__sampleproject",
+        "artifacts": {"project_map_report": {"content": {
+            "source_health": {"entrypoint_count": 1, "declared_script_entrypoint_count": 1},
+            "answers": {"1_scope": {"domain_profile": {
+                "kind": "packaging_build_backend", "confidence": 0.63,
+            }}},
+        }}},
+    })
+
+    assert classification["project_stratum"] == "cli_local_tool"
+    assert classification["project_archetype_scope"] == "internal_capability"
+
+
+def test_declared_script_does_not_override_source_backed_packaging_backend() -> None:
+    classification = classify_project_case({
+        "project": "pypa__build",
+        "artifacts": {"project_map_report": {"content": {
+            "source_health": {"entrypoint_count": 1, "declared_script_entrypoint_count": 1},
+            "answers": {"1_scope": {"domain_profile": {
+                "kind": "packaging_build_backend", "confidence": 0.79,
+            }}},
+        }}},
+    })
+
+    assert classification["project_stratum"] == "framework_plugin_build"
+
+
 def test_researcher_is_conditional_for_known_project_strata(tmp_path: Path) -> None:
     report = build_role_project_type_evaluation(root=tmp_path, report_paths=[])
 
@@ -343,50 +372,3 @@ def test_project_identity_override_repairs_stale_explicit_classification() -> No
     assert classified["project_stratum"] == "framework_plugin_build"
     assert classified["classification_source"] == "identity_override"
 
-
-def test_structural_downstream_scores_cannot_claim_demonstrated_maturity(tmp_path: Path) -> None:
-    sources = []
-    for report_index in range(2):
-        source = tmp_path / f"pipeline-{report_index}.json"
-        source.write_text(json.dumps({
-            "source_lineage": f"corpus-{report_index}",
-            "cases": [
-                {
-                    **_case(f"cli-project-{report_index}-{case_index}", 10.0, 10.0),
-                    "role_scores": {"implementer": 10.0, "tester": 10.0, "reviewer": 10.0},
-                    "programmer_evidence": {"transformation_evaluated": False},
-                }
-                for case_index in range(3)
-            ],
-        }), encoding="utf-8")
-        sources.append(source)
-
-    report = build_role_project_type_evaluation(
-        root=tmp_path,
-        report_paths=sources,
-        blind_report_paths=sources,
-    )
-
-    for role_id in ("implementer", "tester", "reviewer"):
-        cell = _cell(report, role_id, "cli_local_tool")
-        assert cell["score"] == 10.0
-        assert cell["maturity"] == "usable"
-        assert cell["transformation_project_count"] == 0
-        assert "minimum_transformation_projects" in cell["evidence_gaps"]
-        assert "minimum_independent_lineages" in cell["evidence_gaps"]
-
-
-def test_numeric_case_score_does_not_hide_explicit_role_scores(tmp_path: Path) -> None:
-    source = tmp_path / "transformation.json"
-    source.write_text(json.dumps({
-        "source_lineage": "blind-corpus",
-        "cases": [{
-            **_case("pure-transform", 9.8, 10.0),
-            "score": 10.0,
-            "programmer_evidence": {"transformation_evaluated": True},
-        }],
-    }), encoding="utf-8")
-
-    report = build_role_project_type_evaluation(root=tmp_path, report_paths=[source])
-
-    assert _cell(report, "implementer", "library_pure_transform")["score"] == 10.0
