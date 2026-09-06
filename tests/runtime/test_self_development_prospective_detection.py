@@ -80,11 +80,14 @@ def _write_report(
     }), encoding="utf-8")
 
 
-def test_current_corpus_waits_for_strictly_new_evidence() -> None:
+def test_current_corpus_enforces_thresholds_on_live_evidence() -> None:
     report = run_prospective_detection(root=ROOT, write=False)
 
-    assert report["status"] == "waiting_for_evidence"
-    assert report["candidate_count"] == 0
+    assert report["status"] in {"waiting_for_evidence", "candidate_detected"}
+    assert all(
+        row["independent_project_count"] >= report["minimum_independent_projects"]
+        for row in report["candidates"]
+    )
     assert report["audit"]["post_cutoff_files"] >= 10
     assert report["audit"]["pre_cutoff_excluded"] == 75
     assert all(report["checks"].values())

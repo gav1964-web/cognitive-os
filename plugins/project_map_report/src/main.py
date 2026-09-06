@@ -6,6 +6,7 @@ from typing import Any
 
 from .answers import build_answers, inline_value
 from .core_paths import is_core_path
+from .entrypoints import declared_script_entrypoints, project_entrypoints
 from .language_scope import language_scope
 from .source_health import source_health as build_source_health
 
@@ -19,7 +20,13 @@ def run(payload: dict[str, object]) -> dict[str, object]:
     files = dict(payload["files"])  # type: ignore[index]
     python_structure = dict(payload["python_structure"])  # type: ignore[index]
     runtime_commands = dict(payload["runtime_commands"])  # type: ignore[index]
-    source_health = build_source_health(tree, stack, files, python_structure, runtime_commands)
+    declared_scripts = declared_script_entrypoints(files)
+    stack_with_scripts = {
+        **stack,
+        "declared_script_entrypoints": declared_scripts,
+        "entrypoints": [*list(stack.get("entrypoints") or []), *declared_scripts],
+    }
+    source_health = build_source_health(tree, stack_with_scripts, files, python_structure, runtime_commands)
     security_health = _security_health(files)
     analysis_scope = language_scope(stack)
     summary = {
@@ -30,11 +37,12 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "source_health_status": source_health["status"],
         "languages": [item.get("language") for item in stack.get("languages", [])[:6]],
         "frameworks": stack.get("frameworks", []),
-        "entrypoints": _entrypoints(stack, python_structure),
+        "entrypoints": project_entrypoints(stack_with_scripts, python_structure),
         "routes": len(python_structure.get("routes", [])),
         "read_files": [item.get("path") for item in files.get("files", [])],
         "analysis_scope": analysis_scope,
     }
+    summary["declared_script_entrypoints"] = declared_scripts
     risks = _risks(tree, stack, files, python_structure, runtime_commands, source_health)
     answers = build_answers(summary, risks, stack, files, python_structure, runtime_commands)
     answers["0_source_health"] = source_health
@@ -53,45 +61,6 @@ def run(payload: dict[str, object]) -> dict[str, object]:
         "answers": answers,
         "markdown": markdown,
     }
-
-
-def _entrypoints(stack: dict[str, Any], python_structure: dict[str, Any]) -> list[str]:
-    stack_entrypoints = [str(item) for item in stack.get("entrypoints", []) if item and is_core_path(str(item))]
-    package_inits = _package_init_entrypoints(python_structure)
-    if stack_entrypoints:
-        return sorted(dict.fromkeys([*stack_entrypoints, *package_inits]))[:40]
-    if package_inits:
-        return package_inits[:40]
-    return _top_level_module_entrypoints(python_structure)[:8]
-
-
-def _package_init_entrypoints(python_structure: dict[str, Any]) -> list[str]:
-    package_inits = []
-    for file_row in python_structure.get("files", []):
-        path = str(file_row.get("path") or "")
-        if not path.endswith("/__init__.py") or not is_core_path(path):
-            continue
-        parts = path.split("/")
-        if parts[0] in {"src", "lib"} and len(parts) >= 3:
-            package_inits.append(path)
-        elif "src" in parts[:-2]:
-            src_index = parts.index("src")
-            if len(parts) - src_index >= 3:
-                package_inits.append(path)
-        elif len(parts) == 2 and parts[0].replace("_", "").isalnum():
-            package_inits.append(path)
-    return sorted(package_inits)
-
-
-def _top_level_module_entrypoints(python_structure: dict[str, Any]) -> list[str]:
-    modules = []
-    for file_row in python_structure.get("files", []):
-        path = str(file_row.get("path") or "").replace("\\", "/")
-        if "/" in path or not path.endswith(".py") or path == "__init__.py":
-            continue
-        if is_core_path(path):
-            modules.append(path)
-    return sorted(dict.fromkeys(modules))
 
 
 def _risks(

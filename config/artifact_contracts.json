@@ -36,6 +36,36 @@
       "consumers": ["researcher", "architect", "evaluation", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "checks", "failed_checks", "detection", "certification", "ready_count", "ready", "deferred_count", "deferred", "next_action", "safety", "queue_digest"]
     },
+    "SelfDevelopmentChallengeManifest": {
+      "producer": "self_development_challenge_campaign",
+      "consumers": ["researcher", "project_development", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "source_index", "scanned_projects", "candidate_counts", "splits", "shortages", "network_fallback", "checks", "failed_checks", "safety", "manifest_digest"]
+    },
+    "SelfDevelopmentChallengeCampaignReport": {
+      "producer": "self_development_challenge_campaign",
+      "consumers": ["researcher", "architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "manifest_digest", "manifest_snapshot", "summary", "coverage", "cases", "safety"]
+    },
+    "SelfDevelopmentExperimentArmEvidence": {
+      "producer": "bounded_experiment_arm_runner",
+      "consumers": ["self_development_experiment_runner", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "arm", "holdout_digest", "evaluation_protocol_digest", "metrics", "source_snapshot_before", "source_snapshot_after", "isolated_overlay", "generated_stub_count", "source_apply", "promotion_applied"]
+    },
+    "SelfDevelopmentExperimentExecution": {
+      "producer": "self_development_experiment_runner",
+      "consumers": ["self_development_l0_lifecycle", "architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "candidate_digest", "queue_digest", "baseline_receipt", "candidate_receipt", "checks", "failed_checks", "comparison_evidence_receipt", "experiment", "safety", "execution_digest"]
+    },
+    "InterpreterCoverageAudit": {
+      "producer": "interpreter_coverage_audit",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "summary", "modules", "checks", "failed_checks", "next_action", "safety", "audit_digest"]
+    },
+    "FrameworkPluginReadinessReport": {
+      "producer": "framework_plugin_readiness",
+      "consumers": ["architect", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "target_score", "role_checks", "prospective_candidates", "checks", "failed_checks", "next_action", "certification_granted", "promotion_applied", "report_digest"]
+    },
     "CorpusEvaluationPlan": {
       "producer": "corpus_evaluation_factory",
       "consumers": ["project_analyzer", "researcher", "evaluation", "human"],

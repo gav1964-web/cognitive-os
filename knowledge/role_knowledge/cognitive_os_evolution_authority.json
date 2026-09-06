@@ -8,17 +8,18 @@
     "A 9.7 role score is not a certification without disjoint independent holdout evidence and zero generated function stubs.",
     "L0 and L1 self-development requires a baseline-versus-candidate experiment with no metric or role regression.",
     "Existing local corpus must be deduplicated and split before targeted external acquisition is allowed.",
+    "Declared distribution scripts are project-identity evidence and must not depend on CLI tokens in a repository name.",
     "Unknown project clusters remain research candidates and never promote automatically.",
     "Broad Python project strata remain development debt after narrow-type certification.",
     "Web UI is deferred until the architecture and authority contracts are stable."
   ],
   "current_sequence": [
-    "interpreter_authority",
-    "role_chain_recovery",
-    "narrow_type_holdout",
-    "narrow_type_certification",
+    "interpreter_boundary_integration",
+    "prospective_narrow_candidate_collection",
     "bounded_L0_L1_experiment",
-    "external_review_for_staging"
+    "framework_plugin_independent_certification",
+    "external_review_for_staging",
+    "broad_project_type_hardening"
   ],
   "narrow_project_types": ["cli_local_tool", "library_pure_transform"],
   "promotion_target_score": 9.7,
@@ -35,9 +36,25 @@
     "narrow_holdout_lineages": 2,
     "narrow_generated_stub_count": 0,
     "durable_input_receipts": 7,
-    "bounded_experiment_queue_status": "waiting_for_candidate",
+    "bounded_experiment_queue_status": "waiting_for_certified_candidate",
     "bounded_experiment_ready_candidates": 0,
-    "bounded_experiment_queue_receipt": "sha256:614904cb8cf361533519162f348da9c7bf57d0c828960432ec30e8384a42bc15"
+    "bounded_experiment_deferred_candidates": 1,
+    "bounded_experiment_queue_receipt": "sha256:f6c568fc4346e3b02c7cf35685004620a6fe65241a282846cc2f4e8c1a860e83",
+    "bounded_experiment_runner_status": "implemented_not_run_without_eligible_candidate",
+    "challenge_projects_scanned": 1386,
+    "challenge_local_cli_candidates": 3,
+    "challenge_external_projects_acquired_after_measured_shortage": 2,
+    "challenge_manifest_receipt": "sha256:b01df241df1bca962975959e5f18c51e0cf7aae13df6384a638c41da9dd369a1",
+    "declared_script_cli_validations": 2,
+    "declared_script_cli_validation_result": "recognized_no_actionable_issue",
+    "interpreter_transition_producers": 5,
+    "interpreter_boundary_coverage": 0.0,
+    "interpreter_bypass_gaps": 5,
+    "interpreter_coverage_receipt": "sha256:d516e1c47a637b7b213942c4c73e96a7d1ac64ce68debc5f7ad2b5e85a354fb8",
+    "framework_plugin_prospective_candidate_projects": 4,
+    "framework_plugin_readiness": "holdout_required",
+    "framework_plugin_certification_granted": false,
+    "framework_plugin_readiness_receipt": "sha256:7ff38f68833c526ba62991a32589fa7b98435591332868dcc62a4439199c4155"
   },
   "required_negative_controls": [
     "target_reselection",
@@ -49,7 +66,8 @@
   ],
   "deferred": {
     "web_ui": "after stable architecture",
-    "broad_project_types": "after a prospective narrow-type experiment; framework_plugin_build currently has subthreshold prospective signals only",
+    "broad_project_types": "after interpreter boundary integration and a prospective narrow-type experiment; they remain explicit development debt",
+    "framework_plugin_build": "separate lane; repeated recognition gap is real but certification requires an independent holdout, generated-stub receipt and no-role-regression receipt",
     "L2": "proposal and test only with external review",
     "L3_L4": "external architecture authority required"
   },

@@ -14,14 +14,24 @@ ROOT = Path(__file__).resolve().parents[2]
 CERTIFICATION_RECEIPT = "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json"
 
 
-def test_current_corpus_waits_for_a_certified_candidate() -> None:
+def test_current_corpus_routes_only_certified_candidates() -> None:
     detection = run_prospective_detection(root=ROOT, write=False)
     queue = build_self_development_experiment_queue(
         root=ROOT, detection=detection, certification_receipt=CERTIFICATION_RECEIPT
     )
 
-    assert queue["status"] == "waiting_for_candidate"
-    assert queue["ready_count"] == 0
+    assert queue["status"] in {
+        "waiting_for_candidate", "waiting_for_certified_candidate", "ready_for_experiment"
+    }
+    assert all(
+        set(row["project_types"]).issubset({"cli_local_tool", "library_pure_transform"})
+        for row in queue["ready"]
+    )
+    assert all(
+        "project_type_not_certified" in row["reasons"]
+        for row in queue["deferred"]
+        if not set(row["project_types"]).issubset({"cli_local_tool", "library_pure_transform"})
+    )
     assert queue["certification"]["project_strata"] == [
         "cli_local_tool", "library_pure_transform"
     ]

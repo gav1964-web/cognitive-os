@@ -79,9 +79,9 @@ def classify_project_case(
         policy=config,
     )
     if entrypoint_override:
-        selected = strata[entrypoint_override]
+        selected = strata[str(entrypoint_override["project_stratum"])]
         source = "entrypoint_identity_precedence"
-        matched = ["project_name", "project_map_entrypoint"]
+        matched = [str(entrypoint_override["evidence_marker"]), "project_map_entrypoint"]
 
     risk_text = _normalized_text({
         **_risk_evidence(case, evidence, archetype, contract_family, project_shape),
@@ -152,7 +152,7 @@ def _classification_evidence(case: dict[str, Any]) -> dict[str, Any]:
 
 def _entrypoint_identity_override(
     *, case: dict[str, Any], evidence: dict[str, Any], selected_id: str, policy: dict[str, Any]
-) -> str | None:
+) -> dict[str, str] | None:
     rule = dict(policy.get("entrypoint_identity_precedence") or {})
     target = str(rule.get("project_stratum") or "")
     if not target or selected_id not in {str(value) for value in rule.get("when_selected") or []}:
@@ -164,9 +164,17 @@ def _entrypoint_identity_override(
         return None
     project_name = str(case.get("project") or case.get("name") or "").lower()
     patterns = [str(pattern) for pattern in rule.get("project_name_patterns") or []]
-    if not any(re.search(pattern, project_name, re.IGNORECASE) for pattern in patterns):
+    declared_script = (
+        rule.get("declared_script_entrypoint_precedence") is True
+        and int(source_health.get("declared_script_entrypoint_count") or 0) > 0
+    )
+    project_name_match = any(re.search(pattern, project_name, re.IGNORECASE) for pattern in patterns)
+    if not declared_script and not project_name_match:
         return None
-    return target
+    return {
+        "project_stratum": target,
+        "evidence_marker": "declared_script_entrypoint" if declared_script else "project_name",
+    }
 
 
 def _project_archetype(evidence: dict[str, Any], case: dict[str, Any]) -> str:

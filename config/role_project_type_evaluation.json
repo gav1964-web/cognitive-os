@@ -26,6 +26,7 @@
     "project_stratum": "cli_local_tool",
     "when_selected": ["library_pure_transform", "stateful_service_database"],
     "minimum_entrypoint_count": 1,
+    "declared_script_entrypoint_precedence": true,
     "project_name_patterns": ["(?:^|[_-])cli(?:$|[_-])", "cli$", "(?:^|[_-])commander(?:$|[_-])", "(?:^|[_-])runner(?:$|[_-])", "(?:^|[_-])tools?(?:$|[_-])"]
   },
   "target_score": 9.2,

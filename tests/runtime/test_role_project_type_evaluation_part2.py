@@ -253,6 +253,32 @@ def test_cli_entrypoint_identity_wins_over_internal_database_archetype() -> None
     assert classification["project_stratum"] == "cli_local_tool"
 
 
+def test_declared_distribution_script_does_not_require_cli_in_project_name() -> None:
+    classification = classify_project_case({
+        "project": "ott2__isabelle-layout",
+        "artifacts": {
+            "project_map_report": {
+                "content": {
+                    "source_health": {
+                        "entrypoint_count": 1,
+                        "declared_script_entrypoint_count": 1,
+                    },
+                    "answers": {
+                        "1_scope": {"domain_profile": {"kind": "configuration_file_parser_library"}}
+                    },
+                },
+            }
+        },
+    })
+
+    assert classification["project_stratum"] == "cli_local_tool"
+    assert classification["classification_source"] == "entrypoint_identity_precedence"
+    assert classification["matched_markers"] == [
+        "declared_script_entrypoint",
+        "project_map_entrypoint",
+    ]
+
+
 def test_researcher_is_conditional_for_known_project_strata(tmp_path: Path) -> None:
     report = build_role_project_type_evaluation(root=tmp_path, report_paths=[])
 

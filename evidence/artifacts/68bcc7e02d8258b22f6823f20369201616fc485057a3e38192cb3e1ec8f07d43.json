@@ -1,0 +1,51 @@
+{
+  "artifact_type": "SelfDevelopmentExperimentQueue",
+  "certification": {
+    "project_strata": [
+      "cli_local_tool",
+      "library_pure_transform"
+    ],
+    "receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
+    "status": "certified"
+  },
+  "checks": {
+    "certification_receipt_verified": true,
+    "certified_scope_nonempty": true,
+    "detection_verified": true,
+    "no_active_apply": true,
+    "no_automatic_promotion": true
+  },
+  "deferred": [
+    {
+      "candidate_digest": "sha256:f29ff3f71db998bd1b655c2770c37012be559ae14cd3d021e173d7a331884de8",
+      "change_class": "L0",
+      "project_types": [
+        "framework_plugin_build"
+      ],
+      "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+      "reasons": [
+        "project_type_not_certified"
+      ],
+      "signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build",
+      "status": "deferred"
+    }
+  ],
+  "deferred_count": 1,
+  "detection": {
+    "candidate_count": 1,
+    "report_digest": "sha256:b0208e4527838062770e00a26b06b64f6dc9228c241910871513f7d84aef6114",
+    "status": "candidate_detected"
+  },
+  "failed_checks": [],
+  "next_action": "collect_or_certify_matching_project_type",
+  "queue_digest": "sha256:6673f5e3a719aa2407d067c7f155e2d04af81a23f9f9e0d9d7a1de3c95011eca",
+  "ready": [],
+  "ready_count": 0,
+  "safety": {
+    "active_kb_write": false,
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "schema_version": "self_development_experiment_queue.v1",
+  "status": "waiting_for_certified_candidate"
+}

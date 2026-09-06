@@ -1,0 +1,52 @@
+{
+  "schema_version": "self_development_challenge_campaign.v1",
+  "status": "active",
+  "corpus_index": "artifacts/self_development/self_development_corpus_eligibility_20260831T052410743974Z.json",
+  "certification_receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
+  "target_project_types": ["cli_local_tool", "library_pure_transform"],
+  "acquisition_per_type": 3,
+  "holdout_per_type": 2,
+  "scan_limit": 5000,
+  "split_seed": "cognitive-os-prospective-challenge-v1",
+  "prospective_evidence_glob": "artifacts/project_development/project_development_*.json",
+  "signals": {
+    "cli_local_tool": ["[project.scripts]", "console_scripts", "argparse", "click", "typer", "command", "cli"],
+    "library_pure_transform": ["parser", "codec", "converter", "transform", "mapping", "schema", "validation", "template", "markup", "token"]
+  },
+  "required_name_signals": {
+    "cli_local_tool": ["cli", "command", "commander", "runner"],
+    "library_pure_transform": ["parser", "codec", "convert", "transform", "mapping", "schema", "valid", "template", "markup", "token"]
+  },
+  "excluded_signals": {
+    "cli_local_tool": ["tensorflow", "django", "fastapi", "scheduler", "task manager", "training"],
+    "library_pure_transform": ["django", "fastapi", "plugin", "build backend", "tensorflow", "scheduler", "database"]
+  },
+  "external_acquisition": [
+    {
+      "project": "zingu-ai__zingu-apis",
+      "owner": "zingu-ai",
+      "project_root": "artifacts/challenge_external_acquisition/src/zingu-ai__zingu-apis",
+      "expected_project_type": "cli_local_tool",
+      "source_url": "https://github.com/zingu-ai/zingu-apis.git",
+      "revision": "1acee25772a43fc8aa561e4af4307668f9782cf8"
+    },
+    {
+      "project": "ott2__isabelle-layout",
+      "owner": "ott2",
+      "project_root": "artifacts/challenge_external_acquisition/src/ott2__isabelle-layout",
+      "expected_project_type": "cli_local_tool",
+      "source_url": "https://github.com/ott2/isabelle-layout.git",
+      "revision": "f8b3f72f4fb41e3c9094c4745556bb07d804c696"
+    }
+  ],
+  "invariants": {
+    "untouched_only": true,
+    "owner_independent": true,
+    "content_independent": true,
+    "holdout_frozen_before_execution": true,
+    "external_acquisition_only_after_local_shortage": true,
+    "holdout_consumed": false,
+    "source_apply": false,
+    "promotion_applied": false
+  }
+}

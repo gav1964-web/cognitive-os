@@ -41,6 +41,9 @@ def source_health(
         + len(inaccessible)
     )
     entrypoints = [str(item) for item in stack.get("entrypoints", []) if item]
+    declared_script_entrypoints = [
+        str(item) for item in stack.get("declared_script_entrypoints", []) if item
+    ]
     dependency_files = [str(item.get("path", "")) for item in stack.get("dependency_files", []) if isinstance(item, dict)]
     generated_signals = _generated_run_signals(tree, stack, python_structure)
     packaged_copy_signals = _packaged_copy_signals(tree, stack, python_structure)
@@ -92,6 +95,7 @@ def source_health(
         "env_file_signal_count": len(env_file_signals),
         "env_file_samples": env_file_signals[:12],
         "entrypoint_count": len(entrypoints),
+        "declared_script_entrypoint_count": len(declared_script_entrypoints),
         "dependency_file_count": len(dependency_files),
         "tree_truncated": bool(dict(tree.get("counts", {})).get("truncated")),
         "recommendation": recommendation,
