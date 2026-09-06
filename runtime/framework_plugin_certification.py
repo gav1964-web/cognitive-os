@@ -18,6 +18,9 @@ REQUIRED_RECEIPT_CHECKS = {
     "role_chain_continuity",
     "generated_stub_gate",
     "inputs_digest_bound",
+    "semantic_role_quality",
+    "role_artifacts_auditable",
+    "project_development_evaluated",
 }
 
 
@@ -78,6 +81,7 @@ def build_framework_plugin_certification(
             "ledger_receipt_verified": receipt_verification.get("status") == "verified",
             "holdout_report_passed": payload.get("artifact_type")
             == "FrameworkPluginHoldoutEvidence"
+            and payload.get("schema_version") == "framework_plugin_holdout_evidence.v2"
             and payload.get("status") == "passed",
             "zero_generated_stubs": int(payload.get("generated_stub_count") or 0) == 0,
             "multiple_holdout_lineages": int(provenance.get("source_lineages") or 0) > 1,
@@ -89,7 +93,7 @@ def build_framework_plugin_certification(
     passed = cells_passed and all(receipt_checks.values())
     body = {
         "artifact_type": "FrameworkPluginCertification",
-        "schema_version": "framework_plugin_certification.v1",
+        "schema_version": "framework_plugin_certification.v2",
         "status": "certified" if passed else "evidence_required",
         "project_stratum": "framework_plugin_build",
         "target_score": target_score,
@@ -117,7 +121,7 @@ def verify_framework_plugin_certification(value: dict[str, Any]) -> bool:
     body = {key: item for key, item in value.items() if key != "certificate_digest"}
     return (
         value.get("artifact_type") == "FrameworkPluginCertification"
-        and value.get("schema_version") == "framework_plugin_certification.v1"
+        and value.get("schema_version") == "framework_plugin_certification.v2"
         and value.get("status") == "certified"
         and value.get("promotion_eligible") is True
         and value.get("promotion_applied") is False

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/4ccff5f2558058fade6dc1c77def5180ead808226b8627831be633d3dacf2ca0.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:4ccff5f2558058fade6dc1c77def5180ead808226b8627831be633d3dacf2ca0",
+  "entry_digest": "sha256:44d08a0cdd3c2e4fafb65ac7c99bae39e80d688f66acb0262eb1326b64495bca",
+  "evaluator_fingerprint": "evidence-ledger-governance:v2",
+  "producer_fingerprint": "framework-plugin-reassessment:v1",
+  "replay_command": [
+    "python",
+    "tools/framework_plugin_certification_reassessment.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/framework_plugin_certification_reassessment_final_20260906.json",
+  "status": "promoted"
+}

@@ -26,6 +26,7 @@ def _receipt(root: Path, *, no_role_regression: bool = True) -> str:
     source = root / "framework_holdout.json"
     source.write_text(json.dumps({
         "artifact_type": "FrameworkPluginHoldoutEvidence",
+        "schema_version": "framework_plugin_holdout_evidence.v2",
         "status": "passed",
         "checks": {
             "independent_holdout": True,
@@ -34,6 +35,9 @@ def _receipt(root: Path, *, no_role_regression: bool = True) -> str:
             "role_chain_continuity": True,
             "generated_stub_gate": True,
             "inputs_digest_bound": True,
+            "semantic_role_quality": True,
+            "role_artifacts_auditable": True,
+            "project_development_evaluated": True,
         },
         "generated_stub_count": 0,
         "holdout_provenance": {"source_lineages": 4},

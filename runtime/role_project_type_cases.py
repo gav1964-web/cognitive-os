@@ -14,6 +14,12 @@ def _project_development_evaluation_case(payload: dict[str, Any]) -> dict[str, A
     handoff = dict(payload.get("role_chain_handoff") or {})
     experiment = dict(payload.get("experiment") or {})
     reassessment = dict(payload.get("outcome_reassessment") or {})
+    semantic = dict(
+        payload.get("role_semantic_quality")
+        or payload.get("foundation_semantic_quality")
+        or {}
+    )
+    semantic_scores = dict(semantic.get("role_scores") or {})
     native = dict(experiment.get("project_native_verification") or {})
     issue = dict(dict(payload.get("decision") or {}).get("selected_issue") or {})
     validated = (
@@ -23,10 +29,16 @@ def _project_development_evaluation_case(payload: dict[str, Any]) -> dict[str, A
         and native.get("status") == "passed"
     )
     role_scores: dict[str, float] = {}
-    if recognition.get("status") == "recognized":
-        role_scores["project_analyzer"] = 9.7
-    if handoff.get("status") == "completed_aligned" and handoff.get("issue_target_aligned") is True:
-        role_scores.update({"architect": 9.7, "spec_writer": 9.7})
+    if (
+        recognition.get("status") == "recognized"
+        and handoff.get("status") == "completed_aligned"
+        and handoff.get("issue_target_aligned") is True
+        and semantic.get("status") in {"ok", "passed"}
+    ):
+        for role_id in ("project_analyzer", "architect", "spec_writer"):
+            value = semantic_scores.get(role_id)
+            if isinstance(value, (int, float)):
+                role_scores[role_id] = float(value)
     if validated:
         role_scores.update({"implementer": 9.8, "tester": 10.0, "reviewer": 9.8})
     failure_kinds = [str(value) for value in issue.get("failure_kinds") or [] if value]
@@ -61,6 +73,8 @@ def _github_full_chain_evaluation_case(case: dict[str, Any]) -> dict[str, Any]:
     executor = dict(case.get("executor") or {})
     stub = dict(case.get("generated_function_stub_admission") or {})
     targets = dict(case.get("target_chain") or {})
+    semantic = dict(case.get("role_semantic_quality") or {})
+    semantic_scores = dict(semantic.get("role_scores") or {})
     target_values = [
         targets.get(name)
         for name in ("spec_target", "implementation_target", "test_target", "review_target")
@@ -88,10 +102,11 @@ def _github_full_chain_evaluation_case(case: dict[str, Any]) -> dict[str, Any]:
         and stub.get("status") == "passed"
     )
     role_scores: dict[str, float] = {}
-    if recognized:
-        role_scores["project_analyzer"] = 9.7
-    if chain_ready:
-        role_scores.update({"architect": 9.7, "spec_writer": 9.7})
+    if recognized and chain_ready and semantic.get("status") == "passed":
+        for role_id in ("project_analyzer", "architect", "spec_writer"):
+            value = semantic_scores.get(role_id)
+            if isinstance(value, (int, float)):
+                role_scores[role_id] = float(value)
     if execution_ready:
         role_scores.update({"implementer": 9.8, "tester": 10.0, "reviewer": 9.8})
     project = str(case.get("project") or "unknown-project")

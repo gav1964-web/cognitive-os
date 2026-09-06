@@ -18,6 +18,7 @@ def main() -> int:
     parser.add_argument("--evaluation", required=True)
     parser.add_argument("--role-pipeline", required=True)
     parser.add_argument("--stub-audit")
+    parser.add_argument("--semantic-evidence")
     parser.add_argument("--evaluation-receipt")
     parser.add_argument("--role-pipeline-receipt")
     parser.add_argument("--stub-audit-receipt")
@@ -32,10 +33,15 @@ def main() -> int:
     role_pipeline = _read(role_pipeline_path)
     role_pipeline.setdefault("report_path", role_pipeline_path.as_posix())
     stub_audit = _read(stub_audit_path) if stub_audit_path else None
+    semantic_evidence = (
+        _read(Path(args.semantic_evidence).resolve())
+        if args.semantic_evidence else None
+    )
     report = evaluate_narrow_type_holdout(
         evaluation=evaluation,
         role_pipeline_report=role_pipeline,
         stub_audit=stub_audit,
+        semantic_evidence=semantic_evidence,
         input_provenance={
             "evaluation": _receipt_provenance(root, evaluation_path, args.evaluation_receipt),
             "role_pipeline": _receipt_provenance(root, role_pipeline_path, args.role_pipeline_receipt),

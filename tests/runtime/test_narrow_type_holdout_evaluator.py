@@ -1,4 +1,5 @@
 from runtime.narrow_type_holdout_evaluator import evaluate_narrow_type_holdout
+from runtime.framework_plugin_role_semantics import artifact_digest
 
 
 ROLES = ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"]
@@ -42,9 +43,35 @@ def _pipeline():
     }
 
 
+def _semantic_evidence():
+    artifacts = {
+        "project_map_report": {"artifact_type": "ProjectMapReport"},
+        "architecture_decision": {"artifact_type": "ArchitectureDecision"},
+        "technical_spec": {"artifact_type": "TechnicalSpec"},
+    }
+    return {
+        "artifact_type": "NarrowTypeRoleSemanticEvidence",
+        "schema_version": "narrow_type_role_semantic_evidence.v1",
+        "status": "passed",
+        "cases": [
+            {
+                "project_stratum": project_type,
+                "role_scores": {role: 9.8 for role in ROLES},
+                "role_artifacts": artifacts,
+                "role_artifact_digests": {
+                    name: artifact_digest(value) for name, value in artifacts.items()
+                },
+                "development_change_evaluated": True,
+            }
+            for project_type in STRATA
+        ],
+    }
+
+
 def test_holdout_evidence_requires_explicit_stub_audit():
     report = evaluate_narrow_type_holdout(
-        evaluation=_evaluation(), role_pipeline_report=_pipeline(), input_provenance=PROVENANCE
+        evaluation=_evaluation(), role_pipeline_report=_pipeline(), input_provenance=PROVENANCE,
+        semantic_evidence=_semantic_evidence(),
     )
 
     assert report["status"] == "evidence_required"
@@ -64,6 +91,7 @@ def test_holdout_evidence_passes_with_bound_zero_stub_audit():
             "generated_stub_count": 0,
             "report_digests": {"blind-a.json": "sha256:a", "blind-b.json": "sha256:b"},
         },
+        semantic_evidence=_semantic_evidence(),
     )
 
     assert report["status"] == "passed"
@@ -83,6 +111,7 @@ def test_holdout_evidence_rejects_shared_lineage():
             "generated_stub_count": 0,
             "report_digests": {"blind-a.json": "sha256:a", "blind-b.json": "sha256:b"},
         },
+        semantic_evidence=_semantic_evidence(),
     )
 
     assert report["status"] == "evidence_required"
@@ -100,8 +129,26 @@ def test_holdout_evidence_rejects_partial_stub_audit_coverage():
             "generated_stub_count": 0,
             "report_digests": {"blind-a.json": "sha256:a"},
         },
+        semantic_evidence=_semantic_evidence(),
     )
 
     assert report["status"] == "evidence_required"
     assert report["checks"]["stub_audit_covers_holdout"] is False
     assert report["checks"]["blind_inputs_durable"] is False
+
+
+def test_holdout_rejects_self_declared_semantic_booleans():
+    report = evaluate_narrow_type_holdout(
+        evaluation=_evaluation(),
+        role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE,
+        semantic_evidence={
+            "status": "passed",
+            "role_artifacts_auditable": True,
+            "project_development_evaluated": True,
+        },
+    )
+
+    assert report["checks"]["semantic_role_quality"] is False
+    assert report["checks"]["role_artifacts_auditable"] is False
+    assert report["checks"]["project_development_evaluated"] is False

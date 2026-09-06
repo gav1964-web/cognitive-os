@@ -38,7 +38,10 @@ def _run_case(
         }
 
     dirty_before = git_porcelain(project_dir)
-    project_report = project_analyzer(root=root, project_dir=project_dir, goal=f"GitHub full-chain probe for {project_dir.name}")["project_map_report"]
+    case_goal = f"GitHub full-chain probe for {project_dir.name}"
+    project_report = project_analyzer(
+        root=root, project_dir=project_dir, goal=case_goal
+    )["project_map_report"]
     recognition = recognize_project(
         project=project_dir.name,
         project_report=project_report,
@@ -55,7 +58,7 @@ def _run_case(
             dirty_before=dirty_before,
         )
     artifacts = role_prefix(
-        goal=f"GitHub full-chain probe for {project_dir.name}",
+        goal=case_goal,
         project_report=project_report,
         until_artifact_type="ReviewFindings",
     )
@@ -87,7 +90,7 @@ def _run_case(
             rerun=lambda revised: _rerun_after_execution_reselection(
                 root=root,
                 project_dir=project_dir,
-                goal=f"GitHub full-chain probe for {project_dir.name}",
+                goal=case_goal,
                 project_report=project_report,
                 revised_adr=revised,
                 run_verification=run_verification,
@@ -100,13 +103,37 @@ def _run_case(
         review = artifact_by_type(artifacts, "ReviewFindings")
         target_chain = _target_chain(adr, spec, plan, test_plan, review)
         forbidden = _forbidden_sources(target_chain, plan, test_plan, review)
+    role_artifacts = {
+        "project_map_report": project_report,
+        "architecture_decision": adr,
+        "technical_spec": spec,
+    }
+    semantic_quality = evaluate_framework_plugin_role_semantics(
+        project_report=project_report,
+        architecture_decision=adr,
+        technical_spec=spec,
+        classification=classification,
+        goal=case_goal,
+        executor=executor,
+    )
     checks = _chain_checks(adr, spec, plan, test_plan, review, target_chain, forbidden, executor, run_executor)
+    if classification.get("project_stratum") == "framework_plugin_build":
+        checks.append(_check(
+            "framework_role_semantics_passed",
+            semantic_quality.get("status") == "passed",
+        ))
     target_quality = selected_target_quality(spec, project_dir.name)
     quality = bounded_quality_score(checks, target_quality)
     executor_ready = not run_executor or executor_evidence_ready(executor)
     if run_executor and not executor_ready:
         quality = min(quality, META_ONLY_SCORE_CAP)
     status = "ok" if quality >= READY_THRESHOLD and not forbidden and executor_ready else "needs_review"
+    if (
+        classification.get("project_stratum") == "framework_plugin_build"
+        and semantic_quality.get("status") != "passed"
+    ):
+        quality = min(quality, META_ONLY_SCORE_CAP)
+        status = "needs_review"
     if is_controlled_block(spec, plan, forbidden):
         status = "blocked_ok"
         quality = CONTROLLED_BLOCK_SCORE
@@ -130,6 +157,12 @@ def _run_case(
             "test_plan": test_plan.get("artifact_type"),
             "review_findings": review.get("artifact_type"),
         },
+        "role_artifacts": role_artifacts,
+        "role_artifact_digests": {
+            name: artifact_digest(artifact)
+            for name, artifact in role_artifacts.items()
+        },
+        "role_semantic_quality": semantic_quality,
         "binding_status": dict(plan.get("contract_binding", {})).get("binding_status"),
         "conformance_status": review.get("conformance_status"),
         "contract_violations": len(review.get("contract_violations", [])),

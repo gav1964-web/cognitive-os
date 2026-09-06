@@ -49,6 +49,9 @@ def recognize_project(
     elif classified.get("classification_conflict"):
         status = "ambiguous"
         reasons.append("authoritative_evidence_conflicts_with_project_identity")
+    elif classified.get("identity_profile_tension"):
+        status = "ambiguous"
+        reasons.append("plugin_identity_conflicts_with_analyzer_domain_profile")
     elif not risks or risks == ["unspecified"]:
         status = "ambiguous"
         reasons.append("risk_profile_not_resolved")
@@ -91,6 +94,7 @@ def recognize_project(
             "project_archetype": classified.get("project_archetype"),
             "project_archetype_scope": classified.get("project_archetype_scope"),
             "effective_project_identity": classified.get("effective_project_identity"),
+            "identity_profile_tension": classified.get("identity_profile_tension"),
             "project_analyzer_confidence": analyzer_confidence,
             "project_analyzer_evidence": list(analyzer_profile.get("evidence") or []),
             "contract_family": classified.get("contract_family"),

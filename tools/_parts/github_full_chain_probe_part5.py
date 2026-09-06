@@ -25,6 +25,7 @@ def _run_executor(
         "patch_package_status": patch.get("status"),
         "patch_synthesis_status": synthesis.get("status"),
         "patch_synthesis_reason": synthesis.get("reason"),
+        "patch_count": len(patch.get("patches") or []),
         "test_result_status": test_result.get("status"),
         "executable_acceptance": executable.get("status"),
         "callable_harness_count": acceptance.get("callable_harness_count"),

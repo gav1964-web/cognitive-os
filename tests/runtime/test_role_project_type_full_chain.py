@@ -31,9 +31,28 @@ def test_github_full_chain_case_scores_only_verified_role_boundaries() -> None:
             "source_code_changes": False,
         },
         "generated_function_stub_admission": {"status": "passed"},
+        "role_semantic_quality": {
+            "status": "passed",
+            "role_scores": {
+                "project_analyzer": 9.7,
+                "architect": 9.8,
+                "spec_writer": 9.9,
+            },
+        },
     })
 
     assert set(case["role_scores"]) == {
         "project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"
     }
     assert case["source_lineage"] == "github_owner:owner"
+
+
+def test_github_full_chain_case_does_not_invent_scores_from_artifact_presence() -> None:
+    case = _github_full_chain_evaluation_case({
+        "project": "owner__plugin",
+        "status": "ok",
+        "project_recognition": {"status": "recognized"},
+        "artifact_status": {"architecture_decision": "ArchitectureDecisionRecord"},
+    })
+
+    assert case["role_scores"] == {}

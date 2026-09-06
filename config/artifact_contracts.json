@@ -19,7 +19,17 @@
     "NarrowTypeHoldoutEvidence": {
       "producer": "narrow_type_holdout_evaluator",
       "consumers": ["narrow_type_certification", "architect", "reviewer", "human"],
-      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_chain_report", "stub_audit", "input_provenance", "source_apply", "promotion_applied", "evidence_digest"]
+      "required_fields": ["artifact_type", "schema_version", "status", "lane_id", "target_score", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_chain_report", "stub_audit", "semantic_evidence", "input_provenance", "source_apply", "promotion_applied", "evidence_digest"]
+    },
+    "NarrowTypeCertificationReassessment": {
+      "producer": "narrow_type_certification_reassessment",
+      "consumers": ["architect", "promotion_controller", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "certificate_receipt", "holdout_receipt", "checks", "failed_checks", "reason_codes", "affected_scope", "promotion_eligible", "promotion_applied", "next_action", "reassessment_digest"]
+    },
+    "NarrowTypeRoleSemanticEvidence": {
+      "producer": "narrow_role_semantic_evaluator",
+      "consumers": ["narrow_type_holdout_evaluator", "architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "cases"]
     },
     "GeneratedFunctionStubAudit": {
       "producer": "generated_function_stub_audit",
@@ -71,6 +81,21 @@
       "consumers": ["architect", "promotion_controller", "evaluation", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "project_stratum", "target_score", "required_roles", "cell_checks", "holdout_receipt", "receipt_status", "receipt_checks", "failed_cell_roles", "failed_receipt_checks", "promotion_eligible", "promotion_applied", "next_action", "certificate_digest"]
     },
+    "FrameworkPluginCertificationReassessment": {
+      "producer": "framework_plugin_certification_reassessment",
+      "consumers": ["architect", "promotion_controller", "evaluation", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "prior_certificate_receipt", "prior_certificate_digest", "checks", "failed_checks", "reason_codes", "affected_scope", "promotion_eligible", "promotion_applied", "next_action", "reassessment_digest"]
+    },
+    "FrameworkPluginRoleSemanticAdmission": {
+      "producer": "github_full_chain_probe",
+      "consumers": ["role_project_type_evaluation", "framework_plugin_holdout_evaluator", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "role_scores", "checks", "failed_checks", "plugin_entrypoints", "selected_target", "development_change_evaluated", "foundation_semantic_quality", "admission_digest"]
+    },
+    "GitHubFullChainProbeReport": {
+      "producer": "github_full_chain_probe",
+      "consumers": ["role_project_type_evaluation", "framework_plugin_holdout_evaluator", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "milestone", "project_count", "cases", "summary", "invariants"]
+    },
     "FrameworkPluginHoldoutSelection": {
       "producer": "framework_plugin_holdout_selection",
       "consumers": ["project_analyzer", "researcher", "evaluation", "human"],
@@ -79,7 +104,7 @@
     "FrameworkPluginHoldoutEvidence": {
       "producer": "framework_plugin_holdout_evaluator",
       "consumers": ["framework_plugin_certification", "evaluation", "human"],
-      "required_fields": ["artifact_type", "schema_version", "status", "checks", "generated_stub_count", "holdout_provenance", "input_digests", "evidence_digest"]
+      "required_fields": ["artifact_type", "schema_version", "status", "checks", "failed_checks", "generated_stub_count", "holdout_provenance", "role_scores", "matrix_role_scores", "input_digests", "evidence_digest"]
     },
     "RoleEvaluationRegression": {
       "producer": "role_evaluation_regression",

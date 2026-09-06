@@ -6,6 +6,7 @@ import hashlib
 import json
 from typing import Any
 
+from .framework_plugin_role_semantics import artifact_digest
 from .role_project_type_evaluation_policy import load_role_project_type_policy
 
 
@@ -15,6 +16,7 @@ def evaluate_narrow_type_holdout(
     role_pipeline_report: dict[str, Any],
     stub_audit: dict[str, Any] | None = None,
     input_provenance: dict[str, Any] | None = None,
+    semantic_evidence: dict[str, Any] | None = None,
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rules = policy or load_role_project_type_policy()
@@ -42,6 +44,12 @@ def evaluate_narrow_type_holdout(
     required_inputs = {"evaluation", "role_pipeline", "stub_audit"}
     core_inputs = [dict(provenance.get(name) or {}) for name in sorted(required_inputs)]
     blind_receipts = [dict(row) for row in provenance.get("blind_reports") or []]
+    semantic_checks = _semantic_evidence_checks(
+        semantic_evidence or {},
+        project_strata=[str(value) for value in lane.get("project_strata") or []],
+        required_roles=[str(value) for value in lane.get("required_roles") or []],
+        target_score=target_score,
+    )
     checks = {
         "all_required_cells_present": len(selected) == len(required) and all(selected),
         "scores_at_promotion_target": all(
@@ -60,6 +68,7 @@ def evaluate_narrow_type_holdout(
         "independent_evaluator": True,
         "inputs_digest_bound": required_inputs.issubset(provenance)
         and all(row.get("verified") is True for row in core_inputs),
+        **semantic_checks,
     }
     lineages = {
         lineage
@@ -82,7 +91,7 @@ def evaluate_narrow_type_holdout(
     checks["blind_inputs_durable"] = blind_inputs_durable
     body = {
         "artifact_type": "NarrowTypeHoldoutEvidence",
-        "schema_version": "narrow_type_holdout_evidence.v1",
+        "schema_version": "narrow_type_holdout_evidence.v2",
         "status": "passed" if all(checks.values()) else "evidence_required",
         "lane_id": lane.get("id"),
         "target_score": target_score,
@@ -98,10 +107,57 @@ def evaluate_narrow_type_holdout(
         "role_chain_report": role_pipeline_report.get("report_path"),
         "stub_audit": audit or {"status": "not_provided"},
         "input_provenance": provenance,
+        "semantic_evidence": semantic_evidence or {"status": "not_provided"},
         "source_apply": False,
         "promotion_applied": False,
     }
     return {**body, "evidence_digest": _digest(body)}
+
+
+def _semantic_evidence_checks(
+    evidence: dict[str, Any], *, project_strata: list[str],
+    required_roles: list[str], target_score: float,
+) -> dict[str, bool]:
+    cases = [row for row in evidence.get("cases") or [] if isinstance(row, dict)]
+    structure_valid = (
+        evidence.get("artifact_type") == "NarrowTypeRoleSemanticEvidence"
+        and evidence.get("schema_version") == "narrow_type_role_semantic_evidence.v1"
+        and evidence.get("status") == "passed"
+        and bool(cases)
+    )
+    covered_strata = {str(row.get("project_stratum")) for row in cases}
+    semantic_quality = structure_valid and set(project_strata).issubset(covered_strata) and all(
+        all(
+            isinstance(dict(row.get("role_scores") or {}).get(role), (int, float))
+            and float(dict(row.get("role_scores") or {})[role]) >= target_score
+            for role in required_roles
+        )
+        for row in cases
+    )
+    artifacts_auditable = structure_valid and all(
+        _semantic_case_artifacts_valid(row) for row in cases
+    )
+    development_evaluated = structure_valid and all(
+        row.get("development_change_evaluated") is True for row in cases
+    )
+    return {
+        "semantic_role_quality": semantic_quality,
+        "role_artifacts_auditable": artifacts_auditable,
+        "project_development_evaluated": development_evaluated,
+    }
+
+
+def _semantic_case_artifacts_valid(case: dict[str, Any]) -> bool:
+    artifacts = dict(case.get("role_artifacts") or {})
+    digests = dict(case.get("role_artifact_digests") or {})
+    required = {"project_map_report", "architecture_decision", "technical_spec"}
+    if not required.issubset(artifacts) or not required.issubset(digests):
+        return False
+    return all(
+        isinstance(artifacts[name], dict)
+        and digests[name] == artifact_digest(artifacts[name])
+        for name in required
+    )
 
 
 def _digest(value: Any) -> str:

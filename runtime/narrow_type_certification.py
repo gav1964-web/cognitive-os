@@ -61,12 +61,16 @@ def build_narrow_type_certification(
         and int(payload.get("generated_stub_count") or 0) == 0,
         "inputs_digest_bound": evidence_checks.get("inputs_digest_bound") is True,
         "multiple_holdout_lineages": int(holdout.get("source_lineages") or 0) > 1,
+        "semantic_role_quality": evidence_checks.get("semantic_role_quality") is True,
+        "role_artifacts_auditable": evidence_checks.get("role_artifacts_auditable") is True,
+        "project_development_evaluated": evidence_checks.get("project_development_evaluated") is True,
+        "holdout_schema_v2": payload.get("schema_version") == "narrow_type_holdout_evidence.v2",
     }
     all_cells_passed = bool(cell_checks) and all(row["status"] == "passed" for row in cell_checks)
     passed = all_cells_passed and all(receipt_checks.values())
     body = {
         "artifact_type": "NarrowTypeCertification",
-        "schema_version": "narrow_type_certification.v1",
+        "schema_version": "narrow_type_certification.v2",
         "status": "certified" if passed else "evidence_required",
         "lane_id": lane.get("id"),
         "target_score": target_score,
@@ -97,10 +101,12 @@ def verify_narrow_type_certification(
         "ledger_receipt_verified", "holdout_report_passed", "independent_holdout",
         "lineage_disjoint", "no_role_regression", "role_chain_continuity",
         "generated_stub_gate", "inputs_digest_bound", "multiple_holdout_lineages",
+        "semantic_role_quality", "role_artifacts_auditable",
+        "project_development_evaluated", "holdout_schema_v2",
     }
     structurally_valid = (
         certification.get("artifact_type") == "NarrowTypeCertification"
-        and certification.get("schema_version") == "narrow_type_certification.v1"
+        and certification.get("schema_version") == "narrow_type_certification.v2"
         and certification.get("status") == "certified"
         and certification.get("promotion_eligible") is True
         and certification.get("promotion_applied") is False

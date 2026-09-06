@@ -88,6 +88,11 @@ def classify_project_case(
         selected = strata[str(entrypoint_override["project_stratum"])]
         source = "entrypoint_identity_precedence"
         matched = [str(entrypoint_override["evidence_marker"]), "project_map_entrypoint"]
+    identity_profile_tension = bool(
+        entrypoint_override
+        and archetype
+        and pre_entrypoint_stratum != str(selected["id"])
+    )
 
     risk_text = _normalized_text({
         **_risk_evidence(case, evidence, archetype, contract_family, project_shape),
@@ -120,6 +125,7 @@ def classify_project_case(
             else "project_identity"
         ),
         "effective_project_identity": str(selected["id"]),
+        "identity_profile_tension": identity_profile_tension,
         "contract_family": contract_family or None,
         "project_shape": project_shape or None,
         "project_subtype": (

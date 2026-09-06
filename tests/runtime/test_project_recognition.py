@@ -319,3 +319,24 @@ def test_attached_recognition_is_role_pipeline_context():
 
     assert attached["project_recognition"] == decision
     assert attached["project_classification"] == decision["classification"]
+
+
+def test_plugin_identity_domain_tension_is_ambiguous():
+    decision = recognize_project(
+        project="plugin",
+        project_report=_report("async_database_access_library"),
+        classification={
+            "project_stratum": "framework_plugin_build",
+            "project_archetype": "async_database_access_library",
+            "project_archetype_scope": "internal_capability",
+            "effective_project_identity": "framework_plugin_build",
+            "identity_profile_tension": True,
+            "classification_source": "entrypoint_identity_precedence",
+            "risk_profiles": ["deterministic"],
+        },
+    )
+
+    assert decision["status"] == "ambiguous"
+    assert decision["ambiguity_reasons"] == [
+        "plugin_identity_conflicts_with_analyzer_domain_profile"
+    ]

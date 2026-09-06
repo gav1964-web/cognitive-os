@@ -19,11 +19,15 @@ def _receipt(root: Path, **check_overrides: bool) -> str:
         "role_chain_continuity": True,
         "generated_stub_gate": True,
         "inputs_digest_bound": True,
+        "semantic_role_quality": True,
+        "role_artifacts_auditable": True,
+        "project_development_evaluated": True,
         **check_overrides,
     }
     source = root / "holdout.json"
     source.write_text(json.dumps({
         "artifact_type": "NarrowTypeHoldoutEvidence",
+        "schema_version": "narrow_type_holdout_evidence.v2",
         "status": "passed",
         "checks": checks,
         "generated_stub_count": 0,

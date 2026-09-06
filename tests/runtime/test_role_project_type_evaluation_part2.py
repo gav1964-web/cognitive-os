@@ -292,6 +292,7 @@ def test_declared_script_overrides_low_confidence_packaging_text_profile() -> No
 
     assert classification["project_stratum"] == "cli_local_tool"
     assert classification["project_archetype_scope"] == "internal_capability"
+    assert classification["identity_profile_tension"] is True
 
 
 def test_declared_plugin_identity_wins_over_script_entrypoint() -> None:

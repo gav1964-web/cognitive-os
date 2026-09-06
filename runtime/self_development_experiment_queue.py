@@ -105,7 +105,9 @@ def build_self_development_experiment_queue(
         },
         "certification": {
             "receipt": certification_receipt,
-            "status": certification.get("status") if certification else "invalid",
+            "declared_status": certification.get("status") if certification else "invalid",
+            "authority_status": "verified" if certification_verified else "rejected",
+            "schema_version": certification.get("schema_version"),
             "project_strata": sorted(certified_types),
         },
         "ready_count": len(ready),
