@@ -9,7 +9,19 @@ ROLES = (
 
 def _case(project: str, stratum: str, lineage: str) -> dict:
     target = "src/demo.py:normalize"
-    issue = {"evidence": [f"failing_test:{target}"], "affected_targets": [target]}
+    issue = {
+        "evidence": [f"failing_test:{target}"],
+        "affected_targets": [target],
+        "failure_evidence": [{
+            "detail": "AssertionError: whitespace was retained",
+            "failure_signature": "known-signature",
+            "failing_nodeids": ["tests/test_demo.py::test_normalize"],
+        }],
+        "causal_hypothesis": {
+            "mechanism": "The input reaches the return path before surrounding whitespace is removed.",
+            "evidence": [target, "tests/test_demo.py::test_normalize"],
+        },
+    }
     artifacts = {
         "project_map_report": {
             "summary": {"root": "demo"}, "answers": {"1_scope": {}},
@@ -18,6 +30,11 @@ def _case(project: str, stratum: str, lineage: str) -> dict:
         "architecture_decision": {
             "artifact_type": "ArchitectureDecisionRecord", "status": "ok",
             "first_slice_contract": {"targets": [target]},
+            "repair_design": {
+                "target": target,
+                "mechanism": "Normalize surrounding whitespace at the bounded function return path.",
+                "evidence": [target, "tests/test_demo.py::test_normalize"],
+            },
         },
         "technical_spec": {
             "artifact_type": "TechnicalSpec", "status": "ok",
@@ -36,6 +53,14 @@ def _case(project: str, stratum: str, lineage: str) -> dict:
             ],
             "verification_strategy": {
                 "regression_checks": [{"target": target, "assertion": "suite passes"}],
+            },
+            "implementation_delta": {
+                "status": "ready",
+                "intent": {
+                    "target_symbol": target,
+                    "operator_id": "strip_surrounding_whitespace",
+                    "mutation": "Strip surrounding whitespace before returning the normalized value.",
+                },
             },
         },
     }
@@ -92,7 +117,7 @@ def _cases() -> list[dict]:
 def test_semantic_evidence_requires_real_artifacts_and_execution(monkeypatch) -> None:
     monkeypatch.setattr(
         "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
-        lambda _value: {"role_scores": {role: 10.0 for role in ROLES}},
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
     )
     result = evaluate_narrow_type_role_semantics(
         cases=_cases(), evaluation_split="holdout"
@@ -107,7 +132,7 @@ def test_semantic_evidence_requires_real_artifacts_and_execution(monkeypatch) ->
 def test_holdout_requires_independent_source_owners(monkeypatch) -> None:
     monkeypatch.setattr(
         "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
-        lambda _value: {"role_scores": {role: 10.0 for role in ROLES}},
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
     )
     cases = _cases()
     cases[0]["source_owner"] = "shared-owner"
@@ -125,7 +150,7 @@ def test_holdout_requires_independent_source_owners(monkeypatch) -> None:
 def test_semantic_evidence_rejects_missing_regression_and_artifact(monkeypatch) -> None:
     monkeypatch.setattr(
         "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
-        lambda _value: {"role_scores": {role: 10.0 for role in ROLES}},
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
     )
     cases = _cases()
     cases[0]["execution_run"]["experiment"]["project_native_verification"]["regression_suite"]["status"] = "failed"
@@ -142,7 +167,7 @@ def test_semantic_evidence_rejects_missing_regression_and_artifact(monkeypatch) 
 def test_project_analyzer_score_requires_expected_archetype_match(monkeypatch) -> None:
     monkeypatch.setattr(
         "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
-        lambda _value: {"role_scores": {role: 10.0 for role in ROLES}},
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
     )
     cases = _cases()
     cases[0]["expected_project_archetype"] = "test_framework_library"
@@ -153,3 +178,31 @@ def test_project_analyzer_score_requires_expected_archetype_match(monkeypatch) -
     assert result["status"] == "evidence_required"
     assert result["cases"][0]["checks"]["project_analyzer"]["project_archetype_matches_ground_truth"] is False
     assert result["role_scores"]["project_analyzer"] < 9.7
+
+
+def test_structurally_complete_roles_are_capped_without_causal_repair_evidence(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
+    )
+    cases = _cases()
+    for case in cases:
+        issue = case["role_run"]["decision"]["selected_issue"]
+        issue.pop("causal_hypothesis")
+        artifacts = case["role_run"]["role_artifacts"]
+        artifacts["architecture_decision"].pop("repair_design")
+        artifacts["technical_spec"]["implementation_delta"] = {
+            "status": "semantic_synthesis_required"
+        }
+        case["execution_run"]["status"] = "research_required"
+        case["execution_run"]["experiment"] = {"status": "blocked", "apply_source": False}
+
+    result = evaluate_narrow_type_role_semantics(cases=cases, evaluation_split="holdout")
+
+    assert result["role_scores"]["project_analyzer"] == 8.0
+    assert result["role_scores"]["architect"] == 6.0
+    assert result["role_scores"]["spec_writer"] == 6.0
+    assert result["cases"][0]["structural_role_scores"]["project_analyzer"] > 8.0
+    assert "missing_causal_diagnosis" in {
+        row["reason"] for row in result["cases"][0]["score_caps_applied"]["project_analyzer"]
+    }

@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
+from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .framework_plugin_role_semantics import artifact_digest
 
 
@@ -21,7 +22,11 @@ def evaluate_narrow_type_role_semantics(
     *, cases: list[dict[str, Any]], target_score: float = 9.7,
     evaluation_split: str = "calibration",
 ) -> dict[str, Any]:
-    evaluated = [_evaluate_case(dict(case), target_score=target_score) for case in cases]
+    policy = load_foundation_semantic_quality_policy()
+    evaluated = [
+        _evaluate_case(dict(case), target_score=target_score, policy=policy)
+        for case in cases
+    ]
     stratum_checks = {
         stratum: _stratum_check(evaluated, stratum) for stratum in REQUIRED_STRATA
     }
@@ -46,7 +51,7 @@ def evaluate_narrow_type_role_semantics(
     }
     body = {
         "artifact_type": "NarrowTypeRoleSemanticEvidence",
-        "schema_version": "narrow_type_role_semantic_evidence.v1",
+        "schema_version": "narrow_type_role_semantic_evidence.v2",
         "status": "passed" if all(checks.values()) else "evidence_required",
         "evaluation_split": evaluation_split,
         "target_score": target_score,
@@ -61,7 +66,9 @@ def evaluate_narrow_type_role_semantics(
     return {**body, "evidence_digest": _digest(body)}
 
 
-def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, Any]:
+def _evaluate_case(
+    case: dict[str, Any], *, target_score: float, policy: dict[str, Any]
+) -> dict[str, Any]:
     role_run = dict(case.get("role_run") or {})
     execution_run = dict(case.get("execution_run") or {})
     artifacts = dict(role_run.get("role_artifacts") or {})
@@ -77,8 +84,11 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
     native = dict(experiment.get("project_native_verification") or {})
     target = str(handoff.get("selected_target") or "")
     expected = str(case.get("project_stratum") or "")
-    foundation = evaluate_foundation_semantic_quality({"artifacts": artifacts})
+    foundation = evaluate_foundation_semantic_quality({"artifacts": artifacts}, policy=policy)
     artifact_audit = _artifact_audit(artifacts)
+    causal_diagnosis = _causal_diagnosis_present(issue)
+    concrete_design = _concrete_repair_design(adr, target)
+    implementation_ready = _implementation_ready(spec, target)
     checks = {
         "project_analyzer": {
             "project_identity_matches_expected_stratum": classification.get("effective_project_identity") == expected,
@@ -92,6 +102,8 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
             "development_issue_is_source_backed": bool(issue.get("evidence"))
             and bool(issue.get("affected_targets")),
             "development_issue_has_single_bounded_target": len(issue.get("affected_targets") or []) == 1,
+            "failure_behavior_is_characterized": _failure_behavior_characterized(issue),
+            "causal_diagnosis_is_present": causal_diagnosis,
             "foundation_quality_passed": _foundation_score(foundation, "project_analyzer") >= target_score,
         },
         "architect": {
@@ -100,6 +112,9 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
             and handoff.get("issue_target_aligned") is True,
             "selected_target_is_issue_bound": _target_matches_issue(target, issue),
             "first_slice_contains_selected_target": target in _first_slice_targets(adr),
+            "causal_diagnosis_is_consumed": causal_diagnosis,
+            "repair_design_is_concrete": concrete_design,
+            "implementation_path_is_ready": implementation_ready,
             "foundation_quality_passed": _foundation_score(foundation, "architect") >= target_score,
         },
         "spec_writer": {
@@ -110,6 +125,8 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
             "acceptance_is_bounded": 0 < len(spec.get("acceptance_criteria") or []) <= 20,
             "acceptance_traceability_is_exact": _acceptance_traceability_exact(spec, target),
             "verification_is_target_bound": _verification_target_bound(spec, target),
+            "repair_action_is_concrete": _concrete_spec_action(spec, target),
+            "implementation_delta_is_ready": implementation_ready,
             "foundation_quality_passed": _foundation_score(foundation, "spec_writer") >= target_score,
         },
         "implementer": {
@@ -136,7 +153,7 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
             "stub_admission_passed": dict(experiment.get("generated_function_stub_admission") or {}).get("status") == "passed",
         },
     }
-    role_scores = {
+    structural_scores = {
         role: _binary_score(role_checks) for role, role_checks in checks.items()
     }
     artifact_digests = {
@@ -147,6 +164,14 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
     development_evaluated = all(
         all(checks[role].values()) for role in ("implementer", "tester", "reviewer")
     )
+    role_scores, applied_caps = _validated_role_scores(
+        structural_scores,
+        policy=policy,
+        causal_diagnosis=causal_diagnosis,
+        concrete_design=concrete_design,
+        implementation_ready=implementation_ready,
+        development_evaluated=development_evaluated,
+    )
     status = "passed" if artifact_audit and development_evaluated and min(role_scores.values()) >= target_score else "evidence_required"
     return {
         "project": role_run.get("project"),
@@ -155,6 +180,8 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
         "source_owner": case.get("source_owner"),
         "status": status,
         "role_scores": role_scores,
+        "structural_role_scores": structural_scores,
+        "score_caps_applied": applied_caps,
         "checks": checks,
         "failed_checks": {
             role: [name for name, passed in rows.items() if not passed]
@@ -174,6 +201,93 @@ def _artifact_audit(artifacts: dict[str, Any]) -> bool:
         isinstance(artifacts.get(name), dict) and bool(artifacts[name])
         for name in ("project_map_report", "architecture_decision", "technical_spec")
     )
+
+
+def _failure_behavior_characterized(issue: dict[str, Any]) -> bool:
+    rows = [row for row in issue.get("failure_evidence") or [] if isinstance(row, dict)]
+    return bool(rows) and all(
+        row.get("detail") and row.get("failure_signature") and row.get("failing_nodeids")
+        for row in rows
+    )
+
+
+def _causal_diagnosis_present(issue: dict[str, Any]) -> bool:
+    for key in ("causal_hypothesis", "root_cause", "failure_mechanism", "repair_hypothesis"):
+        value = issue.get(key)
+        if isinstance(value, dict) and _specific_text(value.get("mechanism") or value.get("statement")):
+            return bool(value.get("evidence"))
+        if _specific_text(value):
+            return True
+    return False
+
+
+def _concrete_repair_design(adr: dict[str, Any], target: str) -> bool:
+    synthesis = dict(adr.get("architecture_synthesis") or {})
+    design = dict(adr.get("repair_design") or synthesis.get("repair_design") or {})
+    return (
+        str(design.get("target") or "") == target
+        and _specific_text(design.get("mechanism"))
+        and bool(design.get("evidence"))
+    )
+
+
+def _implementation_ready(spec: dict[str, Any], target: str) -> bool:
+    delta = dict(spec.get("implementation_delta") or {})
+    intent = dict(delta.get("intent") or {})
+    return (
+        delta.get("status") == "ready"
+        and str(intent.get("target_symbol") or target) == target
+        and bool(intent.get("operator_id") or intent.get("recipe") or intent.get("mutation"))
+    )
+
+
+def _concrete_spec_action(spec: dict[str, Any], target: str) -> bool:
+    delta = dict(spec.get("implementation_delta") or {})
+    intent = dict(delta.get("intent") or {})
+    if (
+        str(intent.get("target_symbol") or "") != target
+        or not intent.get("operator_id")
+        or not _specific_text(intent.get("mutation"))
+    ):
+        return False
+    statements = " ".join(
+        str(row.get("statement") or "")
+        for row in spec.get("requirements") or [] if isinstance(row, dict)
+    ).lower()
+    return "approved failure reducer" not in statements
+
+
+def _specific_text(value: Any) -> bool:
+    return isinstance(value, str) and len(value.strip()) >= 24
+
+
+def _validated_role_scores(
+    structural: dict[str, float], *, policy: dict[str, Any],
+    causal_diagnosis: bool, concrete_design: bool,
+    implementation_ready: bool, development_evaluated: bool,
+) -> tuple[dict[str, float], dict[str, list[dict[str, Any]]]]:
+    scores = dict(structural)
+    applied: dict[str, list[dict[str, Any]]] = {role: [] for role in REQUIRED_ROLES}
+    caps = dict(policy.get("narrow_holdout_validation_caps") or {})
+
+    def apply(reason: str) -> None:
+        for role, value in dict(caps.get(reason) or {}).items():
+            if role not in scores:
+                continue
+            cap = float(value)
+            if scores[role] > cap:
+                scores[role] = cap
+                applied[role].append({"reason": reason, "cap": cap})
+
+    if not causal_diagnosis:
+        apply("missing_causal_diagnosis")
+    if not concrete_design:
+        apply("missing_concrete_repair_design")
+    if not implementation_ready:
+        apply("implementation_not_ready")
+    if not development_evaluated:
+        apply("change_not_validated")
+    return scores, {role: rows for role, rows in applied.items() if rows}
 
 
 def _target_matches_issue(target: str, issue: dict[str, Any]) -> bool:

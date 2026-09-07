@@ -51,7 +51,7 @@ def _semantic_evidence():
     }
     return {
         "artifact_type": "NarrowTypeRoleSemanticEvidence",
-        "schema_version": "narrow_type_role_semantic_evidence.v1",
+        "schema_version": "narrow_type_role_semantic_evidence.v2",
         "status": "passed",
         "evaluation_split": "holdout",
         "checks": {"holdout_independent_owners_per_stratum": True},
@@ -81,6 +81,19 @@ def test_holdout_evidence_requires_explicit_stub_audit():
     assert report["failed_checks"] == [
         "generated_stub_gate", "stub_audit_covers_holdout", "blind_inputs_durable"
     ]
+
+
+def test_holdout_rejects_structural_only_v1_semantic_scores():
+    semantic = _semantic_evidence()
+    semantic["schema_version"] = "narrow_type_role_semantic_evidence.v1"
+
+    report = evaluate_narrow_type_holdout(
+        evaluation=_evaluation(), role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE, semantic_evidence=semantic,
+    )
+
+    assert report["status"] == "evidence_required"
+    assert "semantic_role_quality" in report["failed_checks"]
 
 
 def test_holdout_evidence_passes_with_bound_zero_stub_audit():

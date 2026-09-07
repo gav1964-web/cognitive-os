@@ -11,6 +11,7 @@ from .project_development_experiment import (
     build_project_development_execution_feedback,
     run_project_development_experiment,
 )
+from .project_failure_causal_diagnosis import enrich_failure_diagnosis
 from .project_development_feedback import run_project_development_feedback_continuation
 from .project_development_handoff import _role_chain_handoff
 from .project_development_memory import _memory_context, _now
@@ -74,6 +75,9 @@ def run_project_development(
         source_incompleteness=source_incompleteness,
         classification_consistency=classification_consistency,
         policy=policy,
+    )
+    diagnosis = enrich_failure_diagnosis(
+        diagnosis, project_dir=project_dir, workspace_root=root
     )
     portfolio = build_development_options(diagnosis, policy=policy)
     decision = select_development_option(diagnosis, portfolio, policy=policy)

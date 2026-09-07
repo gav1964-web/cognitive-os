@@ -26,7 +26,9 @@ def build_project_development_execution_feedback(
         }
         and admission.get("contract_mode") == "failure_repair"
         and not admission.get("allowed_operator_ids")
-        and admission.get("implementation_delta_status") == "semantic_synthesis_required"
+        and admission.get("implementation_delta_status") in {
+            "semantic_synthesis_required", "proposal_review_required",
+        }
         and bool(handoff.get("selected_target"))
     )
     if reassessment.get("status") == "validated":

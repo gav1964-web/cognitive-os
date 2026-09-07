@@ -1,6 +1,20 @@
 {
   "schema_version": "narrow_type_semantic_manifest.v1",
   "evaluation_split": "calibration",
+  "latest_evaluation": {
+    "status": "evidence_required",
+    "schema_version": "narrow_type_role_semantic_evidence.v2",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260907T053842685672Z.json",
+    "evidence_digest": "sha256:319a910da7d64b21f2840ba7ab59ee42d7b10d80cb59068a584b9bdd378f7aa6",
+    "role_scores": {
+      "project_analyzer": 8.0,
+      "architect": 6.0,
+      "spec_writer": 6.0,
+      "implementer": 10.0,
+      "tester": 10.0,
+      "reviewer": 10.0
+    }
+  },
   "cases": [
     {
       "project": "platformdirs",

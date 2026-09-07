@@ -141,6 +141,7 @@ def _focused_project_report(
             "domain_profile": profile,
         },
         "project_diagnosis": f"Selected {issue.get('rule_id')} as the next evidence-backed development problem.",
+        "repair_design": dict(issue.get("repair_design") or {}),
         "target_architecture_shape": [
             "Keep the first change inside the selected issue evidence boundary.",
             "Characterize current behavior before changing implementation.",

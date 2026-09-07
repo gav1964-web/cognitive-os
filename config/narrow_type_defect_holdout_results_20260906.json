@@ -11,8 +11,8 @@
       "expected_project_archetype": "test_framework_library",
       "intake_status": "qualified_failure",
       "intake_report": "artifacts/field_trials/project_native_failure_intake_20260906T193015843432Z.json",
-      "role_report": "artifacts/project_development/project_development_20260907T025319990897Z.json",
-      "execution_report": "artifacts/project_development/project_development_20260907T025319990897Z.json"
+      "role_report": "artifacts/project_development/project_development_20260907T054743766552Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T054743766552Z.json"
     },
     {
       "project": "more-itertools",
@@ -22,8 +22,8 @@
       "expected_project_archetype": "python_transform_library",
       "intake_status": "qualified_failure",
       "intake_report": "artifacts/field_trials/project_native_failure_intake_20260906T191649898562Z.json",
-      "role_report": "artifacts/project_development/project_development_20260907T025256991018Z.json",
-      "execution_report": "artifacts/project_development/project_development_20260907T025256991018Z.json"
+      "role_report": "artifacts/project_development/project_development_20260907T054744307203Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T054744307203Z.json"
     }
   ],
   "excluded_cases": [
@@ -40,18 +40,19 @@
   ],
   "semantic_evaluation": {
     "status": "evidence_required",
-    "report": "artifacts/self_development/narrow_type_role_semantics_20260907T025351747607Z.json",
-    "evidence_digest": "sha256:34336f4401ea23e1d5f80cf9c7f2bb151d2c78674c76c4991f51e9c0fcb5e51a",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260907T054831902526Z.json",
+    "evidence_digest": "sha256:02781dc142896fd8c86b9a722e0fa550f7acccb9c5ea8626237411ceb129acff",
     "role_scores": {
-      "project_analyzer": 10.0,
-      "architect": 10.0,
-      "spec_writer": 10.0,
+      "project_analyzer": 9.2,
+      "architect": 7.0,
+      "spec_writer": 6.5,
       "implementer": 4.0,
       "tester": 0.0,
       "reviewer": 2.0
     },
     "qualified_cases_per_stratum": 1,
     "required_cases_per_stratum": 2,
+    "foundation_role_gap": "training-derived causal diagnosis, defect-specific repair design, and mutation proposal are present, but the proposed operator has no independent validation or execution authority",
     "all_project_changes_evaluated": false,
     "certification_granted": false
   },

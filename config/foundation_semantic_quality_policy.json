@@ -6,6 +6,26 @@
     "architect": 9.7,
     "spec_writer": 9.8
   },
+  "narrow_holdout_validation_caps": {
+    "missing_causal_diagnosis": {
+      "project_analyzer": 8.0,
+      "architect": 6.0,
+      "spec_writer": 6.0
+    },
+    "missing_concrete_repair_design": {
+      "architect": 6.0,
+      "spec_writer": 6.0
+    },
+    "implementation_not_ready": {
+      "architect": 7.0,
+      "spec_writer": 6.5
+    },
+    "change_not_validated": {
+      "project_analyzer": 9.2,
+      "architect": 9.0,
+      "spec_writer": 8.8
+    }
+  },
   "feedback_scoring": {
     "unverified_handoff_caps": {
       "project_analyzer": 9.2,

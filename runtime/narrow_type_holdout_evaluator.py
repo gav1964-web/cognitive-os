@@ -121,7 +121,7 @@ def _semantic_evidence_checks(
     cases = [row for row in evidence.get("cases") or [] if isinstance(row, dict)]
     structure_valid = (
         evidence.get("artifact_type") == "NarrowTypeRoleSemanticEvidence"
-        and evidence.get("schema_version") == "narrow_type_role_semantic_evidence.v1"
+        and evidence.get("schema_version") == "narrow_type_role_semantic_evidence.v2"
         and evidence.get("status") == "passed"
         and evidence.get("evaluation_split") == "holdout"
         and bool(cases)

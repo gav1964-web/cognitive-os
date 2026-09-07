@@ -29,6 +29,7 @@ def load_foundation_semantic_quality_policy(path: str | None = None) -> dict[str
         "project_analyzer",
         "architect",
         "spec_writer",
+        "narrow_holdout_validation_caps",
         "source_reference",
         "side_effect_policy",
         "feedback_scoring",
@@ -51,4 +52,11 @@ def load_foundation_semantic_quality_policy(path: str | None = None) -> dict[str
     }
     if not required_feedback <= set(feedback):
         raise FoundationSemanticQualityPolicyError("feedback_scoring is incomplete")
+    validation_caps = dict(payload["narrow_holdout_validation_caps"])
+    required_caps = {
+        "missing_causal_diagnosis", "missing_concrete_repair_design",
+        "implementation_not_ready", "change_not_validated",
+    }
+    if not required_caps <= set(validation_caps):
+        raise FoundationSemanticQualityPolicyError("narrow_holdout_validation_caps is incomplete")
     return payload

@@ -192,6 +192,7 @@ def _architecture_synthesis_summary(synthesis: dict[str, Any]) -> dict[str, Any]
         "confidence": synthesis.get("confidence"),
         "project_profile": synthesis.get("project_profile", {}),
         "project_diagnosis": synthesis.get("project_diagnosis"),
+        "repair_design": dict(synthesis.get("repair_design") or {}),
         "target_architecture_shape": list(synthesis.get("target_architecture_shape", []))[:8],
     }
 

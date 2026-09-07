@@ -94,6 +94,7 @@ def _bind_failure_repair_contract(
         "failure_kinds": list(issue.get("failure_kinds") or []),
         "failure_evidence": failure_evidence,
         "allowed_operator_ids": list(reducers),
+        "proposed_operator_ids": list(issue.get("proposed_operator_ids") or []),
         "validation_gates": [
             *([{"kind": "project_native_failure_replay", "nodeid": nodeid} for nodeid in nodeids]),
             {"kind": "source_digest_unchanged_outside_patch_scope", "target": target},
@@ -113,15 +114,25 @@ def _bind_failure_repair_contract(
         "current_target": target,
         "reason": "failure repair target is authority-bound and must not be reranked as an extraction candidate",
     }
+    repair_design = dict(issue.get("repair_design") or {})
+    proposal = bool(repair_design.get("proposed_operator_id"))
     row["implementation_delta"] = {
-        "status": "semantic_synthesis_required",
-        "intent": {"kind": "repair_verified_project_failure", "target_symbol": target},
-        "reason": "A verified failure reducer must be selected by ProjectDevelopmentDecision.",
+        "status": "proposal_review_required" if proposal else "semantic_synthesis_required",
+        "intent": {
+            "kind": "repair_verified_project_failure",
+            "target_symbol": target,
+            "operator_id": repair_design.get("proposed_operator_id"),
+            "mutation": repair_design.get("mutation_contract"),
+        },
+        "reason": (
+            "Training-derived repair proposal requires fresh independent validation."
+            if proposal else "A verified failure reducer must be selected by ProjectDevelopmentDecision."
+        ),
         "evidence": failure_evidence,
     }
     row["implementation_handoff"] = {
         **dict(row.get("implementation_handoff") or {}),
-        "mode": "semantic_synthesis_required",
+        "mode": "proposal_review_required" if proposal else "semantic_synthesis_required",
         "patch_scope": [target],
     }
     replay_criteria = [
@@ -170,8 +181,11 @@ def _bind_failure_repair_contract(
         },
         {
             "id": "REQ-FAILURE-REPAIR",
-            "statement": f"Apply exactly one approved failure reducer inside `{target}` and preserve its declared contract.",
-            "source": "ProjectDevelopmentDecision.allowed_operator_ids",
+            "statement": (
+                str(repair_design.get("mutation_contract"))
+                if proposal else f"Apply exactly one approved failure reducer inside `{target}` and preserve its declared contract."
+            ),
+            "source": "ProjectDevelopmentDecision.repair_design" if proposal else "ProjectDevelopmentDecision.allowed_operator_ids",
             "target": target,
             "priority": "MUST",
         },
