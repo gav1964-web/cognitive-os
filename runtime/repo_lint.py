@@ -12,6 +12,7 @@ DEFAULT_EXCLUDED_PARTS = {
     ".git",
     ".nfi",
     ".nft",
+    ".pde",
     ".pytest_cache",
     ".pytest-tmp",
     ".pytest-tmp-100",
@@ -91,7 +92,7 @@ def assert_repository_lint(root: Path, *, max_python_lines: int = MAX_PYTHON_LIN
 def _is_excluded(root: Path, path: Path) -> bool:
     rel = path.relative_to(root)
     parts = rel.parts
-    if any(part.startswith((".pytest-tmp", ".nfi", ".nft")) for part in parts):
+    if any(part.startswith((".pytest-tmp", ".nfi", ".nft", ".pde")) for part in parts):
         return True
     if any(part in DEFAULT_EXCLUDED_PARTS for part in parts):
         return not _is_allowed_generated_subpath(parts)

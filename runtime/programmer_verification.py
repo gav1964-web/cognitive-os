@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -39,10 +40,11 @@ def run_test_result(
     )
     if executable_acceptance.get("status") == "failed":
         failed.append({"status": "failed", "command": "executable_acceptance"})
+    verified = bool(executed) or executable_acceptance.get("status") == "passed"
     return {
         "artifact_type": "TestResult",
         "role": "programmer_executor",
-        "status": "failed" if failed else "ok",
+        "status": "failed" if failed else "ok" if verified else "not_verified",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "project": source_project_dir.as_posix(),
         "execution_project": project_dir.as_posix(),
@@ -54,6 +56,7 @@ def run_test_result(
             "failed": len(failed),
             "skipped": sum(1 for item in command_results if item.get("status") == "skipped"),
             "executable_acceptance": executable_acceptance.get("status"),
+            "verification_status": "failed" if failed else "verified" if verified else "not_verified",
         },
         "executable_acceptance_result": executable_acceptance,
         "source_code_changes": False,
@@ -130,11 +133,17 @@ def run_command(
     env = dict(os.environ)
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
-    effective_command = _bind_python(command, python_executable)
+    argv = command_argv(command)
+    if argv is None or not _argv_allowed(argv):
+        return {
+            "command": command, "status": "failed", "returncode": None,
+            "stdout_tail": "", "stderr_tail": "unsafe_or_invalid_command",
+        }
+    effective_argv = _bind_python(argv, python_executable)
     result = subprocess.run(
-        effective_command,
+        effective_argv,
         cwd=str(cwd),
-        shell=True,
+        shell=False,
         capture_output=True,
         text=True,
         env=env,
@@ -144,7 +153,7 @@ def run_command(
     )
     return {
         "command": command,
-        "effective_command": effective_command,
+        "effective_command": subprocess.list2cmdline(effective_argv),
         "status": "passed" if result.returncode == 0 else "failed",
         "returncode": result.returncode,
         "stdout_tail": result.stdout[-2000:],
@@ -152,20 +161,62 @@ def run_command(
     }
 
 
-def _bind_python(command: str, python_executable: Path | None) -> str:
+def _bind_python(command: list[str], python_executable: Path | None) -> list[str]:
     if python_executable is None:
         return command
-    _, separator, arguments = command.partition(" ")
-    return f'"{python_executable.resolve()}"{separator}{arguments}'
+    return [str(python_executable.resolve()), *command[1:]]
 
 
 def command_allowed(command: str) -> bool:
-    normalized = " ".join(command.strip().split()).lower()
+    argv = command_argv(command)
+    return argv is not None and _argv_allowed(argv)
+
+
+def _argv_allowed(argv: list[str]) -> bool:
+    if not argv or not _python_command(argv[0]):
+        return False
+    tail = argv[1:]
+    if tail[:2] == ["-m", "compileall"]:
+        return bool(tail[2:]) and all(_safe_compileall_arg(value) for value in tail[2:])
+    if tail[:1] == ["tools/mvp_acceptance.py"]:
+        return tail[1:] == ["--skip-pytest"]
+    if tail[:2] == ["-m", "pytest"]:
+        return _safe_runtime_pytest_args(tail[2:])
+    return False
+
+
+def command_argv(command: str) -> list[str] | None:
+    if not command.strip() or any(value in command for value in (";", "&", "|", ">", "<", "\r", "\n")):
+        return None
+    try:
+        values = shlex.split(command, posix=False)
+    except ValueError:
+        return None
+    return [value[1:-1] if len(value) >= 2 and value[0] == value[-1] == '"' else value for value in values]
+
+
+def _python_command(value: str) -> bool:
+    normalized = value.replace("\\", "/").lower()
+    return Path(normalized).name in {"python", "python.exe", "python3", "python3.exe"} or normalized == Path(sys.executable).as_posix().lower()
+
+
+def _safe_compileall_arg(value: str) -> bool:
+    if value in {"-b", "-f", "-q", "-qq", "."}:
+        return True
+    path = value.replace("\\", "/")
+    return not value.startswith("-") and not Path(value).is_absolute() and ".." not in path.split("/")
+
+
+def _safe_runtime_pytest_args(values: list[str]) -> bool:
+    targets = [value.replace("\\", "/") for value in values if not value.startswith("-")]
+    options = [value for value in values if value.startswith("-")]
     return (
-        normalized.startswith(f"{Path(sys.executable).as_posix().lower()} -m compileall")
-        or normalized.startswith("python -m compileall")
-        or (normalized.startswith("python tools/mvp_acceptance.py") and "--skip-pytest" in normalized)
-        or (normalized.startswith("python -m pytest") and "tests/runtime/" in normalized.replace("\\", "/"))
+        bool(targets)
+        and all(value == "tests/runtime" or value.startswith("tests/runtime/") for value in targets)
+        and all(
+            value in {"-q", "-x"} or value.startswith("--tb=") or value.startswith("--maxfail=")
+            for value in options
+        )
     )
 
 

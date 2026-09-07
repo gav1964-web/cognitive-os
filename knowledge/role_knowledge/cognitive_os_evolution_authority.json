@@ -21,7 +21,10 @@
     "Verification-only execution proves callable acceptance, not project development or architecture quality.",
     "Unknown project clusters remain research candidates and never promote automatically.",
     "Broad Python project strata remain development debt after narrow-role semantic revalidation.",
-    "Web UI is deferred until the architecture and authority contracts are stable."
+    "Web UI is deferred until the architecture and authority contracts are stable.",
+    "A verification result with no executed checks and no executable acceptance evidence is not verified and cannot be treated as success.",
+    "A durable worker may mutate a running job only while it holds the unique lease token for the current attempt.",
+    "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain."
   ],
   "current_sequence": [
     "independently_validate_training_only_repair_proposals",
@@ -111,6 +114,18 @@
     "bounded_experiment_ready_candidates": 0,
     "bounded_experiment_deferred_candidates": 1,
     "bounded_experiment_runner_status": "implemented_not_run_without_eligible_candidate",
+    "runtime_safety_audit_status": "hardened_full_regression_passed",
+    "runtime_safety_audit_date": "2026-09-07",
+    "runtime_safety_audit_registry_drift": 0,
+    "runtime_safety_audit_core_tests_passed": 2835,
+    "runtime_safety_audit_plugin_tests_passed": 182,
+    "runtime_safety_audit_controls": [
+      "structured_verification_argv_shell_false",
+      "zero_checks_not_verified",
+      "recursive_fail_closed_schema_fallback",
+      "attempt_bound_durable_queue_lease",
+      "dead_owner_queue_lock_recovery"
+    ],
     "challenge_projects_scanned": 1382,
     "challenge_local_cli_candidates": 2,
     "challenge_external_projects_acquired_after_measured_shortage": 3,

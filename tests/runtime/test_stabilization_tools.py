@@ -21,7 +21,12 @@ def test_queue_cleanup_and_registry_selection_report_cli(runtime_workspace):
         retry_policy={},
     )
     job_id = queue.enqueue(pipeline, {"value": "cleanup"})
-    queue.complete(job_id, result={"status": "ok", "outputs": {}})
+    claimed = queue.claim_next("cleanup-test")
+    assert claimed is not None
+    queue.complete(
+        job_id, worker_id="cleanup-test", lease_token=claimed["lease_token"],
+        result={"status": "ok", "outputs": {}},
+    )
 
     cleanup = _run_tool(source, runtime_workspace, "queue_cleanup.py", "--archive-terminal")
     report = _run_tool(source, runtime_workspace, "registry_selection_report.py")

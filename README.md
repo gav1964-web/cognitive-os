@@ -86,6 +86,12 @@ Readiness, role-by-project-type maturity, and production confidence are separate
 
 Run `python tools/canonical_verify.py --root .` before a release or architecture checkpoint. The command uses project-local temporary directories and checks registry/config integrity, the 400-line source limit, compilation, the core test suite, and plugin contract tests. Use `--skip-tests` only for a fast structural preflight; it is not release evidence.
 
+## Runtime Safety Audit
+
+The 2026-09-07 control-plane audit hardened four runtime guarantees. Programmer verification commands are parsed into a bounded argument vector and run with `shell=False`; shell composition is rejected. A run with no executed command and no executable acceptance evidence reports `not_verified`, never success. JSON Schema validation uses the required `jsonschema` dependency, while its emergency fallback recursively enforces the supported subset and fails closed on unsupported keywords. Every durable-queue claim now receives a unique lease token that must match the worker for heartbeat, completion, and failure; abandoned queue locks are recovered only when their recorded process is no longer alive.
+
+`registry_doctor` is clean on the audited current tree. This runtime hardening is safety evidence, not evidence that the full role chain outperforms a direct agent. That product claim still requires a frozen same-task comparison of direct, shortened-chain, and full-chain execution, scored for result quality, elapsed time, cost, and manual corrections.
+
 ## Architecture
 
 ```text

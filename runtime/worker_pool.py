@@ -107,10 +107,11 @@ def _run_job(
     heartbeat_interval_seconds: float,
 ) -> dict[str, Any]:
     job_id = str(job["job_id"])
+    lease_token = str(job["lease_token"])
     stop_heartbeat = threading.Event()
     heartbeat_thread = threading.Thread(
         target=_heartbeat_loop,
-        args=(queue, job_id, worker_id, stop_heartbeat),
+        args=(queue, job_id, worker_id, lease_token, stop_heartbeat),
         kwargs={"lease_seconds": lease_seconds, "interval_seconds": heartbeat_interval_seconds},
         daemon=True,
     )
@@ -144,7 +145,8 @@ def _run_job(
         result["level35_adaptations"] = recovery.adaptations
         stop_heartbeat.set()
         heartbeat_thread.join(timeout=1)
-        queue.complete(job_id, result=result)
+        if not queue.complete(job_id, worker_id=worker_id, lease_token=lease_token, result=result):
+            return {"job_id": job_id, "status": "lease_lost", "result_status": result.get("status")}
         append_journal_event(
             root,
             {
@@ -165,7 +167,12 @@ def _run_job(
     except Exception as exc:
         stop_heartbeat.set()
         heartbeat_thread.join(timeout=1)
-        queue.fail(job_id, error=f"{type(exc).__name__}: {exc}")
+        accepted = queue.fail(
+            job_id, worker_id=worker_id, lease_token=lease_token,
+            error=f"{type(exc).__name__}: {exc}",
+        )
+        if not accepted:
+            return {"job_id": job_id, "status": "lease_lost", "error": f"{type(exc).__name__}: {exc}"}
         current = queue.load(job_id)
         status = "retry_scheduled" if current.get("status") == "queued" else "failed"
         append_journal_event(
@@ -186,11 +193,12 @@ def _heartbeat_loop(
     queue: DurableQueue,
     job_id: str,
     worker_id: str,
+    lease_token: str,
     stop_event: threading.Event,
     *,
     lease_seconds: float,
     interval_seconds: float,
 ) -> None:
     while not stop_event.wait(interval_seconds):
-        if not queue.heartbeat(job_id, worker_id, lease_seconds=lease_seconds):
+        if not queue.heartbeat(job_id, worker_id, lease_token, lease_seconds=lease_seconds):
             return

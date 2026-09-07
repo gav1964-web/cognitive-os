@@ -23,7 +23,10 @@ def test_control_plane_summarizes_and_inspects_jobs(tmp_path):
     job_id = queue.enqueue(pipeline, {"value": "control"}, priority=7)
     claimed = queue.claim_next("control-test")
     assert claimed is not None
-    queue.complete(job_id, result={"status": "ok", "layer_packets": [{"packet_type": "execution_event"}]})
+    queue.complete(
+        job_id, worker_id="control-test", lease_token=claimed["lease_token"],
+        result={"status": "ok", "layer_packets": [{"packet_type": "execution_event"}]},
+    )
 
     summary = queue_summary(tmp_path)
     inspected = inspect_job(tmp_path, job_id)
