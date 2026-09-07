@@ -58,7 +58,8 @@ def _bind_failure_repair_contract(
 ) -> dict[str, Any]:
     targets = [str(value) for value in issue.get("affected_targets") or [] if value]
     failure_evidence = [dict(value) for value in issue.get("failure_evidence") or [] if isinstance(value, dict)]
-    if len(targets) != 1 or not failure_evidence:
+    target_files = {value.split(":", 1)[0] for value in targets}
+    if not (1 <= len(targets) <= 3) or len(target_files) != 1 or not failure_evidence:
         return artifact
     target = targets[0]
     matching = next(
@@ -73,8 +74,9 @@ def _bind_failure_repair_contract(
         "status": "failure_repair_ready",
         "mode": "failure_repair",
         "candidate": target,
+        "affected_targets": targets,
         "candidate_score": 100,
-        "selection_reason": "Repeated project-native failing test authorizes repair of the unique production target.",
+        "selection_reason": "Repeated project-native failure bounds repair to the selected same-module target family.",
         "ranked_candidates": [{
             "source": target,
             "kind": "failure_backed_repair_target",
@@ -116,24 +118,28 @@ def _bind_failure_repair_contract(
     }
     repair_design = dict(issue.get("repair_design") or {})
     proposal = bool(repair_design.get("proposed_operator_id"))
+    training_replay = bool(issue.get("training_replay_authority")) and bool(reducers)
     row["implementation_delta"] = {
-        "status": "proposal_review_required" if proposal else "semantic_synthesis_required",
+        "status": "ready" if training_replay else "proposal_review_required" if proposal else "semantic_synthesis_required",
         "intent": {
             "kind": "repair_verified_project_failure",
             "target_symbol": target,
             "operator_id": repair_design.get("proposed_operator_id"),
+            "allowed_operator_ids": list(reducers),
             "mutation": repair_design.get("mutation_contract"),
+            "authority": "explicit_training_replay" if training_replay else "none",
         },
         "reason": (
-            "Training-derived repair proposal requires fresh independent validation."
+            "Training-derived repair proposal is authorized only for this consumed-case sandbox replay."
+            if training_replay else "Training-derived repair proposal requires fresh independent validation."
             if proposal else "A verified failure reducer must be selected by ProjectDevelopmentDecision."
         ),
         "evidence": failure_evidence,
     }
     row["implementation_handoff"] = {
         **dict(row.get("implementation_handoff") or {}),
-        "mode": "proposal_review_required" if proposal else "semantic_synthesis_required",
-        "patch_scope": [target],
+        "mode": "training_replay_ready" if training_replay else "proposal_review_required" if proposal else "semantic_synthesis_required",
+        "patch_scope": targets,
     }
     replay_criteria = [
         {

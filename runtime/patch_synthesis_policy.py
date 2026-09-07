@@ -83,6 +83,14 @@ def framework_contract_recipe(operation_kind: str) -> dict[str, Any]:
     return recipe if recipe.get("enabled", True) else {}
 
 
+def training_repair_recipe(operation_kind: str) -> dict[str, Any]:
+    recipes = dict(_policy().get("recipes") or {})
+    recipe = dict(recipes.get(operation_kind) or {})
+    if recipe.get("authority") != "training_only":
+        return {}
+    return recipe if recipe.get("enabled", True) else {}
+
+
 def return_literal_stub_recipe() -> dict[str, Any]:
     recipes = dict(_policy().get("recipes") or {})
     recipe = dict(recipes.get("return_literal_stub") or {})

@@ -34,6 +34,7 @@ Desktop.ini
 /outputs/
 /reports/
 /static/
+/.pde/
 
 # Machine-local credentials and scratch files
 /config/secret.key

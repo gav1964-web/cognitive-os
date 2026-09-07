@@ -58,6 +58,14 @@
     "project_pytest_arguments": {
       "build": ["tests/test_native_metadata_path.py"],
       "mkdocs": ["mkdocs/tests/test_native_empty_theme.py"],
+      "tox": [
+        "-o",
+        "markers=integration: requires external services\nslow: exceeds one second\nflaky: retry-capable upstream test (retries disabled in hermetic replay)",
+        "-m",
+        "not integration and not slow",
+        "--deselect=tests/execute/local_subprocess/test_local_subprocess.py::test_command_does_not_exist",
+        "--deselect=tests/plugin/test_inline.py::test_toxfile_py_w_ephemeral_envs"
+      ],
       "urllib3": ["--noconftest"],
       "isort": [
         "--ignore=tests/integration/test_projects_using_isort.py",
@@ -65,9 +73,13 @@
       ]
     },
     "project_regression_targets": {
+      "tox": ["tests/config/loader/ini"],
       "urllib3": ["test/test_exceptions.py"]
     },
     "project_probe_settings": {
+      "tox": {
+        "timeout_seconds": 300
+      },
       "pluggy": {
         "local_editable_install": false,
         "probe_path_bootstrap": false

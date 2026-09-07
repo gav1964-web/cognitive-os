@@ -88,6 +88,21 @@ def _project_version_hint(project: Path) -> str | None:
         tag = (completed.stdout or "").strip()
         if completed.returncode == 0 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+!-]*", tag):
             return tag.removeprefix("v")
+        described = subprocess.run(
+            [
+                "git", "-c", f"safe.directory={resolved.as_posix()}", "-C", str(resolved),
+                "describe", "--tags", "--long", "--always", "HEAD",
+            ],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=5, check=False,
+        )
+        match = re.fullmatch(
+            r"v?([0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.]*)?)-(\d+)-g([0-9a-f]+)",
+            (described.stdout or "").strip(),
+        )
+        if described.returncode == 0 and match:
+            base, distance, revision = match.groups()
+            return f"{base}.dev{distance}+g{revision}"
     except (OSError, subprocess.TimeoutExpired):
         pass
 

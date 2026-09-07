@@ -1,6 +1,22 @@
 {
   "schema_version": "patch_synthesis_policy.v1",
   "recipes": {
+    "guard_empty_materialized_fast_path": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "training_empty_fast_path_guard_synthesized",
+      "operation_kind": "guard_empty_materialized_fast_path",
+      "authority": "training_only",
+      "automatic_source_mutation_allowed": false
+    },
+    "require_left_token_boundary_for_numeric_range": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "training_numeric_range_boundary_synthesized",
+      "operation_kind": "require_left_token_boundary_for_numeric_range",
+      "authority": "training_only",
+      "automatic_source_mutation_allowed": false
+    },
     "guard_empty_theme_config": {
       "enabled": true,
       "status": "prepared",

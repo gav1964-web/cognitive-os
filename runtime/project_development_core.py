@@ -40,6 +40,7 @@ def run_project_development(
     policy: dict[str, Any] | None = None,
     human_approval: dict[str, Any] | None = None,
     architect_design: dict[str, Any] | None = None,
+    authorize_training_replay: bool = False,
 ) -> dict[str, Any]:
     """Diagnose one project and select a bounded, measurable next experiment."""
     policy = policy or load_project_development_policy()
@@ -77,7 +78,8 @@ def run_project_development(
         policy=policy,
     )
     diagnosis = enrich_failure_diagnosis(
-        diagnosis, project_dir=project_dir, workspace_root=root
+        diagnosis, project_dir=project_dir, workspace_root=root,
+        authorize_training_replay=authorize_training_replay,
     )
     portfolio = build_development_options(diagnosis, policy=policy)
     decision = select_development_option(diagnosis, portfolio, policy=policy)
@@ -170,6 +172,8 @@ def run_project_development(
             "feedback_executor_rerun": False,
             "feedback_developer_handoff": False,
             "replan_execution_authorized": False,
+            "training_replay_authorized": authorize_training_replay,
+            "training_replay_scope": "consumed_case_sandbox_only" if authorize_training_replay else None,
         },
     }
     if role_artifacts:

@@ -33,6 +33,12 @@ from .programmer_patch_synthesizer_guard import (
     _required_signature_keys,
 )
 from .programmer_patch_synthesizer_recovery import _development_helper_extraction_package
+from .programmer_patch_synthesizer_training import training_repair_package
+
+TRAINING_REPAIR_OPERATORS = {
+    "guard_empty_materialized_fast_path",
+    "require_left_token_boundary_for_numeric_range",
+}
 
 def synthesize_patch_package(
     *,
@@ -67,6 +73,13 @@ def synthesize_patch_package(
     intent = dict(delta.get("intent") or {})
     operation_kind = str(intent.get("operator_id") or "")
     allowed_operations = [str(value) for value in intent.get("allowed_operator_ids") or [] if value]
+    if operation_kind in TRAINING_REPAIR_OPERATORS:
+        if intent.get("authority") != "explicit_training_replay" or allowed_operations != [operation_kind]:
+            return {"status": "blocked", "reason": "training_replay_authority_required", "patches": []}
+        return training_repair_package(
+            execution_dir=execution_dir, project_dir=project_dir, target=target,
+            path_text=path_text, symbol=symbol, operation_kind=operation_kind,
+        )
     if operation_kind.startswith("extract_") or allowed_operations:
         if allowed_operations in (
             ["fallback_missing_registry_to_env"],

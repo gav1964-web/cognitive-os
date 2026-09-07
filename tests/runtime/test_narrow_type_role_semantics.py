@@ -206,3 +206,29 @@ def test_structurally_complete_roles_are_capped_without_causal_repair_evidence(m
     assert "missing_causal_diagnosis" in {
         row["reason"] for row in result["cases"][0]["score_caps_applied"]["project_analyzer"]
     }
+
+
+def test_training_replay_cannot_claim_transfer_maturity(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
+        lambda _value, **_kwargs: {"role_scores": {role: 10.0 for role in ROLES}},
+    )
+    cases = _cases()
+    cases[0]["regression_scope_kind"] = "affected_subsystem"
+
+    result = evaluate_narrow_type_role_semantics(
+        cases=cases, evaluation_split="training_replay"
+    )
+
+    assert result["status"] == "evidence_required"
+    assert result["role_scores"] == {
+        "project_analyzer": 9.4,
+        "architect": 8.5,
+        "spec_writer": 8.5,
+        "implementer": 8.8,
+        "tester": 8.5,
+        "reviewer": 8.5,
+    }
+    assert "training_replay" in {
+        row["reason"] for row in result["cases"][1]["score_caps_applied"]["architect"]
+    }

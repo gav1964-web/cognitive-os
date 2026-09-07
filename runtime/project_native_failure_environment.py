@@ -184,15 +184,18 @@ def _project_specific_intake(project: Path, intake: dict[str, Any]) -> dict[str,
     selected = dict(intake)
     identity = _project_distribution_name(project)
     project_settings = dict(intake.get("project_probe_settings") or {}).get(identity.lower()) or {}
-    allowed_settings = {
+    boolean_settings = {
         "local_editable_install",
         "probe_path_bootstrap",
     }
-    applied_settings = {
+    applied_settings: dict[str, Any] = {
         str(key): value
         for key, value in dict(project_settings).items()
-        if str(key) in allowed_settings and isinstance(value, bool)
+        if str(key) in boolean_settings and isinstance(value, bool)
     }
+    timeout = project_settings.get("timeout_seconds")
+    if isinstance(timeout, int) and 1 <= timeout <= 600:
+        applied_settings["timeout_seconds"] = timeout
     if applied_settings:
         selected.update(applied_settings)
         selected["project_probe_settings_applied"] = applied_settings
@@ -367,7 +370,8 @@ def _hermetic_user_environment(project: Path, intake: dict[str, Any]) -> dict[st
     cache = home / ".cache"
     config = home / ".config"
     data = home / ".local" / "share"
-    for directory in (home, roaming, local, cache, config, data):
+    virtualenv_data = project.parent / ".va"
+    for directory in (home, roaming, local, cache, config, data, virtualenv_data):
         directory.mkdir(parents=True, exist_ok=True)
     return {
         "HOME": str(home),
@@ -378,4 +382,7 @@ def _hermetic_user_environment(project: Path, intake: dict[str, Any]) -> dict[st
         "XDG_CACHE_HOME": str(cache),
         "XDG_CONFIG_HOME": str(config),
         "XDG_DATA_HOME": str(data),
+        "VIRTUALENV_OVERRIDE_APP_DATA": str(virtualenv_data),
+        "VIRTUALENV_SEEDER": "pip",
+        "VIRTUALENV_SYMLINK_APP_DATA": "0",
     }

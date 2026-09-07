@@ -7,9 +7,10 @@
       "required_failure_contains_all": ["empty", "[[]]"],
       "required_source_contains_all": ["if maxsplit == 0", "yield list(iterable)"],
       "mechanism": "The zero-split fast path yields a materialized iterable unconditionally, so an empty input emits one empty group while the normal path emits no groups.",
-      "repair_mechanism": "Materialize the iterable once in the zero-split branch and yield it only when the materialized buffer is non-empty.",
-      "mutation_contract": "Replace the unconditional fast-path yield with one materialization and a non-empty guard, preserving the immediate return.",
-      "proposed_operator_id": "guard_empty_materialized_fast_path"
+      "repair_mechanism": "Across the bounded split_before/split_after/split_when family, materialize the iterable once in each zero-split branch and yield it only when the buffer is non-empty.",
+      "mutation_contract": "Replace the three sibling unconditional fast-path yields with one materialization and a non-empty guard per function, preserving each immediate return.",
+      "proposed_operator_id": "guard_empty_materialized_fast_path",
+      "related_symbol_names": ["split_before", "split_after", "split_when"]
     },
     {
       "id": "embedded_numeric_range_without_left_boundary",

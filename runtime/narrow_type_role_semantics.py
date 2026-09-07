@@ -24,7 +24,10 @@ def evaluate_narrow_type_role_semantics(
 ) -> dict[str, Any]:
     policy = load_foundation_semantic_quality_policy()
     evaluated = [
-        _evaluate_case(dict(case), target_score=target_score, policy=policy)
+        _evaluate_case(
+            dict(case), target_score=target_score, policy=policy,
+            evaluation_split=evaluation_split,
+        )
         for case in cases
     ]
     stratum_checks = {
@@ -67,7 +70,8 @@ def evaluate_narrow_type_role_semantics(
 
 
 def _evaluate_case(
-    case: dict[str, Any], *, target_score: float, policy: dict[str, Any]
+    case: dict[str, Any], *, target_score: float, policy: dict[str, Any],
+    evaluation_split: str,
 ) -> dict[str, Any]:
     role_run = dict(case.get("role_run") or {})
     execution_run = dict(case.get("execution_run") or {})
@@ -101,7 +105,7 @@ def _evaluate_case(
             and bool(project_map.get("source_health")),
             "development_issue_is_source_backed": bool(issue.get("evidence"))
             and bool(issue.get("affected_targets")),
-            "development_issue_has_single_bounded_target": len(issue.get("affected_targets") or []) == 1,
+            "development_issue_has_bounded_target_scope": _bounded_target_scope(issue),
             "failure_behavior_is_characterized": _failure_behavior_characterized(issue),
             "causal_diagnosis_is_present": causal_diagnosis,
             "foundation_quality_passed": _foundation_score(foundation, "project_analyzer") >= target_score,
@@ -171,6 +175,8 @@ def _evaluate_case(
         concrete_design=concrete_design,
         implementation_ready=implementation_ready,
         development_evaluated=development_evaluated,
+        evaluation_split=evaluation_split,
+        regression_scope_kind=str(case.get("regression_scope_kind") or "full"),
     )
     status = "passed" if artifact_audit and development_evaluated and min(role_scores.values()) >= target_score else "evidence_required"
     return {
@@ -209,6 +215,12 @@ def _failure_behavior_characterized(issue: dict[str, Any]) -> bool:
         row.get("detail") and row.get("failure_signature") and row.get("failing_nodeids")
         for row in rows
     )
+
+
+def _bounded_target_scope(issue: dict[str, Any]) -> bool:
+    targets = [str(value) for value in issue.get("affected_targets") or [] if value]
+    files = {value.split(":", 1)[0].replace("\\", "/").lower() for value in targets}
+    return 1 <= len(targets) <= 3 and len(files) == 1
 
 
 def _causal_diagnosis_present(issue: dict[str, Any]) -> bool:
@@ -265,6 +277,7 @@ def _validated_role_scores(
     structural: dict[str, float], *, policy: dict[str, Any],
     causal_diagnosis: bool, concrete_design: bool,
     implementation_ready: bool, development_evaluated: bool,
+    evaluation_split: str, regression_scope_kind: str,
 ) -> tuple[dict[str, float], dict[str, list[dict[str, Any]]]]:
     scores = dict(structural)
     applied: dict[str, list[dict[str, Any]]] = {role: [] for role in REQUIRED_ROLES}
@@ -287,6 +300,16 @@ def _validated_role_scores(
         apply("implementation_not_ready")
     if not development_evaluated:
         apply("change_not_validated")
+    split_caps = dict(policy.get("narrow_evaluation_split_caps") or {})
+    for reason in (
+        evaluation_split,
+        "scoped_regression" if regression_scope_kind != "full" else "",
+    ):
+        for role, value in dict(split_caps.get(reason) or {}).items():
+            cap = float(value)
+            if role in scores and scores[role] > cap:
+                scores[role] = cap
+                applied[role].append({"reason": reason, "cap": cap})
     return scores, {role: rows for role, rows in applied.items() if rows}
 
 

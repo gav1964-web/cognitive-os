@@ -100,6 +100,21 @@ def test_project_version_hint_prefers_exact_git_tag(tmp_path, monkeypatch):
     assert _project_version_hint(tmp_path) == "3.1.0"
 
 
+def test_project_version_hint_converts_nearest_git_tag_to_pep440(tmp_path, monkeypatch):
+    class Completed:
+        def __init__(self, returncode, stdout):
+            self.returncode = returncode
+            self.stdout = stdout
+
+    results = iter([Completed(1, ""), Completed(0, "4.61.1-1-g96e2d714\n")])
+    monkeypatch.setattr(
+        "runtime.project_native_failure_process.subprocess.run",
+        lambda *args, **kwargs: next(results),
+    )
+
+    assert _project_version_hint(tmp_path) == "4.61.1.dev1+g96e2d714"
+
+
 def test_project_version_hint_uses_hermetic_fallback_for_vcs_backend(tmp_path, monkeypatch):
     class Completed:
         returncode = 1
@@ -302,6 +317,9 @@ def test_hermetic_user_environment_stays_next_to_sandbox_project(tmp_path):
     assert env["USERPROFILE"] == str(home)
     assert env["APPDATA"] == str(home / "AppData" / "Roaming")
     assert env["LOCALAPPDATA"] == str(home / "AppData" / "Local")
+    assert env["VIRTUALENV_OVERRIDE_APP_DATA"] == str(project.parent / ".va")
+    assert env["VIRTUALENV_SEEDER"] == "pip"
+    assert env["VIRTUALENV_SYMLINK_APP_DATA"] == "0"
     assert env["GIT_CEILING_DIRECTORIES"] == str(project.parent.resolve())
     assert not str(home).startswith(str(project) + "\\")
 

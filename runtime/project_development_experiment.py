@@ -52,7 +52,8 @@ def run_project_development_experiment(
         run_verification=True,
         apply_source=False,
         max_commands=int(dict(policy["execution_policy"]).get("maximum_verification_commands") or 3),
-        execution_base_dir=root / "artifacts" / "project_development" / "executions",
+        # Keep Windows virtualenv cache paths below MAX_PATH during native replay.
+        execution_base_dir=root / ".pde",
     )
     after = _project_digest(project_dir)
     patch = _read_artifact(result.get("patch_package_path"))

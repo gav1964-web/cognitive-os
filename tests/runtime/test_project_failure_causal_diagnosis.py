@@ -31,6 +31,10 @@ def test_empty_fast_path_creates_training_only_causal_design(tmp_path: Path) -> 
         "def split_before(iterable, pred, maxsplit=-1):\n"
         "    if maxsplit == 0:\n"
         "        yield list(iterable)\n"
+        "        return\n\n"
+        "def split_after(iterable, pred, maxsplit=-1):\n"
+        "    if maxsplit == 0:\n"
+        "        yield list(iterable)\n"
         "        return\n",
         encoding="utf-8",
     )
@@ -113,3 +117,46 @@ def test_training_design_reaches_architect_and_non_executable_spec(tmp_path: Pat
     assert spec["implementation_delta"]["intent"]["operator_id"] == "guard_empty_materialized_fast_path"
     assert spec["extraction_contract"]["allowed_operator_ids"] == []
     assert spec["implementation_handoff"]["mode"] == "proposal_review_required"
+
+
+def test_explicit_training_replay_authorizes_only_proposed_operator(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "more.py").write_text(
+        "def split_before(iterable, pred, maxsplit=-1):\n"
+        "    if maxsplit == 0:\n"
+        "        yield list(iterable)\n"
+        "        return\n\n"
+        "def split_after(iterable, pred, maxsplit=-1):\n"
+        "    if maxsplit == 0:\n"
+        "        yield list(iterable)\n"
+        "        return\n",
+        encoding="utf-8",
+    )
+    issue = enrich_failure_diagnosis(
+        _diagnosis(
+            "more.py:split_before", "AssertionError: [[]] != []",
+            "tests/test_more.py::SplitTests::test_empty_collection",
+        ),
+        project_dir=project,
+        workspace_root=Path.cwd(),
+        authorize_training_replay=True,
+    )["issues"][0]
+
+    assert issue["allowed_operator_ids"] == ["guard_empty_materialized_fast_path"]
+    assert issue["training_replay_authority"]["source_apply"] is False
+    assert issue["affected_targets"] == [
+        "more.py:split_before", "more.py:split_after"
+    ]
+    transform = development_delta_transform(
+        {"selected_issue": issue, "selected_option": {}}, {}
+    )
+    spec = transform({
+        "artifact_type": "TechnicalSpec",
+        "source_evidence": [{
+            "source": "more.py:split_before",
+            "signature": {"args": [{"name": "iterable", "annotation": "Iterable"}]},
+        }],
+    })
+    assert spec["implementation_delta"]["status"] == "ready"
+    assert spec["implementation_delta"]["intent"]["authority"] == "explicit_training_replay"

@@ -26,6 +26,10 @@ def main() -> int:
     parser.add_argument("--run-sandbox-experiment", action="store_true")
     parser.add_argument("--human-approval", help="Path to ProjectDevelopmentHumanApprovalDecision JSON")
     parser.add_argument("--architect-design", help="Path to ProjectDevelopmentImplementationDesign JSON")
+    parser.add_argument(
+        "--authorize-training-replay", action="store_true",
+        help="Allow a training-only causal proposal in a sandbox; never applies source or promotes knowledge",
+    )
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -42,6 +46,7 @@ def main() -> int:
         chain_case=chain_case,
         human_approval=_read_json(_resolve(root, args.human_approval)) if args.human_approval else None,
         architect_design=_read_json(_resolve(root, args.architect_design)) if args.architect_design else None,
+        authorize_training_replay=args.authorize_training_replay,
     )
     if args.write:
         written = _write(root, report)

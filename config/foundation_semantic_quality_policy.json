@@ -26,6 +26,21 @@
       "spec_writer": 8.8
     }
   },
+  "narrow_evaluation_split_caps": {
+    "training_replay": {
+      "project_analyzer": 9.4,
+      "architect": 8.5,
+      "spec_writer": 8.5,
+      "implementer": 9.0,
+      "tester": 8.8,
+      "reviewer": 8.8
+    },
+    "scoped_regression": {
+      "implementer": 8.8,
+      "tester": 8.5,
+      "reviewer": 8.5
+    }
+  },
   "feedback_scoring": {
     "unverified_handoff_caps": {
       "project_analyzer": 9.2,
