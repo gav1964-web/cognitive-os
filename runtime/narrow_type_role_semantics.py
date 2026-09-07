@@ -82,6 +82,8 @@ def _evaluate_case(case: dict[str, Any], *, target_score: float) -> dict[str, An
     checks = {
         "project_analyzer": {
             "project_identity_matches_expected_stratum": classification.get("effective_project_identity") == expected,
+            "project_archetype_matches_ground_truth": not case.get("expected_project_archetype")
+            or classification.get("project_archetype") == case.get("expected_project_archetype"),
             "recognition_is_source_backed": recognition.get("status") == "recognized"
             and bool(dict(recognition.get("evidence") or {}).get("project_analyzer_evidence")),
             "project_map_is_source_backed": bool(project_map.get("summary"))

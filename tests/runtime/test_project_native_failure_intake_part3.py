@@ -168,6 +168,56 @@ def test_pytest_duration_does_not_change_failure_signature(tmp_path):
     assert first["failure_signature"] == second["failure_signature"]
 
 
+def test_subtest_failure_binds_class_method_assertion_to_production(tmp_path):
+    project = tmp_path / "library"
+    (project / "tests").mkdir(parents=True)
+    (project / "src" / "demo").mkdir(parents=True)
+    (project / "src" / "demo" / "split.py").write_text(
+        "def split_before(values):\n    return [values]\n", encoding="utf-8"
+    )
+    (project / "tests" / "test_split.py").write_text(
+        "from demo.split import split_before\n\n"
+        "class SplitTests:\n"
+        "    def test_empty(self):\n"
+        "        actual = split_before([])\n"
+        "        assert actual == []\n",
+        encoding="utf-8",
+    )
+    output = (
+        "SUBFAILED(maxsplit=0) tests/test_split.py::SplitTests::test_empty\n"
+        "AssertionError: [[]] != []\n1 failed in 0.1s"
+    )
+
+    result = _interpret_pytest_result(project, 1, output, {})
+
+    assert result["status"] == "test_failed"
+    assert result["failing_nodeids"] == ["tests/test_split.py::SplitTests::test_empty"]
+    assert result["production_targets"] == ["src/demo/split.py:split_before"]
+    assert result["target_binding"] == "unique_assertion_causal_call"
+
+
+def test_unique_local_star_reexport_resolves_to_defining_module(tmp_path):
+    project = tmp_path / "library"
+    (project / "tests").mkdir(parents=True)
+    (project / "src" / "demo").mkdir(parents=True)
+    (project / "src" / "demo" / "__init__.py").write_text(
+        "from .operations import *\n", encoding="utf-8"
+    )
+    (project / "src" / "demo" / "operations.py").write_text(
+        "def split_before(values):\n    return [values]\n", encoding="utf-8"
+    )
+    (project / "tests" / "test_split.py").write_text(
+        "import demo\n\ndef test_empty():\n    assert demo.split_before([]) == []\n",
+        encoding="utf-8",
+    )
+
+    result = _interpret_pytest_result(
+        project, 1, "FAILED tests/test_split.py::test_empty\nAssertionError: [[]] != []", {}
+    )
+
+    assert result["production_targets"] == ["src/demo/operations.py:split_before"]
+
+
 def test_direct_test_helper_does_not_bind_as_production(tmp_path):
     project = tmp_path / "library"
     (project / "tests").mkdir(parents=True)

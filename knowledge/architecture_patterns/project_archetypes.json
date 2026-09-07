@@ -3082,10 +3082,8 @@
         "required_source_contains_any": [
           "configparser",
           "iniconfig",
-          ".ini",
           "parse_config",
-          "parse_ini",
-          "section"
+          "parse_ini"
         ],
         "negative_contains_any": [
           "flask",

@@ -224,6 +224,23 @@ def test_argument_usage_and_receiver_return_produce_concrete_contracts():
     assert evidence["inferred_output_type"] == "ReceiverState"
 
 
+def test_iter_constructor_and_callback_call_produce_concrete_inputs():
+    evidence = infer_source_contract(
+        {
+            "signature": {"args": [
+                {"name": "iterable", "annotation": ""},
+                {"name": "pred", "annotation": ""},
+            ]},
+            "snippet": "def split_before(iterable, pred):\n    for item in iter(iterable):\n        if pred(item):\n            yield item",
+        }
+    )
+
+    assert evidence["argument_usage_types"] == {
+        "iterable": "IterableLike",
+        "pred": "CallableLike",
+    }
+
+
 def test_deleted_argument_key_proves_mapping_mutation_and_return_shape():
     evidence = infer_source_contract(
         {

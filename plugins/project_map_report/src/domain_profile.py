@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import re
-from pathlib import Path
 from typing import Any
 
 from .doc_purpose import docs_text
+from .domain_profile_knowledge import infer_knowledge_profile
+
+
 def infer_domain_profile(
     summary: dict[str, Any],
     files: dict[str, Any],
@@ -60,14 +61,18 @@ def infer_domain_profile(
     root_docs_searchable = _root_docs_text(files).lower()
     authoritative_searchable = "\n".join([source_searchable, root_docs_searchable]).lower()
 
-    kb_profile = _infer_kb_profile(
+    kb_profile = infer_knowledge_profile(
         searchable, source_searchable, authoritative_searchable, root_docs_searchable, summary
     )
     has_chat_gateway = any(
         marker in searchable
         for marker in ("/v1/chat/completions", "/chat/completions", "chat_completions", "_handle_chat_request")
     )
-    if kb_profile and not (kb_profile.get("kind") == "llm_application_runtime" and has_chat_gateway):
+    if (
+        kb_profile
+        and kb_profile.get("evidence_scope") == "project_identity"
+        and not (kb_profile.get("kind") == "llm_application_runtime" and has_chat_gateway)
+    ):
         return kb_profile
 
     if "/v1/chat/completions" in routes_seen or "/chat/completions" in searchable:
@@ -180,161 +185,13 @@ def infer_domain_profile(
             "input_summary": ["caller-provided Python values", "function arguments", "module-level configuration when present"],
             "output_summary": ["normalized Python values", "parsed or validated results", "explicit exceptions for invalid inputs"],
         }
+    if kb_profile:
+        return kb_profile
     return {"kind": "generic", "confidence": 0.0, "evidence": []}
 
 
 def _tokens(text: str) -> list[str]:
     return [chunk.strip(".,;:()[]{}<>/\\\"'`") for chunk in text.split()]
-
-
-def _infer_kb_profile(
-    searchable: str,
-    source_searchable: str,
-    authoritative_searchable: str,
-    root_docs_searchable: str,
-    summary: dict[str, Any],
-) -> dict[str, Any] | None:
-    knowledge = _load_project_archetypes()
-    best: tuple[int, dict[str, Any], list[str]] | None = None
-    for rule in knowledge.get("records", []):
-        if not isinstance(rule, dict):
-            continue
-        score, evidence = _score_kb_rule(
-            rule, searchable, source_searchable, authoritative_searchable, root_docs_searchable, summary
-        )
-        if score <= 0:
-            continue
-        min_score = int(dict(rule.get("match") or {}).get("min_score") or 1)
-        if score < min_score:
-            continue
-        priority = int(rule.get("priority") or 0)
-        rank = score + priority
-        if best is None or rank > best[0]:
-            best = (rank, rule, evidence)
-    if best is None:
-        return None
-    _, rule, evidence = best
-    strong_prefixes = ("matched root purpose markers:", "matched source contract markers:")
-    evidence_units = sum(2 if item.startswith(strong_prefixes) else 1 for item in evidence)
-    return {
-        "kind": str(rule.get("archetype") or rule.get("rule_id") or "generic"),
-        "confidence": round(min(0.98, 0.55 + min(evidence_units, 5) * 0.08), 2),
-        "evidence": evidence,
-        "transport": _transport(summary),
-        "knowledge_rule": rule.get("rule_id"),
-        "label": rule.get("label"),
-        "purpose_summary": rule.get("purpose_summary"),
-        "scenario_summary": _strings(rule.get("scenario_summary"))[:6],
-        "input_summary": _strings(rule.get("input_summary"))[:8],
-        "output_summary": _strings(rule.get("output_summary"))[:8],
-        "target_markers": _strings(dict(rule.get("first_slice") or {}).get("targets_prefer"))[:12],
-    }
-
-
-def _score_kb_rule(
-    rule: dict[str, Any],
-    searchable: str,
-    source_searchable: str,
-    authoritative_searchable: str,
-    root_docs_searchable: str,
-    summary: dict[str, Any],
-) -> tuple[int, list[str]]:
-    match = dict(rule.get("match") or {})
-    root = str(summary.get("root") or "").replace("\\", "/").rstrip("/").lower()
-    project_name = root.rsplit("/", 1)[-1] if root else ""
-    project_name_hits = [
-        item
-        for item in _strings(match.get("project_name_contains_any"))
-        if _contains_marker(item, project_name)
-    ]
-    purpose_hits = [item for item in _strings(match.get("purpose_contains_any")) if _contains_marker(item, root_docs_searchable)]
-    negative = _strings(match.get("negative_contains_any"))
-    name_overrides_negative = bool(match.get("project_name_overrides_negative"))
-    if (
-        negative
-        and any(_contains_marker(item, searchable) for item in negative)
-        and not (name_overrides_negative and project_name_hits)
-    ):
-        return 0, []
-    required = _strings(match.get("required_contains_any"))
-    if required and not (
-        purpose_hits or any(_contains_marker(item, authoritative_searchable) for item in required)
-    ):
-        return 0, []
-    required_all = _strings(match.get("required_contains_all"))
-    if required_all and not all(_contains_marker(item, searchable) for item in required_all):
-        return 0, []
-    required_source = _strings(match.get("required_source_contains_any"))
-    source_hits = [item for item in required_source if _contains_marker(item, source_searchable)]
-    if required_source and not source_hits:
-        return 0, []
-    required_source_all = _strings(match.get("required_source_contains_all"))
-    if required_source_all and not all(_contains_marker(item, source_searchable) for item in required_source_all):
-        return 0, []
-    score = 0
-    evidence: list[str] = []
-    if project_name_hits:
-        score += 60 + len(project_name_hits) * 10
-        evidence.append("matched project name: " + ", ".join(project_name_hits[:5]))
-    if match.get("require_project_name_match") and not project_name_hits:
-        return 0, []
-    if match.get("require_project_name_or_purpose_match") and not (project_name_hits or purpose_hits):
-        return 0, []
-    if purpose_hits:
-        score += 100 + len(purpose_hits) * 5
-        evidence.append("matched root purpose markers: " + ", ".join(purpose_hits[:5]))
-    text_hits = [item for item in _strings(match.get("text_contains_any")) if _contains_marker(item, searchable)]
-    if text_hits:
-        score += 30 + len(text_hits) * 3
-        evidence.append("matched text markers: " + ", ".join(text_hits[:5]))
-    if source_hits:
-        score += 30 + len(source_hits) * 2
-        evidence.append("matched source markers: " + ", ".join(source_hits[:5]))
-    if required_source_all:
-        score += 80 + len(required_source_all) * 5
-        evidence.append("matched source contract markers: " + ", ".join(required_source_all[:5]))
-    framework_hits = [
-        item
-        for item in _strings(match.get("framework_contains_any"))
-        if item.lower() in {str(framework).lower() for framework in summary.get("frameworks", [])}
-    ]
-    if framework_hits:
-        score += 40 + len(framework_hits) * 5
-        evidence.append("matched frameworks: " + ", ".join(framework_hits[:5]))
-    routes_min = match.get("routes_min")
-    if routes_min is not None and int(summary.get("routes") or 0) >= int(routes_min):
-        score += 25
-        evidence.append(f"matched routes >= {routes_min}")
-    return score, evidence
-
-
-def _load_project_archetypes() -> dict[str, Any]:
-    here = Path(__file__).resolve()
-    for parent in [here, *here.parents]:
-        candidate = parent / "knowledge" / "architecture_patterns" / "project_archetypes.json"
-        if candidate.exists():
-            return json.loads(candidate.read_text(encoding="utf-8"))
-    return {"records": []}
-
-
-def _contains_marker(marker: str, text: str) -> bool:
-    needle = marker.strip().lower()
-    if not needle:
-        return False
-    if any(character in needle for character in "/\\.:"):
-        return needle in text.lower()
-    tokens = [re.escape(token) for token in re.split(r"[\s_-]+", needle) if token]
-    pattern = r"(?<![a-z0-9])" + r"[\s_-]+".join(tokens) + r"(?![a-z0-9])"
-    return re.search(pattern, text.lower()) is not None
-
-
-def _transport(summary: dict[str, Any]) -> str:
-    frameworks = {str(item).lower() for item in summary.get("frameworks", [])}
-    if "fastapi" in frameworks:
-        return "FastAPI"
-    if summary.get("entrypoints"):
-        return "CLI/script"
-    return "unknown"
 
 
 def source_sample_text(files: dict[str, Any]) -> str:

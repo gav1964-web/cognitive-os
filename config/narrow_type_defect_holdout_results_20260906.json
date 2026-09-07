@@ -1,0 +1,63 @@
+{
+  "schema_version": "narrow_type_defect_holdout_results.v1",
+  "evaluation_split": "holdout",
+  "source_manifest": "config/narrow_type_defect_holdout_20260906.json",
+  "cases": [
+    {
+      "project": "tox",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "tox-dev/tox",
+      "source_owner": "tox-dev",
+      "expected_project_archetype": "test_framework_library",
+      "intake_status": "qualified_failure",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260906T193015843432Z.json",
+      "role_report": "artifacts/project_development/project_development_20260907T025319990897Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T025319990897Z.json"
+    },
+    {
+      "project": "more-itertools",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "more-itertools/more-itertools",
+      "source_owner": "more-itertools",
+      "expected_project_archetype": "python_transform_library",
+      "intake_status": "qualified_failure",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260906T191649898562Z.json",
+      "role_report": "artifacts/project_development/project_development_20260907T025256991018Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T025256991018Z.json"
+    }
+  ],
+  "excluded_cases": [
+    {
+      "project": "pipx",
+      "reason": "bounded_pytest_timeout",
+      "report": "artifacts/field_trials/project_native_failure_intake_20260906T192054529018Z.json"
+    },
+    {
+      "project": "pyTooling",
+      "reason": "required_python_3_11_unavailable",
+      "report": "artifacts/field_trials/project_native_failure_intake_20260906T191300941215Z.json"
+    }
+  ],
+  "semantic_evaluation": {
+    "status": "evidence_required",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260907T025351747607Z.json",
+    "evidence_digest": "sha256:34336f4401ea23e1d5f80cf9c7f2bb151d2c78674c76c4991f51e9c0fcb5e51a",
+    "role_scores": {
+      "project_analyzer": 10.0,
+      "architect": 10.0,
+      "spec_writer": 10.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "qualified_cases_per_stratum": 1,
+    "required_cases_per_stratum": 2,
+    "all_project_changes_evaluated": false,
+    "certification_granted": false
+  },
+  "safety": {
+    "source_apply": false,
+    "promotion_applied": false,
+    "unsupported_reducers_remained_blocked": true
+  }
+}

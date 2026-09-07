@@ -48,7 +48,8 @@
     "project_pytest_plugins": {
       "isort": ["pytest_benchmark.plugin", "hypothesis.extra.pytestplugin"],
       "platformdirs": ["pytest_mock.plugin"],
-      "pytest-socket": ["pytest_benchmark.plugin"]
+      "pytest-socket": ["pytest_benchmark.plugin"],
+      "tox": ["pytest_timeout", "pytest_mock.plugin"]
     },
     "project_nested_pytest_plugins": {
       "pytest-randomly": ["faker.contrib.pytest.plugin"],

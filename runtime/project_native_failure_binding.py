@@ -16,6 +16,7 @@ from .project_native_failure_target_binding import (
 )
 
 _FAILED_NODE = re.compile(r"(?m)^FAILED\s+(.+?)(?:\s+-\s+.*)?$")
+_SUBFAILED_NODE = re.compile(r"(?m)^SUBFAILED(?:\([^\r\n]*\))?\s+(.+?)$")
 _ERROR_NODE = re.compile(r"(?m)^ERROR\s+(.+?)(?:\s+-\s+.*)?$")
 _SUMMARY = re.compile(r"(?m)^E\s+([A-Za-z_][A-Za-z0-9_.]*(?:Error|Exception))(?::\s*(.*))?$")
 _DEPENDENCY_INSTALL_HINT = re.compile(
@@ -24,6 +25,7 @@ _DEPENDENCY_INSTALL_HINT = re.compile(
 )
 _ENVIRONMENT_MARKERS = (
     "error collecting",
+    "error at setup of",
     "importerror while importing test module",
     "modulenotfounderror:",
     "unrecognized arguments:",
@@ -51,7 +53,11 @@ def _interpret_pytest_result(
     lowered = output.lower()
     raw_failing = list(dict.fromkeys(
         _normalize_nodeid(value)
-        for value in [*_FAILED_NODE.findall(output), *_ERROR_NODE.findall(output)]
+        for value in [
+            *_FAILED_NODE.findall(output),
+            *_SUBFAILED_NODE.findall(output),
+            *_ERROR_NODE.findall(output),
+        ]
     ))
     nodeid_limit = int(intake.get("maximum_nodeid_chars") or 1024)
     failing = [value[:nodeid_limit] for value in raw_failing]

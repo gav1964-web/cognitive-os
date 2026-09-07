@@ -219,8 +219,17 @@ def _repair_io_contract(
     evidence: dict[str, Any], structural: dict[str, Any]
 ) -> tuple[dict[str, str], dict[str, str]]:
     signature = dict(evidence.get("signature") or {})
+    documented = dict(structural.get("docstring_argument_types") or {})
+    usage = dict(structural.get("argument_usage_types") or {})
+    constraints = dict(structural.get("argument_constraint_types") or {})
     inputs = {
-        str(arg.get("name")): str(arg.get("annotation") or "Any")
+        str(arg.get("name")): str(
+            arg.get("annotation")
+            or documented.get(str(arg.get("name")))
+            or usage.get(str(arg.get("name")))
+            or constraints.get(str(arg.get("name")))
+            or "Any"
+        )
         for arg in signature.get("args") or []
         if isinstance(arg, dict) and str(arg.get("name") or "") not in {"self", "cls", ""}
     }

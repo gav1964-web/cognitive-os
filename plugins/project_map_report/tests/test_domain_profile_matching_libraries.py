@@ -222,6 +222,22 @@ def test_domain_profile_prefers_api_client_over_incidental_dataframe_boundaries(
     assert "external API" in profile["purpose_summary"]
 
 
+def test_iterable_recipe_sections_do_not_imply_configuration_parser():
+    profile = infer_domain_profile(
+        {"root": "F:/tmp/more-itertools", "frameworks": [], "entrypoints": [], "routes": 0},
+        {"files": [{"path": "more_itertools/recipes.py", "text": "Recipes section with parse and line helpers."}]},
+        {"files": [{"path": "more_itertools/recipes.py", "functions": [
+            {"name": "parse_iterable", "calls": []},
+            {"name": "normalize_items", "calls": []},
+            {"name": "transform_window", "calls": []},
+        ]}], "imports": []},
+        [],
+        set(),
+    )
+
+    assert profile["kind"] == "python_transform_library"
+
+
 def test_domain_profile_recognizes_rest_client_from_owned_request_flow():
     profile = infer_domain_profile(
         {

@@ -1,0 +1,78 @@
+{
+  "schema_version": "narrow_type_defect_holdout.v1",
+  "evaluation_split": "owner_independent_defect_holdout",
+  "frozen_at": "2026-09-06T00:00:00+03:00",
+  "holdout_consumed": true,
+  "consumed_at": "2026-09-06T19:31:11+00:00",
+  "result_manifest": "config/narrow_type_defect_holdout_results_20260906.json",
+  "cases": [
+    {
+      "id": "tox_factor_name_range_4053",
+      "project": "tox",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "tox-dev",
+      "source_url": "https://github.com/tox-dev/tox",
+      "defect_url": "https://github.com/tox-dev/tox/pull/4053",
+      "base_revision": "96e2d7149291901e253abff9a090176d5716c3f1",
+      "fix_revision": "21819660b895acbbb650c433c8370f1d44d45a91",
+      "merge_revision": "f31ebedc7e0e93516f850dbfea247355ccf198df",
+      "project_root": "artifacts/narrow_type_holdout_sources/tox",
+      "test_target": "tests/config/loader/ini/test_factor.py::test_expand_ranges_targets_matched_range",
+      "frozen_project_digest": "62a4672614f5d4fb1e84b5698b7dfb696553296e9ee938b31b40163c0206263b",
+      "test_patch_digest": "sha256:b643846fda6f01831e4706b09f0ca4c96e7770eb7ed1c6b0431ae468391c279f"
+    },
+    {
+      "id": "pipx_environment_max_logs_2024",
+      "project": "pipx",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "pypa",
+      "source_url": "https://github.com/pypa/pipx",
+      "defect_url": "https://github.com/pypa/pipx/pull/2024",
+      "base_revision": "277f161d5c2ad3a0017e3976fc308672957353ba",
+      "fix_revision": "14e9a91f21e95648a6d10d19b2a27b56a29d5560",
+      "merge_revision": "9ca67c45ad56d8aaf91eafd3c6fcbf2a3ff6cda2",
+      "project_root": "artifacts/narrow_type_holdout_sources/pipx",
+      "test_target": "tests/test_environment.py::test_cli_with_user_environment_value[PIPX_MAX_LOGS-3]",
+      "frozen_project_digest": "64c5692f16c65c3d1738e55a6e87da01f1bcfe1bc6bccea8e68fdbaa17e5e37b",
+      "test_patch_digest": "sha256:cea3a92f867481b3e9bb21490deafad1596cb8b61f464fc45d63c96af8a6f665"
+    },
+    {
+      "id": "more_itertools_empty_split_1253",
+      "project": "more-itertools",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "more-itertools",
+      "source_url": "https://github.com/more-itertools/more-itertools",
+      "defect_url": "https://github.com/more-itertools/more-itertools/pull/1253",
+      "base_revision": "d92f081a089714e0aa92434c797fdd1a06da1290",
+      "fix_revision": "ce676d24136e6efa932df8a4f3bf4801b89e1dd0",
+      "merge_revision": "3e87c08ac878f4bb79349d38ac69ba75c45dc5bf",
+      "project_root": "artifacts/narrow_type_holdout_sources/more-itertools",
+      "test_target": "tests/test_more.py::SplitBeforeTest::test_empty_collection",
+      "frozen_project_digest": "4ea9666b2609cfc50e5246028495312f3dd9ba1ddd8b50d8cb0e09cce309d13d",
+      "test_patch_digest": "sha256:7f2f601ebf84dfe7c9e4c67c4bda0e9c21a0b55dede91aa357ed075f7ab54807"
+    },
+    {
+      "id": "pytooling_version_range_intersection_372",
+      "project": "pyTooling",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "pyTooling",
+      "source_url": "https://github.com/pyTooling/pyTooling",
+      "defect_url": "https://github.com/pyTooling/pyTooling/pull/372",
+      "base_revision": "05e44873e1be87c8f2767ffb7bbc1cf7d7d605e3",
+      "fix_revision": "5623d557bf22e6482bcce83347da0a02e1dab5f6",
+      "merge_revision": "a3a0809464ec51bf0af76942cd346c1b1dbb2cff",
+      "project_root": "artifacts/narrow_type_holdout_sources/pyTooling",
+      "test_target": "tests/unit/Versioning/Range.py::IntersectionBoundHandling::test_AnExclusiveBoundStaysExclusive",
+      "frozen_project_digest": "e3aa1a2421aab16dad2427548086ee5098aebe8a4c8a5f5c4f99e9c98b964efb",
+      "test_patch_digest": "sha256:6e29f2a7fbbfe14c3b83bf820f928e5b9f5253497f2b6b10e3ba2ef0ec6663ee"
+    }
+  ],
+  "invariants": {
+    "distinct_source_owners": true,
+    "test_patch_from_upstream_fix": true,
+    "source_apply": false,
+    "promotion_applied": false,
+    "knowledge_updates_before_evaluation": false,
+    "candidate_must_not_be_fabricated": true
+  }
+}

@@ -137,3 +137,19 @@ def test_semantic_evidence_rejects_missing_regression_and_artifact(monkeypatch) 
     assert result["role_scores"]["spec_writer"] < 9.7
     assert result["role_scores"]["tester"] < 9.7
     assert result["checks"]["all_role_artifacts_auditable"] is False
+
+
+def test_project_analyzer_score_requires_expected_archetype_match(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "runtime.narrow_type_role_semantics.evaluate_foundation_semantic_quality",
+        lambda _value: {"role_scores": {role: 10.0 for role in ROLES}},
+    )
+    cases = _cases()
+    cases[0]["expected_project_archetype"] = "test_framework_library"
+    cases[0]["role_run"]["recognition"]["classification"]["project_archetype"] = "async_worker_queue"
+
+    result = evaluate_narrow_type_role_semantics(cases=cases, evaluation_split="holdout")
+
+    assert result["status"] == "evidence_required"
+    assert result["cases"][0]["checks"]["project_analyzer"]["project_archetype_matches_ground_truth"] is False
+    assert result["role_scores"]["project_analyzer"] < 9.7

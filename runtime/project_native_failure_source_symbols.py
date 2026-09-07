@@ -5,6 +5,28 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+def _source_symbol_target(project: Path, path: Path, symbol: str) -> tuple[Path, str] | None:
+    if _source_defines_symbol(path, symbol):
+        return path, symbol
+    if path.name != "__init__.py" or "." in symbol:
+        return None
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError):
+        return None
+    candidates: list[Path] = []
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or node.level != 1:
+            continue
+        if not any(item.name == "*" or item.asname == symbol or item.name == symbol for item in node.names):
+            continue
+        module = (node.module or "").split(".")
+        candidate = path.parent.joinpath(*module).with_suffix(".py")
+        if candidate.is_file() and _source_defines_symbol(candidate, symbol):
+            candidates.append(candidate)
+    unique = list(dict.fromkeys(candidates))
+    return (unique[0], symbol) if len(unique) == 1 else None
+
 def _source_defines_symbol(path: Path, symbol: str) -> bool:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))

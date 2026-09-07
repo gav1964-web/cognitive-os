@@ -99,6 +99,11 @@ def _update_usage_from_node(
         for arg in node.args[:1]:
             if isinstance(arg, ast.Name) and arg.id in known:
                 inferred[arg.id] = isinstance_type(node) if call_name(node.func) == "isinstance" else "str"
+    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in known:
+        inferred[node.func.id] = "CallableLike"
+    elif isinstance(node, ast.Call) and call_name(node.func) in {"enumerate", "iter", "list", "set", "sorted", "tuple"}:
+        for name in argument_names(node.args, known):
+            inferred.setdefault(name, "IterableLike")
     elif isinstance(node, (ast.For, ast.comprehension)) and isinstance(node.iter, ast.Name) and node.iter.id in known:
         inferred.setdefault(node.iter.id, "IterableLike")
     elif isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Name) and node.slice.id in known:

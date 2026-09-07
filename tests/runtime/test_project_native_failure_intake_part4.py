@@ -2,6 +2,29 @@ from __future__ import annotations
 
 from tests.runtime.project_native_failure_intake_helpers import *
 
+
+def test_fixture_setup_error_cannot_gain_repair_authority_from_test_body(tmp_path):
+    project = tmp_path / "library"
+    (project / "tests").mkdir(parents=True)
+    (project / "src" / "demo").mkdir(parents=True)
+    (project / "src" / "demo" / "parser.py").write_text(
+        "def parse(value):\n    return value\n", encoding="utf-8"
+    )
+    (project / "tests" / "test_parser.py").write_text(
+        "from demo.parser import parse\n\ndef test_parse(missing_fixture):\n    assert parse('x') == 'x'\n",
+        encoding="utf-8",
+    )
+    output = (
+        "ERROR at setup of test_parse\n"
+        "fixture 'missing_fixture' not found\n"
+        "ERROR tests/test_parser.py::test_parse\n1 error in 0.1s"
+    )
+
+    result = _interpret_pytest_result(project, 1, output, {})
+
+    assert result["status"] == "environment_blocked"
+    assert result["failure_signature"] is None
+
 def test_repeated_target_bound_failure_creates_change_request(tmp_path):
     project = tmp_path / "broken_tool"
     project.mkdir()

@@ -43,6 +43,7 @@ def classify_project_case(
     archetype = _project_archetype(evidence, case)
     contract_family = _contract_family(evidence, case)
     project_shape = _project_shape(evidence, case)
+    inferred_archetype_scope = _project_archetype_scope(evidence)
     identity_text = _normalized_text({
         "project": case.get("project"),
         "archetype": archetype,
@@ -121,7 +122,8 @@ def classify_project_case(
         "project_archetype": archetype or None,
         "project_archetype_scope": (
             "internal_capability"
-            if entrypoint_override and archetype and pre_entrypoint_stratum != str(selected["id"])
+            if inferred_archetype_scope == "internal_capability"
+            or (entrypoint_override and archetype and pre_entrypoint_stratum != str(selected["id"]))
             else "project_identity"
         ),
         "effective_project_identity": str(selected["id"]),
@@ -214,13 +216,18 @@ def _entrypoint_identity_override(
 
 
 def _project_archetype_confidence(evidence: dict[str, Any]) -> float:
+    return float(_project_domain_profile(evidence).get("confidence") or 0.0)
+
+
+def _project_archetype_scope(evidence: dict[str, Any]) -> str:
+    return str(_project_domain_profile(evidence).get("evidence_scope") or "")
+
+def _project_domain_profile(evidence: dict[str, Any]) -> dict[str, Any]:
     project_map = dict(evidence.get("project_map_report") or {})
     content = dict(project_map.get("content") or project_map)
     answers = dict(content.get("answers") or {})
     scope = dict(answers.get("1_scope") or answers.get("scope") or {})
-    profile = dict(scope.get("domain_profile") or content.get("domain_profile") or {})
-    return float(profile.get("confidence") or 0.0)
-
+    return dict(scope.get("domain_profile") or content.get("domain_profile") or {})
 
 def _project_archetype(evidence: dict[str, Any], case: dict[str, Any]) -> str:
     project_map = dict(evidence.get("project_map_report") or {})

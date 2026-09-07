@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .project_native_failure_source_symbols import _source_defines_symbol, _symbol_at_line
+from .project_native_failure_source_symbols import _source_defines_symbol, _source_symbol_target, _symbol_at_line
 
 _TRACEBACK_REF = re.compile(r"(?m)^((?:[A-Za-z]:)?[^\r\n:]+\.py):(\d+)(?::|\s)")
 _NAMED_INIT_TYPE_ERROR = re.compile(
@@ -98,17 +98,21 @@ def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[s
         if len(parts) < 2:
             continue
         test_path = project / parts[0]
-        test_name = parts[1].split("[", 1)[0]
+        test_name = parts[-1].split("[", 1)[0]
         if not test_path.is_file():
             continue
         try:
             tree = ast.parse(test_path.read_text(encoding="utf-8", errors="replace"))
         except (OSError, SyntaxError):
             continue
-        function = next(
-            (node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == test_name),
-            None,
-        )
+        scope = tree.body
+        if len(parts) >= 3:
+            class_name = parts[-2].split("[", 1)[0]
+            owner = next(
+                (node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name), None
+            )
+            scope = owner.body if owner is not None else []
+        function = next((node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == test_name), None)
         if function is None:
             continue
         aliases = _test_import_aliases(tree)
@@ -356,9 +360,11 @@ def _imported_call_target(
     if path is None or not symbol_parts:
         return None
     symbol = ".".join(symbol_parts)
-    if not _source_defines_symbol(path, symbol):
+    resolved = _source_symbol_target(project, path, symbol)
+    if resolved is None:
         return None
-    return f"{path.relative_to(project).as_posix()}:{symbol}"
+    target_path, target_symbol = resolved
+    return f"{target_path.relative_to(project).as_posix()}:{target_symbol}"
 
 def _attribute_names(node: ast.expr) -> list[str]:
     if isinstance(node, ast.Name):

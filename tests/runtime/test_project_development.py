@@ -262,6 +262,35 @@ def test_failure_repair_transform_preserves_research_target_without_reducer():
     assert spec["implementation_handoff"]["patch_scope"] == ["src/plugin.py:Server.start"]
 
 
+def test_failure_repair_contract_uses_structural_input_shapes():
+    decision = {
+        "selected_issue": {
+            "rule_id": "weak_contracts",
+            "affected_targets": ["src/demo.py:split_before"],
+            "allowed_operator_ids": [],
+            "failure_specific_reducer_required": True,
+            "failure_evidence": [{
+                "target": "src/demo.py:split_before",
+                "authority": "failing_contract_test",
+                "failing_nodeids": ["tests/test_demo.py::test_empty"],
+            }],
+        },
+        "selected_option": {"option_id": "OPTION-001"},
+    }
+    spec = development_delta_transform(decision, load_project_development_policy())({
+        "artifact_type": "TechnicalSpec",
+        "source_evidence": [{
+            "source": "src/demo.py:split_before",
+            "signature": {"args": [{"name": "values", "annotation": ""}], "returns": ""},
+            "snippet": "def split_before(values):\n    for value in iter(values):\n        yield value",
+        }],
+        "implementation_handoff": {},
+    })
+
+    assert spec["extraction_contract"]["input_contract"] == {"values": "IterableLike"}
+    assert spec["extraction_contract"]["output_contract"] == {"result": "IteratorLike"}
+
+
 def test_focused_report_uses_affected_target_not_authority_prefixed_evidence():
     focused = _focused_project_report(
         {"summary": {}, "answers": {}},
