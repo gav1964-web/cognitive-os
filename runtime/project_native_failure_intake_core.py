@@ -228,9 +228,19 @@ def run_project_native_verification(
     regression = _run_pytest(
         project.resolve(), intake, nodeids=regression_targets or None
     )
+    targeted_passed = bool(normalized) and targeted.get("status") == "passed"
+    regression_status = str(regression.get("status") or "")
+    status = (
+        "passed"
+        if targeted_passed and regression_status == "passed"
+        else "targeted_passed_regression_environment_blocked"
+        if targeted_passed and regression_status == "environment_blocked"
+        else "failed"
+    )
     return {
         "artifact_type": "ProjectNativeVerificationResult",
-        "status": "passed" if normalized and targeted.get("status") == "passed" and regression.get("status") == "passed" else "failed",
+        "status": status,
+        "evidence_scope": "targeted_and_regression" if status == "passed" else "targeted_only" if targeted_passed else "none",
         "failing_nodeids": normalized,
         "targeted_replay": targeted,
         "regression_suite": regression,

@@ -155,6 +155,21 @@ def test_project_pytest_arguments_are_scoped_by_distribution(tmp_path):
     ]
 
 
+def test_project_regression_targets_require_existing_bounded_path(tmp_path):
+    project = tmp_path / "checkout"
+    project.mkdir()
+    (project / "setup.cfg").write_text("[metadata]\nname = invoke\n", encoding="utf-8")
+    (project / "cognitive_os_tests").mkdir()
+
+    selected = _project_specific_intake(project, {
+        "project_regression_targets": {
+            "invoke": ["cognitive_os_tests", "../outside", "missing_tests"],
+        },
+    })
+
+    assert selected["regression_targets"] == ["cognitive_os_tests"]
+
+
 def test_project_probe_settings_are_allowlisted_by_distribution(tmp_path):
     project = tmp_path / "checkout"
     project.mkdir()

@@ -74,6 +74,23 @@ def test_project_development_reducer_must_reference_patch_operation():
     ) in check.errors
 
 
+def test_project_failure_reducer_must_reference_patch_operation():
+    policy = deepcopy(load_project_development_policy())
+    policy["verified_failure_reducers"]["unknown_contract"] = [
+        "repair_without_recipe"
+    ]
+
+    check = _check_project_development_policy({
+        "project_development_policy": policy,
+        "patch_synthesis_policy": load_patch_synthesis_policy(),
+    })
+
+    assert (
+        "project_development_policy_unknown_failure_reducer:"
+        "unknown_contract.repair_without_recipe"
+    ) in check.errors
+
+
 def test_cli_repair_knowledge_rejects_unknown_operator():
     catalog = json.loads(
         (ROOT / "knowledge" / "role_knowledge" / "project_native_cli_failure_repair_patterns.json").read_text(

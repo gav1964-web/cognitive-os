@@ -1,0 +1,50 @@
+{
+  "schema_version": "historical_defect_acquisition.v1",
+  "status": "sandbox_validated_not_holdout",
+  "recorded_at": "2026-09-08",
+  "project": "invoke",
+  "project_stratum": "cli_local_tool",
+  "origin": "https://github.com/pyinvoke/invoke.git",
+  "base_revision": "b477491cc0a4531d9acb2ca061c9a1e0e1bfd71e",
+  "upstream_fix_revision": "de0eadaa64813d841cffa50fb3cc9774c763ac8e",
+  "target": "invoke/parser/context.py:ParserContext.help_for",
+  "failure_kind": "cli_help_type_placeholder_contract",
+  "operator_id": "add_cli_int_help_placeholder",
+  "adapter": {
+    "source": "evaluation/historical_adapters/invoke_integer_help/cognitive_os_tests/test_integer_help_regression.py",
+    "destination": "cognitive_os_tests/test_integer_help_regression.py",
+    "sha256": "af7007080ad49ce466dfc9fa859e9cbd747f543f857bd7de57e0ae8b71487923",
+    "targeted_nodeid": "cognitive_os_tests/test_integer_help_regression.py::test_integer_defaults_render_int_help_placeholder",
+    "regression_target": "cognitive_os_tests",
+    "base_results": "1 failed, 2 passed"
+  },
+  "evidence": {
+    "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T123852054951Z.json",
+    "project_development_report": "artifacts/project_development/project_development_20260908T131311725514Z.json",
+    "project_development_report_sha256": "d2de3e2aa9936db3a14758e65934895339d2483b6749b65fcaff6013e812b158",
+    "base_source_blob": "ec1c404bb83b5e4e85390cbacb7b33ea5663bb2b",
+    "generated_source_blob": "97e1626f707747079cff2927e9a480b382134364",
+    "upstream_fix_source_blob": "97e1626f707747079cff2927e9a480b382134364",
+    "generated_matches_upstream_fix": true,
+    "targeted_result": "1 passed",
+    "compatibility_regression_result": "3 passed",
+    "role_chain_handoff": "completed_aligned",
+    "outcome_reassessment": "validated",
+    "source_project_unchanged": true,
+    "generated_function_stubs": 0
+  },
+  "discovery_corrections": [
+    "warning summary frames cannot bind a production target",
+    "re-exported class aliases resolve to the defining class method",
+    "case-insensitive filesystems cannot turn an exported class into a module",
+    "vendored legacy syntax is source noise rather than active-source damage",
+    "legacy setup.py distribution identity is parsed statically"
+  ],
+  "promotion": {
+    "operator_status": "validated_active_exact_shape",
+    "role_scores_changed": false,
+    "holdout_consumed": true,
+    "automatic_kb_promotion": false,
+    "reason": "Owner-independent historical acquisition validates the exact reducer but is consumed training evidence, not a disjoint fresh role holdout."
+  }
+}

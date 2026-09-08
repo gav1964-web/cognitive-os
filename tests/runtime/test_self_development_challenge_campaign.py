@@ -20,6 +20,11 @@ def _policy() -> dict:
         "scan_limit": 20,
         "split_seed": "test",
         "prospective_evidence_glob": "artifacts/project_development/project_development_*.json",
+        "native_failure_evidence_glob": "artifacts/field_trials/project_native_failure_intake_*.json",
+        "candidate_requirements": {
+            "native_tests_present": True,
+            "git_metadata_present": True,
+        },
         "signals": {
             "cli_local_tool": ["console_scripts", "argparse", "cli"],
             "library_pure_transform": ["parser", "transform", "schema"],
@@ -30,9 +35,10 @@ def _policy() -> dict:
         },
         "excluded_signals": {
             "cli_local_tool": ["django"],
-            "library_pure_transform": ["django"],
+            "library_pure_transform": ["django", "gui"],
         },
         "external_acquisition": [],
+        "external_holdout": [],
         "invariants": {
             "untouched_only": True,
             "owner_independent": True,
@@ -53,11 +59,22 @@ def _workspace(root: Path) -> None:
         ("pure", "parser transform schema"),
     ):
         for index in range(5):
-            name = f"owner-{project_type}-{index}__project"
+            identity = "command" if project_type == "cli" else project_type
+            name = f"owner-{identity}-{index}__project"
             project = root / "corpus" / name
             project.mkdir(parents=True)
+            (project / ".git").mkdir()
+            (project / "tests").mkdir()
+            (project / "tests" / "test_smoke.py").write_text(
+                "def test_smoke():\n    assert True\n", encoding="utf-8"
+            )
             (project / "README.md").write_text(marker, encoding="utf-8")
             (project / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+            if project_type == "cli":
+                (project / "pyproject.toml").write_text(
+                    "[project]\nname = 'sample'\n[project.scripts]\nsample = 'module:main'\n",
+                    encoding="utf-8",
+                )
             projects.append({
                 "project": name,
                 "canonical_project": name,
@@ -81,6 +98,11 @@ def test_manifest_freezes_independent_local_splits(tmp_path: Path) -> None:
     assert manifest["network_fallback"]["allowed"] is False
     assert all(len(row["acquisition"]) == len(row["holdout"]) == 2 for row in manifest["splits"])
     assert all(all(row["checks"].values()) for row in manifest["splits"])
+    cli = next(row for row in manifest["splits"] if row["project_type"] == "cli_local_tool")
+    assert all(
+        case["identity_evidence"] == "declared_script_entrypoint"
+        for case in [*cli["acquisition"], *cli["holdout"]]
+    )
 
 
 def test_policy_rejects_consumable_holdout(tmp_path: Path) -> None:
@@ -98,6 +120,37 @@ def test_cli_name_matching_is_token_aware() -> None:
     assert campaign._name_signal_matches("owner__python-client", "cli") is False
 
 
+def test_manifest_excludes_projects_seen_by_native_intake(tmp_path: Path) -> None:
+    _workspace(tmp_path)
+    reports = tmp_path / "artifacts" / "field_trials"
+    reports.mkdir(parents=True)
+    (reports / "project_native_failure_intake_seen.json").write_text(
+        json.dumps({"cases": [{"project": "owner-command-0__project"}]}),
+        encoding="utf-8",
+    )
+
+    manifest = campaign.build_challenge_manifest(root=tmp_path, policy=_policy())
+    cli = next(row for row in manifest["splits"] if row["project_type"] == "cli_local_tool")
+
+    assert manifest["candidate_counts"]["cli_local_tool"] == 4
+    assert all(
+        row["project"] != "owner-command-0__project"
+        for row in [*cli["acquisition"], *cli["holdout"]]
+    )
+
+
+def test_manifest_rejects_gui_parser_as_pure_library(tmp_path: Path) -> None:
+    _workspace(tmp_path)
+    project = tmp_path / "corpus" / "owner-pure-0__project"
+    (project / "README.md").write_text(
+        "parser transform schema desktop gui", encoding="utf-8"
+    )
+
+    manifest = campaign.build_challenge_manifest(root=tmp_path, policy=_policy())
+
+    assert manifest["candidate_counts"]["library_pure_transform"] == 4
+
+
 def test_campaign_connects_reports_collector_detector_and_queue(tmp_path: Path, monkeypatch) -> None:
     _workspace(tmp_path)
     manifest = campaign.build_challenge_manifest(root=tmp_path, policy=_policy())
@@ -106,7 +159,11 @@ def test_campaign_connects_reports_collector_detector_and_queue(tmp_path: Path, 
         "status": "controlled_stop",
         "project": kwargs["project_dir"].name,
         "recognition": {"status": "recognized", "classification": {
-            "project_stratum": "cli_local_tool" if "cli" in kwargs["project_dir"].name else "library_pure_transform"
+            "project_stratum": (
+                "cli_local_tool"
+                if "command" in kwargs["project_dir"].name
+                else "library_pure_transform"
+            )
         }},
         "diagnosis": {"issues": []},
         "safety": {"source_changes": False, "automatic_kb_promotion": False},

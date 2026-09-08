@@ -352,6 +352,24 @@
         "regression_suite_passes",
         "source_project_remains_unchanged"
       ]
+    },
+    "cli_help_type_placeholder_contract": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "cli_help_type_placeholder_contract_synthesized",
+      "operation_kind": "add_cli_int_help_placeholder",
+      "required_symbol": "ParserContext.help_for",
+      "existing_type_name": "str",
+      "existing_placeholder": "STRING",
+      "added_type_name": "int",
+      "added_placeholder": "INT",
+      "automatic_source_mutation_allowed": false,
+      "required_verification": [
+        "original_failing_test_passes_in_sandbox",
+        "targeted_acceptance_passes",
+        "regression_suite_passes",
+        "source_project_remains_unchanged"
+      ]
     }
   }
 }

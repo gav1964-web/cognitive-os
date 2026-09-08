@@ -25,6 +25,84 @@ def test_fixture_setup_error_cannot_gain_repair_authority_from_test_body(tmp_pat
     assert result["status"] == "environment_blocked"
     assert result["failure_signature"] is None
 
+
+def test_declared_pytest_asyncio_plugin_failure_is_environment_blocked(tmp_path):
+    project = tmp_path / "async_library"
+    project.mkdir()
+    (project / "pyproject.toml").write_text(
+        "[tool.poetry.group.dev.dependencies]\npytest-asyncio = '^0.23'\n",
+        encoding="utf-8",
+    )
+    output = (
+        "FAILED tests/test_async.py::test_parse\n"
+        "PytestUnknownMarkWarning: Unknown pytest.mark.asyncio\n"
+        "1 failed in 0.1s"
+    )
+
+    result = _interpret_pytest_result(project, 1, output, {})
+
+    assert result["status"] == "environment_blocked"
+    assert result["failure_signature"] is None
+    assert result["environment_reason"] == "declared_pytest_asyncio_plugin_unavailable"
+
+
+def test_warning_locations_cannot_override_assertion_target(tmp_path):
+    project = tmp_path / "invoke"
+    source = project / "invoke" / "parser" / "context.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "class ParserContext:\n"
+        "    def help_for(self, name):\n"
+        "        return name\n",
+        encoding="utf-8",
+    )
+    (source.parent / "__init__.py").write_text(
+        "from .context import ParserContext as Context\n", encoding="utf-8"
+    )
+    warning_source = project / "invoke" / "watchers.py"
+    warning_source.write_text(
+        "class Responder:\n"
+        "    def __init__(self):\n"
+        "        pass\n",
+        encoding="utf-8",
+    )
+    test = project / "cognitive_os_tests" / "test_help.py"
+    test.parent.mkdir()
+    test.write_text(
+        "from invoke.parser import Context\n\n"
+        "def test_help():\n"
+        "    context = Context()\n"
+        "    assert Context.help_for(context, '--intval') == 'INT'\n",
+        encoding="utf-8",
+    )
+    output = (
+        "FAILED cognitive_os_tests/test_help.py::test_help\n"
+        "E   AssertionError: integer placeholder missing\n"
+        "================ warnings summary ================\n"
+        "invoke/watchers.py:2: DeprecationWarning: invalid escape sequence\n"
+    )
+
+    result = _interpret_pytest_result(project, 1, output, {})
+
+    assert result["production_targets"] == [
+        "invoke/parser/context.py:ParserContext.help_for"
+    ]
+    assert result["target_binding"] == "unique_assertion_causal_call"
+
+
+def test_cli_help_placeholder_kind_requires_bound_target_and_nodeid():
+    target = "invoke/parser/context.py:ParserContext.help_for"
+    summary = "AssertionError: integer placeholder missing"
+    nodeids = [
+        "cognitive_os_tests/test_integer_help_regression.py::"
+        "test_integer_defaults_render_int_help_placeholder"
+    ]
+
+    assert _failure_kind(target, summary, nodeids) == (
+        "cli_help_type_placeholder_contract"
+    )
+    assert _failure_kind(target, summary, []) is None
+
 def test_repeated_target_bound_failure_creates_change_request(tmp_path):
     project = tmp_path / "broken_tool"
     project.mkdir()
@@ -142,3 +220,42 @@ def test_native_verification_requires_targeted_and_regression_passes(tmp_path, m
 
     assert result["status"] == "passed"
     assert result["failing_nodeids"] == ["tests/test_api.py::test_case"]
+
+
+def test_native_verification_distinguishes_unavailable_regression(tmp_path, monkeypatch):
+    project = tmp_path / "demo"
+    project.mkdir()
+    outcomes = iter([
+        {"status": "passed", "exit_code": 0},
+        {"status": "environment_blocked", "exit_code": 4},
+    ])
+    monkeypatch.setattr(
+        "runtime.project_native_failure_intake_core._run_pytest",
+        lambda *args, **kwargs: next(outcomes),
+    )
+
+    result = run_project_native_verification(
+        root=tmp_path,
+        project=project,
+        failing_nodeids=["tests/test_api.py::test_case"],
+        policy={"native_failure_intake": {}},
+    )
+
+    assert result["status"] == "targeted_passed_regression_environment_blocked"
+    assert result["evidence_scope"] == "targeted_only"
+
+
+def test_legacy_setup_py_selects_distribution_regression_profile(tmp_path):
+    project = tmp_path / "historical-checkout"
+    project.mkdir()
+    (project / "setup.py").write_text(
+        "from setuptools import setup\nsetup(name='invoke', version='0.1')\n",
+        encoding="utf-8",
+    )
+    (project / "cognitive_os_tests").mkdir()
+
+    selected = _project_specific_intake(project, {
+        "project_regression_targets": {"invoke": ["cognitive_os_tests"]},
+    })
+
+    assert selected["regression_targets"] == ["cognitive_os_tests"]

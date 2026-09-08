@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import re
 from collections import defaultdict
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -13,6 +11,18 @@ from pathlib import Path
 from typing import Any
 
 from .project_development import run_project_development
+from .self_development_challenge_evidence import (
+    bounded_project_text as _bounded_project_text,
+    declared_script_entrypoints as _declared_script_entrypoints,
+    exposed_projects as _exposed_projects,
+    name_signal_matches as _name_signal_matches,
+    native_test_roots as _native_test_roots,
+    signal_score as _signal_score,
+)
+from .self_development_challenge_external import (
+    fill_external_shortage as _fill_external_shortage,
+    split_checks as _split_checks,
+)
 from .self_development_collector import collect_project_development_report
 from .self_development_experiment_queue import build_self_development_experiment_queue
 from .self_development_prospective_detection import run_prospective_detection
@@ -46,6 +56,15 @@ def load_challenge_campaign_policy(path: str | None = None) -> dict[str, Any]:
         "holdout_consumed", "source_apply", "promotion_applied"
     )):
         raise ChallengeCampaignError("challenge campaign mutation boundary is unsafe")
+    requirements = dict(payload.get("candidate_requirements") or {})
+    if not all(requirements.get(name) is True for name in (
+        "native_tests_present", "git_metadata_present",
+    )):
+        raise ChallengeCampaignError("challenge candidate requirements are incomplete")
+    if not all(payload.get(name) for name in (
+        "prospective_evidence_glob", "native_failure_evidence_glob",
+    )):
+        raise ChallengeCampaignError("challenge exposure evidence is incomplete")
     return payload
 
 
@@ -57,7 +76,13 @@ def build_challenge_manifest(
         str(base / "config" / "self_development_challenge_campaign.json")
     )
     index = _read_inside(base, str(rules["corpus_index"]))
-    dynamically_exposed = _exposed_projects(base, str(rules["prospective_evidence_glob"]))
+    project_development_exposed = _exposed_projects(
+        base, str(rules["prospective_evidence_glob"])
+    )
+    native_failure_exposed = _exposed_projects(
+        base, str(rules["native_failure_evidence_glob"])
+    )
+    dynamically_exposed = project_development_exposed | native_failure_exposed
     reserved = {
         str(row.get("canonical_project"))
         for key in ("acquisition", "holdout")
@@ -79,20 +104,31 @@ def build_challenge_manifest(
         scanned += 1
         root_path = (base / str(row["project_root"])).resolve()
         text = _bounded_project_text(root_path)
+        declared_scripts = _declared_script_entrypoints(root_path)
+        native_tests = _native_test_roots(root_path)
+        git_metadata = (root_path / ".git").exists()
+        requirements = dict(rules.get("candidate_requirements") or {})
         scores = {
             project_type: _signal_score(text, list(dict(rules["signals"])[project_type]))
             for project_type in rules["target_project_types"]
         }
         ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
-        selected_type = ranked[0][0]
+        script_identity = bool(declared_scripts)
+        selected_type = "cli_local_tool" if script_identity else ranked[0][0]
         name = str(row.get("project") or "").lower()
         required_name = list(dict(rules["required_name_signals"])[selected_type])
         excluded = list(dict(rules["excluded_signals"])[selected_type])
+        minimum_score = 1 if script_identity else 2
         if (
-            ranked[0][1] < 2
-            or ranked[0][1] == ranked[1][1]
-            or not any(_name_signal_matches(name, signal) for signal in required_name)
+            scores[selected_type] < minimum_score
+            or (not script_identity and ranked[0][1] == ranked[1][1])
+            or (
+                not script_identity
+                and not any(_name_signal_matches(name, signal) for signal in required_name)
+            )
             or any(signal.lower() in text for signal in excluded)
+            or (requirements.get("native_tests_present") is True and not native_tests)
+            or (requirements.get("git_metadata_present") is True and not git_metadata)
         ):
             continue
         candidates[selected_type].append({
@@ -103,6 +139,12 @@ def build_challenge_manifest(
             "content_digest": "sha256:" + str(row.get("content_fingerprint")),
             "expected_project_type": selected_type,
             "signal_scores": scores,
+            "identity_evidence": (
+                "declared_script_entrypoint" if script_identity else "project_name_token"
+            ),
+            "declared_script_entrypoints": declared_scripts,
+            "native_test_roots": native_tests,
+            "git_metadata_present": git_metadata,
         })
     splits, shortages = [], {}
     for project_type in rules["target_project_types"]:
@@ -129,8 +171,9 @@ def build_challenge_manifest(
         root=base,
         splits=splits,
         shortages=shortages,
-        external=list(rules.get("external_acquisition") or []),
-        dynamically_exposed=dynamically_exposed,
+        acquisition_candidates=list(rules.get("external_acquisition") or []),
+        holdout_candidates=list(rules.get("external_holdout") or []),
+        exposed_projects=dynamically_exposed,
     ) if local_shortage else []
     checks = {
         "source_index_is_local_and_sufficient": index.get("status") == "local_corpus_sufficient",
@@ -155,6 +198,8 @@ def build_challenge_manifest(
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_index": str(rules["corpus_index"]),
         "dynamically_exposed_projects": len(dynamically_exposed),
+        "project_development_exposed_projects": len(project_development_exposed),
+        "native_failure_exposed_projects": len(native_failure_exposed),
         "scanned_projects": scanned,
         "candidate_counts": {key: len(candidates[key]) for key in rules["target_project_types"]},
         "splits": splits,
@@ -239,42 +284,6 @@ def run_challenge_campaign(
     return {**body, "campaign_digest": _digest(body)}
 
 
-def _bounded_project_text(project: Path) -> str:
-    names, chunks, total = [], [], 0
-    skipped = {".git", ".hg", ".mypy_cache", ".pytest_cache", ".tox", ".venv", "venv", "node_modules", "__pycache__"}
-    for current, dirs, files in os.walk(project):
-        dirs[:] = sorted(name for name in dirs if name not in skipped and not name.startswith("."))
-        for filename in sorted(files):
-            path = Path(current) / filename
-            relative = path.relative_to(project).as_posix().lower()
-            if path.suffix.lower() == ".py" and len(names) < 64:
-                names.append(relative)
-            if filename.lower() not in {"pyproject.toml", "setup.cfg", "setup.py", "readme.md", "readme.rst"}:
-                continue
-            try:
-                value = path.read_text(encoding="utf-8", errors="replace")[:8192].lower()
-            except OSError:
-                continue
-            chunks.append(value)
-            total += len(value)
-            if total >= 32768:
-                break
-        if total >= 32768:
-            break
-    return "\n".join([project.name.lower(), *names[:64], *chunks])
-
-
-def _signal_score(text: str, signals: list[str]) -> int:
-    return sum(signal.lower() in text for signal in signals)
-
-
-def _name_signal_matches(name: str, signal: str) -> bool:
-    return re.search(
-        rf"(?:^|[^a-z0-9]){re.escape(signal.lower())}(?:$|[^a-z0-9])",
-        name.lower(),
-    ) is not None
-
-
 def _take_independent(rows: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
     result, owners, digests = [], set(), set()
     for row in rows:
@@ -286,53 +295,6 @@ def _take_independent(rows: list[dict[str, Any]], count: int) -> list[dict[str, 
         if len(result) == count:
             break
     return result
-
-
-def _fill_external_shortage(
-    *, root: Path, splits: list[dict[str, Any]], shortages: dict[str, dict[str, int]],
-    external: list[dict[str, Any]], dynamically_exposed: set[str],
-) -> list[dict[str, Any]]:
-    used = []
-    for split in splits:
-        project_type = str(split["project_type"])
-        needed = int(shortages[project_type]["acquisition"])
-        if needed <= 0:
-            continue
-        existing_owners = {row["owner"] for row in [*split["holdout"], *split["acquisition"]]}
-        existing_digests = {row["content_digest"] for row in [*split["holdout"], *split["acquisition"]]}
-        for raw in external:
-            if raw.get("expected_project_type") != project_type or str(raw.get("project")).lower() in dynamically_exposed:
-                continue
-            project_root = (root / str(raw.get("project_root") or "")).resolve()
-            project_root.relative_to(root)
-            if not project_root.is_dir() or not raw.get("revision") or not raw.get("source_url"):
-                continue
-            digest = "sha256:" + hashlib.sha256(_bounded_project_text(project_root).encode()).hexdigest()
-            owner = str(raw.get("owner") or "")
-            if not owner or owner in existing_owners or digest in existing_digests:
-                continue
-            row = {
-                **dict(raw), "canonical_project": str(raw["project"]).lower(),
-                "content_digest": digest, "source_kind": "targeted_external_acquisition",
-                "acquisition_reason": "measured_local_cli_shortage",
-            }
-            split["acquisition"].append(row)
-            used.append(row)
-            existing_owners.add(owner)
-            existing_digests.add(digest)
-            needed -= 1
-            if needed == 0:
-                break
-        shortages[project_type]["acquisition"] = needed
-        split["checks"] = _split_checks(split["acquisition"], split["holdout"])
-    return used
-
-
-def _split_checks(acquisition: list[dict[str, Any]], holdout: list[dict[str, Any]]) -> dict[str, bool]:
-    return {
-        "owner_disjoint": {row["owner"] for row in acquisition}.isdisjoint(row["owner"] for row in holdout),
-        "content_disjoint": {row["content_digest"] for row in acquisition}.isdisjoint(row["content_digest"] for row in holdout),
-    }
 
 
 def _coverage(cases: list[dict[str, Any]]) -> dict[str, Any]:
@@ -360,19 +322,6 @@ def _read_inside(root: Path, value: str) -> dict[str, Any]:
     path = (root / value).resolve()
     path.relative_to(root)
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _exposed_projects(root: Path, pattern: str) -> set[str]:
-    projects = set()
-    for path in root.glob(pattern):
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        project = str(payload.get("project") or "").lower()
-        if project:
-            projects.add(project)
-    return projects
 
 
 def _split_key(row: dict[str, Any], seed: str) -> str:

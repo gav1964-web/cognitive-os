@@ -135,3 +135,16 @@ def _check_verified_issue_reducers(
                 check.errors.append(
                     f"project_development_policy_unknown_reducer:{rule_id}.{operation_kind}"
                 )
+    for failure_kind, operations in dict(
+        policy.get("verified_failure_reducers") or {}
+    ).items():
+        if not operations:
+            check.errors.append(
+                f"project_development_policy_missing_failure_reducer:{failure_kind}"
+            )
+        for operation_kind in list(operations or []):
+            if operation_kind not in known_operations:
+                check.errors.append(
+                    "project_development_policy_unknown_failure_reducer:"
+                    f"{failure_kind}.{operation_kind}"
+                )

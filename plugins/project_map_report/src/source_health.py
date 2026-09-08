@@ -16,7 +16,13 @@ def source_health(
     py_skipped = [row for row in python_structure.get("skipped", []) if isinstance(row, dict)]
     file_skipped = [row for row in files.get("skipped", []) if isinstance(row, dict)]
     runtime_skipped = [row for row in runtime_commands.get("skipped", []) if isinstance(row, dict)]
-    syntax_errors = [row for row in py_skipped if str(row.get("reason")) == "SyntaxError"]
+    all_syntax_errors = [
+        row for row in py_skipped if str(row.get("reason")) == "SyntaxError"
+    ]
+    vendored_syntax_errors = [
+        row for row in all_syntax_errors if _is_vendored_path(str(row.get("path") or ""))
+    ]
+    syntax_errors = [row for row in all_syntax_errors if row not in vendored_syntax_errors]
     parser_incompatibilities = [
         row for row in py_skipped if str(row.get("reason")) == "ParserVersionIncompatible"
     ]
@@ -62,11 +68,13 @@ def source_health(
     status = "clean"
     if syntax_errors or inaccessible_count:
         status = "damaged"
-    elif parser_incompatibilities or project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
+    elif vendored_syntax_errors or parser_incompatibilities or project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
         status = "noisy"
     blockers = []
     if syntax_errors:
         blockers.append("repair or quarantine files that fail Python AST parsing")
+    if vendored_syntax_errors:
+        blockers.append("exclude vendored parser-incompatible source from active analysis")
     if inaccessible_count:
         blockers.append("skip or isolate inaccessible filesystem entries")
     if project_shape == "dirty_portfolio":
@@ -85,6 +93,8 @@ def source_health(
         "project_shape": project_shape,
         "syntax_error_count": len(syntax_errors),
         "syntax_error_samples": syntax_errors[:12],
+        "vendored_syntax_error_count": len(vendored_syntax_errors),
+        "vendored_syntax_error_samples": vendored_syntax_errors[:12],
         "parser_incompatibility_count": len(parser_incompatibilities),
         "parser_incompatibility_samples": parser_incompatibilities[:12],
         "inaccessible_count": inaccessible_count,
@@ -248,3 +258,10 @@ def _looks_like_snapshot_dir(part: str) -> bool:
     lowered = part.lower()
     chunks = lowered.replace("-", "_").split("_")
     return any(len(chunk) == 8 and chunk.isdigit() and chunk.startswith(("20", "19")) for chunk in chunks)
+
+
+def _is_vendored_path(path: str) -> bool:
+    parts = {
+        part for part in path.replace("\\", "/").lower().split("/") if part
+    }
+    return bool(parts.intersection({"vendor", "vendored", "third_party", "thirdparty"}))

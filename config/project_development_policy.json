@@ -73,6 +73,7 @@
       ]
     },
     "project_regression_targets": {
+      "invoke": ["cognitive_os_tests"],
       "tox": ["tests/config/loader/ini"],
       "urllib3": ["test/test_exceptions.py"]
     },
@@ -354,6 +355,7 @@
     "duplicate_cli_short_option_contract": ["replace_duplicate_cli_short_option"],
     "strict_default_string_comparison_contract": ["guard_empty_string_comparison_type"],
     "escaped_fstring_brace_offset_contract": ["adjust_fstring_middle_brace_offsets"],
-    "trailing_backslash_index_contract": ["guard_trailing_backslash_index"]
+    "trailing_backslash_index_contract": ["guard_trailing_backslash_index"],
+    "cli_help_type_placeholder_contract": ["add_cli_int_help_placeholder"]
   }
 }

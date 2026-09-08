@@ -229,3 +229,38 @@ def test_failure_packet_does_not_match_operator_from_failure_text_alone(tmp_path
 
     assert "causal_hypothesis" not in issue
     assert issue["allowed_operator_ids"] == []
+
+
+def test_invoke_integer_help_failure_creates_exact_training_repair(tmp_path: Path) -> None:
+    project = tmp_path / "invoke"
+    source = project / "invoke" / "parser"
+    source.mkdir(parents=True)
+    (source / "context.py").write_text(
+        "class ParserContext:\n"
+        "    def help_for(self, flag):\n"
+        "        arg = self.flags[flag]\n"
+        "        value = {\n"
+        "            str: 'STRING',\n"
+        "        }.get(arg.kind)\n"
+        "        return value\n",
+        encoding="utf-8",
+    )
+    diagnosis = _diagnosis(
+        "invoke/parser/context.py:ParserContext.help_for",
+        "AssertionError: '-i, --intval' != '-i INT, --intval=INT'",
+        "cognitive_os_tests/test_integer_help_regression.py::"
+        "test_integer_defaults_render_int_help_placeholder",
+    )
+
+    issue = enrich_failure_diagnosis(
+        diagnosis,
+        project_dir=project,
+        workspace_root=Path.cwd(),
+        authorize_training_replay=True,
+    )["issues"][0]
+
+    assert issue["causal_hypothesis"]["pattern_id"] == (
+        "integer_cli_help_missing_type_placeholder"
+    )
+    assert issue["allowed_operator_ids"] == ["add_cli_int_help_placeholder"]
+    assert issue["training_replay_authority"]["source_apply"] is False

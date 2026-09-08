@@ -26,9 +26,14 @@
     "A durable worker may mutate a running job only while it holds the unique lease token for the current attempt.",
     "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain.",
     "A defect-driven role chain must preserve one digest-bound ProblemOutcomeContract from baseline evidence through Reviewer; artifact completeness cannot replace causal conformance.",
-    "A consumed training replay may demonstrate chain competence but its structural score cannot remove training caps or substitute for a fresh owner-independent holdout."
+    "A consumed training replay may demonstrate chain competence but its structural score cannot remove training caps or substitute for a fresh owner-independent holdout.",
+    "Vendored parser-incompatible source is reported as source noise and cannot outrank a failure-backed active-source defect.",
+    "A targeted repair pass with an unavailable legacy regression suite is targeted-only evidence, not a verified project-development outcome.",
+    "Legacy setup.py identity may be read only by static constant extraction; project analysis never executes setup.py to discover metadata."
   ],
   "current_sequence": [
+    "qualify_two_fresh_owner_independent_defects_per_narrow_stratum",
+    "run_the_full_role_chain_on_each_qualified_fresh_defect",
     "collect_same_model_direct_short_full_receipts_for_frozen_product_tasks",
     "execute_twenty_product_tasks_from_the_frozen_local_first_corpus",
     "obtain_independent_blind_scorecard_before_any_product_claim",
@@ -48,7 +53,9 @@
     "failure_repair_spec_target_binding",
     "framework_plugin_certification_reassessment",
     "narrow_type_certification_reassessment",
-    "execute_verified_reducers_on_consumed_training_defects"
+    "execute_verified_reducers_on_consumed_training_defects",
+    "run_two_local_first_fresh_holdout_campaigns_without_score_inflation",
+    "validate_invoke_integer_help_reducer_against_the_exact_upstream_fix"
   ],
   "narrow_project_types": ["cli_local_tool", "library_pure_transform"],
   "promotion_target_score": 9.7,
@@ -94,16 +101,16 @@
       "reviewer": 2.0
     },
     "narrow_defect_holdout_receipt": "sha256:02781dc142896fd8c86b9a722e0fa550f7acccb9c5ea8626237411ceb129acff",
-    "narrow_causal_training_patterns": 7,
+    "narrow_causal_training_patterns": 8,
     "narrow_causal_training_execution_authority": false,
-    "narrow_causal_training_replay_status": "five_full_regression_cases_validated_not_certified",
+    "narrow_causal_training_replay_status": "six_full_regression_cases_validated_not_certified",
     "narrow_causal_training_replay_scope": "explicit_consumed_case_sandbox_only",
-    "narrow_causal_training_replay_projects": 5,
+    "narrow_causal_training_replay_projects": 6,
     "narrow_causal_training_replay_strata": {
-      "cli_local_tool": 3,
+      "cli_local_tool": 4,
       "library_pure_transform": 2
     },
-    "narrow_causal_training_replay_full_regressions_passed": 5,
+    "narrow_causal_training_replay_full_regressions_passed": 6,
     "narrow_causal_training_replay_structural_scores": {
       "project_analyzer": 10.0,
       "architect": 10.0,
@@ -121,8 +128,24 @@
       "reviewer": 8.8
     },
     "narrow_causal_training_replay_receipt": "sha256:842b7b88716714054a8a6c0e932a9c6302c5c72ca05ba7e60c00bae25fcb02cb",
+    "narrow_causal_training_replay_receipt_scope": "first_five_cases_before_invoke_acquisition",
+    "narrow_role_status_receipt": "sha256:d1a415b3cb1207b046455cdb837a53656416916b55343c5587154211c81fcdeb",
     "narrow_causal_training_source_apply": false,
     "narrow_causal_training_promotion_applied": false,
+    "fresh_holdout_campaigns_completed": 2,
+    "fresh_holdout_projects_executed": 8,
+    "fresh_holdout_qualified_failures": 0,
+    "fresh_holdout_clean_projects": 3,
+    "fresh_holdout_environment_blocked_projects": 5,
+    "fresh_holdout_role_scores_changed": false,
+    "fresh_holdout_result_receipts": [
+      "sha256:ff66476cf978ddb83f08df69010a17c7c6ed3234b238dbe8dd3cd9407a013edc",
+      "sha256:c791dee201a2400463e9106619cf42863d30f2d35feeb365d8ac9b9279c47ae6"
+    ],
+    "invoke_historical_acquisition_status": "sandbox_validated_not_holdout",
+    "invoke_historical_acquisition_receipt": "sha256:01c206366dc312da8b604bc09edfe1f20a9f755ab5d12e40919f3ff960a8fc33",
+    "invoke_generated_patch_matches_upstream_fix_blob": true,
+    "invoke_historical_acquisition_role_scores_changed": false,
     "problem_outcome_contract_schema": "problem_outcome_contract.v1",
     "problem_outcome_contract_chain": [
       "project_analyzer",

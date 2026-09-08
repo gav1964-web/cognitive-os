@@ -12,6 +12,7 @@ from .patch_synthesis_policy import (
     string_transform_identity_return_recipe,
 )
 from .programmer_contract_transform_patch import contract_transform_patch
+from .programmer_cli_help_placeholder_package import cli_help_placeholder_package
 from .programmer_literal_stub_patch import literal_return_patch, notimplemented_return_patch
 from .programmer_patch_synthesizer_common import NO_PATCH, _copy_project, _expected_files, _patch_result, _target_symbol
 from .programmer_patch_synthesizer_contract_packages import (
@@ -90,6 +91,7 @@ def synthesize_patch_package(
             ["guard_empty_string_comparison_type"],
             ["adjust_fstring_middle_brace_offsets"],
             ["guard_trailing_backslash_index"],
+            ["add_cli_int_help_placeholder"],
             ["guard_empty_theme_config"],
             ["order_extra_hooks_after_wrappers"],
             ["derive_dist_info_from_wheel_contents"],
@@ -161,6 +163,14 @@ def synthesize_patch_package(
         )
     if operation_kind == "guard_trailing_backslash_index":
         return _trailing_backslash_bounds_package(
+            execution_dir=execution_dir,
+            project_dir=project_dir,
+            target=target,
+            path_text=path_text,
+            symbol=symbol,
+        )
+    if operation_kind == "add_cli_int_help_placeholder":
+        return cli_help_placeholder_package(
             execution_dir=execution_dir,
             project_dir=project_dir,
             target=target,

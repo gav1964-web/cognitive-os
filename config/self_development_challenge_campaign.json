@@ -1,7 +1,7 @@
 {
   "schema_version": "self_development_challenge_campaign.v1",
   "status": "active",
-  "corpus_index": "artifacts/self_development/self_development_corpus_eligibility_20260831T052410743974Z.json",
+  "corpus_index": "artifacts/self_development/self_development_corpus_eligibility_20260906T101336989553Z.json",
   "certification_receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
   "target_project_types": ["cli_local_tool", "library_pure_transform"],
   "acquisition_per_type": 3,
@@ -9,6 +9,11 @@
   "scan_limit": 5000,
   "split_seed": "cognitive-os-prospective-challenge-v1",
   "prospective_evidence_glob": "artifacts/project_development/project_development_*.json",
+  "native_failure_evidence_glob": "artifacts/field_trials/project_native_failure_intake_*.json",
+  "candidate_requirements": {
+    "native_tests_present": true,
+    "git_metadata_present": true
+  },
   "signals": {
     "cli_local_tool": ["[project.scripts]", "console_scripts", "argparse", "click", "typer", "command", "cli"],
     "library_pure_transform": ["parser", "codec", "converter", "transform", "mapping", "schema", "validation", "template", "markup", "token"]
@@ -19,7 +24,7 @@
   },
   "excluded_signals": {
     "cli_local_tool": ["tensorflow", "django", "fastapi", "scheduler", "task manager", "training"],
-    "library_pure_transform": ["django", "fastapi", "plugin", "build backend", "tensorflow", "scheduler", "database"]
+    "library_pure_transform": ["django", "fastapi", "plugin", "build backend", "tensorflow", "scheduler", "database", "gui"]
   },
   "external_acquisition": [
     {
@@ -61,6 +66,16 @@
       "expected_project_type": "cli_local_tool",
       "source_url": "https://github.com/contextforge-org/contextforge-cli.git",
       "revision": "348f6316a2877cb227536c4cbb9a0e2439a2ab8d"
+    }
+  ],
+  "external_holdout": [
+    {
+      "project": "python-hyper__uritemplate",
+      "owner": "python-hyper",
+      "source_url": "https://github.com/python-hyper/uritemplate.git",
+      "revision": "e7a947e7385de3e04bb05d73d4acbc4c4409f059",
+      "project_root": "artifacts/targeted_external_holdouts/python-hyper__uritemplate",
+      "expected_project_type": "library_pure_transform"
     }
   ],
   "invariants": {

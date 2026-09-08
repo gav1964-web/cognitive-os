@@ -7,6 +7,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .project_native_failure_module_resolution import (
+    _is_production_path,
+    _project_relative_traceback_path,
+    _python_module_path,
+    _python_module_path_any,
+)
 from .project_native_failure_source_symbols import _source_defines_symbol, _source_symbol_target, _symbol_at_line
 
 _TRACEBACK_REF = re.compile(r"(?m)^((?:[A-Za-z]:)?[^\r\n:]+\.py):(\d+)(?::|\s)")
@@ -16,7 +22,10 @@ _NAMED_INIT_TYPE_ERROR = re.compile(
 
 def _production_targets(project: Path, output: str) -> list[str]:
     result = []
-    for raw_path, raw_line in _TRACEBACK_REF.findall(output):
+    failure_section = re.split(
+        r"(?m)^=+\s+warnings summary\s+=+\s*$", output, maxsplit=1,
+    )[0]
+    for raw_path, raw_line in _TRACEBACK_REF.findall(failure_section):
         normalized = _project_relative_traceback_path(project, raw_path)
         if normalized is None:
             continue
@@ -60,32 +69,6 @@ def _named_constructor_failure_target(project: Path, output: str) -> str | None:
             f"{path.relative_to(project).as_posix()}:{class_name}.__init__"
         )
     return candidates[0] if len(candidates) == 1 else None
-
-def _project_relative_traceback_path(project: Path, raw_path: str) -> str | None:
-    candidate = Path(raw_path)
-    if candidate.is_absolute():
-        try:
-            relative = candidate.resolve().relative_to(project.resolve())
-        except (OSError, ValueError):
-            return None
-        return relative.as_posix()
-
-    normalized = raw_path.replace("\\", "/")
-    direct = Path(normalized)
-    if ".." not in direct.parts and (project / direct).is_file():
-        return direct.as_posix().lstrip("./")
-
-    # Nested pytest reports paths relative to its basetemp. Intake copies always
-    # place the project at a bounded `p` directory, so only that anchored suffix
-    # may be rebound to the current isolated project copy.
-    parts = [part for part in normalized.split("/") if part not in {"", "."}]
-    for index in range(len(parts) - 1, -1, -1):
-        if parts[index].lower() != "p":
-            continue
-        suffix = Path(*parts[index + 1:])
-        if suffix.parts and ".." not in suffix.parts and (project / suffix).is_file():
-            return suffix.as_posix()
-    return None
 
 def _direct_test_call_targets(project: Path, nodeids: list[str]) -> list[str]:
     return list(_test_assertion_causal_analysis(project, nodeids)["production_targets"])
@@ -373,22 +356,3 @@ def _attribute_names(node: ast.expr) -> list[str]:
         parent = _attribute_names(node.value)
         return [*parent, node.attr] if parent else []
     return []
-
-def _python_module_path(project: Path, parts: list[str]) -> Path | None:
-    path = _python_module_path_any(project, parts)
-    return path if path is not None and _is_production_path(project, path) else None
-
-def _python_module_path_any(project: Path, parts: list[str]) -> Path | None:
-    for root in (project / "src", project):
-        module = root.joinpath(*parts).with_suffix(".py")
-        if module.is_file():
-            return module
-        package = root.joinpath(*parts, "__init__.py")
-        if package.is_file():
-            return package
-    return None
-
-def _is_production_path(project: Path, path: Path) -> bool:
-    relative = path.relative_to(project)
-    parts = {part.lower() for part in relative.parts}
-    return not parts.intersection({"test", "tests", "testing"}) and not path.name.startswith("test_")

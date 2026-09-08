@@ -77,6 +77,12 @@ def trailing_backslash_bounds_contract_recipe() -> dict[str, Any]:
     return recipe if recipe.get("enabled", True) else {}
 
 
+def cli_help_type_placeholder_contract_recipe() -> dict[str, Any]:
+    recipes = dict(_policy().get("recipes") or {})
+    recipe = dict(recipes.get("cli_help_type_placeholder_contract") or {})
+    return recipe if recipe.get("enabled", True) else {}
+
+
 def framework_contract_recipe(operation_kind: str) -> dict[str, Any]:
     recipes = dict(_policy().get("recipes") or {})
     recipe = dict(recipes.get(operation_kind) or {})

@@ -108,6 +108,43 @@
         "target_scope_admission": "admitted",
         "targeted_result": "1 passed"
       }
+    },
+    {
+      "authority": "historical_upstream_fix_and_repeated_project_native_failure",
+      "failure_kind": "cli_help_type_placeholder_contract",
+      "id": "cli_help_type_placeholder_contract",
+      "operator_id": "add_cli_int_help_placeholder",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique assertion-causal production target",
+        "target is exactly invoke/parser/context.py:ParserContext.help_for",
+        "the local type map is exactly str to STRING and int is not shadowed",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "historical integer-help failure passes in the patch sandbox",
+        "string and boolean neighboring help contracts pass",
+        "generated target file matches the owner upstream fix blob",
+        "generated-function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "Invoke ParserContext.help_for exact one-entry type-placeholder map",
+      "validated_evidence": {
+        "acquisition_manifest": "config/historical_defect_acquisition_invoke_20260908.json",
+        "base_revision": "b477491cc0a4531d9acb2ca061c9a1e0e1bfd71e",
+        "failing_nodeid": "cognitive_os_tests/test_integer_help_regression.py::test_integer_defaults_render_int_help_placeholder",
+        "project": "invoke",
+        "project_development_report": "artifacts/project_development/project_development_20260908T131311725514Z.json",
+        "regression_result": "3 passed",
+        "target": "invoke/parser/context.py:ParserContext.help_for",
+        "target_binding": "unique_assertion_causal_call",
+        "targeted_result": "1 passed",
+        "upstream_fix_revision": "de0eadaa64813d841cffa50fb3cc9774c763ac8e",
+        "upstream_source_blob_match": true
+      }
     }
   ],
   "promotion_policy": {

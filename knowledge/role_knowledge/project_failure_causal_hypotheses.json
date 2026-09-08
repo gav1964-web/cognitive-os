@@ -65,6 +65,15 @@
       "repair_mechanism": "Bound the escaped-line continuation loop by the known line count before reading the next line, preserving normal multiline import parsing.",
       "mutation_contract": "Add the existing index-versus-line-count guard to the trailing-backslash loop and leave comment, parenthesis, and import categorization behavior unchanged.",
       "proposed_operator_id": "guard_trailing_backslash_index"
+    },
+    {
+      "id": "integer_cli_help_missing_type_placeholder",
+      "required_failure_contains_all": ["--intval", "int"],
+      "required_source_contains_all": ["str: 'string'", ".get(arg.kind)"],
+      "mechanism": "The CLI help type map handles strings but omits integer arguments, so integer flags are rendered without their INT placeholder.",
+      "repair_mechanism": "Add the integer-to-INT entry to the existing local type-placeholder map while preserving flag ordering and optional-value formatting.",
+      "mutation_contract": "Extend only the exact one-entry str-to-STRING map in ParserContext.help_for with int-to-INT; reject wider or shadowed mappings.",
+      "proposed_operator_id": "add_cli_int_help_placeholder"
     }
   ],
   "authority": {

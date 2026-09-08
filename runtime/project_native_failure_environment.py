@@ -13,6 +13,9 @@ import venv
 from pathlib import Path
 from typing import Any
 
+from .project_native_failure_regression import existing_regression_targets
+from .project_native_setup_identity import setup_py_distribution_name
+
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10 controller compatibility.
@@ -218,9 +221,9 @@ def _project_specific_intake(project: Path, intake: dict[str, Any]) -> dict[str,
         selected["project_pytest_arguments_applied"] = [
             str(value) for value in project_arguments
         ]
-    regression_targets = list(
+    regression_targets = existing_regression_targets(project, list(
         dict(intake.get("project_regression_targets") or {}).get(identity.lower()) or []
-    )
+    ))
     if regression_targets:
         selected["regression_targets"] = [str(value) for value in regression_targets]
     plugins = list(dict(intake.get("project_pytest_plugins") or {}).get(identity.lower()) or [])
@@ -270,7 +273,7 @@ def _project_distribution_name(project: Path) -> str:
                 return name
         except (configparser.Error, OSError, UnicodeError):
             pass
-    return project.name
+    return setup_py_distribution_name(project) or project.name
 
 def _resolve_project_interpreter(identity: str, intake: dict[str, Any]) -> dict[str, Any]:
     profiles = dict(intake.get("project_interpreter_profiles") or {})

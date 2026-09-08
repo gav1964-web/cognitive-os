@@ -90,6 +90,7 @@ def _interpret_pytest_result(
         exit_code in {2, 3, 4, 5}
         or any(marker in lowered for marker in _ENVIRONMENT_MARKERS)
         or _DEPENDENCY_INSTALL_HINT.search(output) is not None
+        or _declared_pytest_asyncio_plugin_missing(project, lowered)
         or _source_fallback_plugin_metadata_failure(output, environment_preparation)
     ):
         status = "environment_blocked"
@@ -117,9 +118,22 @@ def _interpret_pytest_result(
         "environment_reason": (
             "editable_install_required_for_plugin_metadata"
             if _source_fallback_plugin_metadata_failure(output, environment_preparation)
+            else "declared_pytest_asyncio_plugin_unavailable"
+            if _declared_pytest_asyncio_plugin_missing(project, lowered)
             else None
         ),
     }
+
+
+def _declared_pytest_asyncio_plugin_missing(project: Path, lowered_output: str) -> bool:
+    if "unknown pytest.mark.asyncio" not in lowered_output:
+        return False
+    path = project / "pyproject.toml"
+    try:
+        pyproject = path.read_text(encoding="utf-8").lower()
+    except (OSError, UnicodeError):
+        return False
+    return "pytest-asyncio" in pyproject or "pytest_asyncio" in pyproject
 
 def _source_fallback_plugin_metadata_failure(
     output: str, preparation: dict[str, Any] | None
@@ -235,6 +249,17 @@ def _failure_kind(
         and any("duplicate_option" in nodeid.lower() for nodeid in (failing_nodeids or []))
     ):
         return "duplicate_cli_short_option_contract"
+    if (
+        lowered.startswith("assertionerror:")
+        and normalized_target.endswith(
+            "invoke/parser/context.py:parsercontext.help_for"
+        )
+        and any(
+            "integer_defaults_render_int_help_placeholder" in nodeid.lower()
+            for nodeid in (failing_nodeids or [])
+        )
+    ):
+        return "cli_help_type_placeholder_contract"
     if (
         lowered.startswith("valueerror: cannot compare to string")
         and normalized_target.endswith(":option.get_help_extra")
