@@ -9,9 +9,31 @@ import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import ProxyHandler, build_opener
 
 SCHEMA_VERSION = "llm_gateway_bootstrap.v1"
+
+
+def ensure_llm_gateway_for_url(root: Path, base_url: str) -> dict[str, Any]:
+    """Bootstrap the managed gateway only for a loopback LLM endpoint."""
+    endpoint = urlparse(base_url)
+    host = (endpoint.hostname or "").lower()
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        return _result("not_required", checked=False, base_url=base_url)
+    config_path = root / "config" / "llm_gateway_bootstrap.json"
+    if config_path.is_file():
+        try:
+            managed = urlparse(str(_load_policy(config_path).get("base_url") or ""))
+        except (OSError, ValueError, json.JSONDecodeError):
+            return ensure_llm_gateway(root)
+        if _origin(endpoint) != _origin(managed):
+            return _result("not_required", checked=False, base_url=base_url)
+    return ensure_llm_gateway(root)
+
+
+def _origin(parsed: Any) -> tuple[str, str, int | None]:
+    return parsed.scheme.lower(), (parsed.hostname or "").lower(), parsed.port
 
 
 def ensure_llm_gateway(root: Path) -> dict[str, Any]:

@@ -12,6 +12,8 @@ from .project_development_experiment import (
     run_project_development_experiment,
 )
 from .project_failure_causal_diagnosis import enrich_failure_diagnosis
+from .project_development_llm_hypothesis import enrich_with_llm_failure_hypothesis
+from .local_inference import LocalInferenceConfig
 from .project_development_feedback import run_project_development_feedback_continuation
 from .project_development_handoff import _role_chain_handoff
 from .project_development_memory import _memory_context, _now
@@ -41,6 +43,7 @@ def run_project_development(
     human_approval: dict[str, Any] | None = None,
     architect_design: dict[str, Any] | None = None,
     authorize_training_replay: bool = False,
+    llm_hypothesis_config: LocalInferenceConfig | None = None,
 ) -> dict[str, Any]:
     """Diagnose one project and select a bounded, measurable next experiment."""
     policy = policy or load_project_development_policy()
@@ -81,6 +84,14 @@ def run_project_development(
         diagnosis, project_dir=project_dir, workspace_root=root,
         authorize_training_replay=authorize_training_replay,
     )
+    diagnosis = enrich_with_llm_failure_hypothesis(
+        diagnosis, project_dir=project_dir, config=llm_hypothesis_config
+    )
+    llm_advisories = [
+        dict(issue.get("llm_hypothesis_advisory") or {})
+        for issue in diagnosis.get("issues") or [] if isinstance(issue, dict)
+        and issue.get("llm_hypothesis_advisory")
+    ]
     portfolio = build_development_options(diagnosis, policy=policy)
     decision = select_development_option(diagnosis, portfolio, policy=policy)
     outcome = build_outcome_contract(decision, policy=policy)
@@ -164,6 +175,15 @@ def run_project_development(
         "execution_feedback": execution_feedback,
         "feedback_continuation": feedback_continuation,
         "validated_memory": validated_memory,
+        "llm_hypothesis_summary": {
+            "requested": llm_hypothesis_config is not None,
+            "advisory_count": len(llm_advisories),
+            "statuses": sorted({str(row.get("status") or "unknown") for row in llm_advisories}),
+            "accepted_count": sum(
+                row.get("status") == "accepted_hypothesis_only" for row in llm_advisories
+            ),
+            "execution_authorized": False,
+        },
         "safety": {
             "source_changes": False,
             "automatic_patch_apply": False,
@@ -175,6 +195,8 @@ def run_project_development(
             "replan_execution_authorized": False,
             "training_replay_authorized": authorize_training_replay,
             "training_replay_scope": "consumed_case_sandbox_only" if authorize_training_replay else None,
+            "llm_hypothesis_enabled": llm_hypothesis_config is not None,
+            "llm_hypothesis_authority": "hypothesis_only" if llm_hypothesis_config is not None else None,
         },
     }
     if role_artifacts:

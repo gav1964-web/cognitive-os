@@ -730,6 +730,11 @@
       "producer": "project_development_boundary_field_trial",
       "consumers": ["researcher", "architect", "role_project_type_evaluation", "human"],
       "required_fields": ["artifact_type", "schema_version", "status", "split", "summary", "promotion", "cases"]
+    },
+    "ProjectDevelopmentLlmHypothesisAdvisory": {
+      "producer": "project_analyzer",
+      "consumers": ["architect", "researcher", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "target", "failure_signature", "source_digest", "authority", "execution_authorized"]
     }
   }
 }

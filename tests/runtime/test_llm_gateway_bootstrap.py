@@ -67,3 +67,36 @@ def test_reports_early_gateway_exit(tmp_path, monkeypatch):
 
     assert result["status"] == "failed"
     assert "code 3" in result["error"]
+
+
+def test_loopback_url_uses_managed_gateway(tmp_path, monkeypatch):
+    expected = {"status": "started"}
+    monkeypatch.setattr(bootstrap, "ensure_llm_gateway", lambda root: expected)
+
+    assert bootstrap.ensure_llm_gateway_for_url(
+        tmp_path, "http://127.0.0.1:8000/v1"
+    ) is expected
+
+
+def test_remote_url_does_not_start_managed_gateway(tmp_path, monkeypatch):
+    launch = Mock()
+    monkeypatch.setattr(bootstrap, "ensure_llm_gateway", launch)
+
+    result = bootstrap.ensure_llm_gateway_for_url(
+        tmp_path, "https://provider.example/v1"
+    )
+
+    assert result["status"] == "not_required"
+    assert result["checked"] is False
+    launch.assert_not_called()
+
+
+def test_other_loopback_port_does_not_start_managed_gateway(tmp_path, monkeypatch):
+    root = _root(tmp_path)
+    launch = Mock()
+    monkeypatch.setattr(bootstrap, "ensure_llm_gateway", launch)
+
+    result = bootstrap.ensure_llm_gateway_for_url(root, "http://127.0.0.1:9000/v1")
+
+    assert result["status"] == "not_required"
+    launch.assert_not_called()

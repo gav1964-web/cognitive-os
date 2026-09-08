@@ -11,6 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_development import run_project_development
+from runtime.llm_gateway_bootstrap import ensure_llm_gateway_for_url
+from runtime.local_inference import LocalInferenceConfig
 from runtime.self_development_collector import collect_project_development_report
 
 
@@ -31,11 +33,20 @@ def main() -> int:
         help="Allow a training-only causal proposal in a sandbox; never applies source or promotes knowledge",
     )
     parser.add_argument("--write", action="store_true")
+    parser.add_argument(
+        "--use-l45-llm", action="store_true",
+        help="Allow a bounded L4.5 hypothesis for an unknown failure mechanism",
+    )
     args = parser.parse_args()
     root = Path(args.root).resolve()
     project_dir = _resolve(root, args.project_dir)
     prior = _prior_runs(root)
     chain_case = _chain_case(_resolve(root, args.chain_report), project_dir.name) if args.chain_report else None
+    llm_config = LocalInferenceConfig.from_l45_env() if args.use_l45_llm else None
+    gateway = (
+        ensure_llm_gateway_for_url(root, llm_config.base_url)
+        if llm_config is not None else {"status": "not_requested", "checked": False}
+    )
     report = run_project_development(
         root=root,
         project_dir=project_dir,
@@ -47,7 +58,9 @@ def main() -> int:
         human_approval=_read_json(_resolve(root, args.human_approval)) if args.human_approval else None,
         architect_design=_read_json(_resolve(root, args.architect_design)) if args.architect_design else None,
         authorize_training_replay=args.authorize_training_replay,
+        llm_hypothesis_config=llm_config,
     )
+    report["llm_gateway"] = gateway
     if args.write:
         written = _write(root, report)
         report["report_path"] = written.as_posix()

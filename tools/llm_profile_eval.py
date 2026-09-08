@@ -13,6 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.l45_semantic_benchmark import run_l45_semantic_benchmark
+from runtime.llm_gateway_bootstrap import ensure_llm_gateway_for_url
 from runtime.local_inference import LocalInferenceConfig, call_json_chat, load_llm_profiles
 
 
@@ -48,6 +49,18 @@ def build_llm_profile_eval(
     payload = load_llm_profiles(str(root / "config" / "llm_profiles.json"))
     profiles = dict(payload.get("profiles") or {})
     selected = profile_ids or ["local_l35", "external_l45_intent_resolver"]
+    selected_profiles = [dict(profiles.get(profile_id) or {}) for profile_id in selected]
+    local_urls = [
+        str(profile.get("base_url") or "") for profile in selected_profiles
+        if str(profile.get("base_url") or "")
+    ]
+    gateway = {"status": "not_requested", "checked": False}
+    if smoke or benchmark_l45:
+        for base_url in local_urls:
+            candidate = ensure_llm_gateway_for_url(root, base_url)
+            gateway = candidate
+            if candidate["status"] != "not_required":
+                break
     rows = [_profile_row(profile_id, dict(profiles.get(profile_id) or {}), smoke=smoke) for profile_id in selected]
     benchmark = _benchmark_l45(root, profiles) if benchmark_l45 else None
     failed = [row for row in rows if row["status"] == "failed"]
@@ -57,6 +70,7 @@ def build_llm_profile_eval(
         "artifact_type": "LlmProfileEvalReport",
         "status": "failed" if failed else "ok",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "llm_gateway": gateway,
         "profiles": rows,
         "l45_benchmark": benchmark,
         "summary": {
