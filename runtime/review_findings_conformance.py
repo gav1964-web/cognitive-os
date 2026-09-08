@@ -4,6 +4,7 @@ from typing import Any
 
 from .review_findings_common import blocked_handoff, check_row
 from .review_findings_contracts import scope_violations, unmodeled_source_effects
+from .problem_outcome_contract import problem_outcome_conformance
 
 
 def conformance_checks(
@@ -30,15 +31,19 @@ def conformance_checks(
     }
     executable = dict(test_plan.get("executable_acceptance", {}))
     obligations = list(executable.get("obligations", []))
+    causal = problem_outcome_conformance(technical_spec, implementation_plan, test_plan)
     if blocked_handoff(implementation_plan, test_plan):
-        return _blocked_handoff_checks(
+        rows = _blocked_handoff_checks(
             technical_spec,
             implementation_plan,
             test_plan,
             forbidden_observed,
         )
+        rows.insert(1, _problem_outcome_check(causal))
+        return rows
     return [
         _artifact_chain_check(technical_spec, implementation_plan, test_plan),
+        _problem_outcome_check(causal),
         check_row(
             "traceability_present",
             bool(technical_spec.get("traceability_table")) and bool(implementation_plan.get("acceptance_mapping")),
@@ -89,6 +94,15 @@ def conformance_checks(
             {"status": executable_acceptance_result.get("status")},
         ),
     ]
+
+
+def _problem_outcome_check(causal: dict[str, Any]) -> dict[str, Any]:
+    return check_row(
+        "problem_outcome_contract_preserved",
+        causal["status"] in {"not_applicable", "passed"},
+        "Evidence-bound development must preserve target, baseline replay and regression obligations.",
+        causal,
+    )
 
 
 def _blocked_handoff_checks(

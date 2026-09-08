@@ -74,6 +74,85 @@ def test_project_development_research_handoff_is_interpreter_bound() -> None:
     assert verify_interpreter_decision(trace)["status"] == "verified"
 
 
+def test_failure_backed_handoff_stops_without_evidence_bound_contract() -> None:
+    handoff = _role_chain_handoff(
+        project_report={"summary": {"root": "demo"}},
+        recognition={"status": "recognized"},
+        decision={
+            "selected_option": {"route": "role_chain", "strategy": "repair"},
+            "selected_issue": {
+                "issue_id": "ISSUE-1",
+                "rule_id": "weak_contracts",
+                "failure_specific_reducer_required": True,
+                "affected_targets": ["pkg/service.py:run"],
+                "failure_evidence": [],
+            },
+        },
+        goal="Repair demo",
+        run_role_chain=True,
+        policy={},
+    )
+
+    assert handoff["status"] == "controlled_stop"
+    assert handoff["reason"] == "failure_backed_problem_outcome_contract_invalid"
+
+
+def test_completed_handoff_retains_focused_project_analyzer_artifact(monkeypatch) -> None:
+    captured = {}
+
+    def fake_role_prefix(**kwargs):
+        captured["project_report"] = kwargs["project_report"]
+        contract = kwargs["project_report"]["problem_outcome_contract"]
+        return {
+            "adr": {"artifact_type": "ArchitectureDecisionRecord", "status": "ok"},
+            "spec": {
+                "artifact_type": "TechnicalSpec",
+                "status": "ok",
+                "extraction_contract": {"candidate": "pkg/service.py:run"},
+            },
+            "implementation": {"artifact_type": "ImplementationPlan", "status": "ok"},
+            "tests": {"artifact_type": "TestPlan", "status": "ok"},
+            "tree": {"artifact_type": "ProgrammerTaskTree", "status": "ready"},
+            "review": {
+                "artifact_type": "ReviewFindings",
+                "status": "ok",
+                "recommendation": "approve_with_risks",
+                "problem_outcome_contract": contract,
+                "problem_outcome_conformance": {"status": "passed"},
+            },
+        }
+
+    monkeypatch.setattr(
+        "runtime.project_development_handoff.run_configured_role_prefix",
+        fake_role_prefix,
+    )
+    handoff = _role_chain_handoff(
+        project_report={"summary": {"root": "demo"}, "answers": {}},
+        recognition={"status": "recognized"},
+        decision={
+            "selected_option": {"route": "role_chain", "strategy": "repair"},
+            "selected_issue": {
+                "issue_id": "ISSUE-1",
+                "rule_id": "weak_contracts",
+                "affected_targets": ["pkg/service.py:run"],
+                "evidence": ["failing_contract_test:pkg/service.py:run"],
+                "failure_evidence": [{
+                    "target": "pkg/service.py:run",
+                    "failure_signature": "sig",
+                    "failing_nodeids": ["tests/test_service.py::test_run"],
+                    "authority": "failing_contract_test",
+                }],
+            },
+        },
+        goal="Repair demo",
+        run_role_chain=True,
+        policy={},
+    )
+
+    assert handoff["_project_report"] is captured["project_report"]
+    assert handoff["_project_report"]["problem_outcome_contract"]["status"] == "evidence_bound"
+
+
 def test_transform_stage_stops_without_accepted_interpreter_authority() -> None:
     state = {"next_action": "controlled_stop"}
 

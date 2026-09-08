@@ -99,6 +99,9 @@ def test_training_design_reaches_architect_and_non_executable_spec(tmp_path: Pat
         {"summary": {}, "answers": {"1_scope": {}}}, issue, {}
     )
     assert focused["architecture_synthesis"]["repair_design"]["execution_authority"] is False
+    assert focused["problem_outcome_contract"]["status"] == "evidence_bound"
+    assert focused["problem_outcome_contract"]["target"] == "more.py:split_before"
+    assert focused["problem_outcome_contract"]["authority"]["execution_authorized"] is False
     summary = _architecture_synthesis_summary(focused["architecture_synthesis"])
     assert summary["repair_design"]["proposed_operator_id"] == "guard_empty_materialized_fast_path"
 

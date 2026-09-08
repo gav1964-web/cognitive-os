@@ -33,6 +33,7 @@ from .foundation_semantic_quality_predicates import (
     target_in_refs as _target_in_refs,
     traceability_usable as _traceability_usable,
 )
+from .problem_outcome_contract import validate_problem_outcome_contract
 
 
 def evaluate_foundation_semantic_quality(result: dict[str, Any], *, policy: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -94,7 +95,7 @@ def _project_analyzer_checks(project: dict[str, Any], *, policy: dict[str, Any])
         _check("data_lifecycle_is_multistage", len(readiness.get("data_lifecycle") or []) >= int(project_policy.get("minimum_data_lifecycle_stages") or 3)),
         _check("minimal_extraction_plan_is_actionable", _extraction_plan_is_actionable(readiness, policy=policy)),
         _check("evidence_summary_is_source_backed", _evidence_summary_is_source_backed(content, readiness, policy=policy)),
-    ]
+    ] + _causal_role_checks("project_analyzer", project=project)
 
 
 def _architect_checks(project: dict[str, Any], adr: dict[str, Any], spec: dict[str, Any], *, policy: dict[str, Any]) -> list[dict[str, Any]]:
@@ -128,7 +129,7 @@ def _architect_checks(project: dict[str, Any], adr: dict[str, Any], spec: dict[s
             content, adr, minimum_refs=int(architect_policy.get("minimum_source_context_refs") or 3)
         )),
         _check("open_questions_and_non_goals_present", isinstance(adr.get("open_questions"), list) and bool(adr.get("non_goals"))),
-    ]
+    ] + _causal_role_checks("architect", project=project, adr=adr)
 
 
 def _spec_writer_checks(adr: dict[str, Any], spec: dict[str, Any], *, policy: dict[str, Any]) -> list[dict[str, Any]]:
@@ -150,4 +151,48 @@ def _spec_writer_checks(adr: dict[str, Any], spec: dict[str, Any], *, policy: di
         _check("work_plan_has_obligations", bool(dict(spec.get("work_plan_contract") or {}).get("obligations"))),
         _check("implementation_handoff_bounded", bool(dict(spec.get("implementation_handoff") or {}).get("patch_scope"))),
         _check("human_review_material_present", _human_review_material_present(spec)),
+    ] + _causal_role_checks("spec_writer", adr=adr, spec=spec)
+
+
+def _causal_role_checks(
+    role: str, *, project: dict[str, Any] | None = None,
+    adr: dict[str, Any] | None = None, spec: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    artifacts = [project or {}, adr or {}, spec or {}]
+    contract = next(
+        (dict(row.get("problem_outcome_contract") or {}) for row in artifacts if row.get("problem_outcome_contract")),
+        {},
+    )
+    if not contract:
+        return []
+    valid = not validate_problem_outcome_contract(contract)
+    target = str(contract.get("target") or "")
+    if role == "project_analyzer":
+        return [
+            _check("problem_outcome_contract_valid", valid),
+            _check(
+                "baseline_failure_is_evidence_bound",
+                contract.get("status") == "evidence_bound"
+                and bool(contract.get("baseline_failures"))
+                and target in set(str(value) for value in contract.get("allowed_targets") or []),
+            ),
+        ]
+    if role == "architect":
+        first_slice = dict((adr or {}).get("first_slice_contract") or {})
+        repair = dict(contract.get("repair_design") or {})
+        return [
+            _check("problem_outcome_contract_valid", valid),
+            _check("causal_target_selected", _target_in_refs(target, set(first_slice.get("targets") or []))),
+            _check("repair_mechanism_explicit", bool(repair.get("mechanism") or repair.get("mutation_contract"))),
+        ]
+    extraction = dict((spec or {}).get("extraction_contract") or {})
+    acceptance_ids = {
+        str(row.get("id") or "") for row in (spec or {}).get("acceptance_criteria") or []
+        if isinstance(row, dict)
+    }
+    return [
+        _check("problem_outcome_contract_valid", valid),
+        _check("causal_target_preserved", _target_in_refs(str(extraction.get("candidate") or ""), {target})),
+        _check("baseline_replay_acceptance_present", any(value.startswith("AC-FAILURE-REPLAY") for value in acceptance_ids)),
+        _check("causal_regression_acceptance_present", "AC-FAILURE-REGRESSION" in acceptance_ids),
     ]

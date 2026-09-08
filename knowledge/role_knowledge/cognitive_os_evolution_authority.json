@@ -24,11 +24,12 @@
     "Web UI is deferred until the architecture and authority contracts are stable.",
     "A verification result with no executed checks and no executable acceptance evidence is not verified and cannot be treated as success.",
     "A durable worker may mutate a running job only while it holds the unique lease token for the current attempt.",
-    "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain."
+    "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain.",
+    "A defect-driven role chain must preserve one digest-bound ProblemOutcomeContract from baseline evidence through Reviewer; artifact completeness cannot replace causal conformance."
   ],
   "current_sequence": [
     "collect_same_model_direct_short_full_receipts_for_frozen_product_tasks",
-    "acquire_six_additional_independent_product_tasks_after_local_corpus_shortage_check",
+    "execute_twenty_product_tasks_from_the_frozen_local_first_corpus",
     "obtain_independent_blind_scorecard_before_any_product_claim",
     "independently_validate_training_only_repair_proposals",
     "promote_only_reusable_operator_shapes_after_required_evidence",
@@ -107,6 +108,29 @@
     "narrow_causal_training_replay_receipt": "sha256:fbb645657b1122d7a5715eca04b3a2d835688004d4d7e0e11c462b8556d5682e",
     "narrow_causal_training_source_apply": false,
     "narrow_causal_training_promotion_applied": false,
+    "problem_outcome_contract_schema": "problem_outcome_contract.v1",
+    "problem_outcome_contract_chain": [
+      "project_analyzer",
+      "architect",
+      "spec_writer",
+      "implementer",
+      "tester",
+      "reviewer"
+    ],
+    "unseen_transfer_evaluation_status": "evidence_required",
+    "unseen_transfer_evaluation_receipt": "sha256:d60886ef0567bbfbb005424e92c60b0df2433aa5d89385a4df95b739e1f61fad",
+    "unseen_transfer_role_scores": {
+      "project_analyzer": 8.0,
+      "architect": 5.0,
+      "spec_writer": 6.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "unseen_transfer_projects": ["rich", "click_strict_default_eq", "pytest-httpserver-readiness"],
+    "unseen_transfer_source_apply": false,
+    "unseen_transfer_promotion_applied": false,
+    "deepmerge_transfer_claim_rejected": "generic failure kind and repair operator were already present in KB",
     "narrow_holdout_receipt": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
     "narrow_revoked_certificate_receipt": "sha256:ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657",
     "narrow_reassessment_receipt": "sha256:51c039cec3a6f65acef3dd88dc9286abe2923c95b5a71458098b70dbddbac3d8",

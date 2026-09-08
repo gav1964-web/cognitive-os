@@ -12,6 +12,7 @@ from runtime.local_inference import LocalInferenceConfig
 from runtime.role_architect_llm import apply_architect_advisory
 from runtime.role_skill_common import now_iso
 from runtime.role_source_context import build_source_context
+from runtime.problem_outcome_contract import propagate_problem_outcome_contract
 
 ARCHITECTURE_DECISION_POLICY = load_architecture_decision_policy()
 FALLBACK_ARCHETYPE_POLICY = dict(ARCHITECTURE_DECISION_POLICY["fallback_archetype"])
@@ -63,6 +64,7 @@ def build_architecture_decision(
         sources=_dedupe_strings(context_sources)[:36],
         function_scoped_dependencies=True,
     )
+    problem_outcome_contract = propagate_problem_outcome_contract(project_report)
     artifact = {
         "artifact_type": "ArchitectureDecisionRecord",
         "role": role_id,
@@ -98,6 +100,7 @@ def build_architecture_decision(
         "open_questions": open_questions,
         "traceability": traceability,
         "source_context": source_context,
+        "problem_outcome_contract": problem_outcome_contract,
         "architecture_options": options,
         "chosen_option": chosen,
         "rejected_options": _rejected_options(rejected),

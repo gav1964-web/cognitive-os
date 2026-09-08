@@ -9,6 +9,7 @@ from runtime.role_implementer_blueprint import (
 from runtime.role_skill_common import now_iso
 from runtime.stage2_template_routes import select_stage2_case
 from runtime.greenfield_stage2_templates import expected_artifacts_for_case
+from runtime.problem_outcome_contract import propagate_problem_outcome_contract
 
 def build_implementation_plan(
     *,
@@ -16,11 +17,13 @@ def build_implementation_plan(
     role_id: str = "implementer",
     next_role_id: str = "tester",
 ) -> dict[str, Any]:
+    problem_outcome_contract = propagate_problem_outcome_contract(technical_spec)
     if _is_greenfield_product_spec(technical_spec):
         return _build_greenfield_implementation_plan(
             technical_spec=technical_spec,
             role_id=role_id,
             next_role_id=next_role_id,
+            problem_outcome_contract=problem_outcome_contract,
         )
     requirements = list(technical_spec.get("requirements", []))
     acceptance = list(technical_spec.get("acceptance_criteria", []))
@@ -53,6 +56,7 @@ def build_implementation_plan(
             "role": technical_spec.get("role"),
             "chosen_architecture_option": technical_spec.get("chosen_architecture_option"),
         },
+        "problem_outcome_contract": problem_outcome_contract,
         "implementation_target": target,
         "implementation_delta": implementation_delta,
         "contract_binding": binding,
@@ -98,6 +102,7 @@ def _build_greenfield_implementation_plan(
     technical_spec: dict[str, Any],
     role_id: str,
     next_role_id: str,
+    problem_outcome_contract: dict[str, Any],
 ) -> dict[str, Any]:
     prompt = str(dict(technical_spec.get("source_artifact") or {}).get("prompt") or technical_spec.get("prompt") or "")
     case_name = select_stage2_case(prompt) or _case_from_primary_contract(technical_spec)
@@ -161,6 +166,7 @@ def _build_greenfield_implementation_plan(
             "role": technical_spec.get("role"),
             "chosen_architecture_option": technical_spec.get("chosen_architecture_option"),
         },
+        "problem_outcome_contract": problem_outcome_contract,
         "implementation_target": target,
         "implementation_delta": implementation_delta,
         "contract_binding": binding,

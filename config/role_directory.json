@@ -90,7 +90,7 @@
       "llm_policy": {"allowed": false, "reason": "project facts must be extracted deterministically"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["path_outside_scope", "no_python_files", "scan_contract_failure"],
-      "quality_criteria": ["answers_source_linked", "task_inputs_outputs_and_code_areas_present", "entrypoints_or_runtime_commands_detected", "execution_path_pipeline_candidate_present", "capability_candidates_or_controlled_gap_present", "contracts_data_and_weak_zones_reported", "errors_state_reproducibility_explicit", "data_lifecycle_present", "runtime_extraction_plan_present"]
+      "quality_criteria": ["answers_source_linked", "task_inputs_outputs_and_code_areas_present", "entrypoints_or_runtime_commands_detected", "execution_path_pipeline_candidate_present", "capability_candidates_or_controlled_gap_present", "contracts_data_and_weak_zones_reported", "errors_state_reproducibility_explicit", "data_lifecycle_present", "runtime_extraction_plan_present", "defect_context_preserves_baseline_failure_evidence"]
     },
     "architect": {
       "label": "Architect",
@@ -110,7 +110,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["no_source_evidence", "forbidden_source_target", "mutation_requested"],
-      "quality_criteria": ["decision_has_source_evidence", "options_include_tradeoffs", "subsystem_boundaries_have_inputs_outputs", "data_lifecycle_and_state_model_present", "risks_are_actionable", "traceability_required", "spec_writer_brief_has_contract_targets", "handoff_is_typed"],
+      "quality_criteria": ["decision_has_source_evidence", "options_include_tradeoffs", "subsystem_boundaries_have_inputs_outputs", "data_lifecycle_and_state_model_present", "risks_are_actionable", "traceability_required", "spec_writer_brief_has_contract_targets", "handoff_is_typed", "defect_context_preserves_causal_target_and_repair_mechanism"],
       "artifact_builder": {"builder_id": "architecture_decision_v1", "callable": "runtime.architecture_decision_builder:build_architecture_decision", "artifact_type": "ArchitectureDecisionRecord", "kwargs": {"role_id": "architect", "next_role_id": "spec_writer"}}
     },
     "spec_writer": {
@@ -131,7 +131,7 @@
       "llm_policy": {"allowed": true, "authority": "hypothesis_only", "model_class": "external_l4_or_l45"},
       "kb_policy": {"read": true, "write_candidate": true, "auto_promote": false},
       "stop_conditions": ["missing_adr", "unverifiable_acceptance", "scope_not_bounded"],
-      "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed", "implementation_delta_evidence_bound"],
+      "quality_criteria": ["requirements_verifiable", "interface_contracts_present", "contract_shapes_specific", "side_effect_gates_present", "data_lifecycle_present", "error_model_present", "acceptance_criteria_source_linked", "traceability_table_present", "spec_writer_red_team_passed", "state_and_replay_policy_present", "implementation_handoff_typed", "implementation_delta_evidence_bound", "defect_context_requires_baseline_replay_and_regression"],
       "artifact_builder": {"builder_id": "technical_spec_v1", "callable": "runtime.technical_spec_builder:build_technical_spec", "artifact_type": "TechnicalSpec", "kwargs": {"role_id": "spec_writer", "next_role_id": "implementer"}}
     },
     "implementer": {

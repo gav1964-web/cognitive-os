@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .problem_outcome_contract import problem_outcome_conformance, propagate_problem_outcome_contract
+
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / "knowledge" / "role_qa" / "programmer_task_tree_policy.json"
 
@@ -35,7 +37,12 @@ def build_programmer_task_tree(
     nodes = _blocked_nodes(implementation_plan, test_plan, policy) if blocked else _work_nodes(implementation_plan, test_plan, policy)
     coverage = _coverage(implementation_plan, test_plan, nodes)
     gates = _verifier_gates(implementation_plan, test_plan, policy)
-    ready = bool(target and expected_files and not coverage["unmapped_acceptance_ids"])
+    problem_contract = propagate_problem_outcome_contract(technical_spec, implementation_plan, test_plan)
+    causal_conformance = problem_outcome_conformance(technical_spec, implementation_plan, test_plan)
+    ready = bool(
+        target and expected_files and not coverage["unmapped_acceptance_ids"]
+        and causal_conformance["status"] != "failed"
+    )
     return {
         "artifact_type": "ProgrammerTaskTree",
         "role": role_id,
@@ -45,6 +52,8 @@ def build_programmer_task_tree(
         "target": target,
         "expected_files": expected_files,
         "source_artifacts": _source_artifacts(technical_spec, implementation_plan, test_plan),
+        "problem_outcome_contract": problem_contract,
+        "problem_outcome_conformance": causal_conformance,
         "boundary": _boundary(implementation_plan, test_plan, policy),
         "nodes": nodes,
         "coverage": coverage,

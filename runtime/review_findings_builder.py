@@ -33,6 +33,7 @@ from .review_findings_target import (
     review_target as _review_target,
 )
 from .role_skill_common import now_iso
+from .problem_outcome_contract import problem_outcome_conformance, propagate_problem_outcome_contract
 
 
 def build_review_findings(
@@ -66,6 +67,8 @@ def build_review_findings(
     )
     review_target = _review_target(implementation_plan, test_plan)
     recommendation = _recommendation(findings, risks)
+    problem_contract = propagate_problem_outcome_contract(technical_spec, implementation_plan, test_plan)
+    causal_conformance = problem_outcome_conformance(technical_spec, implementation_plan, test_plan)
     return {
         "artifact_type": "ReviewFindings",
         "role": role_id,
@@ -76,6 +79,8 @@ def build_review_findings(
             {"type": implementation_plan.get("artifact_type"), "role": implementation_plan.get("role")},
             {"type": test_plan.get("artifact_type"), "role": test_plan.get("role")},
         ],
+        "problem_outcome_contract": problem_contract,
+        "problem_outcome_conformance": causal_conformance,
         "review_target": review_target,
         "coverage_assessment": _coverage_assessment(implementation_plan, test_plan, review_target),
         "conformance_checks": conformance,

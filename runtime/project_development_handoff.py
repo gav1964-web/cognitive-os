@@ -11,6 +11,10 @@ from .interpreter_runtime_governance import (
     project_target_scope,
 )
 from .project_development_delta import development_delta_transform
+from .problem_outcome_contract import (
+    build_problem_outcome_contract,
+    validate_problem_outcome_contract,
+)
 from .project_recognition import attach_project_recognition
 from .role_pipeline_stages import artifact_by_type, run_configured_role_prefix
 
@@ -46,6 +50,23 @@ def _role_chain_handoff(
     if not run_role_chain:
         return {"status": "ready", "executed": False, "route": "architect->spec_writer->implementer->tester->reviewer", "interpreter_decision_trace": trace}
     focused = _focused_project_report(project_report, issue, dict(decision.get("selected_option") or {}))
+    problem_contract = dict(focused.get("problem_outcome_contract") or {})
+    failure_backed = bool(
+        issue.get("failure_specific_reducer_required") or issue.get("failure_evidence")
+    )
+    contract_errors = validate_problem_outcome_contract(problem_contract)
+    if failure_backed and (
+        problem_contract.get("status") != "evidence_bound" or contract_errors
+    ):
+        return {
+            "status": "controlled_stop",
+            "executed": False,
+            "route": "architect->spec_writer->implementer->tester->reviewer",
+            "reason": "failure_backed_problem_outcome_contract_invalid",
+            "contract_errors": contract_errors,
+            "problem_outcome_contract_digest": problem_contract.get("contract_digest"),
+            "interpreter_decision_trace": trace,
+        }
     enriched = attach_project_recognition(focused, recognition)
     artifacts = run_configured_role_prefix(
         goal=chain_goal,
@@ -58,6 +79,9 @@ def _role_chain_handoff(
     )
     spec = artifact_by_type(artifacts, "TechnicalSpec")
     target = str(dict(spec.get("extraction_contract") or {}).get("candidate") or "")
+    review = artifact_by_type(artifacts, "ReviewFindings")
+    problem_contract = dict(review.get("problem_outcome_contract") or {})
+    causal_conformance = dict(review.get("problem_outcome_conformance") or {})
     alignment_targets = list(issue.get("affected_targets") or []) or list(issue.get("evidence") or [])
     aligned = _target_issue_aligned(target, alignment_targets)
     return {
@@ -71,8 +95,11 @@ def _role_chain_handoff(
         "selected_target": target,
         "issue_target_aligned": aligned,
         "alignment_policy": "selected target must be the issue evidence target or share its source file",
-        "review_recommendation": artifact_by_type(artifacts, "ReviewFindings").get("recommendation"),
+        "review_recommendation": review.get("recommendation"),
+        "problem_outcome_contract_digest": problem_contract.get("contract_digest"),
+        "problem_outcome_conformance": causal_conformance,
         "interpreter_decision_trace": trace,
+        "_project_report": enriched,
         "_artifacts": artifacts,
     }
 
@@ -123,6 +150,7 @@ def _focused_project_report(
         "allowed_targets": targets,
         "authority": "ProjectDevelopmentDecision",
     }
+    focused["problem_outcome_contract"] = build_problem_outcome_contract(issue, option)
     if not targets:
         return focused
     summary = dict(focused.get("summary") or {})

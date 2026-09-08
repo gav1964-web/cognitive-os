@@ -8,6 +8,7 @@ from .contract_transform_contract_profiles import profile_positive_case
 from .function_invocation_patterns import match_invocation_pattern
 from .executable_acceptance_policy import external_call_tokens, sample_value
 from .role_skill_common import now_iso
+from .problem_outcome_contract import propagate_problem_outcome_contract
 
 
 def build_test_plan(
@@ -27,6 +28,7 @@ def build_test_plan(
     target = _target_name(implementation_target, patch_scope)
     dependency_policy = _dependency_policy(technical_spec, implementation_plan, target)
     executable_acceptance, scope_binding = _target_bound_acceptance(acceptance, target)
+    problem_outcome_contract = propagate_problem_outcome_contract(technical_spec, implementation_plan)
     return {
         "artifact_type": "TestPlan",
         "role": role_id,
@@ -36,6 +38,7 @@ def build_test_plan(
             {"type": technical_spec.get("artifact_type"), "role": technical_spec.get("role")},
             {"type": implementation_plan.get("artifact_type"), "role": implementation_plan.get("role")},
         ],
+        "problem_outcome_contract": problem_outcome_contract,
         "test_target": _test_target(implementation_target, contract_binding, target),
         "contract_test_matrix": _contract_test_matrix(contract_binding, target),
         "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target, dependency_policy),

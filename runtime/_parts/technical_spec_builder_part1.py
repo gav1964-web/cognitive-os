@@ -8,6 +8,7 @@ from runtime.first_slice_viability import first_slice_viability
 from runtime.implementation_delta import build_implementation_delta
 from runtime.requested_contract_profile import bind_requested_contract_profile
 from runtime.role_skill_common import now_iso
+from runtime.problem_outcome_contract import propagate_problem_outcome_contract
 
 def build_technical_spec(
     *,
@@ -72,6 +73,7 @@ def build_technical_spec(
         acceptance=acceptance,
         implementation_handoff=implementation_handoff,
     )
+    problem_outcome_contract = propagate_problem_outcome_contract(architecture_decision)
     return {
         "artifact_type": "TechnicalSpec",
         "role": role_id,
@@ -82,6 +84,7 @@ def build_technical_spec(
             "role": architecture_decision.get("role"),
             "goal": architecture_decision.get("goal"),
         },
+        "problem_outcome_contract": problem_outcome_contract,
         "scope": brief.get("scope", []),
         "chosen_architecture_option": chosen.get("id"),
         "requirements": _requirements_from_brief(brief, traceability),

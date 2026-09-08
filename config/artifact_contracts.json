@@ -1,6 +1,11 @@
 {
   "schema_version": "artifact_contracts.v1",
   "contracts": {
+    "ProblemOutcomeContract": {
+      "producer": "project_development",
+      "consumers": ["architect", "spec_writer", "implementer", "tester", "task_tree_builder", "reviewer"],
+      "required_fields": ["artifact_type", "schema_version", "status", "issue_id", "rule_id", "target", "allowed_targets", "evidence_refs", "baseline_failures", "repair_design", "expected_outcome", "required_checks", "forbidden_success_substitutes", "authority", "contract_digest"]
+    },
     "ThreeRouteEvaluationManifest": {
       "producer": "three_route_evaluation",
       "consumers": ["route_runner", "independent_evaluator", "human"],

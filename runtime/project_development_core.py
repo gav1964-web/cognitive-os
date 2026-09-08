@@ -94,6 +94,7 @@ def run_project_development(
         policy=policy,
     )
     role_artifacts = handoff.pop("_artifacts", {})
+    role_project_report = handoff.pop("_project_report", report)
     experiment, reassessment, validated_memory = run_project_development_experiment(
         root=root,
         project_dir=project_dir,
@@ -178,10 +179,14 @@ def run_project_development(
     }
     if role_artifacts:
         result["role_artifacts"] = {
-            "project_map_report": report,
+            "project_map_report": role_project_report,
             "architecture_decision": artifact_by_type(
                 role_artifacts, "ArchitectureDecisionRecord"
             ),
             "technical_spec": artifact_by_type(role_artifacts, "TechnicalSpec"),
+            "implementation_plan": artifact_by_type(role_artifacts, "ImplementationPlan"),
+            "test_plan": artifact_by_type(role_artifacts, "TestPlan"),
+            "programmer_task_tree": artifact_by_type(role_artifacts, "ProgrammerTaskTree"),
+            "review_findings": artifact_by_type(role_artifacts, "ReviewFindings"),
         }
     return result

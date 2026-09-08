@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from runtime.problem_outcome_contract import validate_problem_outcome_contract
 from runtime.role_directory import load_role_directory
 from runtime.spec_writer_red_team import red_team_technical_spec
 
@@ -11,6 +12,49 @@ def _interface_contracts_present(artifact: dict[str, Any], artifacts: dict[str, 
     rows = artifact.get("interface_contracts", [])
     ok = isinstance(rows, list) and bool(rows) and all(_interface_row_has_io(row) for row in rows[:6])
     return ok, "interface contracts exist"
+
+def _defect_context_preserves_baseline_failure_evidence(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("problem_outcome_contract") or {})
+    if not contract:
+        return True, "not a defect-backed project context"
+    valid = not validate_problem_outcome_contract(contract)
+    target = str(contract.get("target") or "")
+    ok = bool(
+        valid
+        and contract.get("status") == "evidence_bound"
+        and contract.get("baseline_failures")
+        and target in set(str(value) for value in contract.get("allowed_targets") or [])
+    )
+    return ok, "defect context binds baseline failure evidence to the selected target"
+
+def _defect_context_preserves_causal_target_and_repair_mechanism(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("problem_outcome_contract") or {})
+    if not contract:
+        return True, "not a defect-backed architecture context"
+    target = str(contract.get("target") or "")
+    first_slice = set(str(value) for value in dict(artifact.get("first_slice_contract") or {}).get("targets") or [])
+    repair = dict(contract.get("repair_design") or {})
+    ok = bool(
+        not validate_problem_outcome_contract(contract)
+        and target in first_slice
+        and (repair.get("mechanism") or repair.get("mutation_contract"))
+    )
+    return ok, "defect architecture preserves the causal target and repair mechanism"
+
+def _defect_context_requires_baseline_replay_and_regression(artifact: dict[str, Any], artifacts: dict[str, dict[str, Any]], project_report: dict[str, Any]) -> tuple[bool, str]:
+    contract = dict(artifact.get("problem_outcome_contract") or {})
+    if not contract:
+        return True, "not a defect-backed specification context"
+    acceptance_ids = {
+        str(row.get("id") or "") for row in artifact.get("acceptance_criteria") or []
+        if isinstance(row, dict)
+    }
+    ok = bool(
+        not validate_problem_outcome_contract(contract)
+        and any(value.startswith("AC-FAILURE-REPLAY") for value in acceptance_ids)
+        and "AC-FAILURE-REGRESSION" in acceptance_ids
+    )
+    return ok, "defect specification includes baseline replay and regression acceptance"
 
 def _interface_row_has_io(row: object) -> bool:
     if not isinstance(row, dict):
