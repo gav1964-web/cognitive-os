@@ -5,15 +5,15 @@
     "route_self_scores": "forbidden",
     "winner_requires_independent_blind_score": true
   },
-  "frozen_at": "2026-09-08T01:55:33.612281+00:00",
-  "manifest_digest": "sha256:939c2eba298f67b6284b80c7433e3e9cd16558ae5aa72aa63e9af0d808ec02ef",
+  "frozen_at": "2026-09-08T01:57:40.036346+00:00",
+  "manifest_digest": "sha256:e8ad67d0b47877959385d4f509d1cfc4293f419942aff0cb5a8e3546d8907325",
   "routes": [
     "direct_agent",
     "short_chain",
     "full_chain"
   ],
   "schema_version": "three_route_evaluation_manifest.v2",
-  "source_commit": "231f7a402654743f388052e339e98ff68222548f",
+  "source_commit": "03d4d5bd9fa915974e9fa18f60217ac402bb292b",
   "tasks": [
     {
       "constraints": [

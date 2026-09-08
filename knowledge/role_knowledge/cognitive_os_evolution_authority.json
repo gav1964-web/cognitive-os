@@ -130,7 +130,7 @@
       "dead_owner_queue_lock_recovery"
     ],
     "three_route_evaluation_protocol": "v2_frozen_evidence_required",
-    "three_route_evaluation_manifest_digest": "sha256:939c2eba298f67b6284b80c7433e3e9cd16558ae5aa72aa63e9af0d808ec02ef",
+    "three_route_evaluation_manifest_digest": "sha256:e8ad67d0b47877959385d4f509d1cfc4293f419942aff0cb5a8e3546d8907325",
     "three_route_evaluation_tasks": 26,
     "three_route_product_tasks": 20,
     "three_route_ablation_tasks": 6,
