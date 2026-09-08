@@ -1,6 +1,8 @@
 # MVP_STATUS.md
 **Current snapshot: Cognitive OS foundation and Local Automation MVP target**
 
+**Three-route product evidence (2026-09-08):** protocol v2 freezes 26 tasks as 20 product workloads plus 6 architecture ablations. All six declared product classes now have at least two tasks, including five untouched local-corpus projects outside the protected self-development splits. Current status is `evidence_required` with `0/20` complete product tasks and zero authoritative winners. Legacy direct-agent metrics are non-authoritative because they did not consistently use a real comparable agent, a shortened chain, the same model, and an independent blind evaluator. Product claims remain blocked until the product set has complete direct/short/full receipts and blind scorecards.
+
 Updated August 27, 2026 after the role-by-project-type evaluation, role-chain interaction trials, and bounded no-safe-candidate recovery work. Older benchmark sections below remain historical evidence for their named runs.
 
 ## Current Verdict

@@ -1,8 +1,8 @@
 # Evaluation Corpus
 
-This directory stores direct-agent vs Cognitive OS comparison tasks.
+This directory stores 20 product tasks and 6 architecture-ablation tasks. Legacy two-route results remain for historical diagnosis; new product claims use the manifest-bound, three-route v2 protocol in `PROTOCOL_V2.md`. `corpus_selection_v2.json` records the five untouched local projects added for class coverage without consuming self-development holdouts.
 
-The purpose is to prove or falsify value, not to showcase architecture.
+The purpose is to prove or falsify value, not to showcase architecture. Existing `metrics.json` winners are not v2 authority because their routes, scoring and evaluator independence were not consistently comparable.
 
 Each task compares two routes under the same prompt and constraints:
 

@@ -51,6 +51,8 @@ def test_config_doctor_passes_current_catalogs():
     assert any(check["code"] == "pypi_archetype_kb_integrity" for check in report["checks"])
     assert any(check["code"] == "system_knowledge_ir_backlog_policy_integrity" for check in report["checks"])
     assert any(check["code"] == "role_promotion_policy_integrity" for check in report["checks"])
+    assert any(check["code"] == "evaluation_protocol_v2_integrity" for check in report["checks"])
+    assert any(check["code"] == "evaluation_manifest_v2_integrity" for check in report["checks"])
     assert any(check["code"] == "llm_profiles_integrity" for check in report["checks"])
     assert any(check["code"] == "hypothesis_compiler_integrity" for check in report["checks"])
     assert any(check["code"] == "role_source_policy_integrity" for check in report["checks"])

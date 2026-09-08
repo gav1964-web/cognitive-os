@@ -1,0 +1,28 @@
+{
+  "artifact_type": "ThreeRouteExecutionReceipt",
+  "schema_version": "three_route_execution_receipt.v2",
+  "task_id": "taskXX_name",
+  "route": "direct_agent | short_chain | full_chain",
+  "manifest_digest": "sha256:<manifest>",
+  "prompt_digest": "sha256:<prompt>",
+  "input_digest": "sha256:<identical-input-snapshot>",
+  "status": "completed | blocked | failed",
+  "executor": "actual executor identity",
+  "model": "same model identity used by all routes for this task",
+  "runtime_seconds": 0.0,
+  "estimated_cost": 0.0,
+  "token_usage": {"input": 0, "output": 0},
+  "manual_corrections": [],
+  "acceptance_checks": [
+    {"id": "criterion_id", "passed": false, "evidence": "artifact digest or test output"}
+  ],
+  "artifacts": [
+    {"path": "route-local artifact path", "digest": "sha256:<artifact>"}
+  ],
+  "judge_payload": {
+    "result": "route-neutral result presented to the blind judge",
+    "limitations": []
+  },
+  "safety": {"source_mutation_detected": false},
+  "uses_cognitive_os": false
+}

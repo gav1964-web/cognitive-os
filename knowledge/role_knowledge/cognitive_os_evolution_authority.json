@@ -27,6 +27,9 @@
     "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain."
   ],
   "current_sequence": [
+    "collect_same_model_direct_short_full_receipts_for_frozen_product_tasks",
+    "acquire_six_additional_independent_product_tasks_after_local_corpus_shortage_check",
+    "obtain_independent_blind_scorecard_before_any_product_claim",
     "independently_validate_training_only_repair_proposals",
     "promote_only_reusable_operator_shapes_after_required_evidence",
     "execute_verified_reducers_on_consumed_training_defects",
@@ -126,6 +129,14 @@
       "attempt_bound_durable_queue_lease",
       "dead_owner_queue_lock_recovery"
     ],
+    "three_route_evaluation_protocol": "v2_frozen_evidence_required",
+    "three_route_evaluation_manifest_digest": "sha256:939c2eba298f67b6284b80c7433e3e9cd16558ae5aa72aa63e9af0d808ec02ef",
+    "three_route_evaluation_tasks": 26,
+    "three_route_product_tasks": 20,
+    "three_route_ablation_tasks": 6,
+    "three_route_complete_product_tasks": 0,
+    "three_route_required_product_tasks": 20,
+    "three_route_legacy_winners_are_authority": false,
     "challenge_projects_scanned": 1382,
     "challenge_local_cli_candidates": 2,
     "challenge_external_projects_acquired_after_measured_shortage": 3,

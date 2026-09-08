@@ -1,0 +1,44 @@
+{
+  "schema_version": "evaluation_protocol.v2",
+  "routes": ["direct_agent", "short_chain", "full_chain"],
+  "product_task_classes": [
+    "cli_utility",
+    "fastapi_service",
+    "project_analysis",
+    "sandbox_project_change",
+    "documentation",
+    "negative"
+  ],
+  "ablation_task_classes": ["architecture_hypothesis", "configuration"],
+  "route_contracts": {
+    "direct_agent": {
+      "description": "A real workspace/coding agent receives the frozen task without Cognitive OS artifacts.",
+      "forbidden_executors": ["deterministic_direct_baseline"],
+      "may_use_cognitive_os": false
+    },
+    "short_chain": {
+      "description": "Goal intake, bounded planning, implementation and verification without the complete role chain.",
+      "may_use_cognitive_os": true
+    },
+    "full_chain": {
+      "description": "The configured Project Analyzer through Reviewer chain with the same execution boundary.",
+      "may_use_cognitive_os": true
+    }
+  },
+  "rubric": {
+    "requirement_coverage": 0.3,
+    "correctness": 0.3,
+    "maintainability": 0.15,
+    "evidence_quality": 0.15,
+    "safety": 0.1
+  },
+  "winner_margin": 0.25,
+  "minimum_tasks_before_claim": 20,
+  "minimum_tasks_per_class_before_claim": 2,
+  "require_independent_judge": true,
+  "require_judge_route_separation": true,
+  "require_blind_key_withheld_until_scored": true,
+  "require_same_model_per_task": true,
+  "require_all_routes": true,
+  "legacy_metrics_are_authority": false
+}

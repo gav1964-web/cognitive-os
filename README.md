@@ -92,6 +92,8 @@ The 2026-09-07 control-plane audit hardened four runtime guarantees. Programmer 
 
 `registry_doctor` is clean on the audited current tree. This runtime hardening is safety evidence, not evidence that the full role chain outperforms a direct agent. That product claim still requires a frozen same-task comparison of direct, shortened-chain, and full-chain execution, scored for result quality, elapsed time, cost, and manual corrections.
 
+The three-route v2 harness now exists in `tools/three_route_evaluation.py`. Manifest `evaluation/protocol_v2_manifest.json` freezes 26 tasks and their prompt, constraints, acceptance criteria and input digest: 20 are product tasks and 6 are architecture ablations. The product track has at least two tasks in every declared class; five new tasks use an owner-independent local-corpus split that excludes the protected self-development acquisition and holdout sets. Current authority remains `evidence_required`: no v2 route receipt or independent blind score exists yet, and the legacy hardcoded direct baseline is explicitly inadmissible. A product claim requires all three same-model routes, manifest-bound inputs and independent blind scoring. See `evaluation/PROTOCOL_V2.md`.
+
 ## Architecture
 
 ```text

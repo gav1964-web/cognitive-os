@@ -1,6 +1,26 @@
 {
   "schema_version": "artifact_contracts.v1",
   "contracts": {
+    "ThreeRouteEvaluationManifest": {
+      "producer": "three_route_evaluation",
+      "consumers": ["route_runner", "independent_evaluator", "human"],
+      "required_fields": ["artifact_type", "schema_version", "frozen_at", "source_commit", "routes", "tasks", "authority", "manifest_digest"]
+    },
+    "ThreeRouteExecutionReceipt": {
+      "producer": "route_runner",
+      "consumers": ["three_route_evaluation", "independent_evaluator", "human"],
+      "required_fields": ["artifact_type", "schema_version", "task_id", "route", "manifest_digest", "prompt_digest", "input_digest", "status", "executor", "model", "runtime_seconds", "estimated_cost", "token_usage", "manual_corrections", "acceptance_checks", "artifacts", "judge_payload", "safety", "uses_cognitive_os"]
+    },
+    "ThreeRouteBlindBundle": {
+      "producer": "three_route_evaluation",
+      "consumers": ["independent_evaluator", "human"],
+      "required_fields": ["artifact_type", "schema_version", "manifest_digest", "rubric", "tasks", "candidates", "bundle_digest"]
+    },
+    "ThreeRouteEvaluationReport": {
+      "producer": "three_route_evaluation_scoring",
+      "consumers": ["architect", "reviewer", "human"],
+      "required_fields": ["artifact_type", "schema_version", "status", "bundle_digest", "judge", "task_results", "quality_by_task_class", "quality_by_route", "operations_by_route", "product_task_count", "ablation_task_count", "claim_eligible", "limitations"]
+    },
     "InterpreterDecisionTrace": {
       "producer": "interpreter_authority",
       "consumers": ["role_pipeline", "reviewer", "evaluation", "human"],
