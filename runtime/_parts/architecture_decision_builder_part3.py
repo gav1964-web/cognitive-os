@@ -236,8 +236,9 @@ def _important_runtime_sources(project_report: dict[str, Any]) -> list[str]:
         target = f"{item.get('path')}:{item.get('name')}" if item.get("path") and item.get("name") else ""
         if target and _domain_evidence_source(target):
             rows.append(target)
-    root = Path(str(summary.get("root") or project_report.get("root") or ""))
-    rows.extend(_provider_parser_sources(root))
+    root_text = str(summary.get("root") or project_report.get("root") or "").strip()
+    if root_text:
+        rows.extend(_provider_parser_sources(Path(root_text)))
     return rows
 def _callable_transform_fallback_candidates(answers: dict[str, Any]) -> list[str]:
     policy = CALLABLE_TRANSFORM_FALLBACK_POLICY

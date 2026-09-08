@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any
 
 from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .framework_plugin_role_semantics import artifact_digest
+from .narrow_type_role_evidence import digest_evidence, stratum_check, worst_role_scores
 
 
 REQUIRED_ROLES = (
@@ -31,7 +30,7 @@ def evaluate_narrow_type_role_semantics(
         for case in cases
     ]
     stratum_checks = {
-        stratum: _stratum_check(evaluated, stratum) for stratum in REQUIRED_STRATA
+        stratum: stratum_check(evaluated, stratum) for stratum in REQUIRED_STRATA
     }
     all_cases_pass = bool(evaluated) and all(row["status"] == "passed" for row in evaluated)
     checks = {
@@ -45,7 +44,7 @@ def evaluate_narrow_type_role_semantics(
         ),
         "all_roles_at_target": all(
             score is not None and score >= target_score
-            for score in _worst_role_scores(evaluated).values()
+            for score in worst_role_scores(evaluated, REQUIRED_ROLES).values()
         ),
         "all_role_artifacts_auditable": bool(evaluated)
         and all(row["role_artifacts_auditable"] for row in evaluated),
@@ -60,13 +59,13 @@ def evaluate_narrow_type_role_semantics(
         "target_score": target_score,
         "checks": checks,
         "failed_checks": [name for name, passed in checks.items() if not passed],
-        "role_scores": _worst_role_scores(evaluated),
+        "role_scores": worst_role_scores(evaluated, REQUIRED_ROLES),
         "strata": stratum_checks,
         "cases": evaluated,
         "source_apply": False,
         "promotion_applied": False,
     }
-    return {**body, "evidence_digest": _digest(body)}
+    return {**body, "evidence_digest": digest_evidence(body)}
 
 
 def _evaluate_case(
@@ -197,8 +196,8 @@ def _evaluate_case(
         "role_artifact_digests": artifact_digests,
         "role_artifacts_auditable": artifact_audit,
         "development_change_evaluated": development_evaluated,
-        "role_run_digest": _digest(role_run),
-        "execution_run_digest": _digest(execution_run),
+        "role_run_digest": digest_evidence(role_run),
+        "execution_run_digest": digest_evidence(execution_run),
     }
 
 
@@ -256,11 +255,16 @@ def _implementation_ready(spec: dict[str, Any], target: str) -> bool:
 def _concrete_spec_action(spec: dict[str, Any], target: str) -> bool:
     delta = dict(spec.get("implementation_delta") or {})
     intent = dict(delta.get("intent") or {})
-    if (
-        str(intent.get("target_symbol") or "") != target
-        or not intent.get("operator_id")
-        or not _specific_text(intent.get("mutation"))
-    ):
+    mutation = intent.get("mutation")
+    mutation_text = (
+        " ".join(str(value) for value in mutation.values())
+        if isinstance(mutation, dict) else str(mutation or "")
+    )
+    has_bounded_action = bool(intent.get("operator_id")) or (
+        intent.get("authority") == "explicit_llm_training_replay"
+        and _specific_text(mutation_text)
+    )
+    if str(intent.get("target_symbol") or "") != target or not has_bounded_action:
         return False
     statements = " ".join(
         str(row.get("statement") or "")
@@ -369,29 +373,3 @@ def _foundation_score(report: dict[str, Any], role: str) -> float:
 
 def _binary_score(checks: dict[str, bool]) -> float:
     return round(10.0 * sum(bool(value) for value in checks.values()) / max(1, len(checks)), 2)
-
-
-def _stratum_check(cases: list[dict[str, Any]], stratum: str) -> dict[str, Any]:
-    selected = [row for row in cases if row.get("project_stratum") == stratum]
-    return {
-        "case_count": len(selected),
-        "source_lineage_count": len({row.get("source_lineage") for row in selected if row.get("source_lineage")}),
-        "source_owner_count": len({row.get("source_owner") for row in selected if row.get("source_owner")}),
-        "projects": sorted(str(row.get("project")) for row in selected),
-        "status": "passed" if len(selected) >= 2 and all(row.get("status") == "passed" for row in selected) else "evidence_required",
-    }
-
-
-def _worst_role_scores(cases: list[dict[str, Any]]) -> dict[str, float | None]:
-    return {
-        role: min(
-            (float(dict(row.get("role_scores") or {})[role]) for row in cases if role in dict(row.get("role_scores") or {})),
-            default=None,
-        )
-        for role in REQUIRED_ROLES
-    }
-
-
-def _digest(value: Any) -> str:
-    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return "sha256:" + hashlib.sha256(encoded).hexdigest()

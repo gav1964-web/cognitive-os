@@ -347,7 +347,7 @@ def test_cli_writes_profile_proposal_on_strict_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(proposal_module, '_call_openai_compatible', fake_llm)
     output = tmp_path / 'blocked.md'
     candidate = tmp_path / 'candidate.json'
-    assert main(['https://example.test/', str(output), '--top-per-site', '2', '--fail-policy', 'strict', '--profile-proposal', str(candidate), '--browser', 'off']) == 3
+    assert main(['https://example.test/', str(output), '--top-per-site', '2', '--fail-policy', 'strict', '--profile-proposal', str(candidate), '--browser', 'off', '--no-llm-fallback']) == 3
     payload = json.loads(candidate.read_text(encoding='utf-8'))
     assert payload['artifact_type'] == 'SiteProfileProposal'
     assert payload['status'] == 'candidate'

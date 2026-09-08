@@ -344,6 +344,12 @@ valid independent holdout requires a frozen selection and isolated checkout arti
 Use `--no-write` to skip the durable training report and KB candidate. Verified role evidence is still materialized
 because the current evaluator checks both structured artifacts and generated human documents.
 
+## Bounded Failure Learning
+
+Project-development training now requires a `ProjectFailureEvidencePacket` with a stable repeated signature, exact source-backed target, failing test source, traceback/assertion evidence, and source digests. A known causal pattern may authorize exactly one matching allowlisted reducer only behind `--authorize-training-replay`; an unknown pattern may request an LLM hypothesis only behind `--use-l45-llm`. The LLM response has no operator, source-apply, or promotion authority. Both paths remain sandbox-only and must pass targeted replay, full native regression, patch-scope, generated-function-stub, and source-invariant gates.
+
+The 2026-09-08 consumed replay covers five projects across the two narrow strata. All role artifacts and downstream changes pass structural semantic checks, but `evaluation_split=training_replay` caps the published scores at `9.4/8.5/8.5/9.0/8.8/8.8`; only a fresh owner-independent holdout can remove those caps.
+
 ## Model Routing
 
 - `local_l35`: default diagnostician. It handles classification and bounded hypothesis generation locally.

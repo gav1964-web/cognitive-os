@@ -27,6 +27,7 @@ MUTATION_FIELDS = {"precondition", "change", "preserved_behavior"}
 def enrich_with_llm_failure_hypothesis(
     diagnosis: dict[str, Any], *, project_dir: Path,
     config: LocalInferenceConfig | None,
+    training_replay_authorized: bool = False,
 ) -> dict[str, Any]:
     result = deepcopy(diagnosis)
     if config is None:
@@ -44,6 +45,13 @@ def enrich_with_llm_failure_hypothesis(
         issue["repair_design"] = dict(advisory["repair_design"])
         issue["proposed_operator_ids"] = []
         issue["allowed_operator_ids"] = []
+        issue["llm_training_replay"] = {
+            "authorized": bool(training_replay_authorized),
+            "scope": "consumed_case_sandbox_only" if training_replay_authorized else None,
+            "hypothesis_authority_unchanged": "hypothesis_only",
+            "source_apply": False,
+            "memory_promotion": False,
+        }
     return result
 
 
@@ -55,7 +63,10 @@ def build_llm_failure_hypothesis(
     target = targets[0] if len(targets) == 1 else ""
     failure = failures[0] if len(failures) == 1 else {}
     source = _target_source(project_dir, target) if target else ""
-    envelope = _evidence_envelope(target=target, failure=failure, source=source)
+    packet = dict(issue.get("failure_evidence_packet") or {})
+    envelope = _evidence_envelope(
+        target=target, failure=failure, source=source, packet=packet
+    )
     if (
         not target or not failure or not source or not envelope["failure_signature"]
         or str(failure.get("target") or target) != target
@@ -111,7 +122,10 @@ def _eligible(issue: dict[str, Any]) -> bool:
     )
 
 
-def _evidence_envelope(*, target: str, failure: dict[str, Any], source: str) -> dict[str, Any]:
+def _evidence_envelope(
+    *, target: str, failure: dict[str, Any], source: str,
+    packet: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "target": target,
         "failure_signature": str(failure.get("failure_signature") or ""),
@@ -119,6 +133,18 @@ def _evidence_envelope(*, target: str, failure: dict[str, Any], source: str) -> 
         "failing_nodeids": _strings(failure.get("failing_nodeids"))[:8],
         "source_digest": hashlib.sha256(source.encode("utf-8")).hexdigest() if source else "",
         "source_excerpt": source[:8000],
+        "observed_failure": str(packet.get("observed_failure") or "")[:5000],
+        "assertion_evidence": _strings(packet.get("assertion_evidence"))[:24],
+        "test_sources": [
+            {
+                "nodeid": row.get("nodeid"),
+                "path": row.get("path"),
+                "excerpt": str(row.get("excerpt") or "")[:4000],
+                "sha256": row.get("sha256"),
+            }
+            for row in packet.get("test_sources") or [] if isinstance(row, dict)
+        ][:4],
+        "evidence_packet_digest": packet.get("packet_digest"),
     }
 
 

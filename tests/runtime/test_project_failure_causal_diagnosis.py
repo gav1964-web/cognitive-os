@@ -163,3 +163,69 @@ def test_explicit_training_replay_authorizes_only_proposed_operator(tmp_path: Pa
     })
     assert spec["implementation_delta"]["status"] == "ready"
     assert spec["implementation_delta"]["intent"]["authority"] == "explicit_training_replay"
+
+
+def test_failure_packet_matches_known_strict_default_repair(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    source = project / "src" / "click"
+    source.mkdir(parents=True)
+    (source / "core.py").write_text(
+        "class Option:\n"
+        "    def get_help_extra(self, default_value):\n"
+        "        if default_value == \"\":\n"
+        "            default_string = '\"\"'\n"
+        "        else:\n"
+        "            default_string = str(default_value)\n"
+        "        return default_string\n",
+        encoding="utf-8",
+    )
+    diagnosis = _diagnosis(
+        "src/click/core.py:Option.get_help_extra",
+        "ValueError: cannot compare to string",
+        "tests/test_options.py::test_show_default_with_empty_string",
+    )
+    diagnosis["issues"][0]["failure_evidence_packet"] = {
+        "observed_failure": "src/click/core.py:3113: in get_help_extra",
+        "assertion_evidence": ["ValueError: cannot compare to string"],
+    }
+
+    issue = enrich_failure_diagnosis(
+        diagnosis,
+        project_dir=project,
+        workspace_root=Path.cwd(),
+        authorize_training_replay=True,
+    )["issues"][0]
+
+    assert issue["causal_hypothesis"]["pattern_id"] == (
+        "strict_default_string_comparison_without_type_guard"
+    )
+    assert issue["allowed_operator_ids"] == ["guard_empty_string_comparison_type"]
+
+
+def test_failure_packet_does_not_match_operator_from_failure_text_alone(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "parser.py").write_text(
+        "def parse(line):\n"
+        "    return line.split()\n",
+        encoding="utf-8",
+    )
+    diagnosis = _diagnosis(
+        "parser.py:parse",
+        "IndexError: list index out of range",
+        "tests/test_parser.py::test_incomplete_import",
+    )
+    diagnosis["issues"][0]["failure_evidence_packet"] = {
+        "observed_failure": "line.split()[1] raised IndexError",
+        "assertion_evidence": ["IndexError: list index out of range"],
+    }
+
+    issue = enrich_failure_diagnosis(
+        diagnosis,
+        project_dir=project,
+        workspace_root=Path.cwd(),
+        authorize_training_replay=True,
+    )["issues"][0]
+
+    assert "causal_hypothesis" not in issue
+    assert issue["allowed_operator_ids"] == []

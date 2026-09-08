@@ -24,7 +24,12 @@ def contract_alignment(
         (str(item.get("source_criterion") or ""), ref)
         for item in obligations
         if isinstance(item, dict)
-        for ref in set(re.findall(r"[\w./-]+\.py:[A-Za-z_]\w*", str(item.get("source_criterion") or "")))
+        for ref in set(
+            re.findall(
+                r"[\w./-]+\.py:[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*",
+                str(item.get("source_criterion") or ""),
+            )
+        )
     ]
     refs = sorted({ref for _, ref in criterion_refs})
     mismatches = [ref for ref in refs if target and ref not in accepted_targets]

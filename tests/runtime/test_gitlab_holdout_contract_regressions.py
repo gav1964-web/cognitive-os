@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from runtime._parts.role_foundation_field_trial_scope import _primary_language_scope
+from runtime._parts import architecture_decision_builder_part3 as architecture_builder_part3
 import runtime.architecture_decision_builder as architecture_builder
 from runtime.module_script_boundary import enrich_module_script_readiness
 from runtime.source_contract_semantics import infer_source_contract
@@ -116,7 +117,12 @@ def test_short_architecture_risk_is_expanded_with_target_context():
     assert "target `os`" in result["description"]
 
 
-def test_active_core_files_are_kept_as_architecture_context():
+def test_active_core_files_are_kept_as_architecture_context(monkeypatch):
+    monkeypatch.setattr(
+        architecture_builder_part3,
+        "_provider_parser_sources",
+        lambda _root: (_ for _ in ()).throw(AssertionError("rootless scan forbidden")),
+    )
     report = {
         "answers": {
             "3_capabilities": {},

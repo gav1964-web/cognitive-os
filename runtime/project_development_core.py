@@ -12,6 +12,7 @@ from .project_development_experiment import (
     run_project_development_experiment,
 )
 from .project_failure_causal_diagnosis import enrich_failure_diagnosis
+from .project_failure_evidence_packet import attach_failure_evidence_packets
 from .project_development_llm_hypothesis import enrich_with_llm_failure_hypothesis
 from .local_inference import LocalInferenceConfig
 from .project_development_feedback import run_project_development_feedback_continuation
@@ -80,12 +81,16 @@ def run_project_development(
         classification_consistency=classification_consistency,
         policy=policy,
     )
+    diagnosis = attach_failure_evidence_packets(
+        diagnosis, project_dir=project_dir, chain_case=chain_case
+    )
     diagnosis = enrich_failure_diagnosis(
         diagnosis, project_dir=project_dir, workspace_root=root,
         authorize_training_replay=authorize_training_replay,
     )
     diagnosis = enrich_with_llm_failure_hypothesis(
-        diagnosis, project_dir=project_dir, config=llm_hypothesis_config
+        diagnosis, project_dir=project_dir, config=llm_hypothesis_config,
+        training_replay_authorized=authorize_training_replay,
     )
     llm_advisories = [
         dict(issue.get("llm_hypothesis_advisory") or {})
@@ -117,6 +122,7 @@ def run_project_development(
         requested=run_sandbox_experiment,
         policy=policy,
         recognition=recognition,
+        use_l45_llm=bool(llm_hypothesis_config and authorize_training_replay),
     )
     execution_feedback = build_project_development_execution_feedback(
         handoff=handoff,

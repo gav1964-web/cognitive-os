@@ -59,6 +59,11 @@ def infer_causal_hypothesis(
     failure_text = "\n".join([
         str(failures[0].get("detail") or ""),
         *[str(value) for value in failures[0].get("failing_nodeids") or []],
+        str(dict(issue.get("failure_evidence_packet") or {}).get("observed_failure") or ""),
+        *[
+            str(value)
+            for value in dict(issue.get("failure_evidence_packet") or {}).get("assertion_evidence") or []
+        ],
     ]).lower()
     for pattern in _load_knowledge(workspace_root).get("patterns") or []:
         if not isinstance(pattern, dict) or not _matches(pattern, failure_text, source.lower()):

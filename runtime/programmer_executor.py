@@ -34,6 +34,7 @@ def run_programmer_executor(
     max_commands: int = 3,
     dependency_probe_session_approval: dict[str, Any] | None = None,
     execution_base_dir: Path | None = None,
+    use_l45_llm: bool | None = None,
 ) -> dict[str, Any]:
     target = dict(implementation_plan.get("implementation_target", {}))
     if target.get("status") == "blocked_no_safe_candidate":
@@ -65,13 +66,14 @@ def run_programmer_executor(
         test_plan=test_plan,
     )
     execution_project_dir = Path(str(synthesis.get("sandbox_project") or project_dir))
+    llm_enabled = llm_strategy_enabled() if use_l45_llm is None else bool(use_l45_llm)
     strategy = build_patch_strategy(
         project_dir=execution_project_dir,
         technical_spec=technical_spec,
         implementation_plan=implementation_plan,
         test_plan=test_plan,
         synthesis=synthesis,
-        use_l45_llm=llm_strategy_enabled(),
+        use_l45_llm=llm_enabled,
     )
     synthesis, execution_project_dir, candidate_attempt = prepare_candidate_synthesis(
         execution_dir=execution_dir, project_dir=project_dir, implementation_plan=implementation_plan, synthesis=synthesis, strategy=strategy
@@ -93,7 +95,10 @@ def run_programmer_executor(
         root=root, source_project_dir=project_dir, execution_project_dir=execution_project_dir,
         execution_dir=execution_dir, implementation_plan=implementation_plan, test_plan=test_plan,
         test_result=test_result, synthesis=synthesis, candidate_attempt=candidate_attempt,
-        run_verification=run_verification, max_commands=max_commands, should_repair=_repair_needed,
+        run_verification=run_verification, max_commands=max_commands,
+        should_repair=lambda result, attempt, plan: repair_needed(
+            result, attempt, plan, llm_enabled=lambda: llm_enabled
+        ),
     )
     synthesis = dict(repair["synthesis"])
     execution_project_dir = Path(repair["execution_project_dir"])
@@ -117,7 +122,7 @@ def run_programmer_executor(
         test_plan=test_plan,
         synthesis=synthesis,
         acceptance_summary=dict(dict(test_result.get("executable_acceptance_result") or {}).get("summary") or {}),
-        use_l45_llm=llm_strategy_enabled(),
+        use_l45_llm=llm_enabled,
     )
     test_result["executor_strategy"] = final_strategy
     dependency_session = run_executor_dependency_session(

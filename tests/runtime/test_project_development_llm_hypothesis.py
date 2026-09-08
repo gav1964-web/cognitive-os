@@ -73,6 +73,24 @@ def test_llm_hypothesis_is_evidence_bound_but_never_authorized(tmp_path, monkeyp
     assert issue["repair_design"]["source_apply"] is False
     assert issue["proposed_operator_ids"] == []
     assert issue["allowed_operator_ids"] == []
+    assert issue["llm_training_replay"]["authorized"] is False
+
+
+def test_llm_hypothesis_training_replay_requires_explicit_authorization(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "runtime.project_development_llm_hypothesis.call_json_chat",
+        lambda messages, config=None: _payload(),
+    )
+
+    result = enrich_with_llm_failure_hypothesis(
+        {"issues": [_issue()]}, project_dir=_project(tmp_path), config=_config(),
+        training_replay_authorized=True,
+    )
+
+    authority = result["issues"][0]["llm_training_replay"]
+    assert authority["authorized"] is True
+    assert authority["scope"] == "consumed_case_sandbox_only"
+    assert result["issues"][0]["causal_hypothesis"]["execution_authority"] is False
 
 
 def test_llm_hypothesis_rejects_target_drift_and_patch_fields(tmp_path, monkeypatch) -> None:

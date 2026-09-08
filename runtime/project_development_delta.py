@@ -119,17 +119,31 @@ def _bind_failure_repair_contract(
     repair_design = dict(issue.get("repair_design") or {})
     proposal = bool(repair_design.get("proposed_operator_id"))
     training_replay = bool(issue.get("training_replay_authority")) and bool(reducers)
+    llm_training_replay = bool(
+        dict(issue.get("llm_training_replay") or {}).get("authorized")
+        and repair_design.get("status") == "llm_hypothesis_review_required"
+        and repair_design.get("mutation_contract")
+    )
+    implementation_ready = training_replay or llm_training_replay
     row["implementation_delta"] = {
-        "status": "ready" if training_replay else "proposal_review_required" if proposal else "semantic_synthesis_required",
+        "status": "ready" if implementation_ready else "proposal_review_required" if proposal else "semantic_synthesis_required",
         "intent": {
-            "kind": "repair_verified_project_failure",
+            "kind": "repair_llm_hypothesis_training_replay" if llm_training_replay else "repair_verified_project_failure",
             "target_symbol": target,
             "operator_id": repair_design.get("proposed_operator_id"),
             "allowed_operator_ids": list(reducers),
             "mutation": repair_design.get("mutation_contract"),
-            "authority": "explicit_training_replay" if training_replay else "none",
+            "repair_mechanism": repair_design.get("mechanism"),
+            "causal_hypothesis": dict(issue.get("causal_hypothesis") or {}),
+            "failure_evidence_packet": dict(issue.get("failure_evidence_packet") or {}),
+            "authority": (
+                "explicit_llm_training_replay" if llm_training_replay else
+                "explicit_training_replay" if training_replay else "none"
+            ),
         },
         "reason": (
+            "A bounded LLM hypothesis is admitted only for this consumed-case sandbox replay."
+            if llm_training_replay else
             "Training-derived repair proposal is authorized only for this consumed-case sandbox replay."
             if training_replay else "Training-derived repair proposal requires fresh independent validation."
             if proposal else "A verified failure reducer must be selected by ProjectDevelopmentDecision."
@@ -138,7 +152,7 @@ def _bind_failure_repair_contract(
     }
     row["implementation_handoff"] = {
         **dict(row.get("implementation_handoff") or {}),
-        "mode": "training_replay_ready" if training_replay else "proposal_review_required" if proposal else "semantic_synthesis_required",
+        "mode": "training_replay_ready" if implementation_ready else "proposal_review_required" if proposal else "semantic_synthesis_required",
         "patch_scope": targets,
     }
     replay_criteria = [

@@ -9,6 +9,7 @@ from typing import Any
 
 from .generated_stub_admission import inspect_generated_function_stubs
 from .programmer_executor import run_programmer_executor
+from .project_failure_evidence_packet import is_complete_failure_evidence_packet
 from .project_recognition import recognize_project
 from .role_pipeline_stages import artifact_by_type
 from .role_project_analysis import analyze_role_project
@@ -35,6 +36,7 @@ def run_project_development_experiment(
     requested: bool,
     policy: dict[str, Any],
     recognition: dict[str, Any],
+    use_l45_llm: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     if not requested:
         return _not_requested_artifacts()
@@ -54,6 +56,7 @@ def run_project_development_experiment(
         max_commands=int(dict(policy["execution_policy"]).get("maximum_verification_commands") or 3),
         # Keep Windows virtualenv cache paths below MAX_PATH during native replay.
         execution_base_dir=root / ".pde",
+        use_l45_llm=use_l45_llm,
     )
     after = _project_digest(project_dir)
     patch = _read_artifact(result.get("patch_package_path"))
@@ -122,6 +125,13 @@ def _admission(
     implementation_plan = _artifact_or_empty(artifacts, "ImplementationPlan")
     extraction_contract = dict(technical_spec.get("extraction_contract") or {})
     implementation_delta = dict(implementation_plan.get("implementation_delta") or {})
+    intent = dict(implementation_delta.get("intent") or {})
+    packet = dict(intent.get("failure_evidence_packet") or {})
+    bounded_training_replay = _bounded_training_replay(
+        intent=intent,
+        packet=packet,
+        allowed_operator_ids=list(extraction_contract.get("allowed_operator_ids") or []),
+    )
     checks = {
         "role_handoff_aligned": handoff.get("status") == execution.get("required_handoff_status"),
         "review_allows_sandbox": handoff.get("review_recommendation") in set(execution.get("allowed_review_recommendations") or []),
@@ -134,7 +144,7 @@ def _admission(
         "recognition_pilot_route_allows_experiment": (
             dict(recognition.get("pilot_route") or {}).get("status")
             == "eligible_for_full_chain"
-        ),
+        ) or bounded_training_replay,
     }
     return {
         "artifact_type": "ProjectDevelopmentExperimentAdmission",
@@ -144,7 +154,27 @@ def _admission(
         "contract_mode": technical_spec.get("contract_mode"),
         "allowed_operator_ids": list(extraction_contract.get("allowed_operator_ids") or []),
         "implementation_delta_status": implementation_delta.get("status"),
+        "bounded_training_replay_override": bounded_training_replay,
     }
+
+
+def _bounded_training_replay(
+    *, intent: dict[str, Any], packet: dict[str, Any],
+    allowed_operator_ids: list[Any],
+) -> bool:
+    authority = str(intent.get("authority") or "")
+    if authority not in {"explicit_training_replay", "explicit_llm_training_replay"}:
+        return False
+    if not is_complete_failure_evidence_packet(
+        packet, target=str(intent.get("target_symbol") or "")
+    ):
+        return False
+    operator_id = str(intent.get("operator_id") or "")
+    intent_operators = [str(value) for value in intent.get("allowed_operator_ids") or []]
+    contract_operators = [str(value) for value in allowed_operator_ids]
+    if authority == "explicit_training_replay":
+        return bool(operator_id) and intent_operators == [operator_id] == contract_operators
+    return not operator_id and not intent_operators and not contract_operators
 
 
 def _artifact_or_empty(artifacts: dict[str, dict[str, Any]], artifact_type: str) -> dict[str, Any]:

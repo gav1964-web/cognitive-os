@@ -25,7 +25,8 @@
     "A verification result with no executed checks and no executable acceptance evidence is not verified and cannot be treated as success.",
     "A durable worker may mutate a running job only while it holds the unique lease token for the current attempt.",
     "Runtime safety evidence cannot substitute for a same-task product comparison against a direct agent and a shortened role chain.",
-    "A defect-driven role chain must preserve one digest-bound ProblemOutcomeContract from baseline evidence through Reviewer; artifact completeness cannot replace causal conformance."
+    "A defect-driven role chain must preserve one digest-bound ProblemOutcomeContract from baseline evidence through Reviewer; artifact completeness cannot replace causal conformance.",
+    "A consumed training replay may demonstrate chain competence but its structural score cannot remove training caps or substitute for a fresh owner-independent holdout."
   ],
   "current_sequence": [
     "collect_same_model_direct_short_full_receipts_for_frozen_product_tasks",
@@ -33,7 +34,6 @@
     "obtain_independent_blind_scorecard_before_any_product_claim",
     "independently_validate_training_only_repair_proposals",
     "promote_only_reusable_operator_shapes_after_required_evidence",
-    "execute_verified_reducers_on_consumed_training_defects",
     "freeze_second_owner_independent_defect_per_stratum",
     "narrow_role_v2_independent_holdout_evaluation",
     "framework_plugin_role_revalidation",
@@ -47,7 +47,8 @@
     "narrow_known_case_semantic_calibration",
     "failure_repair_spec_target_binding",
     "framework_plugin_certification_reassessment",
-    "narrow_type_certification_reassessment"
+    "narrow_type_certification_reassessment",
+    "execute_verified_reducers_on_consumed_training_defects"
   ],
   "narrow_project_types": ["cli_local_tool", "library_pure_transform"],
   "promotion_target_score": 9.7,
@@ -93,19 +94,33 @@
       "reviewer": 2.0
     },
     "narrow_defect_holdout_receipt": "sha256:02781dc142896fd8c86b9a722e0fa550f7acccb9c5ea8626237411ceb129acff",
-    "narrow_causal_training_patterns": 2,
+    "narrow_causal_training_patterns": 7,
     "narrow_causal_training_execution_authority": false,
-    "narrow_causal_training_replay_status": "validated_not_certified",
+    "narrow_causal_training_replay_status": "five_full_regression_cases_validated_not_certified",
     "narrow_causal_training_replay_scope": "explicit_consumed_case_sandbox_only",
+    "narrow_causal_training_replay_projects": 5,
+    "narrow_causal_training_replay_strata": {
+      "cli_local_tool": 3,
+      "library_pure_transform": 2
+    },
+    "narrow_causal_training_replay_full_regressions_passed": 5,
+    "narrow_causal_training_replay_structural_scores": {
+      "project_analyzer": 10.0,
+      "architect": 10.0,
+      "spec_writer": 10.0,
+      "implementer": 10.0,
+      "tester": 10.0,
+      "reviewer": 10.0
+    },
     "narrow_causal_training_replay_scores": {
       "project_analyzer": 9.4,
       "architect": 8.5,
       "spec_writer": 8.5,
-      "implementer": 8.8,
-      "tester": 8.5,
-      "reviewer": 8.5
+      "implementer": 9.0,
+      "tester": 8.8,
+      "reviewer": 8.8
     },
-    "narrow_causal_training_replay_receipt": "sha256:fbb645657b1122d7a5715eca04b3a2d835688004d4d7e0e11c462b8556d5682e",
+    "narrow_causal_training_replay_receipt": "sha256:842b7b88716714054a8a6c0e932a9c6302c5c72ca05ba7e60c00bae25fcb02cb",
     "narrow_causal_training_source_apply": false,
     "narrow_causal_training_promotion_applied": false,
     "problem_outcome_contract_schema": "problem_outcome_contract.v1",
@@ -139,6 +154,16 @@
     "bounded_llm_failure_hypothesis_source_apply": false,
     "bounded_llm_failure_hypothesis_promotion_allowed": false,
     "bounded_llm_failure_hypothesis_live_score_claimed": false,
+    "bounded_llm_training_candidate_status": "schema_rejected_no_patch_then_known_kb_reducer_validated",
+    "bounded_llm_training_candidate_report": "artifacts/project_development/project_development_20260908T073453945918Z.json",
+    "project_failure_evidence_packet_schema": "project_failure_evidence_packet.v1",
+    "project_failure_evidence_packet_required_for_training_override": true,
+    "project_failure_evidence_packet_required_checks": [
+      "stable_failure_signature",
+      "exact_target_is_source_backed",
+      "failing_test_source_is_present",
+      "observed_failure_is_detailed"
+    ],
     "bounded_llm_gateway_bootstrap": "started_then_already_running",
     "bounded_llm_gateway_smoke_report": "artifacts/llm_profile_eval/llm_profile_eval_20260908T070103388061Z.json",
     "narrow_holdout_receipt": "sha256:3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d",
@@ -152,16 +177,19 @@
     "bounded_experiment_deferred_candidates": 1,
     "bounded_experiment_runner_status": "implemented_not_run_without_eligible_candidate",
     "runtime_safety_audit_status": "hardened_full_regression_passed",
-    "runtime_safety_audit_date": "2026-09-07",
+    "runtime_safety_audit_date": "2026-09-08",
     "runtime_safety_audit_registry_drift": 0,
-    "runtime_safety_audit_core_tests_passed": 2835,
+    "runtime_safety_audit_core_tests_passed": 2875,
     "runtime_safety_audit_plugin_tests_passed": 182,
     "runtime_safety_audit_controls": [
       "structured_verification_argv_shell_false",
       "zero_checks_not_verified",
       "recursive_fail_closed_schema_fallback",
       "attempt_bound_durable_queue_lease",
-      "dead_owner_queue_lock_recovery"
+      "dead_owner_queue_lock_recovery",
+      "evidence_bound_training_replay_override",
+      "rootless_architect_workspace_scan_blocked",
+      "generated_test_live_llm_isolation"
     ],
     "three_route_evaluation_protocol": "v2_frozen_evidence_required",
     "three_route_evaluation_manifest_digest": "sha256:e8ad67d0b47877959385d4f509d1cfc4293f419942aff0cb5a8e3546d8907325",
