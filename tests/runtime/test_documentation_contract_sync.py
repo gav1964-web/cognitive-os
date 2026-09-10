@@ -27,12 +27,9 @@ def test_exception_pickle_docs_track_active_kb_evidence() -> None:
         evidence["latest_applied_target"].split(":")[-1],
     ]
 
-    for name in (
-        "README.md",
-        "MVP_STATUS.md",
-        "KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md",
-        "COGNITIVE_OS_TECHNICAL_BASELINE.md",
-    ):
+    # Current KB evidence belongs in the engineering baseline, not the short
+    # navigation README or frozen historical status reports.
+    for name in ("COGNITIVE_OS_TECHNICAL_BASELINE.md",):
         text = _read(name)
         for marker in count_markers:
             assert marker in text
@@ -67,12 +64,7 @@ def test_exception_pickle_docs_track_derived_message_audit() -> None:
             f"{lane_summary['derived_message_patch_shape_first']} patch-shape-first cases"
         )
 
-    for name in (
-        "README.md",
-        "MVP_STATUS.md",
-        "KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md",
-        "COGNITIVE_OS_TECHNICAL_BASELINE.md",
-    ):
+    for name in ("COGNITIVE_OS_TECHNICAL_BASELINE.md",):
         text = _read(name)
         for marker in markers:
             assert marker in text
@@ -107,19 +99,14 @@ def test_exception_pickle_docs_track_derived_import_audit() -> None:
             f"{audit['lane_summary']['derived_import_metadata_side_effect']} metadata side-effect candidate"
         )
 
-    for name in (
-        "README.md",
-        "MVP_STATUS.md",
-        "KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md",
-        "COGNITIVE_OS_TECHNICAL_BASELINE.md",
-    ):
+    for name in ("COGNITIVE_OS_TECHNICAL_BASELINE.md",):
         text = _read(name)
         for marker in markers:
             assert marker in text
 
 
-def test_readme_tracks_runtime_role_artifact_order() -> None:
-    readme = _read("README.md")
+def test_role_brief_tracks_runtime_role_artifact_order() -> None:
+    readme = _read("docs/architecture/roles.md")
 
     assert (
         "Project Analyzer -> Architect -> SpecWriter -> Implementer Planner -> "
@@ -129,7 +116,7 @@ def test_readme_tracks_runtime_role_artifact_order() -> None:
 
 def test_core_docs_track_controlled_recovery_contract() -> None:
     baseline = _read("COGNITIVE_OS_TECHNICAL_BASELINE.md")
-    readme = _read("README.md")
+    readme = _read("docs/architecture/roles.md")
 
     route = "Reviewer -> Researcher -> Architect -> Developer -> Tester -> Architect"
     assert route in baseline
@@ -139,7 +126,7 @@ def test_core_docs_track_controlled_recovery_contract() -> None:
 
 
 def test_status_keeps_measurement_axes_separate() -> None:
-    readme = _read("README.md")
+    readme = _read("DEVELOPMENT_STATUS.md")
     status = _read("MVP_STATUS.md")
 
     assert "Readiness, role-by-project-type maturity, and production confidence" in readme
@@ -148,8 +135,8 @@ def test_status_keeps_measurement_axes_separate() -> None:
     assert "production-confidence scores" in status
 
 
-def test_docs_keep_pilot_and_semantic_boundaries_fail_closed() -> None:
-    readme = _read("README.md")
+def test_historical_pilot_and_semantic_boundary_record_is_preserved() -> None:
+    readme = _read("docs/history/README_20260910.md")
     summary = _read("KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md")
 
     assert "pilot remains blocked" in readme
@@ -158,7 +145,7 @@ def test_docs_keep_pilot_and_semantic_boundaries_fail_closed() -> None:
 
 
 def test_docs_track_project_development_boundary() -> None:
-    readme = _read("README.md")
+    readme = _read("docs/architecture/roles.md")
     baseline = _read("COGNITIVE_OS_TECHNICAL_BASELINE.md")
     summary = _read("KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md")
 
@@ -227,7 +214,11 @@ def test_docs_track_project_development_boundary() -> None:
 
 
 def test_docs_track_bounded_self_development_protocol() -> None:
-    readme = _read("README.md")
+    current = _read("docs/architecture/research.md")
+    for marker in ("SelfDevelopmentChangeProposal", "L0-L4", "unknown target kind", "waiting_for_evidence"):
+        assert marker in current
+    # Timestamped trial receipts remain dated evidence, not claims in the brief.
+    readme = _read("docs/history/README_20260910.md")
     baseline = _read("COGNITIVE_OS_TECHNICAL_BASELINE.md")
     status = _read("MVP_STATUS.md")
     summary = _read("KB_COGNITIVE_OS_ARCHITECT_SUMMARY.md")

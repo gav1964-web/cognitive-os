@@ -12,9 +12,11 @@ def test_canonical_verification_covers_integrity_lint_and_both_test_scopes():
         "registry_doctor",
         "config_doctor",
         "repo_lint",
+        "project_boundaries",
         "compileall",
         "core_tests",
         "plugin_tests",
+        "package_tests",
     }
     assert commands["core_tests"][:4] == [sys.executable, "-m", "pytest", "tests"]
     assert commands["plugin_tests"][:4] == [sys.executable, "-m", "pytest", "plugins"]
@@ -25,6 +27,7 @@ def test_canonical_verification_can_skip_expensive_test_scopes():
         "registry_doctor",
         "config_doctor",
         "repo_lint",
+        "project_boundaries",
         "compileall",
     }
 

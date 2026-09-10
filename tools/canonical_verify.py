@@ -57,9 +57,10 @@ def verification_commands(
         ("registry_doctor", [sys.executable, "tools/registry_doctor.py", "--root", "."]),
         ("config_doctor", [sys.executable, "tools/config_doctor.py", "--root", "."]),
         ("repo_lint", [sys.executable, "tools/check_repo_lint.py", "--root", "."]),
+        ("project_boundaries", [sys.executable, "tools/project_context.py", "--root", ".", "--check"]),
         (
             "compileall",
-            [sys.executable, "-m", "compileall", "-q", "runtime", "tools", "plugins", "tests"],
+            [sys.executable, "-m", "compileall", "-q", "runtime", "tools", "plugins", "tests", "packages"],
         ),
     ]
     if include_tests:
@@ -75,6 +76,11 @@ def verification_commands(
                         "-q",
                         f"--basetemp=.pytest-tmp/{run_id}/c",
                     ],
+                ),
+                (
+                    "package_tests",
+                    [sys.executable, "-m", "pytest", "packages", "-q", "--import-mode=importlib",
+                     f"--basetemp=.pytest-tmp/{run_id}/pkg"],
                 ),
                 (
                     "plugin_tests",
@@ -97,9 +103,11 @@ def _run(*, root: Path, name: str, command: list[str], run_id: str) -> dict[str,
         "registry_doctor": "rd",
         "config_doctor": "cd",
         "repo_lint": "rl",
+        "project_boundaries": "pb",
         "compileall": "ca",
         "core_tests": "ct",
         "plugin_tests": "pt",
+        "package_tests": "pkg",
     }
     temp_dir = root / ".pytest-tmp" / run_id / temp_aliases[name]
     temp_dir.mkdir(parents=True, exist_ok=True)

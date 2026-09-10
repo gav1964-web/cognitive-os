@@ -40,7 +40,7 @@ def test_contract_registry_is_documented_and_enforced():
 
 def test_hypothesis_driven_self_improvement_docs_match_runtime():
     self_improvement = (ROOT / "SELF_IMPROVEMENT.md").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = (ROOT / "docs/architecture/research.md").read_text(encoding="utf-8")
     baseline = (ROOT / "COGNITIVE_OS_TECHNICAL_BASELINE.md").read_text(encoding="utf-8")
 
     for text in (self_improvement, readme, baseline):

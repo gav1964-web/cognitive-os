@@ -1,0 +1,11 @@
+{
+  "schema_version": "project_development_boundary_corpus.v1",
+  "cases": [
+    {"id": "train_nested_batches", "split": "train", "lineage": "batch_normalization", "path": "train_nested_batches.py", "target": "normalize_batches", "expected_profile": "nested_loop_mapping_boundary"},
+    {"id": "train_simple_rows", "split": "train", "lineage": "row_normalization", "path": "train_simple_rows.py", "target": "normalize_rows", "expected_profile": "unsupported_reducer_shape"},
+    {"id": "train_nested_groups", "split": "train", "lineage": "group_projection", "path": "train_nested_groups.py", "target": "project_groups", "expected_profile": "nested_loop_mapping_boundary"},
+    {"id": "train_simple_items", "split": "train", "lineage": "item_projection", "path": "train_simple_items.py", "target": "project_items", "expected_profile": "unsupported_reducer_shape"},
+    {"id": "blind_nested_pages", "split": "blind", "lineage": "page_indexing", "path": "blind_nested_pages.py", "target": "index_pages", "expected_profile": "nested_loop_mapping_boundary"},
+    {"id": "blind_simple_tokens", "split": "blind", "lineage": "token_indexing", "path": "blind_simple_tokens.py", "target": "index_tokens", "expected_profile": "unsupported_reducer_shape"}
+  ]
+}

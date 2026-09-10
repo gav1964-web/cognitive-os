@@ -253,27 +253,7 @@ def _project_specific_intake(project: Path, intake: dict[str, Any]) -> dict[str,
         selected["interpreter_path"] = str(resolution["executable"])
     return selected
 
-def _project_distribution_name(project: Path) -> str:
-    pyproject = project / "pyproject.toml"
-    if pyproject.is_file():
-        try:
-            payload = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-            name = str(dict(payload.get("project") or {}).get("name") or "").strip()
-            if name:
-                return name
-        except (OSError, UnicodeError, tomllib.TOMLDecodeError):
-            pass
-    setup_cfg = project / "setup.cfg"
-    if setup_cfg.is_file():
-        parser = configparser.ConfigParser(interpolation=None)
-        try:
-            parser.read(setup_cfg, encoding="utf-8")
-            name = parser.get("metadata", "name", fallback="").strip()
-            if name:
-                return name
-        except (configparser.Error, OSError, UnicodeError):
-            pass
-    return setup_py_distribution_name(project) or project.name
+from cognitive_replay.metadata import _project_distribution_name
 
 def _resolve_project_interpreter(identity: str, intake: dict[str, Any]) -> dict[str, Any]:
     profiles = dict(intake.get("project_interpreter_profiles") or {})

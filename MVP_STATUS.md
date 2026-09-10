@@ -1,3 +1,5 @@
+> Датированный отчёт. Текущий статус: [DEVELOPMENT_STATUS.md](DEVELOPMENT_STATUS.md); карта исходников: [PROJECT_MAP.md](PROJECT_MAP.md).
+
 # MVP_STATUS.md
 **Current snapshot: Cognitive OS foundation and Local Automation MVP target**
 

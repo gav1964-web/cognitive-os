@@ -2,6 +2,7 @@
   "id": "extract_python_structure",
   "version": "0.1.0",
   "entrypoint": "plugins.extract_python_structure.src.main:run",
+  "implementation_packages": ["cognitive_inspect"],
   "determinism_grade": "A",
   "side_effects": {
     "filesystem": "read_only",

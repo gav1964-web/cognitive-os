@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from .integrity import implementation_files
+
 
 class PluginLintError(RuntimeError):
     """Raised when a plugin violates static architecture rules."""
@@ -28,6 +30,12 @@ def lint_plugin(
             raise PluginLintError(f"{plugin_id} file exceeds {max_python_lines} lines: {rel_path}:{line_count}")
         if "src" in relative.parts:
             _lint_src_file(path, plugin_id, effects)
+    for label, path in implementation_files(plugin_dir):
+        if path.suffix != ".py":
+            continue
+        if _line_count(path) > max_python_lines:
+            raise PluginLintError(f"{plugin_id} implementation exceeds {max_python_lines} lines: {label}")
+        _lint_src_file(path, plugin_id, effects)
 
 
 def _line_count(path: Path) -> int:

@@ -28,26 +28,8 @@ def test_extract_python_structure_accepts_extensionless_python_executable(tmp_pa
     assert result["files"][0]["functions"][0]["name"] == "parse_spec"
 
 
-def test_extract_python_structure_separates_newer_parser_syntax(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    Path("project").mkdir()
-    Path("project/app.py").write_text("class Cache[T]:\n    pass\n", encoding="utf-8")
-
-    result = run({"root": "project"})
-
-    assert result["skipped"] == [
-        {"path": "app.py", "reason": "ParserVersionIncompatible", "line": 1}
-    ]
 
 
-def test_extract_python_structure_indexes_python2_through_compatibility_ast(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    Path("project").mkdir()
-    Path("project/app.py").write_text("#!/usr/bin/env python2\ndef run(value):\n    print value\n", encoding="utf-8")
-    result = run({"root": "project"})
-    assert result["files"][0]["functions"][0]["name"] == "run"
-    assert result["files"][0]["parser_compatibility"] == "python2_compatibility_ast"
-    assert result["skipped"] == []
 
 
 def test_extract_python_structure_detects_imports_functions_and_routes(tmp_path, monkeypatch):

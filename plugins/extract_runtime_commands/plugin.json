@@ -2,6 +2,7 @@
   "id": "extract_runtime_commands",
   "version": "0.1.0",
   "entrypoint": "plugins.extract_runtime_commands.src.main:run",
+  "implementation_packages": ["cognitive_inspect"],
   "determinism_grade": "B",
   "side_effects": {
     "filesystem": "read_only",

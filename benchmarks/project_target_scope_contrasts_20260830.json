@@ -1,0 +1,94 @@
+{
+  "schema_version": "project_target_scope_contrast_manifest.v1",
+  "minimum_independent_positive_lineages": 2,
+  "cases": [
+    {
+      "case_id": "isort_repeated_pure_failure_target",
+      "project": "isort_trailing_backslash",
+      "lineage": "pycqa/isort",
+      "project_dir": "benchmarks/github_historical_prefixed_20260829/isort_trailing_backslash",
+      "classification": {
+        "classification_source": "explicit",
+        "project_archetype": "import_sorting_tool",
+        "project_stratum": "cli_local_tool",
+        "risk_profiles": ["deterministic", "filesystem", "stateful"]
+      },
+      "change_request": {
+        "authority": "failing_contract_test",
+        "repeat_count": 2,
+        "target": "isort/parse.py:file_contents"
+      },
+      "expected": {
+        "pilot_status": "eligible_for_full_chain",
+        "decision": "admitted",
+        "reason": null
+      }
+    },
+    {
+      "case_id": "mkdocs_literal_read_only_theme_target",
+      "project": "mkdocs_empty_theme_config",
+      "lineage": "mkdocs/mkdocs",
+      "project_dir": "benchmarks/github_historical_prefixed_20260830/mkdocs_empty_theme_config",
+      "classification": {
+        "classification_source": "explicit",
+        "project_archetype": "docs_site_generator",
+        "project_stratum": "framework_plugin_build",
+        "risk_profiles": ["deterministic", "filesystem", "stateful"]
+      },
+      "change_request": {
+        "authority": "failing_contract_test",
+        "repeat_count": 2,
+        "target": "mkdocs/theme.py:Theme._load_theme_config"
+      },
+      "expected": {
+        "pilot_status": "eligible_for_full_chain",
+        "decision": "admitted",
+        "reason": null
+      }
+    },
+    {
+      "case_id": "isort_direct_write_target",
+      "project": "isort_trailing_backslash",
+      "lineage": "pycqa/isort",
+      "project_dir": "benchmarks/github_historical_prefixed_20260829/isort_trailing_backslash",
+      "classification": {
+        "classification_source": "explicit",
+        "project_archetype": "import_sorting_tool",
+        "project_stratum": "cli_local_tool",
+        "risk_profiles": ["deterministic", "filesystem", "stateful"]
+      },
+      "change_request": {
+        "authority": "failing_contract_test",
+        "repeat_count": 2,
+        "target": "isort/api.py:sort_file"
+      },
+      "expected": {
+        "pilot_status": "analysis_only_stop",
+        "decision": "rejected",
+        "reason": "target_has_prohibited_direct_effects"
+      }
+    },
+    {
+      "case_id": "click_nonwaivable_subprocess_project",
+      "project": "click_strict_default_eq",
+      "lineage": "pallets/click",
+      "project_dir": "benchmarks/github_historical_prefixed_20260829/click_strict_default_eq",
+      "classification": {
+        "classification_source": "explicit",
+        "project_archetype": "cli_framework_library",
+        "project_stratum": "cli_local_tool",
+        "risk_profiles": ["deterministic", "filesystem", "stateful", "subprocess"]
+      },
+      "change_request": {
+        "authority": "failing_contract_test",
+        "repeat_count": 2,
+        "target": "src/click/core.py:Option.get_help_extra"
+      },
+      "expected": {
+        "pilot_status": "analysis_only_stop",
+        "decision": "rejected",
+        "reason": "project_risk_not_waivable"
+      }
+    }
+  ]
+}

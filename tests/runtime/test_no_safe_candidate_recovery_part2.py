@@ -179,8 +179,8 @@ def test_splitlines_recovery_rejects_multiple_boundaries(tmp_path: Path) -> None
 
 def test_splitlines_recipe_transfers_to_tree_scanner(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[2]
-    project = root / "plugins" / "scan_project_tree"
-    target = "src/main.py:_line_count"
+    project = root / "packages" / "cognitive-inspect"
+    target = "src/cognitive_inspect/tree.py:_line_count"
     recovery = run_no_safe_candidate_recovery(
         project_root=project,
         project=project.name,
@@ -193,7 +193,7 @@ def test_splitlines_recipe_transfers_to_tree_scanner(tmp_path: Path) -> None:
         recovery_route=recovery,
     )
 
-    assert recovery["research_hypothesis"]["proposed_target"] == "src/main.py:split_lines"
+    assert recovery["research_hypothesis"]["proposed_target"] == "src/cognitive_inspect/tree.py:split_lines"
     assert package["status"] == "prepared"
     assert package["patches"][0]["kind"] == "extract_splitlines_helper"
 
