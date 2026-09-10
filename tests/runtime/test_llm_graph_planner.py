@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 from runtime.llm_graph_planner import plan_pipeline_with_llm
 from runtime.registry import CapabilityRegistry
 
 
-def test_llm_graph_planner_validates_model_plan():
-    root = Path(__file__).resolve().parents[2]
+def test_llm_graph_planner_validates_model_plan(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     proposal = {
@@ -30,8 +29,8 @@ def test_llm_graph_planner_validates_model_plan():
     assert result["selection"][0]["capability_id"] == "normalize_text"
 
 
-def test_llm_graph_planner_includes_memory_hint_in_prompt():
-    root = Path(__file__).resolve().parents[2]
+def test_llm_graph_planner_includes_memory_hint_in_prompt(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     proposal = {

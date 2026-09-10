@@ -1,0 +1,31 @@
+from pathlib import Path
+
+from web_research_summarizer.search import load_fixture_results, parse_duckduckgo_html
+
+
+def test_fixture_search_limits_top_15_and_deduplicates(tmp_path):
+    payload = '[' + ','.join('{"title":"T%s","url":"https://e.test/%s.html"}' % (i, i) for i in range(20)) + ']'
+    path = tmp_path / 'results.json'
+    path.write_text(payload, encoding='utf-8')
+    rows = load_fixture_results(str(path), limit=15)
+    assert len(rows) == 15
+    assert rows[0].title == 'T0'
+
+
+def test_fixture_search_rejects_malformed_payload(tmp_path):
+    path = tmp_path / 'bad.json'
+    path.write_text('{"bad": true}', encoding='utf-8')
+    try:
+        load_fixture_results(str(path))
+    except ValueError as exc:
+        assert 'search payload' in str(exc)
+    else:
+        raise AssertionError('malformed search payload must fail')
+
+
+def test_duckduckgo_html_search_fixture_extracts_result_links():
+    html = Path('tests/fixtures/search_page.html').read_text(encoding='utf-8')
+    rows = parse_duckduckgo_html(html, limit=15)
+    assert [row.title for row in rows] == ['Python packaging overview', 'Reliable package indexes']
+    assert rows[0].url == 'https://example.test/article_one.html'
+    assert rows[0].snippet == 'Packaging news and practical release notes.'

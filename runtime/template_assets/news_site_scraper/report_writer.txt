@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+
+
+FIELDS = ['title', 'url', 'date', 'summary', 'source']
+
+
+def write_news_report(path: str, rows: list[dict[str, str]], *, fixture: bool = False, summary_text: str | None = None) -> None:
+    target = Path(path)
+    suffix = target.suffix.lower()
+    if suffix == '.md':
+        write_news_markdown(path, rows, fixture=fixture, summary_text=summary_text)
+    elif suffix == '.json':
+        write_news_json(path, rows)
+    else:
+        write_news_csv(path, rows)
+
+
+def write_news_csv(path: str, rows: list[dict[str, str]]) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open('w', newline='', encoding='utf-8') as handle:
+        writer = csv.DictWriter(handle, fieldnames=FIELDS, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_news_markdown(path: str, rows: list[dict[str, str]], *, fixture: bool = False, summary_text: str | None = None) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lines = ['# Сводка новостей', '']
+    if fixture:
+        lines.extend(['> Fixture parser smoke output, not live site news.', ''])
+    if not rows:
+        lines.append('_Новости не найдены._')
+    else:
+        summary = summary_text.strip() if summary_text else _combined_summary(rows)
+        lines.extend(['## Общее резюме', '', summary, '', '## Ссылки для проверки', ''])
+    for index, row in enumerate(rows, start=1):
+        title = row.get('title', '').strip() or 'Untitled'
+        url = row.get('url', '').strip()
+        date = row.get('date', '').strip()
+        source = row.get('source', '').strip()
+        heading = f'{index}. [{title}]({url})' if url else f'{index}. {title}'
+        lines.append(heading)
+        meta = date
+        if meta:
+            lines.append(f'   - {meta}')
+    target.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def _combined_summary(rows: list[dict[str, str]], *, limit: int = 5) -> str:
+    fragments = []
+    for row in rows[:limit]:
+        title = row.get('title', '').strip()
+        summary = row.get('summary', '').strip()
+        if title:
+            fragments.append(f'{title}: {summary}' if summary else title)
+    body = ' '.join(fragments).strip()
+    if len(body) > 900:
+        body = body[:900].rsplit(' ', 1)[0].rstrip('.,;:') + '...'
+    if body:
+        return f'Общее резюме: собрано {len(rows)} релевантных материалов. По доступным заголовкам и описаниям главная тема выглядит так: {body}'
+    return f'Общее резюме: собрано {len(rows)} релевантных материалов. Полные тексты статей не извлечены, поэтому вывод ограничен проверенными заголовками и ссылками.'
+
+
+def write_news_json(path: str, rows: list[dict[str, str]]) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')

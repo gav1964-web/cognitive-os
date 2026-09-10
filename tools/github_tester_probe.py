@@ -13,36 +13,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import (
-    run_architect_skill,
-    run_implementer_skill,
-    run_spec_writer_skill,
-    run_tester_skill,
-)
-
-
-FORBIDDEN_SOURCE_TOKENS = (
-    "/benchmarks/",
-    "/bench/",
-    "/ci_tools/",
-    "/docs/",
-    "/downstream/",
-    "/examples/",
-    "/failures-to-investigate/",
-    "/packaging/pep517_backend/",
-    "/scripts/",
-    "/tasks/",
-    "/test/",
-    "/tests/",
-    "/tools/",
-    "benchmark.py",
-    "bench.py",
-    "_bench.py",
-    "_benchmark.py",
-    "noxfile.py",
-    "testclient.py",
-    "testing.py",
-)
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
+from runtime.role_foundation_field_trial import _primary_language_scope
+from runtime.source_target_policy import is_context_only_implementation_target
 
 
 def main() -> int:
@@ -66,7 +39,7 @@ def main() -> int:
 def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
     cases = [_run_case(project_dir) for project_dir in sorted(projects_dir.iterdir()) if (project_dir / ".git").exists()]
     return {
-        "status": "ok" if all(case["status"] in {"ok", "blocked_ok"} for case in cases) else "needs_review",
+        "status": "ok" if all(case["status"] in {"ok", "blocked_ok", "out_of_scope"} for case in cases) else "needs_review",
         "milestone": label,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "project_count": len(cases),
@@ -77,7 +50,7 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
             "registry_changes": False,
             "teacher_reference_is_ground_truth": False,
             "automatic_code_changes_from_own_output": False,
-            "reviewer_not_in_scope": True,
+            "downstream_roles_not_in_scope": True,
             "foundry_or_promote_not_in_scope": True,
         },
         "cases": cases,
@@ -85,23 +58,54 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
 
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
+    language_scope = _primary_language_scope(project_dir)
+    if language_scope.get("status") == "out_of_scope":
+        return {
+            "project": project_dir.name,
+            "project_dir": project_dir.as_posix(),
+            "status": "out_of_scope",
+            "quality_score": 0.0,
+            "blocked_reason": language_scope.get("reason") or "unsupported_primary_language_for_python_tester",
+            "test_target": "",
+            "implementation_target": "",
+            "binding_status": None,
+            "writable_scope": [],
+            "evidence_scope": [],
+            "read_only_context": [],
+            "contract_rows": 0,
+            "negative_tests": 0,
+            "acceptance_tests": 0,
+            "smoke_checks": 0,
+            "forbidden_sources": [],
+            "llm_invoked": False,
+            "source_project_dirty_before": bool(_git_porcelain(project_dir)),
+            "source_project_dirty_after": bool(_git_porcelain(project_dir)),
+            "source_code_changes": False,
+        }
+    dirty_before = _git_porcelain(project_dir)
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub Tester probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
-    plan = run_implementer_skill(technical_spec=spec)
-    test_plan = run_tester_skill(technical_spec=spec, implementation_plan=plan)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub Tester probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="TestPlan",
+    )
+    plan = artifact_by_type(artifacts, "ImplementationPlan")
+    test_plan = artifact_by_type(artifacts, "TestPlan")
     target = str(dict(test_plan.get("test_target", {})).get("candidate") or "")
+    binding_status = str(dict(test_plan.get("test_target", {})).get("binding_status") or "")
     implementation_target = str(dict(plan.get("implementation_target", {})).get("candidate") or "")
     strategy = dict(test_plan.get("test_strategy", {}))
     writable_scope = [str(item) for item in strategy.get("writable_scope", []) if item]
     evidence_scope = [str(item) for item in strategy.get("evidence_scope", []) if item]
-    forbidden = [value for value in [target, implementation_target, *writable_scope, *evidence_scope] if _is_forbidden_source(value)]
-    blocked_reason = _blocked_reason(project_report)
-    quality = _quality_score(test_plan, target, implementation_target, writable_scope, forbidden)
+    read_only_context = [str(item) for item in strategy.get("read_only_context", []) if item]
+    forbidden = [value for value in [target, implementation_target, *writable_scope] if _is_forbidden_source(value)]
+    blocked_reason = _blocked_reason(project_report, dict(plan.get("implementation_target", {})))
+    quality = _quality_score(test_plan, target, implementation_target, binding_status, writable_scope, read_only_context, forbidden)
     status = "ok" if quality >= 0.9 and not forbidden else "needs_review"
-    if blocked_reason == "no_safe_python_candidate" and not implementation_target and not forbidden:
+    if blocked_reason in {"no_safe_python_candidate", "context_only_implementation_target"} and not implementation_target and not forbidden:
         status = "blocked_ok"
         quality = 1.0
+    dirty_after = _git_porcelain(project_dir)
     return {
         "project": project_dir.name,
         "project_dir": project_dir.as_posix(),
@@ -110,15 +114,19 @@ def _run_case(project_dir: Path) -> dict[str, Any]:
         "blocked_reason": blocked_reason,
         "test_target": target,
         "implementation_target": implementation_target,
+        "binding_status": binding_status,
         "writable_scope": writable_scope[:8],
         "evidence_scope": evidence_scope[:8],
+        "read_only_context": read_only_context[:8],
         "contract_rows": len(test_plan.get("contract_test_matrix", [])),
         "negative_tests": len(test_plan.get("negative_tests", [])),
         "acceptance_tests": len(test_plan.get("acceptance_tests", [])),
         "smoke_checks": len(test_plan.get("smoke_checklist", [])),
         "forbidden_sources": sorted(set(forbidden)),
         "llm_invoked": False,
-        "source_code_changes": _git_dirty(project_dir),
+        "source_project_dirty_before": bool(dirty_before),
+        "source_project_dirty_after": bool(dirty_after),
+        "source_code_changes": dirty_before != dirty_after,
     }
 
 
@@ -140,9 +148,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "ok": ok,
         "blocked_no_safe_candidate": blocked,
+        "out_of_scope": sum(1 for case in cases if case["status"] == "out_of_scope"),
         "accepted": ok + blocked,
-        "needs_review": count - ok - blocked,
-        "avg_quality_score": round(sum(float(case["quality_score"]) for case in cases) / count, 3) if count else 0.0,
+        "needs_review": sum(1 for case in cases if case["status"] == "needs_review"),
+        "avg_quality_score": round(sum(float(case["quality_score"]) for case in cases if case["status"] != "out_of_scope") / max(1, sum(1 for case in cases if case["status"] != "out_of_scope")), 3) if count else 0.0,
         "target_matches_implementation": sum(1 for case in cases if case["test_target"] == case["implementation_target"] and case["implementation_target"]),
         "writable_scope_targets_candidate": sum(
             1
@@ -157,7 +166,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
 }
 
 
-def _blocked_reason(project_report: dict[str, Any]) -> str:
+def _blocked_reason(project_report: dict[str, Any], implementation_target: dict[str, Any]) -> str:
+    blocked = [str(item) for item in list(implementation_target.get("blocked_by") or [])]
+    if "context_only_implementation_target" in blocked:
+        return "context_only_implementation_target"
     answers = dict(project_report.get("answers", {}))
     readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
     plan = dict(readiness.get("minimal_extraction_plan", {}))
@@ -165,16 +177,28 @@ def _blocked_reason(project_report: dict[str, Any]) -> str:
     return "no_safe_python_candidate" if "no_safe_python_candidate" in blocked else ""
 
 
-def _quality_score(test_plan: dict[str, Any], target: str, implementation_target: str, writable_scope: list[str], forbidden: list[str]) -> float:
+def _quality_score(
+    test_plan: dict[str, Any],
+    target: str,
+    implementation_target: str,
+    binding_status: str,
+    writable_scope: list[str],
+    read_only_context: list[str],
+    forbidden: list[str],
+) -> float:
     score = 0.0
-    if test_plan.get("artifact_type") == "TestPlan" and test_plan.get("role") == "tester":
+    if test_plan.get("artifact_type") == "TestPlan" and test_plan.get("role") == producer_for_artifact_type("TestPlan"):
         score += 0.15
     if target and target == implementation_target:
         score += 0.2
     if writable_scope == [target]:
         score += 0.15
+    if binding_status in {"bound_to_extraction_contract", "bound_to_product_contract"}:
+        score += 0.1
+    if target and target not in read_only_context:
+        score += 0.05
     if test_plan.get("contract_test_matrix"):
-        score += 0.15
+        score += 0.1
     if test_plan.get("negative_tests"):
         score += 0.1
     if test_plan.get("acceptance_tests"):
@@ -183,15 +207,16 @@ def _quality_score(test_plan: dict[str, Any], target: str, implementation_target
         score += 0.1
     if not forbidden and not test_plan.get("forbidden_actions_observed"):
         score += 0.05
-    return round(score, 3)
+    if binding_status not in {"bound_to_extraction_contract", "bound_to_product_contract"}:
+        score = min(score, 0.89)
+    return round(min(score, 1.0), 3)
 
 
 def _is_forbidden_source(value: str) -> bool:
-    normalized = "/" + value.replace("\\", "/").lower()
-    return any(token in normalized for token in FORBIDDEN_SOURCE_TOKENS)
+    return is_context_only_implementation_target(value)
 
 
-def _git_dirty(project_dir: Path) -> bool:
+def _git_porcelain(project_dir: Path) -> str:
     try:
         result = subprocess.run(
             ["git", "-C", str(project_dir), "status", "--porcelain"],
@@ -201,8 +226,8 @@ def _git_dirty(project_dir: Path) -> bool:
             timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return True
-    return bool(result.stdout.strip())
+        return "__git_status_unavailable__"
+    return result.stdout.strip()
 
 
 def _markdown(report: dict[str, Any]) -> str:

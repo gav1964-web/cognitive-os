@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from .integrity import implementation_files
+
 
 class PluginLintError(RuntimeError):
     """Raised when a plugin violates static architecture rules."""
@@ -19,27 +21,25 @@ def lint_plugin(
 ) -> None:
     effects = side_effects or {"filesystem": "none", "network": "none", "secrets": "none"}
     for path in plugin_dir.rglob("*.py"):
+        relative = path.relative_to(plugin_dir)
+        if "tests" in relative.parts:
+            continue
         line_count = _line_count(path)
         if line_count > max_python_lines:
-            rel_path = path.relative_to(plugin_dir).as_posix()
+            rel_path = relative.as_posix()
             raise PluginLintError(f"{plugin_id} file exceeds {max_python_lines} lines: {rel_path}:{line_count}")
-        if "src" in path.relative_to(plugin_dir).parts:
+        if "src" in relative.parts:
             _lint_src_file(path, plugin_id, effects)
+    for label, path in implementation_files(plugin_dir):
+        if path.suffix != ".py":
+            continue
+        if _line_count(path) > max_python_lines:
+            raise PluginLintError(f"{plugin_id} implementation exceeds {max_python_lines} lines: {label}")
+        _lint_src_file(path, plugin_id, effects)
 
 
 def _line_count(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").splitlines())
-
-
-def _reject_plugin_to_plugin_imports(path: Path, plugin_id: str) -> None:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    own_prefix = f"plugins.{plugin_id}."
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                _check_import(alias.name, own_prefix, path)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            _check_import(node.module, own_prefix, path)
 
 
 def _lint_src_file(path: Path, plugin_id: str, side_effects: dict[str, str]) -> None:

@@ -1,0 +1,34 @@
+{
+  "schema_version": "local_historical_defect_mining.v1",
+  "status": "active",
+  "corpus_index": "artifacts/self_development/self_development_corpus_eligibility_20260906T101336989553Z.json",
+  "target_project_types": ["cli_local_tool", "library_pure_transform"],
+  "minimum_candidates_per_type": 2,
+  "scan_limit": 1200,
+  "max_commits_per_project": 160,
+  "max_changed_files": 10,
+  "max_production_python_files": 4,
+  "max_test_python_files": 5,
+  "split_seed": "cognitive-os-local-history-defects-v1",
+  "fix_message_tokens": ["fix", "fixed", "bug", "regression", "correct", "prevent", "resolve"],
+  "prospective_evidence_glob": "artifacts/project_development/project_development_*.json",
+  "native_failure_evidence_glob": "artifacts/field_trials/project_native_failure_intake_*.json",
+  "historical_selection_evidence_glob": "artifacts/self_development/historical_defect_mining/public_manifest_*.json",
+  "signals": {
+    "cli_local_tool": ["[project.scripts]", "console_scripts", "argparse", "click", "typer", "command", "cli"],
+    "library_pure_transform": ["parser", "codec", "converter", "transform", "mapping", "schema", "validation", "template", "markup", "token"]
+  },
+  "required_library_name_signals": ["parser", "codec", "convert", "transform", "mapping", "schema", "valid", "template", "markup", "token"],
+  "excluded_cli_signals": ["tensorflow", "django", "fastapi", "scheduler", "task manager", "training"],
+  "excluded_library_signals": ["django", "fastapi", "plugin", "build backend", "tensorflow", "scheduler", "database", "gui", "pipeline", "streamer"],
+  "invariants": {
+    "local_corpus_first": true,
+    "untouched_projects_only": true,
+    "owner_independent": true,
+    "production_and_test_delta_required": true,
+    "baseline_frozen_before_execution": true,
+    "fix_oracle_separated": true,
+    "source_apply": false,
+    "automatic_promotion": false
+  }
+}

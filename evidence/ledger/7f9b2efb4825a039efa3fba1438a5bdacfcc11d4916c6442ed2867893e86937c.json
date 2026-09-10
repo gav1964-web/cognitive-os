@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/e9c7ee87b410cd01bd6835370188d15ca3987aa4ca69218a21dcf1fce2fcc579.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:e9c7ee87b410cd01bd6835370188d15ca3987aa4ca69218a21dcf1fce2fcc579",
+  "entry_digest": "sha256:7f9b2efb4825a039efa3fba1438a5bdacfcc11d4916c6442ed2867893e86937c",
+  "evaluator_fingerprint": "durable-holdout-gate:v1",
+  "producer_fingerprint": "framework-certification:v1",
+  "replay_command": [
+    "python",
+    "tools/framework_plugin_certification.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/framework_plugin_certification_20260906T053917124960Z.json",
+  "status": "promoted"
+}

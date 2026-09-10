@@ -43,6 +43,7 @@ def build_patch(*, root: Path, project_dir: Path, target_model: str) -> dict[str
     (tests_dir / "test_gigachat_client.py").write_text(_test_content(), encoding="utf-8")
     _write_readme(out_dir, project_dir, target_model)
     verification = _verify(package_dir)
+    _clean_runtime_artifacts(package_dir)
     report = {
         "artifact_type": "SandboxPatchPackage",
         "status": "ok" if verification["status"] == "passed" else "failed",
@@ -314,7 +315,7 @@ def _write_readme(out_dir: Path, project_dir: Path, target_model: str) -> None:
 def _verify(package_dir: Path) -> dict[str, object]:
     commands = [
         [sys.executable, "-m", "compileall", "-b", "."],
-        [sys.executable, "-m", "pytest", "tests", "-q"],
+        [sys.executable, "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"],
     ]
     results = []
     for command in commands:
@@ -329,6 +330,16 @@ def _verify(package_dir: Path) -> dict[str, object]:
             }
         )
     return {"status": "passed" if all(row["status"] == "passed" for row in results) else "failed", "commands": results}
+
+
+def _clean_runtime_artifacts(package_dir: Path) -> None:
+    for name in (".pytest-tmp", ".pytest_cache", "__pycache__"):
+        for path in package_dir.rglob(name):
+            if path.is_dir():
+                shutil.rmtree(path)
+    for path in package_dir.rglob("*.py[co]"):
+        if path.is_file():
+            path.unlink()
 
 
 def _out_dir(root: Path) -> Path:

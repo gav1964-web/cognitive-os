@@ -1,0 +1,92 @@
+{
+  "artifact_type": "InterpreterCoverageAudit",
+  "audit_digest": "sha256:a444989d8fb945fd46f86cd1ae13a22686ddbbf74cf915902fee3808a92e16b3",
+  "checks": {
+    "all_required_modules_read": true,
+    "minimum_coverage_met": false,
+    "no_promotion_applied": true,
+    "no_source_apply": true,
+    "report_only": true,
+    "transition_producers_identified": true
+  },
+  "failed_checks": [
+    "minimum_coverage_met"
+  ],
+  "modules": [
+    {
+      "authority_calls": [],
+      "module": "runtime/role_pipeline_stages.py",
+      "requires_interpreter_trace": true,
+      "source_sha256": "sha256:dc26a73b5b502c3e47234834b7436b703afe95bbd1545960476b7dc2a84ca97c",
+      "status": "bypass_gap",
+      "transition_markers": [
+        "next_action",
+        "role_transition",
+        "run_configured_role_prefix"
+      ]
+    },
+    {
+      "authority_calls": [],
+      "module": "runtime/configured_role_pipeline.py",
+      "requires_interpreter_trace": true,
+      "source_sha256": "sha256:610e719e046040f7489140f6feb7c2f9b7812f6bf5e1bf0e9ba80146f49678be",
+      "status": "bypass_gap",
+      "transition_markers": [
+        "run_configured_role_prefix"
+      ]
+    },
+    {
+      "authority_calls": [],
+      "module": "runtime/project_development_core.py",
+      "requires_interpreter_trace": false,
+      "source_sha256": "sha256:9e4eb6dfafba8f9e524f6c881d5fce5cdf22951fdd1cad2df02fa04aac0a84c6",
+      "status": "covered",
+      "transition_markers": []
+    },
+    {
+      "authority_calls": [],
+      "module": "runtime/project_development_handoff.py",
+      "requires_interpreter_trace": true,
+      "source_sha256": "sha256:d440ec1447e5b6a404e7e6af8401ee4752b114de1c47ab99ae81d3f4b0f34e47",
+      "status": "bypass_gap",
+      "transition_markers": [
+        "run_configured_role_prefix"
+      ]
+    },
+    {
+      "authority_calls": [],
+      "module": "runtime/_parts/cognitive_control_plane_part1.py",
+      "requires_interpreter_trace": true,
+      "source_sha256": "sha256:8ebbbed518554b8d29a8f1ffa8c02399f699c8def62ced7462543976987a18be",
+      "status": "bypass_gap",
+      "transition_markers": [
+        "next_action",
+        "role_transition"
+      ]
+    },
+    {
+      "authority_calls": [],
+      "module": "runtime/role_recovery_contract.py",
+      "requires_interpreter_trace": true,
+      "source_sha256": "sha256:b5c86c509633eb47786985c03ae617c069e8af1113cde64c2950486c2abb676e",
+      "status": "bypass_gap",
+      "transition_markers": [
+        "return_to"
+      ]
+    }
+  ],
+  "next_action": "enforce_interpreter_trace_at_orchestrator_boundaries",
+  "safety": {
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "schema_version": "interpreter_coverage_audit_report.v1",
+  "status": "coverage_gap",
+  "summary": {
+    "bypass_gap_count": 5,
+    "coverage": 0.0,
+    "covered_count": 0,
+    "module_count": 6,
+    "transition_producer_count": 5
+  }
+}

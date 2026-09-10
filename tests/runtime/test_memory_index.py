@@ -67,12 +67,16 @@ def test_memory_cli_rebuild_and_search(tmp_path):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     search = subprocess.run(
         [sys.executable, str(root / "tools" / "memory_search.py"), "--root", str(tmp_path), "--query", "list directory files"],
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     assert json.loads(rebuild.stdout)["entries"] == 1
@@ -110,6 +114,36 @@ def test_memory_index_builds_plan_templates_from_successful_reports(tmp_path):
     assert result["template_recommendation"]["capabilities"] == ["normalize_text", "hash_payload"]
 
 
+def test_memory_search_filters_unavailable_capabilities(tmp_path):
+    _write_report(
+        tmp_path,
+        "goal_1.json",
+        {
+            "goal_id": "goal_1",
+            "goal": "Disable old feature",
+            "summary": "Goal executed successfully",
+            "status": "decided",
+            "level4_decision": {"action": "PLAN_WITH_L35"},
+            "level35_plan": {
+                "pipeline": {
+                    "id": "old_patch",
+                    "nodes": [{"id": "old", "capability": "removed_capability", "input": {}}],
+                    "edges": [],
+                }
+            },
+            "execution": {"status": "ok", "completed_nodes": ["old"]},
+        },
+    )
+    index = MemoryIndex(tmp_path)
+    index.rebuild()
+
+    result = index.search("disable old feature", available_capabilities={"apply_project_change_recipe"})
+
+    assert result["matches"] == []
+    assert result["template_matches"] == []
+    assert result["template_recommendation"] is None
+
+
 def test_memory_templates_cli_lists_derived_templates(tmp_path):
     _write_report(
         tmp_path,
@@ -137,6 +171,8 @@ def test_memory_templates_cli_lists_derived_templates(tmp_path):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     templates = json.loads(result.stdout)["templates"]

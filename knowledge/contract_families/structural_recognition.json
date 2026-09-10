@@ -1,0 +1,263 @@
+{
+  "schema_version": "structural_contract_family_rules.v1",
+  "rules": [
+    {"family_id": "decorated_web_route_boundary", "all": [
+      {"field": "decorators", "op": "intersects", "value": ["route", "action", "get", "post", "put", "patch", "delete"]}
+    ]},
+    {"family_id": "decorated_web_error_boundary", "all": [
+      {"field": "decorators", "op": "contains", "value": "errorhandler"}
+    ]},
+    {"family_id": "decorated_background_task_boundary", "all": [
+      {"field": "decorators", "op": "contains", "value": "task"}
+    ]},
+    {"family_id": "decorated_identity_loader_boundary", "all": [
+      {"field": "decorators", "op": "contains", "value": "user_loader"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "async_batch_processing_boundary", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "async_callable", "op": "truthy"},
+      {"field": "usage_types", "op": "contains", "value": "IterableLike"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "ordered_mapping_mutation_boundary", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "MappingLike"},
+      {"field": "declared_effects", "op": "contains", "value": "memory_state"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "truthy"}
+    ]},
+    {"family_id": "database_read_mapping_boundary", "all": [
+      {"field": "output_type", "op": "equals", "value": "MappingLike"},
+      {"field": "observed_effects", "op": "contains", "value": "database"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "tabular_database_query_boundary", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "ends_with_ci", "value": "DataFrame"},
+      {"field": "observed_effects", "op": "contains", "value": "database_read"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "route_tree_flatten_boundary", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "iterator["},
+      {"field": "usage.routes", "op": "equals", "value": "IterableLike"},
+      {"field": "yield_paths", "op": "truthy"}
+    ]},
+    {"family_id": "persistence_append_command", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "observed_effects", "op": "contains", "value": "database"},
+      {"field": "source_body_complete", "op": "truthy"}
+    ]},
+    {"family_id": "subprocess_tuple_query_boundary", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "TupleLike"},
+      {"field": "observed_effects", "op": "contains", "value": "subprocess"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "file_extension_admission_policy", "all": [
+      {"field": "file_extension_policy", "op": "truthy"},
+      {"field": "output_type", "op": "equals", "value": "bool"}
+    ]},
+    {"family_id": "filesystem_artifact_command", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "array_artifact_projection", "all": [
+      {"field": "output_type", "op": "equals", "value": "ArrayLike"},
+      {"field": "usage_types", "op": "contains", "value": "ArrayLike"},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "numerical_array_transform_boundary", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "equals", "value": "ArrayLike"},
+      {"field": "usage_types", "op": "contains", "value": "ArrayLike"},
+      {"field": "declared_effects", "op": "set_equals", "value": []},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "sequence_array_translation_boundary", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "union["},
+      {"field": "output_union_members", "op": "contains_all", "value": ["ArrayLike", "SequenceLike"]},
+      {"field": "usage_types", "op": "intersects", "value": ["IterableLike", "SequenceLike"]},
+      {"field": "declared_effects", "op": "set_equals", "value": []},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "filesystem_typed_collection_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "List["},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
+      {"field": "raises", "op": "truthy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "filesystem_typed_object_loader", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "truthy"},
+      {"field": "usage_types", "op": "contains_all", "value": ["PathLike", "ProtocolLike"]},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
+      {"field": "raises", "op": "truthy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "object_mapping_projection", "score_bonus": 6, "all": [
+      {"field": "output_type", "op": "equals", "value": "MappingLike"},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "receiver_object_mapping_projection", "score_bonus": 8, "all": [
+      {"field": "output_type", "op": "equals", "value": "MappingLike"},
+      {"field": "argument_count", "op": "equals", "value": 0},
+      {"field": "owner_class", "op": "truthy"},
+      {"field": "called_operations", "op": "contains_all", "value": ["getattr", "isinstance"]},
+      {"field": "accessed_attributes", "op": "contains", "value": "items"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "receiver_state_predicate", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "bool"},
+      {"field": "argument_count", "op": "equals", "value": 0},
+      {"field": "owner_class", "op": "truthy"},
+      {"field": "accessed_attributes", "op": "truthy"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "optional_type_annotation_normalization", "score_bonus": 8, "all": [
+      {"field": "output_type", "op": "equals", "value": "T"},
+      {"field": "explicit_return_annotation", "op": "equals", "value": "T"},
+      {"field": "argument_count", "op": "equals", "value": 1},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "called_operations", "op": "contains_all", "value": ["getattr", "type"]},
+      {"field": "accessed_attributes", "op": "contains", "value": "__args__"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "protocol_string_fallback_projection", "score_bonus": 8, "benign_support_path": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "argument_count", "op": "equals", "value": 1},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "callable_decorator_factory", "score_bonus": 8, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "Callable"},
+      {"field": "argument_count", "op": "gte", "value": 2},
+      {"field": "return_paths", "op": "gte", "value": 1},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "parameterized_text_builder", "score_bonus": 10, "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "argument_count", "op": "gte", "value": 4},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "cryptographic_digest_transform", "score_bonus": 8, "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "called_operations", "op": "contains", "value": "hexdigest"},
+      {"field": "argument_count", "op": "equals", "value": 1},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "mapping_observability_validation_command", "score_bonus": 4, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "MappingLike"},
+      {"field": "observed_effects", "op": "contains", "value": "observability"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "validated_string_projection", "all": [
+      {"field": "output_type", "op": "equals", "value": "str"},
+      {"field": "argument_count", "op": "gte", "value": 3},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "raises", "op": "truthy"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "response_collection_ordering_transform", "all": [
+      {"field": "output_type", "op": "equals", "value": "ResponseLike"},
+      {"field": "usage_types", "op": "contains_all", "value": ["KeyLike", "ProtocolLike"]},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "source_body_complete", "op": "truthy"}
+    ]},
+    {"family_id": "cached_analysis_transform", "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "union["},
+      {"field": "usage_types", "op": "contains_count_at_least", "value": "PathLike", "count": 2},
+      {"field": "usage_types", "op": "contains", "value": "MappingLike"},
+      {"field": "observed_effects", "op": "contains", "value": "filesystem_read"},
+      {"field": "observed_effects", "op": "subset_of", "value": ["filesystem_read", "observability"]},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "source_body_complete", "op": "truthy"}
+    ]},
+    {"family_id": "mapping_observability_report_command", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "argument_count", "op": "equals", "value": 1},
+      {"field": "usage_types", "op": "contains", "value": "MappingLike"},
+      {"field": "declared_effects", "op": "set_equals", "value": ["observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "iterable_observability_report_command", "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "IterableLike"},
+      {"field": "observed_effects", "op": "set_equals", "value": ["observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "observability_render_command", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "observed_effects", "op": "set_equals", "value": ["observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "filesystem_read_observability_command", "score_bonus": 4, "benign_runtime_boundary": true, "all": [
+      {"field": "output_type", "op": "equals", "value": "VoidSideEffect"},
+      {"field": "usage_types", "op": "contains", "value": "PathLike"},
+      {"field": "observed_effects", "op": "contains_all", "value": ["filesystem_read", "observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "multi_shape_prediction_boundary", "all": [
+      {"field": "output_type", "op": "starts_with_ci", "value": "union["},
+      {"field": "output_union_members", "op": "contains_all", "value": ["ArrayLike", "TupleLike"]},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "protocol_operator_result_boundary", "all": [
+      {"field": "output_type", "op": "equals", "value": "SetLike"},
+      {"field": "usage_types", "op": "contains", "value": "ProtocolLike"},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "observed_effects", "op": "falsy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]},
+    {"family_id": "external_authorization_policy", "all": [
+      {"field": "output_type", "op": "equals", "value": "bool"},
+      {"field": "async_callable", "op": "truthy"},
+      {"field": "return_paths", "op": "gte", "value": 2},
+      {"field": "declared_effects", "op": "contains", "value": "network"},
+      {"field": "observed_effects", "op": "contains", "value": "network"},
+      {"field": "observed_effects", "op": "subset_of", "value": ["network", "observability"]},
+      {"field": "source_body_complete", "op": "truthy"},
+      {"field": "state_mutation", "op": "falsy"}
+    ]}
+  ]
+}

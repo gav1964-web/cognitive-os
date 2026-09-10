@@ -29,6 +29,12 @@
         "type": "object"
       }
     },
+    "domain_flow_anchors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "wide_functions": {
       "type": "array",
       "items": {
@@ -36,6 +42,12 @@
       }
     },
     "pure_transform_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "bounded_policy_candidates": {
       "type": "array",
       "items": {
         "type": "object"

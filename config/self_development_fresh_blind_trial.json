@@ -1,0 +1,32 @@
+{
+  "schema_version": "self_development_fresh_blind_trial.v1",
+  "status": "active",
+  "evidence_cutoff": "2026-08-30T16:07:49.990978+00:00",
+  "minimum_projects_per_type": 3,
+  "prospective_report": "artifacts/self_development/self_development_prospective_detection_20260830T182928779320Z.json",
+  "collector_checkpoint": "artifacts/self_development/prospective_collector_checkpoint.json",
+  "target_project_types": [
+    "library_pure_transform",
+    "cli_local_tool",
+    "framework_plugin_build"
+  ],
+  "sources": [
+    {"path": "artifacts/project_development/project_development_20260830T182805738091Z.json", "expected_project_type": "library_pure_transform"},
+    {"path": "artifacts/project_development/project_development_20260830T182826729225Z.json", "expected_project_type": "library_pure_transform", "contrast": true},
+    {"path": "artifacts/project_development/project_development_20260830T182830338430Z.json", "expected_project_type": "library_pure_transform"},
+    {"path": "artifacts/project_development/project_development_20260830T182834564667Z.json", "expected_project_type": "cli_local_tool"},
+    {"path": "artifacts/project_development/project_development_20260830T182840048696Z.json", "expected_project_type": "cli_local_tool"},
+    {"path": "artifacts/project_development/project_development_20260830T182843224983Z.json", "expected_project_type": "cli_local_tool"},
+    {"path": "artifacts/project_development/project_development_20260830T182844544587Z.json", "expected_project_type": "framework_plugin_build"},
+    {"path": "artifacts/project_development/project_development_20260830T182846342799Z.json", "expected_project_type": "framework_plugin_build"},
+    {"path": "artifacts/project_development/project_development_20260830T182850493059Z.json", "expected_project_type": "framework_plugin_build"},
+    {"path": "artifacts/project_development/project_development_20260830T182911311474Z.json", "expected_project_type": "library_pure_transform"}
+  ],
+  "invariants": {
+    "chain_hint_used": false,
+    "sandbox_execution_used": false,
+    "source_apply": false,
+    "promotion_applied": false,
+    "candidate_must_not_be_fabricated": true
+  }
+}

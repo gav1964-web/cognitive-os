@@ -1,0 +1,45 @@
+{
+  "schema_version": "interpreter_authority.v1",
+  "status": "active",
+  "stage_sequence": [
+    "goal_intake",
+    "project_analysis",
+    "architecture",
+    "specification",
+    "implementation",
+    "verification",
+    "review",
+    "evaluation"
+  ],
+  "transitions": {
+    "goal_intake": ["project_analysis", "research", "controlled_stop"],
+    "project_analysis": ["architecture", "research", "controlled_stop"],
+    "research": ["architecture", "controlled_stop"],
+    "architecture": ["specification", "research", "controlled_stop"],
+    "specification": ["implementation", "architecture", "controlled_stop"],
+    "implementation": ["verification", "review", "specification", "controlled_stop"],
+    "verification": ["review", "implementation", "architecture", "controlled_stop"],
+    "review": ["evaluation", "implementation", "architecture", "controlled_stop"],
+    "evaluation": ["completed", "research", "controlled_stop"]
+  },
+  "allowed_outcomes": ["accepted", "needs_rework", "research_more", "controlled_stop"],
+  "authority_source_prefixes": ["config/", "knowledge/", "registry/"],
+  "required_evidence_fields": ["reference", "content_digest", "kind"],
+  "recovery": {
+    "maximum_returns": 2,
+    "target_must_be_preserved": true,
+    "scope_expansion_forbidden": true,
+    "automatic_retry_forbidden": true
+  },
+  "invariants": {
+    "raw_llm_output_is_authority": false,
+    "unrecorded_alternative_allowed": false,
+    "source_apply": false,
+    "automatic_promotion": false,
+    "digest_bound_trace": true
+  },
+  "product_surface": {
+    "web_ui": "deferred_until_stable_architecture",
+    "web_ui_is_current_milestone": false
+  }
+}

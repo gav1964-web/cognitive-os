@@ -1,0 +1,70 @@
+{
+  "schema_version": "programmer_l45_composite_cases.v1",
+  "source_root": "artifacts/gitlab_blind_iteration_11_40_20260817/src",
+  "cases": [
+    {
+      "id": "irpf90_text_normalizers", "project": "scemama__irpf90", "fixture_relation": "direct_semantic_mutation",
+      "files": {"text_ops.py": "def strip(x):\n    return x.lower()\n\ndef lower(x):\n    return x.strip()\n"},
+      "edits": [
+        {"target": "text_ops.py:strip", "provenance": "src/util.py:strip", "provenance_ast_sha256": "43391b820fa307db75be691b780ee39af7b3719dd0b0e64c3e8b44aae5b084aa", "statement": "strip must remove leading and trailing whitespace without changing case.", "examples": [{"given": {"x": "  MiXeD  "}, "expected": "MiXeD"}]},
+        {"target": "text_ops.py:lower", "provenance": "src/util.py:lower", "provenance_ast_sha256": "7aeae136b7b616592fa6593802d885a3ed654e6475e8bcbad51b87b65a416cdf", "statement": "lower must lowercase the text without stripping whitespace.", "examples": [{"given": {"x": " MiXeD "}, "expected": " mixed "}]}
+      ]
+    },
+    {
+      "id": "irpf90_dimension_and_dedupe", "project": "scemama__irpf90", "fixture_relation": "direct_semantic_mutation",
+      "files": {"shape_ops.py": "def build_dim(dim):\n    return ','.join(dim)\n\ndef make_single(values):\n    return sorted(set(values))\n"},
+      "edits": [
+        {"target": "shape_ops.py:build_dim", "provenance": "src/util.py:build_dim", "provenance_ast_sha256": "b3437c6a5d70855bed3a35866bcbfa5c1e986fea82f21714e2026577e22e5e71", "statement": "build_dim returns an empty string for no dimensions, otherwise comma-joined dimensions in parentheses.", "examples": [{"given": {"dim": []}, "expected": ""}, {"given": {"dim": ["n", "m"]}, "expected": "(n,m)"}]},
+        {"target": "shape_ops.py:make_single", "provenance": "src/util.py:make_single", "provenance_ast_sha256": "43b9b25bf658d88f07514c10c219fec8c6127a7ea7bb44db6ebf8d0015efeb52", "statement": "make_single removes duplicates while preserving first-seen order.", "examples": [{"given": {"values": ["b", "a", "b", "c", "a"]}, "expected": ["b", "a", "c"]}]}
+      ]
+    },
+    {
+      "id": "bankground_date_serializers", "project": "karelhusa__bankground", "fixture_relation": "adapted_datetime_to_json_strings",
+      "files": {"timestamp_ops.py": "from datetime import datetime\n\ndef string_time_to_datetime(string_time):\n    return string_time.split('T')[0]\n", "date_ops.py": "def date_to_param(date):\n    return date.replace('-', '/')\n"},
+      "edits": [
+        {"target": "timestamp_ops.py:string_time_to_datetime", "provenance": "tests/utils.py:string_time_to_datetime", "provenance_ast_sha256": "de20b85460d3f7ba405e8dd0d9158a08e2077d9e9a7bfa9e6cfba9356c86549a", "statement": "Parse the repository timestamp format and return its complete ISO representation as a JSON-compatible string.", "examples": [{"given": {"string_time": "2024-02-03T04:05:06.123456+0000"}, "expected": "2024-02-03T04:05:06.123456+00:00"}]},
+        {"target": "date_ops.py:date_to_param", "provenance": "tests/utils.py:date_to_param", "provenance_ast_sha256": "f7c4d5e0b12998e6e7560a12ce6b47d6aec4b2a7b50ed6010e5eab9cad6980b5", "statement": "Accept an ISO date string and preserve the YYYY-MM-DD query parameter form.", "examples": [{"given": {"date": "2025-11-09"}, "expected": "2025-11-09"}]}
+      ]
+    },
+    {
+      "id": "mlds_one_hot_encoders", "project": "mlcathome__mlds", "fixture_relation": "direct_non_numpy_path",
+      "files": {"encoding.py": "def cmd_to_vec(seq, alphabet=['a', 'b'], numpy=False):\n    return [[1.0 if i != alphabet.index(x) else 0.0 for i in range(len(alphabet))] for x in seq]\n\ndef output_to_vec(output, N=20, numpy=False):\n    rows = []\n    for value in output:\n        row = [0.0] * (N - 1)\n        row[value] = 1.0\n        rows.append(row)\n    return rows\n"},
+      "edits": [
+        {"target": "encoding.py:cmd_to_vec", "provenance": "dataset/randgraph.py:cmd_to_vec", "provenance_ast_sha256": "cec4ad397d418bbfc001b63e1ba7744c7b26770a8d953afe07d83260436fa828", "statement": "Encode each command as a one-hot row using its index in alphabet; return lists when numpy is false.", "examples": [{"given": {"seq": ["b", "a"], "alphabet": ["a", "b"], "numpy": false}, "expected": [[0.0, 1.0], [1.0, 0.0]]}]},
+        {"target": "encoding.py:output_to_vec", "provenance": "dataset/randgraph.py:output_to_vec", "provenance_ast_sha256": "8e01a4a37c9c2c6e054db58352f293e749c5e3b3e9288d8f13b0ae3739e4bfc5", "statement": "Encode each non-negative output index as a one-hot row of exactly N entries; return lists when numpy is false.", "examples": [{"given": {"output": [2, 0], "N": 3, "numpy": false}, "expected": [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0]]}]}
+      ]
+    },
+    {
+      "id": "mlds_bit_command_codec", "project": "mlcathome__mlds", "fixture_relation": "direct_semantic_mutation",
+      "files": {"commands.py": "def get_cmdvec(cmd, width=8):\n    inputvec = [0] * width\n    inputvec[cmd[1]] = 1\n    if cmd[0] == 'clear':\n        inputvec[-1] = 1\n    return inputvec\n\ndef cmdvec_to_string(cmd):\n    operation = 'clear' if cmd[8] == 1 else 'set'\n    index = next((i for i, value in enumerate(cmd[:-1]) if value == 1), len(cmd) - 1)\n    return str((operation, index))\n"},
+      "edits": [
+        {"target": "commands.py:get_cmdvec", "provenance": "dataset/bitmachines_modified.py:get_cmdvec", "provenance_ast_sha256": "5eaa67f7927efed67341ddbf9ce789afd85377f9c5e507ed2967e8f4c404c440", "statement": "Return width+1 bits: mark the command bit and set the last flag only for a set operation.", "examples": [{"given": {"cmd": ["set", 2], "width": 4}, "expected": [0, 0, 1, 0, 1]}, {"given": {"cmd": ["clear", 1], "width": 4}, "expected": [0, 1, 0, 0, 0]}]},
+        {"target": "commands.py:cmdvec_to_string", "provenance": "dataset/bitmachines_modified.py:cmdvec_to_string", "provenance_ast_sha256": "35064a1d069b98d702ef2b1ea4a48d10c0679bc2fdc747466f2c406857491549", "statement": "Decode a nine-element command vector to the string form of (operation, bit-index), where the final flag selects set.", "examples": [{"given": {"cmd": [0, 0, 1, 0, 0, 0, 0, 0, 1]}, "expected": "('set', 2)"}]}
+      ]
+    },
+    {
+      "id": "qemu_json_and_error_formatting", "project": "qemu-project__python-qemu-qmp", "fixture_relation": "adapted_exception_object_to_fields",
+      "files": {"json_tools.py": "import json\n\ndef format_json(msg):\n    return msg\n", "error_tools.py": "def exception_summary(exc_type, exc_module, message):\n    return f'{exc_module}.{exc_type}: {message}'\n"},
+      "edits": [
+        {"target": "json_tools.py:format_json", "provenance": "qemu/qmp/qmp_tui.py:format_json", "provenance_ast_sha256": "590503005ff8e1c618811a08c113a99b5c8aecd51b213937dcfecd1341d31778", "statement": "Compact valid JSON; for invalid JSON remove newlines and collapse repeated spaces.", "examples": [{"given": {"msg": "[ 1,\n true, 3 ]"}, "expected": "[1, true, 3]"}, {"given": {"msg": "not   json\n value"}, "expected": "not json value"}]},
+        {"target": "error_tools.py:exception_summary", "provenance": "qemu/qmp/util.py:exception_summary", "provenance_ast_sha256": "4e0537cedfd180bc0d4ae0b7eb6a4cdb9fc66d1d780d230f50d97c696ea60288", "statement": "Format module-qualified exception type except for builtins or __main__, and append colon plus message only when non-empty.", "examples": [{"given": {"exc_type": "ValueError", "exc_module": "builtins", "message": "bad"}, "expected": "ValueError: bad"}, {"given": {"exc_type": "Failure", "exc_module": "pkg.errors", "message": ""}, "expected": "pkg.errors.Failure"}]}
+      ]
+    },
+    {
+      "id": "cytosim_pattern_and_utf8", "project": "f-nedelec__cytosim", "fixture_relation": "adapted_bytes_to_integer_list",
+      "files": {"patterns.py": "def cannonical_pattern(arg):\n    return arg\n", "encoding.py": "def uncode(values):\n    return str(values)\n"},
+      "edits": [
+        {"target": "patterns.py:cannonical_pattern", "provenance": "doc/tutorials/code/collect.py:cannonical_pattern", "provenance_ast_sha256": "5d9978e578f5e37d6e9d4f1fce3f1ca934753209d5f23e816ffe370874a7831d", "statement": "Replace the first repeated-percent run of length N with printf form %0Ni; leave strings without a repeated run unchanged.", "examples": [{"given": {"arg": "frame_%%%%.png"}, "expected": "frame_%04i.png"}, {"given": {"arg": "frame_%04i.png"}, "expected": "frame_%04i.png"}]},
+        {"target": "encoding.py:uncode", "provenance": "python/endo/plot_bead_height.py:uncode", "provenance_ast_sha256": "5e6dccfb6d561df0a9e95e371e2b34e1813a8bcf12a42e4a39e3265f9e82a9c8", "statement": "Convert a list of byte values to UTF-8 text.", "examples": [{"given": {"values": [99, 97, 102, 195, 169]}, "expected": "café"}]}
+      ]
+    },
+    {
+      "id": "fedora_package_filters", "project": "fedora__ostree__ci-test", "fixture_relation": "adapted_regex_and_enum_inputs",
+      "files": {"filters.py": "import re\n\ndef is_exclude_listed(pkgname, exclude_patterns):\n    return pkgname in exclude_patterns\n", "package_types.py": "def format_pkgtype(pkgtype):\n    return 'mandatory' if pkgtype == 0 else 'default'\n"},
+      "edits": [
+        {"target": "filters.py:is_exclude_listed", "provenance": "comps-sync.py:is_exclude_listed", "provenance_ast_sha256": "11305feb1c11d80fd88c9b8345ebf6e06e8b803e39c0a365be8917bb80cb8515", "statement": "Treat exclude_patterns as regular-expression strings and return true when any pattern matches the package name.", "examples": [{"given": {"pkgname": "kernel-debug", "exclude_patterns": ["^kernel-", "docs$"]}, "expected": true}, {"given": {"pkgname": "bash", "exclude_patterns": ["^kernel-"]}, "expected": false}]},
+        {"target": "package_types.py:format_pkgtype", "provenance": "comps-sync.py:format_pkgtype", "provenance_ast_sha256": "0a0edcceddb51e4228337fa0635992256a8d204b91bfc5068249b826fc520d07", "statement": "Map package type 0 to default and type 1 to mandatory.", "examples": [{"given": {"pkgtype": 0}, "expected": "default"}, {"given": {"pkgtype": 1}, "expected": "mandatory"}]}
+      ]
+    }
+  ]
+}

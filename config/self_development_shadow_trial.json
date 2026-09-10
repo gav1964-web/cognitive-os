@@ -1,0 +1,31 @@
+{
+  "schema_version": "self_development_shadow_trial.v1",
+  "status": "active",
+  "maturity_matrix": "artifacts/field_trials/role_project_type_evaluation_20260830T161442270918Z.json",
+  "minimum_cases": 3,
+  "minimum_case_score": 0.9,
+  "require_mature_project_type": true,
+  "sources": [
+    {
+      "path": "artifacts/role_promotion/project_native_repair_promotion_20260830T000805901553Z.json",
+      "expected_change_class": "L0",
+      "expected_project_type": "library_pure_transform"
+    },
+    {
+      "path": "artifacts/role_promotion/project_native_repair_promotion_20260830T104614251822Z.json",
+      "expected_change_class": "L0",
+      "expected_project_type": "cli_local_tool"
+    },
+    {
+      "path": "artifacts/role_promotion/project_native_repair_promotion_20260830T160749995978Z.json",
+      "expected_change_class": "L0",
+      "expected_project_type": "framework_plugin_build"
+    }
+  ],
+  "invariants": {
+    "backfill_is_read_only": true,
+    "source_apply": false,
+    "promotion_applied": false,
+    "historical_promotion_is_evidence_not_authority": true
+  }
+}

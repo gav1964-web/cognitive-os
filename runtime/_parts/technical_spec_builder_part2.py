@@ -1,0 +1,345 @@
+from __future__ import annotations
+import ast
+import builtins
+import re
+from typing import Any
+from runtime.role_spec_writer_ranking import (
+    candidate_level_bonus as _candidate_level_bonus,
+    name_and_contract_score as _name_and_contract_score,
+    operational_boundary_score as _operational_boundary_score,
+)
+from runtime.role_skill_common import now_iso
+from runtime.spec_writer_candidate_arbiter import arbitrate_candidates
+from runtime.technical_spec_domain_contract import domain_extraction_contract
+from runtime.source_contract_semantics import infer_source_contract
+from runtime.source_target_policy import is_context_only_implementation_target, is_fallback_product_target
+from runtime.spec_writer_target_binding import promote_environment_ready_candidate
+from runtime.python_source_files import is_python_source_ref
+from runtime.promoted_candidate_selection_policies import apply_preflight_selection_policies
+from runtime.target_quality import semantic_target_quality_report
+from runtime.technical_spec_contract_enrichment import enrich_signature_contract
+from runtime.technical_spec_policy import load_technical_spec_policy, policy_list, policy_rules
+from runtime.technical_spec_target_selection import (
+    binding_rejection_rows as _binding_rejection_rows,
+    enforce_preferred_first_slice_scope as _enforce_preferred_first_slice_scope,
+    first_slice_target_can_override as _first_slice_target_can_override,
+    promote_preferred_first_slice_target as _promote_preferred_first_slice_target,
+    ranked_item_has_weak_io as _ranked_item_has_weak_io,
+    reconciled_input_contract as _reconciled_input_contract,
+)
+_BUILTIN_NAMES = set(dir(builtins))
+TECHNICAL_SPEC_POLICY = load_technical_spec_policy()
+SNIPPET_POLICY = dict(TECHNICAL_SPEC_POLICY["snippet_analysis"])
+CONTRACT_TYPE_POLICY = dict(TECHNICAL_SPEC_POLICY["contract_type_inference"])
+SEMANTIC_RERANK_POLICY = dict(TECHNICAL_SPEC_POLICY["semantic_rerank"])
+FIRST_SLICE_SCOPE_POLICY = dict(TECHNICAL_SPEC_POLICY.get("first_slice_scope") or {})
+ARCHITECTURE_SHAPE_POLICY = dict(TECHNICAL_SPEC_POLICY["architecture_shape_score"])
+SIDE_EFFECT_PROCESS_BOUNDARY = set(policy_list(TECHNICAL_SPEC_POLICY, "side_effect_process_boundary"))
+ALLOWED_EXTERNAL_SNIPPET_NAMES = {str(item) for item in SNIPPET_POLICY.get("allowed_external_names", [])}
+HIGH_CONFIDENCE_UNRESOLVED_SETS = tuple(
+    frozenset(str(item) for item in row) for row in SNIPPET_POLICY.get("high_confidence_unresolved_sets", []) if isinstance(row, list)
+)
+IGNORED_RETURN_ANNOTATIONS = set(policy_list(CONTRACT_TYPE_POLICY, "ignored_return_annotations"))
+ARGUMENT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "argument_rules")
+PAYLOAD_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "payload_rules")
+RESULT_TYPE_RULES = policy_rules(CONTRACT_TYPE_POLICY, "result_rules")
+def _fallback_work_plan_contract(targets: list[str]) -> dict[str, Any]:
+    targets = _dedupe([_normalize_source_ref(str(item)) for item in targets if item])
+    primary = targets[0]
+    steps = [
+        f"Define explicit input/output contract for {primary}.",
+        f"Record side-effect and retry policy for {primary}.",
+        f"Attach source-linked acceptance and negative-test expectations for {primary}.",
+    ]
+    return {
+        "status": "ready",
+        "source": "TechnicalSpec.fallback_from_spec_writer_brief",
+        "name": "extraction_contract_slice",
+        "goal": f"Prepare a bounded implementation handoff for `{primary}` from source-backed SpecWriter evidence.",
+        "targets": targets[:24],
+        "knowledge_rule": None,
+        "obligations": [
+            {
+                "id": f"WPC-{index:03d}",
+                "step": step,
+                "target": primary,
+                "input": "source-backed evidence, current behavior, and declared capability boundary",
+                "output": "bounded implementation obligation with acceptance and rollback evidence",
+                "verification": "must be linked to at least one acceptance criterion before Implementer handoff",
+            }
+            for index, step in enumerate(steps, start=1)
+        ],
+    }
+
+def _human_review_material(
+    architecture_decision: dict[str, Any],
+    extraction_contract: dict[str, Any],
+    quality_gate: dict[str, Any],
+) -> dict[str, Any]:
+    candidate = str(extraction_contract.get("candidate") or "no candidate selected")
+    open_questions = list(architecture_decision.get("open_questions") or [])
+    non_goals = list(architecture_decision.get("non_goals") or [])
+    return {
+        "open_questions": open_questions,
+        "non_goals": non_goals,
+        "decision_points": [
+            {
+                "topic": "first_slice_scope",
+                "decision": f"Confirm that `{candidate}` is the intended first bounded implementation target.",
+                "evidence": extraction_contract.get("source") or candidate,
+            },
+            {
+                "topic": "quality_gate",
+                "decision": "Accept, block, or request rework based on the engineering quality gate.",
+                "evidence": quality_gate.get("status"),
+            },
+        ],
+        "release_note": "This TechnicalSpec is an API artifact between SpecWriter and Implementer; it is not permission to edit source code.",
+    }
+def _source_evidence(brief: dict[str, Any], source_context: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    first_slice = dict(brief.get("first_slice") or {})
+    contract_targets = [
+        target.get("source")
+        for target in list(brief.get("contract_targets", []) or [])
+        if isinstance(target, dict) and target.get("source")
+    ]
+    sources = _dedupe(
+        [
+            *[_normalize_source_ref(str(source)) for source in list(brief.get("files_or_symbols", []) or []) if source],
+            *[_normalize_source_ref(str(source)) for source in list(first_slice.get("targets", []) or []) if source],
+            *[_normalize_source_ref(str(source)) for source in contract_targets if source],
+        ]
+    )
+    allow_fallback = not any(_implementation_source(source) for source in sources)
+    for source in sources:
+        if not _implementation_source(str(source)) and not (allow_fallback and is_fallback_product_target(str(source))):
+            continue
+        source = _normalize_source_ref(str(source))
+        context = dict(source_context.get(str(source), {}))
+        snippet_value = context.get("snippet", {})
+        snippet = dict(snippet_value) if isinstance(snippet_value, dict) else {"text": str(snippet_value or "")}
+        signature = dict(context.get("signature", {}))
+        rows.append(
+            {
+                "source": str(source),
+                "kind": context.get("kind") or "unknown",
+                "snippet": snippet.get("text"),
+                "signature": signature,
+                "decorators": context.get("decorators") or snippet.get("decorators", []),
+                "callers": context.get("callers", []),
+                "callees": context.get("callees", []),
+                "unresolved_calls": context.get("unresolved_calls", []),
+                "side_effects": context.get("side_effects", []),
+                "contract_side_effects": context.get("contract_side_effects", context.get("side_effects", [])),
+                "claims": context.get("claims", []),
+                "target_binding": context.get("target_binding") or snippet.get("target_binding"),
+                "symbol_occurrences": context.get("symbol_occurrences") or snippet.get("symbol_occurrences", []),
+                "owner_class": context.get("owner_class") or snippet.get("owner_class"),
+                "structural_contract": context.get("structural_contract") or snippet.get("structural_contract", {}),
+                "dependency_readiness": dict(context.get("dependency_readiness") or {}),
+            }
+        )
+    return rows
+
+
+def _supplement_source_evidence(
+    evidence: list[dict[str, Any]],
+    acceptance: list[dict[str, Any]],
+    source_context: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Retain traceability symbols when their source context was already resolved."""
+    rows = list(evidence)
+    seen = {str(row.get("source") or "") for row in rows}
+    for acceptance_row in acceptance:
+        source = _normalize_source_ref(str(acceptance_row.get("source") or ""))
+        if ":" not in source or source in seen or source not in source_context:
+            continue
+        additions = _source_evidence({"files_or_symbols": [source]}, source_context)
+        if additions:
+            rows.append(additions[0])
+            seen.add(source)
+    return rows
+def _implementation_source(source: str) -> bool:
+    lowered = source.lower()
+    if _context_only_implementation_source(lowered):
+        return False
+    if is_python_source_ref(source):
+        return True
+    if lowered.startswith("[") and " " in lowered:
+        return True
+    return False
+
+def _context_only_implementation_source(lowered: str) -> bool:
+    return is_context_only_implementation_target(lowered)
+def _normalize_source_ref(source: str) -> str:
+    return re.sub(r"\s*\(\d+\s+loc\)\s*$", "", str(source or "").strip(), flags=re.IGNORECASE)
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen = set()
+    rows = []
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        rows.append(value)
+    return rows
+def _extraction_contract(
+    evidence: list[dict[str, Any]], *, preferred_targets: list[Any] | None = None, advisory_config: Any = None,
+    apply_preflight: bool = True,
+) -> dict[str, Any]:
+    ranked = _rank_extraction_candidates(evidence); read_only_ranked_context = []
+    binding_rejections = [item for item in ranked if item.get("standalone_eligible") is False]
+    ranked = [item for item in ranked if item.get("standalone_eligible") is not False]
+    if FIRST_SLICE_SCOPE_POLICY.get("enforce_candidate_within_targets", True):
+        pre_scope_ranked = list(ranked); ranked = _enforce_preferred_first_slice_scope(ranked, preferred_targets or [])
+        read_only_ranked_context = pre_scope_ranked
+    else:
+        ranked = _semantic_rerank_candidates(ranked, evidence)
+        ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [])
+    ranked = _semantic_rerank_candidates(ranked, [dict(item.get("evidence", {})) for item in ranked])
+    if FIRST_SLICE_SCOPE_POLICY.get("preserve_architecture_order_before_execution_failure", True):
+        ranked = _promote_preferred_first_slice_target(ranked, preferred_targets or [], architecture_contract_only=True)
+    else:
+        ranked = promote_environment_ready_candidate(ranked)
+    read_only_ranked_context = _bounded_read_only_ranked_context(
+        ranked,
+        apply_preflight_selection_policies(read_only_ranked_context, trigger_candidate=ranked[0])
+        if apply_preflight and read_only_ranked_context and ranked
+        else read_only_ranked_context,
+    )
+    ranked = _append_learned_ranked_context(ranked, read_only_ranked_context)
+    ranked, candidate_advisory = arbitrate_candidates(ranked, config=advisory_config)
+    ranked = apply_preflight_selection_policies(ranked) if apply_preflight else ranked
+    if not ranked:
+        blocked_codes = _dedupe([str(item.get("blocked_reason") or "") for item in binding_rejections])
+        rejection_rows = _binding_rejection_rows(binding_rejections)
+        return {
+            "status": "blocked_no_safe_candidate",
+            "candidate": None,
+            "candidate_score": 0,
+            "selection_reason": "; ".join(str(item.get("reason") or "") for item in rejection_rows)
+            or "no source-specific evidence available for a bounded extraction contract",
+            "ranked_candidates": [],
+            "binding_rejections": rejection_rows,
+            "semantic_quality": semantic_target_quality_report(""),
+            "input_contract": {},
+            "output_contract": {},
+            "side_effects": {"declared": [], "requires_process_boundary": False},
+            "evidence_source": None,
+            "blocked_by": blocked_codes or ["no_safe_source_specific_candidate"],
+        }
+    candidate = dict(ranked[0].get("evidence", {})) if ranked else {}
+    source = str(candidate.get("source") or "")
+    domain_contract = domain_extraction_contract(source, candidate)
+    structural_evidence = infer_source_contract(candidate)
+    signature_input_contract = _input_contract_from_candidate(candidate)
+    signature_output_contract = _output_contract_from_candidate(candidate)
+    contract_side_effects = _dedupe([*list(candidate.get("contract_side_effects", candidate.get("side_effects", [])) or []), *list(structural_evidence.get("observed_side_effects") or []), *list(dict(domain_contract.get("side_effect_policy") or {}).get("declared") or [])])
+    enriched_contract = enrich_signature_contract(
+        target=source,
+        input_contract=signature_input_contract,
+        output_contract=signature_output_contract,
+        side_effects=contract_side_effects,
+        source_snippet=str(candidate.get("snippet") or ""),
+    )
+    signature_input_contract = dict(enriched_contract.get("input_contract") or signature_input_contract)
+    signature_output_contract = dict(enriched_contract.get("output_contract") or signature_output_contract)
+    input_contract = _reconciled_input_contract(signature_input_contract, dict(domain_contract.get("input_contract") or {}), dict(domain_contract.get("input_bindings") or {}))
+    output_contract = dict(domain_contract.get("output_contract") or signature_output_contract)
+    contract = {
+        "candidate": candidate.get("source"),
+        "candidate_score": ranked[0]["score"] if ranked else 0,
+        "selection_reason": "; ".join(ranked[0]["reasons"]) if ranked else "no source evidence available",
+        "ranked_candidates": [
+            {
+                "source": item.get("source"),
+                "kind": item.get("kind"),
+                "score": item.get("score"),
+                "reasons": item.get("reasons", []),
+                "side_effects": item.get("side_effects", []),
+                "dependency_readiness": dict(dict(item.get("evidence") or {}).get("dependency_readiness") or {}),
+                **({"selection_policy_ids": item["selection_policy_ids"]} if item.get("selection_policy_ids") else {}),
+            }
+            for item in ranked[:32]
+        ],
+        "read_only_ranked_context": [
+            {
+                "source": item.get("source"),
+                "kind": item.get("kind"),
+                "score": item.get("score"),
+                "reasons": item.get("reasons", []),
+                "side_effects": item.get("side_effects", []),
+            }
+            for item in read_only_ranked_context
+        ],
+        "input_contract": input_contract,
+        "output_contract": output_contract,
+        "side_effects": {
+            **_side_effect_policy(contract_side_effects),
+            "requires_process_boundary": bool(contract_side_effects),
+            **dict(domain_contract.get("side_effect_policy") or {}),
+        },
+        "evidence_source": candidate.get("source"),
+        "structural_evidence": structural_evidence,
+        "candidate_advisory": candidate_advisory,
+        "dependency_readiness": dict(candidate.get("dependency_readiness") or {}),
+    }
+    contract.update({"selection_policy_ids": list(ranked[0]["selection_policy_ids"])} if ranked[0].get("selection_policy_ids") else {})
+    if binding_rejections:
+        contract["binding_rejections"] = _binding_rejection_rows(binding_rejections)
+    supporting_sources = [
+        str(item) for item in list(candidate.get("contract_slice_sources") or [])
+        if item and str(item) != source
+    ]
+    if supporting_sources:
+        contract["supporting_sources"] = supporting_sources[:7]
+        contract["effect_handoff_chains"] = list(candidate.get("transitive_effect_chains") or [])[:12]
+    if domain_contract.get("contract_family"):
+        contract["contract_family"] = domain_contract["contract_family"]
+        contract["semantic_contract"] = {
+            "input_contract": dict(domain_contract.get("input_contract") or {}),
+            "output_contract": dict(domain_contract.get("output_contract") or {}),
+        }
+        contract["validation_gates"] = domain_contract.get("validation_gates", [])
+        contract["failure_modes"] = domain_contract.get("failure_modes", [])
+    elif enriched_contract.get("contract_profile"):
+        contract["contract_profile"] = dict(enriched_contract.get("contract_profile") or {})
+    contract["semantic_quality"] = semantic_target_quality_report(
+        str(contract.get("candidate") or ""),
+        ranked_candidates=[str(row.get("source")) for row in contract["ranked_candidates"] if isinstance(row, dict)],
+        source_evidence=[str(row.get("source")) for row in evidence if row.get("source")],
+        selection_reason=str(contract.get("selection_reason") or ""),
+        **{"structural_evidence": structural_evidence, "input_contract": input_contract, "output_contract": output_contract, "side_effect_contract": contract["side_effects"], "recognized_profile": domain_contract},
+    )
+    quality = dict(contract.get("semantic_quality") or {})
+    quality_reasons = " ".join(str(reason) for reason in list(quality.get("reasons", []) or [])).lower()
+    weak_semantic_status = str(quality.get("status") or "") in {"poor", "suspicious"}
+    runtime_boundary_needs_review = "runtime/api boundary target needs semantic review" in quality_reasons
+    explicitly_too_broad = "too broad for direct implementer handoff" in quality_reasons
+    proven_contract = _semantic_contract_proven(contract, quality)
+    if not contract.get("contract_family") and not proven_contract and (weak_semantic_status or runtime_boundary_needs_review or explicitly_too_broad):
+        review = _semantic_review_override(contract, quality, preferred_targets or [])
+        if review.get("status") == "approved_with_constraints":
+            contract["semantic_review"] = review
+            return contract
+        return {
+            "status": "blocked_no_safe_candidate",
+            "candidate": None,
+            "candidate_score": 0,
+            "selection_reason": (
+                "best available source candidate requires semantic review before implementer handoff; "
+                "scope clarification or L4.5 semantic review is required before implementer handoff"
+            ),
+            "ranked_candidates": contract["ranked_candidates"],
+            "semantic_quality": quality,
+            "input_contract": {},
+            "output_contract": {},
+            "side_effects": {"declared": [], "requires_process_boundary": False},
+            "evidence_source": None,
+            "blocked_by": [
+                "no_safe_source_specific_candidate",
+                "selected_candidate_semantic_quality_requires_review",
+            ],
+        }
+    return contract

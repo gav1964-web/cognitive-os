@@ -1,0 +1,30 @@
+{
+  "schema_version": "tester_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/scraper_with_retry_and_cache",
+  "teacher_profile": "tester",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_test_plan": {
+    "candidate": "scraper.py:parse_links",
+    "writable_scope": [
+      "scraper.py:parse_links"
+    ],
+    "min_contract_matrix_count": 2,
+    "min_acceptance_test_count": 4,
+    "min_negative_test_count": 2,
+    "min_smoke_count": 3,
+    "min_regression_risk_count": 1,
+    "min_executable_obligation_count": 5,
+    "dependency_external_calls": "fake_by_default"
+  },
+  "teacher_review": {
+    "project_condition": "scraper with network/cache context where parse_links is the safe target",
+    "expected_test_behavior": [
+      "verify parser with fixture HTML",
+      "reject malformed HTML/input",
+      "fake network/cache boundaries by default"
+    ],
+    "known_risks": [
+      "fetch_html and save_cache must not become required live integration tests"
+    ]
+  }
+}

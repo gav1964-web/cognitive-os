@@ -22,12 +22,18 @@ def test_role_pipeline_returns_next_action(tmp_path):
     assert result["next_action"] in {"run_project_transform", "review_risks_then_run_project_transform", "rework_role_artifacts"}
     assert result["safety"]["source_code_changes"] is False
     assert result["safety"]["llm_invoked"] is False
+    assert result["safety"]["l4_5_required"] is False
     assert result["safety"]["foundry_invoked"] is False
+    assert result["cognitive_control_plane"]["layer"] == "L4.0"
+    assert result["cognitive_control_plane"]["role_transition"]["next_action"] == result["next_action"]
     assert result["architect_advisory"]["source"] == "deterministic"
     assert result["transform"]["status"] == "skipped"
     assert Path(result["report_path"]).exists()
     assert Path(result["human_documents"]["architecture_analysis"]).exists()
+    assert Path(result["human_documents"]["technical_spec"]).exists()
     assert result["artifacts"]["review_findings"]["artifact_type"] == "ReviewFindings"
+    assert result["artifacts"]["programmer_task_tree"]["artifact_type"] == "ProgrammerTaskTree"
+    assert result["artifacts"]["programmer_task_tree"]["role"] == "task_tree_builder"
 
 
 def test_role_pipeline_cli_writes_report():
@@ -52,6 +58,7 @@ def test_role_pipeline_cli_writes_report():
 
     assert payload["status"] == "ok"
     assert Path(payload["report_path"]).exists()
+    assert Path(payload["human_documents"]["technical_spec"]).exists()
 
 
 def test_role_pipeline_can_run_transform():
@@ -85,5 +92,7 @@ def test_role_pipeline_architect_llm_fallback():
 
     assert result["status"] == "ok"
     assert result["safety"]["llm_invoked"] is False
+    assert result["safety"]["l4_5_required"] is True
     assert result["safety"]["foundry_invoked"] is False
     assert result["architect_advisory"]["source"] == "deterministic_fallback"
+    assert "report_path" not in result

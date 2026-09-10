@@ -1,0 +1,38 @@
+{
+  "prompt": "Напиши локальную CLI .py утилиту без обязательных внешних зависимостей: вход — путь к изображению PNG/JPG/WEBP, выход — JSON со списком видимых объектов, кратким описанием и limitations в stdout или файл. Реальная vision-модель допускается только как optional OpenAI-compatible backend через env, тесты должны работать без сети через injectable analyzer. Нужны README и pytest.",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "codex_external_corrector",
+  "expected_steps": [
+    "classify prompt as bounded image-content CLI",
+    "define image path input and JSON contents output contract",
+    "separate CLI, image validation, optional vision backend and serialization",
+    "make vision backend injectable for deterministic tests",
+    "handle missing, unsupported and unavailable-backend errors explicitly",
+    "run project-scoped compile and pytest"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/image_contents/__init__.py",
+    "src/image_contents/cli.py",
+    "src/image_contents/analyzer.py",
+    "tests/fixtures/sample.webp",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "image fixture is described through an injectable vision backend",
+    "CLI writes JSON contents output",
+    "missing or unsupported images are rejected with controlled errors",
+    "real vision backend is optional and not required for default tests",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "dependency_policy"
+  ]
+}

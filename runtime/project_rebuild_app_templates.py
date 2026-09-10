@@ -49,19 +49,16 @@ def _fastapi_app(spec: dict[str, Any]) -> str:
     blueprints = _blueprints_by_route(spec)
     for row in spec.get("routes", [])[:12]:
         route = str(row.get("route") or "/")
+        target_route = _route_template(route)
         methods = [str(item).lower() for item in row.get("methods", [])] or ["get"]
         func = _safe_name(str(row.get("function") or "handler"))
         for method in methods:
-            sample = blueprints.get((route, method.upper()), {"route": route, "handler": func, "status": "available"})
-            handlers.append(
-                f"@app.{method}({route!r})\n"
-                f"def {func}_{method}():\n"
-                f"    return {sample!r}\n"
-            )
+            handlers.append(_fastapi_handler(route, target_route, method, func, row, blueprints))
     return (
         '"""Minimal API rebuild scaffold generated from source routes."""\n\n'
         "from __future__ import annotations\n\n"
         "from fastapi import FastAPI\n\n"
+        "from fastapi.responses import HTMLResponse, RedirectResponse\n\n"
         "app = FastAPI(title='rebuild api')\n\n"
         + "\n".join(handlers)
         + "\n\ndef main() -> None:\n"
@@ -70,6 +67,22 @@ def _fastapi_app(spec: dict[str, Any]) -> str:
         "if __name__ == '__main__':\n"
         "    main()\n"
     )
+
+
+def _fastapi_handler(
+    route: str, target_route: str, method: str, func: str, row: dict[str, Any], blueprints: dict[tuple[str, str], Any]
+) -> str:
+    if str(row.get("response_kind") or "") == "redirect":
+        return f"@app.{method}({target_route!r})\ndef {func}_{method}():\n    return RedirectResponse('/en', status_code=302)\n"
+    if str(row.get("response_kind") or "") == "html":
+        body = f"<html><body><main data-route={route!r}>{func}</main></body></html>"
+        return f"@app.{method}({target_route!r})\ndef {func}_{method}():\n    return HTMLResponse({body!r})\n"
+    sample = blueprints.get((route, method.upper()), {"route": route, "handler": func, "status": "available"})
+    return f"@app.{method}({target_route!r})\ndef {func}_{method}():\n    return {sample!r}\n"
+
+
+def _route_template(route: str) -> str:
+    return route.replace("<language:str>", "{language}").replace("<path:path>", "{path:path}")
 
 
 def _cli_app(spec: dict[str, Any]) -> str:

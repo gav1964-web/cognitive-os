@@ -18,7 +18,7 @@ def apply_architect_advisory(
         artifact["architect_advisory"] = {"source": "deterministic", "llm_invoked": False}
         return artifact
     try:
-        response = call_json_chat(_messages(artifact), config=config)
+        response = call_json_chat(_messages(artifact, config.advisory_context), config=config)
     except LocalInferenceError as exc:
         artifact["architect_advisory"] = {
             "source": "deterministic_fallback",
@@ -47,7 +47,7 @@ def apply_architect_advisory(
     return artifact
 
 
-def _messages(artifact: dict[str, Any]) -> list[dict[str, str]]:
+def _messages(artifact: dict[str, Any], training_context: dict[str, Any] | None = None) -> list[dict[str, str]]:
     evidence_sources = sorted(_risk_evidence_terms(artifact))
     compact = {
         "goal": artifact.get("goal"),
@@ -59,6 +59,7 @@ def _messages(artifact: dict[str, Any]) -> list[dict[str, str]]:
         "evidence_sources": evidence_sources,
         "source_context": _select_source_context(artifact, evidence_sources),
         "current_choice": dict(artifact.get("chosen_option", {})).get("id"),
+        "training_context": dict(training_context or {}),
     }
     return [
         {

@@ -145,6 +145,21 @@ def _validate_payload(packet: dict[str, Any]) -> None:
         _require_payload(payload, {"signals", "needs_l4_decision", "blocked"})
     elif packet_type == "EXECUTION_EVENT":
         _require_payload(payload, {"event_type", "pipeline_id", "node_id", "capability_id", "status", "artifact_refs"})
+    elif packet_type == "INTERRUPT":
+        _require_payload(
+            payload,
+            {
+                "type",
+                "pipeline_id",
+                "failed_node_id",
+                "capability_id",
+                "error_class",
+                "error_fingerprint",
+                "state_ref",
+                "capability_status",
+                "suggested_actions",
+            },
+        )
 
 
 def _require_payload(payload: dict[str, Any], required: set[str]) -> None:

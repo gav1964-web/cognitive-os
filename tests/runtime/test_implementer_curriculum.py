@@ -24,6 +24,10 @@ def test_implementer_curriculum_local_three_scores_teacher_references():
     assert report["milestone"] == "Implementer Curriculum Local-3 v0.1"
     assert report["project_count"] == 3
     assert report["summary"]["score"] == 1.0
+    assert report["summary"]["avg_score"] == 1.0
+    assert report["summary"]["worst_case_score"] == 1.0
+    assert report["summary"]["ready_threshold"] == 0.92
+    assert report["summary"]["ready_by_worst_case"] is True
     assert report["summary"]["backlog_items"] == 0
     assert report["invariants"]["teacher_reference_is_ground_truth"] is False
     assert report["invariants"]["source_code_changes"] is False
@@ -49,6 +53,8 @@ def test_implementer_curriculum_cli_writes_report():
 
     assert payload["status"] == "ok"
     assert payload["summary"]["score"] == 1.0
+    assert payload["summary"]["worst_case_score"] == 1.0
+    assert payload["summary"]["ready_by_worst_case"] is True
     assert Path(payload["report_path"]).exists()
 
 
@@ -63,7 +69,13 @@ def test_implementer_curriculum_external_three_when_projects_exist():
     assert report["status"] == "ok"
     assert report["milestone"] == "Implementer Curriculum External-3 v0.1"
     assert report["project_count"] == 3
-    assert report["summary"]["score"] == 1.0
+    assert float(report["summary"]["worst_case_score"]) >= 0.92
+    assert report["summary"]["ready_by_worst_case"] is True
+    for case in report["cases"]:
+        candidate = case["actual"]["candidate"]
+        actions = case["actual"]["implementation_actions"]
+        assert any(candidate in action for action in actions)
+        assert all(" only inside writable_scope" not in action or candidate in action for action in actions)
     assert report["summary"]["backlog_items"] == 0
 
 

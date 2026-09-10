@@ -28,6 +28,8 @@ def unsafe_candidate_reason(function: dict[str, Any]) -> str:
     }
     if len(name) <= 1:
         return "too_weak_symbol_name"
+    if len(name) > 4 and name.startswith("__") and name.endswith("__"):
+        return "protocol_dunder_method"
     if name in dangerous_names or name.startswith(("exec_", "eval_")):
         return "dangerous_runtime_helper"
     if path.endswith(("_api.py", "/api.py")) and name in api_boundary_names:

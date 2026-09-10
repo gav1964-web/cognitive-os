@@ -1,0 +1,47 @@
+{
+  "schema_version": "project_fact_query_patterns.v1",
+  "status": "active",
+  "default_questions": [
+    "дай список файлов .py больше 300 строк"
+  ],
+  "patterns": [
+    {
+      "id": "py_files_over_lines",
+      "target": "files",
+      "all_markers": [[".py", "строк"], ["больше"]],
+      "filters": [
+        {"field": "extension", "op": "eq", "value": ".py"},
+        {"field": "line_count", "op": "gt", "value_from": "first_integer"}
+      ],
+      "sort": [{"field": "line_count", "direction": "desc"}, {"field": "path", "direction": "asc"}],
+      "limit": null,
+      "answer_key_template": "py_files_over_{first_integer}_lines",
+      "output_fields": ["path", "line_count"]
+    },
+    {
+      "id": "files_over_size",
+      "target": "files",
+      "all_markers": [["файл"], ["больше"], ["kb", "кб", "mb", "мб", "bytes", "байт"]],
+      "filters": [
+        {"field": "size_bytes", "op": "gt", "value_from": "first_size_bytes"}
+      ],
+      "sort": [{"field": "size_bytes", "direction": "desc"}, {"field": "path", "direction": "asc"}],
+      "limit": null,
+      "answer_key_template": "files_over_{first_size_label}",
+      "output_fields": ["path", "size_bytes", "size_kb"]
+    },
+    {
+      "id": "files_name_contains_underscore_top_by_size",
+      "target": "files",
+      "all_markers": [["файл"], ["подчеркиван", "подчёркиван", "underscore"], ["топ", "top"], ["размер", "size"]],
+      "filters": [
+        {"field": "name", "op": "contains", "value": "_"}
+      ],
+      "sort": [{"field": "size_bytes", "direction": "desc"}, {"field": "path", "direction": "asc"}],
+      "limit_from": "top_integer",
+      "default_limit": 10,
+      "answer_key_template": "files_name_contains_underscore_top_{limit}_by_size_bytes_desc",
+      "output_fields": ["path", "name", "size_bytes", "size_kb"]
+    }
+  ]
+}

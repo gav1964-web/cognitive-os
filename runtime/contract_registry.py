@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,28 @@ from .registry import CapabilityRegistry
 
 class ContractRegistryError(ValueError):
     """Raised when a runtime contract is missing or cannot be used."""
+
+
+
+ARTIFACT_CONTRACTS_PATH = Path(__file__).resolve().parents[1] / "config" / "artifact_contracts.json"
+
+def load_artifact_contracts(path: str | None = None) -> dict[str, dict[str, Any]]:
+    source = Path(path) if path else ARTIFACT_CONTRACTS_PATH
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "artifact_contracts.v1":
+        raise ContractRegistryError("artifact contracts must use schema_version artifact_contracts.v1")
+    contracts = payload.get("contracts")
+    if not isinstance(contracts, dict):
+        raise ContractRegistryError("artifact contracts must contain contracts object")
+    normalized: dict[str, dict[str, Any]] = {}
+    for artifact_type, contract in contracts.items():
+        if not isinstance(contract, dict):
+            raise ContractRegistryError(f"artifact contract must be object: {artifact_type}")
+        required = contract.get("required_fields")
+        if not isinstance(required, list):
+            raise ContractRegistryError(f"artifact contract requires required_fields list: {artifact_type}")
+        normalized[str(artifact_type)] = dict(contract)
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -37,6 +60,7 @@ class ContractRegistry:
     def __init__(self, capabilities: dict[str, CapabilityContract]) -> None:
         self.capabilities = capabilities
         self.packet_routes = set(LAYER_ROUTES)
+        self.artifacts = load_artifact_contracts()
 
     @classmethod
     def from_capability_registry(cls, registry: CapabilityRegistry) -> "ContractRegistry":
@@ -75,6 +99,20 @@ class ContractRegistry:
         if route not in self.packet_routes:
             raise ContractRegistryError(f"missing packet route contract: {route}")
 
+    def require_artifact(self, artifact_type: str) -> dict[str, Any]:
+        if artifact_type not in self.artifacts:
+            raise ContractRegistryError(f"missing artifact contract: {artifact_type}")
+        return dict(self.artifacts[artifact_type])
+
+    def validate_artifact(self, artifact: dict[str, Any]) -> None:
+        artifact_type = str(artifact.get("artifact_type") or "")
+        contract = self.require_artifact(artifact_type)
+        missing = [field for field in contract["required_fields"] if field not in artifact]
+        if missing:
+            raise ContractRegistryError(
+                f"{artifact_type} artifact missing fields: {', '.join(missing)}"
+            )
+
     def catalog(self) -> dict[str, Any]:
         return {
             "capabilities": [
@@ -92,6 +130,10 @@ class ContractRegistry:
             "packet_routes": [
                 {"source_layer": source, "target_layer": target, "packet_type": packet_type}
                 for source, target, packet_type in sorted(self.packet_routes)
+            ],
+            "artifacts": [
+                {"artifact_type": artifact_type, **contract}
+                for artifact_type, contract in sorted(self.artifacts.items())
             ],
         }
 

@@ -1,0 +1,462 @@
+{
+  "schema_version": "project_evolution_policy.v1",
+  "status_threshold": 0.8,
+  "principles": [
+    "failed_projects_are_training_examples",
+    "cognitive_os_runs_its_own_improvement_loop",
+    "model_capability_sufficiency_before_maximum_capability",
+    "field_evidence_before_score_increase",
+    "kb_or_config_before_code_branch",
+    "no_source_project_mutation_in_field_trials",
+    "bounded_complexity_before_new_capability",
+    "regression_suite_before_readiness_claim",
+    "meta_only_is_not_callable_evidence",
+    "native_extensions_are_separate_boundary_track"
+  ],
+  "chosen_path": {
+    "north_star": "self_improving_role_capability_from_project_training_and_calibrated_field_evidence",
+    "architecture_bet": "code_is_not_the_only_system_knowledge_carrier",
+    "field_trial_role": "corpora_are_evidence_not_the_goal",
+    "promotion_rule": "raw_scores_may_describe_local_progress_but_calibrated_scores_decide_readiness",
+    "implementation_rule": "general_policy_or_kb_first_role_logic_second_project_specific_branch_never"
+  },
+  "self_improvement": {
+    "trigger_score_below": 9.7,
+    "max_training_iterations": 5,
+    "minimum_capability_request_projects": 3,
+    "promotion_transaction_paths": [
+      "config/executable_acceptance_policy.json",
+      "knowledge/role_knowledge/promoted_candidate_selection_policies.json",
+      "knowledge/role_knowledge/promoted_executable_adapters.json",
+      "knowledge/role_knowledge/promoted_semantic_contract_profiles.json",
+      "knowledge/role_knowledge/project_native_failure_repair_patterns.json"
+    ],
+    "max_challenger_attempts": 3,
+    "max_temporary_profile_attempts": 1,
+    "local_diagnostician_profile": "local_l35",
+    "teacher_profile": "external_l45_intent_resolver",
+    "teacher_confidence_threshold": 0.78,
+    "max_external_calls_per_iteration": 1,
+    "maximum_field_trial_case_seconds": 60,
+    "training_priority": {
+      "actionable_acceptance_signals": ["meta_only"],
+      "actionable_downstream_statuses": ["failed"]
+    },
+    "hypothesis_holdout": {
+      "enabled": true,
+      "plan_version": "hypothesis_holdout.v29",
+      "providers": ["gitlab", "github"],
+      "provider_policy_overrides": {
+        "gitlab": {"minimum_stars": 0},
+        "github": {"minimum_stars": 5, "maximum_size_kb": 30000}
+      },
+      "minimum_projects": 4,
+      "minimum_emergent_redirect_projects": 4,
+      "minimum_new_projects": 1,
+      "maximum_projects": 4,
+      "candidate_pool_projects": 24,
+      "clone_workers": 4,
+      "maximum_discovery_rounds": 3,
+      "maximum_search_pages": 2,
+      "queries_per_round": 8,
+      "signature_normalization": {
+        "effect_match_mode": "required_subset",
+        "near_match_score": 0.65,
+        "failure_class_families": {
+          "spec_writer_candidate_selection": [
+            "spec_contract_unsafe_candidates",
+            "spec_writer_blocked_no_safe_candidate",
+            "spec_writer_no_safe_candidate"
+          ]
+        },
+        "forbidden_additional_effects": [
+          "database_write",
+          "filesystem_write",
+          "network",
+          "process_control",
+          "subprocess"
+        ],
+        "output_basis_families": {
+          "void_side_effect": [
+            "no_value_return",
+            "explicit_none_annotation"
+          ]
+        }
+      },
+      "query_composition": {
+        "enabled": true,
+        "maximum_queries": 6
+      },
+      "structural_prescreen": {
+        "enabled": true,
+        "semantic_context_tokens": {
+          "logging_adapter_factory": ["logging.config", "handler factory", "dicthandler", "create_handler"],
+          "logging_sink_adapter": ["logging.handler", "def emit", "send_message", "transport"],
+          "logging_record_projection": ["logging.formatter", "logging.logrecord", "def format(self, record", "def format_record"],
+          "logging_output_format_boundary": ["logging.formatter", "logging.logrecord", "def format(self, record", "def format_record"]
+        },
+        "semantic_context_callable_tokens": {
+          "logging_adapter_factory": ["create", "build", "factory", "get_handler"],
+          "logging_sink_adapter": ["emit", "send", "write", "publish", "__call__"],
+          "logging_record_projection": ["format", "project", "serialize"],
+          "logging_output_format_boundary": ["format", "serialize"]
+        },
+        "maximum_shortlist_projects": 8,
+        "minimum_shortlist_projects": 2,
+        "maximum_python_files": 120,
+        "maximum_functions": 3000,
+        "maximum_file_bytes": 500000,
+        "maximum_project_python_file_bytes": 1000000,
+        "maximum_evidence_samples": 8,
+        "excluded_directories": [
+          "tests",
+          "test",
+          "docs",
+          "examples",
+          "benchmarks",
+          "build",
+          "dist",
+            "generated",
+            "vendor",
+            "vendors",
+            "third_party",
+            "third-party",
+            "3rdparty",
+            "site-packages",
+            "example_scenes"
+        ],
+          "excluded_file_names": [
+            "conftest.py",
+            "setup.py"
+        ],
+        "excluded_file_prefixes": [
+          "test_"
+        ],
+        "excluded_callable_names": [
+          "__init__",
+          "__new__",
+          "__enter__",
+          "__exit__",
+          "setup",
+          "teardown",
+          "setUp",
+          "tearDown"
+        ],
+        "callable_name_tokens": {
+          "void_side_effect": [
+            "add",
+            "append",
+            "cache",
+            "clear",
+            "dispatch",
+            "emit",
+            "handle",
+            "record",
+            "register",
+            "remove",
+            "reset",
+            "set",
+            "store",
+            "update",
+            "write"
+          ]
+        },
+        "weights": {
+          "exact_effects": 60,
+          "compatible_effects": 40,
+          "overlapping_effects": 15,
+          "output_basis": 40,
+          "callable_name_signal": 20
+        }
+      },
+      "query_profiles": {
+        "side_effectful_target": ["state management", "report generator", "observability", "command handler"],
+        "executable_sample_contract": ["data validation", "parser", "serializer", "python library"],
+        "dependency_boundary": ["api client", "integration service", "plugin system", "adapter"],
+        "first_slice_reselection_required": ["workflow engine", "service layer", "automation tool", "data pipeline"],
+        "default": ["python application", "python library", "automation tool"]
+      },
+      "signature_query_terms": {
+        "maximum_queries": 58,
+        "semantic_context": {
+          "logging_adapter_factory": ["logging handler factory", "logging config handler"],
+          "logging_sink_adapter": ["logging sink handler", "logging transport adapter"],
+          "logging_record_projection": ["structured logging formatter", "LogRecord formatter"],
+          "logging_output_format_boundary": ["structured logging formatter", "log formatter"]
+        },
+        "effects": {
+          "memory_state": [
+            "topic:state-management",
+            "global state in:name,description",
+            "topic:event-driven",
+            "topic:state-machine",
+            "state registry",
+            "in-memory state",
+            "topic:cache",
+            "event dispatcher",
+            "plugin registry",
+            "command bus",
+            "observer pattern",
+            "session store",
+            "cache manager",
+            "reactive state",
+            "state container",
+            "listener registry",
+            "cache invalidation",
+            "memoization library",
+            "object registry",
+            "session manager",
+            "signal dispatcher",
+            "dependency injection container",
+            "state machine library",
+            "event bus",
+            "signal registry",
+            "callback registry",
+            "session backend",
+            "cache backend",
+            "identity map",
+            "unit of work",
+            "lifecycle manager",
+            "resource registry",
+            "hook manager",
+            "object pool",
+            "subscription manager",
+            "handler registry",
+            "middleware registry",
+            "service locator",
+            "state coordinator",
+            "runtime registry",
+            "component registry",
+            "task registry",
+            "connection pool",
+            "session registry",
+            "cache store",
+            "state store",
+            "event listener",
+            "callback manager",
+            "hook registry"
+          ],
+          "filesystem_read": ["configuration loader", "file reader"],
+          "observability": [
+            "telemetry collector",
+            "metrics recorder",
+            "structured logging",
+            "audit logger",
+            "activity tracker",
+            "progress reporter",
+            "status reporter",
+            "event recorder",
+            "trace recorder",
+            "diagnostic collector",
+            "console reporter",
+            "task monitor",
+            "job monitor",
+            "workflow monitor",
+            "agent framework",
+            "bot framework"
+          ],
+          "network": ["api client", "network adapter"]
+        },
+        "output_bases": {
+          "void_side_effect": [
+            "command handler",
+            "event handler",
+            "state updater",
+            "notification handler",
+            "logging handler",
+            "progress callback",
+            "lifecycle hook",
+            "command registry",
+            "status callback",
+            "event listener"
+          ],
+          "no_value_return": [
+            "command handler",
+            "event handler",
+            "state updater",
+            "notification handler",
+            "logging handler",
+            "progress callback",
+            "lifecycle hook",
+            "command registry",
+            "status callback",
+            "event listener"
+          ],
+          "return_expression": ["data transform", "query service"],
+          "explicit_return_annotation": ["typed service", "typed library"]
+        }
+      }
+    },
+    "failure_classification": {
+      "reselection_trigger_map": {
+        "no_semantically_safe_candidate_in_approved_first_slice": "first_slice_reselection_required"
+      },
+      "downstream_reason_map": {
+        "side_effectful_target": "side_effectful_target",
+        "first_slice_reselection_required": "first_slice_reselection_required",
+        "import_failed_missing_module": "dependency_boundary",
+        "import_failed_runtime_error": "dependency_boundary",
+        "positive_sample_execution_failed": "executable_sample_contract"
+      },
+      "skipped_reason_map": {
+        "import_failed_missing_module": "dependency_boundary",
+        "positive_sample_execution_failed": "executable_sample_contract",
+        "import_failed_runtime_error": "dependency_boundary"
+      }
+    },
+    "mutable_config_paths": {
+      "config/executable_acceptance_policy.json": ["/structural_sample_policy"]
+    },
+    "promotion": {
+      "require_shadow_improvement": true,
+      "require_no_role_regression": true,
+      "require_all_regression_cases_ok": true,
+      "minimum_regression_cases": 1,
+      "minimum_score_delta": 0.01
+    },
+    "allowed_parameter_changes": ["architect_advisory", "spec_writer_advisory", "spec_writer_candidate_preference", "temporary_semantic_profile", "model_tier", "staged_kb_candidate", "config_mutation_proposal"],
+    "forbidden_changes": ["evaluation_policy", "score_threshold", "role_score_caps", "source_project", "active_kb_without_promotion"],
+    "success_rule": "target_reached_or_score_improved_without_role_regression"
+  },
+  "development_lanes": {
+    "evidence_calibration": {
+      "goal": "make readiness claims harder than raw field scores",
+      "primary_artifacts": ["field_reports", "role_promotion_readiness", "calibration_caps"]
+    },
+    "role_contract_depth": {
+      "goal": "increase role intelligence by sharpening task contracts and acceptance criteria",
+      "primary_artifacts": ["role_specs", "technical_spec_policy", "architecture_decision_policy"]
+    },
+    "kb_generalization": {
+      "goal": "turn repeated failures into reusable archetypes and solution patterns",
+      "primary_artifacts": ["contract_archetype_inference", "semantic_target_profiles", "executor_solution_patterns"]
+    },
+    "negative_controls": {
+      "goal": "prevent optimistic scoring from counting meta files, trivial helpers, or false callables",
+      "primary_artifacts": ["target_quality_policy", "role_source_policy", "field_trial_scope"]
+    },
+    "executor_separation": {
+      "goal": "split task-tree planning from code synthesis when executor behavior remains mechanical",
+      "primary_artifacts": ["programmer_executor_playbooks", "executor_solution_patterns", "future_task_tree_builder"]
+    },
+    "native_extension_boundary": {
+      "goal": "treat C, C++, and Rust extension work as a separate capability track",
+      "primary_artifacts": ["field_trial_scope", "native_extension_boundary_evidence"]
+    }
+  },
+  "decision_rules": {
+    "add_kb_when": [
+      "failure_recurs_across_unrelated_projects",
+      "domain_boundary_can_be_named_as_contract_or_archetype",
+      "change_improves_selection_without_source_project_mutation"
+    ],
+    "change_role_logic_when": [
+      "existing_kb_is_not_expressible_enough_for_general_decision",
+      "failure_is_in_role_control_flow_or_scoring_semantics",
+      "negative_control_requires_runtime_enforcement"
+    ],
+    "split_or_promote_role_when": [
+      "one_role_contains_two_distinct_decision_loops",
+      "quality_ceiling_persists_after_kb_and_policy_generalization",
+      "acceptance_contract_needs_a_separate_planning_artifact"
+    ],
+    "declare_separate_track_when": [
+      "project_requires_native_compilation_boundary",
+      "evidence_depends_on_external_service_or_hardware",
+      "capability_cannot_be_fairly_scored_by_current_pure_python_gates"
+    ]
+  },
+  "stop_signals": [
+    "repeated_project_specific_patches",
+    "raw_score_rises_while_calibrated_score_is_capped",
+    "new_profile_without_reusable_contract_language",
+    "role_ceiling_persists_across_two_independent_corpora",
+    "field_delta_comes_from_meta_only_or_trivial_callable_targets"
+  ],
+  "evidence_milestones": {
+    "calibrated_9_5": {
+      "minimum_scored_projects": 160,
+      "required_property": "no_below_target_projects_in_independent_multi_type_corpus"
+    },
+    "calibrated_9_7": {
+      "minimum_scored_projects": 320,
+      "required_property": "stable_no_below_target_result_across_repeated_unseen_corpora"
+    }
+  },
+  "evolution_rules": {
+    "score_growth_requires_independent_holdout": {
+      "blocked_gate": "role_score_9_7",
+      "required_evidence": "independent_holdout",
+      "blocker": "score_growth_without_independent_holdout"
+    },
+    "previous_field_cannot_validate_new_level": {
+      "blocked_gate": "role_score_9_7",
+      "required_evidence": "independent_holdout",
+      "blocker": "reused_field_as_new_level_evidence"
+    },
+    "false_callable_is_regression": {
+      "metric": "false_callable_regressions",
+      "blocker": "false_callable_regression"
+    },
+    "meta_only_is_not_callable": {
+      "metric": "meta_only_delta_as_callable",
+      "blocker": "meta_only_counted_as_callable"
+    },
+    "native_extension_boundary_is_separate_track": {
+      "boundary_track": "native_extension",
+      "required_evidence": "native_extension_boundary",
+      "blocker": "native_extension_mixed_into_pure_python_score"
+    },
+    "line_limit_blocks_promotion": {
+      "required_evidence": "line_limit_check",
+      "blocker": "line_limit_check_missing"
+    }
+  },
+  "evolution_change_types": {
+    "field_validated_capability": {
+      "required_evidence": ["field_report", "regression_tests", "no_source_changes"],
+      "score": 3
+    },
+    "kb_crystallization": {
+      "required_evidence": ["config_or_kb_change", "config_doctor", "regression_tests"],
+      "score": 2
+    },
+    "policy_extraction": {
+      "required_evidence": ["code_to_policy_move", "config_doctor", "line_limit_check"],
+      "score": 2
+    },
+    "independent_holdout_validation": {
+      "required_evidence": ["independent_holdout", "field_report", "regression_tests", "no_source_changes"],
+      "score": 2
+    },
+    "cosmetic_tuning": {
+      "required_evidence": ["regression_tests"],
+      "score": 0
+    }
+  },
+  "promotion_gates": {
+    "role_score_9_5": {
+      "minimum_recent_evolution_score": 5,
+      "minimum_field_callable_delta": 2,
+      "required_evidence": ["field_report", "regression_tests", "config_doctor", "line_limit_check"]
+    },
+    "role_score_9_7": {
+      "minimum_recent_evolution_score": 8,
+      "minimum_field_callable_delta": 4,
+      "required_evidence": ["independent_holdout", "field_report", "regression_tests", "config_doctor", "line_limit_check"]
+    }
+  },
+  "anti_patterns": [
+    "score_increase_without_field_delta",
+    "score_growth_without_independent_holdout",
+    "reused_field_as_new_level_evidence",
+    "false_callable_regression",
+    "meta_only_counted_as_callable",
+    "native_extension_mixed_into_pure_python_score",
+    "line_limit_check_missing",
+    "project_specific_branch_without_kb_record",
+    "broad_dependency_stub_without_field_win",
+    "new_runtime_code_when_policy_config_would_work",
+    "acceptance_fixture_that_masks_real_side_effects"
+  ]
+}

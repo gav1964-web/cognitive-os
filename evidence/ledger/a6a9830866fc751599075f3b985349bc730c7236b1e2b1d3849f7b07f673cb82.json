@@ -1,0 +1,18 @@
+{
+  "artifact": "evidence/artifacts/5997ca973e57fa1ec72127e032c97a763fbd041da4490c981e0277a248754530.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:5997ca973e57fa1ec72127e032c97a763fbd041da4490c981e0277a248754530",
+  "entry_digest": "sha256:a6a9830866fc751599075f3b985349bc730c7236b1e2b1d3849f7b07f673cb82",
+  "evaluator_fingerprint": "narrow-role-semantic-evaluator-v1",
+  "producer_fingerprint": "project-development-role-chain-v2",
+  "replay_command": [
+    "python",
+    "tools/narrow_type_role_semantics.py",
+    "--manifest",
+    "config/narrow_type_semantic_calibration_20260906.json",
+    "--summary"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/narrow_type_role_semantics_20260906T184508427351Z.json",
+  "status": "promoted"
+}

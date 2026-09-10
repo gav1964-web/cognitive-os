@@ -1,30 +1,9 @@
-# Cognitive OS Route
+# Cognitive OS
 
-## Executor
+Status: ok
 
-- Tool: not run yet
-- Model: not run yet
-- Date: not run yet
+Release decision: release_ready
 
-## Run Summary
+Project dir: `F:/ubuntu/test/9/artifacts/programmer_prompt_curriculum/generic_file_converter_cli_20260720T055046658723Z`
 
-Pending.
-
-## Artifact APIs
-
-- `GoalSpec`: pending
-- `TechnicalSpec`: pending
-- `ImplementationPlan`: pending
-- `TestPlan`: pending
-- `ReviewFindings`: pending
-
-## Artifacts
-
-- Output: pending
-- Tests: pending
-- Logs: pending
-
-## Notes
-
-This route should pass through prompt adequacy, package generation, verification and review.
-
+Report path: `F:/ubuntu/test/9/artifacts/verified_system_packages/verified_system_package_20260720T055047525201Z.json`

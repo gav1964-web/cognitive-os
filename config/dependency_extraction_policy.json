@@ -1,0 +1,53 @@
+{
+  "schema_version": "dependency_extraction_policy.v1",
+  "status": "active",
+  "stdlib_inline_imports": [
+    "base64",
+    "binascii",
+    "codecs",
+    "hashlib",
+    "json",
+    "math",
+    "re",
+    "uuid"
+  ],
+  "unsafe_effects": [
+    "database_side_effect",
+    "filesystem_write",
+    "network",
+    "secrets",
+    "subprocess"
+  ],
+  "unsafe_call_roots": [
+    "requests",
+    "socket",
+    "subprocess"
+  ],
+  "safe_bare_calls": [
+    "endswith",
+    "items",
+    "join",
+    "keys",
+    "lower",
+    "lstrip",
+    "replace",
+    "rstrip",
+    "split",
+    "startswith",
+    "strip",
+    "upper",
+    "values"
+  ],
+  "safe_call_roots": [
+    "SimpleNamespace",
+    "json"
+  ],
+  "bound_method_argument_names": [
+    "cls",
+    "self"
+  ],
+  "recommendations": {
+    "blocked": "choose a more self-contained candidate or add dependency bundling policy",
+    "self_contained": "safe to sandbox"
+  }
+}

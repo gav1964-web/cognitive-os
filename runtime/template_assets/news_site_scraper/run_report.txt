@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+from news_site_scraper.collection_plan import NewsCollectionPlan
+
+
+@dataclass(frozen=True)
+class NewsSiteRunEvent:
+    input: str
+    rows_found: int
+    status_code: int
+    live: bool
+    status: str
+
+
+def write_run_report(path: str, *, plan: NewsCollectionPlan, events: list[NewsSiteRunEvent], total_items: int, summary_mode: str) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        'artifact_type': 'NewsRunReport',
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'plan': asdict(plan),
+        'events': [asdict(event) for event in events],
+        'total_items': total_items,
+        'summary_mode': summary_mode,
+        'status': 'ok' if total_items > 0 and not any(event.status == 'failed' for event in events) else 'partial',
+    }
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')

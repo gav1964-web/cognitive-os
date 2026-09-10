@@ -1,0 +1,59 @@
+{
+  "schema_version": "narrow_type_transfer_results.v1",
+  "evaluation_split": "holdout",
+  "source_holdout_manifest": "config/narrow_type_transfer_holdout_20260908.json",
+  "cases": [
+    {
+      "project": "rich",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "Textualize/rich",
+      "source_owner": "Textualize",
+      "role_report": "artifacts/project_development/project_development_20260908T033641447146Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T032718717872Z.json",
+      "regression_scope_kind": "none",
+      "result": "research_required"
+    },
+    {
+      "project": "click_strict_default_eq",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "pallets/click",
+      "source_owner": "pallets",
+      "role_report": "artifacts/project_development/project_development_20260908T033700437271Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T032320122074Z.json",
+      "regression_scope_kind": "none",
+      "result": "research_required"
+    },
+    {
+      "project": "pytest-httpserver-readiness",
+      "project_stratum": "framework_plugin_build",
+      "source_lineage": "csernazs/pytest-httpserver",
+      "source_owner": "csernazs",
+      "role_report": "artifacts/project_development/project_development_20260908T033716226056Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T032338643488Z.json",
+      "regression_scope_kind": "none",
+      "result": "research_required"
+    }
+  ],
+  "semantic_evaluation": {
+    "status": "evidence_required",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260908T033758449554Z.json",
+    "evidence_digest": "sha256:d60886ef0567bbfbb005424e92c60b0df2433aa5d89385a4df95b739e1f61fad",
+    "role_scores": {
+      "project_analyzer": 8.0,
+      "architect": 5.0,
+      "spec_writer": 6.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "role_artifacts_auditable": true,
+    "project_changes_evaluated": false,
+    "certification_granted": false
+  },
+  "authority": {
+    "certification_allowed": false,
+    "automatic_promotion_allowed": false,
+    "source_apply": false,
+    "reason": "A single unseen case per stratum can expose gaps but cannot certify transfer maturity."
+  }
+}

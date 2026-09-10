@@ -1,0 +1,85 @@
+{
+  "schema_version": "project_failure_causal_hypotheses.v1",
+  "status": "training_only",
+  "patterns": [
+    {
+      "id": "empty_materialized_fast_path_yield",
+      "required_failure_contains_all": ["empty", "[[]]"],
+      "required_source_contains_all": ["if maxsplit == 0", "yield list(iterable)"],
+      "mechanism": "The zero-split fast path yields a materialized iterable unconditionally, so an empty input emits one empty group while the normal path emits no groups.",
+      "repair_mechanism": "Across the bounded split_before/split_after/split_when family, materialize the iterable once in each zero-split branch and yield it only when the buffer is non-empty.",
+      "mutation_contract": "Replace the three sibling unconditional fast-path yields with one materialization and a non-empty guard per function, preserving each immediate return.",
+      "proposed_operator_id": "guard_empty_materialized_fast_path",
+      "related_symbol_names": ["split_before", "split_after", "split_when"]
+    },
+    {
+      "id": "embedded_numeric_range_without_left_boundary",
+      "required_failure_contains_all": ["digit run continuing", "not a range"],
+      "required_source_contains_all": ["re.sub", "\\d+", "-"],
+      "mechanism": "The numeric-range regular expression can start inside a longer identifier or dotted version because its closed and right-open branches have no left token-boundary constraint.",
+      "repair_mechanism": "Require a non-word, non-dot left boundary before closed and right-open numeric ranges while preserving the separately anchored left-open range branch.",
+      "mutation_contract": "Add a left-boundary assertion around only the closed and right-open range alternatives and retain existing left-open range handling.",
+      "proposed_operator_id": "require_left_token_boundary_for_numeric_range"
+    },
+    {
+      "id": "strict_default_string_comparison_without_type_guard",
+      "required_failure_contains_all": ["cannot compare to string", "get_help_extra"],
+      "required_source_contains_all": ["default_value == \"\"", "default_string = '\"\"'"],
+      "mechanism": "The help formatter compares an arbitrary default object directly with an empty string, so a user-defined equality method can raise before the value is rendered.",
+      "repair_mechanism": "Guard the empty-string comparison with an exact string-type check so non-string defaults proceed to their existing string rendering path.",
+      "mutation_contract": "Require the default value to be a string before comparing it with the empty string, while preserving empty-string display and all remaining default formatting branches.",
+      "proposed_operator_id": "guard_empty_string_comparison_type"
+    },
+    {
+      "id": "missing_registry_value_without_environment_fallback",
+      "required_failure_contains_all": ["filenotfounderror", "queryvalueex"],
+      "required_source_contains_all": ["winreg.queryvalueex", "shell_folder_name"],
+      "mechanism": "The registry-backed Windows folder resolver assumes the selected shell-folder value exists, so a missing registry value escapes as FileNotFoundError instead of using the existing environment fallback.",
+      "repair_mechanism": "Catch only the missing-value boundary around the registry query and delegate that case to the existing environment-variable folder resolver.",
+      "mutation_contract": "Add a FileNotFoundError fallback around QueryValueEx while preserving successful registry reads, unknown-name validation, and all unrelated exceptions.",
+      "proposed_operator_id": "fallback_missing_registry_to_env"
+    },
+    {
+      "id": "platform_dependent_timestamp_range_message",
+      "required_failure_contains_all": ["expected regex", "error converting value to datetime"],
+      "required_source_contains_all": ["except overflowerror", "except oserror"],
+      "mechanism": "The operating system reports an out-of-range timestamp as OSError, but the OSError branch emits a generic conversion message that violates the cross-platform range-error contract.",
+      "repair_mechanism": "Normalize both operating-system range exception variants to the same stable out-of-range ValueError without changing valid timestamp conversion.",
+      "mutation_contract": "Handle OverflowError and OSError through one range-error boundary and preserve the existing boolean, negative-value, timezone, and successful conversion behavior.",
+      "proposed_operator_id": "normalize_timestamp_range_error"
+    },
+    {
+      "id": "incomplete_import_without_second_token",
+      "required_failure_contains_all": ["line.split()[1]", "indexerror"],
+      "required_source_contains_all": ["line.lstrip().startswith", "line.split()[1]"],
+      "mechanism": "The import parser recognizes a bare import keyword as a candidate statement and unconditionally reads a second token that is absent.",
+      "repair_mechanism": "Reject incomplete import statements before indexing their token list while preserving package extraction for complete import and from forms.",
+      "mutation_contract": "Guard the second-token access by token count and return the established no-package result for incomplete input without weakening the existing syntax assertions.",
+      "proposed_operator_id": "guard_incomplete_import_tokens"
+    },
+    {
+      "id": "trailing_backslash_without_following_line",
+      "required_failure_contains_all": ["parse_comments(in_lines[index])", "indexerror"],
+      "required_source_contains_all": ["while line.strip().endswith", "parse_comments(in_lines[index])"],
+      "mechanism": "The escaped-line loop assumes every trailing backslash has a following physical line and indexes past the input boundary when the file ends immediately after it.",
+      "repair_mechanism": "Bound the escaped-line continuation loop by the known line count before reading the next line, preserving normal multiline import parsing.",
+      "mutation_contract": "Add the existing index-versus-line-count guard to the trailing-backslash loop and leave comment, parenthesis, and import categorization behavior unchanged.",
+      "proposed_operator_id": "guard_trailing_backslash_index"
+    },
+    {
+      "id": "integer_cli_help_missing_type_placeholder",
+      "required_failure_contains_all": ["--intval", "int"],
+      "required_source_contains_all": ["str: 'string'", ".get(arg.kind)"],
+      "mechanism": "The CLI help type map handles strings but omits integer arguments, so integer flags are rendered without their INT placeholder.",
+      "repair_mechanism": "Add the integer-to-INT entry to the existing local type-placeholder map while preserving flag ordering and optional-value formatting.",
+      "mutation_contract": "Extend only the exact one-entry str-to-STRING map in ParserContext.help_for with int-to-INT; reject wider or shadowed mappings.",
+      "proposed_operator_id": "add_cli_int_help_placeholder"
+    }
+  ],
+  "authority": {
+    "execution_authority": false,
+    "automatic_promotion": false,
+    "minimum_fresh_independent_validations": 2,
+    "source": "consumed owner-independent defect training cases"
+  }
+}

@@ -1,22 +1,9 @@
-# Direct Agent Route
+# Direct Agent Baseline
 
-## Executor
+Status: blocked
 
-- Tool: not run yet
-- Model: not run yet
-- Date: not run yet
+Release decision: blocked
 
-## Run Summary
+Project dir: `None`
 
-Pending.
-
-## Artifacts
-
-- Output: pending
-- Tests: pending
-- Logs: pending
-
-## Notes
-
-The direct route should build the package from the original prompt.
-
+Reason: direct baseline has no safe spreadsheet round-trip backend without dependency policy

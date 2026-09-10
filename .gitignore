@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.pytest-tmp*
+.nfi/
+.nft/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -30,6 +33,12 @@ Desktop.ini
 /generated/
 /outputs/
 /reports/
+/static/
+/.pde/
+
+# Machine-local credentials and scratch files
+/config/secret.key
+/sample
 
 # External cloned benchmark corpora and live field-trial checkouts
 /benchmarks/github_*/

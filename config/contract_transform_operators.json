@@ -1,0 +1,60 @@
+{
+  "schema_version": "contract_transform_operators.v1",
+  "status": "active",
+  "admission_policy": {
+    "automatic_source_mutation_allowed": false,
+    "automatic_operator_promotion_allowed": false,
+    "required_evidence": ["regression_test", "acceptance_callable", "config_doctor"]
+  },
+  "operators": [
+    {"id": "strip", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip()"},
+    {"id": "lower", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.lower()"},
+    {"id": "upper", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.upper()"},
+    {"id": "strip_lower", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip().lower()"},
+    {"id": "strip_upper", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.strip().upper()"},
+    {
+      "id": "comma_split_strip_nonempty",
+      "input_kind": "string",
+      "output_kind": "list[string]",
+      "expression_template": "[part.strip() for part in {arg}.split(',') if part.strip()]"
+    },
+    {"id": "sum_numbers", "input_kind": "list[number]", "output_kind": "number", "expression_template": "sum({arg})"},
+    {"id": "len_sequence", "input_kind": "sequence", "output_kind": "integer", "expression_template": "len({arg})"},
+    {"id": "first_item", "input_kind": "sequence", "output_kind": "item", "expression_template": "{arg}[0]"},
+    {"id": "last_item", "input_kind": "sequence", "output_kind": "item", "expression_template": "{arg}[-1]"},
+    {"id": "sorted_list", "input_kind": "list[comparable]", "output_kind": "list", "expression_template": "sorted({arg})"},
+    {
+      "id": "unique_preserve_order",
+      "input_kind": "list[hashable]",
+      "output_kind": "list",
+      "expression_template": "list(dict.fromkeys({arg}))"
+    },
+    {"id": "titlecase_dict_keys", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{k.title(): v for k, v in {arg}.items()}"},
+    {"id": "xml_escape", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('&', '&amp;').replace('\\\"', '&quot;').replace(\"'\", '&apos;').replace('<', '&lt;').replace('>', '&gt;')"},
+    {"id": "truthy_string", "input_kind": "string", "output_kind": "boolean", "expression_template": "{arg}.lower() in ('yes', 'true', 't', '1')"},
+    {"id": "drop_none_values", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{k: v for k, v in {arg}.items() if v is not None}"},
+    {"id": "append_suffix", "input_kind": "string", "output_kind": "string", "expression_template": "'{}_suffix'.format({arg})"},
+    {"id": "append_upper_suffix", "input_kind": "string", "output_kind": "string", "expression_template": "'{}_SUFFIX'.format({arg})"},
+    {"id": "slash_to_dot", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('/', '.')"},
+    {"id": "dot_to_slash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('.', '/')"},
+    {"id": "starts_with_con1", "input_kind": "string", "output_kind": "boolean", "expression_template": "{arg}.startswith('CON.1')"},
+    {"id": "prefix_before_underscore", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.split('_')[0]"},
+    {"id": "file_extension", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.split('.')[-1]"},
+    {"id": "lower_replace_dash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.lower().replace('-', '_')"},
+    {"id": "escape_backslash", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace('\\\\', '\\\\\\\\')"},
+    {"id": "sanitize_class_name", "input_kind": "string", "output_kind": "string", "expression_template": "{arg}.replace(' ', '_').replace('.', '_')"},
+    {"id": "split_slash", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.split('/')"},
+    {"id": "lower_split_words", "input_kind": "string", "output_kind": "list[string]", "expression_template": "{arg}.lower().split()"},
+    {"id": "lib_name", "input_kind": "integer", "output_kind": "string", "expression_template": "'lib_' + str({arg})"},
+    {"id": "values_choice_mapping", "input_kind": "mapping", "output_kind": "mapping", "expression_template": "{value: value for value in {arg}.values()}"},
+    {"id": "mean_center_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[value - (sum({arg}) / len({arg})) for value in {arg}]"},
+    {"id": "square_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[value * value for value in {arg}]"},
+    {"id": "minmax_scale_values", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[(value - min({arg})) / (max({arg}) - min({arg})) for value in {arg}]"},
+    {"id": "threshold_binary", "input_kind": "list[number]", "output_kind": "list[integer]", "expression_template": "[1 if value >= 0.5 else 0 for value in {arg}]"},
+    {"id": "argmax_index", "input_kind": "list[number]", "output_kind": "integer", "expression_template": "max(range(len({arg})), key={arg}.__getitem__)"},
+    {"id": "clamp_probabilities", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[min(1.0, max(0.0, value)) for value in {arg}]"},
+    {"id": "clip_signed_unit", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[min(1.0, max(-1.0, value)) for value in {arg}]"},
+    {"id": "decay_rate", "input_kind": "number", "output_kind": "number", "expression_template": "{arg} * 0.5"},
+    {"id": "discount_returns", "input_kind": "list[number]", "output_kind": "list[number]", "expression_template": "[sum(reward * (0.9 ** offset) for offset, reward in enumerate({arg}[index:])) for index in range(len({arg}))]"}
+  ]
+}

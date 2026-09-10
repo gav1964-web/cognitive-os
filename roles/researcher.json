@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "researcher",
+  "label": "Researcher",
+  "order": 70,
+  "consumes": ["KnowledgeGapPacket", "ProjectMapReport"],
+  "produces": ["EvidenceCandidate", "KnowledgeGapPacket"],
+  "kb_filters": {"role_scope": ["researcher"]},
+  "policy": {"llm_authority": "hypothesis_only", "kb_admission": "requires_repeated_cases_and_human_approval"},
+  "questions": [
+    {"id": "gaps", "question": "Какие knowledge gaps обнаружены?", "answer": {"provider": "ctx", "path": ["knowledge_gap"]}, "evidence": ["project_research_gap_from_synthesis"], "confidence": "medium"},
+    {"id": "official_docs", "question": "Нужны ли official docs?", "answer": {"provider": "helper", "name": "official_docs_need"}, "evidence": ["knowledge_gap", "external_imports"], "confidence": "medium"},
+    {"id": "package_metadata", "question": "Нужны ли PyPI/package metadata?", "answer": {"provider": "helper", "name": "package_metadata_need"}, "evidence": ["detect_project_stack", "external_imports"], "confidence": "medium"},
+    {"id": "comparable_repos", "question": "Нужны ли comparable GitHub repos?", "answer": {"provider": "helper", "name": "comparable_repo_need"}, "evidence": ["matched_rule", "architecture_synthesis"], "confidence": "medium"},
+    {"id": "kb_candidates", "question": "Какие KB candidates можно предложить?", "answer": {"provider": "helper", "name": "kb_candidates"}, "evidence": ["architecture_synthesis", "knowledge_gap"], "confidence": "medium"},
+    {"id": "source_policy", "question": "Какая source policy для исследования?", "answer": {"provider": "constant", "value": "Prefer official docs and project-owned files; treat internet/GitHub findings as evidence, not truth."}, "evidence": ["EXTERNAL_RESEARCH_LOOP_SPEC"]},
+    {"id": "facts_vs_judgments", "question": "Где факты, а где judgments?", "answer": {"provider": "helper", "name": "facts_vs_judgments"}, "evidence": ["ProjectMapReport", "ArchitectureSynthesis"]},
+    {"id": "kb_confirmations", "question": "Какие подтверждения нужны до KB admission?", "answer": {"provider": "helper", "name": "kb_confirmations"}, "evidence": ["ROLE_KNOWLEDGE_BASE_SPEC"], "confidence": "medium"},
+    {"id": "freshness", "question": "Есть ли stale/fresh facts?", "answer": {"provider": "helper", "name": "freshness"}, "evidence": ["external_research_policy"], "confidence": "medium"},
+    {"id": "allowed_sources", "question": "Какие источники разрешены?", "answer": {"provider": "helper", "name": "allowed_sources"}, "evidence": ["EXTERNAL_RESEARCH_LOOP_SPEC"]},
+    {"id": "unresolved_sources", "question": "Какие unresolved sources остаются?", "answer": {"provider": "helper", "name": "unresolved_sources"}, "evidence": ["research_plan"], "confidence": "medium"},
+    {"id": "admission_status", "question": "Какой admission status?", "answer": {"provider": "helper", "name": "admission_status"}, "evidence": ["knowledge_gap", "review policy"], "confidence": "medium"}
+  ]
+}

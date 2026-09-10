@@ -62,6 +62,71 @@ def test_goal_intake_asks_target_for_ambiguous_implementation_prompt():
     assert "target" in spec.clarification.missing
 
 
+def test_goal_intake_accepts_greenfield_image_contents_cli_prompt():
+    spec = build_goal_spec("напиши CLI .py, которая перечислит содержимое картинки")
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "image_path" in spec.inputs
+    assert "json" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_semantic_cli_argument_program_prompt():
+    spec = build_goal_spec("программе как параметры передаются два числа и она должна в терминале вывести их сумму")
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "two_numeric_cli_args" in spec.inputs
+    assert "stdout" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_three_arg_numeric_cli_expression_prompt():
+    spec = build_goal_spec(
+        "напиши программу CLI которая принимает три аргумента, первые два перемножает, "
+        "результат складывает с третьим и выводит результат, например 22*6+3"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "three_numeric_cli_args" in spec.inputs
+    assert "stdout" in spec.outputs
+    assert "local_python" in spec.constraints
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_project_change_prompt_with_target():
+    spec = build_goal_spec(
+        "Доработай проект 12: CLI должна читать изображение табличной сметы и выводить .xlsx, .csv и .xls. Тесты без сети."
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert spec.target == "12"
+    assert "write" in spec.allowed_actions
+    assert "csv" in spec.outputs
+    assert "spreadsheet" in spec.outputs
+
+
+def test_goal_intake_does_not_treat_docker_as_doc_output():
+    spec = build_goal_spec(
+        "создай приложение CLI, которое будет запускаться в docker и собирать новости про Трампа "
+        "с 10 наиболее популярных новостных сайтов и давать агрегированное суммари по всем новостям "
+        "в целом и выводить результат в .md"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "implementation"
+    assert "markdown" in spec.outputs
+    assert "report" in spec.outputs
+    assert "file" in spec.outputs
+    assert "spreadsheet" not in spec.outputs
+    assert "stdout" not in spec.outputs
+
+
 def test_goal_spec_contract_rejects_extra_fields():
     spec = build_goal_spec("Normalize input text and hash it").to_dict()
     spec["extra"] = True
@@ -70,8 +135,8 @@ def test_goal_spec_contract_rejects_extra_fields():
         validate_goal_spec(spec)
 
 
-def test_goal_orchestrator_uses_goal_intake_clarification():
-    registry = CapabilityRegistry(ROOT)
+def test_goal_orchestrator_uses_goal_intake_clarification(runtime_workspace):
+    registry = CapabilityRegistry(runtime_workspace)
     registry.reset_from_plugins()
 
     decision = decide_goal_route("process this", registry)
@@ -79,6 +144,39 @@ def test_goal_orchestrator_uses_goal_intake_clarification():
     assert decision.action == "ASK_CLARIFICATION"
     assert decision.reason_code == "GOAL_INTAKE_MISSING_REQUIRED_FIELDS"
     assert decision.clarification_question
+
+
+def test_goal_orchestrator_routes_project_fact_questions_to_answer_capability(runtime_workspace):
+    registry = CapabilityRegistry(runtime_workspace)
+    registry.reset_from_plugins()
+
+    decision = decide_goal_route(
+        "Проанализируй проект F:/ubuntu/test/map и ответь: сколько .py файлов больше 300 строк?",
+        registry,
+        root_input={"path": "F:/ubuntu/test/map"},
+    )
+
+    assert decision.action == "PLAN_WITH_L35"
+    assert decision.required_capabilities[-1] == "project_fact_questions"
+
+
+def test_goal_intake_accepts_project_fact_question_without_clarification():
+    spec = build_goal_spec(
+        "По проекту F:/ubuntu/test/5.1 ответь на вопрос: какой порт используется для подключения клиентов"
+    )
+
+    assert spec.status == "ready"
+    assert spec.intent == "project_fact_question"
+    assert spec.target == "F:/ubuntu/test/5.1"
+    assert spec.clarification is None
+
+
+def test_goal_intake_accepts_project_provider_probe():
+    spec = build_goal_spec("По проекту F:/ubuntu/test/5.1 запусти сервер и протестируй работу с провайдерами")
+
+    assert spec.status == "ready"
+    assert spec.intent == "project_provider_probe"
+    assert spec.target == "F:/ubuntu/test/5.1"
 
 
 def test_goal_intake_cli_outputs_goal_spec():

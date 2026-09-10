@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -13,8 +14,16 @@ from typing import Any
 from .greenfield_templates import acceptance_covered, content_for
 
 
-def create_greenfield_scaffold(*, root: Path, case_name: str, reference: dict[str, Any]) -> dict[str, Any]:
-    project_dir = _project_dir(root, case_name)
+def create_greenfield_scaffold(
+    *,
+    root: Path,
+    case_name: str,
+    reference: dict[str, Any],
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
+    project_dir = output_dir.resolve() if output_dir is not None else _project_dir(root, case_name)
+    if output_dir is not None:
+        _clean_generated_scaffold(project_dir)
     prompt = str(reference.get("prompt", ""))
     files = _write_artifacts(project_dir, case_name, prompt, reference)
     manifest = {
@@ -33,6 +42,7 @@ def create_greenfield_scaffold(*, root: Path, case_name: str, reference: dict[st
         ],
     }
     manifest["verification"] = run_project_verification(project_dir)
+    _clean_runtime_artifacts(project_dir)
     manifest["acceptance_covered"] = acceptance_covered(case_name, manifest["verification"])
     (project_dir / "scaffold_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -50,6 +60,31 @@ def _write_artifacts(project_dir: Path, case_name: str, prompt: str, reference: 
         path.write_text(content_for(artifact, case_name, prompt), encoding="utf-8")
         written.append({"path": path.relative_to(project_root).as_posix(), "status": "written"})
     return written
+
+
+def _clean_generated_scaffold(project_dir: Path) -> None:
+    project_dir.mkdir(parents=True, exist_ok=True)
+    for relative in ("src", "tests", ".pytest_cache", ".pytest-tmp"):
+        target = (project_dir / relative).resolve()
+        if _is_inside(project_dir, target) and target.exists():
+            shutil.rmtree(target)
+    for pattern in ("*.pyc", "__pycache__", "pyproject.toml", "README.md", "Dockerfile", "*.bat", "scaffold_manifest.json", "image_table_to_excel.py"):
+        for target in project_dir.glob(pattern):
+            resolved = target.resolve()
+            if not _is_inside(project_dir, resolved) or not target.exists():
+                continue
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+
+
+def _is_inside(project_dir: Path, target: Path) -> bool:
+    try:
+        target.relative_to(project_dir.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _project_dir(root: Path, case_name: str) -> Path:
@@ -75,7 +110,7 @@ def run_project_verification(project_dir: Path) -> dict[str, Any]:
     env["PYTHONPATH"] = str(project_dir / "src")
     commands = [
         ("python -m compileall -b .", [sys.executable, "-m", "compileall", "-b", "."]),
-        ("python -m pytest tests -q", [sys.executable, "-m", "pytest", "tests", "-q"]),
+        ("python -m pytest tests -q", [sys.executable, "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"]),
     ]
     results = [_run_command(project_dir, env, label, command) for label, command in commands]
     return {
@@ -83,6 +118,21 @@ def run_project_verification(project_dir: Path) -> dict[str, Any]:
         "project_scoped": True,
         "commands": results,
     }
+
+
+def _clean_runtime_artifacts(project_dir: Path) -> None:
+    for path in project_dir.rglob("__pycache__"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob(".pytest_cache"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob(".pytest-tmp*"):
+        if path.is_dir():
+            shutil.rmtree(path)
+    for path in project_dir.rglob("*.py[co]"):
+        if path.is_file():
+            path.unlink()
 
 
 def _ensure_pycache_dirs(project_dir: Path) -> None:

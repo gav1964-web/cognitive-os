@@ -1,0 +1,40 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши локальную CLI-утилиту OCR без сетевых вызовов: вход — путь к изображению PNG/JPG, выход — распознанный текст в stdout или текстовый файл. Реальные OCR-зависимости допускаются только как optional dependencies, тесты должны работать без Tesseract через injectable backend. Нужны README и pytest.",
+  "expected_steps": [
+    "classify prompt as bounded image-processing CLI",
+    "create isolated CLI package scaffold with README and tests",
+    "define image input and text output contract",
+    "implement OCR core separately from CLI entrypoint",
+    "keep real OCR backend optional and injectable for tests",
+    "handle missing and unsupported image paths explicitly",
+    "run project-scoped tests and produce release instructions"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/image_ocr/__init__.py",
+    "src/image_ocr/cli.py",
+    "src/image_ocr/ocr.py",
+    "tests/fixtures/sample.png",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "image fixture is recognized through an injectable OCR backend",
+    "CLI writes recognized text output",
+    "missing or unsupported images are rejected with controlled errors",
+    "real OCR dependencies are optional and no live network is required",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture",
+    "dependency_policy"
+  ]
+}

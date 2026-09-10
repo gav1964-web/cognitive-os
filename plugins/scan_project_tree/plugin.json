@@ -2,6 +2,7 @@
   "id": "scan_project_tree",
   "version": "0.1.0",
   "entrypoint": "plugins.scan_project_tree.src.main:run",
+  "implementation_packages": ["cognitive_inspect"],
   "determinism_grade": "B",
   "side_effects": {
     "filesystem": "read_only",

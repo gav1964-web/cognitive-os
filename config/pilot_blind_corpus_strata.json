@@ -1,0 +1,56 @@
+{
+  "schema_version": "github_blind_corpus_strata.v1",
+  "projects_per_stratum": 1,
+  "minimum_stars": 50,
+  "maximum_size_kb": 12000,
+  "maximum_search_pages": 5,
+  "search_page_start": 1,
+  "unique_owners": true,
+  "excluded_name_tokens": [
+    "awesome",
+    "boilerplate",
+    "cookiecutter",
+    "example",
+    "examples",
+    "interview",
+    "template",
+    "tutorial"
+  ],
+  "excluded_description_tokens": [
+    "awesome list",
+    "collection of",
+    "course",
+    "examples of",
+    "interview questions",
+    "starter template",
+    "tutorial"
+  ],
+  "production_signal_tokens": [
+    "cli",
+    "command-line",
+    "library",
+    "parser",
+    "serialization",
+    "tool",
+    "validation"
+  ],
+  "strata": [
+    {
+      "id": "cli_local_tool",
+      "queries": [
+        "topic:python-cli",
+        "topic:command-line-tool",
+        "topic:cli-tool"
+      ]
+    },
+    {
+      "id": "library_pure_transform",
+      "queries": [
+        "topic:data-validation",
+        "topic:serialization",
+        "topic:parser-library",
+        "python parsing library in:name,description"
+      ]
+    }
+  ]
+}

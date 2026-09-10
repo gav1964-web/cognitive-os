@@ -1,0 +1,244 @@
+{
+  "schema_version": "project_context.v1",
+  "search_roots": [
+    "runtime",
+    "plugins",
+    "packages",
+    "tools",
+    "tests",
+    "registry",
+    "config",
+    "knowledge",
+    "docs/architecture"
+  ],
+  "subsystems": {
+    "inspect": {
+      "purpose": "Факты о репозитории: дерево, стек, Python, команды",
+      "entrypoints": [
+        "packages/cognitive-inspect/src/cognitive_inspect/__init__.py"
+      ],
+      "contracts": [
+        "plugins/scan_project_tree/schemas/input.json",
+        "plugins/scan_project_tree/schemas/output.json",
+        "plugins/detect_project_stack/schemas/input.json",
+        "plugins/detect_project_stack/schemas/output.json",
+        "plugins/extract_python_structure/schemas/input.json",
+        "plugins/extract_python_structure/schemas/output.json",
+        "plugins/extract_runtime_commands/schemas/input.json",
+        "plugins/extract_runtime_commands/schemas/output.json"
+      ],
+      "tests": [
+        "packages/cognitive-inspect/tests",
+        "plugins/scan_project_tree/tests",
+        "plugins/detect_project_stack/tests",
+        "plugins/extract_python_structure/tests",
+        "plugins/extract_runtime_commands/tests"
+      ],
+      "dependencies": [],
+      "paths": [
+        "packages/cognitive-inspect/*",
+        "plugins/scan_project_tree/*",
+        "plugins/detect_project_stack/*",
+        "plugins/extract_python_structure/*",
+        "plugins/extract_runtime_commands/*",
+        "runtime/python_source_files.py",
+        "runtime/python_parser_compatibility.py"
+      ],
+      "commands": [
+        "python -m pytest packages/cognitive-inspect/tests -q --import-mode=importlib",
+        "python -m pytest plugins/scan_project_tree/tests plugins/detect_project_stack/tests plugins/extract_python_structure/tests plugins/extract_runtime_commands/tests -q"
+      ],
+      "brief": "docs/architecture/inspect.md"
+    },
+    "replay": {
+      "purpose": "Повтор дефекта и проверка исправления в отдельном окружении",
+      "entrypoints": [
+        "packages/cognitive-replay/src/cognitive_replay/__init__.py",
+        "packages/cognitive-replay/src/cognitive_replay/sandbox.py"
+      ],
+      "contracts": [
+        "packages/cognitive-replay/src/cognitive_replay/environment.py",
+        "packages/cognitive-replay/src/cognitive_replay/pytest_report.py",
+        "HISTORICAL_DEFECT_QUALIFICATION.md"
+      ],
+      "tests": [
+        "packages/cognitive-replay/tests",
+        "tests/runtime/test_historical_defect_replay.py",
+        "tests/runtime/test_historical_defect_qualification.py",
+        "tests/runtime/test_windows_job_process.py"
+      ],
+      "dependencies": [],
+      "paths": [
+        "packages/cognitive-replay/*",
+        "runtime/historical_defect_*",
+        "runtime/windows_job_process.py",
+        "runtime/project_native_setup_identity.py",
+        "tests/runtime/test_historical_defect_*",
+        "tests/runtime/test_windows_job_process.py",
+        "tools/historical_defect_*"
+      ],
+      "commands": [
+        "python -m pytest packages/cognitive-replay/tests -q --import-mode=importlib",
+        "python -m pytest tests/runtime/test_historical_defect_replay.py tests/runtime/test_historical_defect_qualification.py tests/runtime/test_historical_defect_environment.py tests/runtime/test_historical_defect_pytest.py tests/runtime/test_windows_job_process.py -q"
+      ],
+      "brief": "docs/architecture/replay.md"
+    },
+    "execution": {
+      "purpose": "Pipeline, очередь, leases, worker recovery",
+      "entrypoints": [
+        "runtime/executor.py",
+        "runtime/durable_queue.py",
+        "runtime/worker_pool.py"
+      ],
+      "contracts": [
+        "runtime/models.py",
+        "registry/interface_contracts.json"
+      ],
+      "tests": [
+        "tests/runtime/test_durable_queue.py",
+        "tests/runtime/test_durable_queue_lock.py",
+        "tests/runtime/test_worker_pool.py",
+        "tests/runtime/test_executor_acceptance.py"
+      ],
+      "dependencies": [
+        "evidence",
+        "replay"
+      ],
+      "paths": [
+        "runtime/executor*",
+        "runtime/durable_queue*",
+        "runtime/worker*",
+        "runtime/execution*",
+        "runtime/project_native_failure_process.py",
+        "tests/runtime/test_durable_queue*",
+        "tests/runtime/test_worker*",
+        "tests/runtime/test_executor*"
+      ],
+      "commands": [
+        "python -m pytest tests/runtime/test_durable_queue.py tests/runtime/test_durable_queue_lock.py tests/runtime/test_worker_pool.py tests/runtime/test_executor_acceptance.py -q"
+      ],
+      "brief": "docs/architecture/execution.md"
+    },
+    "evidence": {
+      "purpose": "Контракты, schema validation и целостность артефактов",
+      "entrypoints": [
+        "runtime/evidence_ledger.py",
+        "runtime/schema.py",
+        "runtime/models.py"
+      ],
+      "contracts": [
+        "registry/interface_contracts.json"
+      ],
+      "tests": [
+        "tests/runtime/test_evidence_ledger.py",
+        "tests/runtime/test_schema.py"
+      ],
+      "dependencies": [],
+      "paths": [
+        "runtime/evidence_ledger.py",
+        "runtime/schema.py",
+        "runtime/models.py",
+        "registry/interface_contracts.json",
+        "tests/runtime/test_evidence_ledger.py",
+        "tests/runtime/test_schema.py"
+      ],
+      "commands": [
+        "python -m pytest tests/runtime/test_evidence_ledger.py tests/runtime/test_schema.py -q"
+      ],
+      "brief": "docs/architecture/evidence.md"
+    },
+    "roles": {
+      "purpose": "Ролевой анализ, планы, спецификации и review",
+      "entrypoints": [
+        "runtime/configured_role_pipeline.py",
+        "runtime/role_artifact_interpreter.py",
+        "runtime/role_project_analysis.py",
+        "runtime/project_development.py"
+      ],
+      "contracts": [
+        "config/role_artifact_pipeline.json",
+        "registry/interface_contracts.json"
+      ],
+      "tests": [
+        "tests/runtime/test_role_project_analysis.py"
+      ],
+      "dependencies": [
+        "inspect",
+        "execution",
+        "evidence"
+      ],
+      "paths": [
+        "runtime/role_*",
+        "runtime/configured_role*",
+        "runtime/project_development*",
+        "runtime/project_native_failure_intake*",
+        "runtime/interpreter*",
+        "config/role_*",
+        "tests/runtime/test_role_*",
+        "tests/runtime/test_project_development*"
+      ],
+      "commands": [
+        "python -m pytest tests/runtime/test_role_project_analysis.py -q"
+      ],
+      "brief": "docs/architecture/roles.md"
+    },
+    "research": {
+      "purpose": "Корпус, qualification admission, обучение и независимая оценка",
+      "entrypoints": [
+        "runtime/local_historical_defect_mining.py",
+        "runtime/historical_defect_qualification.py",
+        "runtime/three_route_evaluation.py"
+      ],
+      "contracts": [
+        "config/local_historical_defect_mining.json",
+        "evaluation/protocol_v2_manifest.json",
+        "evaluation/PROTOCOL_V2.md"
+      ],
+      "tests": [
+        "tests/runtime/test_local_historical_defect_mining.py",
+        "tests/runtime/test_historical_defect_qualification.py",
+        "tests/runtime/test_three_route_evaluation.py"
+      ],
+      "dependencies": [
+        "replay",
+        "roles",
+        "evidence"
+      ],
+      "paths": [
+        "runtime/local_historical*",
+        "runtime/local_history*",
+        "runtime/historical_defect_qualification.py",
+        "runtime/self_development*",
+        "runtime/three_route*",
+        "tools/local_historical*",
+        "tools/local_history*",
+        "tools/three_route*",
+        "evaluation/*",
+        "tests/runtime/test_local_historical*",
+        "tests/runtime/test_historical_defect_qualification.py",
+        "tests/runtime/test_three_route*"
+      ],
+      "commands": [
+        "python -m pytest tests/runtime/test_local_historical_defect_mining.py tests/runtime/test_historical_defect_qualification.py tests/runtime/test_three_route_evaluation.py -q"
+      ],
+      "brief": "docs/architecture/research.md"
+    }
+  },
+  "packages": [
+    {
+      "source": "packages/cognitive-inspect/src/cognitive_inspect",
+      "allowed_import_roots": [
+        "cognitive_inspect"
+      ]
+    },
+    {
+      "source": "packages/cognitive-replay/src/cognitive_replay",
+      "allowed_import_roots": [
+        "cognitive_replay",
+        "packaging",
+        "tomllib",
+        "tomli"
+      ]
+    }
+  ]
+}

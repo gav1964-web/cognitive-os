@@ -1,0 +1,23 @@
+{
+  "schema_version": "interpreter_coverage_audit.v1",
+  "status": "active",
+  "required_modules": [
+    "runtime/role_pipeline_stages.py",
+    "runtime/configured_role_pipeline.py",
+    "runtime/project_development_core.py",
+    "runtime/project_development_handoff.py",
+    "runtime/_parts/cognitive_control_plane_part1.py",
+    "runtime/role_recovery_contract.py"
+  ],
+  "authority_calls": ["build_interpreter_decision", "verify_interpreter_decision"],
+  "required_authority_calls": {
+    "runtime/role_pipeline_stages.py": ["verify_interpreter_decision"],
+    "runtime/configured_role_pipeline.py": ["build_verified_runtime_transition", "verify_interpreter_decision"],
+    "runtime/project_development_handoff.py": ["build_verified_runtime_transition"],
+    "runtime/_parts/cognitive_control_plane_part1.py": ["build_verified_runtime_transition"],
+    "runtime/role_recovery_contract.py": ["build_verified_runtime_transition"]
+  },
+  "transition_markers": ["next_action", "next_stage", "role_transition", "return_to", "run_configured_role_prefix"],
+  "minimum_coverage": 1.0,
+  "invariants": {"report_only": true, "source_apply": false, "promotion_applied": false}
+}

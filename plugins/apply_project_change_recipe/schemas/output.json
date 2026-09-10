@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["root", "changed_files", "skipped", "replacement_count", "contract"],
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "replacement_count": {
+      "type": "integer"
+    },
+    "contract": {
+      "type": "string"
+    }
+  }
+}

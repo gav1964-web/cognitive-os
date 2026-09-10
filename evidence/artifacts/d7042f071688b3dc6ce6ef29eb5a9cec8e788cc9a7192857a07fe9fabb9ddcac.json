@@ -1,0 +1,196 @@
+{
+  "artifact_type": "NarrowTypeCertification",
+  "broad_strata": {
+    "project_strata": [
+      "web_api_middleware",
+      "sdk_provider_integration",
+      "framework_plugin_build",
+      "data_tabular_pipeline",
+      "scientific_compute",
+      "ml_inference",
+      "ml_training_checkpoint",
+      "async_worker_scheduler",
+      "stateful_service_database",
+      "external_process_io",
+      "llm_multi_agent"
+    ],
+    "status": "deferred"
+  },
+  "cell_checks": [
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "project_analyzer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "architect",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "spec_writer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "implementer",
+      "score": 9.8,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "tester",
+      "score": 10.0,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "cli_local_tool",
+      "role_id": "reviewer",
+      "score": 9.8,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "project_analyzer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "architect",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "spec_writer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "implementer",
+      "score": 9.8,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "tester",
+      "score": 10.0,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "measured": true,
+        "promotion_eligible": true,
+        "score_at_least_9_7": true
+      },
+      "project_stratum": "library_pure_transform",
+      "role_id": "reviewer",
+      "score": 9.8,
+      "status": "passed"
+    }
+  ],
+  "certificate_digest": "sha256:8f04abdbcb4cdae6ee565c5e67f1c532cc4bf0ad816a7dd95ea1aea7cb5c688b",
+  "lane_id": "narrow_python_owned",
+  "project_strata": [
+    "cli_local_tool",
+    "library_pure_transform"
+  ],
+  "promotion_applied": false,
+  "promotion_eligible": true,
+  "receipt": "evidence\\ledger\\3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d.json",
+  "receipt_checks": {
+    "generated_stub_gate": true,
+    "holdout_report_passed": true,
+    "independent_holdout": true,
+    "inputs_digest_bound": true,
+    "ledger_receipt_verified": true,
+    "lineage_disjoint": true,
+    "multiple_holdout_lineages": true,
+    "no_role_regression": true,
+    "role_chain_continuity": true
+  },
+  "required_roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer",
+    "tester",
+    "reviewer"
+  ],
+  "schema_version": "narrow_type_certification.v1",
+  "status": "certified",
+  "target_score": 9.7
+}

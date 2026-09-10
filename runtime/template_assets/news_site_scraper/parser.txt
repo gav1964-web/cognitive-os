@@ -1,0 +1,271 @@
+from __future__ import annotations
+
+import html as html_lib
+import json
+import re
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
+
+from news_site_scraper.site_profile import SiteProfile
+
+
+class _ArticleParser(HTMLParser):
+    def __init__(self, profile: SiteProfile) -> None:
+        super().__init__()
+        self.profile = profile
+        self.items: list[dict[str, str]] = []
+        self._current: dict[str, str] | None = None
+        self._field: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        data = {key: value or '' for key, value in attrs}
+        if tag == 'article':
+            self._current = _empty_item(self.profile)
+        elif self._current is not None and tag == 'a' and data.get('href'):
+            self._field = 'title'
+            self._current['url'] = urljoin(self.profile.base_url, data['href'].split('#', 1)[0])
+        elif self._current is not None and tag == 'time':
+            self._field = 'date'
+            self._current['date'] = data.get('datetime') or ''
+        elif self._current is not None and tag in {'p', 'span'} and not self._current.get('summary'):
+            self._field = 'summary'
+
+    def handle_data(self, data: str) -> None:
+        if self._current is None or self._field is None:
+            return
+        if self._field == 'date' and self._current['date']:
+            return
+        self._current[self._field] = _squash(self._current[self._field] + ' ' + data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {'a', 'time', 'p', 'span'}:
+            self._field = None
+        if tag == 'article' and self._current is not None:
+            if _valid_item(self._current) and _looks_like_news_candidate(self._current, self.profile):
+                self.items.append(self._current)
+            self._current = None
+
+
+class _LinkParser(HTMLParser):
+    def __init__(self, profile: SiteProfile) -> None:
+        super().__init__()
+        self.profile = profile
+        self.items: list[dict[str, str]] = []
+        self._current: dict[str, str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        href = dict(attrs).get('href') if tag == 'a' else None
+        if href and _usable_href(href):
+            self._current = _empty_item(self.profile)
+            self._current['url'] = urljoin(self.profile.base_url, href.split('#', 1)[0])
+
+    def handle_data(self, data: str) -> None:
+        if self._current is not None:
+            self._current['title'] = _squash(self._current['title'] + ' ' + data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == 'a' and self._current is not None:
+            if _valid_item(self._current) and _looks_like_news_candidate(self._current, self.profile):
+                self.items.append(self._current)
+            self._current = None
+
+
+def parse_news_items(html: str, profile: SiteProfile) -> list[dict[str, str]]:
+    article_parser = _ArticleParser(profile)
+    article_parser.feed(html)
+    rows = article_parser.items + _parse_json_ld_news(html, profile) + _parse_embedded_json_news(html, profile) + _parse_link_fallback(html, profile)
+    seen: set[str] = set()
+    unique: list[dict[str, str]] = []
+    for row in rows:
+        key = _dedupe_key(row)
+        if key in seen:
+            continue
+        if not row.get('date'):
+            row['date'] = _date_from_url(row['url'])
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def _parse_link_fallback(html: str, profile: SiteProfile) -> list[dict[str, str]]:
+    parser = _LinkParser(profile)
+    parser.feed(html)
+    return parser.items
+
+
+def _parse_embedded_json_news(html: str, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for raw in re.findall(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', html, flags=re.S):
+        try:
+            data = json.loads(html_lib.unescape(raw))
+        except json.JSONDecodeError:
+            continue
+        rows.extend(_rows_from_json(data, profile))
+    return rows
+
+
+def _parse_json_ld_news(html: str, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for raw in re.findall(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, flags=re.S | re.I):
+        try:
+            data = json.loads(html_lib.unescape(raw.strip()))
+        except json.JSONDecodeError:
+            continue
+        rows.extend(_rows_from_json_ld(data, profile))
+    return rows
+
+
+def _rows_from_json_ld(value, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    if isinstance(value, dict):
+        graph = value.get('@graph')
+        if isinstance(graph, list):
+            rows.extend(_rows_from_json_ld(graph, profile))
+        item = _item_from_json_ld_object(value, profile)
+        if item and _valid_item(item) and _looks_like_news_candidate(item, profile):
+            rows.append(item)
+    elif isinstance(value, list):
+        for child in value:
+            rows.extend(_rows_from_json_ld(child, profile))
+    return rows
+
+
+def _item_from_json_ld_object(obj: dict, profile: SiteProfile) -> dict[str, str] | None:
+    item_type = obj.get('@type')
+    types = item_type if isinstance(item_type, list) else [item_type]
+    if not any(str(t).lower() in {'newsarticle', 'article', 'blogposting'} for t in types):
+        return None
+    title = _squash(str(obj.get('headline') or obj.get('name') or obj.get('title') or ''))
+    url = obj.get('url') or obj.get('mainEntityOfPage')
+    if isinstance(url, dict):
+        url = url.get('@id') or url.get('url')
+    if not title or not url:
+        return None
+    summary = _squash(str(obj.get('description') or ''))
+    date = _squash(str(obj.get('datePublished') or obj.get('dateModified') or ''))
+    return {'title': title, 'url': urljoin(profile.base_url, str(url).split('#', 1)[0]), 'date': date, 'summary': summary, 'source': profile.source}
+
+
+def _rows_from_json(value, profile: SiteProfile) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    if isinstance(value, dict):
+        item = _item_from_json_object(value, profile)
+        if item and _valid_item(item) and _looks_like_news_candidate(item, profile):
+            rows.append(item)
+        for child in value.values():
+            rows.extend(_rows_from_json(child, profile))
+    elif isinstance(value, list):
+        for child in value:
+            rows.extend(_rows_from_json(child, profile))
+    return rows
+
+
+def _item_from_json_object(obj: dict, profile: SiteProfile) -> dict[str, str] | None:
+    has_publication_shape = any(key in obj for key in ('header', 'anons', 'anonsMd', 'publishDate', 'urlDate')) or obj.get('type') in {'article', 'news'}
+    if not has_publication_shape:
+        return None
+    title = _squash(str(obj.get('title') or obj.get('header') or ''))
+    url = obj.get('url')
+    link = obj.get('link')
+    if not url and isinstance(link, dict):
+        url = link.get('url')
+    if not title or not url:
+        return None
+    summary = _squash(str(obj.get('anons') or obj.get('anonsMd') or obj.get('description') or obj.get('descriptionMd') or ''))
+    date = _squash(str(obj.get('publishDate') or obj.get('urlDate') or ''))
+    return {
+        'title': title,
+        'url': urljoin(profile.base_url, str(url).split('#', 1)[0]),
+        'date': date,
+        'summary': summary,
+        'source': profile.source,
+    }
+
+
+def _empty_item(profile: SiteProfile) -> dict[str, str]:
+    return {'title': '', 'url': '', 'date': '', 'summary': '', 'source': profile.source}
+
+
+def _valid_item(item: dict[str, str]) -> bool:
+    title = item.get('title', '').strip()
+    lower = title.lower()
+    if len(title) < 8 or not item.get('url'):
+        return False
+    if lower in {'новости', 'лента новостей', 'читать далее', 'read more'}:
+        return False
+    if re.fullmatch(r'\d+\s+(?:минут(?:у|ы)?|час(?:а|ов)?|д(?:ень|ня|ней))\s+назад', lower):
+        return False
+    if re.fullmatch(r'\d+\s+(?:min|mins|minutes|hours|days)\s+ago', lower):
+        return False
+    return True
+
+
+def _usable_href(href: str) -> bool:
+    lower = href.lower().strip()
+    return bool(lower) and not lower.startswith(('#', 'javascript:', 'mailto:', 'tel:')) and '#comments' not in lower
+
+
+def _looks_like_news_candidate(item: dict[str, str], profile: SiteProfile) -> bool:
+    url = item.get('url', '').lower()
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    title = item.get('title', '').lower()
+    base_host = urlparse(profile.base_url).netloc.lower().removeprefix('www.')
+    item_host = parsed.netloc.lower().removeprefix('www.')
+    if item_host and base_host and item_host != base_host:
+        return False
+    if _is_navigation_or_service_link(path, title):
+        return False
+    if any(re.search(pattern, path) for pattern in profile.article_path_patterns):
+        return True
+    if any(marker in path for marker in profile.link_markers) and _has_article_specific_path(path):
+        return True
+    url_markers = ('/news/', '/article/', '/articles/', '/blog/', '/post/', '/press/')
+    title_markers = ('новост', 'сообщ', 'представ', 'запуст', 'обнов', 'announc', 'release')
+    return any(marker in path for marker in url_markers) and any(marker in title for marker in title_markers)
+
+
+def _is_navigation_or_service_link(path: str, title: str) -> bool:
+    blocked_paths = ('/redirect', '/about', '/contact', '/contacts', '/vacancies', '/service', '/services', '/market', '/rubric', '/story', '/stories', '/tag', '/tags', '/authors', '/author', '/search', '/login', '/auth', '/subscribe', '/subscription', '/newsletter', '/newsletters', '/terms', '/privacy', '/cookies', '/advertising', '/reviews', '/review', '/ratings', '/comments')
+    blocked_titles = {'новости', 'лента новостей', 'все новости', 'новости hardware', 'новости software', 'аналитика', 'конференции', 'контакты', 'вакансии', 'образование', 'все обзоры', 'газета газета', 'читать далее', 'about', 'contact', 'contacts', 'subscribe', 'subscription', 'newsletters', 'newsletter', 'terms', 'privacy', 'see all reviews', 'reviews', 'read more'}
+    clean_title = title.strip().strip('|').strip()
+    if any(marker in path for marker in blocked_paths) or clean_title in blocked_titles:
+        return True
+    if '|' in title and any(part.strip() in blocked_titles for part in title.split('|')):
+        return True
+    return False
+
+
+def _has_article_specific_path(path: str) -> bool:
+    if re.search(r'/(20\d{2})/(\d{1,2})/(\d{1,2})/', path) or re.search(r'/(\d{1,2})/(\d{1,2})/(20\d{2})/', path):
+        return True
+    if re.search(r'^/\d{6,}(?:/|$|-)', path):
+        return True
+    leaf = path.rstrip('/').rsplit('/', 1)[-1]
+    return len(leaf) >= 12 and '-' in leaf
+
+
+def _squash(value: str) -> str:
+    return ' '.join(value.split())
+
+
+def _dedupe_key(row: dict[str, str]) -> str:
+    url = row.get('url', '').strip().lower()
+    if url:
+        parsed = urlparse(url)
+        match = re.search(r'^/(\d{6,})(?:/|$|-)', parsed.path)
+        if match:
+            return f'{parsed.netloc.lower()}:{match.group(1)}'
+        return url.rstrip('/')
+    return row.get('title', '').strip().lower()
+
+
+def _date_from_url(url: str) -> str:
+    match = re.search(r'/news/(\d{4})/(\d{2})/(\d{2})/', url)
+    if match:
+        return '-'.join(match.groups())
+    match = re.search(r'/(\d{2})/(\d{2})/(\d{4})/', url)
+    if not match:
+        return ''
+    day, month, year = match.groups()
+    return f'{year}-{month}-{day}'

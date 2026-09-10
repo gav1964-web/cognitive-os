@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+from html.parser import HTMLParser
+import json
+from pathlib import Path
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
+from urllib.request import Request, urlopen
+
+from web_research_summarizer.contracts import SearchResult
+
+
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; cognitive-os-web-research-summarizer/0.1)'
+
+
+def load_fixture_results(path: str, *, limit: int = 15) -> list[SearchResult]:
+    payload = json.loads(Path(path).read_text(encoding='utf-8'))
+    return _coerce_results(payload)[:limit]
+
+
+def search_web(query: str, *, endpoint_template: str | None = None, limit: int = 15, timeout: float = 15.0) -> list[SearchResult]:
+    if endpoint_template is None:
+        return search_duckduckgo_html(query, limit=limit, timeout=timeout)
+    if '{query}' not in endpoint_template:
+        raise ValueError('search endpoint template must contain {query}')
+    url = endpoint_template.replace('{query}', quote_plus(query))
+    request = Request(url, headers={'User-Agent': DEFAULT_USER_AGENT})
+    with urlopen(request, timeout=timeout) as response:
+        encoding = response.headers.get_content_charset() or 'utf-8'
+        payload = json.loads(response.read().decode(encoding, errors='replace'))
+    return _coerce_results(payload)[:limit]
+
+
+def search_duckduckgo_html(query: str, *, limit: int = 15, timeout: float = 15.0) -> list[SearchResult]:
+    encoded = quote_plus(query)
+    candidates = [
+        'https://duckduckgo.com/html/?q=' + encoded,
+        'https://html.duckduckgo.com/html/?q=' + encoded,
+        'https://lite.duckduckgo.com/lite/?q=' + encoded,
+    ]
+    last_error: Exception | None = None
+    for url in candidates:
+        try:
+            request = Request(url, headers={'User-Agent': DEFAULT_USER_AGENT})
+            with urlopen(request, timeout=timeout) as response:
+                encoding = response.headers.get_content_charset() or 'utf-8'
+                html = response.read().decode(encoding, errors='replace')
+            results = parse_duckduckgo_html(html, limit=limit)
+            if results:
+                return results
+        except Exception as exc:
+            last_error = exc
+    if last_error is not None:
+        raise RuntimeError(f'DuckDuckGo search failed: {last_error}') from last_error
+    return []
+
+
+def parse_duckduckgo_html(html: str, *, limit: int = 15) -> list[SearchResult]:
+    parser = _DuckDuckGoParser()
+    parser.feed(html)
+    return parser.results[:limit]
+
+
+class _DuckDuckGoParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.results: list[SearchResult] = []
+        self._capture_title = False
+        self._capture_snippet = False
+        self._current_href = ''
+        self._current_title: list[str] = []
+        self._current_snippet: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_dict = {name: value or '' for name, value in attrs}
+        class_name = attrs_dict.get('class', '')
+        if tag == 'a' and ('result__a' in class_name or 'result-link' in class_name):
+            self._capture_title = True
+            self._current_href = attrs_dict.get('href', '')
+            self._current_title = []
+
+        if tag in {'td', 'div', 'a'} and 'result-snippet' in class_name:
+            self._capture_snippet = True
+            self._current_snippet = []
+
+    def handle_data(self, data: str) -> None:
+        if self._capture_title:
+            text = ' '.join(data.split())
+            if text:
+                self._current_title.append(text)
+
+        if self._capture_snippet:
+            text = ' '.join(data.split())
+            if text:
+                self._current_snippet.append(text)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {'td', 'div', 'a'} and self._capture_snippet:
+            self._capture_snippet = False
+            snippet = ' '.join(self._current_snippet).strip()
+            if snippet and self.results:
+                last = self.results[-1]
+                self.results[-1] = SearchResult(title=last.title, url=last.url, snippet=snippet)
+            self._current_snippet = []
+        if tag != 'a' or not self._capture_title:
+            return
+        self._capture_title = False
+        title = ' '.join(self._current_title).strip()
+        url = _normalize_duckduckgo_url(self._current_href)
+        if title and url and not any(item.url == url for item in self.results):
+            self.results.append(SearchResult(title=title, url=url))
+
+
+def _normalize_duckduckgo_url(href: str) -> str:
+    if not href:
+        return ''
+    if href.startswith('//'):
+        href = 'https:' + href
+    parsed = urlparse(href)
+    if 'duckduckgo.com' in parsed.netloc and parsed.path.startswith('/l/'):
+        target = parse_qs(parsed.query).get('uddg', [''])[0]
+        return unquote(target)
+    return href
+
+
+def _coerce_results(payload: object) -> list[SearchResult]:
+    rows = payload.get('results', payload) if isinstance(payload, dict) else payload
+    if not isinstance(rows, list):
+        raise ValueError('search payload must be a list or object with results')
+    results: list[SearchResult] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        title = str(row.get('title') or '').strip()
+        url = str(row.get('url') or row.get('link') or '').strip()
+        if not title or not url or url in seen:
+            continue
+        seen.add(url)
+        results.append(SearchResult(title=title, url=url, snippet=str(row.get('snippet') or '').strip()))
+    return results

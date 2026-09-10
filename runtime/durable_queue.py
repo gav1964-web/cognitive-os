@@ -5,15 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import secrets
 import shutil
 import time
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from types import TracebackType
 from typing import Any
 
+from .durable_queue_lock import QueueLock
 from .execution_journal import append_journal_event
 from .models import Pipeline, PipelineNode
 
@@ -51,6 +52,7 @@ class DurableQueue:
             "max_attempts": max(1, int(max_attempts)),
             "priority": int(priority),
             "worker_id": None,
+            "lease_token": None,
             "lease_expires_at": None,
             "heartbeat_at": None,
             "result": None,
@@ -73,6 +75,7 @@ class DurableQueue:
                     continue
                 job["status"] = "running"
                 job["worker_id"] = worker_id
+                job["lease_token"] = secrets.token_urlsafe(24)
                 job["attempts"] = int(job.get("attempts", 0)) + 1
                 job["started_at"] = _now()
                 job["heartbeat_at"] = _now()
@@ -86,18 +89,21 @@ class DurableQueue:
                         "job_id": job["job_id"],
                         "pipeline_id": job["pipeline"]["id"],
                         "worker_id": worker_id,
+                        "attempt": job["attempts"],
                     },
                 )
                 return job
         return None
 
-    def heartbeat(self, job_id: str, worker_id: str, *, lease_seconds: float = 30.0) -> bool:
+    def heartbeat(
+        self, job_id: str, worker_id: str, lease_token: str, *, lease_seconds: float = 30.0
+    ) -> bool:
         with self._lock():
             path = self._job_path(job_id)
             if not path.exists():
                 return False
             job = _read_json(path)
-            if job.get("status") != "running" or job.get("worker_id") != worker_id:
+            if not _owns_lease(job, worker_id, lease_token):
                 return False
             job["heartbeat_at"] = _now()
             job["lease_expires_at"] = _from_timestamp(time.time() + lease_seconds)
@@ -106,11 +112,16 @@ class DurableQueue:
         append_journal_event(self.root, {"event": "queue_heartbeat", "job_id": job_id, "worker_id": worker_id})
         return True
 
-    def complete(self, job_id: str, *, result: dict[str, Any]) -> None:
+    def complete(
+        self, job_id: str, *, worker_id: str, lease_token: str, result: dict[str, Any]
+    ) -> bool:
         status = "succeeded" if result.get("status") == "ok" else "stopped"
-        self._finish(job_id, status=status, result=result, error=None)
+        return self._finish(
+            job_id, status=status, result=result, error=None,
+            worker_id=worker_id, lease_token=lease_token,
+        )
 
-    def fail(self, job_id: str, *, error: str) -> None:
+    def fail(self, job_id: str, *, worker_id: str, lease_token: str, error: str) -> bool:
         with self._lock():
             path = self._job_path(job_id)
             if not path.exists():
@@ -122,11 +133,12 @@ class DurableQueue:
                 job = _read_json(path)
             if missing:
                 pass
-            elif job.get("status") in TERMINAL_STATUSES:
-                return
+            elif not _owns_lease(job, worker_id, lease_token):
+                return False
             elif int(job.get("attempts", 0)) < int(job.get("max_attempts", 1)):
                 job["status"] = "queued"
                 job["worker_id"] = None
+                job["lease_token"] = None
                 job["lease_expires_at"] = None
                 job["heartbeat_at"] = None
                 job["error"] = error
@@ -142,11 +154,14 @@ class DurableQueue:
                 append_registry_event = None
         if missing:
             append_journal_event(self.root, {"event": "queue_fail_missing_job", "job_id": job_id, "error": error})
-            return
+            return False
         if append_registry_event is not None:
             append_journal_event(self.root, append_registry_event)
-            return
-        self._finish(job_id, status="failed", result=None, error=error)
+            return True
+        return self._finish(
+            job_id, status="failed", result=None, error=error,
+            worker_id=worker_id, lease_token=lease_token,
+        )
 
     def cancel(self, job_id: str, *, reason: str = "cancelled") -> None:
         self._finish(job_id, status="cancelled", result=None, error=reason)
@@ -159,6 +174,7 @@ class DurableQueue:
                 return False
             job["status"] = "queued"
             job["worker_id"] = None
+            job["lease_token"] = None
             job["lease_expires_at"] = None
             job["heartbeat_at"] = None
             job["error"] = reason
@@ -227,6 +243,7 @@ class DurableQueue:
                 max_attempts = int(job.get("max_attempts", 1))
                 job["status"] = "queued" if attempts < max_attempts else "failed"
                 job["worker_id"] = None
+                job["lease_token"] = None
                 job["lease_expires_at"] = None
                 job["heartbeat_at"] = None
                 if job["status"] == "failed":
@@ -247,7 +264,16 @@ class DurableQueue:
             key=lambda item: (int(item[1].get("priority", 100)), str(item[1].get("created_at", "")), str(item[1].get("job_id", ""))),
         )
 
-    def _finish(self, job_id: str, *, status: str, result: dict[str, Any] | None, error: str | None) -> None:
+    def _finish(
+        self,
+        job_id: str,
+        *,
+        status: str,
+        result: dict[str, Any] | None,
+        error: str | None,
+        worker_id: str | None = None,
+        lease_token: str | None = None,
+    ) -> bool:
         with self._lock():
             path = self._job_path(job_id)
             if not path.exists():
@@ -260,10 +286,13 @@ class DurableQueue:
             if missing:
                 pass
             elif job.get("status") in TERMINAL_STATUSES:
-                return
+                return False
+            elif worker_id is not None and not _owns_lease(job, worker_id, lease_token):
+                return False
             else:
                 job["status"] = status
                 job["worker_id"] = None
+                job["lease_token"] = None
                 job["lease_expires_at"] = None
                 job["heartbeat_at"] = None
                 job["result"] = result
@@ -279,16 +308,17 @@ class DurableQueue:
                 }
         if missing:
             append_journal_event(self.root, {"event": "queue_finish_missing_job", "job_id": job_id, "status": status})
-            return
+            return False
         if append_event is not None:
             append_journal_event(self.root, append_event)
+        return True
 
     def _job_path(self, job_id: str) -> Path:
         return self.jobs_dir / f"{job_id}.json"
 
     @contextmanager
     def _lock(self):
-        lock = _QueueLock(self.lock_path)
+        lock = QueueLock(self.lock_path)
         lock.acquire()
         try:
             yield
@@ -298,48 +328,6 @@ class DurableQueue:
 
 def job_pipeline(job: dict[str, Any]) -> Pipeline:
     return _pipeline_from_dict(dict(job["pipeline"]))
-
-
-class _QueueLock:
-    def __init__(self, path: Path, *, timeout_seconds: float = 5.0, poll_seconds: float = 0.05) -> None:
-        self.path = path
-        self.timeout_seconds = timeout_seconds
-        self.poll_seconds = poll_seconds
-        self.fd: int | None = None
-
-    def acquire(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        deadline = time.monotonic() + self.timeout_seconds
-        while True:
-            try:
-                self.fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(self.fd, str(os.getpid()).encode("ascii"))
-                return
-            except FileExistsError:
-                if time.monotonic() >= deadline:
-                    raise TimeoutError(f"queue lock timeout: {self.path}")
-                time.sleep(self.poll_seconds)
-
-    def release(self) -> None:
-        if self.fd is not None:
-            os.close(self.fd)
-            self.fd = None
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            pass
-
-    def __enter__(self) -> "_QueueLock":
-        self.acquire()
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        self.release()
 
 
 def _pipeline_to_dict(pipeline: Pipeline) -> dict[str, Any]:
@@ -396,3 +384,12 @@ def _parse_time(value: str) -> float:
     if not value:
         return 0.0
     return datetime.fromisoformat(value).timestamp()
+
+
+def _owns_lease(job: dict[str, Any], worker_id: str, lease_token: str | None) -> bool:
+    return (
+        job.get("status") == "running"
+        and job.get("worker_id") == worker_id
+        and bool(lease_token)
+        and secrets.compare_digest(str(job.get("lease_token") or ""), lease_token)
+    )

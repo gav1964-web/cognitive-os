@@ -1,4 +1,43 @@
 from plugins.project_map_report.src.main import run
+from plugins.project_map_report.src.runtime_readiness import resume_reuse_plan
+
+
+def test_runtime_readiness_preserves_resume_plan_compatibility_export():
+    assert callable(resume_reuse_plan)
+
+
+def test_python_library_without_cli_gets_library_usage_flow():
+    result = run(
+        {
+            "tree": {
+                "root": "project",
+                "counts": {"files": 3, "directories": 2, "truncated": False},
+                "files": [{"path": "pyproject.toml"}, {"path": "src/demo/__init__.py"}, {"path": "src/demo/core.py"}],
+            },
+            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": []},
+            "files": {
+                "files": [
+                    {"path": "pyproject.toml", "text": "[project]\nname = 'demo'\n"},
+                    {"path": "README.md", "text": "# Demo\n\nDemo provides reusable Python data processing APIs."},
+                ]
+            },
+            "python_structure": {
+                "imports": [],
+                "routes": [],
+                "files": [{"path": "src/demo/core.py", "functions": [{"path": "src/demo/core.py", "name": "process", "loc": 20}]}],
+                "project_insights": {},
+            },
+            "runtime_commands": {"commands": []},
+        }
+    )
+
+    scope = result["answers"]["1_scope"]
+    execution = result["answers"]["2_execution"]
+    assert result["human_summary"]["purpose"]
+    assert result["evidence_summary"]["source_refs"]
+    assert result["evidence_summary"]["limits"]
+    assert "Import package modules" in scope["supported_scenarios"][0]
+    assert execution["primary_execution_path"][0] == "user imports package/API"
 
 
 def test_project_map_report_builds_markdown_and_risks():
@@ -140,6 +179,132 @@ def test_project_map_report_builds_markdown_and_risks():
     assert readiness["evidence_claims"][0]["evidence"]
 
 
+def test_project_map_report_flags_snapshot_copy_and_artifact_noise():
+    result = run(
+        {
+            "tree": {
+                "root": "F:/ubuntu/VAAT-v4",
+                "counts": {"files": 8, "directories": 5, "truncated": False},
+                "files": [
+                    {"path": "README.md"},
+                    {"path": ".env"},
+                    {"path": "api/main.py"},
+                    {"path": "vaat-v4_20250828/README.md"},
+                    {"path": "vaat-v4_20250828/api/main.py"},
+                    {"path": "vaat-v4_20250828/.env"},
+                    {"path": "vaat-v4_20250828.zip"},
+                    {"path": "logs/run.jsonl"},
+                    {"path": "notebooks/exploration.ipynb"},
+                ],
+                "directories": ["api", "vaat-v4_20250828", "vaat-v4_20250828/api", "logs", "notebooks"],
+            },
+            "stack": {
+                "languages": [{"language": "Python"}],
+                "frameworks": ["FastAPI"],
+                "entrypoints": ["api/main.py", "vaat-v4_20250828/api/main.py"],
+                "large_artifacts": [],
+                "dependency_files": [{"path": "requirements.txt", "dependencies": ["fastapi>=0.1"]}],
+            },
+            "files": {
+                "files": [
+                    {"path": "README.md", "text": "# VAAT v4\nA2A agents consensus orchestrator"},
+                    {"path": ".env", "text": "SECRET_KEY=demo"},
+                ]
+            },
+            "python_structure": {
+                "imports": [],
+                "routes": [],
+                "files": [
+                    {"path": "api/main.py", "functions": [{"path": "api/main.py", "name": "_execute_pipeline_background", "loc": 40}]},
+                    {
+                        "path": "vaat-v4_20250828/api/main.py",
+                        "functions": [{"path": "vaat-v4_20250828/api/main.py", "name": "_execute_pipeline_background", "loc": 40}],
+                    },
+                ],
+                "central_nodes": [],
+                "wide_functions": [],
+                "pure_transform_candidates": [],
+                "project_insights": {},
+                "contracts": {},
+                "external_dependencies": {},
+            },
+            "runtime_commands": {"commands": []},
+        }
+    )
+
+    health = result["source_health"]
+    risks = {risk["code"] for risk in result["risks"]}
+    strata = result["answers"]["6_runtime_extraction_readiness"]["source_strata"]
+    assert health["status"] == "noisy"
+    assert health["project_shape"] == "dirty_portfolio"
+    assert health["packaged_copy_signal_count"] > 0
+    assert health["artifact_noise_signal_count"] > 0
+    assert "notebooks/exploration.ipynb" in health["artifact_noise_samples"]
+    assert health["env_file_signal_count"] > 0
+    assert health["noise_exclusion_decision"]["status"] in {"context_only_noise_excluded", "pending_active_root"}
+    assert health["noise_exclusion_decision"]["excluded_signal_count"] > 0
+    assert {"packaged_copy_detected", "artifact_noise_detected", "env_file_in_project_tree"} <= risks
+    assert any(row["path"] == "vaat-v4_20250828/api/main.py" for row in strata["packaged_copy"])
+    assert not any(row["path"] == "vaat-v4_20250828/api/main.py" for row in strata["active_core"])
+
+
+def test_project_map_report_identifies_ml_competition_workspace_and_hf_token():
+    result = run(
+        {
+            "tree": {
+                "root": "F:/ubuntu/zindi.africa.vscode",
+                "counts": {"files": 6, "directories": 1, "truncated": False},
+                "files": [
+                    {"path": "x31.py", "extension": ".py", "size_bytes": 3000},
+                    {"path": "auto_install_imports.py", "extension": ".py", "size_bytes": 1200},
+                    {"path": "prompts.csv", "extension": ".csv", "size_bytes": 1000},
+                    {"path": "data/faiss_index.bin", "extension": ".bin", "size_bytes": 2000},
+                    {"path": "data/index_mapping.pkl", "extension": ".pkl", "size_bytes": 2000},
+                    {"path": "data/synthetic_2000.jsonl", "extension": ".jsonl", "size_bytes": 2000},
+                ],
+            },
+            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": [], "large_artifacts": [], "dependency_files": []},
+            "files": {
+                "files": [
+                    {
+                        "path": "x31.py",
+                        "text": "from transformers import AutoModelForCausalLM, AutoTokenizer\nmodel.generate(...)\nuse_auth_token='hf_demo_token'\nPROMPT_FILE='prompts.csv'\nOUTPUT_FILE='local_submission.csv'",
+                    },
+                    {"path": "auto_install_imports.py", "text": "import subprocess\n"},
+                ]
+            },
+            "python_structure": {
+                "imports": ["pandas", "numpy", "torch", "transformers", "subprocess"],
+                "routes": [],
+                "files": [
+                    {
+                        "path": "x31.py",
+                        "functions": [
+                            {"path": "x31.py", "name": "generate_response", "line": 1, "loc": 8, "calls": ["model.generate"], "side_effects": []},
+                            {"path": "x31.py", "name": "postprocess", "line": 10, "loc": 5, "calls": [], "side_effects": []},
+                        ],
+                    }
+                ],
+                "central_nodes": [{"path": "x31.py", "name": "generate_response", "line": 1, "loc": 8, "call_count": 4}],
+                "wide_functions": [],
+                "pure_transform_candidates": [{"path": "x31.py", "name": "postprocess", "line": 10, "loc": 5}],
+                "project_insights": {},
+                "contracts": {},
+                "external_dependencies": {},
+            },
+            "runtime_commands": {"commands": []},
+        }
+    )
+
+    assert result["answers"]["1_scope"]["domain_profile"]["kind"] == "ml_competition_inference_script"
+    assert result["security_health"]["status"] == "attention_required"
+    assert result["source_health"]["artifact_noise_signal_count"] >= 3
+    risks = {risk["code"] for risk in result["risks"]}
+    assert "secret_material_in_source" in risks
+    assert "artifact_noise_detected" in risks
+    assert "submission CSV rows" in result["answers"]["1_scope"]["outputs"]
+
+
 def test_project_map_report_infers_library_entrypoint_and_demotes_dev_context():
     result = run(
         {
@@ -188,26 +353,22 @@ def test_project_map_report_infers_library_entrypoint_and_demotes_dev_context():
     assert readiness["minimal_extraction_plan"]["capabilities_to_extract"][0]["capability"] == "src/pkg/core.py:normalize"
 
 
-def test_project_map_report_skips_non_purpose_doc_headings_for_main_task():
+def test_project_map_report_combines_stack_and_package_entrypoints():
     result = run(
         {
-            "tree": {"root": "project", "counts": {"files": 2, "directories": 1, "truncated": False}},
-            "stack": {"languages": [{"language": "Python"}], "frameworks": [], "entrypoints": [], "large_artifacts": [], "dependency_files": []},
-            "files": {
-                "files": [
-                    {"path": "AGENTS.md", "text": "# AGENTS.md\n"},
-                    {"path": "CLAUDE.md", "text": "# CLAUDE.md\n"},
-                    {"path": "CHANGES/README.rst", "text": "Change notes\n============\n"},
-                    {"path": "examples/README.rst", "text": "Example Project\n===============\n"},
-                    {"path": "packaging/pep517_backend/README.md", "text": "# `pep517_backend` in-tree build backend\n"},
-                    {"path": "README.rst", "text": "# <div align=\"center\">logo</div>\nReal Package\n============\n"},
-                    {"path": "CONTRIBUTORS.txt", "text": "# Contributors (alphabetical order)\n"},
-                ]
+            "tree": {"root": "library", "counts": {"files": 3, "directories": 1, "truncated": False}},
+            "stack": {
+                "languages": [{"language": "Python"}],
+                "frameworks": [],
+                "entrypoints": ["app.py"],
+                "large_artifacts": [],
+                "dependency_files": [],
             },
+            "files": {"files": [{"path": "README.md", "text": "# Demo\n\nReusable package."}]},
             "python_structure": {
                 "imports": [],
                 "routes": [],
-                "files": [{"path": "src/pkg/__init__.py", "functions": []}],
+                "files": [{"path": "pkg/__init__.py", "functions": []}],
                 "central_nodes": [],
                 "wide_functions": [],
                 "pure_transform_candidates": [],
@@ -219,4 +380,4 @@ def test_project_map_report_skips_non_purpose_doc_headings_for_main_task():
         }
     )
 
-    assert result["answers"]["1_scope"]["main_task"].startswith("Inferred from docs: Real Package")
+    assert result["summary"]["entrypoints"] == ["app.py", "pkg/__init__.py"]

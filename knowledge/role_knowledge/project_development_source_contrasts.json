@@ -1,0 +1,45 @@
+{
+  "schema_version": "project_development_source_contrasts.v1",
+  "contrasts": [
+    {
+      "contrast_id": "pytest_socket_direct_exception_args",
+      "hypothesis_kind": "exception_pickle_reconstruction_boundary",
+      "status": "staged_evidence",
+      "polarity": "negative_boundary",
+      "project_path": "artifacts/pytest_plugin_prefixed_20260831/pytest-socket-pickle",
+      "target": "src/pytest_socket/__init__.py:SocketBlockedError.__init__",
+      "sha256": "592e8fc805dfdedb8b98f099b5d829a1d57dc1a340c4a2e41de962a68e1caed9",
+      "validation_report": "project_development_20260831T071538481541Z.json",
+      "expected_facts": {
+        "custom_exception_constructor": true,
+        "base_exception_replays_constructor_parameters": true,
+        "has_reduce_method": false
+      },
+      "provenance": {
+        "authority": "paired_source_ast",
+        "independent_lineage": "pytest-socket-same-project-negative",
+        "same_project_contrast": true,
+        "kb_promotion_evidence": false
+      }
+    },
+    {
+      "contrast_id": "simple_loop_mapping_validated_o",
+      "hypothesis_kind": "nested_loop_mapping_boundary",
+      "status": "staged_evidence",
+      "polarity": "positive_boundary",
+      "project_path": "artifacts/project_development_trial_mixed_o",
+      "target": "normalizer.py:normalize_rows",
+      "sha256": "aa37a8c0430feeabf575b4cdcc46b5919c3340e9069674a710e89ac4be6c302d",
+      "validation_report": "project_development_20260828T111943104093Z.json",
+      "expected_facts": {
+        "maximum_loop_depth": 1,
+        "dict_append_sites": 1
+      },
+      "provenance": {
+        "authority": "source_ast",
+        "independent_lineage": "project_development_trial_mixed_o",
+        "kb_promotion_evidence": false
+      }
+    }
+  ]
+}

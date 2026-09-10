@@ -4,7 +4,7 @@
   "entrypoint": "plugins.project_map_report.src.main:run",
   "determinism_grade": "A",
   "side_effects": {
-    "filesystem": "none",
+    "filesystem": "read_only",
     "network": "none",
     "secrets": "none"
   },

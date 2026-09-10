@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +22,17 @@ def main() -> int:
 
     capabilities = load_capabilities(root)
     test_paths = [str(root / "plugins" / capability_id / "tests") for capability_id in sorted(capabilities)]
-    result = subprocess.run([sys.executable, "-m", "pytest", *test_paths], cwd=str(root), capture_output=True, text=True)
+    base_temp = root / ".pytest-tmp" / "plugins"
+    base_temp.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env.update({"TMP": str(base_temp), "TEMP": str(base_temp), "TMPDIR": str(base_temp)})
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", f"--basetemp={base_temp}", *test_paths],
+        cwd=str(root),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
     payload = {
         "status": "ok" if result.returncode == 0 else "failed",
         "capabilities": sorted(capabilities),
@@ -36,4 +47,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

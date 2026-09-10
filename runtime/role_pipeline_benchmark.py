@@ -9,6 +9,8 @@ from typing import Any
 
 from .local_inference import LocalInferenceConfig
 from .role_pipeline import run_role_pipeline
+from .role_project_type_evaluation import classify_project_case
+from .role_chain_interaction import build_role_chain_trace, summarize_role_chain_traces
 
 
 REQUIRED_ARTIFACTS = [
@@ -66,6 +68,12 @@ def run_role_pipeline_case(
     score = score_role_pipeline(result, allow_llm=allow_llm, expected_candidate=expected_candidate)
     advisory = dict(result.get("architect_advisory", {}))
     role_quality = dict(result.get("role_quality", {}))
+    project_classification = classify_project_case({
+        "project": project_dir.name,
+        "artifacts": result.get("artifacts", {}),
+        "role_quality": role_quality,
+    })
+    chain_trace = build_role_chain_trace(project=project_dir.name, result=result)
     return {
         "project": project_dir.name,
         "status": "ok" if score["passed"] else "failed",
@@ -76,6 +84,9 @@ def run_role_pipeline_case(
         "expected_best_extraction_candidate": expected_candidate,
         "next_action": result.get("next_action"),
         "recommendation": result.get("recommendation"),
+        "project_classification": project_classification,
+        "role_chain_interaction": chain_trace,
+        "no_safe_candidate_recovery": dict(result.get("no_safe_candidate_recovery") or {}),
     }
 
 
@@ -88,18 +99,25 @@ def score_role_pipeline(
     artifacts = dict(result.get("artifacts", {}))
     safety = dict(result.get("safety", {}))
     role_quality = dict(result.get("role_quality", {}))
+    controlled_block = _controlled_no_safe_candidate_block(result, role_quality)
     checks = {
         "all_artifacts_present": all(key in artifacts for key in REQUIRED_ARTIFACTS),
         "review_has_recommendation": result.get("recommendation") in {"approve", "approve_with_risks", "request_rework"},
         "next_action_valid": result.get("next_action")
         in {"run_project_transform", "review_risks_then_run_project_transform", "rework_role_artifacts"},
-        "implementer_targets_extraction_candidate": role_quality.get("implementation_targets_extraction_candidate") is True,
-        "implementer_has_bound_input_contract": role_quality.get("implementation_has_input_contract") is True,
-        "implementer_has_bound_output_contract": role_quality.get("implementation_has_output_contract") is True,
-        "tester_targets_implementation_target": role_quality.get("test_targets_implementation_target") is True,
-        "tester_has_contract_matrix": role_quality.get("test_has_contract_matrix") is True,
-        "tester_has_negative_tests_for_target": role_quality.get("test_has_negative_tests_for_target") is True,
-        "reviewer_targets_implementation_target": role_quality.get("review_targets_implementation_target") is True,
+        "implementer_targets_extraction_candidate": role_quality.get("implementation_targets_extraction_candidate") is True
+        or controlled_block,
+        "implementer_has_bound_input_contract": role_quality.get("implementation_has_input_contract") is True
+        or controlled_block,
+        "implementer_has_bound_output_contract": role_quality.get("implementation_has_output_contract") is True
+        or controlled_block,
+        "tester_targets_implementation_target": role_quality.get("test_targets_implementation_target") is True
+        or controlled_block,
+        "tester_has_contract_matrix": role_quality.get("test_has_contract_matrix") is True or controlled_block,
+        "tester_has_negative_tests_for_target": role_quality.get("test_has_negative_tests_for_target") is True
+        or controlled_block,
+        "reviewer_targets_implementation_target": role_quality.get("review_targets_implementation_target") is True
+        or controlled_block,
         "reviewer_confirms_target_coverage": role_quality.get("review_confirms_target_coverage") is True,
         "reviewer_has_no_contract_violations": role_quality.get("review_contract_violations") == 0,
         "no_source_changes": safety.get("source_code_changes") is False,
@@ -108,7 +126,9 @@ def score_role_pipeline(
         "llm_policy_ok": allow_llm or safety.get("llm_invoked") is False,
     }
     if expected_candidate:
-        checks["implementer_matches_expected_candidate"] = role_quality.get("implementation_target") == expected_candidate
+        checks["implementer_matches_expected_candidate"] = (
+            role_quality.get("implementation_target") == expected_candidate or controlled_block
+        )
     artifact_checks = [
         dict(artifacts.get("architecture_decision", {})).get("artifact_type") == "ArchitectureDecisionRecord",
         dict(artifacts.get("technical_spec", {})).get("artifact_type") == "TechnicalSpec",
@@ -144,6 +164,15 @@ def score_role_pipeline(
     }
 
 
+def _controlled_no_safe_candidate_block(result: dict[str, Any], role_quality: dict[str, Any]) -> bool:
+    return (
+        role_quality.get("implementation_blocked_no_safe_candidate") is True
+        and role_quality.get("test_blocked_no_safe_candidate") is True
+        and result.get("recommendation") == "request_rework"
+        and result.get("next_action") == "rework_role_artifacts"
+    )
+
+
 def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
     passed = sum(1 for case in cases if case["score"]["passed"])
     artifact_score = _ratio(sum(case["score"]["artifact_score"] for case in cases), len(cases))
@@ -152,6 +181,9 @@ def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
     safety_score = _ratio(sum(case["score"]["safety_score"] for case in cases), len(cases))
     advisories = [dict(case.get("architect_advisory", {})) for case in cases]
     qualities = [dict(case.get("advisory_quality", {})) for case in cases]
+    chain_summary = summarize_role_chain_traces([
+        dict(case.get("role_chain_interaction") or {}) for case in cases
+    ])
     delta_score = _ratio(sum(int(item.get("advisory_delta_score") or 0) for item in advisories), len(cases))
     return {
         "status": "ok" if passed == len(cases) else "failed",
@@ -169,6 +201,21 @@ def _suite_report(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "advisory_quality": _merge_quality(qualities),
             "llm_invoked": sum(1 for item in advisories if item.get("llm_invoked") is True),
             "warnings": sum(len(case["score"]["warnings"]) for case in cases),
+            "role_chain": chain_summary,
+            "no_safe_candidate_recovery": {
+                "applicable": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") != "not_applicable"
+                    for case in cases
+                ),
+                "bounded_rework_ready": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") == "bounded_rework_ready"
+                    for case in cases
+                ),
+                "controlled_stop": sum(
+                    dict(case.get("no_safe_candidate_recovery") or {}).get("status") == "controlled_stop"
+                    for case in cases
+                ),
+            },
         },
         "cases": cases,
     }

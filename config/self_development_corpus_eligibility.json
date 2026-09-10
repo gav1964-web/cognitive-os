@@ -1,0 +1,34 @@
+{
+  "schema_version": "self_development_corpus_eligibility.v1",
+  "status": "active",
+  "corpus_root": "artifacts",
+  "source_directory_name": "src",
+  "corpus_path_markers": ["github", "gitlab", "hypothesis_holdouts", "pytest_plugin_holdout"],
+  "prospective_evidence_glob": "artifacts/project_development/project_development_*.json",
+  "historical_evidence_glob": "artifacts/field_trials/*.json",
+  "target_markers": [
+    "build backend",
+    "build-system",
+    "flit_core",
+    "hatchling",
+    "packaging",
+    "poetry.core",
+    "setuptools",
+    "sdist",
+    "wheel"
+  ],
+  "identity_files": ["pyproject.toml", "setup.cfg", "setup.py", "README.md", "README.rst"],
+  "minimum_python_files": 2,
+  "minimum_acquisition_projects": 3,
+  "minimum_holdout_projects": 3,
+  "split_seed": "cognitive-os-self-development-v1",
+  "invariants": {
+    "untouched_only": true,
+    "owner_independence": true,
+    "content_independence": true,
+    "holdout_frozen_before_acquisition": true,
+    "network_fallback_only_on_shortage": true,
+    "source_apply": false,
+    "promotion_applied": false
+  }
+}

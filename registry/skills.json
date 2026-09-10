@@ -22,7 +22,8 @@
         "execute_pipeline",
         "promote_candidate"
       ],
-      "entrypoint": "runtime.role_skills:run_architect_skill"
+      "entrypoint": "runtime.role_skills:run_role_skill",
+      "entrypoint_role_arg": "architect"
     },
     {
       "id": "spec_writer",
@@ -43,7 +44,8 @@
         "execute_pipeline",
         "promote_candidate"
       ],
-      "entrypoint": "runtime.role_skills:run_spec_writer_skill"
+      "entrypoint": "runtime.role_skills:run_role_skill",
+      "entrypoint_role_arg": "spec_writer"
     },
     {
       "id": "implementer",
@@ -64,7 +66,8 @@
         "execute_pipeline",
         "promote_candidate"
       ],
-      "entrypoint": "runtime.role_skills:run_implementer_skill"
+      "entrypoint": "runtime.role_skills:run_role_skill",
+      "entrypoint_role_arg": "implementer"
     },
     {
       "id": "tester",
@@ -86,7 +89,8 @@
         "execute_pipeline",
         "promote_candidate"
       ],
-      "entrypoint": "runtime.role_skills:run_tester_skill"
+      "entrypoint": "runtime.role_skills:run_role_skill",
+      "entrypoint_role_arg": "tester"
     },
     {
       "id": "reviewer",
@@ -110,7 +114,8 @@
         "execute_pipeline",
         "promote_candidate"
       ],
-      "entrypoint": "runtime.role_skills:run_reviewer_skill"
+      "entrypoint": "runtime.role_skills:run_role_skill",
+      "entrypoint_role_arg": "reviewer"
     }
   ]
 }

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
 from runtime.executor import execute_pipeline
 from runtime.models import Pipeline, PipelineNode
 from runtime.registry import CapabilityRegistry
 
 
-def test_execution_updates_quality_metrics():
-    root = Path(__file__).resolve().parents[2]
+def test_execution_updates_quality_metrics(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = Pipeline(
         id="quality_hash",

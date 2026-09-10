@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/101e732472408ba4637d6905738cf8a0525dff1aba6b7e2b7f8c605d14f9c163.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:101e732472408ba4637d6905738cf8a0525dff1aba6b7e2b7f8c605d14f9c163",
+  "entry_digest": "sha256:c08272032b9734de5040085c2027413eb0be50bd372bbdea4a4e5072da190014",
+  "evaluator_fingerprint": "static-boundary-evaluator:v1",
+  "producer_fingerprint": "interpreter-coverage-audit:v1",
+  "replay_command": [
+    "python",
+    "tools/interpreter_coverage_audit.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/interpreter_coverage_audit_20260906T061111140952Z.json",
+  "status": "promoted"
+}

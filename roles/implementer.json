@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "implementer",
+  "label": "Implementer",
+  "order": 40,
+  "consumes": ["TechnicalSpec"],
+  "produces": ["ImplementationPlan", "PatchPackage"],
+  "kb_filters": {"role_scope": ["implementer"]},
+  "policy": {"source_mutation": "forbidden_without_approval", "dependency_expansion": "explicit_only", "llm_authority": "hypothesis_only"},
+  "questions": [
+    {"id": "target", "question": "Какие файлы/символы являются первой целью изменения?", "answer": {"provider": "target"}, "evidence": ["minimal_extraction_plan.capabilities_to_extract"]},
+    {"id": "minimal_plan", "question": "Какой минимальный extraction plan?", "answer": {"provider": "helper", "name": "minimal_plan"}, "evidence": ["answers.6_runtime_extraction_readiness.minimal_extraction_plan"]},
+    {"id": "pure_transforms", "question": "Какие чистые transforms можно вынести без риска?", "answer": {"provider": "ctx", "path": ["capabilities", "pure_transforms"]}, "evidence": ["answers.3_capabilities.pure_transforms"]},
+    {"id": "broad_functions", "question": "Какие широкие функции нужно резать?", "answer": {"provider": "ctx", "path": ["capabilities", "too_broad_functions"]}, "evidence": ["answers.3_capabilities.too_broad_functions"]},
+    {"id": "adapters", "question": "Где нужны adapters?", "answer": {"provider": "helper", "name": "adapter_candidates"}, "evidence": ["entrypoints", "external_imports"]},
+    {"id": "schema_layer", "question": "Где нужен schema layer?", "answer": {"provider": "first", "items": [{"provider": "ctx", "path": ["contracts", "explicit_schemas"]}, {"provider": "ctx", "path": ["contracts", "weak_contract_zones"]}]}, "evidence": ["answers.4_contracts_data"]},
+    {"id": "idempotency", "question": "Какие операции нельзя безопасно повторять?", "answer": {"provider": "ctx", "path": ["readiness", "idempotency_risks"]}, "evidence": ["answers.6_runtime_extraction_readiness.idempotency_risks"]},
+    {"id": "resume", "question": "Что можно checkpoint/resume?", "answer": {"provider": "ctx", "path": ["readiness", "resume_reuse_plan"]}, "evidence": ["answers.6_runtime_extraction_readiness.resume_reuse_plan"]},
+    {"id": "process_boundary", "question": "Что лучше изолировать через process boundary?", "answer": {"provider": "ctx", "path": ["readiness", "process_boundary_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.process_boundary_candidates"]},
+    {"id": "patch_strategy", "question": "Какой patch strategy безопасен?", "answer": {"provider": "helper", "name": "patch_strategy", "args": ["$target"]}, "evidence": ["role policy", "source_strata"]},
+    {"id": "blockers", "question": "Какие blockers у реализации?", "answer": {"provider": "helper", "name": "implementation_blockers"}, "evidence": ["minimal_extraction_plan.blocked_by", "open_questions"], "confidence": "medium"},
+    {"id": "rollout", "question": "Какой rollout plan минимален?", "answer": {"provider": "helper", "name": "rollout_plan", "args": ["$target"]}, "evidence": ["minimal_extraction_plan", "runtime_commands"]}
+  ]
+}

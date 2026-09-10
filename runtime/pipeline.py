@@ -85,6 +85,10 @@ def topological_nodes(pipeline: Pipeline) -> list[PipelineNode]:
 
 
 def _resolve_value(context: ExecutionContext, value: Any) -> Any:
+    if isinstance(value, list):
+        return [_resolve_value(context, item) for item in value]
+    if isinstance(value, dict):
+        return {key: _resolve_value(context, item) for key, item in value.items()}
     if not isinstance(value, str) or not value.startswith("$"):
         return value
     parts = value[1:].split(".")

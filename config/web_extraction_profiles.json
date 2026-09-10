@@ -1,0 +1,27 @@
+{
+  "schema_version": "web_extraction_profiles.v1",
+  "status": "active",
+  "profiles": [
+    {
+      "host": "3dnews.ru",
+      "target_kind": "news",
+      "base_url": "https://3dnews.ru/",
+      "link_markers": ["/news/", "/software-news/", "/hardware-news/"],
+      "evidence": ["known Stage 2 fixture profile", "news_site_scraper_cli parser tests"]
+    },
+    {
+      "host": "cnews.ru",
+      "target_kind": "news",
+      "base_url": "https://www.cnews.ru/",
+      "link_markers": ["/news/", "/reviews/", "/articles/"],
+      "evidence": ["known Stage 2 fixture profile", "news_site_scraper_cli parser profile"]
+    },
+    {
+      "host": "ixbt.com",
+      "target_kind": "news",
+      "base_url": "https://www.ixbt.com/",
+      "link_markers": ["/news/"],
+      "evidence": ["legacy ixbt_news_scraper case", "known Stage 2 fixture profile"]
+    }
+  ]
+}

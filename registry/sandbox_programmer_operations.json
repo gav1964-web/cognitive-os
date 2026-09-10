@@ -1,0 +1,212 @@
+{
+  "schema_version": "sandbox_programmer_operations.v1",
+  "operations": [
+    {
+      "id": "upper",
+      "package": "uppercase_text_cli",
+      "description": "Read UTF-8 text input, convert it to upper case, write UTF-8 output.",
+      "match": ["uppercase", "upper case", "верхний регистр", "верхний", "заглав"],
+      "profile": "text_expression",
+      "expression": "text.upper()",
+      "sample": "One\nTwo\n",
+      "expected": "ONE\nTWO\n"
+    },
+    {
+      "id": "lower",
+      "package": "lowercase_text_cli",
+      "description": "Read UTF-8 text input, convert it to lower case, write UTF-8 output.",
+      "match": ["lowercase", "lower case", "нижн", "строчн"],
+      "profile": "text_expression",
+      "expression": "text.lower()",
+      "sample": "One\nTwo\n",
+      "expected": "one\ntwo\n"
+    },
+    {
+      "id": "reverse",
+      "package": "reverse_text_cli",
+      "description": "Read UTF-8 text input, reverse it, write UTF-8 output.",
+      "match": ["reverse", "переверн", "обратн"],
+      "profile": "text_expression",
+      "expression": "text[::-1]",
+      "sample": "One\nTwo\n",
+      "expected": "\nowT\nenO"
+    },
+    {
+      "id": "line_count",
+      "package": "line_count_cli",
+      "description": "Read UTF-8 text input, count lines, write count plus newline.",
+      "match": ["line count", "count lines", "количество строк", "количеств строк", "число строк"],
+      "profile": "text_expression",
+      "expression": "str(len(text.splitlines())) + '\\n'",
+      "sample": "One\nTwo\n",
+      "expected": "2\n"
+    },
+    {
+      "id": "word_count",
+      "package": "word_count_cli",
+      "description": "Read UTF-8 text input, count whitespace-separated words, write count plus newline.",
+      "match": ["word count", "count words", "количество слов", "количеств слов", "число слов"],
+      "profile": "text_expression",
+      "expression": "str(len(text.split())) + '\\n'",
+      "sample": "One two\nthree\n",
+      "expected": "3\n"
+    },
+    {
+      "id": "trim",
+      "package": "trim_text_cli",
+      "description": "Read UTF-8 text input, trim leading/trailing whitespace, write output plus newline.",
+      "match": ["trim", "strip", "обреж", "убери пробел", "пробелы по краям", "по краям текста"],
+      "profile": "text_expression",
+      "expression": "text.strip() + '\\n'",
+      "sample": "  One two  \n",
+      "expected": "One two\n"
+    },
+    {
+      "id": "line_sort",
+      "package": "line_sort_cli",
+      "description": "Read UTF-8 text input, sort lines lexicographically, write sorted lines.",
+      "match": ["sort lines", "line sort", "сортировать строки", "отсортировать строки", "упорядочить строки"],
+      "profile": "line_sort",
+      "sample": "beta\nalpha\ngamma\n",
+      "expected": "alpha\nbeta\ngamma\n"
+    },
+    {
+      "id": "line_unique",
+      "package": "line_unique_cli",
+      "description": "Read UTF-8 text input, remove duplicate lines preserving first occurrence.",
+      "match": ["unique lines", "dedupe lines", "remove duplicate lines", "убрать дубли строк", "удалить повторяющиеся строки", "уникальные строки"],
+      "profile": "line_unique",
+      "sample": "alpha\nbeta\nalpha\ngamma\nbeta\n",
+      "expected": "alpha\nbeta\ngamma\n"
+    },
+    {
+      "id": "csv_row_count",
+      "package": "csv_row_count_cli",
+      "description": "Read UTF-8 CSV input, count non-empty data rows, write count plus newline.",
+      "match": ["csv row count", "count csv rows", "количество строк csv", "число строк csv", "посчитать строки csv"],
+      "profile": "csv_row_count",
+      "sample": "name,qty\nalpha,2\nbeta,3\n",
+      "expected": "2\n"
+    },
+    {
+      "id": "csv_sort_first_column",
+      "package": "csv_sort_first_column_cli",
+      "description": "Read UTF-8 CSV input, sort data rows by the first column, write CSV output.",
+      "match": ["sort csv", "csv sort", "сортировать csv", "сортирует csv", "отсортировать csv", "сортировка csv"],
+      "profile": "csv_sort_first_column",
+      "sample": "name,qty\nbeta,3\nalpha,2\n",
+      "expected": "name,qty\nalpha,2\nbeta,3\n"
+    },
+    {
+      "id": "csv_select_first_two_columns",
+      "package": "csv_select_first_two_columns_cli",
+      "description": "Read UTF-8 CSV input, keep the first two columns, write CSV output.",
+      "match": ["select csv columns", "csv select columns", "выбрать колонки csv", "первые две колонки csv", "первые 2 колонки csv"],
+      "profile": "csv_select_first_two_columns",
+      "sample": "name,qty,price\nalpha,2,10\nbeta,3,20\n",
+      "expected": "name,qty\nalpha,2\nbeta,3\n"
+    },
+    {
+      "id": "csv_filter_first_column_nonempty",
+      "package": "csv_filter_first_column_nonempty_cli",
+      "description": "Read UTF-8 CSV input, keep rows with non-empty first column, write CSV output.",
+      "match": ["filter csv", "csv filter", "фильтровать csv", "отфильтровать csv", "непустая первая колонка"],
+      "profile": "csv_filter_first_column_nonempty",
+      "sample": "name,qty\nalpha,2\n,3\nbeta,4\n",
+      "expected": "name,qty\nalpha,2\nbeta,4\n"
+    },
+    {
+      "id": "csv_sum_second_column",
+      "package": "csv_sum_second_column_cli",
+      "description": "Read UTF-8 CSV input, sum numeric values from the second column, write sum plus newline.",
+      "match": ["sum csv column", "csv sum second column", "сумма второй колонки csv", "сложить вторую колонку csv", "посчитать сумму csv"],
+      "profile": "csv_sum_second_column",
+      "sample": "name,qty\nalpha,2\nbeta,3\n",
+      "expected": "5\n"
+    },
+    {
+      "id": "csv_to_json_records",
+      "package": "csv_to_json_records_cli",
+      "description": "Read UTF-8 CSV input with a header and write JSON array of records.",
+      "match": ["csv to json", "csv records json", "csv в json", "превратить csv в json", "конвертировать csv в json"],
+      "profile": "csv_to_json_records",
+      "sample": "name,qty\nalpha,2\nbeta,3\n",
+      "expected": "[{\"name\": \"alpha\", \"qty\": \"2\"}, {\"name\": \"beta\", \"qty\": \"3\"}]\n"
+    },
+    {
+      "id": "html_table_to_csv",
+      "package": "html_table_to_csv_cli",
+      "description": "Read HTML with a simple table, extract rows, write CSV output.",
+      "match": ["html table to csv", "table html csv", "таблица html в csv", "html таблицу в csv"],
+      "profile": "html_table_to_csv",
+      "sample": "<table><tr><th>name</th><th>qty</th></tr><tr><td>alpha</td><td>2</td></tr></table>",
+      "expected": "name,qty\nalpha,2\n"
+    },
+    {
+      "id": "json_extract_first_key",
+      "package": "json_extract_first_key_cli",
+      "description": "Read UTF-8 JSON object, extract value of the first sorted key, write JSON value.",
+      "match": ["json extract", "extract json", "извлечь json", "вытащить json", "первый ключ json"],
+      "profile": "json_extract_first_key",
+      "sample": "{\"b\": 2, \"a\": {\"x\": 1}}",
+      "expected": "{\"x\": 1}\n"
+    },
+    {
+      "id": "json_keys",
+      "package": "json_keys_cli",
+      "description": "Read UTF-8 JSON object and write sorted top-level keys as JSON array.",
+      "match": ["json keys", "list json keys", "ключи json", "список ключей json", "перечислить ключи json", "ключи верхнего уровня json"],
+      "profile": "json_keys",
+      "sample": "{\"b\": 2, \"a\": 1}",
+      "expected": "[\"a\", \"b\"]\n"
+    },
+    {
+      "id": "json_pretty",
+      "package": "json_pretty_cli",
+      "description": "Read UTF-8 JSON input, write stable pretty-printed JSON output.",
+      "match": ["pretty json", "format json", "json pretty", "форматировать json", "красивый json"],
+      "profile": "json_pretty",
+      "sample": "{\"b\": 2, \"a\": 1}",
+      "expected": "{\n  \"a\": 1,\n  \"b\": 2\n}\n"
+    },
+    {
+      "id": "sum_two_numbers_args",
+      "package": "sum_two_numbers_cli",
+      "description": "Accept two numeric command-line arguments and print their sum to stdout.",
+      "match": ["два числа", "2 числа", "two numbers", "сумму", "сложить числа", "sum two numbers", "print sum"],
+      "profile": "numeric_args_sum",
+      "sample": "2 3",
+      "expected": "5\n"
+    },
+    {
+      "id": "multiply_first_two_add_third_args",
+      "package": "multiply_add_cli",
+      "description": "Accept three numeric command-line arguments, multiply the first two, add the third, and print the result to stdout.",
+      "match": ["три аргумента", "3 аргумента", "three arguments", "первые два перемножает", "перемножает", "складывает с третьим", "22*6+3", "a*b+c"],
+      "profile": "numeric_args_expression",
+      "expression": "a * b + c",
+      "sample": "22 6 3",
+      "expected": "135\n"
+    },
+    {
+      "id": "stdin_upper_stdout",
+      "package": "stdin_upper_stdout_cli",
+      "description": "Read UTF-8 text from stdin, convert it to upper case, and print stdout.",
+      "match": ["stdin upper", "stdin uppercase", "stdin в верхний", "стандартный ввод в верхний", "читает stdin", "из stdin"],
+      "profile": "stdin_text_expression",
+      "expression": "text.upper()",
+      "sample": "One\nTwo\n",
+      "expected": "ONE\nTWO\n"
+    },
+    {
+      "id": "file_word_count_stdout",
+      "package": "file_word_count_stdout_cli",
+      "description": "Read a UTF-8 text file, count words, and print the count to stdout.",
+      "match": ["file word count stdout", "файл количество слов stdout", "читает файл считает слова", "файл считает количество слов", "выводит количество слов в stdout"],
+      "profile": "file_stdout_text_expression",
+      "expression": "str(len(text.split())) + '\\n'",
+      "sample": "One two\nthree\n",
+      "expected": "3\n"
+    }
+  ]
+}

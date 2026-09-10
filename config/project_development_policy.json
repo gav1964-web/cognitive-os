@@ -1,0 +1,361 @@
+{
+  "schema_version": "project_development_policy.v1",
+  "selection": {
+    "minimum_confidence": 0.7,
+    "maximum_active_issues": 8,
+    "maximum_options_per_issue": 3,
+    "severity_order": ["critical", "high", "medium", "low"],
+    "route_order": ["role_chain", "research", "controlled_stop"]
+  },
+  "native_failure_intake": {
+    "repeat_count": 2,
+    "timeout_seconds": 120,
+    "shard_on_timeout": true,
+    "maximum_shards": 6,
+    "maximum_shard_test_files": 240,
+    "shard_timeout_seconds": 60,
+    "shard_collection_timeout_seconds": 30,
+    "maximum_refined_shards": 16,
+    "refined_shard_timeout_seconds": 60,
+    "maximum_collected_nodeids": 50000,
+    "maximum_collected_nodeid_chars": 4000000,
+    "maximum_collected_single_nodeid_chars": 2048,
+    "shard_cache_enabled": true,
+    "shard_cache_directory": "artifacts/project_native_failure_intake/shard_cache",
+    "maximum_output_chars": 12000,
+    "maximum_nodeid_chars": 1024,
+    "terminate_process_tree_on_timeout": true,
+    "opaque_observers_block_repair_authority": true,
+    "runner": "pytest",
+    "local_editable_install": true,
+    "local_install_timeout_seconds": 90,
+    "hermetic_user_environment": true,
+    "probe_path_bootstrap": true,
+    "disable_external_pytest_plugin_autoload": true,
+    "preserve_bounded_git_build_metadata": true,
+    "maximum_git_metadata_files": 5000,
+    "maximum_git_metadata_bytes": 20000000,
+    "work_directory": ".nfi",
+    "short_basetemp_directory": ".nft",
+    "dependency_overlay": "artifacts/project_native_failure_intake/dependency_overlay",
+    "project_dependency_overlays": {
+      "build": "artifacts/project_native_failure_intake/dependency_overlays/build",
+      "flake8": "artifacts/project_native_failure_intake/dependency_overlays/flake8-7.1",
+      "isort": "artifacts/project_native_failure_intake/dependency_overlays/isort-8.0",
+      "pytest-randomly": "artifacts/project_native_failure_intake/dependency_overlays/pytest-randomly-faker-40.13",
+      "pytest-socket": "artifacts/project_native_failure_intake/dependency_overlays/pytest-socket-test-tools"
+    },
+    "project_pytest_plugins": {
+      "isort": ["pytest_benchmark.plugin", "hypothesis.extra.pytestplugin"],
+      "platformdirs": ["pytest_mock.plugin"],
+      "pytest-socket": ["pytest_benchmark.plugin"],
+      "tox": ["pytest_timeout", "pytest_mock.plugin"]
+    },
+    "project_nested_pytest_plugins": {
+      "pytest-randomly": ["faker.contrib.pytest.plugin"],
+      "pytest-socket": ["pytest_socket"]
+    },
+    "project_pytest_arguments": {
+      "build": ["tests/test_native_metadata_path.py"],
+      "mkdocs": ["mkdocs/tests/test_native_empty_theme.py"],
+      "tox": [
+        "-o",
+        "markers=integration: requires external services\nslow: exceeds one second\nflaky: retry-capable upstream test (retries disabled in hermetic replay)",
+        "-m",
+        "not integration and not slow",
+        "--deselect=tests/execute/local_subprocess/test_local_subprocess.py::test_command_does_not_exist",
+        "--deselect=tests/plugin/test_inline.py::test_toxfile_py_w_ephemeral_envs"
+      ],
+      "urllib3": ["--noconftest"],
+      "isort": [
+        "--ignore=tests/integration/test_projects_using_isort.py",
+        "--hypothesis-seed=1"
+      ]
+    },
+    "project_regression_targets": {
+      "invoke": ["cognitive_os_tests"],
+      "tox": ["tests/config/loader/ini"],
+      "urllib3": ["test/test_exceptions.py"]
+    },
+    "project_probe_settings": {
+      "tox": {
+        "timeout_seconds": 300
+      },
+      "pluggy": {
+        "local_editable_install": false,
+        "probe_path_bootstrap": false
+      },
+      "build": {
+        "local_editable_install": false,
+        "probe_path_bootstrap": true
+      },
+      "mkdocs": {
+        "local_editable_install": false,
+        "probe_path_bootstrap": true
+      }
+    },
+    "project_interpreter_profiles": {
+      "flake8": {"major": 3, "minor": 12, "fallback_allowed": false}
+    },
+    "pytest_arguments": [
+      "-q", "--tb=short", "--maxfail=1", "-p", "no:cacheprovider", "-o", "addopts=",
+      "--basetemp=.pytest-native-intake"
+    ],
+    "excluded_copy_directories": [
+      ".git", ".hg", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+      ".tox", ".venv", "__pycache__", "node_modules", "venv", ".native-user", ".nfi", ".nft"
+    ],
+    "actionable_authorities": [
+      "failing_contract_test",
+      "executable_acceptance_failure",
+      "explicit_user_failure"
+    ],
+    "require_repeated_failure_signature": true,
+    "require_unique_production_target": true,
+    "source_apply": false
+  },
+  "diagnosis_policy": {
+    "weak_contract_zones_are_observations_only": true,
+    "mixed_responsibility_is_observation_only": true,
+    "high_project_risks_are_observations_only": true,
+    "medium_project_risks_are_observations_only": true,
+    "actionable_contract_failure_authorities": [
+      "failing_contract_test",
+      "executable_acceptance_failure",
+      "explicit_user_failure"
+    ],
+    "actionable_architecture_failure_authorities": [
+      "failing_architecture_test",
+      "measured_runtime_bottleneck",
+      "explicit_user_failure"
+    ],
+    "actionable_medium_risk_authorities": [
+      "security_scanner_finding",
+      "failing_reliability_test",
+      "observed_runtime_failure",
+      "explicit_user_failure"
+    ],
+    "actionable_high_risk_authorities": [
+      "security_scanner_finding",
+      "failing_security_test",
+      "failing_reliability_test",
+      "observed_runtime_failure",
+      "explicit_user_failure"
+    ]
+  },
+  "issue_rules": {
+    "recognition_gap": {"category": "architecture", "severity": "critical", "confidence": 1.0},
+    "classification_contradiction": {"category": "classification", "severity": "critical", "confidence": 0.98},
+    "damaged_source": {"category": "source_integrity", "severity": "critical", "confidence": 0.98},
+    "dirty_portfolio": {"category": "source_integrity", "severity": "critical", "confidence": 0.98},
+    "high_project_risk": {"category": "security_reliability", "severity": "high", "confidence": 0.95},
+    "medium_project_risk": {"category": "security_reliability", "severity": "medium", "confidence": 0.82},
+    "weak_contracts": {"category": "contract", "severity": "high", "confidence": 0.9},
+    "mixed_responsibility": {"category": "architecture", "severity": "medium", "confidence": 0.85},
+    "no_safe_candidate": {"category": "architecture", "severity": "high", "confidence": 0.98}
+  },
+  "option_templates": {
+    "architecture": [
+      {"id": "bounded_decomposition", "route": "role_chain", "value": 5, "cost": 3, "risk": 2, "reversibility": 5},
+      {"id": "architecture_research", "route": "research", "value": 4, "cost": 2, "risk": 1, "reversibility": 5}
+    ],
+    "classification": [
+      {"id": "independent_classification_research", "route": "research", "value": 5, "cost": 2, "risk": 1, "reversibility": 5}
+    ],
+    "source_integrity": [
+      {"id": "select_clean_active_root", "route": "research", "value": 5, "cost": 1, "risk": 1, "reversibility": 5}
+    ],
+    "security_reliability": [
+      {"id": "characterize_and_remediate", "route": "role_chain", "value": 5, "cost": 3, "risk": 2, "reversibility": 4},
+      {"id": "bounded_risk_research", "route": "research", "value": 3, "cost": 2, "risk": 1, "reversibility": 5}
+    ],
+    "contract": [
+      {"id": "contract_characterization", "route": "role_chain", "value": 5, "cost": 2, "risk": 1, "reversibility": 5},
+      {"id": "boundary_decomposition", "route": "role_chain", "value": 4, "cost": 3, "risk": 2, "reversibility": 4}
+    ]
+  },
+  "outcome_policy": {
+    "required_checks": [
+      "issue_evidence_reproduced_before_change",
+      "selected_issue_resolved_or_reduced",
+      "targeted_acceptance_passed",
+      "regression_suite_passed",
+      "source_scope_preserved"
+    ],
+    "forbidden_success_substitutes": [
+      "artifact_presence_only",
+      "tests_started_without_result",
+      "unverified_model_claim",
+      "unrelated_green_tests"
+    ]
+  },
+  "execution_policy": {
+    "required_handoff_status": "completed_aligned",
+    "allowed_review_recommendations": ["approve", "approve_with_risks"],
+    "maximum_verification_commands": 3,
+    "apply_source": false,
+    "require_original_source_digest_unchanged": true,
+    "require_patch_scope_within_issue_evidence": true,
+    "forbid_generated_function_stubs": true
+  },
+  "memory_policy": {
+    "promotion_status": "validated",
+    "required_reassessment_status": "validated",
+    "allow_model_claim_as_evidence": false,
+    "allow_unverified_memory": false
+  },
+  "feedback_policy": {
+    "automatic_retry": false,
+    "preserve_allowed_targets": true,
+    "knowledge_catalogs": {
+      "boundary_profiles": "knowledge/role_knowledge/project_development_boundary_profiles.json",
+      "source_contrasts": "knowledge/role_knowledge/project_development_source_contrasts.json"
+    },
+    "research_reasons": [
+      "no_unique_development_helper_extraction",
+      "ambiguous_development_helper_extraction",
+      "no_verified_failure_reducer"
+    ],
+    "research_reason_suffixes": ["_pattern_not_proven"],
+    "controlled_stop_reasons": [
+      "unsupported_development_helper_extraction",
+      "experiment_admission_blocked"
+    ],
+    "decisions": ["research", "needs_replanning", "controlled_stop", "completed"],
+    "minimum_replan_confidence": 0.8,
+    "allowed_hypothesis_kinds": [
+      "exception_pickle_reconstruction_boundary",
+      "nested_loop_mapping_boundary",
+      "cross_reducer_ambiguity",
+      "unsupported_reducer_shape"
+    ],
+    "architect_decisions": ["replan", "research_more", "controlled_stop"],
+    "replan_revision": {
+      "planning_only": true,
+      "maximum_revision_increment": 1,
+      "preserve_allowed_targets": true,
+      "preserve_required_checks": true,
+      "developer_handoff_allowed": false,
+      "executor_rerun_allowed": false,
+      "source_changes_allowed": false,
+      "statuses": ["planning_only", "blocked"],
+      "bounded_experiment": {
+        "enabled": true,
+        "maximum_targets": 1,
+        "maximum_source_files": 2,
+        "maximum_contrast_sources": 1,
+        "maximum_evidence_requirements": 3,
+        "maximum_observations": 3,
+        "execution_authorized": false,
+        "read_only_research_enabled": true,
+        "network_allowed": false,
+        "subprocess_allowed": false,
+        "allowed_actions": [
+          "inspect_source",
+          "read_allowlisted_contrast",
+          "compare_source_shapes",
+          "revise_planning_artifacts"
+        ],
+        "required_stop_conditions": [
+          "target_drift",
+          "evidence_missing",
+          "budget_exhausted",
+          "implementation_required"
+        ],
+        "proposal_statuses": ["proposed", "blocked"],
+        "admission_statuses": ["admitted_for_planning", "blocked"],
+        "evidence_statuses": ["collected", "incomplete", "blocked"],
+        "architect_evidence_decisions": [
+          "evidence_accepted",
+          "research_more",
+          "controlled_stop"
+        ],
+        "human_approval": {
+          "required": true,
+          "allowed_decisions": ["approve", "reject"],
+          "allowed_authorities": ["human"],
+          "request_statuses": ["awaiting_human_approval"],
+          "validation_statuses": ["pending", "approved", "rejected", "blocked"],
+          "candidate_statuses": ["approved_not_executable"],
+          "maximum_candidate_targets": 1,
+          "execution_authorized": false,
+          "developer_handoff_allowed": false,
+          "executor_rerun_allowed": false,
+          "source_changes_allowed": false,
+          "memory_promotion_allowed": false,
+          "implementation_design": {
+            "enabled": true,
+            "allowed_candidate_statuses": ["approved_not_executable"],
+            "maximum_targets": 1,
+            "required_outputs": [
+              "interface_boundary",
+              "transformation_steps",
+              "acceptance_mapping",
+              "rollback_strategy"
+            ],
+            "forbidden_outputs": [
+              "source_patch",
+              "implementation_plan",
+              "executor_task"
+            ],
+            "automatic_role_invocation": false,
+            "allowed_authorities": ["architect"],
+            "design_statuses": ["designed_not_executable"],
+            "validation_statuses": ["accepted_not_executable", "blocked"],
+            "next_gate": "separate_implementation_authorization",
+            "execution_authorized": false,
+            "developer_handoff_allowed": false,
+            "executor_rerun_allowed": false,
+            "source_changes_allowed": false,
+            "memory_promotion_allowed": false,
+            "statuses": ["ready_for_architect_design", "blocked"],
+            "implementation_authorization": {
+              "enabled": true,
+              "allowed_decisions": ["approve", "reject"],
+              "allowed_authorities": ["human"],
+              "maximum_targets": 1,
+              "operator_id": "preserve_exception_constructor_reconstruction",
+              "required_hypothesis_kind": "exception_pickle_reconstruction_boundary",
+              "required_constructor_inputs": ["allowed", "host"],
+              "reconstruction_method": "__reduce__",
+              "allowed_state_strategies": ["insert_private_exact", "reuse_direct_assignments"],
+              "maximum_constructor_inputs": 4,
+              "sandbox_implementation_allowed": true,
+              "targeted_verification_required": true,
+              "regression_verification_required": true,
+              "generated_function_stubs_allowed": false,
+              "source_apply_allowed": false,
+              "memory_promotion_allowed": false,
+              "request_statuses": ["awaiting_human_approval"],
+              "validation_statuses": ["pending", "approved", "rejected", "blocked"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "verified_issue_reducers": {
+    "weak_contracts": ["insert_required_input_guard"],
+    "mixed_responsibility": [
+      "extract_json_dumps_helper",
+      "extract_json_loads_helper",
+      "extract_splitlines_helper",
+      "extract_append_mapping_helper"
+    ],
+    "no_safe_candidate": ["replace_notimplemented_with_literal_return", "replace_stub_with_literal_return"]
+  },
+  "verified_failure_reducers": {
+    "empty_theme_config_contract": ["guard_empty_theme_config"],
+    "hook_extra_wrapper_order_contract": ["order_extra_hooks_after_wrappers"],
+    "wheel_dist_info_content_contract": ["derive_dist_info_from_wheel_contents"],
+    "missing_registry_value": ["fallback_missing_registry_to_env"],
+    "timestamp_overflow_error_contract": ["normalize_timestamp_range_error"],
+    "falsy_primitive_empty_contract": ["preserve_falsy_primitive_override"],
+    "incomplete_import_token_contract": ["guard_incomplete_import_tokens"],
+    "duplicate_cli_short_option_contract": ["replace_duplicate_cli_short_option"],
+    "strict_default_string_comparison_contract": ["guard_empty_string_comparison_type"],
+    "escaped_fstring_brace_offset_contract": ["adjust_fstring_middle_brace_offsets"],
+    "trailing_backslash_index_contract": ["guard_trailing_backslash_index"],
+    "cli_help_type_placeholder_contract": ["add_cli_int_help_placeholder"]
+  }
+}
