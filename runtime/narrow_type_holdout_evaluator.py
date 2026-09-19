@@ -8,6 +8,7 @@ from typing import Any
 
 from .framework_plugin_role_semantics import artifact_digest
 from .role_project_type_evaluation_policy import load_role_project_type_policy
+from .narrow_type_evidence_binding import index_cells, valid_score
 
 
 def evaluate_narrow_type_holdout(
@@ -26,11 +27,7 @@ def evaluate_narrow_type_holdout(
         for project_type in lane.get("project_strata") or []
         for role in lane.get("required_roles") or []
     }
-    cells = {
-        (str(row.get("role_id")), str(row.get("project_stratum"))): dict(row)
-        for row in evaluation.get("cells") or []
-        if isinstance(row, dict)
-    }
+    cells, counts = index_cells(evaluation)
     selected = [cells.get(identity, {}) for identity in sorted(required)]
     chain = dict(dict(role_pipeline_report.get("summary") or {}).get("role_chain") or {})
     audit = dict(stub_audit or {})
@@ -51,9 +48,9 @@ def evaluate_narrow_type_holdout(
         target_score=target_score,
     )
     checks = {
-        "all_required_cells_present": len(selected) == len(required) and all(selected),
+        "all_required_cells_present": bool(required) and all(counts[key] == 1 for key in required),
         "scores_at_promotion_target": all(
-            isinstance(row.get("score"), (int, float)) and float(row["score"]) >= target_score
+            valid_score(row.get("score")) and row["score"] >= target_score
             for row in selected
         ),
         "cells_promotion_eligible": all(row.get("promotion_eligible") is True for row in selected),
@@ -95,6 +92,8 @@ def evaluate_narrow_type_holdout(
         "status": "passed" if all(checks.values()) else "evidence_required",
         "lane_id": lane.get("id"),
         "target_score": target_score,
+        "evaluation_digest": _digest(evaluation),
+        "policy_digest": _digest(rules),
         "checks": checks,
         "failed_checks": [name for name, passed in checks.items() if not passed],
         "generated_stub_count": generated_stub_count,
@@ -131,7 +130,7 @@ def _semantic_evidence_checks(
     covered_strata = {str(row.get("project_stratum")) for row in cases}
     semantic_quality = structure_valid and set(project_strata).issubset(covered_strata) and all(
         all(
-            isinstance(dict(row.get("role_scores") or {}).get(role), (int, float))
+            valid_score(dict(row.get("role_scores") or {}).get(role))
             and float(dict(row.get("role_scores") or {})[role]) >= target_score
             for role in required_roles
         )

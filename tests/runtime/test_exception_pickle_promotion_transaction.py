@@ -49,7 +49,7 @@ def _fixture(root: Path) -> tuple[Path, Path, Path, Path]:
         }),
         encoding="utf-8",
     )
-    catalog = root / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json"
+    catalog = root / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json"
     return readiness, evaluator, holdout, catalog
 
 

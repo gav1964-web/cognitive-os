@@ -11,7 +11,7 @@ def _read(name: str) -> str:
 
 def test_exception_pickle_docs_track_active_kb_evidence() -> None:
     kb = json.loads(
-        (ROOT / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json").read_text(
+        (ROOT / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json").read_text(
             encoding="utf-8"
         )
     )
@@ -39,7 +39,7 @@ def test_exception_pickle_docs_track_active_kb_evidence() -> None:
 
 def test_exception_pickle_docs_track_derived_message_audit() -> None:
     kb = json.loads(
-        (ROOT / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json").read_text(
+        (ROOT / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json").read_text(
             encoding="utf-8"
         )
     )
@@ -72,7 +72,7 @@ def test_exception_pickle_docs_track_derived_message_audit() -> None:
 
 def test_exception_pickle_docs_track_derived_import_audit() -> None:
     kb = json.loads(
-        (ROOT / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json").read_text(
+        (ROOT / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json").read_text(
             encoding="utf-8"
         )
     )

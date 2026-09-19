@@ -1,4 +1,6 @@
 import json
+import pytest
+from tests.corpus_requirements import require_files
 from pathlib import Path
 
 from runtime.project_target_scope_contrast import evaluate_target_scope_contrasts
@@ -8,7 +10,15 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "benchmarks" / "project_target_scope_contrasts_20260830.json"
 
 
+def require_contrasts():
+    manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
+    require_files(ROOT, [row['project_dir'] + '/' + row['change_request']['target'].split(':')[0]
+                         for row in manifest['cases']])
+
+
+@pytest.mark.local_corpus
 def test_source_backed_target_scope_contrasts_match_frozen_labels():
+    require_contrasts()
     report = evaluate_target_scope_contrasts(root=ROOT, manifest_path=MANIFEST)
 
     assert report["status"] == "validated"
@@ -21,7 +31,9 @@ def test_source_backed_target_scope_contrasts_match_frozen_labels():
     assert all(result["source_unchanged"] for result in report["results"])
 
 
+@pytest.mark.local_corpus
 def test_contrast_runner_fails_closed_on_wrong_frozen_label(tmp_path):
+    require_contrasts()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     manifest["cases"] = [manifest["cases"][0]]
     manifest["cases"][0]["expected"]["decision"] = "rejected"

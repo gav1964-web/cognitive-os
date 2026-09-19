@@ -8,19 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from .patch_synthesis_policy import (
-    append_mapping_helper_recipe,
     development_helper_extraction_recipe,
-    json_dumps_helper_recipe,
-    json_loads_helper_recipe,
-    splitlines_helper_recipe,
+    helper_extraction_recipes,
 )
 from .programmer_patch_synthesizer_common import NO_PATCH, _copy_project, _patch_result, _recovery_patch_digest
-from .programmer_patch_synthesizer_helper_extractors import (
-    _extract_append_mapping_helper,
-    _extract_json_dumps_helper,
-    _extract_json_loads_helper,
-    _extract_splitlines_helper,
-)
+from .helper_extraction_dispatch import propose_helper_extraction
+
 
 def synthesize_recovery_patch_package(
     *,
@@ -34,12 +27,7 @@ def synthesize_recovery_patch_package(
     proposed = str(hypothesis.get("proposed_target") or "")
     origin = str(hypothesis.get("origin_target") or "")
     proposed_path, _, proposed_symbol = proposed.partition(":")
-    recipes = (
-        append_mapping_helper_recipe(),
-        json_dumps_helper_recipe(),
-        json_loads_helper_recipe(),
-        splitlines_helper_recipe(),
-    )
+    recipes = helper_extraction_recipes()
     recipe = next(
         (row for row in recipes if row and proposed_symbol == row.get("required_candidate_symbol")),
         {},
@@ -75,59 +63,15 @@ def synthesize_recovery_patch_package(
     original = original_bytes.decode("utf-8")
     source_precondition_sha256 = hashlib.sha256(original_bytes).hexdigest()
     operation_kind = str(recipe.get("operation_kind") or "")
-    if operation_kind == "extract_append_mapping_helper":
-        patch = _extract_append_mapping_helper(
-            original,
-            origin_symbol=origin_symbol,
-            proposed_symbol=proposed_symbol,
-            maximum_mapping_fields=int(recipe.get("maximum_mapping_fields") or 12),
-        )
-        operation_details = ({
-            "loop_variable": patch["loop_variable"],
-            "accumulator": patch["accumulator"],
-            "mapping_field_count": patch["mapping_field_count"],
-            "mapping_source": patch["mapping_source"],
-        } if patch else {})
-        pattern_reason = "append_mapping_helper_pattern_not_proven"
-    elif operation_kind == "extract_json_dumps_helper":
-        patch = _extract_json_dumps_helper(
-            original,
-            origin_symbol=origin_symbol,
-            proposed_symbol=proposed_symbol,
-            maximum_free_variables=int(recipe.get("maximum_free_variables") or 1),
-        )
-        operation_details = ({
-            "free_variable": patch["free_variable"],
-            "serialization_line": patch["serialization_line"],
-        } if patch else {})
-        pattern_reason = "json_dumps_helper_pattern_not_proven"
-    elif operation_kind == "extract_json_loads_helper":
-        patch = _extract_json_loads_helper(
-            original,
-            origin_symbol=origin_symbol,
-            proposed_symbol=proposed_symbol,
-        )
-        operation_details = ({
-            "read_expression": patch["read_expression"],
-            "parse_line": patch["parse_line"],
-        } if patch else {})
-        pattern_reason = "json_loads_helper_pattern_not_proven"
-    elif operation_kind == "extract_splitlines_helper":
-        patch = _extract_splitlines_helper(
-            original,
-            origin_symbol=origin_symbol,
-            proposed_symbol=proposed_symbol,
-        )
-        operation_details = ({
-            "text_expression": patch["text_expression"],
-            "split_line": patch["split_line"],
-        } if patch else {})
-        pattern_reason = "splitlines_helper_pattern_not_proven"
-    else:
+    proposal = propose_helper_extraction(
+        original, origin_symbol=origin_symbol, proposed_symbol=proposed_symbol, recipe=recipe,
+    )
+    if proposal is None:
         return {**NO_PATCH, "reason": "unsupported_recovery_patch_recipe"}
-    if patch is None:
-        return {**NO_PATCH, "reason": pattern_reason}
-    patched = patch["source"]
+    if proposal["status"] == "not_applicable":
+        return {**NO_PATCH, "reason": proposal["reason"]}
+    operation_details = proposal["operation_details"]
+    patched = proposal["source"]
     try:
         compile(patched, origin_path, "exec")
     except SyntaxError:

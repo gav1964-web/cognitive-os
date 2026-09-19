@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from .python_overload_resolution import implementation_candidates
 
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -35,4 +36,4 @@ def qualified_function_matches(tree: ast.AST, qualified_symbol: str) -> list[Fun
             self.path.pop()
 
     QualifiedVisitor().visit(tree)
-    return matches
+    return implementation_candidates(tree, matches)

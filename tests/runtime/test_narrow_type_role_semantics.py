@@ -1,4 +1,6 @@
 from runtime.narrow_type_role_semantics import evaluate_narrow_type_role_semantics
+from runtime.native_regression_scope import REQUIRED_CHECKS
+from runtime.narrow_type_evidence_binding import content_digest
 
 
 ROLES = (
@@ -8,6 +10,11 @@ ROLES = (
 
 
 def _case(project: str, stratum: str, lineage: str) -> dict:
+    scope = {'schema_version':'native_regression_scope.v1','status':'passed',
+        'baseline_inventory_digest':content_digest({'before':True}),
+        'candidate_inventory_digest':content_digest({'after':True}),
+        'checks':{k:True for k in REQUIRED_CHECKS}}
+    scope['digest']=content_digest(scope)
     target = "src/demo.py:normalize"
     issue = {
         "evidence": [f"failing_test:{target}"],
@@ -93,6 +100,7 @@ def _case(project: str, stratum: str, lineage: str) -> dict:
                 "status": "passed",
                 "targeted_replay": {"status": "passed"},
                 "regression_suite": {"status": "passed"},
+                "regression_scope": scope,
             },
             "source_invariant": {"unchanged": True},
             "generated_function_stub_admission": {"status": "passed"},

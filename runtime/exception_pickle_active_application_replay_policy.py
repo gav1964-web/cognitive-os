@@ -15,8 +15,8 @@ from .exception_pickle_active_application_identity import (
     _candidate_project,
     _candidate_target,
 )
-from .exception_pickle_source_samples import _sample_constructor_value_for_source_file
-from .programmer_exception_pickle_patch import exception_pickle_reconstruction_patch
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
+from .exception_pickle_contract import propose_exception_pickle_patch
 
 def _candidate_precheck_risk(
     root: Path,
@@ -65,7 +65,7 @@ def _candidate_static_patch_risk(root: Path, active_catalog: dict[str, Any], row
     except UnicodeDecodeError:
         source = source_file.read_text(encoding="utf-8", errors="replace")
     required = [str(value) for value in row.get("required_constructor_parameters") or []]
-    patch = exception_pickle_reconstruction_patch(
+    patch = propose_exception_pickle_patch(
         source,
         class_name=str(row.get("class_name") or ""),
         recipe=_recipe(active_catalog, required, root=root, row=row),

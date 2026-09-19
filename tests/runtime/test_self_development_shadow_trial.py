@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.corpus_requirements import require_policy_corpus
 
 from runtime.self_development_shadow_trial import (
     SelfDevelopmentShadowTrialError,
@@ -29,7 +30,9 @@ def test_shadow_trial_policy_loads_real_mature_corpus() -> None:
     assert policy["invariants"]["promotion_applied"] is False
 
 
+@pytest.mark.local_corpus
 def test_real_promotion_corpus_backfills_three_validated_l0_dossiers() -> None:
+    require_policy_corpus(ROOT, 'self_development_shadow_trial.json')
     report = run_self_development_shadow_trial(root=ROOT, write=False)
 
     assert report["status"] == "validated_shadow"
@@ -48,7 +51,9 @@ def test_real_promotion_corpus_backfills_three_validated_l0_dossiers() -> None:
     assert report["safety"]["promotion_applied"] is False
 
 
+@pytest.mark.local_corpus
 def test_shadow_evaluator_rejects_wrong_expected_class() -> None:
+    require_policy_corpus(ROOT, 'self_development_shadow_trial.json')
     report = run_self_development_shadow_trial(root=ROOT, write=False)
     dossier = report["cases"][0]["dossier"]
 
@@ -64,7 +69,9 @@ def test_shadow_evaluator_rejects_wrong_expected_class() -> None:
     assert result["checks"]["classification_matches_expected"] is False
 
 
+@pytest.mark.local_corpus
 def test_shadow_evaluator_detects_tampered_impact_map() -> None:
+    require_policy_corpus(ROOT, 'self_development_shadow_trial.json')
     report = run_self_development_shadow_trial(root=ROOT, write=False)
     dossier = copy.deepcopy(report["cases"][0]["dossier"])
     dossier["proposal"]["impact_map"]["project_types"] = ["cli_local_tool"]

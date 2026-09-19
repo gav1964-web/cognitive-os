@@ -63,6 +63,8 @@ def run_self_development_shadow_trial(
     rules = policy or load_self_development_shadow_trial_policy(
         str(base / "config" / "self_development_shadow_trial.json")
     )
+    for source_rule in rules['sources']:
+        _resolve(base, str(source_rule['path']))
     matrix_path = _resolve(base, str(rules["maturity_matrix"]))
     matrix = _read_json(matrix_path)
     mature = _mature_project_types(matrix)

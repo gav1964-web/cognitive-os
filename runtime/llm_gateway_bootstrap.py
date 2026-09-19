@@ -24,11 +24,19 @@ def ensure_llm_gateway_for_url(root: Path, base_url: str) -> dict[str, Any]:
     config_path = root / "config" / "llm_gateway_bootstrap.json"
     if config_path.is_file():
         try:
-            managed = urlparse(str(_load_policy(config_path).get("base_url") or ""))
+            policy = _load_policy(config_path)
+            managed = urlparse(str(policy.get("base_url") or ""))
         except (OSError, ValueError, json.JSONDecodeError):
             return ensure_llm_gateway(root)
         if _origin(endpoint) != _origin(managed):
             return _result("not_required", checked=False, base_url=base_url)
+        result = ensure_llm_gateway(root)
+        limit = policy.get('max_output_tokens')
+        if limit is not None:
+            if type(limit) is not int or limit <= 0:
+                return _result('failed', error='invalid gateway max_output_tokens')
+            result['max_output_tokens'] = limit
+        return result
     return ensure_llm_gateway(root)
 
 

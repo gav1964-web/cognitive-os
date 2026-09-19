@@ -5,12 +5,22 @@ from __future__ import annotations
 import ast
 from typing import Any
 
+from .programmer_buffer_tail_patch import preserve_split_buffer_tail
+from .programmer_pending_future_patch import complete_pending_futures_on_disconnect
+from .programmer_mapping_descent_patch import guard_mapping_path_descent
+
 
 def training_repair_patch(
     source: str, *, symbol: str, operation_kind: str, recipe: dict[str, Any]
 ) -> dict[str, Any] | None:
     if recipe.get("authority") != "training_only":
         return None
+    if operation_kind == "guard_mapping_path_descent":
+        return guard_mapping_path_descent(source, symbol)
+    if operation_kind == "preserve_split_buffer_tail":
+        return preserve_split_buffer_tail(source, symbol)
+    if operation_kind == "complete_pending_futures_on_disconnect":
+        return complete_pending_futures_on_disconnect(source, symbol)
     if operation_kind == "guard_empty_materialized_fast_path":
         return _guard_empty_materialized_fast_path(source, symbol)
     if operation_kind == "require_left_token_boundary_for_numeric_range":

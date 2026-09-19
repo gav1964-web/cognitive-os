@@ -9,19 +9,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .exception_pickle_constructor_samples import _sample_constructor_value
+from .exception_pickle_sample_contract import sample_constructor_value as _sample_constructor_value
 from .exception_pickle_semantic_replay import (
     _target_import_stub_modules,
     _verify_project_native_semantic_replay,
 )
-from .exception_pickle_source_samples import _sample_constructor_value_for_source_file
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
 from .exception_pickle_holdout_transaction import (
     DEFAULT_AUDIT,
     DEFAULT_LEDGER,
     run_exception_pickle_holdout_transaction,
 )
 from .generated_stub_admission import inspect_generated_function_stubs
-from .programmer_exception_pickle_patch import exception_pickle_reconstruction_patch
+from .exception_pickle_contract import propose_exception_pickle_patch
 
 
 def run_exception_pickle_autonomous_shadow(
@@ -66,7 +66,7 @@ def run_exception_pickle_autonomous_shadow(
         "state_strategy": "reuse_direct_assignments",
         "required_constructor_inputs": list(source_row.get("required_constructor_parameters") or []),
     }
-    patch = exception_pickle_reconstruction_patch(
+    patch = propose_exception_pickle_patch(
         original,
         class_name=str(source_row.get("class_name") or ""),
         recipe=recipe,

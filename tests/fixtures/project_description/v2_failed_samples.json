@@ -1,0 +1,227 @@
+{
+  "scope": "saved live v2 responses, regression data only",
+  "samples": [
+    {
+      "case": "case01",
+      "source_receipt_digest": "sha256:a288ad61e6158fe1be40eb6a7839a49e29c0353a4cad6c86f12181352b4ae93b",
+      "response": {
+        "verdict": "uncertain",
+        "reason": "Код показывает повторную попытку только для исключения TimeoutError, но утверждение говорит о 'любой ошибке клиента'. Недостаточно контекста, чтобы подтвердить или опровергнуть обработку других типов ошибок.",
+        "proposed_text": "При ошибке TimeoutError клиента запрос повторяется один раз.",
+        "parts": [
+          {
+            "text": "При любой ошибке клиента запрос повторяется один раз.",
+            "verdict": "uncertain",
+            "reason": "Код обрабатывает только TimeoutError. Неизвестно, как обрабатываются другие ошибки клиента.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def fetch(client):\n    try:\n        return client.get()\n    except TimeoutError:\n        return client.get()"
+              }
+            ],
+            "counterexamples": []
+          }
+        ],
+        "coverage": {
+          "scope": {
+            "id": "scope",
+            "status": "missing",
+            "reason": "Утверждение универсально ('любой ошибке'), но код показывает обработку только одного конкретного исключения (TimeoutError). Недостаточно контекста, чтобы определить, существуют ли другие обработчики ошибок или это полная реализация.",
+            "citations": []
+          },
+          "bindings": {
+            "id": "bindings",
+            "status": "shown",
+            "reason": "Код явно связывает функцию fetch с методом client.get() и обработку исключения TimeoutError с повторным вызовом client.get().",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def fetch(client):\n    try:\n        return client.get()\n    except TimeoutError:\n        return client.get()"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "case02",
+      "source_receipt_digest": "sha256:24e87240b53b8bca78f7d9ae8f8cfa1c049f61bacd85e502edee61c1ff955cb4",
+      "response": {
+        "verdict": "uncertain",
+        "reason": "Код показывает, что кодирование в UTF-8 происходит всегда, но сжатие gzip применяется только при условии `compressed=True`. В исходном утверждении используется слово 'всегда' для сжатия, что не соответствует коду. Однако, поскольку утверждение содержит две части, и одна из них (кодирование) поддерживается, а вторая (сжатие) опровергается, общий вердикт — 'uncertain'.",
+        "proposed_text": "Текст кодируется в UTF-8, а результат может быть сжат gzip, если указан параметр compressed=True.",
+        "parts": [
+          {
+            "text": "Текст кодируется в UTF-8, ",
+            "verdict": "supported",
+            "reason": "Функция `encode` всегда вызывает `data.encode('utf-8')` для входного параметра `data`.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "raw = data.encode('utf-8')"
+              }
+            ],
+            "counterexamples": []
+          },
+          {
+            "text": "а результат всегда сжимается gzip.",
+            "verdict": "refuted",
+            "reason": "Сжатие gzip выполняется только если параметр `compressed` имеет значение `True`. В противном случае функция возвращает несжатые байты.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "if compressed:\n        return gzip.compress(raw)\n    return raw"
+              }
+            ],
+            "counterexamples": []
+          }
+        ],
+        "coverage": [
+          {
+            "id": "scope",
+            "status": "shown",
+            "reason": "Код показывает условие (`if compressed:`) и альтернативный путь возврата несжатых данных, что определяет границы поведения, заявленного в утверждении.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "if compressed:\n        return gzip.compress(raw)\n    return raw"
+              }
+            ]
+          },
+          {
+            "id": "bindings",
+            "status": "not_applicable",
+            "reason": "Утверждение не содержит ссылок на конкретные точки входа, обработчики, вызывающие функции или псевдонимы. Оно описывает общее поведение функции `encode`.",
+            "citations": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "case03",
+      "source_receipt_digest": "sha256:aaf0a8fa76c9922e254c37e9ea1c8695f0c17398b992c6991c154246c4e142d1",
+      "response": {
+        "verdict": "uncertain",
+        "reason": "В предоставленном коде видно, что имя 'archive' разрешается в некоторый объект backend, у которого вызывается метод write. Однако код не показывает, что именно представляет собой этот backend, куда именно он записывает данные (локальный файл или сетевой ресурс) и выполняет ли он сетевые обращения. Утверждение содержит конкретные детали о реализации (локальный файл, без сетевых обращений), которые не подтверждаются видимым кодом.",
+        "proposed_text": null,
+        "parts": [
+          {
+            "text": "Запись через имя archive выполняется в локальный файл без сетевых обращений.",
+            "verdict": "uncertain",
+            "reason": "Видимый код показывает разрешение имени 'archive' и вызов метода write, но не раскрывает реализацию backend.write. Невозможно подтвердить, что запись идёт именно в локальный файл и что при этом не происходит сетевых обращений.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def dispatch(payload, resolve):\n    backend = resolve('archive')\n    return backend.write(payload)"
+              }
+            ],
+            "counterexamples": []
+          }
+        ],
+        "coverage": [
+          {
+            "id": "scope",
+            "status": "missing",
+            "reason": "Утверждение делает конкретные заявления о поведении (запись в локальный файл, отсутствие сетевых обращений), но видимый код не показывает реализацию backend.write, условия выполнения, исключительные пути или границы применимости этого поведения.",
+            "citations": []
+          },
+          {
+            "id": "bindings",
+            "status": "shown",
+            "reason": "В коде видна связь между именем 'archive' и вызовом метода write через функцию resolve. Это подтверждает часть утверждения о том, что запись выполняется 'через имя archive'.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def dispatch(payload, resolve):\n    backend = resolve('archive')\n    return backend.write(payload)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "case04",
+      "source_receipt_digest": "sha256:eab433664f6fac05f5793c53f425887aa7ec4bcdbca4b27e2b23886418593020",
+      "response": {
+        "verdict": "supported",
+        "reason": "Код функции `load` показывает, что при наличии ключа в словаре `cache` происходит немедленный возврат значения `cache[key]`. Вызов `fetch` происходит только в блоке `else`, который выполняется, если условие `if key in cache:` ложно.",
+        "proposed_text": null,
+        "parts": [
+          {
+            "text": "Если ключ уже есть в кэше, функция возвращает сохранённое значение без вызова fetch.",
+            "verdict": "supported",
+            "reason": "Функция `load` проверяет условие `if key in cache:`. Если оно истинно, выполняется `return cache[key]`. Вызов `fetch(key)` находится после этого условного оператора и выполняется только если ключа нет в кэше.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def load(key, cache, fetch):\n    if key in cache:\n        return cache[key]\n    value = fetch(key)\n    cache[key] = value\n    return value"
+              }
+            ],
+            "counterexamples": []
+          }
+        ],
+        "coverage": [
+          {
+            "id": "scope",
+            "status": "shown",
+            "reason": "Код демонстрирует основное условие (наличие ключа в кэше) и поведение (возврат значения без вызова fetch). Исключительные пути (например, исключения при доступе к словарю) не заявлены и не рассматриваются.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def load(key, cache, fetch):\n    if key in cache:\n        return cache[key]\n    value = fetch(key)\n    cache[key] = value\n    return value"
+              }
+            ]
+          },
+          {
+            "id": "bindings",
+            "status": "not_applicable",
+            "reason": "Утверждение описывает поведение конкретной функции `load` при заданных параметрах (`key`, `cache`, `fetch`). Оно не требует установления связей между различными точками входа, обработчиками или алиасами в коде. Поведение полностью определяется представленным фрагментом.",
+            "citations": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "case05",
+      "source_receipt_digest": "sha256:3feea41595e6ffa187fecde31f993c2e0484052f8535812fe3a40d8030771121",
+      "response": {
+        "verdict": "refuted",
+        "reason": "В коде функция health определена, но маршрут /health вызывает код, который возвращает {'status': 'disabled'}, а не результат вызова функции health. Таким образом, утверждение о том, что маршрут вызывает функцию health и возвращает статус ready, опровергается.",
+        "proposed_text": null,
+        "parts": [
+          {
+            "text": "Маршрут /health вызывает функцию health и возвращает статус ready.",
+            "verdict": "refuted",
+            "reason": "Код показывает, что обработка пути /health происходит в функции route, которая возвращает {'status': 'disabled'}, а не вызывает функцию health и не возвращает {'status': 'ready'}.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def route(path):\n    if path == '/health':\n        return {'status': 'disabled'}\n    return {'status': 'missing'}"
+              }
+            ],
+            "counterexamples": []
+          }
+        ],
+        "coverage": [
+          {
+            "id": "scope",
+            "status": "shown",
+            "reason": "Код показывает обработку маршрута /health и его поведение, что позволяет оценить полное утверждение.",
+            "citations": [
+              {
+                "source_id": "s1",
+                "quote": "def route(path):\n    if path == '/health':\n        return {'status': 'disabled'}\n    return {'status': 'missing'}"
+              }
+            ]
+          },
+          {
+            "id": "bindings",
+            "status": "missing",
+            "reason": "Утверждение предполагает связь между маршрутом /health и функцией health. В предоставленном коде такая связь отсутствует: маршрут /health обрабатывается функцией route, которая не вызывает health.",
+            "citations": []
+          }
+        ]
+      }
+    }
+  ]
+}

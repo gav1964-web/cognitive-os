@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 def existing_regression_targets(project: Path, candidates: list[object]) -> list[str]:
@@ -15,6 +15,7 @@ def existing_regression_targets(project: Path, candidates: list[object]) -> list
             not target
             or target.startswith("-")
             or path.is_absolute()
+            or PureWindowsPath(path_text).drive
             or ".." in path.parts
             or not (project / path).exists()
         ):

@@ -1,6 +1,158 @@
 # COGNITIVE_OS_TECHNICAL_BASELINE.md
 **Инженерная спецификация и требования к MVP**
 
+**Pickle recipe coverage (2026-09-15).** Competency 0.1.1 rejects omitted,
+duplicate or used variadic constructor inputs before producing a patch. Ignored
+variadics retain the existing supported path; direct local-namespace capture blocks
+their omission. Defaults and
+keyword-only parameters must be explicitly covered by the recipe; the existing
+keyword-only reducer permission remains required. The generic core and active KB
+are unchanged. [Scope and evidence](docs/architecture/pickle_state_20260915.md).
+Structural extraction is accepted through ownership, contracts and behavioral
+preservation; a quality increase or new external benchmark is not a migration gate.
+
+**Владение знаниями (2026-09-15, принятая целевая архитектура).**
+Предметные знания и алгоритмы принадлежат плагинам компетенций с локальными KB,
+контрактами, применимостью и тестами. Общий слой сохраняет каталог, протоколы,
+контекст задачи и доказательства; общий интерпретатор не содержит специальных
+веток компетенций. [Решение и порядок миграции](docs/architecture/plugin_owned_knowledge.md)
+задают направление новых изменений и постепенного вывода общей предметной KB
+из рабочего маршрута. Существующие пути ниже описывают текущую реализацию;
+первый [pickle-пилот](docs/architecture/pickle_competency_20260915.md) переносит
+рабочий механизм в `plugins/exception_pickle/`. Остальная миграция продолжается;
+полномочия исполнения и критерии качества сохраняются.
+
+**Knowledge provider contract (2026-09-15).** `knowledge_providers.v1` связывает
+каталоги/profile IDs с зарегистрированными плагинами. Вызов проверяет схемы,
+active lifecycle, code/KB hash, import origin и неизменность во время вызова.
+Общий интерпретатор не содержит предметных branches; прежний `active_patterns`
+перенесён в API pickle-владельца. KB не кешируется, загруженный код при изменении
+требует restart. `propose_patch` только возвращает предложение; применение
+остаётся за прежними authorization/native/review gates. Typed research API и
+делегирующий patch adapter пока сохраняются с описанными условиями удаления.
+
+**Explicit description property (2026-09-18).** Opt-in v4 claim jobs accept a
+reviewer-selected text span, source symbol and returned-field property before
+model IO. The project-description plugin owns hash-bound finite normal-return
+analysis and its local KB. Unsupported code remains unknown; proof is limited
+to False/True/None inputs and ordinary dicts. The guard only downgrades supported
+bound guarantees, never creates semantic certification or execution authority.
+Old suffix/mechanism jobs and full-description defaults retain their contracts.
+[Contract and measured limits](docs/architecture/native_and_description_20260918.md).
+
+**Native fixture observations (2026-09-15).** Opt-in
+`collect_native_repair_observations` replays original selected pytest tests with
+fixtures twice in fresh copies. Capture requires explicit source-local names;
+bounded built-in serialization never renders opaque objects or reevaluates an
+assertion. Reachability and whole-test outcome remain distinct. Exact original
+failure signature, source/probe/request/output identities and unchanged copies
+are required. `native_test_observations` enters the existing authorized diagnostic
+input; it grants no patch or acceptance authority. Legacy isolated probes remain.
+[Scope and evidence](docs/architecture/native_fixture_observations_20260915.md).
+
+**Assigned-return trace (2026-09-14).** Advisory method nomination can link a
+failing equality to an untouched local call-result assignment. Ambiguous calls,
+rebinding, value transformation and unsupported control flow do not expand the
+scope. Repeated native signature, source/probe hashes and existing authority
+checks remain required. This is limited call ancestry, not general data flow.
+[Measured scope](docs/architecture/internal_targets_20260914.md).
+
+**Native proposal preflight (2026-09-14).** Before hypothesis/candidate requests,
+replay the current source-bound baseline twice with the actual native acceptance
+runner. Protocol/environment mismatch blocks proposal IO with a persisted receipt;
+it does not authorize a patch or replace paired/full regression and final review.
+Project analysis L3.5 calls remain separate and must be counted. Direct constructor
+method binding is restricted to static owned classes/methods and is observed API
+provenance, not proof of the internal repair location. Subtest labels preserve
+parent identities and the existing replay bounds.
+[Measured outcomes and limits](docs/architecture/fresh_direct_batch_20260914.md).
+
+**Direct native repair (2026-09-14).** Opt-in policy `model_proposal_route=direct`
+requests one candidate from source/test obligations without a preceding model
+hypothesis. Default remains `hypothesis`. Direct provenance carries route and
+request-context digest, never a fabricated hypothesis response. Source assertion
+contracts remain grounded through Spec/Plan; direct mode omits model assertion
+plans. Exact target/signature/source, native comparison, full regression and final
+Reviewer gates remain required. Existing explicit retry budgets and authorization
+remain. `model_issue_intent` retains grounding in requested-delivery handoffs.
+[Contract and measured scope](docs/architecture/direct_repair_route_20260914.md).
+
+**Isolated repair observations (2026-09-14).** Opt-in core arguments
+`repair_observations` and `repair_counterexample_history` require an authorized
+model trial. Source-derived direct equality expressions run twice in fresh copies;
+named arguments use bounded built-in serialization. Fixture/setup/sequence semantics
+are not replayed; these diagnostics have no native acceptance authority. Validation
+binds source, probe, assertion, request and output identities and unchanged copies.
+Up to three distinct prior comparisons revalidate full native receipts; prompt
+contains exact replacements and explicit diagnostic suffixes. Both optional inputs
+retain the existing model budget, source scope and final native/Reviewer gates.
+[Contract limits and paired result](docs/architecture/five_steps_batch4_20260914.md).
+
+**All-assertion planning (2026-09-14).** Opt-in `model_require_assertion_plan`
+строит source-bound каталог всех прямых assertions в переданных полных excerpts.
+Модель обязана объяснить каждый ID; структурная полнота не доказывает семантику.
+Контракт и план сохраняются в candidate design и grounding intent. Новый аргумент
+`repair_counterexample_comparison` разрешён только в authorized model trial и
+повторно проверяет packet, candidate, native output и source identities.
+Длинный traceback остаётся в receipt; явно обозначенный exact suffix включает
+границы и digest полного вывода. Никакого автоматического повышения оценок или
+расширения retry budgets. [Проверки и ограничения](docs/architecture/five_steps_batch3_20260914.md).
+
+**Candidate design audit (2026-09-14).** Grounded candidate provenance дополнительно
+хранит исходный дизайн и пересчитываемый `repair_candidate_audit.v1`: source/design/
+replacement digests и синтаксические occurrences достигнутых returns. Он не
+доказывает branch semantics. При доставке grounding intent должен совпадать с
+дизайном выбранного кандидата, включая случай удаления полей сразу из Spec и Plan.
+Single-function format feedback сохраняет исходный ответ и bounded AST diagnostics;
+existing retry budgets не расширены. [Результаты и ограничения](docs/architecture/five_steps_batch2_20260914.md).
+
+**Grounded repair extension (2026-09-14).** Необязательный `repair_branch_evidence`
+требует source-current nomination и два совпадающих наблюдения достигнутого return.
+Гипотеза обязана указать return IDs; `repair_grounding` сохраняется в Spec/Plan.
+Это привязка к фактам исполнения, не доказательство верности repair mechanism.
+Policy `model_native_counterexample_retries` допускает 0 или 1 повтор диагноза
+после проверенного native counterexample, без совместного format retry.
+Gateway route/cache/duration сохраняются только из ограниченного списка headers;
+они не подтверждают provider identity или billing. [Контракты и проверки](docs/architecture/five_steps_20260914.md).
+
+**Observed API provenance (2026-09-13).** Native intake поддерживает ограниченный
+transparent test helper, который прямо возвращает результат метода нового
+локального объекта. `helper_bindings` фиксирует наблюдаемый API с authority
+`observed_api_only_not_root_cause`; преобразования, неподдержанные overrides и
+неоднозначность не получают привязки. Evidence packet заново проверяет helper и
+production SHA256. Общие test helpers остаются непрозрачными. Эта связь не
+доказывает внутреннее место дефекта и не разрешает менять тесты. Отдельная
+repair-target nomination реализована 2026-09-14 как advisory контракт с двумя
+source-bound трассами падающего вызова. Явный `repair_nomination` в разрешённом
+модельном trial строит `ProjectRepairTrialPacket` с неизменённой observation;
+native baseline сохраняет старую signature, exact patch ограничен внутренним
+методом. Nomination сама не даёт execution authority. [Контракт и ограничения](docs/architecture/repair_trial_20260914.md).
+Declared CLI может предоставлять
+transform-library capability без identity conflict; ограничения execution risks
+сохраняются. [Измерение и границы](docs/architecture/markdownify_helper_20260913.md).
+
+**Greenfield delivery extension (2026-09-12).** Явный режим
+`run_role_pipeline(mode="greenfield")` расширяет ProductTechnicalSpec до
+GreenfieldImplementationHandoff -> native sandbox programmer -> внешний TestResult
+-> GreenfieldDeliveryReview. Спецификация связывает interface/operation recipe и
+полный набор acceptance IDs; review требует совпадения планов, успешного pytest,
+внешней приёмки и неизменности сгенерированного кода. Допуск ограничен поддержанным
+uppercase-file контрактом, пустым output под artifacts и явным write/verifier.
+Generic/несовместимые задания блокируются. Режим `existing_project` сохраняет
+configured workflow; synthetic ProjectMapReport для greenfield не создаётся.
+Символическая доставка не требует LLM и не получает допуск к same-model v2 по
+одному факту создания файлов. См. `docs/architecture/greenfield_delivery_20260912.md`.
+
+**Stage finalization note (2026-09-10).** Правило 400 строк применяется к завершённому
+этапу и активируемому capability. В рабочем черновике превышение допустимо и
+отражается как незавершённая структурная задача. `tools/finalize_stage.py` проверяет
+границу этапа; режим `--repair --apply` допускает только проверенные переносы
+самостоятельных функций по декларативному плану L4.5. Исходный AST функций,
+совместимые imports и `__module__` сохраняются; baseline и sandbox выполняют
+неизменённый regression scope. Неоднозначное разделение, неуспешные тесты или
+изменившийся исходник блокируют завершение. Нулевая проверка размера без правок
+не заменяет canonical verification. Подробности: `docs/architecture/finalization.md`.
+
 **Runtime safety hardening note (2026-09-07).** Verification-команды обязаны разбираться в структурированный argv, проходить allowlist по операции и аргументам и исполняться только с `shell=False`; shell composition запрещена. Ноль реально выполненных проверок без executable acceptance имеет статус `not_verified`, а не success. `jsonschema` является обязательной dev/runtime verification dependency; аварийный fallback рекурсивно проверяет поддерживаемое подмножество JSON Schema и fail closed на неизвестных keywords. Каждая попытка durable job получает уникальный lease token; heartbeat, complete и fail принимаются только при совпадении worker и token текущей попытки. Lock-файл очереди может быть восстановлен только при доказанно завершившемся owner PID. Эти гарантии подтверждают целостность control plane, но не превосходство полной ролевой цепочки над прямым агентом.
 
 **Project-native hardening note (2026-08-29).** Assertion-causal traversal считает test helpers, external calls и dynamic observers непрозрачными: вложенные production calls сохраняются как `opaque_observer_descendant` для диагностики, но не дают patch authority. Rich подтвердил необходимость gate: snapshot через test-local `render(card)` падал с Pygments `2.21.0`, тогда как project-locked `2.19.2` прошёл исходный nodeid; `make_test_card` не является доказанным defect target. Все bounded subprocess запускаются в отдельной Windows process group или POSIX session, а timeout завершает process tree; `pyproject-api` после hardening вернул два bounded timeout вместо удержания inherited pipes дочерними Python-процессами. Два дополнительных current-head pure-transform batches охватили 19 проектов и дали 12 clean, 7 blockers, 0 qualified failures, 0 source changes. Поэтому следующий discovery gate использует source-complete pre-fix upstream commits с исходным regression test и read-only fix reference; искусственное повреждение source и ослабление authority запрещены.
@@ -51,7 +203,19 @@ Contract Registry реализуется в `runtime/contract_registry.py` ка�
 
 Role artifact contracts являются тем же API-слоем. `ArchitectureDecisionRecord` не считается готовым для SpecWriter только по наличию `chosen_option`: обязательны tradeoff-ranked `architecture_options`, объясненные `rejected_options` со score delta и deferred-until condition, bounded source-backed `first_slice_contract` с selection policy, actionable risk model с impact/mitigation/evidence, `source_context`, source-linked `traceability`, actionable `spec_writer_brief` и forbidden-action enforcement. `first_slice_contract` обязан иметь evidence density: выбранные targets должны совпадать с `source_context`, `capability_model` или `traceability`, а `architecture_synthesis.project_profile` не может оставаться пустым generic placeholder при наличии source-backed extraction facts. Если `ProjectMapReport` еще не содержит явного `architecture_synthesis`, `ArchitectureDecisionRecord` строит conservative fallback из `minimal_extraction_plan`, entrypoints и dataflow evidence вместо выпуска пустого первого среза. `runtime/architect_red_team.py` выпускает `ArchitectRedTeamReport` с verdict `ready_for_spec_writer` или `return_to_architect`; foundation pipeline обязан учитывать этот verdict как gate. `TechnicalSpec` не считается готовым для Implementer только по наличию текста: обязательны `source_evidence`, `extraction_contract`, `work_plan_contract`, `interface_contracts`, `acceptance_criteria` и `traceability_table`. `extraction_contract.ranked_candidates` обязан содержать source и причины выбора минимум для верхних кандидатов; выбранный candidate обязан быть связан с `source_evidence` или ranked source, а `semantic_quality.status=poor` блокирует готовность. `runtime/role_artifact_quality.py` проверяет, что I/O shape не остается слабым `Any -> Any`, а side-effecting target имеет validation/idempotency/process/retry gate. Дополнительно `runtime/spec_writer_red_team.py` выпускает `SpecWriterRedTeamReport` с verdict `ready_for_implementer` или `return_to_spec_writer`; foundation pipeline обязан учитывать этот verdict как gate. Для доменных slices вроде `llm_auto_repair_loop` допустим domain `contract_family`, но тогда он обязан раскрывать typed contract shapes, validation gates и failure modes. Семантика first-slice targets и domain `contract_family` является configuration-first: `config/semantic_target_profiles.json` хранит exact/prefix/contains symbol matchers, path markers, profile exclusions, score/ranking adjustments, benign runtime-boundary markers, typed I/O contracts, side-effect policy, validation gates и failure modes; `runtime/semantic_target_profiles.py`, `runtime/target_quality.py`, `runtime/role_spec_writer_ranking.py` и `runtime/technical_spec_builder.py` только интерпретируют эти записи. Новые target families должны добавляться как профиль+тест, а не как новая ветка role/domain logic в Python, кроме случаев расширения самого универсального matcher/validator.
 
-Контур развития существующего Python-проекта является отдельным typed API над анализом и ролями: `ProjectDevelopmentDiagnosis -> ProjectDevelopmentOptionPortfolio -> ProjectDevelopmentDecision -> ProjectDevelopmentOutcomeContract -> optional role chain -> optional sandbox experiment -> reassessment -> validated memory`. Diagnosis обязан ссылаться на evidence из `ProjectMapReport`, `ProjectRecognitionDecision` и, при наличии, предыдущего full-chain case; policy `config/project_development_policy.json` ранжирует проблему и варианты по severity, confidence, value, cost, risk и reversibility. Unknown recognition, damaged source и dirty portfolio направляются в research до ролевой реализации. Решение с authority `ProjectDevelopmentDecision` ограничивает first-slice reselection списком `allowed_targets`: роли могут выбрать другой target только внутри evidence выбранной проблемы, а исчерпание кандидатов приводит к `needs_replanning`. Sandbox execution допускается только для allowlisted deterministic issue reducers и готового `ImplementationDelta`; Config Doctor требует, чтобы каждый reducer совпадал с зарегистрированным `patch_synthesis_policy.recipes.*.operation_kind`. Если разрешено несколько reducers, каждый проверяется в отдельном sandbox candidate и выполнение допускается только при одном `prepared` результате; ноль или несколько совпадений блокируют patch. Исходный проект хешируется до и после выполнения и не меняется. Outcome не считается достигнутым по наличию артефактов или запуску тестов: обязательны воспроизведение baseline evidence, уменьшение выбранной проблемы, targeted acceptance, bounded executor verification и сохранение source scope. `ProjectDevelopmentValidatedMemory` получает authority только после validated reassessment; неуспешный или неизвестный случай остается `not_promoted`. Для `mixed_responsibility` development authority имеют только `extract_json_dumps_helper` для одной inline JSON-сериализации непосредственно в `write_text`, `extract_json_loads_helper` для одного inline parse вокруг `read_text`, `extract_splitlines_helper` для одного `.splitlines()` site и `extract_append_mapping_helper` для одного dict-literal mapping в `append` внутри простого цикла, когда mapping зависит только от переменной цикла, а accumulator является единственным возвращаемым значением функции. Loop-local conditional field подтверждён report `project_development_20260828T070645103118Z.json`, а дополнительная внешняя fallback-переменная в contrast `project_development_20260828T070723270674Z.json` блокирует extraction. Соседняя форма `record = {...}; accumulator.append(record)` подтверждена report `project_development_20260828T072338364901Z.json` только при одном store и одном load временной переменной; reuse contrast `project_development_20260828T072433082449Z.json` блокируется. Config-backed включительный предел `maximum_mapping_fields=12` подтверждён report `project_development_20260828T080840365016Z.json`, а 13-field contrast `project_development_20260828T080915669163Z.json` блокируется. Nearest loop обязан быть синхронным `for` без enclosing `for` или `async for`: simple-loop report `project_development_20260828T083944554908Z.json` валидирован, nested-loop contrast `project_development_20260828T084003587919Z.json` блокируется. Множественные sites, cross-reducer ambiguity и более широкие helper shapes fail closed. `filesystem_read` консервативно классифицируется как risk profile `filesystem`, а string-параметр с точным именем `path` получает ephemeral readable path fixture при executable acceptance. Source apply и автоматическое продвижение в общую KB запрещены.
+Text splitting helper: `plugins/text_splitting` 0.1.0 владеет recipe и генератором единственного `.splitlines()` без аргументов. Все четыре helper extractors используют зарегистрированные `propose_helper`, прежние импорты делегируют `propose_patch`. Общий recovery сохраняет выбор, проверку неоднозначности и source authority. [Границы и доказательства](docs/architecture/text_splitting_20260916.md).
+
+JSON parsing helper: `plugins/json_parsing` 0.1.0 владеет recipe и генератором inline json.loads/read_text helper. Registered `patch_recipes` и `propose_helper` сохраняют прежние данные; legacy alias использует `propose_patch`. Синтаксическое распознавание не доказывает binding или сетевую семантику. [Границы и доказательства](docs/architecture/json_parsing_20260916.md).
+
+JSON serialization helper: `plugins/json_serialization` 0.1.0 владеет recipe и генератором inline JSON helper. Runtime читает зарегистрированные `patch_recipes`/`propose_helper`; прежний extractor alias делегирует `propose_patch`. Общий `call_name` находится в Inspect, без import resolution. [Границы и доказательства](docs/architecture/json_serialization_20260916.md).
+
+Контракт результата helper extraction: `helper_proposal.v1` передаёт только source-кандидат, предметные operation_details и причину отказа. Recovery сохраняет operation identity, target/path, admission, compile/write и проверку единственного кандидата; metadata не может перезаписать эти поля. Append mapping 0.4.0 предоставляет envelope через `propose_helper`; локальные JSON/text adapters сохраняют прежние алгоритмы. См. [recovery-контракт](docs/architecture/helper_recovery_contract_20260915.md).
+
+Владение append-mapping recipe: `plugins/append_mapping/knowledge/patch_recipes.json` — единственный рабочий источник; `load_installed_patch_synthesis_policy` компонует зарегистрированные вклады, отклоняя конфликтующие ID. Вызов `load_patch_synthesis_policy(path)` читает только переданный документ. Config Doctor использует составной каталог; выбор reducers и полномочия применения остаются в runtime. Подробности: [контракт recipe](docs/architecture/append_mapping_recipe_20260915.md).
+
+Контур развития существующего Python-проекта является отдельным typed API над анализом и ролями: `ProjectDevelopmentDiagnosis -> ProjectDevelopmentOptionPortfolio -> ProjectDevelopmentDecision -> ProjectDevelopmentOutcomeContract -> optional role chain -> optional sandbox experiment -> reassessment -> validated memory`. Diagnosis обязан ссылаться на evidence из `ProjectMapReport`, `ProjectRecognitionDecision` и, при наличии, предыдущего full-chain case; policy `config/project_development_policy.json` ранжирует проблему и варианты по severity, confidence, value, cost, risk и reversibility. Unknown recognition, damaged source и dirty portfolio направляются в research до ролевой реализации. Решение с authority `ProjectDevelopmentDecision` ограничивает first-slice reselection списком `allowed_targets`: роли могут выбрать другой target только внутри evidence выбранной проблемы, а исчерпание кандидатов приводит к `needs_replanning`. Стандартный путь sandbox execution требует allowlisted deterministic issue reducers и готового `ImplementationDelta` (контролируемое исключение для модельного native replay описано ниже); Config Doctor требует, чтобы каждый reducer совпадал с зарегистрированным `patch_synthesis_policy.recipes.*.operation_kind`. Если разрешено несколько reducers, каждый проверяется в отдельном sandbox candidate и выполнение допускается только при одном `prepared` результате; ноль или несколько совпадений блокируют patch. Исходный проект хешируется до и после выполнения и не меняется. Outcome не считается достигнутым по наличию артефактов или запуску тестов: обязательны воспроизведение baseline evidence, уменьшение выбранной проблемы, targeted acceptance, bounded executor verification и сохранение source scope. `ProjectDevelopmentValidatedMemory` получает authority только после validated reassessment; неуспешный или неизвестный случай остается `not_promoted`. Для `mixed_responsibility` development authority имеют только `extract_json_dumps_helper` для одной inline JSON-сериализации непосредственно в `write_text`, `extract_json_loads_helper` для одного inline parse вокруг `read_text`, `extract_splitlines_helper` для одного `.splitlines()` site и `extract_append_mapping_helper` для одного dict-literal mapping в `append` внутри простого цикла, когда mapping зависит только от переменной цикла, а accumulator является единственным возвращаемым значением функции. Loop-local conditional field подтверждён report `project_development_20260828T070645103118Z.json`, а дополнительная внешняя fallback-переменная в contrast `project_development_20260828T070723270674Z.json` блокирует extraction. Соседняя форма `record = {...}; accumulator.append(record)` подтверждена report `project_development_20260828T072338364901Z.json` только при одном store и одном load временной переменной; reuse contrast `project_development_20260828T072433082449Z.json` блокируется. Config-backed включительный предел `maximum_mapping_fields=12` подтверждён report `project_development_20260828T080840365016Z.json`, а 13-field contrast `project_development_20260828T080915669163Z.json` блокируется. Nearest loop обязан быть синхронным `for` без enclosing `for` или `async for`: simple-loop report `project_development_20260828T083944554908Z.json` валидирован, nested-loop contrast `project_development_20260828T084003587919Z.json` блокируется. Множественные sites, cross-reducer ambiguity и более широкие helper shapes fail closed. `filesystem_read` консервативно классифицируется как risk profile `filesystem`, а string-параметр с точным именем `path` получает ephemeral readable path fixture при executable acceptance. Source apply и автоматическое продвижение в общую KB запрещены.
+
+Уточнение native replay (2026-09-13): при явных authorize_training_replay, validate_causal_proposals, llm_hypothesis_config и run_sandbox_experiment допускается explicit_model_candidate_replay. Единственный поддержанный кандидат передаётся точными проверенными байтами через source/packet/comparison/inventory-bound ticket; новая генерация и автоматический repair отключены. Если задан native task_contract, он целиком передаётся обоим модельным запросам, его digest связывается с provenance и ticket, а объявленные исходные pass/fail и все последующие pass проверяются до executor. Spec/Plan, requested evidence, полная native regression, post-regression inventory и финальный Reviewer обязательны. Неоднозначность, потеря требования, изменение proof или patch блокируют допуск. Этот subprocess-контур работает с доверенным development-кодом, не меняет исходный проект и не удостоверяет качество модели или 9.7+. Контракты: docs/architecture/model_delivery_20260913.md и docs/architecture/model_requirements_20260913.md.
 
 Generated-function stub admission является обязательным post-synthesis gate. AST delta сравнивает только затронутые Python-файлы оригинала и sandbox и блокирует новую функцию либо регрессию существующей функции, если её исполняемое тело сводится к `pass`, `...`, `raise NotImplementedError` или `return NotImplemented` (необязательный docstring не маскирует marker). Уже существующие interface stubs не считаются нарушением этого delta. При нарушении `ProjectDevelopmentExperiment.checks.no_generated_function_stubs=false`, project-native replay не запускается, experiment получает `failed`, reassessment остаётся `not_validated`, а validated memory и KB promotion запрещены независимо от остальных зелёных тестов.
 
@@ -561,3 +725,37 @@ Role feedback uses `RoleRecoveryContract`. `needs_rework` and `research_more` ar
 Current evidence audit (2026-09-04) replaces historical blind inputs with four fresh transformation reports drawn from two independent local corpus lineages. The resulting matrix has all 12 required `cli_local_tool` and `library_pure_transform` cells promotion eligible at `9.7+`, with at least two blind projects per cell, disjoint acquisition/holdout lineages and no evidence gaps. The role pipeline passes `8/8`, minimum interaction is `1.0`, and handoff loss is zero. `GeneratedFunctionStubAudit` is SHA-256-bound to every contributing blind report and records four admissions, zero generated stubs and zero parse failures. Seven verified input receipts preserve immutable copies of the evaluation, role pipeline, stub audit and all four blind reports. Immutable holdout receipt `3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d` and certificate receipt `ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657` verify successfully. `NarrowTypeCertification` is therefore `certified`; its scope does not include broad strata, automatic source apply or Web UI.
 
 Correction and current evidence (2026-09-08): the preceding v1 certificate is revoked because it did not preserve semantically auditable upstream role artifacts or evaluate a project-development change. Five consumed-case replays now demonstrate the complete bounded chain with full native regression and zero generated stubs. Their v2 structural scores are `10.0` in all role-case cells, but their valid published scores remain training-capped at `9.4/8.5/8.5/9.0/8.8/8.8` under receipt `sha256:842b7b88716714054a8a6c0e932a9c6302c5c72ca05ba7e60c00bae25fcb02cb`. The current unseen baseline remains `8.0/5.0/6.0/4.0/0.0/2.0`; no certification, source-apply authority, broad-stratum maturity, or Web UI readiness follows from the training replay.
+
+Native model-trial protocol (2026-09-13): candidate context may contain only the
+target and bounded transitive static dependencies from a large module; it is
+explicitly incomplete and never replaces full-file identity or patch scope.
+Native paired acceptance uses pytest assertion rewriting and color-free output.
+Rewritten `E assert ...` lines retain assertion values in identity; warning counts
+are not failure evidence. Replay disables pytest's source-directory cache.
+Intake and paired replay normalize only default object-repr addresses in failure
+identity, preserving types, values, failing nodeids and production targets.
+Missing model identity, invalid candidate schema and confidence below 0.6 remain
+controlled stops. Live humanize attempts are development evidence only; see
+`docs/architecture/fresh_model_20260913.md` for attempts and unresolved delivery.
+
+The subsequent humanize stage (`docs/architecture/humanize_delivery_20260913.md`)
+preserves parameterization decorators in test-source evidence and groups repeated
+test bodies without dropping their native nodeids. Hypothesis and candidate
+response instructions use JSON Schema; confidence has no prescribed answer.
+Rejected hypothesis diagnostics carry no execution authority. Policy
+`model_candidate_format_retries` defaults to 0 and permits at most 1 explicit
+format correction after candidate schema/row/single-function errors. It preserves
+both responses and error, bounds the combined prompt to 72000 characters, and
+retains confidence, source binding, native comparison, full regression and final
+review. Default trials still use at most two logical calls; opt-in correction
+permits at most three. Transport failover remains a separate per-call mechanism.
+
+Project-description0.14.0 adds opt-in normal_return_for_inputs with explicit keyword Boolean/None inputs and literal defaults. Normal return is not useful success; unknown dependencies stay unknown. See docs/architecture/causal_and_api_20260918.md.
+
+Project-description0.15.0: opt-in return_field_equals_for_inputs checks a reviewer-specified returned field/value in the finite model; api_contracts provides bounded syntactic cross-file call/guard/handler facts. Neither certifies external effects. Default unchanged; paired full-description measurement timed out. See docs/architecture/behavioral_contracts_20260918.md.
+
+Контекст внутренних вызовов при hypothesis→candidate переносится вместе с
+идентичностью номинации в запрос генератора; лимит 32 000 символов сохранён.
+Runtime-регрессии блокируют живой urllib chat/completions transport; mock-ответы
+и отдельно бюджетированные экспериментальные runner остаются доступны.
+См. docs/architecture/interface_trial_20260918.md.

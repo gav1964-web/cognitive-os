@@ -37,6 +37,9 @@ from .programmer_patch_synthesizer_recovery import _development_helper_extractio
 from .programmer_patch_synthesizer_training import training_repair_package
 
 TRAINING_REPAIR_OPERATORS = {
+    "guard_mapping_path_descent",
+    "complete_pending_futures_on_disconnect",
+    "preserve_split_buffer_tail",
     "guard_empty_materialized_fast_path",
     "require_left_token_boundary_for_numeric_range",
 }
@@ -49,6 +52,11 @@ def synthesize_patch_package(
     test_plan: dict[str, Any],
 ) -> dict[str, Any]:
     delta = dict(implementation_plan.get("implementation_delta") or {})
+    bound_intent = delta.get('intent') or {}
+    if bound_intent.get('model_delivery') is not None or bound_intent.get('authority') == 'explicit_model_candidate_replay':
+        from .programmer_model_delivery import model_delivery_package
+        return model_delivery_package(execution_dir=execution_dir, project_dir=project_dir,
+            implementation_plan=implementation_plan, test_plan=test_plan)
     if delta.get("status") == "verification_only":
         return {
             "status": "verification_only",

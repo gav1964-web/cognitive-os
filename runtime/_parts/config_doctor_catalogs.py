@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from runtime.exception_pickle_catalog_contract import read_installed_patterns
+
 import json
 from pathlib import Path
 from typing import Any
@@ -21,14 +23,13 @@ from runtime.knowledge_import import load_pypi_archetype_rules
 from runtime.l4_decision_table import load_l4_decision_rules
 from runtime.local_inference import load_llm_profiles
 from runtime.operation_recipe_rules import load_operation_recipe_rules
-from runtime.patch_synthesis_policy import load_patch_synthesis_policy
+from runtime.patch_synthesis_policy import load_installed_patch_synthesis_policy
 from runtime.pilot_profile import load_pilot_profile
 from runtime.programmer_executor_playbooks import load_programmer_executor_playbooks
 from runtime.programmer_task_tree import load_programmer_task_tree_policy
 from runtime.project_development import load_project_development_policy
 from runtime.project_development_boundary_interpreter import (
     load_boundary_profiles,
-    load_exception_pickle_patterns,
     load_source_contrasts,
 )
 from runtime.project_evolution_policy import load_project_evolution_policy
@@ -87,14 +88,14 @@ def _load_catalogs(root: Path) -> dict[str, Any]:
         "contract_transform_operators": load_contract_transform_operators(str(root / "config" / "contract_transform_operators.json")),
         "contract_transform_contract_profiles": load_contract_transform_contract_profiles(str(root / "config" / "contract_transform_contract_profiles.json")),
         "dependency_extraction_policy": load_dependency_extraction_policy(str(root / "config" / "dependency_extraction_policy.json")),
-        "patch_synthesis_policy": load_patch_synthesis_policy(str(root / "config" / "patch_synthesis_policy.json")),
+        "patch_synthesis_policy": load_installed_patch_synthesis_policy(root),
         "programmer_executor_playbooks": load_programmer_executor_playbooks(str(root / "config" / "programmer_executor_playbooks.json")),
         "programmer_task_tree_policy": load_programmer_task_tree_policy(str(root / "knowledge" / "role_qa" / "programmer_task_tree_policy.json")),
         "executor_solution_patterns": load_executor_solution_patterns(str(root / "config" / "executor_solution_patterns.json")),
         "project_development_policy": load_project_development_policy(str(root / "config" / "project_development_policy.json")),
-        "project_development_boundary_profiles": load_boundary_profiles(str(root / "knowledge" / "role_knowledge" / "project_development_boundary_profiles.json")),
-        "project_development_source_contrasts": load_source_contrasts(str(root / "knowledge" / "role_knowledge" / "project_development_source_contrasts.json")),
-        "exception_pickle_reconstruction_patterns": load_exception_pickle_patterns(str(root / "knowledge" / "role_knowledge" / "exception_pickle_reconstruction_patterns.json")),
+        "project_development_boundary_profiles": load_boundary_profiles(root=root),
+        "project_development_source_contrasts": load_source_contrasts(root=root),
+        "exception_pickle_reconstruction_patterns": read_installed_patterns(competency_root=root),
         "project_native_cli_failure_repair_patterns": _read_json(root / "knowledge" / "role_knowledge" / "project_native_cli_failure_repair_patterns.json"),
         "project_evolution_policy": load_project_evolution_policy(str(root / "config" / "project_evolution_policy.json")),
         "project_probe_env_policy": load_project_probe_env_policy(str(root / "config" / "project_probe_env_policy.json")),

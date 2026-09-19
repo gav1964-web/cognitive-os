@@ -1,0 +1,133 @@
+{
+  "schema_version": "project_development_boundary_profiles.v1",
+  "profiles": [
+    {
+      "id": "nested_loop_mapping_boundary",
+      "status": "staged",
+      "priority": 100,
+      "applies_to_reducers": [
+        "extract_append_mapping_helper"
+      ],
+      "match": {
+        "all": [
+          {
+            "source": "source_facts",
+            "path": "source_backed",
+            "operator": "eq",
+            "value": true
+          },
+          {
+            "source": "source_facts",
+            "path": "maximum_loop_depth",
+            "operator": "gt",
+            "value": 1
+          },
+          {
+            "source": "source_facts",
+            "path": "dict_append_sites",
+            "operator": "gt",
+            "value": 0
+          },
+          {
+            "source": "reducer_attempts",
+            "where": {
+              "path": "operation_kind",
+              "operator": "eq",
+              "value": "extract_append_mapping_helper"
+            },
+            "path": "reason",
+            "operator": "suffix",
+            "value": "_pattern_not_proven"
+          }
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.93,
+        "experiment_kind": "architect_replan",
+        "strategy": "characterize_nested_loop_boundary"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {
+        "same_target_source_facts": {
+          "kind": "source_backed",
+          "authority": "source_ast"
+        },
+        "positive_and_negative_shape_contrast": {
+          "kind": "paired_shape",
+          "authority": "paired_source_ast",
+          "primary_match": {
+            "all": [
+              {
+                "source": "primary_facts",
+                "path": "source_backed",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "primary_facts",
+                "path": "maximum_loop_depth",
+                "operator": "gt",
+                "value": 1
+              },
+              {
+                "source": "primary_facts",
+                "path": "dict_append_sites",
+                "operator": "gt",
+                "value": 0
+              }
+            ]
+          },
+          "contrast_match": {
+            "all": [
+              {
+                "source": "contrast_identity",
+                "path": "verified",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "contrast_facts",
+                "path": "source_backed",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "contrast_facts",
+                "path": "maximum_loop_depth",
+                "operator": "eq",
+                "value": 1
+              },
+              {
+                "source": "contrast_facts",
+                "path": "dict_append_sites",
+                "operator": "gt",
+                "value": 0
+              }
+            ]
+          },
+          "bounded_implementation_evidence": true,
+          "kb_promotion_evidence": false
+        },
+        "no_scope_expansion": {
+          "kind": "target_identity",
+          "authority": "proposal_and_hypothesis_identity"
+        }
+      },
+      "evidence_state": {
+        "source_pairs": 4,
+        "independent_projects": 8,
+        "blind_cases": 2,
+        "independent_reports": 1,
+        "corpora": [
+          "benchmark_corpora/project_development_boundaries"
+        ],
+        "promotion_ready": false
+      }
+    }
+  ]
+}

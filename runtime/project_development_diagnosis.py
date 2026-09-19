@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .project_development_policy import load_project_development_policy
+from .narrow_type_evidence_binding import content_digest
 
 
 def build_development_diagnosis(
@@ -73,13 +74,16 @@ def build_development_diagnosis(
         policy=policy,
     )
     source_incompleteness = dict(source_incompleteness or {})
+    corroborating_source_observations = []
     for row in source_incompleteness.get("actionable_findings") or []:
         candidate = {
             "target": str(row.get("target") or ""),
             "authority": str(row.get("authority") or ""),
             "detail": str(row.get("detail") or ""),
         }
-        if candidate["target"] and candidate not in actionable_contracts:
+        if any(r['target'] == candidate['target'] for r in actionable_contracts):
+            corroborating_source_observations.append(dict(row))
+        elif candidate["target"] and candidate not in actionable_contracts:
             actionable_contracts.append(candidate)
     if actionable_contracts:
         targets = [str(row["target"]) for row in actionable_contracts]
@@ -133,6 +137,7 @@ def build_development_diagnosis(
             "high_project_risks": high_risk_observations[:8],
             "medium_project_risks": medium_risk_observations[:8],
             "source_incompleteness": source_incompleteness,
+            "corroborating_source_observations": corroborating_source_observations,
             "classification_consistency": consistency,
         },
     }
@@ -159,17 +164,20 @@ def _actionable_contract_failures(
             continue
         target = str(candidate.get("target") or "")
         authority = str(candidate.get("authority") or "")
-        if not target or authority not in allowed or (target, authority) in seen:
+        if not target or authority not in allowed:
             continue
-        seen.add((target, authority))
-        result.append({
+        row = {
             "target": target,
             "authority": authority,
             "detail": str(candidate.get("detail") or ""),
             "failure_kind": str(candidate.get("failure_kind") or "") or None,
             "failing_nodeids": [str(value) for value in candidate.get("failing_nodeids") or [] if value],
             "failure_signature": str(candidate.get("failure_signature") or "") or None,
-        })
+        }
+        identity = content_digest(row)
+        if identity not in seen:
+            result.append(row)
+            seen.add(identity)
     return result
 
 

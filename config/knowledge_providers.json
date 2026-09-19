@@ -1,0 +1,47 @@
+{
+  "schema_version": "knowledge_providers.v1",
+  "providers": [
+    {
+      "capability": "exception_pickle",
+      "catalogs": [
+        "boundary_profiles",
+        "source_contrasts"
+      ],
+      "profile_ids": [
+        "exception_pickle_reconstruction_boundary"
+      ]
+    },
+    {
+      "capability": "append_mapping",
+      "catalogs": [
+        "boundary_profiles",
+        "source_contrasts",
+        "patch_recipes"
+      ],
+      "profile_ids": [
+        "nested_loop_mapping_boundary"
+      ]
+    },
+    {
+      "capability": "json_serialization",
+      "catalogs": [
+        "patch_recipes"
+      ],
+      "profile_ids": []
+    },
+    {
+      "capability": "json_parsing",
+      "catalogs": [
+        "patch_recipes"
+      ],
+      "profile_ids": []
+    },
+    {
+      "capability": "text_splitting",
+      "catalogs": [
+        "patch_recipes"
+      ],
+      "profile_ids": []
+    }
+  ]
+}

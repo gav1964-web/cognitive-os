@@ -27,7 +27,7 @@ def _active_catalog() -> dict:
 
 
 def _write_active_catalog(root: Path) -> None:
-    path = root / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json"
+    path = root / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json"
     path.parent.mkdir(parents=True)
     path.write_text(
         json.dumps({

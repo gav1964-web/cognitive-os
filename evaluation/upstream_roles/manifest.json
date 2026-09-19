@@ -1,0 +1,267 @@
+{
+  "schema_version": "upstream_role_scenarios.v1",
+  "scope": "six synthetic development scenarios; no independent certification",
+  "cases": [
+    {
+      "id": "empty_average",
+      "kind": "defect",
+      "project": "evaluation/upstream_roles/empty_average",
+      "goal": "Return None for an empty sample; preserve the arithmetic mean for nonempty samples.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "defect",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Return None for an empty sample; preserve the arithmetic mean for nonempty samples.",
+            "targets": [
+              "core.py:average"
+            ],
+            "acceptance_examples": [
+              {
+                "input": [],
+                "expected": null
+              },
+              {
+                "input": [
+                  2,
+                  4
+                ],
+                "expected": 3
+              }
+            ]
+          }
+        ],
+        "constraints": []
+      },
+      "source_hashes": {
+        "core.py": "2a6f38d7b42568c18e8a5ac3d0a02acc9acfc7f7f50f6c6760d14dd993ed4822",
+        "README.md": "2df7c2ba9206ab6af419490b013a786a364bb9de5dfa2a5716b27b5ac61fad5a"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    },
+    {
+      "id": "missing_path",
+      "kind": "defect",
+      "project": "evaluation/upstream_roles/missing_path",
+      "goal": "Return the caller default for a missing descendant; retain values at existing paths.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "defect",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Return the caller default for a missing descendant; retain values at existing paths.",
+            "targets": [
+              "core.py:lookup"
+            ],
+            "acceptance_examples": [
+              {
+                "input": [
+                  {
+                    "a": 4
+                  },
+                  [
+                    "a",
+                    "b"
+                  ],
+                  "missing"
+                ],
+                "expected": "missing"
+              },
+              {
+                "input": [
+                  {
+                    "a": 4
+                  },
+                  [
+                    "a"
+                  ]
+                ],
+                "expected": 4
+              }
+            ]
+          }
+        ],
+        "constraints": []
+      },
+      "source_hashes": {
+        "core.py": "06a9ebecc72ab0f5ab82685b6b779dd5f2373a587576e7b3a0326a8b778bae91",
+        "README.md": "14e2205c49f8f180e48e2369e9887192c3d17f1255fa593fd2cbc7e865f36c50"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    },
+    {
+      "id": "stable_unique",
+      "kind": "feature",
+      "project": "evaluation/upstream_roles/stable_unique",
+      "goal": "Remove repeated values while retaining their first occurrence order; preserve an empty list.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "feature",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Remove repeated values while retaining their first occurrence order; preserve an empty list.",
+            "targets": [
+              "core.py:unique"
+            ],
+            "acceptance_examples": [
+              {
+                "input": [
+                  3,
+                  1,
+                  3,
+                  2
+                ],
+                "expected": [
+                  3,
+                  1,
+                  2
+                ]
+              },
+              {
+                "input": [],
+                "expected": []
+              }
+            ]
+          }
+        ],
+        "constraints": []
+      },
+      "source_hashes": {
+        "core.py": "18db29d64636de0762f43d4934f7e69470e2d95d6f375b43bdd51caa9e64a057",
+        "README.md": "3191b3f5be49d5212b7eb7b2f9d2d940e871239a25ac3564cf919b9b0566c9d6"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    },
+    {
+      "id": "unicode_receipt",
+      "kind": "feature",
+      "project": "evaluation/upstream_roles/unicode_receipt",
+      "goal": "Render names and amounts without dropping Unicode; append exactly one newline.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "feature",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Render names and amounts without dropping Unicode; append exactly one newline.",
+            "targets": [
+              "core.py:render"
+            ],
+            "acceptance_examples": [
+              {
+                "input": [
+                  "Алексей",
+                  7
+                ],
+                "expected": "Алексей: 7\n"
+              }
+            ]
+          }
+        ],
+        "constraints": []
+      },
+      "source_hashes": {
+        "core.py": "aefe5ffbb0a48f3cebefa2d9219e53de4f621cc591c627afc1e4815b37bc8aa9",
+        "README.md": "c2ed7b9a94d38e2d0ae7a17e53bc4868ad124efcc88bf39f7f0dd3b0fd3c79a5"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    },
+    {
+      "id": "storage_boundary",
+      "kind": "architecture",
+      "project": "evaluation/upstream_roles/storage_boundary",
+      "goal": "Separate storage access from total calculation while retaining the public total(path) entrypoint.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "architecture",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Separate storage access from total calculation while retaining the public total(path) entrypoint.",
+            "targets": [
+              "core.py:total"
+            ],
+            "acceptance_examples": [
+              {
+                "kind": "review",
+                "observation": "Existing callers still import core.total; calculation can be tested without filesystem access."
+              }
+            ]
+          }
+        ],
+        "constraints": []
+      },
+      "source_hashes": {
+        "core.py": "f1d36c972955d2fd1d5478b35447b4e29f46c87039874c4f27e12495eb51127b",
+        "README.md": "4f7ad51e2487d5d19eae6b232ea2813e2295d1e764c4ca3145118bfdd4802d49"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    },
+    {
+      "id": "contradictory_order",
+      "kind": "ambiguous",
+      "project": "evaluation/upstream_roles/contradictory_order",
+      "goal": "Always retain the input order and always return ascending order, including [3, 1]. Resolve this conflict before implementation.",
+      "task_contract": {
+        "schema_version": "upstream_task_contract.v1",
+        "origin": "assistant_authored_development_fixture",
+        "change_kind": "ambiguous",
+        "requirements": [
+          {
+            "id": "REQ-USER-001",
+            "statement": "Always retain the input order and always return ascending order, including [3, 1]. Resolve this conflict before implementation.",
+            "targets": [
+              "core.py:arrange"
+            ],
+            "acceptance_examples": []
+          }
+        ],
+        "constraints": [
+          {
+            "key": "output_order",
+            "value": "input"
+          },
+          {
+            "key": "output_order",
+            "value": "ascending"
+          }
+        ]
+      },
+      "source_hashes": {
+        "core.py": "283e4c8f279ba9ce9a1f16ea71e415499d5f7cc77266f523640450fa560059a1",
+        "README.md": "26372f0c2ad0c984500e892543603ad3f228c01644df8563ec0562ac30434885"
+      },
+      "split": "development",
+      "lineage": "assistant_authored_synthetic",
+      "independent": false
+    }
+  ],
+  "protocol": {
+    "variants": [
+      "original",
+      "corrected_analysis",
+      "corrected_architecture"
+    ],
+    "quality_score": null,
+    "cost": "no model calls in deterministic run; assistant cost outside runner"
+  },
+  "assistance": "Fixtures, requirements and diagnostic corrected inputs authored by assistant."
+}

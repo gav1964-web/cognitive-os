@@ -9,12 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .patch_synthesis_policy import (
-    append_mapping_helper_recipe,
-    json_dumps_helper_recipe,
-    json_loads_helper_recipe,
-    splitlines_helper_recipe,
-)
+from .patch_synthesis_policy import helper_extraction_recipes
 
 
 def verify_recovery_patch_package(
@@ -29,12 +24,7 @@ def verify_recovery_patch_package(
     patch = patches[0]
     recipe = next(
         (
-            row for row in (
-                append_mapping_helper_recipe(),
-                json_dumps_helper_recipe(),
-                json_loads_helper_recipe(),
-                splitlines_helper_recipe(),
-            )
+            row for row in helper_extraction_recipes()
             if row and patch.get("kind") == row.get("operation_kind")
         ),
         {},

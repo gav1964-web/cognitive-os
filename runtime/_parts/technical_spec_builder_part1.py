@@ -74,7 +74,7 @@ def build_technical_spec(
         implementation_handoff=implementation_handoff,
     )
     problem_outcome_contract = propagate_problem_outcome_contract(architecture_decision)
-    return {
+    artifact = {
         "artifact_type": "TechnicalSpec",
         "role": role_id,
         "status": "ok",
@@ -111,6 +111,8 @@ def build_technical_spec(
         "forbidden_actions_observed": [],
         "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
     }
+    from runtime.upstream_role_handoff import frame_specification
+    return frame_specification(artifact, architecture_decision)
 
 def _requirements_from_brief(brief: dict[str, Any], traceability: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []

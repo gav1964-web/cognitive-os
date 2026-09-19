@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from tests.runtime.project_development_feedback_helpers import *
+import pytest
+from tests.corpus_requirements import require_boundary_contrast
 
+@pytest.mark.local_corpus
 def test_nested_mapping_feedback_produces_bounded_architect_replan(tmp_path: Path):
+    require_boundary_contrast(Path(__file__).resolve().parents[2], 'nested_loop_mapping_boundary')
     source = (
         "def normalize_batches(batches):\n"
         "    normalized = []\n"

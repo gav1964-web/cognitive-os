@@ -268,7 +268,7 @@ def test_blocker_intelligence_separates_sample_supported_readmission(tmp_path: P
 
 
 def test_blocker_intelligence_readmits_supported_static_patch_shape(tmp_path: Path):
-    catalog = tmp_path / "knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json"
+    catalog = tmp_path / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json"
     catalog.parent.mkdir(parents=True)
     catalog.write_text(
         json.dumps({

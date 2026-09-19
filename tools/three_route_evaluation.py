@@ -22,6 +22,9 @@ def main() -> int:
     status = subparsers.add_parser("status")
     status.add_argument("--manifest", default="evaluation/protocol_v2_manifest.json")
     status.add_argument("--receipts", default="artifacts/evaluation_v2/receipts")
+    readiness = subparsers.add_parser("readiness")
+    readiness.add_argument("--manifest", default="evaluation/protocol_v2_manifest.json")
+    readiness.add_argument("--output")
     bundle = subparsers.add_parser("bundle")
     bundle.add_argument("--manifest", default="evaluation/protocol_v2_manifest.json")
     bundle.add_argument("--receipts", default="artifacts/evaluation_v2/receipts")
@@ -37,11 +40,19 @@ def main() -> int:
     root = Path(args.root).resolve()
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    policy = _read(root / "config" / "evaluation_protocol_v2.json")
+    from runtime.evaluation_protocol_policy import load_evaluation_protocol_policy
+    policy = load_evaluation_protocol_policy(root / "config" / "evaluation_protocol_v2.json")
     if args.command == "freeze":
         return _freeze(root, args, policy)
     if args.command == "status":
         return _status(root, args, policy)
+    if args.command == "readiness":
+        from runtime.evaluation_input_readiness import input_readiness
+        result = input_readiness(root, _read(_path(root, args.manifest)))
+        if args.output:
+            _write(_path(root, args.output), result)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result['status'] == 'inputs_verified' else 2
     if args.command == "bundle":
         return _bundle(root, args, policy)
     return _score(root, args, policy)
@@ -65,19 +76,31 @@ def _freeze(root: Path, args: argparse.Namespace, policy: dict[str, Any]) -> int
 
 def _status(root: Path, args: argparse.Namespace, policy: dict[str, Any]) -> int:
     from runtime.three_route_evaluation import load_receipts, protocol_status
+    from runtime.evaluation_input_readiness import input_readiness
 
+    manifest = _read(_path(root, args.manifest))
     result = protocol_status(
-        _read(_path(root, args.manifest)), load_receipts(_path(root, args.receipts)), policy
+        manifest, load_receipts(_path(root, args.receipts)), policy, artifact_root=root
     )
+    readiness = input_readiness(root, manifest)
+    result['input_readiness'] = readiness
+    if readiness['status'] != 'inputs_verified':
+        result['status'] = 'inputs_not_ready'
+        result['claim_eligible'] = False
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["status"] == "ready_for_blind_judging" else 2
 
 
 def _bundle(root: Path, args: argparse.Namespace, policy: dict[str, Any]) -> int:
     from runtime.three_route_evaluation import build_blind_bundle, load_receipts
+    from runtime.evaluation_input_readiness import input_readiness
 
     manifest = _read(_path(root, args.manifest))
-    blind, key = build_blind_bundle(manifest, load_receipts(_path(root, args.receipts)), policy)
+    readiness = input_readiness(root, manifest)
+    if readiness['status'] != 'inputs_verified':
+        print(json.dumps({'status': 'inputs_not_ready', 'input_readiness': readiness}, ensure_ascii=False, indent=2))
+        return 2
+    blind, key = build_blind_bundle(manifest, load_receipts(_path(root, args.receipts)), policy, artifact_root=root)
     output = _path(root, args.output_dir)
     _write(output / "bundle.json", blind)
     _write(output / "blind_key.json", key)
@@ -94,7 +117,7 @@ def _score(root: Path, args: argparse.Namespace, policy: dict[str, Any]) -> int:
         blind_key=_read(_path(root, args.key)),
         scorecard=_read(_path(root, args.scorecard)),
         receipts=load_receipts(_path(root, args.receipts)),
-        policy=policy,
+        policy=policy, artifact_root=root,
     )
     _write(_path(root, args.output), report)
     print(json.dumps(report, ensure_ascii=False, indent=2))

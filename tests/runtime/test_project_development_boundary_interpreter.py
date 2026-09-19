@@ -3,12 +3,13 @@ import json
 
 import pytest
 
+from plugins.exception_pickle.src.knowledge import load_exception_pickle_patterns, decorate_profile
+
 from runtime.project_development_boundary_interpreter import (
     ProjectDevelopmentBoundaryKnowledgeError,
     evaluate_expression,
     interpret_boundary,
     load_boundary_profiles,
-    load_exception_pickle_patterns,
     load_source_contrasts,
 )
 
@@ -72,8 +73,9 @@ def test_interpreter_stages_exception_pickle_reconstruction_boundary() -> None:
         "reducer_attempts": [],
     }
 
-    profile = interpret_boundary(
-        context,
+    raw = next(row for row in load_boundary_profiles()['profiles'] if row['id'] == 'exception_pickle_reconstruction_boundary')
+    profile = decorate_profile(
+        raw,
         active_patterns={
             "schema_version": "exception_pickle_reconstruction_patterns.v1",
             "status": "absent",

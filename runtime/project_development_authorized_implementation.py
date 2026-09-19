@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .generated_stub_admission import inspect_generated_function_stubs
-from .programmer_exception_pickle_patch import exception_pickle_reconstruction_patch
+from .exception_pickle_contract import propose_exception_pickle_patch
 from .project_development_experiment import _project_digest
 from .project_native_failure_intake import (
     _copy_git_build_metadata,
@@ -89,7 +89,7 @@ def run_authorized_implementation(
         return _blocked_result(target, prechecks, before)
 
     original = source_path.read_text(encoding="utf-8")
-    patch = exception_pickle_reconstruction_patch(
+    patch = propose_exception_pickle_patch(
         original,
         class_name=class_name,
         constructor_name=constructor_name,
@@ -130,6 +130,7 @@ def run_authorized_implementation(
     changed_before_verification = _changed_python_files(project_dir, sandbox)
     verification = (
         run_project_native_verification(
+            baseline_project=project_dir,
             root=root,
             project=sandbox,
             failing_nodeids=failing_nodeids,

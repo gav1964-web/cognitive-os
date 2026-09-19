@@ -56,7 +56,7 @@ def verification_commands(
     commands = [
         ("registry_doctor", [sys.executable, "tools/registry_doctor.py", "--root", "."]),
         ("config_doctor", [sys.executable, "tools/config_doctor.py", "--root", "."]),
-        ("repo_lint", [sys.executable, "tools/check_repo_lint.py", "--root", "."]),
+        ("repo_lint", [sys.executable, "tools/finalize_stage.py", "--root", "."]),
         ("project_boundaries", [sys.executable, "tools/project_context.py", "--root", ".", "--check"]),
         (
             "compileall",

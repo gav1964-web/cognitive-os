@@ -61,7 +61,16 @@ def test_role_pipeline_cli_writes_report():
     assert Path(payload["human_documents"]["technical_spec"]).exists()
 
 
-def test_role_pipeline_can_run_transform():
+def test_role_pipeline_can_run_transform(tmp_path, monkeypatch):
+    from runtime.extraction_proposal import write_foundry_spec
+    # Keep the actual writer and candidate validation, but isolate its spec output
+    # from maintained generated/specs (including platform newline changes).
+    def isolated_spec(_root, spec):
+        return write_foundry_spec(tmp_path, spec)
+    monkeypatch.setattr('runtime.extraction_proposal.write_foundry_spec', isolated_spec)
+    monkeypatch.setattr('runtime.transformation_flow.write_foundry_spec', isolated_spec)
+    maintained_spec = ROOT / 'generated/specs/simple_cli_tool_normalize_text.json'
+    before = maintained_spec.read_bytes() if maintained_spec.exists() else None
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
 
     result = run_role_pipeline(
@@ -77,6 +86,8 @@ def test_role_pipeline_can_run_transform():
     assert result["safety"]["foundry_invoked"] is True
     assert result["transform"]["status"] == "promotion_ready"
     assert Path(result["transform"]["candidate_path"]).exists()
+    assert Path(result['transform']['spec_path']).is_relative_to(tmp_path)
+    assert (maintained_spec.read_bytes() if maintained_spec.exists() else None) == before
 
 
 def test_role_pipeline_architect_llm_fallback():

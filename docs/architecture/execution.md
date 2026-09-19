@@ -1,5 +1,13 @@
 # Execution: исполнение и восстановление
 
+Контракт вкладов KB: `runtime/competency_knowledge.py` и
+`config/knowledge_providers.json`. Выбор владельца идёт по метаданным; вызов
+использует существующий plugin entrypoint со схемами и сверкой полного hash.
+Разрешены active провайдеры с read-only/none filesystem и без network/secrets.
+Это trusted in-process выполнение, не OS sandbox. KB читается заново; изменение
+уже импортированного кода требует нового процесса. Проверки:
+`tests/runtime/test_competency_knowledge.py`, [граница пилота](pickle_competency_20260915.md).
+
 Назначение: исполнить проверенный Pipeline через зарегистрированные возможности,
 сохранить журнал и управлять очередью/worker lifecycle.
 

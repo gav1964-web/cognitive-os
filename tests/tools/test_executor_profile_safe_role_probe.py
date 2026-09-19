@@ -199,7 +199,11 @@ def test_cli_stratum_requires_process_level_behavior_change(tmp_path: Path):
         assert case["role_scores"] == EXPECTED_ROLE_SCORES
 
 
-def test_web_stratum_requires_http_behavior_change(tmp_path: Path):
+def test_web_stratum_requires_http_behavior_change(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:9")
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9")
+    monkeypatch.setenv("no_proxy", "")
+    monkeypatch.setenv("NO_PROXY", "")
     projects = tmp_path / "projects"
     project = projects / "demo-web"
     project.mkdir(parents=True)

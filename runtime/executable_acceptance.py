@@ -1,10 +1,10 @@
 """Generate and run executable acceptance scaffolds from Tester obligations."""
 from __future__ import annotations
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from .executable_acceptance_support import harness_summary
 from .executable_acceptance_runner import run_acceptance_command
 from .executable_acceptance_environment import environment_harness_summary
 def run_executable_acceptance(
@@ -24,22 +24,25 @@ def run_executable_acceptance(
     tests_dir.mkdir(parents=True, exist_ok=True)
     test_path = tests_dir / "test_acceptance_generated.py"
     obligations_path.write_text(json.dumps(obligations, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    harness = (
-        environment_harness_summary(
+    # Discovery imports and invokes project code too; it needs the same process
+    # boundary even when no separate dependency interpreter was requested.
+    harness = environment_harness_summary(
             root=root,
             project_dir=project_dir,
             obligations_path=obligations_path,
-            python_executable=python_executable,
+            python_executable=python_executable or Path(sys.executable),
         )
-        if python_executable else harness_summary(project_dir, obligations)
-    )
     test_path.write_text(_pytest_source(root, obligations_path, project_dir, harness), encoding="utf-8")
-    command_result = run_acceptance_command(
+    probe = harness.get('environment_probe') or {}
+    command_result = ({
+        'returncode': probe.get('returncode', 1), 'status': 'environment_probe_failed',
+        'environment_probe': probe,
+    } if probe.get('status') != 'passed' else run_acceptance_command(
         python_executable=python_executable,
         tests_dir=tests_dir,
         test_path=test_path,
         cwd=scaffold_dir,
-    )
+    ))
     passed = command_result["returncode"] == 0
     result = {
         "artifact_type": "ExecutableAcceptanceResult",

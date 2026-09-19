@@ -1,0 +1,129 @@
+{
+  "schema_version": "project_development_boundary_profiles.v1",
+  "profiles": [
+    {
+      "id": "exception_pickle_reconstruction_boundary",
+      "status": "staged",
+      "priority": 90,
+      "match": {
+        "all": [
+          {
+            "source": "source_facts",
+            "path": "source_backed",
+            "operator": "eq",
+            "value": true
+          },
+          {
+            "source": "source_facts",
+            "path": "custom_exception_constructor",
+            "operator": "eq",
+            "value": true
+          },
+          {
+            "source": "source_facts",
+            "path": "base_exception_replays_constructor_parameters",
+            "operator": "eq",
+            "value": false
+          },
+          {
+            "source": "source_facts",
+            "path": "has_reduce_method",
+            "operator": "eq",
+            "value": false
+          },
+          {
+            "source": "feedback",
+            "path": "reason",
+            "operator": "eq",
+            "value": "no_verified_failure_reducer"
+          }
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.88,
+        "experiment_kind": "architect_replan",
+        "strategy": "compare_exception_constructor_replay_contract"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {
+        "same_target_source_facts": {
+          "kind": "source_backed",
+          "authority": "source_ast"
+        },
+        "positive_and_negative_shape_contrast": {
+          "kind": "paired_shape",
+          "authority": "paired_source_ast",
+          "primary_match": {
+            "all": [
+              {
+                "source": "primary_facts",
+                "path": "custom_exception_constructor",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "primary_facts",
+                "path": "base_exception_replays_constructor_parameters",
+                "operator": "eq",
+                "value": false
+              },
+              {
+                "source": "primary_facts",
+                "path": "has_reduce_method",
+                "operator": "eq",
+                "value": false
+              }
+            ]
+          },
+          "contrast_match": {
+            "all": [
+              {
+                "source": "contrast_identity",
+                "path": "verified",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "contrast_facts",
+                "path": "custom_exception_constructor",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "contrast_facts",
+                "path": "base_exception_replays_constructor_parameters",
+                "operator": "eq",
+                "value": true
+              },
+              {
+                "source": "contrast_facts",
+                "path": "has_reduce_method",
+                "operator": "eq",
+                "value": false
+              }
+            ]
+          },
+          "bounded_implementation_evidence": true,
+          "kb_promotion_evidence": false
+        },
+        "no_scope_expansion": {
+          "kind": "target_identity",
+          "authority": "proposal_and_hypothesis_identity"
+        }
+      },
+      "evidence_state": {
+        "source_pairs": 1,
+        "independent_projects": 1,
+        "blind_cases": 0,
+        "independent_reports": 1,
+        "promotion_ready": false,
+        "same_project_contrast_only": true
+      }
+    }
+  ]
+}

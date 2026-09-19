@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "proposed",
+        "not_applicable"
+      ]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "profile": {
+      "type": "object"
+    },
+    "patch": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "proposal": {
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "records"
+      ]
+    },
+    {
+      "required": [
+        "profile"
+      ]
+    },
+    {
+      "required": [
+        "patch"
+      ]
+    },
+    {
+      "required": [
+        "proposal"
+      ]
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "proposed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "patch"
+        ],
+        "properties": {
+          "patch": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "not_applicable"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "patch"
+        ],
+        "properties": {
+          "patch": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

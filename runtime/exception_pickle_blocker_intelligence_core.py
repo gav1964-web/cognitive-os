@@ -15,7 +15,7 @@ from .exception_pickle_active_application import (
     _candidate_has_source_aware_sample_override,
     _candidate_static_patch_risk,
 )
-from .exception_pickle_autonomous_shadow import _sample_constructor_value_for_source_file
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
 from .exception_pickle_blocker_intelligence_common import (
     _candidate_key,
     _object_contracts_for_sample,
@@ -40,7 +40,7 @@ from .exception_pickle_blocker_intelligence_routing import (
 from .exception_pickle_blocker_intelligence_source import _source_facts
 from .exception_pickle_holdout_transaction import DEFAULT_AUDIT
 from .exception_pickle_object_contract_admission import load_admitted_object_contracts
-from .project_development_boundary_interpreter import load_exception_pickle_patterns
+from .exception_pickle_catalog_contract import RESEARCH_CATALOG_PATH, read_research_patterns
 
 
 def run_exception_pickle_blocker_intelligence(
@@ -54,9 +54,7 @@ def run_exception_pickle_blocker_intelligence(
     root = root.resolve()
     audit = _read_json(root, audit_path)
     ledger = _read_json(root, application_ledger_path)
-    active_catalog = load_exception_pickle_patterns(
-        str(root / "knowledge" / "role_knowledge" / "exception_pickle_reconstruction_patterns.json")
-    )
+    active_catalog = read_research_patterns(root / RESEARCH_CATALOG_PATH)
     admitted_object_contracts = load_admitted_object_contracts(root, object_contract_admission_path)
     active_attempt_details = _latest_active_attempt_details_by_target(root)
     rows_by_key = {

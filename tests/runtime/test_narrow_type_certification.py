@@ -5,13 +5,15 @@ from pathlib import Path
 
 from runtime.evidence_ledger import promote_evidence
 from runtime.narrow_type_certification import build_narrow_type_certification
+from runtime.narrow_type_evidence_binding import content_digest
+from runtime.role_project_type_evaluation_policy import load_role_project_type_policy
 
 
 ROLES = ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"]
 STRATA = ["cli_local_tool", "library_pure_transform"]
 
 
-def _receipt(root: Path, **check_overrides: bool) -> str:
+def _receipt(root: Path, *, evaluation=None, policy=None, **check_overrides: bool) -> str:
     checks = {
         "independent_holdout": True,
         "lineage_disjoint": True,
@@ -29,6 +31,8 @@ def _receipt(root: Path, **check_overrides: bool) -> str:
         "artifact_type": "NarrowTypeHoldoutEvidence",
         "schema_version": "narrow_type_holdout_evidence.v2",
         "status": "passed",
+        "evaluation_digest": content_digest(evaluation if evaluation is not None else _evaluation()),
+        "policy_digest": content_digest(policy or load_role_project_type_policy()),
         "checks": checks,
         "generated_stub_count": 0,
         "holdout_provenance": {"source_lineages": 3, "selection_digest": "sha256:" + "b" * 64},

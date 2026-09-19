@@ -224,6 +224,11 @@ def _write_project(project_dir: Path, operation: SandboxOperation, prompt: str) 
     (project_dir / "README.md").write_text(_readme(operation, prompt), encoding="utf-8")
     (package_dir / "__init__.py").write_text('"""Generated sandbox CLI package."""\n', encoding="utf-8")
     (package_dir / "cli.py").write_text(_cli_py(operation), encoding="utf-8")
+    (project_dir / "main.py").write_text(
+        'from pathlib import Path\nimport sys\n'
+        'sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))\n'
+        f'from {operation.package}.cli import main\n'
+        'if __name__ == "__main__":\n    raise SystemExit(main())\n', encoding="utf-8")
     (fixtures_dir / "input.txt").write_text(operation.sample, encoding="utf-8")
     (fixtures_dir / "expected.txt").write_text(operation.expected, encoding="utf-8")
     (tests_dir / "test_cli.py").write_text(_test_py(operation), encoding="utf-8")
@@ -250,7 +255,7 @@ def _readme(operation: SandboxOperation, prompt: str) -> str:
     elif operation.profile == "file_stdout_text_expression":
         run_command = f"PYTHONPATH=src python -m {operation.package}.cli input.txt"
     else:
-        run_command = f"PYTHONPATH=src python -m {operation.package}.cli input.txt output.txt"
+        run_command = "python main.py input.txt output.txt"
     return f"""# {operation.package}
 
 Generated isolated sandbox package.

@@ -1,0 +1,11 @@
+{
+  "schema_version": "python_transform_properties.v1",
+  "contract": "python_text_to_valid_python.v1",
+  "formatting_contract": "python_text_preserves_ast.v1",
+  "applicability": "Explicitly selected text transformer accepting valid Python in the running interpreter grammar. The caller supplies source-bound seeds and invocation. Not inferred from a project name or README.",
+  "variants": ["multiline_brackets", "comment_after_opening_bracket"],
+  "maximum_variants": 6,
+  "oracle": "Returned text must parse as Python. Generated input variants must preserve the seed AST.",
+  "limitations": "Syntax preservation does not prove semantic equivalence, formatting correctness, support for every grammar version or completeness of acceptance.",
+  "fallback": "Invalid seed, unsupported invocation or no applicable bracket variation is explicitly reported; retain native tests and request a different property or model review."
+}

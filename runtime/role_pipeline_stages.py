@@ -27,7 +27,10 @@ from .executable_reselection import (
 
 def stage_analyze(state: dict[str, Any]) -> None:
     with _pushd(state["root"]):
-        state["project_report"] = analyze_role_project(root=state["root"], project_dir=state["project_dir"], goal=state["goal"])["project_map_report"]
+        extra = {'task_contract': state['task_contract']} if 'task_contract' in state else {}
+        if 'product_context' in state:
+            extra['product_context'] = state['product_context']
+        state["project_report"] = analyze_role_project(root=state["root"], project_dir=state["project_dir"], goal=state["goal"], **extra)["project_map_report"]
 
 
 def stage_build(state: dict[str, Any]) -> None:

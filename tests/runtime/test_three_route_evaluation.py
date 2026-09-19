@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,9 @@ from runtime.three_route_evaluation import (
 from runtime.three_route_evaluation_scoring import score_blind_evaluation
 from runtime.evaluation_protocol_policy import evaluation_protocol_policy_errors
 
+
+ATTEMPTS = [{"model": "same-model", "requested_model": "same-model",
+             "model_reported": True, "provider_label": "test"}]
 
 POLICY = {
     "routes": list(ROUTES),
@@ -99,28 +103,28 @@ def test_bundle_requires_all_routes_and_redacts_identity(tmp_path: Path) -> None
     manifest = freeze_manifest(tmp_path, source_commit="abc")
     receipts = [_receipt(manifest, route) for route in ROUTES]
 
-    bundle, key = build_blind_bundle(manifest, receipts, POLICY)
+    bundle, key = build_blind_bundle(manifest, receipts, POLICY, artifact_root=tmp_path)
 
     encoded = json.dumps(bundle)
     assert "cognitive_os" not in encoded
     assert "direct_agent" not in encoded
     assert len(bundle["candidates"]) == 3
     assert len(key["mapping"]) == 3
-    second_bundle, _ = build_blind_bundle(manifest, receipts, POLICY)
+    second_bundle, _ = build_blind_bundle(manifest, receipts, POLICY, artifact_root=tmp_path)
     assert {row["candidate_id"] for row in bundle["candidates"]} != {
         row["candidate_id"] for row in second_bundle["candidates"]
     }
-    assert protocol_status(manifest, receipts, POLICY)["claim_eligible"] is True
+    assert protocol_status(manifest, receipts, POLICY, artifact_root=tmp_path)["claim_eligible"] is True
 
     with pytest.raises(ValueError, match="missing_receipt"):
-        build_blind_bundle(manifest, receipts[:2], POLICY)
+        build_blind_bundle(manifest, receipts[:2], POLICY, artifact_root=tmp_path)
 
 
 def test_independent_scorecard_unblinds_only_after_complete_scoring(tmp_path: Path) -> None:
     _task(tmp_path)
     manifest = freeze_manifest(tmp_path, source_commit="abc")
     receipts = [_receipt(manifest, route) for route in ROUTES]
-    bundle, key = build_blind_bundle(manifest, receipts, POLICY)
+    bundle, key = build_blind_bundle(manifest, receipts, POLICY, artifact_root=tmp_path)
     scores = []
     for index, candidate in enumerate(bundle["candidates"]):
         value = 7 + index
@@ -138,7 +142,7 @@ def test_independent_scorecard_unblinds_only_after_complete_scoring(tmp_path: Pa
     }
 
     report = score_blind_evaluation(
-        bundle=bundle, blind_key=key, scorecard=scorecard, receipts=receipts, policy=POLICY
+        bundle=bundle, blind_key=key, scorecard=scorecard, receipts=receipts, policy=POLICY, artifact_root=tmp_path
     )
 
     assert report["status"] == "evaluated"
@@ -149,7 +153,7 @@ def test_independent_scorecard_unblinds_only_after_complete_scoring(tmp_path: Pa
     scorecard["judge"]["independent"] = False
     with pytest.raises(ValueError, match="independent_judge_required"):
         score_blind_evaluation(
-            bundle=bundle, blind_key=key, scorecard=scorecard, receipts=receipts, policy=POLICY
+            bundle=bundle, blind_key=key, scorecard=scorecard, receipts=receipts, policy=POLICY, artifact_root=tmp_path
         )
 
 
@@ -162,6 +166,8 @@ def _task(root: Path) -> Path:
         encoding="utf-8",
     )
     (task / "metrics.json").write_text(json.dumps({"task_class": "cli_utility"}), encoding="utf-8")
+    (root / "result.txt").write_text("result", encoding="utf-8")
+    (root / "trace.json").write_text(json.dumps(ATTEMPTS), encoding="utf-8")
     return task
 
 
@@ -176,7 +182,11 @@ def _receipt(manifest: dict, route: str) -> dict:
         "runtime_seconds": 1.0, "estimated_cost": 0.01,
         "token_usage": {"input": 10, "output": 20}, "manual_corrections": [],
         "acceptance_checks": [{"id": "works", "passed": True, "evidence": "test"}],
-        "artifacts": [{"path": "result.txt", "digest": "sha256:" + "2" * 64}],
+        "llm_attempts": ATTEMPTS.copy(), "llm_trace": "trace.json",
+        "artifacts": [
+            {"path": "result.txt", "digest": "sha256:" + hashlib.sha256(b"result").hexdigest()},
+            {"path": "trace.json", "digest": "sha256:" + hashlib.sha256(json.dumps(ATTEMPTS).encode()).hexdigest()},
+        ],
         "judge_payload": {"summary": f"{route} result", "executor": "must disappear"},
         "safety": {"source_mutation_detected": False},
         "uses_cognitive_os": route != "direct_agent",

@@ -101,6 +101,10 @@ def collect_python_target_facts(project_dir: Path, target: str) -> dict[str, Any
 def _target_function(
     tree: ast.Module, symbol: str
 ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    from .programmer_python_symbols import qualified_function_matches
+    implementations = qualified_function_matches(tree,symbol)
+    if len(implementations) == 1:
+        return implementations[0]
     parts = symbol.split(".")
     statements = _module_scope_statements(tree.body)
     if len(parts) == 1:

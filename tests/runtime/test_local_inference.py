@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import pytest
 from unittest.mock import patch
 
 from runtime.local_inference import LocalInferenceConfig, _loads_json_object, call_json_chat, load_llm_profiles
+from runtime.local_inference import LocalInferenceError
 
 
 class _FakeResponse:
@@ -18,6 +20,43 @@ class _FakeResponse:
 
     def read(self):
         return json.dumps(self.payload).encode("utf-8")
+
+
+def test_output_budget_is_explicit_and_truncated_nested_json_is_rejected():
+    response = _FakeResponse({'choices': [{'finish_reason': 'length',
+        'message': {'content': '{"groups": [{"module": "partial"}]'}}]})
+    with patch('runtime.local_inference.request.urlopen', return_value=response) as mocked:
+        with pytest.raises(LocalInferenceError, match='truncated'):
+            call_json_chat([], config=LocalInferenceConfig(base_url='http://localhost', model='test',
+                                                          max_output_tokens=2400))
+    assert json.loads(mocked.call_args.args[0].data)['max_tokens'] == 2400
+
+
+@pytest.mark.parametrize('content,finish,state,error', [
+    ('', 'stop', 'empty', 'empty final content'),
+    ('   ', 'length', 'empty', 'truncated'),
+    (None, 'stop', 'missing', 'empty final content'),
+    ('{"ok":true}', 'length', 'present', 'truncated'),
+])
+def test_final_content_failure_retains_finish_and_usage(content, finish, state, error):
+    records = []
+    response = _FakeResponse({'choices': [{'finish_reason': finish, 'message': {
+        'content': content, 'reasoning_content': 'private reasoning'}}], 'usage': {'total_tokens': 40}})
+    with patch('runtime.local_inference.request.urlopen', return_value=response) as transport:
+        with pytest.raises(LocalInferenceError, match=error):
+            call_json_chat([], config=LocalInferenceConfig(base_url='http://example.invalid', model='test',
+                                                          telemetry_sink=records.append))
+    assert transport.call_count == 1
+    assert records[0]['finish_reason'] == finish and records[0]['final_content_state'] == state
+    assert records[0]['total_tokens'] == 40 and 'private reasoning' not in str(records)
+
+
+@pytest.mark.parametrize('response', [{'choices': None}, {'choices': ['invalid']}, ['invalid']])
+def test_malformed_provider_envelope_raises_a_controlled_error(response):
+    with patch('runtime.local_inference.request.urlopen', return_value=_FakeResponse(response)):
+        with pytest.raises(LocalInferenceError):
+            call_json_chat([], config=LocalInferenceConfig(base_url='http://localhost', model='test',
+                                                          telemetry_sink=lambda _: None))
 
 
 def test_local_inference_openai_like_json_call():

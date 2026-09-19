@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .exception_pickle_active_application import DEFAULT_APPLICATION_LEDGER
-from .exception_pickle_autonomous_shadow import _sample_constructor_value
+from .exception_pickle_sample_contract import sample_constructor_value as _sample_constructor_value
 from .exception_pickle_holdout_transaction import DEFAULT_AUDIT
 
 

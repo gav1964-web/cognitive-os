@@ -3,17 +3,15 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from .competency_knowledge import catalog_records, decorate_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROFILES = ROOT / "knowledge" / "role_knowledge" / "project_development_boundary_profiles.json"
 DEFAULT_CONTRASTS = ROOT / "knowledge" / "role_knowledge" / "project_development_source_contrasts.json"
-DEFAULT_EXCEPTION_PICKLE_PATTERNS = (
-    ROOT / "knowledge" / "role_knowledge" / "exception_pickle_reconstruction_patterns.json"
-)
 ALLOWED_OPERATORS = {"eq", "gt", "suffix"}
 
 
@@ -21,9 +19,10 @@ class ProjectDevelopmentBoundaryKnowledgeError(RuntimeError):
     """Raised when boundary knowledge cannot be interpreted safely."""
 
 
-@lru_cache(maxsize=4)
-def load_boundary_profiles(path: str | None = None) -> dict[str, Any]:
-    payload = json.loads(Path(path or DEFAULT_PROFILES).read_text(encoding="utf-8"))
+def load_boundary_profiles(path: str | None = None, *, root: Path = ROOT) -> dict[str, Any]:
+    payload = json.loads(Path(path or root / "knowledge/role_knowledge/project_development_boundary_profiles.json").read_text(encoding="utf-8"))
+    if path is None:
+        payload["profiles"] = catalog_records("boundary_profiles", root=root) + payload["profiles"]
     if payload.get("schema_version") != "project_development_boundary_profiles.v1":
         raise ProjectDevelopmentBoundaryKnowledgeError("boundary profile schema mismatch")
     profiles = payload.get("profiles")
@@ -62,9 +61,10 @@ def load_boundary_profiles(path: str | None = None) -> dict[str, Any]:
     return payload
 
 
-@lru_cache(maxsize=4)
-def load_source_contrasts(path: str | None = None) -> dict[str, Any]:
-    payload = json.loads(Path(path or DEFAULT_CONTRASTS).read_text(encoding="utf-8"))
+def load_source_contrasts(path: str | None = None, *, root: Path = ROOT) -> dict[str, Any]:
+    payload = json.loads(Path(path or root / "knowledge/role_knowledge/project_development_source_contrasts.json").read_text(encoding="utf-8"))
+    if path is None:
+        payload["contrasts"] = catalog_records("source_contrasts", root=root) + payload["contrasts"]
     if payload.get("schema_version") != "project_development_source_contrasts.v1":
         raise ProjectDevelopmentBoundaryKnowledgeError("source contrast schema mismatch")
     rows = payload.get("contrasts")
@@ -88,46 +88,13 @@ def load_source_contrasts(path: str | None = None) -> dict[str, Any]:
     return payload
 
 
-@lru_cache(maxsize=4)
-def load_exception_pickle_patterns(path: str | None = None) -> dict[str, Any]:
-    source = Path(path or DEFAULT_EXCEPTION_PICKLE_PATTERNS)
-    if not source.exists():
-        return {"schema_version": "exception_pickle_reconstruction_patterns.v1", "status": "absent"}
-    payload = json.loads(source.read_text(encoding="utf-8"))
-    if payload.get("schema_version") != "exception_pickle_reconstruction_patterns.v1":
-        raise ProjectDevelopmentBoundaryKnowledgeError("exception pickle pattern schema mismatch")
-    if payload.get("status") not in {"active", "absent"}:
-        raise ProjectDevelopmentBoundaryKnowledgeError("invalid exception pickle pattern lifecycle")
-    operator = dict(payload.get("operator") or {})
-    if payload.get("status") == "active":
-        required = {
-            "id": "preserve_exception_constructor_reconstruction",
-            "status": "validated_active",
-            "hypothesis_kind": "exception_pickle_reconstruction_boundary",
-            "reconstruction_method": "__reduce__",
-            "state_strategy": "reuse_direct_assignments",
-        }
-        for field, expected in required.items():
-            if operator.get(field) != expected:
-                raise ProjectDevelopmentBoundaryKnowledgeError(
-                    f"invalid exception pickle operator.{field}"
-                )
-        safety = dict(payload.get("safety") or {})
-        if safety.get("source_apply_allowed") is not False or safety.get(
-            "automatic_runtime_mutation_allowed"
-        ) is not False:
-            raise ProjectDevelopmentBoundaryKnowledgeError("unsafe exception pickle pattern policy")
-    return payload
-
-
 def interpret_boundary(
     context: dict[str, Any],
     *,
     profiles: dict[str, Any] | None = None,
-    active_patterns: dict[str, Any] | None = None,
+    root: Path = ROOT,
 ) -> dict[str, Any]:
-    payload = profiles or load_boundary_profiles()
-    active = active_patterns if active_patterns is not None else load_exception_pickle_patterns()
+    payload = profiles or load_boundary_profiles(root=root)
     rows = sorted(
         (dict(row) for row in payload["profiles"]),
         key=lambda row: int(row.get("priority") or 0),
@@ -138,7 +105,7 @@ def interpret_boundary(
         None,
     )
     profile = matched or next(row for row in rows if row.get("fallback") is True)
-    return _apply_active_pattern_overlay(dict(profile), active)
+    return decorate_profile(dict(profile), root=root)
 
 
 def profile_for_hypothesis(kind: str, *, profiles: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -154,32 +121,6 @@ def contrast_for_hypothesis(kind: str, *, contrasts: dict[str, Any] | None = Non
     payload = contrasts or load_source_contrasts()
     matches = [dict(row) for row in payload["contrasts"] if row.get("hypothesis_kind") == kind]
     return matches[0] if len(matches) == 1 else {}
-
-
-def _apply_active_pattern_overlay(profile: dict[str, Any], active: dict[str, Any]) -> dict[str, Any]:
-    if profile.get("id") != "exception_pickle_reconstruction_boundary":
-        return profile
-    operator = dict(active.get("operator") or {})
-    if (
-        active.get("status") != "active"
-        or operator.get("status") != "validated_active"
-        or operator.get("hypothesis_kind") != profile.get("id")
-    ):
-        return profile
-    profile["status"] = "active"
-    profile["active_kb_operator"] = operator
-    evidence = dict(profile.get("evidence_state") or {})
-    evidence.update({
-        "promotion_ready": True,
-        "promotion_authority": active.get("promotion_authority"),
-        "active_catalog": "exception_pickle_reconstruction_patterns",
-    })
-    profile["evidence_state"] = evidence
-    hypothesis = dict(profile.get("hypothesis") or {})
-    hypothesis["status"] = "proposed"
-    hypothesis["confidence"] = max(float(hypothesis.get("confidence") or 0.0), 0.97)
-    profile["hypothesis"] = hypothesis
-    return profile
 
 
 def evaluate_requirement(

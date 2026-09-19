@@ -3,6 +3,33 @@
   "status": "training_only",
   "patterns": [
     {
+      "id": "mapping_leaf_returned_before_path_consumed",
+      "required_failure_contains_all": ["missing_descendant_returns_default"],
+      "required_source_contains_all": ["path.strip", "if not isinstance(sub, dict)", "return sub"],
+      "mechanism": "Lookup returns a scalar as soon as it is encountered, even when path components remain. Assistant-discovered EnvForge development characterization; not independent evidence.",
+      "repair_mechanism": "Before each descent require a dictionary and the next key; return the final value only after every component is consumed.",
+      "mutation_contract": "Accept only the exact side-effect-free lookup AST shape, ordinary dict/isinstance builtins, one self attribute root and path/default parameters. Preserve missing-key default and existing leaf/subtree values. Require native paired acceptance and complete regression; training sandbox only.",
+      "proposed_operator_id": "guard_mapping_path_descent"
+    },
+    {
+      "id": "disconnect_leaves_pending_futures_unsettled",
+      "required_failure_contains_all": ["pending request survives disconnected transport"],
+      "required_source_contains_all": ["self._writer.cancel()", "self._closed_event.set()"],
+      "mechanism": "The disconnect callback cancels the writer and announces closure while futures awaited by pending calls remain unresolved. Development evidence uses real Future objects and an assistant-authored diagnostic observation, not an independent holdout.",
+      "repair_mechanism": "Before announcing closure, complete only unfinished futures in the typed response map with the connection exception, or ConnectionError for a clean close; preserve completed and cancelled futures.",
+      "mutation_contract": "Support only the cancel-writer/close-event callback with a uniquely typed Future map and insertion from a Future parameter. Require baseline, unchanged external component tests, native regression and source invariance. No new-request, late-response or network correctness claim.",
+      "proposed_operator_id": "complete_pending_futures_on_disconnect"
+    },
+    {
+      "id": "retained_split_buffer_tail_cleared",
+      "required_failure_contains_all": ["flush_preserves_split_tail"],
+      "required_source_contains_all": ["self._buffer[: self._buffer_size]", "self._buffer.clear()"],
+      "mechanism": "The flush method retains the suffix after splitting off one output chunk, then clears that retained suffix at the end of the method.",
+      "repair_mechanism": "Preserve the retained suffix for subsequent flush calls by removing the terminal clear after the bounded split.",
+      "mutation_contract": "Remove only a standalone terminal clear of the same attribute assigned the suffix of an exact complementary slice pair; reject intervening direct accesses to that attribute. Require native regression verification before accepting the hypothesis.",
+      "proposed_operator_id": "preserve_split_buffer_tail"
+    },
+    {
       "id": "empty_materialized_fast_path_yield",
       "required_failure_contains_all": ["empty", "[[]]"],
       "required_source_contains_all": ["if maxsplit == 0", "yield list(iterable)"],
@@ -80,6 +107,6 @@
     "execution_authority": false,
     "automatic_promotion": false,
     "minimum_fresh_independent_validations": 2,
-    "source": "consumed owner-independent defect training cases"
+    "source": "consumed development cases; lineage independence requires separate evidence"
   }
 }

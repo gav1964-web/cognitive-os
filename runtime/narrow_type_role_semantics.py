@@ -8,6 +8,7 @@ from .foundation_semantic_quality import evaluate_foundation_semantic_quality
 from .foundation_semantic_quality_policy import load_foundation_semantic_quality_policy
 from .framework_plugin_role_semantics import artifact_digest
 from .narrow_type_role_evidence import digest_evidence, stratum_check, worst_role_scores
+from .native_regression_scope import regression_scope_is_verified
 
 
 REQUIRED_ROLES = (
@@ -53,7 +54,7 @@ def evaluate_narrow_type_role_semantics(
     }
     body = {
         "artifact_type": "NarrowTypeRoleSemanticEvidence",
-        "schema_version": "narrow_type_role_semantic_evidence.v2",
+        "schema_version": "narrow_type_role_semantic_evidence.v3",
         "status": "passed" if all(checks.values()) else "evidence_required",
         "evaluation_split": evaluation_split,
         "target_score": target_score,
@@ -145,6 +146,7 @@ def _evaluate_case(
             "native_verification_passed": native.get("status") == "passed",
             "targeted_replay_passed": dict(native.get("targeted_replay") or {}).get("status") == "passed",
             "regression_suite_passed": dict(native.get("regression_suite") or {}).get("status") == "passed",
+            "regression_contract_preserved": regression_scope_is_verified(native.get('regression_scope')),
             "verification_check_passed": dict(experiment.get("checks") or {}).get("verification_passed") is True,
         },
         "reviewer": {
@@ -264,6 +266,13 @@ def _concrete_spec_action(spec: dict[str, Any], target: str) -> bool:
         intent.get("authority") == "explicit_llm_training_replay"
         and _specific_text(mutation_text)
     )
+    if intent.get('authority') == 'explicit_model_candidate_replay':
+        from .upstream_model_delivery import validate_delivery_intent
+        try:
+            validate_delivery_intent(intent)
+            has_bounded_action = delta.get('status') == 'ready'
+        except (ValueError, KeyError, TypeError, AttributeError):
+            has_bounded_action = False
     if str(intent.get("target_symbol") or "") != target or not has_bounded_action:
         return False
     statements = " ".join(

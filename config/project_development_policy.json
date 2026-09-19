@@ -1,5 +1,6 @@
 {
   "schema_version": "project_development_policy.v1",
+  "model_candidate_format_retries": 0,
   "selection": {
     "minimum_confidence": 0.7,
     "maximum_active_issues": 8,

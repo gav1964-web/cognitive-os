@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from runtime.programmer_framework_contract_patch import framework_contract_patch
+from tests.corpus_requirements import require_files
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,9 +26,11 @@ ROOT = Path(__file__).resolve().parents[2]
         ),
     ],
 )
+@pytest.mark.local_corpus
 def test_framework_reducer_matches_historical_parent(
     project, source_path, symbol, operation, marker
 ):
+    require_files(ROOT, [f'benchmarks/github_historical_prefixed_20260830/{project}/{source_path}'])
     source = (
         ROOT / "benchmarks" / "github_historical_prefixed_20260830" / project / source_path
     ).read_text(encoding="utf-8")

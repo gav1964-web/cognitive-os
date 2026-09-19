@@ -49,13 +49,21 @@ def enrich_failure_diagnosis(
 def infer_causal_hypothesis(
     issue: dict[str, Any], *, project_dir: Path, workspace_root: Path
 ) -> dict[str, Any] | None:
+    proposals = infer_causal_hypotheses(issue, project_dir=project_dir, workspace_root=workspace_root)
+    return proposals[0] if proposals else None
+
+
+def infer_causal_hypotheses(
+    issue: dict[str, Any], *, project_dir: Path, workspace_root: Path
+) -> list[dict[str, Any]]:
+    """Enumerate matching proposals without interpreting ordering as evidence."""
     targets = [str(value) for value in issue.get("affected_targets") or [] if value]
     failures = [dict(value) for value in issue.get("failure_evidence") or [] if isinstance(value, dict)]
     if len(targets) != 1 or not failures:
-        return None
+        return []
     source = _target_source(project_dir, targets[0])
     if not source:
-        return None
+        return []
     failure_text = "\n".join([
         str(failures[0].get("detail") or ""),
         *[str(value) for value in failures[0].get("failing_nodeids") or []],
@@ -65,6 +73,7 @@ def infer_causal_hypothesis(
             for value in dict(issue.get("failure_evidence_packet") or {}).get("assertion_evidence") or []
         ],
     ]).lower()
+    proposals = []
     for pattern in _load_knowledge(workspace_root).get("patterns") or []:
         if not isinstance(pattern, dict) or not _matches(pattern, failure_text, source.lower()):
             continue
@@ -73,7 +82,7 @@ def infer_causal_hypothesis(
             f"target_source:{targets[0]}",
             f"training_pattern:{pattern.get('id')}",
         ]
-        return {
+        proposals.append({
             "causal_hypothesis": {
                 "status": "training_hypothesis",
                 "pattern_id": pattern.get("id"),
@@ -94,8 +103,8 @@ def infer_causal_hypothesis(
                     pattern.get("required_source_contains_all") or [],
                 ) or targets,
             },
-        }
-    return None
+        })
+    return proposals
 
 
 def _target_source(project_dir: Path, target: str) -> str:

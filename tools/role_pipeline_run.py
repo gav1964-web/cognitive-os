@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--project-dir", required=True)
     parser.add_argument("--goal", required=True)
+    parser.add_argument('--task-contract', help='Workspace-relative explicit task requirements; planning only')
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--run-executor", action="store_true")
     parser.add_argument("--run-transform", action="store_true")
@@ -51,9 +52,18 @@ def main() -> int:
         run_transform=args.run_transform,
         force_transform=args.force_transform,
         architect_advisory_config=advisory_config,
+        task_contract=_read_task_contract(root, args.task_contract) if args.task_contract else None,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if result["status"] == "ok" else 2
+
+
+def _read_task_contract(root, name):
+    from runtime.stage_finalization_workspace import owned_path
+    path = owned_path(root, name)
+    if path.name == 'config.json' or path.name.startswith('.env') or path.stat().st_size > 100_000:
+        raise ValueError('unsupported_task_contract_file')
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 if __name__ == "__main__":

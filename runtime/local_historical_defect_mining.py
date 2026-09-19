@@ -5,11 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import subprocess
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from .library_admission import inspect_library_admission
 
 from .local_historical_defect_evidence import (
     canonical as _canonical,
@@ -23,49 +23,13 @@ from .self_development_challenge_evidence import (
     bounded_project_text,
     declared_script_entrypoints,
     exposed_projects,
-    name_signal_matches,
-    signal_score,
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
-POLICY_PATH = ROOT / "config" / "local_historical_defect_mining.json"
-SCHEMA_VERSION = "local_historical_defect_mining.v1"
-TARGET_TYPES = ("cli_local_tool", "library_pure_transform")
-
-
-from cognitive_replay.git import HistoricalDefectMiningError
-
-
-@lru_cache(maxsize=1)
-def load_historical_mining_policy(path: str | None = None) -> dict[str, Any]:
-    payload = json.loads(Path(path or POLICY_PATH).read_text(encoding="utf-8"))
-    if payload.get("schema_version") != SCHEMA_VERSION or payload.get("status") != "active":
-        raise HistoricalDefectMiningError("historical mining policy is not active")
-    if tuple(payload.get("target_project_types") or ()) != TARGET_TYPES:
-        raise HistoricalDefectMiningError("historical mining target types are invalid")
-    positive = (
-        "minimum_candidates_per_type", "scan_limit", "max_commits_per_project",
-        "max_changed_files", "max_production_python_files", "max_test_python_files",
-    )
-    if any(int(payload.get(name) or 0) < 1 for name in positive):
-        raise HistoricalDefectMiningError("historical mining limits must be positive")
-    if not all(payload.get(name) for name in (
-        "prospective_evidence_glob", "native_failure_evidence_glob",
-        "historical_selection_evidence_glob",
-    )):
-        raise HistoricalDefectMiningError("historical mining exposure evidence is incomplete")
-    invariants = dict(payload.get("invariants") or {})
-    required_true = (
-        "local_corpus_first", "untouched_projects_only", "owner_independent",
-        "production_and_test_delta_required", "baseline_frozen_before_execution",
-        "fix_oracle_separated",
-    )
-    if not all(invariants.get(name) is True for name in required_true):
-        raise HistoricalDefectMiningError("historical mining invariants are incomplete")
-    if invariants.get("source_apply") is not False or invariants.get("automatic_promotion") is not False:
-        raise HistoricalDefectMiningError("historical mining mutation boundary is unsafe")
-    return payload
+from .local_historical_defect_policy import (
+    ROOT, POLICY_PATH, SCHEMA_VERSION, TARGET_TYPES, HistoricalDefectMiningError,
+    load_historical_mining_policy,
+)
 
 
 def mine_historical_defect_candidates(
@@ -181,6 +145,8 @@ def mine_historical_defect_candidates(
         "generated_at": generated_at,
         "source_index": str(rules["corpus_index"]),
         "source_index_sha256": _file_digest(index_path),
+        "policy_digest": _digest(rules),
+        "library_admission_schema_version": "library_admission.v1",
         "request": {"project_types": list(project_types), "scan_limit": int(rules["scan_limit"])},
         "summary": {
             "projects_scanned": scanned, "git_repositories": git_repositories,
@@ -256,7 +222,9 @@ def _project_candidate(
         changes = _changed_files(project, fix_revision)
         production = [path for _status, path in changes if _production_python(path)]
         test_support = [path for _status, path in changes if _test_support(path)]
-        test_entries = [path for path in test_support if path.endswith(".py")]
+        test_entries = [path for path in test_support if _pytest_entry(path)]
+        if production and test_support and not test_entries:
+            test_entries = _fixture_consumers(project, parent_values[0], test_support, rules)
         if (
             not production or not test_entries or len(changes) > int(rules["max_changed_files"])
             or len(production) > int(rules["max_production_python_files"])
@@ -296,12 +264,9 @@ def _classify(project: Path, rules: dict[str, Any]) -> tuple[str, str]:
     excluded_cli = [str(value).lower() for value in rules["excluded_cli_signals"]]
     if declared_script_entrypoints(project) and not _token_pattern(excluded_cli).search(text):
         return "cli_local_tool", "declared_script_entrypoint"
-    excluded = [str(value).lower() for value in rules["excluded_library_signals"]]
-    score = signal_score(text, [str(value) for value in dict(rules["signals"])["library_pure_transform"]])
-    required_names = [str(value) for value in rules["required_library_name_signals"]]
-    name_bound = any(name_signal_matches(project.name, value) for value in required_names)
-    if score >= 2 and name_bound and not _token_pattern(excluded).search(text):
-        return "library_pure_transform", "token_bound_name_and_transform_signals"
+    admission = inspect_library_admission(project)
+    if admission["status"] == "admitted_candidate":
+        return "library_pure_transform", "package_api_tests:" + admission["evidence_digest"]
     return "", "unqualified_project_type"
 
 
@@ -334,11 +299,27 @@ def _patch_digest(project: Path, baseline: str, fix: str, paths: list[str]) -> s
 def _test_support(path: str) -> bool:
     parts = path.lower().split("/")
     name = parts[-1]
-    return "tests" in parts or "test" in parts or name.startswith("test_")
+    return "tests" in parts or "test" in parts or name.startswith("test_") or _pytest_entry(path)
 
 
 def _production_python(path: str) -> bool:
     return path.endswith(".py") and not _test_support(path)
+
+
+def _pytest_entry(path: str) -> bool:
+    name = Path(path).name
+    return name.endswith(".py") and (name == "test.py" or name.startswith("test_") or name.endswith("_test.py"))
+
+
+def _fixture_consumers(project: Path, baseline: str, changed: list[str], rules: dict) -> list[str]:
+    """Use a bounded native test directory when only shared test data changed."""
+    roots = sorted({path.split("/")[0] for path in changed if "/" in path})
+    if not roots:
+        return []
+    entries = [path for path in _git(project, [
+        "ls-tree", "-r", "--name-only", baseline, "--", *roots,
+    ]).splitlines() if _pytest_entry(path)]
+    return entries if len(entries) <= int(rules["max_test_python_files"]) else []
 
 
 def _take_independent(rows: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:

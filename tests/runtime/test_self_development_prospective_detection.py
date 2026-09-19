@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.corpus_requirements import require_policy_corpus
 
 from runtime.self_development_prospective_detection import (
     ProspectiveDetectionError,
@@ -81,7 +82,9 @@ def _write_report(
     }), encoding="utf-8")
 
 
+@pytest.mark.local_corpus
 def test_current_corpus_enforces_thresholds_on_live_evidence() -> None:
+    require_policy_corpus(ROOT, 'self_development_prospective_detection.json')
     report = run_prospective_detection(root=ROOT, write=False)
 
     assert report["status"] in {"waiting_for_evidence", "candidate_detected"}

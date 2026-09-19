@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "evidence",
+    "instruction",
+    "review_instruction"
+  ],
+  "properties": {
+    "status": {
+      "const": "ok"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "instruction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_instruction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claim_packets": {
+      "type": "array"
+    },
+    "review_audit": {
+      "type": "object"
+    },
+    "context_characters": {
+      "type": "integer"
+    },
+    "claim_validation": {
+      "type": "object"
+    },
+    "coverage_requirements": {
+      "type": "array"
+    },
+    "normalized_description": {},
+    "shape_receipt": {
+      "type": "object"
+    },
+    "claim_grounding": {
+      "type": "object"
+    },
+    "return_flag_analysis": {
+      "type": "object"
+    },
+    "return_property_analysis": {
+      "type": "object"
+    },
+    "api_contract_facts": {
+      "type": "object"
+    },
+    "behavior_facts": {
+      "type": "object"
+    }
+  }
+}

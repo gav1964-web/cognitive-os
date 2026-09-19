@@ -25,13 +25,8 @@ def _policy() -> dict:
         "prospective_evidence_glob": "artifacts/project_development/*.json",
         "native_failure_evidence_glob": "artifacts/field_trials/*.json",
         "historical_selection_evidence_glob": "artifacts/history/*.json",
-        "signals": {
-            "cli_local_tool": ["cli"],
-            "library_pure_transform": ["parser", "schema"],
-        },
-        "required_library_name_signals": ["parser", "schema"],
+        "library_admission": "package_api_tests_v1",
         "excluded_cli_signals": ["fastapi"],
-        "excluded_library_signals": ["django"],
         "invariants": {
             "local_corpus_first": True,
             "untouched_projects_only": True,
@@ -59,6 +54,8 @@ def _workspace(root: Path) -> list[Path]:
         )
         if name.endswith("parser"):
             (project / "README.md").write_text("parser schema", encoding="utf-8")
+            (project / "demo.py").write_text("def parse(value): return value.strip()\n", encoding="utf-8")
+            (project / "tests/test_demo.py").write_text("from demo import parse\ndef test_parse(): assert parse(' x ') == 'x'\n", encoding="utf-8")
         projects.append(project)
         rows.append({
             "project": name, "canonical_project": name, "owner": owner,
@@ -183,14 +180,13 @@ def test_classifier_rejects_broad_framework_with_cli_script(tmp_path: Path) -> N
 
 @pytest.mark.parametrize("description,admitted", [
     ("Parser schema library. See the user guide and contributing guidelines.", True),
-    ("Parser schema library with a GUI.", False),
-    ("Parser schema library for Django applications.", False),
+    ("Parser schema library with a GUI.", True),
+    ("Parser schema library for Django applications.", True),
 ])
-def test_classifier_distinguishes_gui_from_guide(tmp_path: Path, description, admitted) -> None:
+def test_library_admission_uses_source_instead_of_readme_words(tmp_path: Path, description, admitted) -> None:
     project = _workspace(tmp_path)[1]
     (project / "README.md").write_text(description, encoding="utf-8")
     policy = _policy()
-    policy["excluded_library_signals"] = ["gui", "django"]
 
     assert (mining._classify(project, policy)[0] == "library_pure_transform") is admitted
 
@@ -223,6 +219,21 @@ def test_classifier_allows_empty_exclusions(tmp_path: Path) -> None:
     projects = _workspace(tmp_path)
     policy = _policy()
     policy["excluded_cli_signals"] = []
-    policy["excluded_library_signals"] = []
 
     assert [mining._classify(project, policy)[0] for project in projects] == list(mining.TARGET_TYPES)
+
+
+def test_changed_fixture_uses_bounded_native_test_modules(tmp_path, monkeypatch):
+    calls = []
+    def git(project, args):
+        calls.append(args)
+        return "tests/fixtures/table.py\ntests/test_parser.py\ntests/__init__.py\n"
+    monkeypatch.setattr(mining, "_git", git)
+    assert mining._fixture_consumers(tmp_path, "baseline", ["tests/fixtures/table.py"], _policy()) == ["tests/test_parser.py"]
+    assert calls[0] == ["ls-tree", "-r", "--name-only", "baseline", "--", "tests"]
+    assert not mining._pytest_entry("tests/fixtures/table.py")
+
+
+def test_fixture_scope_does_not_expand_to_an_unbounded_suite(tmp_path, monkeypatch):
+    monkeypatch.setattr(mining, "_git", lambda *args: "\n".join(f"tests/test_{i}.py" for i in range(3)))
+    assert mining._fixture_consumers(tmp_path, "baseline", ["tests/data/input.json"], _policy()) == []

@@ -9,6 +9,10 @@
   "status": "completed | blocked | failed",
   "executor": "actual executor identity",
   "model": "same model identity used by all routes for this task",
+  "llm_trace": "artifacts/evaluation_v2/run-id/llm-trace.json",
+  "llm_attempts": [
+    {"requested_model": "configured model", "model": "gateway-reported model", "model_reported": true, "provider_label": "actual provider"}
+  ],
   "runtime_seconds": 0.0,
   "estimated_cost": 0.0,
   "token_usage": {"input": 0, "output": 0},
@@ -17,7 +21,8 @@
     {"id": "criterion_id", "passed": false, "evidence": "artifact digest or test output"}
   ],
   "artifacts": [
-    {"path": "route-local artifact path", "digest": "sha256:<artifact>"}
+    {"path": "workspace-relative result artifact path", "digest": "sha256:<artifact>"},
+    {"path": "artifacts/evaluation_v2/run-id/llm-trace.json", "digest": "sha256:<actual-trace-bytes>"}
   ],
   "judge_payload": {
     "result": "route-neutral result presented to the blind judge",

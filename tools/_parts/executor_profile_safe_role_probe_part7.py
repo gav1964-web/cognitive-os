@@ -273,7 +273,9 @@ def _http_exchange(
     try:
         for attempt in range(40):
             try:
-                with urllib.request.urlopen(request, timeout=2) as response:
+                # This server is owned by the probe and always bound to loopback.
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                with opener.open(request, timeout=2) as response:
                     status_code = int(response.status)
                     body = response.read().decode("utf-8")
                 break

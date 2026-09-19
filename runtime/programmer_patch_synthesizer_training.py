@@ -26,14 +26,14 @@ def training_repair_package(
         return {"status": "blocked", "reason": "target_outside_sandbox", "patches": []}
     if not source_path.is_file():
         return {"status": "blocked", "reason": "target_file_missing_in_sandbox", "patches": []}
-    original = source_path.read_text(encoding="utf-8")
+    original = source_path.read_bytes().decode("utf-8")
     patch = training_repair_patch(
         original, symbol=symbol, operation_kind=operation_kind, recipe=recipe
     )
     if patch is None:
         return {**NO_PATCH, "reason": "training_repair_source_precondition_not_proven"}
     patched = str(patch["source"])
-    source_path.write_text(patched, encoding="utf-8")
+    source_path.write_bytes(patched.encode("utf-8"))
     return _patch_result(
         recipe=recipe, sandbox_project=sandbox_project, path_text=path_text,
         target=target, original=original, patched=patched,

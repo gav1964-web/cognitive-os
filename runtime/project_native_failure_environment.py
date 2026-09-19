@@ -39,7 +39,7 @@ def _prepare_local_project(project: Path, intake: dict[str, Any]) -> tuple[Path,
     ):
         return base_python, {"status": "not_required", "network_allowed": False}
     environment = project.parent / "probe_env"
-    if base_python.resolve() == Path(sys.executable).resolve():
+    if base_python.absolute() == Path(sys.executable).absolute():
         venv.EnvBuilder(with_pip=True, system_site_packages=True, clear=True).create(environment)
     else:
         try:
@@ -262,7 +262,7 @@ def _resolve_project_interpreter(identity: str, intake: dict[str, Any]) -> dict[
         return {
             "status": "ready",
             "source": "current_interpreter_default",
-            "executable": str(Path(sys.executable).resolve()),
+            "executable": str(Path(sys.executable).absolute()),
             "version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
             "required": False,
         }
@@ -274,7 +274,7 @@ def _resolve_project_interpreter(identity: str, intake: dict[str, Any]) -> dict[
             return {
                 "status": "ready",
                 "source": "configured_project_interpreter",
-                "executable": str(candidate.resolve()),
+                "executable": str(candidate.absolute()),
                 "version": ".".join(str(value) for value in version),
                 "required": True,
                 "requested": f"{major}.{minor}",

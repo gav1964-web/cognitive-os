@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
-from .project_type_token_matcher import marker_matches, match_project_stratum
+from .project_type_token_matcher import marker_matches, match_project_stratum, normalized_project_text as _normalized_text
 from .role_project_type_evaluation_policy import load_role_project_type_policy
 
 
@@ -93,6 +92,9 @@ def classify_project_case(
         entrypoint_override
         and archetype
         and pre_entrypoint_stratum != str(selected["id"])
+        and not (pre_entrypoint_stratum == 'library_pure_transform'
+                 and str(selected['id']) == 'cli_local_tool'
+                 and entrypoint_override['evidence_marker'] == 'declared_script_entrypoint')
     )
 
     risk_text = _normalized_text({
@@ -390,11 +392,3 @@ def _first_value(payload: Any, keys: tuple[str, ...]) -> str:
             if found:
                 return found
     return ""
-
-
-def _normalized_text(value: Any) -> str:
-    try:
-        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str).lower().replace("-", "_")
-    except (TypeError, ValueError):
-        return str(value).lower().replace("-", "_")
-

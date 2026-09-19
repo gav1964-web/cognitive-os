@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import json
 from typing import Any
 
 
@@ -56,3 +57,10 @@ def marker_matches(marker: str, text: str) -> bool:
     parts = [re.escape(part) for part in normalized.split("_") if part]
     pattern = r"(?<![a-z0-9])" + r"[_\s-]+".join(parts) + r"(?![a-z0-9])"
     return re.search(pattern, text) is not None
+
+
+def normalized_project_text(value: Any) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str).lower().replace("-", "_")
+    except (TypeError, ValueError):
+        return str(value).lower().replace("-", "_")

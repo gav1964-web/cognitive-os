@@ -46,7 +46,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--catalog",
-        default="knowledge/role_knowledge/exception_pickle_reconstruction_patterns.json",
+        default="plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json",
     )
     parser.add_argument("--approve", action="store_true")
     parser.add_argument("--write", action="store_true")

@@ -38,6 +38,8 @@ import csv
 from html.parser import HTMLParser
 import io
 import json
+import os
+import tempfile
 from pathlib import Path
 
 
@@ -80,7 +82,23 @@ def main(argv: list[str] | None = None) -> int:
     source = Path(args.input)
     if not source.is_file():
         parser.error(f"input file does not exist: {{source}}")
-    Path(args.output).write_text(transform(source.read_text(encoding="utf-8")), encoding="utf-8")
+    target = Path(args.output)
+    temporary = None
+    try:
+        if source.resolve() == target.resolve() or (target.exists() and source.samefile(target)):
+            parser.error("input and output must be different files")
+        with source.open(encoding="utf-8", newline="") as stream:
+            output = transform(stream.read()).encode("utf-8")
+        with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(output)
+        os.replace(temporary, target)
+        temporary = None
+    except (OSError, UnicodeError, ValueError) as exc:
+        parser.error(f"conversion failed: {{type(exc).__name__}}")
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return 0
 
 

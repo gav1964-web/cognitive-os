@@ -73,7 +73,7 @@ def tester_role_skill_ok(ctx: dict[str, Any]) -> tuple[bool, str]:
         and bool(payload.get("smoke_checklist"))
         and bool(payload.get("regression_risks"))
         and bool(payload.get("reproducibility"))
-        and next_artifact.get("recommended_role") == "reviewer"
+        and next_artifact.get("recommended_role") == "task_tree_builder"
         and payload.get("forbidden_actions_observed") == []
         and bool(payload.get("artifact_path"))
     )

@@ -1,0 +1,922 @@
+{
+  "evidence": {
+    "schema_version": "project_description_evidence.v1",
+    "root": "saved-evaluation-source",
+    "sources": [
+      {
+        "id": "s1",
+        "path": "src/cognitive_inspect/__main__.py",
+        "sha256": "1daca8a0753fad7d9944b6568d0d5d6e15340d4396a0f08381478e82d4b4815b",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [
+            "path",
+            "--max-files",
+            "--max-depth"
+          ],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Print read-only project tree facts as JSON using the public scanner contract.\"\"\"\nimport argparse\nimport json\nimport sys\n\nfrom . import scan_project_tree\n\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('path', help='Project directory within the current directory or its parent')\n    parser.add_argument('--max-files', type=int, default=5000)\n    parser.add_argument('--max-depth', type=int, default=8)\n    args = parser.parse_args(argv)\n    try:\n        result = scan_project_tree({'path': args.path, 'max_files': args.max_files,\n                                    'max_depth': args.max_depth})\n    except (ValueError, OSError) as exc:\n        print(f'cognitive-inspect: {exc}', file=sys.stderr)\n        return 2\n    print(json.dumps(result, ensure_ascii=False, indent=2))\n    return 0\n\n\nif __name__ == '__main__':\n    raise SystemExit(main())\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s2",
+        "path": "src/cognitive_inspect/__init__.py",
+        "sha256": "27afb054b013a8e46fa51ac3bac0b06426b219043679b566de88ef2a486b5fad",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Read-only repository facts; payload contracts match Cognitive OS plugins.\"\"\"\nfrom .tree import run as scan_project_tree\nfrom .stack import run as detect_project_stack\nfrom .structure.main import run as extract_python_structure\nfrom .commands import run as extract_runtime_commands\n\n__all__ = [\"scan_project_tree\", \"detect_project_stack\", \"extract_python_structure\", \"extract_runtime_commands\"]\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "src/cognitive_inspect/commands.py",
+          "src/cognitive_inspect/stack.py",
+          "src/cognitive_inspect/structure/main.py",
+          "src/cognitive_inspect/tree.py"
+        ],
+        "imported_symbols": [
+          "scan_project_tree"
+        ]
+      },
+      {
+        "id": "s3",
+        "path": "src/cognitive_inspect/structure/main.py",
+        "sha256": "e3d4261368ae21bad7ce604040fb715a8b2647590a5fab1c9827239043d5e1b2",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\n\"\"\"Extract Python file structure using the stdlib AST parser.\"\"\"\n\nfrom __future__ import annotations\n\nimport ast\nfrom pathlib import Path\nfrom typing import Any\n\nfrom .domain_anchors import domain_flow_anchors\nfro\n[... omitted ...]\ne, rel_path, size)\n        if parser_compatibility:\n            summary[\"parser_compatibility\"] = parser_compatibility\n        imports.update(summary.get(\"imports\", []))\n        import_details.extend(summary.pop(\"import_details\"))\n\n[lines 19-81, run]\ndef run(payload: dict[str, object]) -> dict[str, object]:\n    root = _resolve_scoped_root(str(payload['root']))\n\n[... omitted ...]\nles), 'external_dependencies': _external_dependencies(imports), 'project_insights': insights, 'skipped': skipped}\n[selected conditions/calls]\nline 34: if is_test_path(rel_path):\nline 36: if len(files) >= max_files:\nline 44: if size > max_bytes:\nline 57: if parser_compatibility:\n\n[lines 84-128, _summarize_file]\ndef _summarize_file(tree: ast.AST, rel_path: str, siz\n[... omitted ...]\n), 'import_details': imports_detail, 'routes': routes}\n\n[lines 131-132, _decorator_names]\ndef _decorator_names(node: ast.FunctionDef | ast.Asy\n[... omitted ...]\nator in node.decorator_list if _expr_name(decorator)]\n\n[lines 135-136, _class_methods]\ndef _class_methods(node: ast.ClassDef) -> list[str]:\n\n[... omitted ...]\ntance(child, (ast.FunctionDef, ast.AsyncFunctionDef))]\n\n[lines 139-145, _function_args]\ndef _function_args(node: ast.FunctionDef | ast.AsyncF\n[... omitted ...]\nn': _annotation_name(arg.annotation)} for arg in args]\n\n[lines 148-160, _annotation_name]\ndef _annotation_name(node: ast.AST | None) -> str:\n \n[... omitted ...]\n   return str(node.value)\n    return _expr_name(node)\n\n[lines 163-170, _call_names]\ndef _call_names(node: ast.AST) -> set[str]:\n    calls =\n[... omitted ...]\n name:\n                calls.add(name)\n    return calls\n\n[lines 173-193, _function_side_effects]\ndef _function_side_effects(node: ast.AST) -> list\n[... omitted ...]\ncts.add('memory_state')\n    return sorted(effects)\n\n[lines 196-216, _route_rows]\ndef _route_rows(node: ast.FunctionDef | ast.AsyncFuncti\n[... omitted ...]\no, 'route': route, 'methods': methods})\n    return rows\n\n[lines 219-225, _route_kind]\ndef _route_kind(name: str) -> str:\n    tail = name.rspl\n[... omitted ...]\nTP_METHOD_DECORATORS:\n        return tail\n    return ''\n\n[lines 228-236, _expr_name]\ndef _expr_name(node: ast.AST) -> str:\n    if isinstance\n[... omitted ...]\nce(node, ast.Name):\n        return node.id\n    return ''\n\n[lines 239-260, _central_nodes]\ndef _central_nodes(functions: list[dict[str, Any]]) -\n[... omitted ...]\nitem.get('side_effects', [])} for item in ranked[:12]]\n\n[lines 263-283, _wide_functions]\ndef _wide_functions(functions: list[dict[str, Any]]) \n[... omitted ...]\n', 0) >= 80 or len(item.get('calls', [])) >= 18][:12]\n\n[lines 286-312, _pure_transform_candidates]\ndef _pure_transform_candidates(functions: list[\n[... omitted ...]\nsorted(candidates, key=_candidate_priority)[:20]\n\n[lines 315-318, _candidate_priority]\ndef _candidate_priority(item: dict[str, Any]) -> tu\n[... omitted ...]\ny(path), _symbol_extraction_priority(name), '', '')\n\n[lines 321-329, _symbol_extraction_priority]\ndef _symbol_extraction_priority(name: str) -> \n[... omitted ...]\nid', 'socket'))):\n        return 8\n    return 4\n\n[lines 332-360, _contracts]\ndef _contracts(files: list[dict[str, Any]]) -> dict[str\n[... omitted ...]\n[:20], 'schema_like_classes': schema_like_classes[:20]}\n\n[lines 363-373, _external_dependencies]\ndef _external_dependencies(imports: set[str]) -> \n[... omitted ...]\nalues) in categories.items() if imports & values}\n\n[lines 376-385, _resolve_scoped_root]\ndef _resolve_scoped_root(value: str) -> Path:\n    \n[... omitted ...]\nde the allowed project scope')\n    return resolved\n\n[lines 388-393, _is_relative_to]\ndef _is_relative_to(path: Path, root: Path) -> bool:\n[... omitted ...]\nturn True\n    except ValueError:\n        return False",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "src/cognitive_inspect/python_parser_compatibility.py",
+          "src/cognitive_inspect/structure/domain_anchors.py",
+          "src/cognitive_inspect/structure/insights.py",
+          "src/cognitive_inspect/structure/path_priority.py",
+          "src/cognitive_inspect/structure/policy_candidates.py"
+        ],
+        "imported_symbols": [
+          "run"
+        ]
+      },
+      {
+        "id": "s4",
+        "path": "src/cognitive_inspect/stack.py",
+        "sha256": "a5f521598d2aecca2a6cc654cb708f947ff165e5ebcb6796933a1591fa9a2778",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\n\"\"\"Detect project stack signals from filenames and small dependency files.\"\"\"\n\nfrom __future__ import annotations\n\nfrom pathlib import Path\nfrom typing import Any\n\n\nEXCLUDED_DIRS = {\".git\", \".venv\", \"__pycache__\",\n[... omitted ...]\n      if suffix in {\".bat\", \".sh\", \".ps1\"}:\n            scripts.append(rel_path)\n        if size >= LARGE_ARTIFACT_BYTES:\n            large_artifacts.append({\"path\": rel_path, \"size_bytes\": size, \"extension\": suffix or \"<none>\"})\n\n\n[visible interface text]\n<\n=\n\n[lines 27-73, run]\ndef run(payload: dict[str, object]) -> dict[str, object]:\n    root = _resolve_scoped_path(str(payload['path']))\n    extension_counts: dict[str, int] = {}\n    dependency_files: list[dict[str, Any]] = []\n    entrypoints: list[str] = []\n    scripts: list[str] = []\n    large_artifacts: list[dict[str, Any]] = []\n    dependency_text = ''\n    framework_text = ''\n    for item in _iter_project_files(root):\n        rel_path = item.relative_to(root).as_posix()\n        suffix = item.suffix.lower()\n        if suffix:\n            extension_counts[suffix] = extension_counts.get(suffix, 0) + 1\n        lower_name = item.name.lower()\n        try:\n            size = item.stat().st_size\n        except OSError:\n            continue\n        if lower_name in DEPENDENCY_FILES:\n            content = _read_small_text(item)\n            dependency_text += '\\n' + content.lower()\n            if not _is_context_path(rel_path):\n                framework_text += '\\n' + content.lower()\n            dependency_files.append({'path': rel_path, 'size_bytes': size, 'dependencies': _dependency_names(content)})\n        if (lower_name in ENTRYPOINT_NAMES or lower_name.startswith(('run_', 'start_'))) and (not _is_context_path(rel_path)):\n            entrypoints.append(rel_path)\n            framework_text += '\\n' + _read_small_text(item).lower()\n        if suffix in {'.bat', '.sh', '.ps1'}:\n            scripts.append(rel_path)\n        if size >= LARGE_ARTIFACT_BYTES:\n            large_artifacts.append({'path': rel_path, 'size_bytes': size, 'extension': suffix or '<none>'})\n    languages = [{'language': LANGUAGE_BY_EXTENSION.get(extension, extension), 'files': count} for (extension, count) in sorted(extension_counts.items(), key=lambda item: (-item[1], item[0]))]\n    return {'root': root.as_posix(), 'languages': languages, 'frameworks': _frameworks(framework_text, entrypoints), 'dependency_files': sorted(dependency_files, key=lambda item: item['path']), 'entrypoints': sorted(entrypoints), 'scripts': sorted(scripts), 'large_artifacts': sorted(large_artifacts, key=lambda item: item['size_bytes'], reverse=True)}\n\n[lines 76-96, _iter_project_files]\ndef _iter_project_f\n[... omitted ...]\n          yield item\n[selected conditions/calls]\nline 90: if is_dir:\nline 92: if item.name in EXCLUDED_DIRS or lower_name in CONTEXT_DIRS or item.name.startswith(\".\") or lower_name.endswith(\"_install_package\"):\nline 95: if is_file:\n\n[lines 99-110, _dependency_names]\ndef _dependency_nam\n[... omitted ...]\n   return names[:50]\n[selected conditions/calls]\nline 103: if not line or line.startswith(\"#\"):\nline 106: if separator in line:\n\n[lines 113-121, _frameworks]\ndef _frameworks(depe\n[... omitted ...]\n   return frameworks\n[selected conditions/calls]\nline 115: if \"flask\" in dependency_text:\nline 117: if \"fastapi\" in dependency_text:\nline 119: if \"folium\" in dependency_text or \"leaflet\" in dependency_text:\n\n[lines 124-157, _is_context_path]\ndef _is_context_pat\n[... omitted ...]\nendswith('_test.py')\n[selected conditions/calls]\nline 151: if name.startswith(\"pipeline_backup_\") or \"_backup_\" in name:\nline 155: if parts[:2] == [\"packaging\", \"pep517_backend\"]:\n[... syntax rows omitted ...]\n\n[lines 160-163, _read_small_text]\ndef _read_small_text(path: Path) -> str:\n    if path.stat().st_size > 200000:\n        return ''\n    return path.read_text(encoding='utf-8', errors='ignore')\n\n[lines 166-175, _resolve_scoped_path]\ndef _resolve_scoped\n[... omitted ...]\n    return resolved\n[selected conditions/calls]\nline 170: if not resolved.exists() or not resolved.is_dir():\nline 173: if not any(_is_relative_to(resolved, allowed) for allowed in allowed_roots):\n\n[lines 178-183, _is_relative_to]\ndef _is_relative_to(path: Path, root: Path) -> bool:\n    try:\n        path.relative_to(root)\n        return True\n    except ValueError:\n        return False",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "pyproject.toml"
+        ],
+        "imported_symbols": [
+          "run"
+        ]
+      },
+      {
+        "id": "s5",
+        "path": "src/cognitive_inspect/tree.py",
+        "sha256": "550290b3e51150a4f8f063e00851d59b311f2bdca632c83e8e5b55b6730e5abe",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\n\"\"\"Scan a project tree with deterministic limits.\"\"\"\n\nfrom __future__ import annotations\n\nfrom pathlib import Path\nfrom typing import Any\n\n\nDEFAULT_EXCLUDED_DIRS = {\n    \".git\",\n    \".hg\",\n    \".mypy_cache\",\n    \"\n[... omitted ...]\nd(current.iterdir(), key=lambda path: path.name.lower())\n        except OSError:\n            skipped[\"inaccessible_directories\"] += 1\n            continue\n        for item in children:\n            relative = item.relative_to(root)\n\n[lines 36-102, run]\ndef run(payload: dict[str, object]) -> dict[str, object]:\n    root = _resolve_scoped_path(str(payload['path']))\n    max_files = int(payload.get('max_files', 5000))\n    max_depth = int(payload.get('max_depth', 8))\n    include_hidden = bool(payload.get('include_hidden', False))\n    if max_files < 1:\n        raise ValueError('max_files must be positive')\n    if max_depth < 0:\n        raise ValueError('max_depth must be non-negative')\n    files: list[dict[str, Any]] = []\n    directories: list[str] = []\n    extensions: dict[str, int] = {}\n    notable_files: list[str] = []\n    skipped = {'directories': 0, 'files': 0, 'too_deep': 0, 'truncated_files': 0, 'inaccessible_directories': 0, 'inaccessible_files': 0}\n    stack = [(root, 0)]\n    while stack:\n        (current, parent_depth) = stack.pop()\n        try:\n            children = sorted(current.iterdir(), key=lambda path: path.name.lower())\n        except OSError:\n            skipped['inaccessible_directories'] += 1\n            continue\n        for item in children:\n            relative = item.relative_to(root)\n            depth = len(relative.parts) - 1\n            rel_path = relative.as_posix()\n            try:\n                is_dir = item.is_dir()\n                is_file = item.is_file()\n            except OSError:\n                skipped['inaccessible_files'] += 1\n                continue\n            if _is_noise_path(relative, include_hidden):\n                if is_dir:\n                    skipped['directories'] += 1\n                else:\n                    skipped['files'] += 1\n                continue\n            if is_dir:\n                if parent_depth >= max_depth:\n                    skipped['too_deep'] += 1\n                    continue\n                directories.append(rel_path)\n                stack.append((item, parent_depth + 1))\n                continue\n            if not is_file:\n                skipped['files'] += 1\n                continue\n            if len(files) >= max_files:\n                skipped['truncated_files'] += 1\n                continue\n            _append_file(files, extensions, notable_files, item, rel_path, depth)\n    return {'root': root.as_posix(), 'files': files, 'directories': directories, 'counts': {'files': len(files), 'directories': len(directories), 'truncated': skipped['truncated_files'] > 0 or skipped['too_deep'] > 0}, 'extensions': dict(sorted(extensions.items())), 'notable_files': sorted(notable_files), 'skipped': skipped}\n\n[lines 105-130, _append_file]\ndef _append_file(files: list[dict[str, Any\n[... omitted ...]\n = _line_count(item)\n    files.append(row)\n[selected conditions/calls]\nline 116: if lower_name in NOTABLE_NAMES or lower_name.endswith((\".bat\", \".sh\", \".ps1\")):\nline 128: if extension == \".py\":\n\n[lines 133-137, _is_noise_path]\ndef _is_noise_path(relative: Path, include_hidden: bool) -> bool:\n    parts = relative.parts\n    if any((part in DEFAULT_EXCLUDED_DIRS for part in parts)):\n        return True\n    return not include_hidden and any((part.startswith('.') for part in parts))\n\n[lines 140-144, _line_count]\ndef _line_count(path: Path) -> int:\n    try:\n        return len(path.read_text(encoding='utf-8', errors='ignore').splitlines())\n    except OSError:\n        return 0\n\n[lines 147-156, _resolve_scoped_path]\ndef _resolve_scoped_path(value: str) -> P\n[... omitted ...]\nlowed project scope')\n    return resolved\n[selected conditions/calls]\nline 151: if not resolved.exists() or not resolved.is_dir():\nline 154: if not any(_is_relative_to(resolved, allowed) for allowed in allowed_roots):\n\n[lines 159-164, _is_relative_to]\ndef _is_relative_to(path: Path, root: Path) -> bool:\n    try:\n        path.relative_to(root)\n        return True\n    except ValueError:\n        return False",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "pyproject.toml"
+        ],
+        "imported_symbols": [
+          "run"
+        ]
+      },
+      {
+        "id": "s6",
+        "path": "src/cognitive_inspect/commands.py",
+        "sha256": "9cfdc6bbc9c2475f73bbef2e5bb8b912a1337cd0f575c3540620922ffa0131a6",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Extract likely runtime commands from project scripts.\"\"\"\n\nfrom __future__ import annotations\n\nfrom pathlib import Path\n\n\nSCRIPT_EXTENSIONS = {\".bat\", \".cmd\", \".ps1\", \".sh\"}\nEXCLUDED_DIRS = {\".git\", \".venv\", \"__pycache__\", \"node_modules\", \"venv\"}\n\n\ndef run(payload: dict[str, object]) -> dict[str, object]:\n    root = _resolve_scoped_root(str(payload[\"root\"]))\n    commands = []\n    skipped = []\n    for script in _iter_scripts(root):\n        rel_path = script.relative_to(root).as_posix()\n        try:\n            size = script.stat().st_size\n        except OSError as exc:\n            skipped.append({\"path\": rel_path, \"reason\": type(exc).__name__})\n            continue\n        if size > 100_000:\n            skipped.append({\"path\": rel_path, \"reason\": \"too_large\"})\n            continue\n        lines = script.read_text(encoding=\"utf-8\", errors=\"ignore\").splitlines()\n        command_lines = [_clean_line(line) for line in lines]\n        command_lines = [\n            line\n            for line in command_lines\n            if line and not _is_comment(line, script.suffix.lower()) and not _is_shell_noise(line)\n        ]\n        commands.append(\n            {\n                \"path\": rel_path,\n                \"commands\": command_lines[:30],\n                \"purpose\": _purpose(rel_path, command_lines),\n            }\n        )\n    return {\"root\": root.as_posix(), \"commands\": commands, \"skipped\": skipped}\n\n\ndef _purpose(path: str, lines: list[str]) -> str:\n    name = Path(path).name.lower()\n    joined = \" \".join(lines).lower()\n    if \"run\" in name or \"python app.py\" in joined:\n        return \"run_application\"\n    if \"install\" in name or \"pip install\" in joined:\n        return \"install_dependencies\"\n    if \"rebuild\" in name:\n        return \"rebuild_data\"\n    return \"script\"\n\n\ndef _clean_line(line: str) -> str:\n    return line.strip().lstrip(\"@\").strip()\n\n\ndef _is_comment(line: str, suffix: str) -> bool:\n    lower = line.lower()\n    if suffix in {\".bat\", \".cmd\"}:\n        return lower.startswith(\"rem \") or lower.startswith(\"::\")\n    return lower.startswith(\"#\")\n\n\ndef _is_shell_noise(line: str) -> bool:\n    lower = line.lower()\n    return lower in {\"echo off\", \"setlocal\", \"endlocal\", \"pause\"} or lower.startswith(\"cd /d \")\n\n\ndef _iter_scripts(root: Path):\n    stack = [root]\n    while stack:\n        current = stack.pop()\n        try:\n            children = sorted(current.iterdir(), key=lambda path: path.name.lower())\n        except OSError:\n            continue\n        for item in children:\n            try:\n                is_dir = item.is_dir()\n                is_file = item.is_file()\n            except OSError:\n                continue\n            if is_dir:\n                if item.name in EXCLUDED_DIRS or item.name.startswith(\".\"):\n                    continue\n                stack.append(item)\n            elif is_file and item.suffix.lower() in SCRIPT_EXTENSIONS:\n                yield item\n\n\ndef _resolve_scoped_root(value: str) -> Path:\n    raw = Path(value).expanduser()\n    candidate = raw if raw.is_absolute() else Path.cwd() / raw\n    resolved = candidate.resolve()\n    if not resolved.exists() or not resolved.is_dir():\n        raise ValueError(\"extract_runtime_commands root must point to an existing directory\")\n    allowed_roots = [Path.cwd().resolve(), Path.cwd().resolve().parent]\n    if not any(_is_relative_to(resolved, allowed) for allowed in allowed_roots):\n        raise ValueError(\"extract_runtime_commands root is outside the allowed project scope\")\n    return resolved\n\n\ndef _is_relative_to(path: Path, root: Path) -> bool:\n    try:\n        path.relative_to(root)\n        return True\n    except ValueError:\n        return False\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": [
+          "run"
+        ]
+      },
+      {
+        "id": "s7",
+        "path": "src/cognitive_inspect/python_parser_compatibility.py",
+        "sha256": "c0378c3b28670bcad935aadeaf305af11721e7178d3e048aaeb2f14faab32691",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Compatibility parsing for Python syntax outside the host AST grammar.\"\"\"\n\nfrom __future__ import annotations\n\nimport ast\nimport re\nimport warnings\n\n\nclass ParserVersionIncompatible(SyntaxError):\n    \"\"\"The source is valid for a known Python grammar, but not the host parser.\"\"\"\n\n    def __init__(self, original: SyntaxError) -> None:\n        super().__init__(*original.args)\n\n\ndef parse_compatible_source(source: str, filename: str) -> tuple[ast.AST, str | None]:\n    try:\n        return ast.parse(source, filename=filename), None\n    except SyntaxError as error:\n        if _newer_python_syntax(source, error):\n            raise ParserVersionIncompatible(error) from error\n        if not _looks_like_python2(source, error):\n            raise\n        converted = _convert_python2(source, filename)\n        if converted is None:\n            raise\n        return ast.parse(converted, filename=filename), \"python2_compatibility_ast\"\n\n\ndef _newer_python_syntax(source: str, error: SyntaxError) -> bool:\n    lines = source.splitlines()\n    if not error.lineno or error.lineno > len(lines):\n        return False\n    line = lines[error.lineno - 1]\n    return bool(\n        re.match(r\"^\\s*(?:(?:async\\s+)?def|class)\\s+[A-Za-z_]\\w*\\s*\\[\", line)\n        or re.match(r\"^\\s*type\\s+[A-Za-z_]\\w*(?:\\s*\\[.*\\])?\\s*=\", line)\n    )\n\n\ndef _looks_like_python2(source: str, error: SyntaxError) -> bool:\n    lines = source.splitlines()\n    line = lines[error.lineno - 1] if error.lineno and error.lineno <= len(lines) else \"\"\n    return bool(\n        re.search(r\"python(?:2|\\s+2(?:\\.\\d+)?)\\b\", source[:2000], re.IGNORECASE)\n        or re.match(r\"^\\s*print(?:\\s+|>>)(?!\\s*\\()\", line)\n        or re.match(r\"^\\s*except\\s+[^:]+,\\s*\\w+\\s*:\", line)\n        or re.match(r\"^\\s*raise\\s+\\w+\\s*,\", line)\n        or re.search(r\"<>|`[^`]+`\", line)\n    )\n\n\ndef _convert_python2(source: str, filename: str) -> str | None:\n    try:\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            from lib2to3.refactor import RefactoringTool, get_fixers_from_package\n\n            tool = RefactoringTool(get_fixers_from_package(\"lib2to3.fixes\"))\n            normalized = source if source.endswith(\"\\n\") else source + \"\\n\"\n            return str(tool.refactor_string(normalized, filename))\n    except Exception:\n        return None\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": [
+          "ParserVersionIncompatible",
+          "parse_compatible_source"
+        ]
+      },
+      {
+        "id": "s8",
+        "path": "src/cognitive_inspect/structure/insights.py",
+        "sha256": "211784084634dbdb3e6bfab7e09183e79bf4335b7d1647e8b92be76b782af00a",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\n\"\"\"Additional AST insights for project analysis.\"\"\"\n\nfrom __future__ import annotations\n\nimport ast\nfrom typing import Any\n\n\ndef class_fields(node: ast.ClassDef) -> list[dict[str, str]]:\n    fields = []\n    for ch\n[... omitted ...]\nrnal_imports),\n        \"external_imports\": _top_imports(external_imports),\n        \"error_handling\": _error_handling(files),\n        \"schema_fields\": _schema_fields(files),\n    }\n\n\ndef annotation_name(node: ast.AST | None) -> str:\n\n[lines 9-18, class_fields]\ndef class_fields(node: ast.ClassDef) -> list[dict[str, str]]:\n    fields = []\n    for child in node.body:\n        if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name):\n            fields.append({'name': child.target.id, 'annotation': annotation_name(child.annotation)})\n        elif isinstance(child, ast.Assign):\n            for target in child.targets:\n                if isinstance(target, ast.Name):\n                    fields.append({'name': target.id, 'annotation': ''})\n    return fields[:40]\n\n[lines 21-32, function_error_profile]\ndef function_error_profile(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, Any]:\n    raises = []\n    handlers = []\n    has_try = False\n    for child in ast.walk(node):\n        if isinstance(child, ast.Raise):\n            raises.append(expr_name(child.exc) if child.exc else 'raise')\n        elif isinstance(child, ast.Try):\n            has_try = True\n            for handler in child.handlers:\n                handlers.append(expr_name(handler.type) if handler.type else 'Exception')\n    return {'raises': sorted(set(filter(None, raises)))[:20], 'handlers': sorted(set(filter(None, handlers)))[:20], 'has_try': has_try}\n\n[lines 35-43, import_rows]\ndef import_rows(tree: ast.AST, rel_path: str) -> list[dict[str, str]]:\n    rows = []\n    for node in ast.walk(tree):\n        if isinstance(node, ast.Import):\n            for alias in node.names:\n                rows.append({'path': rel_path, 'module': alias.name, 'root': alias.name.split('.')[0], 'kind': 'import'})\n        elif isinstance(node, ast.ImportFrom) and node.module:\n            rows.append({'path': rel_path, 'module': node.module, 'root': node.module.split('.')[0], 'kind': 'from'})\n    return rows\n\n[lines 46-57, project_insights]\ndef project_insights(files: list[dict[str, Any]], import_details: list[dict[str, str]]) -> dict[str, Any]:\n    paths = [str(file.get('path', '')) for file in files]\n    local_roots = _local_roots(paths)\n    internal_imports = [row for row in import_details if row.get('root') in local_roots]\n    external_imports = [row for row in import_details if row.get('root') not in local_roots]\n    return {'test_surface': _test_surface(files), 'import_graph': _import_graph(internal_imports), 'external_imports': _top_imports(external_imports), 'error_handling': _error_handling(files), 'schema_fields': _schema_fields(files)}\n\n[lines 60-72, annotation_name]\ndef anno\n[... omitted ...]\nme(node)\n[selected conditions/calls]\nline 61: if node is None:\nline 63: if isinstance(node, ast.Name):\nline 70: if isinstance(node, ast.Constant):\n[... syntax rows omitted ...]\n\n[lines 75-85, expr_name]\ndef expr_\n[... omitted ...]\nreturn ''\n[selected conditions/calls]\nline 76: if node is None:\nline 78: if isinstance(node, ast.Call):\nline 83: if isinstance(node, ast.Name):\n[... syntax rows omitted ...]\n\n[lines 88-90, _local_roots]\ndef _local_roots(paths: list[str]) -> set[str]:\n    roots = {path.split('/', 1)[0] for path in\n[... omitted ...]\nturn {root for root in roots if root not in {'tests', 'tools', 'docs', 'examples', 'scratch'}}\n\n[lines 93-97, _test_surface]\ndef _test_surface(files: list[dict[str, Any]]) -> dict[str, Any]:\n    test_files = [file for \n[... omitted ...]\nctions), 'sample_tests': [f\"{fn.get('path')}:{fn.get('name')}\" for fn in test_functions[:12]]}\n\n[lines 100-104, _import_graph]\ndef _import_graph(imports: list[dict[str, str]]) -> list[dict[str, Any]]:\n    by_path: dict[\n[... omitted ...]\n (path, modules) in sorted(by_path.items(), key=lambda item: (-len(item[1]), item[0]))[:20]]\n\n[lines 107-111, _top_imports]\ndef _top_imports(imports: list[dict[str, str]]) -> list[dict[str, Any]]:\n    counts: dict[st\n[... omitted ...]\nnt} for (module, count) in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:20]]\n\n[lines 114-125, _error_handling]\ndef _err\n[... omitted ...]\nry[:20]}\n[selected conditions/calls]\nline 123: if profile.get(\"has_try\"):\n\n[lines 128-135, _schema_fields]\ndef _sch\n[... omitted ...]\nows[:20]\n[selected conditions/calls]\nline 133: if fields:",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": [
+          "class_fields",
+          "function_error_profile",
+          "import_rows",
+          "project_insights"
+        ]
+      },
+      {
+        "id": "s9",
+        "path": "src/cognitive_inspect/structure/path_priority.py",
+        "sha256": "34347e5848346a9184c0e13dbc92092e4f83e8a471165241912aa256c4a2b561",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[Python syntax retained; oversized string literals abbreviated, not executable evidence]\n\"\"\"Path ordering helpers for Python structure extraction.\"\"\"\nfrom __future__ import annotations\nfrom pathlib import Path\nfrom cognitive_inspect.python_source_files import is_python_source_file\nEXCLUDED_DIRS = {'.git', '.venv', '__pycache__', 'node_modules', 'venv'}\nLATE_DIRS = {'_testing', 'artifacts', 'build', 'dist', 'doc', 'docs', 'docs_src', 'dummyserver', 'end_to_end_tests', 'examples', 'extras', 'generated', 'integration', 'integration_embedded', 'journey_tests', 'mock_tests', 'profiling', 'proto_test', 'scratch', 'test', 'testing', 'tests', 'tools', 'wasm-preview'}\nEARLY_DIRS = {'airflow', 'airflow-core', 'app', 'apps', 'borg', 'core', 'dask', 'gradio', 'lib', 'mitmproxy', 'packages', 'prefect', 'pyinstaller', 'scrapy', 'spyder', 'src'}\nEARLY_FILES = {'api_server.py', 'app.py', 'main.py', 'server.py', 'api.py', '__init__.py'}\nLATE_FILES = {'conftest.py', 'noxfile.py', 'setup.py', 'tasks.py'}\n\ndef iter_python_files(root: Path):\n    stack = [root]\n    deferred_files = []\n    while stack:\n        current = stack.pop()\n        dirs = []\n        files = []\n        try:\n            children = list(current.iterdir())\n        except OSError:\n            continue\n        for item in children:\n            try:\n                is_dir = item.is_dir()\n                is_file = item.is_file()\n            except OSError:\n                continue\n            if is_dir:\n                if item.name in EXCLUDED_DIRS or _is_generated_context_dir(item.name) or item.name.startswith('.'):\n                    continue\n                dirs.append(item)\n            elif is_file and is_python_source_file(item):\n                files.append(item)\n        ordered_dirs = sorted(dirs, key=traversal_key)\n        early_files = [item for item in files if traversal_key(item)[0] < 3]\n        regular_files = [item for item in files if 3 <= traversal_key(item)[0] < 8]\n        deferred_files.extend((item for item in files if traversal_key(item)[0] >= 8))\n        for item in sorted(early_files, key=traversal_key):\n            yield item\n        stack.extend(reversed(ordered_dirs))\n        for item in sorted(regular_files, key=traversal_key):\n            yield item\n    yield from sorted(deferred_files, key=lambda item: (path_priority(item.as_posix()), item.as_posix().lower()))\n\ndef is_test_path(path: str) -> bool:\n    name = Path(path).name\n    return path.startswith('tests/') or '/tests/' in path or name.startswith('test_') or name.endswith('_test.py')\n\ndef traversal_key(path: Path) -> tuple[int, str]:\n    name = path.name.lower()\n    if path.is_dir():\n        if name == 'src':\n            return (0, name)\n        if name in LATE_DIRS or _is_generated_context_dir(name):\n            return (9, name)\n        if (path / '__init__.py').is_file() or name in EARLY_DIRS:\n            return (1, name)\n        return (3, name)\n    if name in EARLY_FILES:\n        return (0, name)\n    if name in LATE_FILES:\n        return (8, name)\n    return (3, name)\n\ndef path_priority(path: str) -> int:\n    lowered = path.replace('\\\\', '/').lower()\n    parts = lowered.split('/')\n    name = parts[-1] if parts else lowered\n    if any((part in {'tests', 'test', '_testing', 'bench', 'benchmarks', 'ci_tools', 'doc', 'docs', 'docs_src', 'dummyserver', 'downstream', 'examples', 'extras', 'failures-to-investigate', 'integration', 'integration_embedded', 'journey_tests', 'mock_tests', 'profiling', 'proto_test', 'scripts', 'tasks', 'testing', 'tools', 'wasm-preview'} for part in parts)) or any((_is_generated_context_dir(part) for part in parts)):\n        return 9\n    helper_names = {'benchmark.py', 'bench.py', 'run_tests.py', 'testclient.py', 'testing.py', *LATE_FILES}\n    if parts[:2] == ['packaging', 'pep517_backend'] or name.endswith(('_benchmark.py', '_bench.py')) or name in helper_names:\n        return 8\n    if lowered.startswith('src/') or '/src/' in lowered:\n        return 0\n    if lowered.startswith(('airflow/', 'airflow-core/', 'app/', 'lib/', 'packages/')) or ('/' not in lowered and name in EARLY_FILES):\n        return 1\n    if any((part in {'borg', 'dask', 'gradio', 'mitmproxy', 'prefect', 'pyinstaller', 'scrapy', 'spyder'} for part in parts[:2])):\n        return 1\n    return 3\n\ndef _is_generated_context_dir(name: str) -> bool:\n    lowered = name.lower()\n    return lowered == 'generated' or lowered.startswith('generated_') or lowered.startswith('generated-')",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "src/cognitive_inspect/python_source_files.py"
+        ],
+        "imported_symbols": [
+          "is_test_path",
+          "iter_python_files",
+          "path_priority"
+        ]
+      },
+      {
+        "id": "s10",
+        "path": "src/cognitive_inspect/structure/domain_anchors.py",
+        "sha256": "5464949436619cc2630e2ae6f20ca2dc10a62211da433e3c6d96c15f493e919c",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Domain flow anchor detection for large Python projects.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom .path_priority import path_priority\n\n\ndef domain_flow_anchors(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:\n    rows = []\n    for item in functions:\n        path = str(item.get(\"path\", \"\"))\n        name = str(item.get(\"name\", \"\"))\n        score = domain_anchor_score(path, name, item)\n        if score <= 0:\n            continue\n        rows.append(\n            {\n                \"path\": item.get(\"path\"),\n                \"name\": item.get(\"name\"),\n                \"line\": item.get(\"line\"),\n                \"loc\": item.get(\"loc\"),\n                \"call_count\": len(item.get(\"calls\", [])),\n                \"side_effects\": item.get(\"side_effects\", []),\n                \"domain_anchor_score\": score,\n            }\n        )\n    return sorted(rows, key=lambda item: (-int(item[\"domain_anchor_score\"]), path_priority(str(item.get(\"path\", \"\"))), str(item.get(\"path\", \"\"))))[:16]\n\n\ndef domain_anchor_score(path: str, name: str, item: dict[str, Any]) -> int:\n    text = f\"{path}:{name}\".replace(\"\\\\\", \"/\").lower()\n    if any(token in text for token in (\"/tests/\", \"/docs/\", \"external-deps\", \"waflib\", \"runtests.py\", \"hatch_build.py\", \"documentation.py\")):\n        return 0\n    groups = (\n        (\"dag\", \"flow\", \"task\", \"scheduler\", \"trigger\", \"state\", \"worker\"),\n        (\"playbook\", \"inventory\", \"module\", \"template\", \"connection\", \"execute\"),\n        (\"archive\", \"repository\", \"manifest\", \"chunk\", \"restore\", \"backup\"),\n        (\"analysis\", \"hook\", \"spec\", \"bundle\", \"bootloader\", \"modulegraph\"),\n        (\"proxy\", \"flow\", \"cert\", \"tls\", \"intercept\", \"websocket\"),\n        (\"plugin\", \"widget\", \"editor\", \"lsp\", \"workspace\", \"preferences\"),\n        (\"component\", \"blocks\", \"interface\", \"queue\", \"api\", \"predict\"),\n        (\"graph\", \"blockwise\", \"scheduler\", \"array\", \"dataframe\", \"partition\"),\n    )\n    hits = [token for tokens in groups for token in tokens if token in text]\n    if not hits:\n        return 0\n    score = 30 + min(len(set(hits)), 5) * 8\n    score += min(int(item.get(\"loc\") or 0), 160) // 20\n    score += min(len(item.get(\"calls\", [])), 20)\n    if any(token in name for token in (\"run\", \"trigger\", \"execute\", \"schedule\", \"dispatch\", \"process\")):\n        score += 18\n    if name.startswith((\"build_\", \"make_\", \"create_\")) and any(token in text for token in (\"task\", \"state\", \"config\")):\n        score -= 10\n    if item.get(\"side_effects\"):\n        score -= 8\n    if name.startswith((\"get_\", \"is_\", \"has_\", \"to_\", \"from_\")):\n        score -= 20\n    return score\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [
+          "src/cognitive_inspect/structure/path_priority.py"
+        ],
+        "imported_symbols": [
+          "domain_flow_anchors"
+        ]
+      },
+      {
+        "id": "s11",
+        "path": "src/cognitive_inspect/structure/policy_candidates.py",
+        "sha256": "c39f9b581c549bee144091955b6bfbccd5695b3f2c8896b58751a88ff79ad5ae",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Detect bounded, reproducible boolean policy decisions.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\n\nNONDETERMINISTIC_CALL_TOKENS = (\"random\", \"randint\", \"choice\", \"time\", \"datetime.now\", \"uuid\")\n\n\ndef bounded_policy_candidates(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:\n    rows = [_candidate(item) for item in functions if _is_candidate(item)]\n    return sorted(rows, key=lambda row: (-_policy_score(row), str(row[\"path\"]), str(row[\"name\"])))[:12]\n\n\ndef _is_candidate(item: dict[str, Any]) -> bool:\n    name = str(item.get(\"name\") or \"\").lower()\n    returns = str(item.get(\"returns\") or \"\").lower()\n    calls = \" \".join(str(call).lower() for call in item.get(\"calls\", []))\n    args = [arg for arg in item.get(\"args\", []) if str(arg.get(\"name\") or \"\") not in {\"self\", \"cls\"}]\n    policy_name = name.startswith((\"can_\", \"should_\", \"allow_\")) or \"eligible\" in name or name.endswith(\"_allowed\")\n    return bool(\n        policy_name\n        and returns in {\"bool\", \"builtins.bool\"}\n        and 2 <= int(item.get(\"loc\") or 0) <= 60\n        and len(args) >= 2\n        and not item.get(\"side_effects\")\n        and not any(token in calls for token in NONDETERMINISTIC_CALL_TOKENS)\n    )\n\n\ndef _candidate(item: dict[str, Any]) -> dict[str, Any]:\n    return {\n        \"path\": item.get(\"path\"),\n        \"name\": item.get(\"name\"),\n        \"line\": item.get(\"line\"),\n        \"loc\": item.get(\"loc\"),\n        \"args\": item.get(\"args\", []),\n        \"returns\": item.get(\"returns\", \"\"),\n        \"calls\": item.get(\"calls\", []),\n        \"side_effects\": item.get(\"side_effects\", []),\n    }\n\n\ndef _policy_score(item: dict[str, Any]) -> int:\n    typed_args = sum(bool(arg.get(\"annotation\")) for arg in item.get(\"args\", []))\n    return 40 + min(int(item.get(\"loc\") or 0), 30) + typed_args * 4\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": true,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": [
+          "bounded_policy_candidates"
+        ]
+      },
+      {
+        "id": "s12",
+        "path": "pyproject.toml",
+        "sha256": "ae9917f63e18e9f2f3185909366df5c2c9f4e3850e73dde690bf32efef992e49",
+        "surface": {},
+        "excerpt": "[build-system]\nrequires = [\"setuptools>=77\", \"wheel\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"cognitive-inspect\"\nversion = \"0.1.0a1\"\ndescription = \"cognitive-inspect component of Cognitive OS\"\nreadme = \"README.md\"\nrequires-python = \">=3.10\"\nlicense = \"MIT\"\nlicense-files = [\"LICENSE\"]\ndependencies = []\n\n[project.optional-dependencies]\ntest = [\"pytest>=8\"]\n\n[tool.setuptools.packages.find]\nwhere = [\"src\"]\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\naddopts = \"--import-mode=importlib\"\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": []
+      },
+      {
+        "id": "s13",
+        "path": "src/cognitive_inspect/python_source_files.py",
+        "sha256": "e5b559abe57980ff866315b484acce3f46a760f1507fa4b7320269e4a134f0dc",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Recognize Python modules and extensionless Python executables.\"\"\"\n\nfrom __future__ import annotations\n\nimport os\nfrom pathlib import Path\n\n\nEXCLUDED_DIRS = {\".git\", \".hg\", \".venv\", \"venv\", \"node_modules\", \"__pycache__\", \".pytest_cache\"}\n\n\ndef is_python_source_file(path: Path) -> bool:\n    if not path.is_file():\n        return False\n    if path.suffix.lower() in {\".py\", \".pyw\"}:\n        return True\n    if path.suffix:\n        return False\n    try:\n        first_line = path.open(\"rb\").readline(256).lower()\n    except OSError:\n        return False\n    return first_line.startswith(b\"#!\") and b\"python\" in first_line\n\n\ndef iter_python_source_files(root: Path, *, limit: int | None = None):\n    count = 0\n    for current, dirs, files in os.walk(root, topdown=True, onerror=lambda _exc: None):\n        dirs[:] = sorted(name for name in dirs if name not in EXCLUDED_DIRS and not name.startswith(\".\"))\n        for name in sorted(files):\n            path = Path(current) / name\n            if not is_python_source_file(path):\n                continue\n            yield path\n            count += 1\n            if limit is not None and count >= limit:\n                return\n\n\ndef is_python_source_ref(source: str) -> bool:\n    source = str(source or \"\")\n    path_text = source.split(\":\", 1)[0].replace(\"\\\\\", \"/\")\n    name = Path(path_text).name\n    suffix = Path(name).suffix.lower()\n    return bool(name and not name.startswith(\"[\") and \" \" not in name and (suffix in {\".py\", \".pyw\"} or not suffix and \":\" in source))\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": [
+          "is_python_source_file"
+        ]
+      },
+      {
+        "id": "s14",
+        "path": "README.md",
+        "sha256": "c15092f2523d25fd6642d45fcf2323b634975710854836872844093305dffa24",
+        "surface": {},
+        "excerpt": "# Cognitive Inspect\r\n\r\nRead-only repository facts extracted from Cognitive OS. Alpha, Python 3.10+;\r\nstandard library only. No role planning, architecture scoring or patch execution.\r\n\r\n```bash\r\npython -m pip install ./packages/cognitive-inspect\r\npython -m pytest packages/cognitive-inspect/tests -q --import-mode=importlib\r\n```\r\n\r\n```python\r\nfrom cognitive_inspect import scan_project_tree, extract_python_structure\r\n\r\ntree = scan_project_tree({\"path\": \"project\", \"max_files\": 5000, \"max_depth\": 8})\r\nstructure = extract_python_structure({\"root\": \"project\"})\r\n```\r\n\r\nPublic API: `scan_project_tree`, `detect_project_stack`,\r\n`extract_python_structure`, `extract_runtime_commands`. Each accepts a payload\r\ndictionary and returns the existing plugin result dictionary. Roots are limited\r\nto the curren",
+        "truncated": true,
+        "authority": "documentation_claims",
+        "primary": false,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": []
+      },
+      {
+        "id": "s15",
+        "path": "src/cognitive_inspect/ast_navigation.py",
+        "sha256": "d479d0c70340f05642743cd80d2f29d6e656e7315097cf0da6e206912165e944",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Neutral AST navigation; nodes are returned by identity without mutation.\"\"\"\r\nfrom __future__ import annotations\r\n\r\nimport ast\r\n\r\n\r\ndef parent_map(node: ast.AST) -> dict[ast.AST, ast.AST]:\r\n    return {child: parent for parent in ast.walk(node) for child in ast.iter_child_nodes(parent)}\r\n\r\n\r\n\r\ndef find_top_level_function(tree: ast.Module, function_name: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:\r\n    return next(\r\n        (\r\n            node\r\n            for node in tree.body\r\n            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name\r\n        ),\r\n        None,\r\n    )\r\n\r\n\r\ndef call_name(node: ast.AST) -> str:\r\n    if isinstance(node, ast.Name):\r\n        return node.id\r\n    if isinstance(node, ast.Attribute):\r\n        base = call_name(node.value)\r\n        return f\"{base}.{node.attr}\" if base else node.attr\r\n    return \"\"\r\n\r\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": []
+      },
+      {
+        "id": "s16",
+        "path": "src/cognitive_inspect/structure/__init__.py",
+        "sha256": "2354f8d79b433582848ae45bed11a1d762317c3d4a1198f9ee4a020009986d39",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "\"\"\"Bounded Python structure extraction.\"\"\"\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": false,
+        "local_dependencies": [],
+        "imported_symbols": []
+      },
+      {
+        "id": "s17",
+        "path": "tests/test_extract_python_structure_contract.py",
+        "sha256": "644782cdeb5d5ef46baa08db34dce95a1e4240f5853bd01a4704ff8ea96f8d5a",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\nfrom pathlib import Path\n\nfrom cognitive_inspect impor\n[... omitted ...]\nath)\n    Path(\"project\").mkdir()\n    Path(\"project/api.py\").write_text(\n\n[visible interface text]\ndef can_comment(media_type: str, allowed: set[str]) -> bool: return media_type in allowed def can_like(state, percentage: int) -> bool: return randint(1, 100)\n<\n= percentage\n\n[lines 6-14, test_extract_python_structure_accepts_utf8_bom]\n[..\n\n[lines 17-28, test_ext\n[... omitted ...]\ness_python_executable]\n\n\n[lines 35-54, test_ext\n[... omitted ...]\n_functions_and_routes]\n\n\n[lines 57-79, test_ext\n[... omitted ...]\nfastapi_method_routes]\n\n\n[lines 82-97, test_ext\n[... omitted ...]\nes_dummyserver_routes]\n\n\n[lines 100-115, test_e\n[... omitted ...]\new_runner_as_context]\n\n\n[lines 118-136, test_e\n[... omitted ...]\n_app_code_over_tools]\n\n\n[lines 139-150, test_e\n[... omitted ...]\nbehind_named_package]\n\n\n[lines 153-164, test_e\n[... omitted ...]\n_over_config_modules]\n\n\n[lines 167-199, test_e\n[... omitted ...]\ne_code_over_docs_src]\n\n\n[lines 202-213, test_e\n[... omitted ...]\nnd_generated_clients]\n\n\n[lines 216-235, test_e\n[... omitted ...]\ndomain_package_roots]\n\n\n[lines 238-254, test_e\n[... omitted ...]\nover_nested_packages]\n\n\n[lines 257-272, test_e\n[... omitted ...]\nnd_integration_noise]\n\n\n[lines 275-297, test_e\n[... omitted ...]\nson_dumps_as_file_io]\n\n\n[lines 300-312, test_e\n[... omitted ...]\ncible_boolean_policy]\n\n\n[lines 315-332, test_p\n[... omitted ...]\n_void_async_wrappers]\n\n\n[lines 335-371, test_e\n[... omitted ...]\nema_fields_and_tests]\n\n\n[lines 374-382, test_e\n[... omitted ...]\nwith_explicit_budget]\n",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s18",
+        "path": "tests/test_detect_project_stack_contract.py",
+        "sha256": "a5187d2962eb9b1ed38e7c9b9a32414a0b5977e3b5b77dea3921b7262922650c",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "[module header]\nfrom pathlib import Path\n\nfrom cognitive_inspect impor\n[... omitted ...]\npy\"]\n    assert \"Flask-like Python web app\" not in result[\"frameworks\"]\n\n[lines 6-25, test_detect_project_stack_reports_python_app]\ndef test_detect_project_stack_reports_python_app(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path('project/static').mkdir(parents=True)\n    Path('project/map_install_package').mkdir(par\n[... omitted ...]\nt result['dependency_files'][0]['dependencies'] == ['flask', 'pandas']\n    assert 'Flask-like Python web app' in result['frameworks']\n    assert {'language': 'Python', 'files': 1} in result['languages']\n\n[lines 28-42, test_detect_project_stack_ignores_context_entrypoints]\ndef test_detect_project_stack_ignores_context_entrypoints(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path('project/tests/testserver').mkdir(parents=True)\n    Path('project/continu\n[... omitted ...]\n/src/pkg/__init__.py').write_text('', encoding='utf-8')\n    Path('project/noxfile.py').write_text('', encoding='utf-8')\n    result = run({'path': 'project'})\n    assert result['entrypoints'] == []\n\n[lines 45-53, test_detect_project_stack_does_not_treat_plain_app_py_as_flask]\ndef test_detect_project_stack_does_not_treat_plain_app_py_as_flask(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path('project').mkdir()\n    Path('project/app.py').write_text(\"def main():\\n    print('hello')\\n\", encoding='utf-8')\n    result = run({'path': 'project'})\n    assert result['entrypoints'] == ['app.py']\n    assert 'Flask-like Python web app' not in result['frameworks']",
+        "truncated": true,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s19",
+        "path": "tests/test_ast_navigation.py",
+        "sha256": "8a97a6600eb526e9943c9a3380d0943e0aa71f7fea664e2f72ec84b8c22cc639",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "import ast\n\nfrom cognitive_inspect.ast_navigation import find_top_level_function, parent_map\n\n\ndef test_lookup_is_top_level_and_preserves_first_sync_or_async_node():\n    tree = ast.parse('class C:\\n    def match(): pass\\nasync def match(): pass\\ndef match(): pass\\n')\n    assert find_top_level_function(tree, 'match') is tree.body[1]\n    assert find_top_level_function(ast.parse('class C:\\n    def match(): pass'), 'match') is None\n    assert find_top_level_function(tree, 'absent') is None\n\n\ndef test_parent_map_preserves_node_identity_and_does_not_mutate_tree():\n    tree = ast.parse('def f(rows):\\n    for row in rows:\\n        result.append(row)\\n')\n    before = ast.dump(tree, include_attributes=True)\n    parents = parent_map(tree)\n    call = tree.body[0].body[0].body[0].value\n    assert parents[call] is tree.body[0].body[0].body[0]\n    assert parents[parents[call]] is tree.body[0].body[0]\n    assert tree not in parents\n    assert ast.dump(tree, include_attributes=True) == before\ndef test_call_name_preserves_attribute_and_unsupported_expression_behavior():\n    import ast\n    from cognitive_inspect.ast_navigation import call_name\n    for text, expected in [('json.dumps', 'json.dumps'), ('value', 'value'),\n                           ('factory().write_text', 'write_text'), ('42', '')]:\n        node = ast.parse(text, mode='eval').body\n        before = ast.dump(node)\n        assert call_name(node) == expected\n        assert ast.dump(node) == before\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/ast_navigation.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s20",
+        "path": "tests/test_cli.py",
+        "sha256": "dc4316b1ff8a6b8424952b6eb993a0b0a8a6d15a954a1c87ab4ba9b7ca489e0e",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "import hashlib\nimport json\nimport subprocess\nimport sys\n\n\ndef invoke(root, *args):\n    return subprocess.run([sys.executable, '-m', 'cognitive_inspect', *args], cwd=root,\n                          capture_output=True, text=True, encoding='utf-8', timeout=20)\n\n\ndef test_cli_emits_bounded_json_without_running_or_mutating_sources(tmp_path):\n    (tmp_path / 'a.py').write_text('raise RuntimeError(\"DO_NOT_EXECUTE\")\\n')\n    (tmp_path / 'b.txt').write_text('data')\n    before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in tmp_path.iterdir()}\n    result = invoke(tmp_path, '.', '--max-files', '1')\n    assert result.returncode == 0, result.stderr\n    data = json.loads(result.stdout)\n    assert len(data['files']) == 1\n    assert data['skipped']['truncated_files'] == 1\n    assert {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in tmp_path.iterdir()} == before\n\n\ndef test_cli_missing_path_and_invalid_budget_are_clear_errors(tmp_path):\n    for args in [('missing',), ('.', '--max-files', '0')]:\n        result = invoke(tmp_path, *args)\n        assert result.returncode == 2\n        assert not result.stdout and 'cognitive-inspect:' in result.stderr\n        assert 'Traceback' not in result.stderr\n\n\ndef test_cli_help_is_available_without_project_access(tmp_path):\n    result = invoke(tmp_path, '--help')\n    assert result.returncode == 0 and '--max-depth' in result.stdout\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [],
+        "imported_symbols": []
+      },
+      {
+        "id": "s21",
+        "path": "tests/test_parser_versions.py",
+        "sha256": "61a8559e90c9f1a09d01b96edb3c68fffee8e115ea2d8abd7fe0630e02b12c8f",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "from pathlib import Path\nimport sys\nfrom cognitive_inspect import extract_python_structure as run\n\n\ndef test_generic_class_matches_host_parser_capability(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path(\"project\").mkdir()\n    Path(\"project/app.py\").write_text(\"class Cache[T]:\\n    pass\\n\", encoding=\"utf-8\")\n    result = run({\"root\": \"project\"})\n    if sys.version_info >= (3, 12):\n        assert result[\"skipped\"] == []\n        assert result[\"files\"][0][\"classes\"][0][\"name\"] == \"Cache\"\n    else:\n        assert result[\"skipped\"] == [{\"path\": \"app.py\", \"reason\": \"ParserVersionIncompatible\", \"line\": 1}]\n\n\ndef test_python2_conversion_or_explicit_skip_on_host_without_lib2to3(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path(\"project\").mkdir()\n    Path(\"project/app.py\").write_text(\"#!/usr/bin/env python2\\ndef run(value):\\n    print value\\n\", encoding=\"utf-8\")\n    result = run({\"root\": \"project\"})\n    if sys.version_info >= (3, 13):\n        assert result[\"files\"] == []\n        assert result[\"skipped\"] == [{\"path\": \"app.py\", \"reason\": \"SyntaxError\", \"line\": 3}]\n    else:\n        assert result[\"files\"][0][\"functions\"][0][\"name\"] == \"run\"\n        assert result[\"files\"][0][\"parser_compatibility\"] == \"python2_compatibility_ast\"\n        assert result[\"skipped\"] == []\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s22",
+        "path": "tests/test_scan_project_tree_contract.py",
+        "sha256": "0c64b2899d9239ef880d15145ccea9f3692e7a85f771331e25461603cf812765",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "from pathlib import Path\n\nimport pytest\n\nfrom cognitive_inspect import scan_project_tree as run\n\n\ndef test_scan_project_tree_skips_common_noise(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path(\"project/.venv\").mkdir(parents=True)\n    Path(\"project/src\").mkdir()\n    Path(\"project/src/app.py\").write_text(\"print('ok')\", encoding=\"utf-8\")\n    Path(\"project/requirements.txt\").write_text(\"pytest==1.0.0\", encoding=\"utf-8\")\n    Path(\"project/.venv/ignored.py\").write_text(\"x\", encoding=\"utf-8\")\n\n    result = run({\"path\": \"project\"})\n\n    assert result[\"counts\"][\"files\"] == 2\n    assert \"requirements.txt\" in result[\"notable_files\"]\n    assert [item[\"path\"] for item in result[\"files\"]] == [\"requirements.txt\", \"src/app.py\"]\n    assert result[\"extensions\"] == {\".py\": 1, \".txt\": 1}\n\n\ndef test_scan_project_tree_rejects_out_of_scope_path():\n    with pytest.raises(ValueError):\n        run({\"path\": \"C:/Windows\"})\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      },
+      {
+        "id": "s23",
+        "path": "tests/test_extract_runtime_commands_contract.py",
+        "sha256": "0c9f95ee6333b7c1342ae5997c6573ea1ecc059c75d1ea55f82f535cb7174cf5",
+        "surface": {
+          "route_literals": [],
+          "file_glob_literals": [],
+          "cli_arguments": [],
+          "visible_ui_text": [],
+          "authority": "syntax_only; endpoints alone do not establish a browser workflow"
+        },
+        "excerpt": "from pathlib import Path\n\nfrom cognitive_inspect import extract_runtime_commands as run\n\n\ndef test_extract_runtime_commands_detects_run_script(tmp_path, monkeypatch):\n    monkeypatch.chdir(tmp_path)\n    Path(\"project\").mkdir()\n    Path(\"project/RUN_MAP.bat\").write_text(\"@echo off\\npython app.py\\npause\\n\", encoding=\"utf-8\")\n\n    result = run({\"root\": \"project\"})\n\n    assert result[\"commands\"][0][\"path\"] == \"RUN_MAP.bat\"\n    assert result[\"commands\"][0][\"purpose\"] == \"run_application\"\n    assert \"python app.py\" in result[\"commands\"][0][\"commands\"]\n",
+        "truncated": false,
+        "authority": "source_excerpt",
+        "primary": false,
+        "auxiliary": true,
+        "local_dependencies": [
+          "src/cognitive_inspect/__init__.py"
+        ],
+        "imported_symbols": []
+      }
+    ],
+    "duplicates": [],
+    "omitted": [],
+    "traversal_limited": false,
+    "excluded_directories": [
+      ".git",
+      ".venv",
+      "__pycache__",
+      "artifacts",
+      "backups",
+      "build",
+      "data",
+      "dist",
+      "node_modules",
+      "vendor",
+      "venv"
+    ],
+    "source_catalog": [
+      {
+        "path": "README.md",
+        "sha256": "c15092f2523d25fd6642d45fcf2323b634975710854836872844093305dffa24",
+        "symbols": [],
+        "auxiliary": false
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "ae9917f63e18e9f2f3185909366df5c2c9f4e3850e73dde690bf32efef992e49",
+        "symbols": [],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/__init__.py",
+        "sha256": "27afb054b013a8e46fa51ac3bac0b06426b219043679b566de88ef2a486b5fad",
+        "symbols": [],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/__main__.py",
+        "sha256": "1daca8a0753fad7d9944b6568d0d5d6e15340d4396a0f08381478e82d4b4815b",
+        "symbols": [
+          "main"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/ast_navigation.py",
+        "sha256": "d479d0c70340f05642743cd80d2f29d6e656e7315097cf0da6e206912165e944",
+        "symbols": [
+          "parent_map",
+          "find_top_level_function",
+          "call_name"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/commands.py",
+        "sha256": "9cfdc6bbc9c2475f73bbef2e5bb8b912a1337cd0f575c3540620922ffa0131a6",
+        "symbols": [
+          "run",
+          "_purpose",
+          "_clean_line",
+          "_is_comment",
+          "_is_shell_noise",
+          "_iter_scripts",
+          "_resolve_scoped_root",
+          "_is_relative_to"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/python_parser_compatibility.py",
+        "sha256": "c0378c3b28670bcad935aadeaf305af11721e7178d3e048aaeb2f14faab32691",
+        "symbols": [
+          "ParserVersionIncompatible",
+          "parse_compatible_source",
+          "_newer_python_syntax",
+          "_looks_like_python2",
+          "_convert_python2",
+          "__init__"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/python_source_files.py",
+        "sha256": "e5b559abe57980ff866315b484acce3f46a760f1507fa4b7320269e4a134f0dc",
+        "symbols": [
+          "is_python_source_file",
+          "iter_python_source_files",
+          "is_python_source_ref"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/stack.py",
+        "sha256": "a5f521598d2aecca2a6cc654cb708f947ff165e5ebcb6796933a1591fa9a2778",
+        "symbols": [
+          "run",
+          "_iter_project_files",
+          "_dependency_names",
+          "_frameworks",
+          "_is_context_path",
+          "_read_small_text",
+          "_resolve_scoped_path",
+          "_is_relative_to"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/tree.py",
+        "sha256": "550290b3e51150a4f8f063e00851d59b311f2bdca632c83e8e5b55b6730e5abe",
+        "symbols": [
+          "run",
+          "_append_file",
+          "_is_noise_path",
+          "_line_count",
+          "_resolve_scoped_path",
+          "_is_relative_to"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/__init__.py",
+        "sha256": "2354f8d79b433582848ae45bed11a1d762317c3d4a1198f9ee4a020009986d39",
+        "symbols": [],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/domain_anchors.py",
+        "sha256": "5464949436619cc2630e2ae6f20ca2dc10a62211da433e3c6d96c15f493e919c",
+        "symbols": [
+          "domain_flow_anchors",
+          "domain_anchor_score"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/insights.py",
+        "sha256": "211784084634dbdb3e6bfab7e09183e79bf4335b7d1647e8b92be76b782af00a",
+        "symbols": [
+          "class_fields",
+          "function_error_profile",
+          "import_rows",
+          "project_insights",
+          "annotation_name",
+          "expr_name",
+          "_local_roots",
+          "_test_surface",
+          "_import_graph",
+          "_top_imports",
+          "_error_handling",
+          "_schema_fields"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/main.py",
+        "sha256": "e3d4261368ae21bad7ce604040fb715a8b2647590a5fab1c9827239043d5e1b2",
+        "symbols": [
+          "run",
+          "_summarize_file",
+          "_decorator_names",
+          "_class_methods",
+          "_function_args",
+          "_annotation_name",
+          "_call_names",
+          "_function_side_effects",
+          "_route_rows",
+          "_route_kind",
+          "_expr_name",
+          "_central_nodes",
+          "_wide_functions",
+          "_pure_transform_candidates",
+          "_candidate_priority",
+          "_symbol_extraction_priority",
+          "_contracts",
+          "_external_dependencies",
+          "_resolve_scoped_root",
+          "_is_relative_to"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/path_priority.py",
+        "sha256": "34347e5848346a9184c0e13dbc92092e4f83e8a471165241912aa256c4a2b561",
+        "symbols": [
+          "iter_python_files",
+          "is_test_path",
+          "traversal_key",
+          "path_priority",
+          "_is_generated_context_dir"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "src/cognitive_inspect/structure/policy_candidates.py",
+        "sha256": "c39f9b581c549bee144091955b6bfbccd5695b3f2c8896b58751a88ff79ad5ae",
+        "symbols": [
+          "bounded_policy_candidates",
+          "_is_candidate",
+          "_candidate",
+          "_policy_score"
+        ],
+        "auxiliary": false
+      },
+      {
+        "path": "tests/test_ast_navigation.py",
+        "sha256": "8a97a6600eb526e9943c9a3380d0943e0aa71f7fea664e2f72ec84b8c22cc639",
+        "symbols": [
+          "test_lookup_is_top_level_and_preserves_first_sync_or_async_node",
+          "test_parent_map_preserves_node_identity_and_does_not_mutate_tree",
+          "test_call_name_preserves_attribute_and_unsupported_expression_behavior"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_cli.py",
+        "sha256": "dc4316b1ff8a6b8424952b6eb993a0b0a8a6d15a954a1c87ab4ba9b7ca489e0e",
+        "symbols": [
+          "invoke",
+          "test_cli_emits_bounded_json_without_running_or_mutating_sources",
+          "test_cli_missing_path_and_invalid_budget_are_clear_errors",
+          "test_cli_help_is_available_without_project_access"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_detect_project_stack_contract.py",
+        "sha256": "a5187d2962eb9b1ed38e7c9b9a32414a0b5977e3b5b77dea3921b7262922650c",
+        "symbols": [
+          "test_detect_project_stack_reports_python_app",
+          "test_detect_project_stack_ignores_context_entrypoints",
+          "test_detect_project_stack_does_not_treat_plain_app_py_as_flask"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_extract_python_structure_contract.py",
+        "sha256": "644782cdeb5d5ef46baa08db34dce95a1e4240f5853bd01a4704ff8ea96f8d5a",
+        "symbols": [
+          "test_extract_python_structure_accepts_utf8_bom",
+          "test_extract_python_structure_accepts_extensionless_python_executable",
+          "test_extract_python_structure_detects_imports_functions_and_routes",
+          "test_extract_python_structure_detects_fastapi_method_routes",
+          "test_extract_python_structure_ignores_dummyserver_routes",
+          "test_extract_python_structure_treats_wasm_preview_runner_as_context",
+          "test_extract_python_structure_prioritizes_app_code_over_tools",
+          "test_extract_python_structure_defers_build_metadata_behind_named_package",
+          "test_extract_python_structure_prioritizes_owned_package_over_config_modules",
+          "test_extract_python_structure_prioritizes_package_code_over_docs_src",
+          "test_extract_python_structure_defers_end_to_end_generated_clients",
+          "test_extract_python_structure_prioritizes_domain_package_roots",
+          "test_extract_python_structure_prioritizes_root_src_over_nested_packages",
+          "test_extract_python_structure_defers_profiling_and_integration_noise",
+          "test_extract_python_structure_does_not_treat_json_dumps_as_file_io",
+          "test_extract_python_structure_finds_reproducible_boolean_policy",
+          "test_pure_transform_candidates_exclude_void_async_wrappers",
+          "test_extract_python_structure_reports_errors_schema_fields_and_tests",
+          "test_extract_python_structure_indexes_oversized_single_file_cli_with_explicit_budget"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_extract_runtime_commands_contract.py",
+        "sha256": "0c9f95ee6333b7c1342ae5997c6573ea1ecc059c75d1ea55f82f535cb7174cf5",
+        "symbols": [
+          "test_extract_runtime_commands_detects_run_script"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_parser_versions.py",
+        "sha256": "61a8559e90c9f1a09d01b96edb3c68fffee8e115ea2d8abd7fe0630e02b12c8f",
+        "symbols": [
+          "test_generic_class_matches_host_parser_capability",
+          "test_python2_conversion_or_explicit_skip_on_host_without_lib2to3"
+        ],
+        "auxiliary": true
+      },
+      {
+        "path": "tests/test_scan_project_tree_contract.py",
+        "sha256": "0c64b2899d9239ef880d15145ccea9f3692e7a85f771331e25461603cf812765",
+        "symbols": [
+          "test_scan_project_tree_skips_common_noise",
+          "test_scan_project_tree_rejects_out_of_scope_path"
+        ],
+        "auxiliary": true
+      }
+    ],
+    "catalog_limited": false,
+    "dependency_edges": {
+      "README.md": [],
+      "pyproject.toml": [],
+      "src/cognitive_inspect/__init__.py": [
+        "src/cognitive_inspect/commands.py",
+        "src/cognitive_inspect/stack.py",
+        "src/cognitive_inspect/structure/main.py",
+        "src/cognitive_inspect/tree.py"
+      ],
+      "src/cognitive_inspect/__main__.py": [
+        "src/cognitive_inspect/__init__.py"
+      ],
+      "src/cognitive_inspect/ast_navigation.py": [],
+      "src/cognitive_inspect/commands.py": [],
+      "src/cognitive_inspect/python_parser_compatibility.py": [],
+      "src/cognitive_inspect/python_source_files.py": [],
+      "src/cognitive_inspect/stack.py": [
+        "pyproject.toml"
+      ],
+      "src/cognitive_inspect/tree.py": [
+        "pyproject.toml"
+      ],
+      "src/cognitive_inspect/structure/__init__.py": [],
+      "src/cognitive_inspect/structure/domain_anchors.py": [
+        "src/cognitive_inspect/structure/path_priority.py"
+      ],
+      "src/cognitive_inspect/structure/insights.py": [],
+      "src/cognitive_inspect/structure/main.py": [
+        "src/cognitive_inspect/python_parser_compatibility.py",
+        "src/cognitive_inspect/structure/domain_anchors.py",
+        "src/cognitive_inspect/structure/insights.py",
+        "src/cognitive_inspect/structure/path_priority.py",
+        "src/cognitive_inspect/structure/policy_candidates.py"
+      ],
+      "src/cognitive_inspect/structure/path_priority.py": [
+        "src/cognitive_inspect/python_source_files.py"
+      ],
+      "src/cognitive_inspect/structure/policy_candidates.py": [],
+      "tests/test_ast_navigation.py": [
+        "src/cognitive_inspect/ast_navigation.py"
+      ],
+      "tests/test_cli.py": [],
+      "tests/test_detect_project_stack_contract.py": [
+        "src/cognitive_inspect/__init__.py"
+      ],
+      "tests/test_extract_python_structure_contract.py": [
+        "src/cognitive_inspect/__init__.py"
+      ],
+      "tests/test_extract_runtime_commands_contract.py": [
+        "src/cognitive_inspect/__init__.py"
+      ],
+      "tests/test_parser_versions.py": [
+        "src/cognitive_inspect/__init__.py"
+      ],
+      "tests/test_scan_project_tree_contract.py": [
+        "src/cognitive_inspect/__init__.py"
+      ]
+    },
+    "scope": "Static excerpts; no execution. Duplicate bytes are not an active-root decision."
+  },
+  "claims": [
+    {
+      "id": "purpose",
+      "text": "Cognitive Inspect — это библиотека Python для извлечения структурированных, только для чтения фактов о проектах программного обеспечения. Она предоставляет четыре основные функции сканирования, которые анализируют файловую структуру, стек технологий, структуру Python-кода и команды запуска, не выполняя и не изменяя исходный код. Результаты возвращаются в виде словарей JSON, совместимых с контрактами плагинов Cognitive OS. Библиотека предназначена для использования в инструментах анализа кода или интеграции в более крупные системы для понимания архитектуры проекта.",
+      "evidence_ids": [
+        "s1",
+        "s2",
+        "s14"
+      ]
+    },
+    {
+      "id": "scenarios.0",
+      "text": "Пользователь запускает CLI-инструмент для получения обзора файловой структуры проекта. Указав путь к каталогу и опциональные ограничения (максимальное количество файлов и глубину), пользователь получает JSON с перечнем файлов, каталогов, расширений и пропущенных элементов, при этом общие служебные каталоги (например, .git, .venv) исключаются.",
+      "evidence_ids": [
+        "s1",
+        "s5",
+        "s22"
+      ]
+    },
+    {
+      "id": "scenarios.1",
+      "text": "Пользователь вызывает функцию `detect_project_stack` для определения технологического стека проекта. Инструмент сканирует файлы, подсчитывает расширения, идентифицирует файлы зависимостей (например, requirements.txt), точки входа (например, app.py) и скрипты, а также пытается определить фреймворки (например, Flask, FastAPI) на основе содержимого текстовых файлов.",
+      "evidence_ids": [
+        "s2",
+        "s4",
+        "s18"
+      ]
+    },
+    {
+      "id": "scenarios.2",
+      "text": "Пользователь вызывает функцию `extract_python_structure` для глубокого анализа Python-кода. Инструмент обходит Python-файлы, используя AST, и извлекает информацию о функциях, классах, импортах, декораторах, маршрутах (например, для Flask/FastAPI), а также вычисляет дополнительные аналитические данные, такие как центральные узлы, кандидаты в политики и якоря предметной области.",
+      "evidence_ids": [
+        "s2",
+        "s3",
+        "s8",
+        "s9",
+        "s10",
+        "s11",
+        "s17"
+      ]
+    },
+    {
+      "id": "scenarios.3",
+      "text": "Пользователь вызывает функцию `extract_runtime_commands` для извлечения вероятных команд запуска из скриптов проекта (например, .bat, .sh, .ps1). Инструмент читает файлы скриптов, фильтрует комментарии и служебные команды оболочки, а также пытается определить цель скрипта (например, запуск приложения, установка зависимостей).",
+      "evidence_ids": [
+        "s2",
+        "s6",
+        "s23"
+      ]
+    },
+    {
+      "id": "data_flow.0",
+      "text": "Входные данные: путь к каталогу проекта и опциональные параметры (например, `max_files`, `max_depth`). Обработка: функции разрешают путь в пределах разрешенной области (текущий рабочий каталог или его родитель), рекурсивно обходят файловую систему с ограничениями и применяют фильтры для исключения служебных путей. Выходные данные: структурированный словарь Python, содержащий извлеченные факты (например, списки файлов, языки, функции, зависимости), который может быть сериализован в JSON.",
+      "evidence_ids": [
+        "s1",
+        "s3",
+        "s4",
+        "s5",
+        "s6"
+      ]
+    },
+    {
+      "id": "data_flow.1",
+      "text": "При анализе Python-структуры исходный код файлов парсится с помощью стандартного модуля `ast` с учетом совместимости (например, попытка преобразования синтаксиса Python 2). Из AST извлекаются узлы функций и классов, их аргументы, декораторы, вызовы и побочные эффекты. Для веб-фреймворков декораторы анализируются для идентификации маршрутов HTTP.",
+      "evidence_ids": [
+        "s3",
+        "s7",
+        "s21"
+      ]
+    }
+  ],
+  "old_policy": {
+    "max_context_characters": 32000,
+    "max_source_characters": 1800,
+    "max_catalog_entries": 60
+  },
+  "original_receipt_sha256": "15ff89ed7c690643781e27ade2f81a701e5e61fc30a500046631afc9534cff6a"
+}

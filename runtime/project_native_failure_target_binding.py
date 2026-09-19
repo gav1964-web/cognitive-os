@@ -14,20 +14,23 @@ from .project_native_failure_module_resolution import (
     _python_module_path_any,
 )
 from .project_native_failure_source_symbols import _source_defines_symbol, _source_symbol_target, _symbol_at_line
+from .project_native_failure_unittest_assertions import unittest_observations
+from .project_native_failure_test_imports import test_import_aliases as _test_import_aliases, test_support_source
+from .project_native_failure_helper_binding import helper_method_binding, helper_call_scope_is_static, direct_constructor_method
 
 _TRACEBACK_REF = re.compile(r"(?m)^((?:[A-Za-z]:)?[^\r\n:]+\.py):(\d+)(?::|\s)")
 _NAMED_INIT_TYPE_ERROR = re.compile(
     r"TypeError:\s+([A-Za-z_][A-Za-z0-9_]*)\.__init__\(\)"
 )
 
-def _production_targets(project: Path, output: str) -> list[str]:
+def _production_targets(project: Path, output: str, *, test_paths=()) -> list[str]:
     result = []
     failure_section = re.split(
         r"(?m)^=+\s+warnings summary\s+=+\s*$", output, maxsplit=1,
     )[0]
     for raw_path, raw_line in _TRACEBACK_REF.findall(failure_section):
         normalized = _project_relative_traceback_path(project, raw_path)
-        if normalized is None:
+        if normalized is None or normalized in test_paths:
             continue
         lowered_parts = {part.lower() for part in Path(normalized).parts}
         if lowered_parts.intersection({"test", "tests", "testing", "site-packages"}) or Path(normalized).name.startswith("test_"):
@@ -37,8 +40,12 @@ def _production_targets(project: Path, output: str) -> list[str]:
             continue
         symbol = _symbol_at_line(path, int(raw_line))
         target = f"{normalized}:{symbol}" if symbol else f"{normalized}:line@{raw_line}"
-        if target not in result:
-            result.append(target)
+        # A shared leaf can recur in several failing tests. Preserve its last
+        # traceback position; first-occurrence deduplication could select a
+        # caller from a later failure as the leaf instead.
+        if target in result:
+            result.remove(target)
+        result.append(target)
     return result
 
 def _named_constructor_failure_target(project: Path, output: str) -> str | None:
@@ -76,6 +83,8 @@ def _direct_test_call_targets(project: Path, nodeids: list[str]) -> list[str]:
 def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[str, Any]:
     targets: list[str] = []
     excluded: list[dict[str, str]] = []
+    support_sources: list[dict] = []
+    helper_bindings: list[dict] = []
     for nodeid in nodeids:
         parts = str(nodeid).replace("\\", "/").split("::")
         if len(parts) < 2:
@@ -89,6 +98,7 @@ def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[s
         except (OSError, SyntaxError):
             continue
         scope = tree.body
+        owner = None
         if len(parts) >= 3:
             class_name = parts[-2].split("[", 1)[0]
             owner = next(
@@ -98,10 +108,13 @@ def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[s
         function = next((node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == test_name), None)
         if function is None:
             continue
-        aliases = _test_import_aliases(tree)
-        calls = _assertion_causal_calls(function, project, aliases)
+        aliases = _test_import_aliases(tree, project=project, test_path=test_path)
+        observations = unittest_observations(owner, function, aliases, _lexical_function_nodes(function))
+        calls = _assertion_causal_calls(function, project, aliases, observations)
         for call, authoritative in calls:
             candidate = _imported_call_target(project, call.func, aliases)
+            if candidate is None and authoritative:
+                candidate = direct_constructor_method(project, tree, function, call, aliases)
             if candidate and authoritative and candidate not in targets:
                 targets.append(candidate)
                 continue
@@ -114,6 +127,19 @@ def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[s
             evidence = {"call": label, "reason": reason}
             if evidence not in excluded:
                 excluded.append(evidence)
+            if reason == "test_support_call" and len(support_sources) < 8:
+                source = test_support_source(project, call.func, aliases)
+                if source and source not in support_sources:
+                    support_sources.append(source)
+                if source and authoritative:
+                    binding = helper_method_binding(project, source)
+                    if binding['status'] == 'bound_observed_api' and not helper_call_scope_is_static(tree, function, call, binding):
+                        binding = {'status': 'unbound', 'reason': 'test_call_scope_not_static',
+                                   'authority': 'observed_api_only_not_root_cause'}
+                    if binding not in helper_bindings:
+                        helper_bindings.append(binding)
+                    if binding['status'] == 'bound_observed_api' and binding['target'] not in targets:
+                        targets.append(binding['target'])
         if not targets:
             state_target = _unique_state_transition_target(
                 project=project,
@@ -127,6 +153,8 @@ def _test_assertion_causal_analysis(project: Path, nodeids: list[str]) -> dict[s
         "production_targets": targets if len(targets) == 1 else [],
         "candidate_targets": targets,
         "excluded_calls": excluded[:12],
+        "test_support_sources": support_sources,
+        "helper_bindings": helper_bindings,
         "reason": (
             "unique_project_production_target"
             if len(targets) == 1
@@ -211,6 +239,7 @@ def _assertion_causal_calls(
     function: ast.FunctionDef | ast.AsyncFunctionDef,
     project: Path,
     aliases: dict[str, tuple[str, str | None]],
+    observations: list[ast.expr] | None = None,
 ) -> list[tuple[ast.Call, bool]]:
     assignments: dict[str, ast.expr] = {}
     assertions: list[ast.expr] = []
@@ -223,7 +252,10 @@ def _assertion_causal_calls(
         elif isinstance(node, ast.Assert):
             assertions.append(node.test)
 
-    roots = assertions or [
+    opaque_assertions = [node for node in _lexical_function_nodes(function)
+                         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                         and node.func.attr.startswith("assert")]
+    roots = [*assertions, *(observations or [])] or opaque_assertions or [
         node
         for node in ast.walk(function)
         if isinstance(node, ast.Call)
@@ -261,7 +293,7 @@ def _assertion_causal_calls(
             visit(child, authoritative)
 
     for root in roots:
-        visit(root)
+        visit(root, root not in opaque_assertions)
     return list(calls.items())
 
 def _lexical_function_nodes(
@@ -307,17 +339,6 @@ def _excluded_call_reason(
         return "external_dependency_call"
     return "test_support_call" if not _is_production_path(project, path) else "unresolved_project_call"
 
-def _test_import_aliases(tree: ast.Module) -> dict[str, tuple[str, str | None]]:
-    aliases: dict[str, tuple[str, str | None]] = {}
-    for node in tree.body:
-        if isinstance(node, ast.Import):
-            for item in node.names:
-                aliases[str(item.asname or item.name.split(".", 1)[0])] = (str(item.name), None)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            for item in node.names:
-                aliases[str(item.asname or item.name)] = (str(node.module), str(item.name))
-    return aliases
-
 def _imported_call_target(
     project: Path, function: ast.expr, aliases: dict[str, tuple[str, str | None]]
 ) -> str | None:
@@ -327,6 +348,12 @@ def _imported_call_target(
     module, imported = aliases[names[0]]
     tail = names[1:]
     module_parts = module.split(".")
+    owner = _python_module_path(project, module_parts)
+    requested = '.'.join(([imported] if imported else []) + tail)
+    exported = _source_symbol_target(project, owner, requested) if owner and requested else None
+    if exported:
+        path, symbol = exported
+        return f'{path.relative_to(project).as_posix()}:{symbol}'
     symbol_parts: list[str] = []
     if imported:
         imported_module = [*module_parts, imported]

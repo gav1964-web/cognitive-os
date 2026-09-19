@@ -17,6 +17,7 @@ def main() -> int:
     parser.add_argument("--root", default=".")
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--output-dir", help="Deliver a supported new project into an empty directory under artifacts; requires --write.")
     parser.add_argument(
         "--question-mode",
         choices=["continue", "continue_with_assumptions", "ask", "ask_user", "ask_user_before_spec"],
@@ -31,6 +32,20 @@ def main() -> int:
     )
     args = parser.parse_args()
     root = Path(args.root).resolve()
+    if args.output_dir:
+        if not args.write or args.use_l45_llm or args.allow_generic_pattern or args.question_mode != 'continue_with_assumptions':
+            parser.error('delivery requires --write and default bounded planning options')
+        from runtime.role_pipeline import run_role_pipeline
+        from runtime.evaluation_route_execution import verify_task15
+        from uuid import uuid4
+        output = Path(args.output_dir)
+        output = output if output.is_absolute() else root / output
+        checks = root / 'artifacts/verification' / ('greenfield-' + uuid4().hex[:12])
+        report = run_role_pipeline(root=root, project_dir=output, goal=args.prompt,
+            mode='greenfield', write=True, run_executor=True,
+            delivery_verifier=lambda project: verify_task15(project, checks))
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report['status'] == 'completed' else 1
     report = run_greenfield_role_pipeline(
         root=root,
         prompt=args.prompt,

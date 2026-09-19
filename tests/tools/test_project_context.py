@@ -54,3 +54,20 @@ def test_context_selects_scope_without_reading_unrelated_files(tmp_path):
 def test_path_selection_does_not_guess_or_escape_root(tmp_path, path):
     with pytest.raises(ValueError):
         select_subsystems(tmp_path, fixture_manifest(tmp_path), [], [path])
+
+
+def test_pending_tasks_are_visible_and_filtered_to_selected_subsystem(tmp_path):
+    from runtime.development_handoff import sync_handoff
+    from runtime.stage_finalization import finalize_stage
+    manifest = fixture_manifest(tmp_path)
+    (tmp_path / 'source/main.py').write_text('# oversized\n' * 25)
+    (tmp_path / 'unmapped.py').write_text('# oversized\n' * 25)
+    sync_handoff(tmp_path, finalize_stage(tmp_path, max_lines=20))
+    payload = context(tmp_path, manifest, ['sample'])
+    assert payload['handoff']['total_pending'] == 2
+    assert [task['path'] for task in payload['handoff']['relevant_tasks']] == ['source/main.py']
+    assert 'DEVELOPMENT_TASKS.json' in payload['read_first']
+    output = markdown(tmp_path, payload)
+    assert 'Pending assistant tasks: 2' in output
+    assert '[open]: source/main.py' in output
+    assert 'unmapped.py' not in output

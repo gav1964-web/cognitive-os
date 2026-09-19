@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from .project_development_source_targets import resolve_python_target
+from .stage_finalization_workspace import inventory
+from .project_native_failure_helper_binding import helper_method_binding
 
 
 REQUIRED_FAILURE_EVIDENCE_CHECKS = (
@@ -28,6 +30,9 @@ def evidence_packet_digest(packet: dict[str, Any]) -> str:
 def is_complete_failure_evidence_packet(
     packet: dict[str, Any], *, target: str,
 ) -> bool:
+    if packet.get('schema_version') == 'repair_trial_packet.v1':
+        from .repair_trial_binding import is_repair_trial_packet
+        return is_repair_trial_packet(packet, target=target)
     checks = dict(packet.get("checks") or {})
     reproduction = dict(packet.get("reproduction") or {})
     return bool(
@@ -50,6 +55,7 @@ def is_complete_failure_evidence_packet(
 def attach_failure_evidence_packets(
     diagnosis: dict[str, Any], *, project_dir: Path,
     chain_case: dict[str, Any] | None = None,
+    native_replay_settings: dict | None = None,
 ) -> dict[str, Any]:
     result = deepcopy(diagnosis)
     for issue in result.get("issues") or []:
@@ -58,7 +64,8 @@ def attach_failure_evidence_packets(
         rows = [row for row in issue.get("failure_evidence") or [] if isinstance(row, dict)]
         packets = [
             build_failure_evidence_packet(
-                project_dir=project_dir, failure=dict(row), chain_case=chain_case
+                project_dir=project_dir, failure=dict(row), chain_case=chain_case,
+                native_replay_settings=native_replay_settings,
             )
             for row in rows
         ]
@@ -72,6 +79,7 @@ def attach_failure_evidence_packets(
 def build_failure_evidence_packet(
     *, project_dir: Path, failure: dict[str, Any],
     chain_case: dict[str, Any] | None = None,
+    native_replay_settings: dict | None = None,
 ) -> dict[str, Any]:
     target = str(failure.get("target") or "")
     signature = str(failure.get("failure_signature") or "")
@@ -81,13 +89,16 @@ def build_failure_evidence_packet(
         if (item := _test_source(project_dir, nodeid)) is not None
     ]
     repetitions = _matching_repetitions(chain_case, signature, target)
+    helper_provenance = _helper_provenance(project_dir, repetitions, target)
     output = _best_output(repetitions, failure)
     checks = dict.fromkeys(REQUIRED_FAILURE_EVIDENCE_CHECKS, False)
     checks.update({
+        "failure_set_within_replay_limit": 1 <= len(_strings(failure.get("failing_nodeids"))) <= 8,
         "stable_failure_signature": bool(signature) and len(repetitions) >= 2,
         "exact_target_is_source_backed": bool(target_source),
         "failing_test_source_is_present": bool(tests),
         "observed_failure_is_detailed": _detailed_failure(output),
+        "helper_provenance_current": helper_provenance['status'] != 'stale',
     })
     body = {
         "artifact_type": "ProjectFailureEvidencePacket",
@@ -101,6 +112,8 @@ def build_failure_evidence_packet(
         "assertion_evidence": _assertion_lines(output),
         "target_source": target_source,
         "test_sources": tests,
+        "helper_call_provenance": helper_provenance,
+        "project_inventory_digest": _inventory_digest(project_dir),
         "reproduction": {
             "matching_repetitions": len(repetitions),
             "exit_codes": [row.get("exit_code") for row in repetitions[:8]],
@@ -110,6 +123,9 @@ def build_failure_evidence_packet(
         "execution_authorized": False,
         "source_changes": False,
     }
+    if native_replay_settings is not None:
+        from .native_replay_settings import replay_settings
+        body['native_replay_settings'] = replay_settings(native_replay_settings)
     body["packet_digest"] = evidence_packet_digest(body)
     return body
 
@@ -138,6 +154,7 @@ def _target_source(project_dir: Path, target: str) -> dict[str, Any] | None:
         "line_end": getattr(nodes[0], "end_lineno", nodes[0].lineno),
         "excerpt": excerpt[:8000],
         "sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
+        "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
 
 
@@ -156,35 +173,72 @@ def _test_source(project_dir: Path, nodeid: str) -> dict[str, Any] | None:
         tree = ast.parse(text)
     except (OSError, UnicodeError, SyntaxError):
         return None
-    leaf = selector.split("::")[-1].split("[", 1)[0]
-    matches = [
-        node for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == leaf
-    ]
-    excerpt = ast.get_source_segment(text, matches[0]) if len(matches) == 1 else text[:5000]
+    scope, matches = tree.body, []
+    for part in selector.split('::'):
+        name = part.split('[', 1)[0]
+        matches = [node for node in scope
+                   if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name]
+        if len(matches) != 1:
+            break
+        scope = matches[0].body
+    if len(matches) == 1 and isinstance(matches[0], ast.ClassDef):
+        matches = []
+    if len(matches) == 1:
+        node = matches[0]
+        start = min([node.lineno, *(d.lineno for d in node.decorator_list)])
+        excerpt = '\n'.join(text.splitlines()[start - 1:node.end_lineno])
+    else:
+        excerpt = text
     excerpt = excerpt or ""
     return {
         "nodeid": nodeid,
         "path": path.relative_to(root).as_posix(),
         "excerpt": excerpt[:5000],
+        "excerpt_complete": len(excerpt) <= 5000,
         "sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
+        "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
 
 
 def _qualified_functions(tree: ast.Module, symbol: str) -> list[ast.AST]:
+    from .python_overload_resolution import implementation_candidates
     parts = symbol.split(".")
     if len(parts) == 1:
-        return [
+        return implementation_candidates(tree, [
             node for node in tree.body
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == parts[0]
-        ]
+        ])
     if len(parts) != 2:
         return []
     owners = [node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == parts[0]]
-    return [
+    return implementation_candidates(tree, [
         node for owner in owners for node in owner.body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == parts[1]
-    ]
+    ])
+
+
+def _helper_provenance(project: Path, repetitions: list[dict], target: str) -> dict:
+    bindings, sources = [], []
+    participating = 0
+    for row in repetitions:
+        analysis = row.get('causal_analysis') or {}
+        selected = [b for b in analysis.get('helper_bindings') or [] if b.get('target') == target]
+        if selected:
+            participating += 1
+        for binding in selected:
+            matching = [s for s in analysis.get('test_support_sources') or []
+                        if s.get('path') == binding.get('helper', {}).get('path')
+                        and s.get('symbol') == binding.get('helper', {}).get('symbol')]
+            if len(matching) != 1 or helper_method_binding(project, matching[0]) != binding:
+                return {'status': 'stale', 'bindings': [], 'test_support_sources': []}
+            if binding not in bindings:
+                bindings.append(binding)
+            if matching[0] not in sources:
+                sources.append(matching[0])
+    if participating and participating != len(repetitions):
+        return {'status': 'stale', 'bindings': [], 'test_support_sources': []}
+    return {'status': 'current' if bindings else 'not_applicable',
+            'bindings': bindings, 'test_support_sources': sources}
 
 
 def _matching_repetitions(
@@ -230,3 +284,10 @@ def _strings(value: Any) -> list[str]:
 def _digest(value: Any) -> str:
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _inventory_digest(project_dir: Path) -> str | None:
+    try:
+        return _digest(inventory(project_dir))
+    except (ValueError, OSError):
+        return None

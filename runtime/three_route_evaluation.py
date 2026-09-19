@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .evaluation_evidence import validate_receipt, payload_digest
+from .evaluation_protocol_policy import numeric_policy_errors
+
 
 ROUTES = ("direct_agent", "short_chain", "full_chain")
 RECEIPT_STATUSES = {"completed", "blocked", "failed"}
@@ -105,81 +108,15 @@ def manifest_drift_errors(
     return sorted(set(errors))
 
 
-def validate_receipt(
-    receipt: dict[str, Any], manifest: dict[str, Any], policy: dict[str, Any]
-) -> list[str]:
-    errors: list[str] = []
-    tasks = {str(row["task_id"]): row for row in manifest.get("tasks", [])}
-    task_id = str(receipt.get("task_id") or "")
-    route = str(receipt.get("route") or "")
-    task = tasks.get(task_id)
-    if task is None:
-        errors.append("unknown_task")
-    if route not in ROUTES:
-        errors.append("unknown_route")
-    if receipt.get("manifest_digest") != manifest.get("manifest_digest"):
-        errors.append("manifest_digest_mismatch")
-    if task and receipt.get("prompt_digest") != task.get("prompt_digest"):
-        errors.append("prompt_digest_mismatch")
-    if not DIGEST_PATTERN.fullmatch(str(receipt.get("input_digest") or "")):
-        errors.append("invalid_input_digest")
-    elif task and receipt.get("input_digest") != task.get("input_digest"):
-        errors.append("input_digest_mismatch")
-    if receipt.get("status") not in RECEIPT_STATUSES:
-        errors.append("invalid_status")
-    for field in ("executor", "model", "runtime_seconds", "estimated_cost", "token_usage"):
-        if receipt.get(field) is None:
-            errors.append(f"missing_{field}")
-    for field in ("runtime_seconds", "estimated_cost"):
-        value = receipt.get(field)
-        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
-            errors.append(f"invalid_{field}")
-    token_usage = receipt.get("token_usage")
-    if not isinstance(token_usage, dict) or any(
-        not isinstance(token_usage.get(name), int)
-        or isinstance(token_usage.get(name), bool)
-        or token_usage[name] < 0
-        for name in ("input", "output")
-    ):
-        errors.append("invalid_token_usage")
-    for field in ("manual_corrections", "acceptance_checks", "artifacts"):
-        if not isinstance(receipt.get(field), list):
-            errors.append(f"{field}_must_be_list")
-    for correction in receipt.get("manual_corrections") or []:
-        if (
-            not isinstance(correction, dict)
-            or not correction.get("kind")
-            or not isinstance(correction.get("minutes"), (int, float))
-        ):
-            errors.append("invalid_manual_correction")
-    for artifact in receipt.get("artifacts") or []:
-        if (
-            not isinstance(artifact, dict)
-            or not artifact.get("path")
-            or not DIGEST_PATTERN.fullmatch(str(artifact.get("digest") or ""))
-        ):
-            errors.append("invalid_artifact_evidence")
-    if not isinstance(receipt.get("judge_payload"), dict):
-        errors.append("judge_payload_must_be_object")
-    safety = receipt.get("safety")
-    if not isinstance(safety, dict) or "source_mutation_detected" not in safety:
-        errors.append("incomplete_safety_evidence")
-    route_policy = dict(dict(policy.get("route_contracts") or {}).get(route) or {})
-    executor = str(receipt.get("executor") or "").lower()
-    if any(value.lower() in executor for value in route_policy.get("forbidden_executors", [])):
-        errors.append("forbidden_route_executor")
-    if route_policy.get("may_use_cognitive_os") is False and receipt.get("uses_cognitive_os") is not False:
-        errors.append("direct_route_cognitive_os_use_forbidden")
-    return sorted(set(errors))
-
-
 def build_blind_bundle(
-    manifest: dict[str, Any], receipts: list[dict[str, Any]], policy: dict[str, Any]
+    manifest: dict[str, Any], receipts: list[dict[str, Any]], policy: dict[str, Any], *, artifact_root: Path | None = None
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    errors = validate_manifest(manifest)
+    errors = validate_manifest(manifest) + numeric_policy_errors(policy)
+    if artifact_root is None:
+        errors.append("artifact_root_required")
     indexed: dict[tuple[str, str], dict[str, Any]] = {}
     for receipt in receipts:
-        receipt_errors = validate_receipt(receipt, manifest, policy)
+        receipt_errors = validate_receipt(receipt, manifest, policy, artifact_root=artifact_root)
         if receipt_errors:
             errors.extend(f"{receipt.get('task_id')}:{receipt.get('route')}:{item}" for item in receipt_errors)
             continue
@@ -238,17 +175,28 @@ def build_blind_bundle(
         "artifact_type": "ThreeRouteBlindKey",
         "bundle_digest": bundle["bundle_digest"],
         "mapping": mapping,
+        "manifest": manifest,
+        "policy_digest": payload_digest(policy),
+        "receipt_digests": [
+            {"task_id": row["task_id"], "route": row["route"], "digest": payload_digest(row)}
+            for row in receipts
+        ],
     }
     key["key_digest"] = _digest(key)
     return bundle, key
 
 
 def protocol_status(
-    manifest: dict[str, Any], receipts: list[dict[str, Any]], policy: dict[str, Any]
+    manifest: dict[str, Any], receipts: list[dict[str, Any]], policy: dict[str, Any], *, artifact_root: Path | None = None
 ) -> dict[str, Any]:
-    valid = {(str(row.get("task_id")), str(row.get("route"))) for row in receipts if not validate_receipt(row, manifest, policy)}
+    valid = {(str(row.get("task_id")), str(row.get("route"))) for row in receipts if not validate_receipt(row, manifest, policy, artifact_root=artifact_root)}
     tasks = [str(row["task_id"]) for row in manifest.get("tasks", [])]
     complete = [task for task in tasks if all((task, route) in valid for route in ROUTES)]
+    bundle_errors = []
+    try:
+        build_blind_bundle(manifest, receipts, policy, artifact_root=artifact_root)
+    except ValueError as exc:
+        bundle_errors.append(str(exc))
     product_classes = set(policy.get("product_task_classes") or [])
     task_classes = {str(row["task_id"]): str(row["task_class"]) for row in manifest.get("tasks", [])}
     product_tasks = [task for task in tasks if task_classes[task] in product_classes]
@@ -263,7 +211,7 @@ def protocol_status(
     minimum = int(policy.get("minimum_tasks_before_claim", 20))
     return {
         "artifact_type": "ThreeRouteEvaluationStatus",
-        "status": "ready_for_blind_judging" if len(complete) == len(tasks) and tasks else "evidence_required",
+        "status": "ready_for_blind_judging" if not bundle_errors and tasks else "evidence_required",
         "manifest_digest": manifest.get("manifest_digest"),
         "task_count": len(tasks),
         "complete_three_route_tasks": len(complete),
@@ -273,7 +221,8 @@ def protocol_status(
         "route_receipt_coverage": coverage,
         "product_class_counts": class_counts,
         "class_coverage_ok": class_coverage_ok,
-        "claim_eligible": len(product_complete) >= minimum and class_coverage_ok,
+        "claim_eligible": not bundle_errors and len(product_complete) >= minimum and class_coverage_ok,
+        "evidence_errors": bundle_errors,
         "missing": [f"{task}:{route}" for task in tasks for route in ROUTES if (task, route) not in valid],
     }
 

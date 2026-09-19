@@ -1,0 +1,78 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation"
+  ],
+  "properties": {
+    "operation": {
+      "enum": [
+        "boundary_profiles",
+        "source_contrasts",
+        "decorate_profile",
+        "propose_patch",
+        "patch_recipes",
+        "propose_helper"
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "const": "nested_loop_mapping_boundary"
+        }
+      }
+    },
+    "source": {
+      "type": "string"
+    },
+    "origin_symbol": {
+      "type": "string"
+    },
+    "proposed_symbol": {
+      "type": "string"
+    },
+    "maximum_mapping_fields": {
+      "type": "integer"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "decorate_profile"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "profile"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "enum": [
+              "propose_patch",
+              "propose_helper"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "source",
+          "origin_symbol",
+          "proposed_symbol",
+          "maximum_mapping_fields"
+        ]
+      }
+    }
+  ]
+}

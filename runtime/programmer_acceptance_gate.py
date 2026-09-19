@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable
+from .native_failure_acceptance import native_coverage
 
 
 def repair_needed(
@@ -45,6 +46,8 @@ def enforce_prepared_patch_acceptance(
 
 
 def acceptance_covers_plan(summary: dict[str, Any], plan: dict[str, Any] | None) -> bool:
+    if summary.get('signal_strength') == 'native_failure_replay':
+        return native_coverage(summary, _planned_targets(plan or {}))
     if summary.get("signal_strength") != "executable_callable":
         return False
     expected = _planned_targets(plan or {})

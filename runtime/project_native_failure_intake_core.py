@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from .project_development import load_project_development_policy
@@ -187,6 +187,7 @@ def _validated_test_targets(projects: list[Path], targets: list[str]) -> list[st
             not target
             or target.startswith("-")
             or path.is_absolute()
+            or PureWindowsPath(test_path).drive
             or ".." in path.parts
             or path.suffix != ".py"
         ):
@@ -204,6 +205,7 @@ def run_project_native_verification(
     failing_nodeids: list[str],
     policy: dict[str, Any] | None = None,
     project_version_hint: str | None = None,
+    baseline_project: Path | None = None,
 ) -> dict[str, Any]:
     policy = policy or load_project_development_policy()
     intake = dict(policy.get("native_failure_intake") or {})
@@ -228,11 +230,15 @@ def run_project_native_verification(
     regression = _run_pytest(
         project.resolve(), intake, nodeids=regression_targets or None
     )
+    scope = None
+    if baseline_project is not None and regression.get('status') == 'passed':
+        from .native_regression_scope import verify_regression_scope
+        scope = verify_regression_scope(root=root, baseline=baseline_project, candidate=project, intake=intake)
     targeted_passed = bool(normalized) and targeted.get("status") == "passed"
     regression_status = str(regression.get("status") or "")
     status = (
         "passed"
-        if targeted_passed and regression_status == "passed"
+        if targeted_passed and regression_status == "passed" and (scope is None or scope['status']=='passed')
         else "targeted_passed_regression_environment_blocked"
         if targeted_passed and regression_status == "environment_blocked"
         else "failed"
@@ -244,6 +250,7 @@ def run_project_native_verification(
         "failing_nodeids": normalized,
         "targeted_replay": targeted,
         "regression_suite": regression,
+        "regression_scope": scope,
         "authority": "project_native_pytest",
         "network_allowed": False,
     }

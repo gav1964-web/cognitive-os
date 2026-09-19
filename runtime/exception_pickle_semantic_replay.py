@@ -10,9 +10,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .exception_pickle_source_samples import (
-    _constructor_sample_call,
-    _sample_constructor_value_for_source_file,
+from .exception_pickle_sample_contract import (
+    constructor_sample_call as _constructor_sample_call,
+    sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file,
 )
 
 def _verify_project_native_semantic_replay(

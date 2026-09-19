@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import pytest
 from pathlib import Path
 
 from runtime.evidence_ledger import promote_evidence
@@ -10,15 +11,19 @@ from runtime.narrow_type_certification import (
     verify_narrow_type_certification,
 )
 from runtime.role_project_type_evaluation_policy import load_role_project_type_policy
+from runtime.narrow_type_evidence_binding import content_digest
 from runtime.self_development_experiment_queue import build_self_development_experiment_queue
 from runtime.self_development_prospective_detection import run_prospective_detection
+from tests.corpus_requirements import require_policy_corpus
 
 
 ROOT = Path(__file__).resolve().parents[2]
 CERTIFICATION_RECEIPT = "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json"
 
 
+@pytest.mark.local_corpus
 def test_current_corpus_is_blocked_by_revoked_v1_certificate() -> None:
+    require_policy_corpus(ROOT, 'self_development_prospective_detection.json')
     detection = run_prospective_detection(root=ROOT, write=False)
     queue = build_self_development_experiment_queue(
         root=ROOT, detection=detection, certification_receipt=CERTIFICATION_RECEIPT
@@ -92,7 +97,8 @@ def test_detection_status_must_match_candidate_count() -> None:
 
 
 def _detection(project_type: str) -> dict:
-    source = run_prospective_detection(root=ROOT, write=False)
+    source = {'artifact_type': 'SelfDevelopmentProspectiveDetectionReport',
+              'checks': {'synthetic_fixture': True}, 'safety': {'promotion_applied': False}}
     candidate = {
         "signature": f"recognition_gap:classification:identity:{project_type}",
         "independent_project_count": 3,
@@ -112,11 +118,20 @@ def _detection(project_type: str) -> dict:
 def _valid_v2_certificate_receipt(root: Path) -> str:
     policy = load_role_project_type_policy()
     lane = dict(dict(policy["development_priority"])["current_lane"])
+    evaluation = {"cells": [
+        {
+            "role_id": role, "project_stratum": stratum, "score": 9.8,
+            "promotion_eligible": True, "evidence_gaps": [],
+        }
+        for stratum in lane["project_strata"] for role in lane["required_roles"]
+    ]}
     holdout = root / "holdout.json"
     holdout.write_text(json.dumps({
         "artifact_type": "NarrowTypeHoldoutEvidence",
         "schema_version": "narrow_type_holdout_evidence.v2",
         "status": "passed",
+        "evaluation_digest": content_digest(evaluation),
+        "policy_digest": content_digest(policy),
         "checks": {
             "independent_holdout": True, "lineage_disjoint": True,
             "no_role_regression": True, "role_chain_continuity": True,
@@ -131,13 +146,6 @@ def _valid_v2_certificate_receipt(root: Path) -> str:
         root=root, source=holdout, producer_fingerprint="holdout:v2",
         evaluator_fingerprint="semantic:v1", replay_command=["pytest", "holdout"],
     )
-    evaluation = {"cells": [
-        {
-            "role_id": role, "project_stratum": stratum, "score": 9.8,
-            "promotion_eligible": True, "evidence_gaps": [],
-        }
-        for stratum in lane["project_strata"] for role in lane["required_roles"]
-    ]}
     certificate = build_narrow_type_certification(
         evaluation=evaluation, evidence_root=root,
         holdout_receipt=str(holdout_receipt["ledger_path"]), policy=policy,

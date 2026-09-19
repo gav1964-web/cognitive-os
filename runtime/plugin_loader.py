@@ -27,44 +27,59 @@ def load_capabilities(root: Path) -> dict[str, Capability]:
     plugins_dir = root / "plugins"
     capabilities: dict[str, Capability] = {}
     for manifest_path in sorted(plugins_dir.glob("*/plugin.json")):
-        manifest = _read_json(manifest_path)
-        plugin_dir = manifest_path.parent
-        _validate_manifest_shape(manifest_path, manifest)
-        plugin_id = str(manifest["id"])
-        if plugin_id != plugin_dir.name:
-            raise PluginLoadError(f"plugin id must match directory name: {plugin_id} != {plugin_dir.name}")
-        if plugin_id in capabilities:
-            raise PluginLoadError(f"duplicate plugin id: {plugin_id}")
-        input_schema_ref = plugin_dir / "schemas" / "input.json"
-        output_schema_ref = plugin_dir / "schemas" / "output.json"
-        input_schema = _read_json(input_schema_ref)
-        output_schema = _read_json(output_schema_ref)
-        _validate_schema_shape(plugin_id, "input", input_schema)
-        _validate_schema_shape(plugin_id, "output", output_schema)
-        _validate_entrypoint(plugin_id, str(manifest["entrypoint"]))
-        side_effects = _validate_side_effects(plugin_id, dict(manifest.get("side_effects", {})))
-        try:
-            lint_plugin(plugin_dir, plugin_id, side_effects=side_effects)
-        except Exception as exc:
-            raise PluginLoadError(str(exc)) from exc
-        capability = Capability(
-            id=plugin_id,
-            version=str(manifest["version"]),
-            entrypoint=str(manifest["entrypoint"]),
-            input_schema_ref=_rel(root, input_schema_ref),
-            output_schema_ref=_rel(root, output_schema_ref),
-            input_schema=input_schema,
-            output_schema=output_schema,
-            determinism_grade=str(manifest.get("determinism_grade", "C")),
-            side_effects=side_effects,
-            lifecycle_status=str(manifest.get("lifecycle_status", "active")),
-            version_hash=hash_plugin_dir(plugin_dir),
-            fallback_for=[str(item) for item in manifest.get("fallback_for", [])],
-        )
-        _validate_lifecycle_status(capability.id, capability.lifecycle_status)
+        capability = load_capability(root, manifest_path.parent.name)
+        if capability.id in capabilities:
+            raise PluginLoadError(f"duplicate plugin id: {capability.id}")
         capabilities[capability.id] = capability
     _validate_fallback_targets(capabilities)
     return capabilities
+
+
+def load_capability(root: Path, plugin_id: str) -> Capability:
+    """Validate one installed plugin without importing its executable code."""
+    if not re.fullmatch(r"[A-Za-z_]\w*", plugin_id):
+        raise PluginLoadError("invalid plugin id")
+    plugin_dir = root / "plugins" / plugin_id
+    if not plugin_dir.resolve().is_relative_to((root / "plugins").resolve()):
+        raise PluginLoadError("plugin directory escapes root")
+    return _load_capability(root, plugin_dir / "plugin.json")
+
+
+def _load_capability(root: Path, manifest_path: Path) -> Capability:
+    manifest = _read_json(manifest_path)
+    plugin_dir = manifest_path.parent
+    _validate_manifest_shape(manifest_path, manifest)
+    plugin_id = str(manifest["id"])
+    if plugin_id != plugin_dir.name:
+        raise PluginLoadError(f"plugin id must match directory name: {plugin_id} != {plugin_dir.name}")
+    input_schema_ref = plugin_dir / "schemas" / "input.json"
+    output_schema_ref = plugin_dir / "schemas" / "output.json"
+    input_schema = _read_json(input_schema_ref)
+    output_schema = _read_json(output_schema_ref)
+    _validate_schema_shape(plugin_id, "input", input_schema)
+    _validate_schema_shape(plugin_id, "output", output_schema)
+    _validate_entrypoint(plugin_id, str(manifest["entrypoint"]))
+    side_effects = _validate_side_effects(plugin_id, dict(manifest.get("side_effects", {})))
+    try:
+        lint_plugin(plugin_dir, plugin_id, side_effects=side_effects)
+    except Exception as exc:
+        raise PluginLoadError(str(exc)) from exc
+    capability = Capability(
+        id=plugin_id,
+        version=str(manifest["version"]),
+        entrypoint=str(manifest["entrypoint"]),
+        input_schema_ref=_rel(root, input_schema_ref),
+        output_schema_ref=_rel(root, output_schema_ref),
+        input_schema=input_schema,
+        output_schema=output_schema,
+        determinism_grade=str(manifest.get("determinism_grade", "C")),
+        side_effects=side_effects,
+        lifecycle_status=str(manifest.get("lifecycle_status", "active")),
+        version_hash=hash_plugin_dir(plugin_dir),
+        fallback_for=[str(item) for item in manifest.get("fallback_for", [])],
+    )
+    _validate_lifecycle_status(capability.id, capability.lifecycle_status)
+    return capability
 
 
 def load_entrypoint(entrypoint: str) -> Callable[[dict[str, Any]], dict[str, Any]]:

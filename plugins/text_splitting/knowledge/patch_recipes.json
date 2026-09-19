@@ -1,0 +1,38 @@
+{
+  "schema_version": "text_splitting_recipes.v1",
+  "recipes": [
+    {
+      "id": "extract_splitlines_helper",
+      "recipe": {
+        "enabled": true,
+        "status": "prepared",
+        "reason": "splitlines_helper_extracted",
+        "operation_kind": "extract_splitlines_helper",
+        "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+        "required_candidate_symbol": "split_lines",
+        "target_cluster": "parse_text_inside_io_boundary",
+        "automatic_source_mutation_allowed": false,
+        "differential_verification": {
+          "case_variants": [
+            "normal",
+            "empty"
+          ],
+          "timeout_seconds": 10,
+          "profile": "callable_text_input",
+          "observations": [
+            "return_value",
+            "subprocess_calls",
+            "written_files"
+          ]
+        },
+        "required_verification": [
+          "patched_source_compiles",
+          "tester_differential_verification_passes",
+          "origin_callable_remains_source_backed",
+          "proposed_callable_becomes_source_backed",
+          "normal_architect_reselection_selects_proposed_callable"
+        ]
+      }
+    }
+  ]
+}

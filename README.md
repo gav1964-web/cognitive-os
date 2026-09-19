@@ -27,6 +27,17 @@ compatibility adapters. There are no hidden sys.path fallbacks.
 
 ## Subsystems
 
+For a human-facing explanation of an existing project, run:
+
+```bash
+python tools/describe_project.py --project-dir /path/to/project --output artifacts/description/report.json
+```
+
+The [description competency](plugins/project_description/README.md) collects source
+evidence and uses the configured model for a draft and factual review. It writes
+a readable Markdown report alongside the JSON receipt. Use `--owner-note` for an
+explicit product fact and `--timeout` to override the primary request timeout.
+
 | Area | Responsibility | Location |
 |---|---|---|
 | [Inspect](packages/cognitive-inspect/README.md) | Read-only repository facts | `packages/cognitive-inspect/` |

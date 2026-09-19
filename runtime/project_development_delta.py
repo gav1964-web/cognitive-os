@@ -6,6 +6,8 @@ from copy import deepcopy
 from typing import Any
 
 from .source_contract_semantics import infer_source_contract
+from .upstream_requested_change import bind_requested_spec
+from .repair_assertion_contract import repair_grounding
 
 
 def development_delta_transform(decision: dict[str, Any], policy: dict[str, Any]):
@@ -18,11 +20,19 @@ def development_delta_transform(decision: dict[str, Any], policy: dict[str, Any]
     )
 
     def transform(artifact: dict[str, Any]) -> dict[str, Any]:
+        if artifact.get('artifact_type') == 'ArchitectureDecisionRecord' and issue.get('causal_comparison'):
+            row = deepcopy(artifact)
+            row['causal_comparison'] = deepcopy(issue['causal_comparison'])
+            row['causal_feedback'] = deepcopy(issue['causal_feedback'])
+            row['repair_design'] = deepcopy(issue.get('repair_design') or {})
+            if issue.get('requested_change'):
+                row['requested_change'] = deepcopy(issue['requested_change'])
+            return row
         if (
             artifact.get("artifact_type") == "TechnicalSpec"
             and issue.get("failure_specific_reducer_required") is True
         ):
-            return _bind_failure_repair_contract(artifact, issue, reducers)
+            return bind_requested_spec(_bind_failure_repair_contract(artifact, issue, reducers), issue)
         if artifact.get("artifact_type") != "ImplementationPlan" or not reducers:
             return artifact
         row = deepcopy(artifact)
@@ -62,6 +72,7 @@ def _bind_failure_repair_contract(
     if not (1 <= len(targets) <= 3) or len(target_files) != 1 or not failure_evidence:
         return artifact
     target = targets[0]
+    nominated = (issue.get('failure_evidence_packet') or {}).get('schema_version') == 'repair_trial_packet.v1'
     matching = next(
         (dict(row) for row in artifact.get("source_evidence") or [] if str(row.get("source") or "") == target),
         {},
@@ -76,7 +87,8 @@ def _bind_failure_repair_contract(
         "candidate": target,
         "affected_targets": targets,
         "candidate_score": 100,
-        "selection_reason": "Repeated project-native failure bounds repair to the selected same-module target family.",
+        "selection_reason": ("Source-bound nomination selects an internal method; the original API observation remains immutable."
+            if nominated else "Repeated project-native failure bounds repair to the selected same-module target family."),
         "ranked_candidates": [{
             "source": target,
             "kind": "failure_backed_repair_target",
@@ -104,7 +116,8 @@ def _bind_failure_repair_contract(
         "semantic_quality": {
             "status": "approved_with_constraints",
             "authority": "repeated_project_native_failure",
-            "reasons": ["repair scope is bounded to the unique repeated production failure target"],
+            "reasons": ["repair scope is bounded by nomination and separately validated native intervention"
+                if nominated else "repair scope is bounded to the unique repeated production failure target"],
         },
     }
     row = deepcopy(artifact)
@@ -124,24 +137,33 @@ def _bind_failure_repair_contract(
         and repair_design.get("status") == "llm_hypothesis_review_required"
         and repair_design.get("mutation_contract")
     )
-    implementation_ready = training_replay or llm_training_replay
+    model_delivery = deepcopy(issue.get('model_delivery'))
+    model_replay = bool(model_delivery and repair_design.get('status') == 'model_candidate_replay_ready')
+    implementation_ready = training_replay or llm_training_replay or model_replay
     row["implementation_delta"] = {
         "status": "ready" if implementation_ready else "proposal_review_required" if proposal else "semantic_synthesis_required",
         "intent": {
-            "kind": "repair_llm_hypothesis_training_replay" if llm_training_replay else "repair_verified_project_failure",
+            "kind": "replay_selected_model_candidate" if model_replay else
+                    "repair_llm_hypothesis_training_replay" if llm_training_replay else "repair_verified_project_failure",
             "target_symbol": target,
             "operator_id": repair_design.get("proposed_operator_id"),
             "allowed_operator_ids": list(reducers),
             "mutation": repair_design.get("mutation_contract"),
             "repair_mechanism": repair_design.get("mechanism"),
             "causal_hypothesis": dict(issue.get("causal_hypothesis") or {}),
+            "repair_grounding": repair_grounding(repair_design),
             "failure_evidence_packet": dict(issue.get("failure_evidence_packet") or {}),
+            "causal_comparison": deepcopy(issue.get('causal_comparison')),
+            "model_delivery": model_delivery,
             "authority": (
+                "explicit_model_candidate_replay" if model_replay else
                 "explicit_llm_training_replay" if llm_training_replay else
                 "explicit_training_replay" if training_replay else "none"
             ),
         },
         "reason": (
+            "Replay the exact model candidate already supported by native intervention tests."
+            if model_replay else
             "A bounded LLM hypothesis is admitted only for this consumed-case sandbox replay."
             if llm_training_replay else
             "Training-derived repair proposal is authorized only for this consumed-case sandbox replay."
@@ -203,9 +225,12 @@ def _bind_failure_repair_contract(
             "id": "REQ-FAILURE-REPAIR",
             "statement": (
                 str(repair_design.get("mutation_contract"))
-                if proposal else f"Apply exactly one approved failure reducer inside `{target}` and preserve its declared contract."
+                if proposal else f"Replay the exact tested model candidate `{model_delivery['candidate_id']}` inside `{target}`, "
+                f"bound by delivery digest {model_delivery['delivery_digest']}, and preserve its declared contract."
+                if model_replay else f"Apply exactly one approved failure reducer inside `{target}` and preserve its declared contract."
             ),
-            "source": "ProjectDevelopmentDecision.repair_design" if proposal else "ProjectDevelopmentDecision.allowed_operator_ids",
+            "source": "ProjectDevelopmentDecision.model_delivery" if model_replay else
+                      "ProjectDevelopmentDecision.repair_design" if proposal else "ProjectDevelopmentDecision.allowed_operator_ids",
             "target": target,
             "priority": "MUST",
         },

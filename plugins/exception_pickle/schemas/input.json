@@ -1,0 +1,184 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation"
+  ],
+  "properties": {
+    "operation": {
+      "enum": [
+        "boundary_profiles",
+        "source_contrasts",
+        "patterns",
+        "decorate_profile",
+        "propose_patch",
+        "sample_values",
+        "constructor_call",
+        "validate_patterns",
+        "prepare_promotion"
+      ]
+    },
+    "profile": {
+      "type": "object"
+    },
+    "source": {
+      "type": "string"
+    },
+    "class_name": {
+      "type": "string"
+    },
+    "recipe": {
+      "type": "object"
+    },
+    "constructor_name": {
+      "type": "string"
+    },
+    "names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "object_contracts": {
+      "type": "object"
+    },
+    "required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "samples": {
+      "type": "array"
+    },
+    "document": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "readiness": {
+      "type": "object"
+    },
+    "evaluator": {
+      "type": "object"
+    },
+    "holdout": {
+      "type": "object"
+    },
+    "generated_at": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "decorate_profile"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "profile"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "propose_patch"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "source",
+          "class_name",
+          "recipe"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "sample_values"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "names"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "constructor_call"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "source",
+          "class_name",
+          "required",
+          "samples"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "sample_values"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "then": {
+        "required": [
+          "class_name"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "validate_patterns"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "document"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "prepare_promotion"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "readiness",
+          "evaluator",
+          "holdout",
+          "generated_at"
+        ]
+      }
+    }
+  ]
+}

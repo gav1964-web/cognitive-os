@@ -1,0 +1,15 @@
+{
+  "id": "json_serialization",
+  "version": "0.1.0",
+  "entrypoint": "plugins.json_serialization.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "implementation_packages": [
+    "cognitive_inspect"
+  ]
+}

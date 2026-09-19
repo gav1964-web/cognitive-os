@@ -1,6 +1,30 @@
 {
   "schema_version": "patch_synthesis_policy.v1",
   "recipes": {
+    "guard_mapping_path_descent": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "training_mapping_path_descent_guard",
+      "operation_kind": "guard_mapping_path_descent",
+      "authority": "training_only",
+      "automatic_source_mutation_allowed": false
+    },
+    "complete_pending_futures_on_disconnect": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "training_disconnect_future_settlement",
+      "operation_kind": "complete_pending_futures_on_disconnect",
+      "authority": "training_only",
+      "automatic_source_mutation_allowed": false
+    },
+    "preserve_split_buffer_tail": {
+      "enabled": true,
+      "status": "prepared",
+      "reason": "training_split_buffer_tail_preserved",
+      "operation_kind": "preserve_split_buffer_tail",
+      "authority": "training_only",
+      "automatic_source_mutation_allowed": false
+    },
     "guard_empty_materialized_fast_path": {
       "enabled": true,
       "status": "prepared",
@@ -106,100 +130,6 @@
         "clip_signed_unit",
         "decay_rate",
         "discount_returns"
-      ]
-    },
-    "extract_append_mapping_helper": {
-      "enabled": true,
-      "status": "prepared",
-      "reason": "append_mapping_helper_extracted",
-      "operation_kind": "extract_append_mapping_helper",
-      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
-      "required_candidate_symbol": "normalize_record",
-      "target_cluster": "append_mapping_inside_effectful_loop",
-      "maximum_mapping_fields": 12,
-      "automatic_source_mutation_allowed": false,
-      "differential_verification": {
-        "profile": "legacy_process_all_fixture",
-        "case_inputs": ["name,value\nalice,1\n bob , 2 ", "", "   ,   "],
-        "timeout_seconds": 10,
-        "observations": ["return_value", "subprocess_calls", "written_files"]
-      },
-      "required_verification": [
-        "patched_source_compiles",
-        "tester_differential_verification_passes",
-        "origin_callable_remains_source_backed",
-        "proposed_callable_becomes_source_backed",
-        "normal_architect_reselection_selects_proposed_callable"
-      ]
-    },
-    "extract_json_dumps_helper": {
-      "enabled": true,
-      "status": "prepared",
-      "reason": "json_dumps_helper_extracted",
-      "operation_kind": "extract_json_dumps_helper",
-      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
-      "required_candidate_symbol": "serialize_json",
-      "target_cluster": "serialize_json_inside_filesystem_boundary",
-      "maximum_free_variables": 1,
-      "automatic_source_mutation_allowed": false,
-      "differential_verification": {
-        "case_variants": ["normal", "empty"],
-        "timeout_seconds": 10,
-        "profile": "callable_file_output",
-        "observations": ["return_value", "subprocess_calls", "written_files"]
-      },
-      "required_verification": [
-        "patched_source_compiles",
-        "tester_differential_verification_passes",
-        "origin_callable_remains_source_backed",
-        "proposed_callable_becomes_source_backed",
-        "normal_architect_reselection_selects_proposed_callable"
-      ]
-    },
-    "extract_json_loads_helper": {
-      "enabled": true,
-      "status": "prepared",
-      "reason": "json_loads_helper_extracted",
-      "operation_kind": "extract_json_loads_helper",
-      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
-      "required_candidate_symbol": "parse_json",
-      "target_cluster": "parse_json_inside_filesystem_boundary",
-      "automatic_source_mutation_allowed": false,
-      "differential_verification": {
-        "case_variants": ["normal", "empty"],
-        "timeout_seconds": 10,
-        "profile": "callable_json_input",
-        "observations": ["return_value", "subprocess_calls", "written_files"]
-      },
-      "required_verification": [
-        "patched_source_compiles",
-        "tester_differential_verification_passes",
-        "origin_callable_remains_source_backed",
-        "proposed_callable_becomes_source_backed",
-        "normal_architect_reselection_selects_proposed_callable"
-      ]
-    },
-    "extract_splitlines_helper": {
-      "enabled": true,
-      "status": "prepared",
-      "reason": "splitlines_helper_extracted",
-      "operation_kind": "extract_splitlines_helper",
-      "allowed_hypothesis_type": "pure_core_with_effect_adapters",
-      "required_candidate_symbol": "split_lines",
-      "target_cluster": "parse_text_inside_io_boundary",
-      "automatic_source_mutation_allowed": false,
-      "differential_verification": {
-        "case_variants": ["normal", "empty"],
-        "timeout_seconds": 10,
-        "profile": "callable_text_input",
-        "observations": ["return_value", "subprocess_calls", "written_files"]
-      },
-      "required_verification": [
-        "patched_source_compiles",
-        "tester_differential_verification_passes",
-        "origin_callable_remains_source_backed",
-        "proposed_callable_becomes_source_backed",
-        "normal_architect_reselection_selects_proposed_callable"
       ]
     },
     "required_input_guard": {

@@ -8,6 +8,10 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime.development_handoff import QUEUE_PATH, active_tasks
+from runtime.development_decisions import decision_context
+
 MANIFEST = "docs/architecture/subsystems.json"
 
 
@@ -89,9 +93,17 @@ def select_subsystems(root: Path, manifest: dict, names: list[str], paths: list[
 
 
 def context(root: Path, manifest: dict, selected: list[str]) -> dict:
+    pending = active_tasks(root)
+    relevant = [task for task in pending if any(
+        fnmatch.fnmatchcase(task['path'], pattern)
+        for name in selected for pattern in manifest['subsystems'][name]['paths'])]
     return {
         "schema_version": "task_context.v1",
-        "read_first": ["AGENTS.md", "PROJECT_MAP.md", "DEVELOPMENT_STATUS.md"],
+        "read_first": ["AGENTS.md", "PROJECT_MAP.md", "DEVELOPMENT_STATUS.md", "DEVELOPMENT_TASKS.md", QUEUE_PATH],
+        "handoff": {"path": QUEUE_PATH, "total_pending": len(pending), "relevant_tasks": relevant},
+        "decisions": [row for row in decision_context(root) if any(
+            fnmatch.fnmatchcase(path, pattern) for path in row['source_hashes']
+            for name in selected for pattern in manifest['subsystems'][name]['paths'])],
         "subsystems": {name: manifest["subsystems"][name] for name in selected},
         "search_roots": manifest["search_roots"],
         "note": "Navigation only. Read the selected code and verify claims; no automatic certification or execution.",
@@ -100,6 +112,15 @@ def context(root: Path, manifest: dict, selected: list[str]) -> dict:
 
 def markdown(root: Path, payload: dict) -> str:
     lines = ["# Task context", "", "Read first: " + ", ".join(payload["read_first"]), ""]
+    handoff = payload['handoff']
+    lines.extend([f"Pending assistant tasks: {handoff['total_pending']} (full queue: {handoff['path']})", ""])
+    for task in handoff['relevant_tasks']:
+        lines.extend([f"- {task['id']} [{task['status']}]: {task['path']}",
+                      "  " + task.get('next_action', 'Inspect the saved task and its evidence.')])
+    lines.append('')
+    for decision in payload['decisions']:
+        lines.extend([f"Decision {decision['id']} [{decision['status']}]: {decision['decision']}",
+                      decision['rationale'], "Reconsider when: " + decision['reconsider_when'], ""])
     for name, spec in payload["subsystems"].items():
         lines.extend([f"## {name}: {spec['purpose']}", "", f"Dependencies: {', '.join(spec['dependencies']) or 'none'}", ""])
         brief = inside(root, spec["brief"]).read_text(encoding="utf-8")
@@ -133,6 +154,7 @@ def main() -> int:
             return int(bool(errors))
         if args.list or not (args.subsystem or args.path):
             print("\n".join(f"{name}: {spec['purpose']}" for name, spec in manifest["subsystems"].items()))
+            print(f"\nPending assistant tasks: {len(active_tasks(root))}; read {QUEUE_PATH}")
             return 0
         selected = select_subsystems(root, manifest, args.subsystem, args.path)
         payload = context(root, manifest, selected)

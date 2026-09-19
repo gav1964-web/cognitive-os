@@ -1,5 +1,8 @@
 from runtime.narrow_type_holdout_evaluator import evaluate_narrow_type_holdout
 from runtime.framework_plugin_role_semantics import artifact_digest
+from runtime.narrow_type_evidence_binding import content_digest
+from runtime.role_project_type_evaluation_policy import load_role_project_type_policy
+import pytest
 
 
 ROLES = ["project_analyzer", "architect", "spec_writer", "implementer", "tester", "reviewer"]
@@ -81,6 +84,32 @@ def test_holdout_evidence_requires_explicit_stub_audit():
     assert report["failed_checks"] == [
         "generated_stub_gate", "stub_audit_covers_holdout", "blind_inputs_durable"
     ]
+
+
+@pytest.mark.parametrize('invalid', [float('inf'), float('nan'), 10.1, True])
+def test_holdout_rejects_invalid_cell_and_semantic_scores(invalid):
+    evaluation = _evaluation()
+    evaluation['cells'][0]['score'] = invalid
+    semantic = _semantic_evidence()
+    semantic['cases'][0]['role_scores']['project_analyzer'] = invalid
+    report = evaluate_narrow_type_holdout(
+        evaluation=evaluation, role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE, semantic_evidence=semantic,
+    )
+    assert report['checks']['scores_at_promotion_target'] is False
+    assert report['checks']['semantic_role_quality'] is False
+
+
+def test_holdout_binds_evaluation_and_policy_and_rejects_duplicate_cells():
+    evaluation = _evaluation()
+    evaluation['cells'].append(dict(evaluation['cells'][0]))
+    report = evaluate_narrow_type_holdout(
+        evaluation=evaluation, role_pipeline_report=_pipeline(),
+        input_provenance=PROVENANCE, semantic_evidence=_semantic_evidence(),
+    )
+    assert report['checks']['all_required_cells_present'] is False
+    assert report['evaluation_digest'] == content_digest(evaluation)
+    assert report['policy_digest'] == content_digest(load_role_project_type_policy())
 
 
 def test_holdout_rejects_structural_only_v1_semantic_scores():

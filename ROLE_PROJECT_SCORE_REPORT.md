@@ -1,6 +1,105 @@
 > Датированный отчёт. Текущий статус: [DEVELOPMENT_STATUS.md](DEVELOPMENT_STATUS.md); карта исходников: [PROJECT_MAP.md](PROJECT_MAP.md).
 
-# Cognitive OS: оценки ролей и проектов на 10 сентября 2026
+# Cognitive OS: оценки ролей и проектов
+
+Последний assisted [Toml-sort с внутренним контекстом](docs/architecture/toml_internal_model_20260914.md):
+**0 принятых ремонтов**, 6 новых регрессий отклонённого кандидата. Повторная
+calibration дала **8/5/6/4/0/2** в порядке ролей ниже. Более полный контекст
+не повысил измеренный результат; независимых 9.7+ нет.
+
+Локальный этап [14 сентября](docs/architecture/internal_targets_20260914.md)
+дал два ручных reference repairs (1098/0 и 34/0), без новых модельных вызовов.
+Это evidence для исправления диагностики; приведённые ниже уровни не повышены.
+
+## Новые случаи 14 сентября: первая серия и assisted повтор
+
+Первая серия: **0/4 ремонтов**. Pathspec/Wcmatch/Toml-sort остановлены intake,
+Pyupgrade получил отклонённый модельный кандидат. После исправлений Analyzer
+и окружения повтор Toml-sort тоже отклонён; полная suite выявила 19 новых регрессий.
+
+| Роль | Pyupgrade, первая попытка | Toml-sort, assisted повтор |
+|---|---:|---:|
+| Project Analyzer | 8.0 | 8.0 |
+| Architect | 5.0 | 5.0 |
+| SpecWriter | 6.0 | 6.0 |
+| Implementer | 4.0 | 4.0 |
+| Tester | 0.0 | 0.0 |
+| Reviewer | 2.0 | 2.0 |
+
+Неизменённая calibration-рубрика, не сертификат. Ноль Tester означает отсутствие
+принятого изменения, хотя native tests выполнялись и отклонили неверные кандидаты.
+Остальные первые остановки не получили выдуманных ролевых баллов. Это новый набор,
+не сопоставимое повторное измерение прежних учебных 9.0/8.8/8.8.
+[Результаты, расходы, source hashes](docs/architecture/fresh_direct_batch_20260914.md).
+
+## Измерение 14 сентября 2026: перенос direct
+
+Humanize: **720 passed / 74 прежних skipped**; vblf: **44 passed**.
+Оба ремонта дошли до финального Reviewer `approve`; vblf потребовал настройки
+baseline-протокола после первой остановки. Это consumed development.
+
+| Роль | Humanize, training caps | vblf, training caps | Независимые 9.7+ |
+|---|---:|---:|---|
+| Project Analyzer | 8.0 | 8.0 | Нет |
+| Architect | 5.0 | 5.0 | Нет |
+| SpecWriter | 6.0 | 6.0 | Нет |
+| Implementer | 9.0 | 9.0 | Нет |
+| Tester | 8.8 | 8.8 | Нет |
+| Reviewer | 8.8 | 8.8 | Нет |
+
+Неизменённый calibration evaluator даёт последним трём ролям 10.0 на этих
+доставках; выше применены существующие ограничения использованных учебных случаев.
+Первые три роли не предъявляют все необходимые diagnosis/design/delta artifacts.
+Researcher сопоставимо не измерен. Новый CLI/holdout здесь не запускался.
+[Полный отчёт и receipts](docs/architecture/direct_transfer_20260914.md).
+
+Ниже — прежние измерения на 10 сентября; их значения сохранены как история.
+
+## Дополнение: независимые CLI-попытки и учебный vblf
+
+| Роль | Granny: первая попытка | Rosbags: первая попытка | Подтверждено 9,7+ |
+| --- | ---: | ---: | --- |
+| Project Analyzer | 8,0 | 3,33 | Нет |
+| Architect | 5,0 | 0,0 | Нет |
+| SpecWriter | 6,0 | 0,0 | Нет |
+| Implementer | 4,0 | 4,0 | Нет |
+| Tester | 0,0 | 0,0 | Нет |
+| Reviewer | 2,0 | 2,0 | Нет |
+
+Granny воспроизводится и связан с `aws_costs_by_service`, но проверенного
+исправления нет. Rosbags воспроизводится, однозначной production-цели нет.
+Это первые попытки ролей после qualification, без обучающей авторизации и без
+чтения production fix. Область — два случая CLI; не blind same-task сравнение.
+[Manifest](config/cli_role_results_20260910.json),
+`artifacts/verification/cli_role_semantics_20260910.json`.
+
+На **потреблённом учебном vblf** новый диагностический probe указал на потерю
+хвоста в `BlfWriter._flush_container`. Ограниченный оператор построил sandbox patch,
+диагностический тест и полная native suite (**44 passed**) прошли. Это
+`experiment_validated` с явной training authority; fresh-баллы vblf ниже сохранены.
+Receipt: `artifacts/verification/vblf_buffer_training_20260910.json`.
+
+## Дополнение: свежая библиотечная диагностика 10.09
+
+| Роль | vblf | anitopy | Подтверждено 9,7+ |
+| --- | ---: | ---: | --- |
+| Project Analyzer | 8,0 | 3,33 | Нет |
+| Architect | 5,0 | 0,0 | Нет |
+| SpecWriter | 6,0 | 0,0 | Нет |
+| Implementer | 4,0 | 4,0 | Нет |
+| Tester | 0,0 | 0,0 | Нет |
+| Reviewer | 2,0 | 2,0 | Нет |
+
+Оба upstream-дефекта прошли повторный replay и проверку исправления.
+Самостоятельные попытки ролей не дали проверенного patch: у vblf —
+`no_verified_failure_reducer`, у anitopy — `reproducible_unbound_failure` и
+отсутствие полного набора ролевых артефактов. Частичные баллы внутренней рубрики
+не подтверждают выполнение соответствующей роли. Mirror anitopy учтён как
+исходная линия `igorcmoura/anitopy`; новых CLI-попыток в этом срезе нет.
+
+Источники: [manifest и ограничения](config/library_role_results_20260910.json),
+[семантический отчёт](artifacts/self_development/narrow_type_role_semantics_20260910T113042436921Z.json).
+Следующие разделы сохраняют предыдущий срез 8 сентября для сравнения разных задач.
 
 Подтверждённой зрелости 9,7+ на новых дефектах сейчас нет. В последнем семантическом
 holdout все шесть обязательных ролей ниже порога. Повторы известных исправлений

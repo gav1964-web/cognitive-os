@@ -12,6 +12,7 @@ from typing import Any
 
 from .executable_acceptance import run_executable_acceptance
 from .python_parser_compatibility import parse_compatible_source
+from .native_failure_acceptance import FORMAT as NATIVE_FORMAT, run_native_acceptance
 
 
 def run_test_result(
@@ -31,7 +32,11 @@ def run_test_result(
     )
     failed = [item for item in command_results if item.get("status") == "failed"]
     executed = [item for item in command_results if item.get("status") in {"passed", "failed"}]
-    executable_acceptance = run_executable_acceptance(
+    native = test_plan.get('executable_acceptance') or {}
+    executable_acceptance = run_native_acceptance(
+        source_project=source_project_dir, patched_project=project_dir, contract=native,
+        work_dir=execution_dir, python_executable=python_executable,
+    ) if native.get('format') == NATIVE_FORMAT else run_executable_acceptance(
         root=root,
         project_dir=project_dir,
         test_plan=test_plan,

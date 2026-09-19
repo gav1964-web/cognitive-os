@@ -26,11 +26,14 @@ def main() -> int:
     parser.add_argument("--chain-report", help="Optional full-chain report with case evidence for this project")
     parser.add_argument("--run-role-chain", action="store_true")
     parser.add_argument("--run-sandbox-experiment", action="store_true")
+    parser.add_argument('--task-contract', help='Explicit requirements bound to native acceptance tests')
+    parser.add_argument("--validate-causal-proposals", action="store_true",
+                        help="Compare native proposals; --run-sandbox-experiment also delivers uniquely supported model bytes in a copy")
     parser.add_argument("--human-approval", help="Path to ProjectDevelopmentHumanApprovalDecision JSON")
     parser.add_argument("--architect-design", help="Path to ProjectDevelopmentImplementationDesign JSON")
     parser.add_argument(
         "--authorize-training-replay", action="store_true",
-        help="Allow a training-only causal proposal in a sandbox; never applies source or promotes knowledge",
+        help="Allow consumed-case candidate replay in copies; never applies source or promotes knowledge",
     )
     parser.add_argument("--write", action="store_true")
     parser.add_argument(
@@ -59,6 +62,8 @@ def main() -> int:
         architect_design=_read_json(_resolve(root, args.architect_design)) if args.architect_design else None,
         authorize_training_replay=args.authorize_training_replay,
         llm_hypothesis_config=llm_config,
+        validate_causal_proposals=args.validate_causal_proposals,
+        task_contract=_read_task_contract(root, args.task_contract) if args.task_contract else None,
     )
     report["llm_gateway"] = gateway
     if args.write:
@@ -114,6 +119,11 @@ def _read_json(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON artifact must be an object: {path}")
     return payload
+
+
+def _read_task_contract(root: Path, name: str) -> dict:
+    from tools.role_pipeline_run import _read_task_contract as read_contract
+    return read_contract(root, name)
 
 
 if __name__ == "__main__":

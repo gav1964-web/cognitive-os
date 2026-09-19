@@ -17,8 +17,8 @@ from .exception_pickle_active_application_replay_policy import (
     _candidate_effective_replay_risk,
     _candidate_static_patch_risk,
 )
-from .exception_pickle_constructor_samples import _sample_constructor_value
-from .exception_pickle_source_samples import _sample_constructor_value_for_source_file
+from .exception_pickle_sample_contract import sample_constructor_value as _sample_constructor_value
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
 
 def _excluded_projects(transfer_ledger: dict[str, Any], application_ledger: dict[str, Any]) -> set[str]:
     rows = [

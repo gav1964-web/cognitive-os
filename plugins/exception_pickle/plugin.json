@@ -1,0 +1,12 @@
+{
+  "id": "exception_pickle",
+  "version": "0.4.0",
+  "entrypoint": "plugins.exception_pickle.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active"
+}

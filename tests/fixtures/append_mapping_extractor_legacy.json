@@ -1,0 +1,148 @@
+{
+  "provenance": "Frozen legacy extractor results before migration, 2026-09-15; synthetic development cases.",
+  "cases": [
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": {
+        "source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result\n",
+        "loop_variable": "row",
+        "accumulator": "result",
+        "mapping_field_count": 1,
+        "mapping_source": "inline_append",
+        "append_line": 4
+      }
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        record = {'name': row.strip()}\n        result.append(record)\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": {
+        "source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        record = normalize_record(row)\n        result.append(record)\n    return result\n",
+        "loop_variable": "row",
+        "accumulator": "result",
+        "mapping_field_count": 1,
+        "mapping_source": "preceding_assignment",
+        "append_line": 5
+      }
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\r\n    result = []\r\n    for row in rows:\r\n        result.append({'name': row.strip()})\r\n    return result\r\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": {
+        "source": "def normalize_record(row):\r\n    return {'name': row.strip()}\r\n\r\ndef normalize_rows(rows):\r\n    result = []\r\n    for row in rows:\r\n        result.append(normalize_record(row))\r\n    return result\r\n",
+        "loop_variable": "row",
+        "accumulator": "result",
+        "mapping_field_count": 1,
+        "mapping_source": "inline_append",
+        "append_line": 4
+      }
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": {
+        "source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result",
+        "loop_variable": "row",
+        "accumulator": "result",
+        "mapping_field_count": 1,
+        "mapping_source": "inline_append",
+        "append_line": 4
+      }
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'имя': row.strip()})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": {
+        "source": "def normalize_record(row):\n    return {'имя': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result\n",
+        "loop_variable": "row",
+        "accumulator": "result",
+        "mapping_field_count": 1,
+        "mapping_source": "inline_append",
+        "append_line": 4
+      }
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        for sub in row:\n            result.append({'name': row.strip()})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': default_name})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n        result.append({'second': row})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n\ndef normalize_record(row):\n    return row\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "invalid syntax !",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "def other_function(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 12
+      },
+      "patch": null
+    },
+    {
+      "request": {
+        "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+        "origin_symbol": "normalize_rows",
+        "proposed_symbol": "normalize_record",
+        "maximum_mapping_fields": 0
+      },
+      "patch": null
+    }
+  ]
+}

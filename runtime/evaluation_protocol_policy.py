@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .evaluation_evidence import finite_nonnegative
+
 
 EXPECTED_ROUTES = ["direct_agent", "short_chain", "full_chain"]
 EXPECTED_RUBRIC = {
@@ -38,14 +40,13 @@ def evaluation_protocol_policy_errors(payload: dict[str, Any]) -> list[str]:
     rubric = dict(payload.get("rubric") or {})
     if set(rubric) != EXPECTED_RUBRIC:
         errors.append("rubric_fields")
-    elif abs(sum(float(value) for value in rubric.values()) - 1.0) > 1e-9:
-        errors.append("rubric_weight_sum")
+    errors.extend(numeric_policy_errors(payload))
     product = set(payload.get("product_task_classes") or [])
     ablation = set(payload.get("ablation_task_classes") or [])
     if not product or product & ablation:
         errors.append("task_class_tracks")
     for field in ("minimum_tasks_before_claim", "minimum_tasks_per_class_before_claim"):
-        if not isinstance(payload.get(field), int) or payload[field] < 1:
+        if type(payload.get(field)) is not int or payload[field] < 1:
             errors.append(field)
     for field in ("require_independent_judge", "require_same_model_per_task", "require_all_routes"):
         if payload.get(field) is not True:
@@ -56,4 +57,19 @@ def evaluation_protocol_policy_errors(payload: dict[str, Any]) -> list[str]:
         errors.append("require_blind_key_withheld_until_scored")
     if payload.get("legacy_metrics_are_authority") is not False:
         errors.append("legacy_metrics_authority")
+    return errors
+
+
+def numeric_policy_errors(payload: dict[str, Any]) -> list[str]:
+    errors = []
+    rubric = payload.get('rubric')
+    if not isinstance(rubric, dict) or not rubric or any(
+        not finite_nonnegative(v) or v > 1 for v in rubric.values()
+    ):
+        errors.append('invalid_rubric_weights')
+    elif abs(sum(rubric.values()) - 1.0) > 1e-9:
+        errors.append('rubric_weight_sum')
+    margin = payload.get('winner_margin', 0.25)
+    if not finite_nonnegative(margin) or margin > 10:
+        errors.append('invalid_winner_margin')
     return errors

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .exception_pickle_autonomous_shadow import _sample_constructor_value_for_source_file
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
 from .exception_pickle_holdout_transaction import DEFAULT_AUDIT
 from .exception_pickle_active_application import DEFAULT_APPLICATION_LEDGER
 from .exception_pickle_object_contract_admission import load_admitted_object_contracts

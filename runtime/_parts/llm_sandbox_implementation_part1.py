@@ -65,10 +65,12 @@ def run_llm_sandbox_implementation(
     project_dir = output_dir or _default_output_dir(root, operation.operation)
     if write:
         _write_project(project_dir, operation, prompt)
-        compile_result = _run([_python(), "-m", "compileall", "-q", "."], cwd=project_dir)
+        compile_result = _run([_python(), "-c",
+            "from pathlib import Path; "
+            "[compile(p.read_bytes(), str(p), 'exec') for p in Path('.').rglob('*.py')]"], cwd=project_dir)
         test_result = _run([_python(), "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"], cwd=project_dir)
     else:
-        compile_result = {"status": "not_run", "command": "python -m compileall -q ."}
+        compile_result = {"status": "not_run", "command": "compile generated Python sources in memory"}
         test_result = {"status": "not_run", "command": "python -m pytest tests -q"}
     passed = compile_result["status"] in {"passed", "not_run"} and test_result["status"] in {"passed", "not_run"}
     interface_contract = interface_contract_for_operation(root, operation.to_dict())
@@ -93,6 +95,7 @@ def run_llm_sandbox_implementation(
         "files": [
             "pyproject.toml",
             "README.md",
+            "main.py",
             f"src/{operation.package}/__init__.py",
             f"src/{operation.package}/cli.py",
             "tests/fixtures/input.txt",

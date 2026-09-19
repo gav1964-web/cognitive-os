@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import os
 
 from runtime import project_probe_env_install
 from runtime.project_probe_env_install import prepare_probe_env
@@ -7,7 +8,7 @@ from runtime.project_probe_env_install import prepare_probe_env
 
 def test_prepare_probe_env_skips_packages_already_installed(tmp_path: Path, monkeypatch):
     env_dir = tmp_path / "env"
-    python = env_dir / "Scripts" / "python.exe"
+    python = env_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     python.parent.mkdir(parents=True)
     python.write_text("", encoding="utf-8")
     (env_dir / "pyvenv.cfg").write_text("", encoding="utf-8")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,8 @@ from .programmer_repair_loop import run_bounded_repairs
 from .programmer_task_tree import build_programmer_task_tree
 from .programmer_acceptance_gate import enforce_prepared_patch_acceptance, repair_needed
 from .programmer_verification import run_test_result
+from .programmer_model_delivery import model_delivery_mode, model_delivery_precheck
+from .programmer_source_snapshot import _snapshot_writable_files, _expected_files
 
 
 def run_programmer_executor(
@@ -49,6 +50,8 @@ def run_programmer_executor(
         )
     if apply_source:
         return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, "source_edit_apply_not_enabled_in_mvp", task_tree)
+    if error := model_delivery_precheck(technical_spec, implementation_plan):
+        return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan, error, task_tree)
 
     execution_dir = _execution_dir(root, base_dir=execution_base_dir)
     execution_dir.mkdir(parents=True, exist_ok=True)
@@ -66,7 +69,11 @@ def run_programmer_executor(
         test_plan=test_plan,
     )
     execution_project_dir = Path(str(synthesis.get("sandbox_project") or project_dir))
-    llm_enabled = llm_strategy_enabled() if use_l45_llm is None else bool(use_l45_llm)
+    fixed_model_candidate = model_delivery_mode(technical_spec, implementation_plan)
+    if fixed_model_candidate and synthesis.get('status') != 'prepared':
+        return _blocked_result(root, project_dir, technical_spec, implementation_plan, test_plan,
+                               str(synthesis.get('reason')), task_tree)
+    llm_enabled = not fixed_model_candidate and (llm_strategy_enabled() if use_l45_llm is None else bool(use_l45_llm))
     strategy = build_patch_strategy(
         project_dir=execution_project_dir,
         technical_spec=technical_spec,
@@ -288,26 +295,6 @@ def _blocked_execution_report(
     }
 
 
-def _snapshot_writable_files(execution_dir: Path, project_dir: Path, implementation_plan: dict[str, Any]) -> list[dict[str, Any]]:
-    snapshot_dir = execution_dir / "source_snapshot"
-    copied = []
-    for file_name in _expected_files(implementation_plan):
-        source = (project_dir / file_name).resolve()
-        try:
-            source.relative_to(project_dir.resolve())
-        except ValueError:
-            copied.append({"file": file_name, "status": "blocked_outside_project"})
-            continue
-        if not source.is_file():
-            copied.append({"file": file_name, "status": "missing"})
-            continue
-        destination = snapshot_dir / file_name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        copied.append({"file": file_name, "status": "copied", "snapshot": destination.as_posix()})
-    return copied
-
-
 def _patch_package(
     project_dir: Path,
     technical_spec: dict[str, Any],
@@ -369,15 +356,6 @@ def _repair_needed(
         implementation_plan,
         llm_enabled=llm_strategy_enabled,
     )
-
-
-def _expected_files(implementation_plan: dict[str, Any]) -> list[str]:
-    files = []
-    for item in implementation_plan.get("expected_files", []):
-        path = str(item).split(":", 1)[0]
-        if path and path not in files:
-            files.append(path)
-    return files[:8]
 
 
 def _execution_dir(root: Path, *, base_dir: Path | None = None) -> Path:

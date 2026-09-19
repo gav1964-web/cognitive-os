@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from .generated_stub_admission import inspect_generated_function_stubs
+from .native_failure_acceptance import FORMAT as NATIVE_FORMAT, native_coverage
 from .programmer_executor import run_programmer_executor
 from .project_failure_evidence_packet import is_complete_failure_evidence_packet
 from .project_recognition import recognize_project
+from .project_development_review import attach_final_review
 from .role_pipeline_stages import artifact_by_type
 from .role_project_analysis import analyze_role_project
 from .project_development_experiment_feedback import (
@@ -88,6 +90,7 @@ def run_project_development_experiment(
     native_verification = (
         run_project_native_verification(
             root=root, project=sandbox, failing_nodeids=nodeids, policy=policy,
+            baseline_project=project_dir,
             project_version_hint=_project_version_hint(project_dir),
         )
         if patch.get("status") == "prepared" and sandbox.is_dir() and nodeids and stub_admission.get("status") == "passed"
@@ -101,6 +104,8 @@ def run_project_development_experiment(
     experiment = _experiment_artifact(
         result, patch, test_result, native_verification, stub_admission, admission, before, after, decision, policy
     )
+    test_result = attach_final_review(experiment, artifacts=artifacts, test_result=test_result,
+                                      native_verification=native_verification, policy=policy)
     reassessment = _reassess(
         root=root,
         goal=goal,
@@ -163,7 +168,17 @@ def _bounded_training_replay(
     allowed_operator_ids: list[Any],
 ) -> bool:
     authority = str(intent.get("authority") or "")
+    if authority == 'explicit_model_candidate_replay':
+        from .upstream_model_delivery import validate_delivery_intent
+        try:
+            validate_delivery_intent(intent)
+            return not allowed_operator_ids and is_complete_failure_evidence_packet(
+                packet, target=str(intent.get('target_symbol') or ''))
+        except (ValueError, KeyError, TypeError):
+            return False
     if authority not in {"explicit_training_replay", "explicit_llm_training_replay"}:
+        return False
+    if packet.get('schema_version') == 'repair_trial_packet.v1':
         return False
     if not is_complete_failure_evidence_packet(
         packet, target=str(intent.get("target_symbol") or "")
@@ -202,9 +217,11 @@ def _experiment_artifact(
         patch, list(issue.get("affected_targets") or []) or list(issue.get("evidence") or [])
     )
     source_unchanged = before == after and result.get("source_code_changes") is False
-    native_authority = native_verification.get("status") == "passed"
     checks = {
-        "executor_completed": result.get("status") == "ok" or native_authority,
+        "executor_completed": result.get("status") == "ok",
+        "executor_tests_passed": test_result.get("status") == "ok",
+        "source_bound_acceptance_passed": _native_acceptance_passed(issue, test_result),
+        "native_verification_passed": native_verification.get("status") in {"passed", "not_requested"},
         "patch_package_prepared": patch.get("artifact_type") == "PatchPackage" and patch.get("status") == "prepared",
         "targeted_acceptance_passed": (
             dict(native_verification.get("targeted_replay") or {}).get("status") == "passed"
@@ -292,11 +309,18 @@ def _reassessment(
     native = dict(experiment.get("project_native_verification") or {})
     native_targeted = dict(native.get("targeted_replay") or {}).get("status") == "passed"
     native_regression = dict(native.get("regression_suite") or {}).get("status") == "passed"
+    native_requested = bool(native) and native.get("status") != "not_requested"
     checks = {
+        "experiment_verified": experiment.get("status") == "verified",
+        "source_bound_acceptance_passed": _native_acceptance_passed(issue, test_result),
         "issue_evidence_reproduced_before_change": bool(baseline),
         "selected_issue_resolved_or_reduced": reduced,
-        "targeted_acceptance_passed": native_targeted or dict(test_result.get("executable_acceptance_result") or {}).get("status") == "passed",
-        "regression_suite_passed": native_regression or (test_result.get("status") == "ok" and int(summary.get("failed") or 0) == 0),
+        "targeted_acceptance_passed": (native_targeted if native_requested
+            else dict(test_result.get("executable_acceptance_result") or {}).get("status") == "passed"),
+        "regression_suite_passed": (
+            native.get("status") == "passed" and native_regression if native_requested
+            else test_result.get("status") == "ok" and int(summary.get("failed") or 0) == 0
+        ),
         "source_scope_preserved": bool(dict(experiment.get("source_invariant") or {}).get("unchanged")) and bool(dict(experiment.get("checks") or {}).get("patch_scope_within_issue_evidence")),
     }
     return {
@@ -313,6 +337,15 @@ def _reassessment(
         "failed_checks": [name for name, passed in checks.items() if not passed],
         "diagnosis": diagnosis,
     }
+
+
+def _native_acceptance_passed(issue: dict, test_result: dict) -> bool:
+    acceptance = dict(test_result.get("executable_acceptance_result") or {})
+    if not issue.get("failure_specific_reducer_required") and acceptance.get("format") != NATIVE_FORMAT:
+        return True
+    targets = {str(value) for value in issue.get("affected_targets") or [] if value}
+    return (acceptance.get("format") == NATIVE_FORMAT and acceptance.get("status") == "passed"
+            and native_coverage(dict(acceptance.get("summary") or {}), targets))
 
 
 def _validated_memory(

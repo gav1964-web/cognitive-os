@@ -16,7 +16,7 @@ from .project_native_failure_target_binding import (
 )
 
 _FAILED_NODE = re.compile(r"(?m)^FAILED\s+(.+?)(?:\s+-\s+.*)?$")
-_SUBFAILED_NODE = re.compile(r"(?m)^SUBFAILED(?:\([^\r\n]*\))?\s+(.+?)$")
+_SUBFAILED_NODE = re.compile(r"(?m)^SUBFAILED(?:\([^\r\n]*\)|\[[^\r\n]*\])?\s+(.+?)$")
 _ERROR_NODE = re.compile(r"(?m)^ERROR\s+(.+?)(?:\s+-\s+.*)?$")
 _SUMMARY = re.compile(r"(?m)^E\s+([A-Za-z_][A-Za-z0-9_.]*(?:Error|Exception))(?::\s*(.*))?$")
 _DEPENDENCY_INSTALL_HINT = re.compile(
@@ -60,8 +60,9 @@ def _interpret_pytest_result(
         ]
     ))
     nodeid_limit = int(intake.get("maximum_nodeid_chars") or 1024)
+    identity_exceeds_bounds = len(raw_failing) > 8 or any(len(value) > nodeid_limit for value in raw_failing)
     failing = [value[:nodeid_limit] for value in raw_failing]
-    targets = _production_targets(project, output)
+    targets = _production_targets(project, output, test_paths={n.partition('::')[0] for n in raw_failing})
     target_binding = "traceback_production_frame" if targets else None
     if not targets:
         named_constructor = _named_constructor_failure_target(project, output)
@@ -73,7 +74,10 @@ def _interpret_pytest_result(
         causal_analysis = _test_assertion_causal_analysis(project, failing)
         targets = list(causal_analysis["production_targets"])
         target_binding = "unique_assertion_causal_call" if targets else None
-    summary_matches = list(_SUMMARY.finditer(output))
+    # Rewritten pytest assertions may omit the exception class. Read their
+    # actual diagnostic, never a trailing test/warning count, as identity.
+    diagnostics = re.sub(r"(?m)^E[ \t]+(assert(?:[ \t].*)?)$", r"E AssertionError: \1", output)
+    summary_matches = list(_SUMMARY.finditer(diagnostics))
     summary_match = summary_matches[0] if summary_matches else None
     summary = (
         f"{summary_match.group(1)}: {summary_match.group(2) or ''}".strip()
@@ -94,12 +98,15 @@ def _interpret_pytest_result(
         or _source_fallback_plugin_metadata_failure(output, environment_preparation)
     ):
         status = "environment_blocked"
+    elif identity_exceeds_bounds:
+        status = "unclassified_failure"
     elif exit_code == 1 and failing:
         status = "test_failed"
     else:
         status = "unclassified_failure"
     signature_source = json.dumps(
-        {"nodeids": failing, "summary": summary, "leaf_summary": leaf_summary, "targets": targets},
+        {"nodeids": failing, "summary": _stable_summary(summary, project=project),
+         "leaf_summary": _stable_summary(leaf_summary, project=project), "targets": targets},
         sort_keys=True,
     )
     limit = int(intake.get("maximum_output_chars") or 12000)
@@ -107,7 +114,7 @@ def _interpret_pytest_result(
         "status": status,
         "exit_code": exit_code,
         "failure_signature": hashlib.sha256(signature_source.encode("utf-8")).hexdigest() if status == "test_failed" else None,
-        "failing_nodeids": failing[:4],
+        "failing_nodeids": failing[:8],
         "production_targets": targets[:8],
         "leaf_production_target": targets[-1] if targets else None,
         "target_binding": target_binding,
@@ -116,6 +123,7 @@ def _interpret_pytest_result(
         "leaf_failure_summary": leaf_summary,
         "output_tail": output[-limit:],
         "environment_reason": (
+            "failure_identity_exceeds_replay_bounds" if identity_exceeds_bounds else
             "editable_install_required_for_plugin_metadata"
             if _source_fallback_plugin_metadata_failure(output, environment_preparation)
             else "declared_pytest_asyncio_plugin_unavailable"
@@ -123,6 +131,25 @@ def _interpret_pytest_result(
             else None
         ),
     }
+
+
+def _stable_summary(summary: str, *, project: Path | None = None) -> str:
+    # A copied project's own absolute prefix is deployment context, not failure
+    # behavior. Preserve the relative filename and every external path/value.
+    if project is not None:
+        root = str(project.resolve())
+        variants = {root, root.replace('\\', '/'), root.replace('/', '\\')}
+        prefixes = set()
+        for value in variants:
+            for separator in ('/', '\\'):
+                prefix = value.rstrip('/\\') + separator
+                prefixes.update((prefix, repr(prefix)[1:-1], json.dumps(prefix)[1:-1]))
+        for prefix in sorted(prefixes, key=len, reverse=True):
+            summary = summary.replace(prefix, '<project>/')
+    # Default object repr addresses vary across subprocesses. Keep values and
+    # type names: ordinary hexadecimal strings remain part of failure identity.
+    summary = re.sub(r'(<function [\w.<>]+ at )0x[0-9a-fA-F]+(?=>)', r'\1<address>', summary)
+    return re.sub(r"(<[A-Za-z_][\w.]* object at )0x[0-9a-fA-F]+(?=>)", r"\1<address>", summary)
 
 
 def _declared_pytest_asyncio_plugin_missing(project: Path, lowered_output: str) -> bool:

@@ -22,14 +22,17 @@ def _git_snapshot(project: Path) -> dict[str, str]:
 
 
 def _git(project: Path, args: list[str], timeout: int = 20) -> str:
-    command = ["git", "-c", f"safe.directory={project.as_posix()}", "-C", str(project), *args]
+    command = ["git", "-c", f"safe.directory={project.as_posix()}",
+               "-c", "i18n.logOutputEncoding=utf-8", "-C", str(project), *args]
     try:
         run = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, check=False, shell=False,
+            command, capture_output=True, timeout=timeout, check=False, shell=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise HistoricalDefectMiningError("local Git metadata unavailable") from exc
     if run.returncode != 0:
         raise HistoricalDefectMiningError("local Git command failed")
-    return run.stdout
-
+    try:
+        return run.stdout.decode("utf-8")
+    except UnicodeError as exc:
+        raise HistoricalDefectMiningError("local Git output is not UTF-8") from exc

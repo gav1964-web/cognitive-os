@@ -1,0 +1,1334 @@
+{
+  "provenance": "Frozen legacy output before sample extraction, 2026-09-15; development regression only.",
+  "base": [
+    {
+      "name": "COUNT",
+      "sample": 7
+    },
+    {
+      "name": "_",
+      "sample": null
+    },
+    {
+      "name": "__sample__",
+      "sample": null
+    },
+    {
+      "name": "_error_display_name",
+      "sample": null
+    },
+    {
+      "name": "_file_path",
+      "sample": "sample-_file_path.py"
+    },
+    {
+      "name": "_filepath",
+      "sample": "sample-_filepath.py"
+    },
+    {
+      "name": "action",
+      "sample": "sample-action"
+    },
+    {
+      "name": "actual",
+      "sample": "sample-actual"
+    },
+    {
+      "name": "ad_id",
+      "sample": "sample-ad_id"
+    },
+    {
+      "name": "ad_title",
+      "sample": "sample-ad_title"
+    },
+    {
+      "name": "address",
+      "sample": "sample-address"
+    },
+    {
+      "name": "addressing",
+      "sample": null
+    },
+    {
+      "name": "after",
+      "sample": null
+    },
+    {
+      "name": "amount",
+      "sample": 7
+    },
+    {
+      "name": "annotation",
+      "sample": null
+    },
+    {
+      "name": "api_class_name",
+      "sample": "sample-api_class_name"
+    },
+    {
+      "name": "argument",
+      "sample": "sample-argument"
+    },
+    {
+      "name": "attribute_object",
+      "sample": null
+    },
+    {
+      "name": "attributes",
+      "sample": null
+    },
+    {
+      "name": "auth_message",
+      "sample": "sample-auth-message"
+    },
+    {
+      "name": "auth_url",
+      "sample": "sample-auth_url"
+    },
+    {
+      "name": "available_models",
+      "sample": [
+        "sample-available_models"
+      ]
+    },
+    {
+      "name": "before",
+      "sample": null
+    },
+    {
+      "name": "block_type",
+      "sample": "sample-block_type"
+    },
+    {
+      "name": "bucket",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-bucket",
+        "mention": "<sample-bucket>",
+        "window": 7
+      }
+    },
+    {
+      "name": "bytes",
+      "sample": null
+    },
+    {
+      "name": "cap",
+      "sample": 7
+    },
+    {
+      "name": "captcha_img",
+      "sample": "sample-captcha_img"
+    },
+    {
+      "name": "captcha_sid",
+      "sample": "sample-captcha_sid"
+    },
+    {
+      "name": "cause",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-cause"
+      }
+    },
+    {
+      "name": "code",
+      "sample": "sample-code"
+    },
+    {
+      "name": "column",
+      "sample": 7
+    },
+    {
+      "name": "command",
+      "sample": "sample-command"
+    },
+    {
+      "name": "connection_id",
+      "sample": "sample-connection_id"
+    },
+    {
+      "name": "connection_key",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-connection-key",
+        "mention": "<sample-connection-key>",
+        "host": "sample-host",
+        "port": 443,
+        "ssl": true
+      }
+    },
+    {
+      "name": "connection_name",
+      "sample": "sample-connection_name"
+    },
+    {
+      "name": "container",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-container",
+        "mention": "<sample-container>"
+      }
+    },
+    {
+      "name": "content",
+      "sample": {
+        "__sample__": "bytes",
+        "value": "sample-content"
+      }
+    },
+    {
+      "name": "context",
+      "sample": "sample-context"
+    },
+    {
+      "name": "contract_kind",
+      "sample": null
+    },
+    {
+      "name": "converters",
+      "sample": [
+        "sample-converters"
+      ]
+    },
+    {
+      "name": "cooldown",
+      "sample": {
+        "__sample__": "cooldown",
+        "rate": 1,
+        "per": 2.0
+      }
+    },
+    {
+      "name": "count",
+      "sample": 7
+    },
+    {
+      "name": "current",
+      "sample": "sample-current"
+    },
+    {
+      "name": "current_step_time",
+      "sample": 7
+    },
+    {
+      "name": "data",
+      "sample": "sample-data"
+    },
+    {
+      "name": "defects",
+      "sample": [
+        "sample-defects"
+      ]
+    },
+    {
+      "name": "dependents",
+      "sample": [
+        {
+          "__sample__": "format_object",
+          "value": "sample-dependent"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "sample": "sample-description"
+    },
+    {
+      "name": "detail",
+      "sample": "sample-detail"
+    },
+    {
+      "name": "dir",
+      "sample": "sample-dir"
+    },
+    {
+      "name": "displayed_name",
+      "sample": null
+    },
+    {
+      "name": "domain",
+      "sample": "sample-domain"
+    },
+    {
+      "name": "driver_error",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-driver_error"
+      }
+    },
+    {
+      "name": "driver_name",
+      "sample": "sample-driver_name"
+    },
+    {
+      "name": "endpoint",
+      "sample": "sample-endpoint"
+    },
+    {
+      "name": "env_var",
+      "sample": "sample-env_var"
+    },
+    {
+      "name": "errdisplay",
+      "sample": null
+    },
+    {
+      "name": "errno",
+      "sample": null
+    },
+    {
+      "name": "error",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-error"
+      }
+    },
+    {
+      "name": "error_items",
+      "sample": [
+        "sample-error_items"
+      ]
+    },
+    {
+      "name": "error_message",
+      "sample": "sample-error_message"
+    },
+    {
+      "name": "error_type",
+      "sample": "sample-error_type"
+    },
+    {
+      "name": "errors",
+      "sample": [
+        "sample-errors"
+      ]
+    },
+    {
+      "name": "evidence",
+      "sample": null
+    },
+    {
+      "name": "exception",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-exception"
+      }
+    },
+    {
+      "name": "exceptions",
+      "sample": {
+        "sample-objective": [
+          {
+            "__sample__": "exception",
+            "message": "sample-exception"
+          },
+          [
+            "sample-traceback"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "excinfo",
+      "sample": {
+        "__sample__": "excinfo",
+        "formatted": "RuntimeError: sample failure",
+        "msg": "sample failure",
+        "errdisplay": "sample traceback"
+      }
+    },
+    {
+      "name": "existing_type",
+      "sample": "sample-existing_type"
+    },
+    {
+      "name": "exit_code",
+      "sample": 7
+    },
+    {
+      "name": "expected",
+      "sample": "sample-expected"
+    },
+    {
+      "name": "extra_name",
+      "sample": "sample-extra_name"
+    },
+    {
+      "name": "f",
+      "sample": "sample-f"
+    },
+    {
+      "name": "failed_step",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-step",
+        "mention": "<sample-step>"
+      }
+    },
+    {
+      "name": "failure_count",
+      "sample": 7
+    },
+    {
+      "name": "fallback_receipt_path",
+      "sample": {
+        "__sample__": "path",
+        "value": "sample-fallback_receipt_path"
+      }
+    },
+    {
+      "name": "field",
+      "sample": "sample-field"
+    },
+    {
+      "name": "file_path",
+      "sample": "sample-file_path"
+    },
+    {
+      "name": "filename",
+      "sample": "sample-filename"
+    },
+    {
+      "name": "filepath",
+      "sample": "sample-filepath"
+    },
+    {
+      "name": "flag",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-flag",
+        "mention": "<sample-flag>",
+        "max_args": 1,
+        "annotation": "sample-annotation"
+      }
+    },
+    {
+      "name": "format_object",
+      "sample": null
+    },
+    {
+      "name": "formatted",
+      "sample": null
+    },
+    {
+      "name": "found_version",
+      "sample": "sample-found_version"
+    },
+    {
+      "name": "func_name",
+      "sample": "sample-func_name"
+    },
+    {
+      "name": "got_type",
+      "sample": "sample-got_type"
+    },
+    {
+      "name": "guild_id",
+      "sample": "sample-guild_id"
+    },
+    {
+      "name": "heads",
+      "sample": [
+        "sample-heads"
+      ]
+    },
+    {
+      "name": "hint_stmt",
+      "sample": "sample-hint"
+    },
+    {
+      "name": "host",
+      "sample": "sample-host"
+    },
+    {
+      "name": "id",
+      "sample": null
+    },
+    {
+      "name": "import_name",
+      "sample": "sample-import_name"
+    },
+    {
+      "name": "index",
+      "sample": 7
+    },
+    {
+      "name": "instance",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-instance",
+        "mention": "<sample-instance>"
+      }
+    },
+    {
+      "name": "issues",
+      "sample": [
+        "sample-issues"
+      ]
+    },
+    {
+      "name": "iterable_string_list",
+      "sample": null
+    },
+    {
+      "name": "job_id",
+      "sample": "sample-job_id"
+    },
+    {
+      "name": "json",
+      "sample": null
+    },
+    {
+      "name": "key",
+      "sample": "sample-key"
+    },
+    {
+      "name": "kind",
+      "sample": "sample-kind"
+    },
+    {
+      "name": "last_step_time",
+      "sample": 7
+    },
+    {
+      "name": "limit",
+      "sample": 7
+    },
+    {
+      "name": "line",
+      "sample": 7
+    },
+    {
+      "name": "lineno",
+      "sample": 7
+    },
+    {
+      "name": "literals",
+      "sample": [
+        "sample-literals"
+      ]
+    },
+    {
+      "name": "lookup",
+      "sample": "sample-lookup"
+    },
+    {
+      "name": "lower",
+      "sample": "sample-lower"
+    },
+    {
+      "name": "mapping",
+      "sample": null
+    },
+    {
+      "name": "mapping_keys",
+      "sample": null
+    },
+    {
+      "name": "mapping_object",
+      "sample": null
+    },
+    {
+      "name": "max_args",
+      "sample": null
+    },
+    {
+      "name": "max_bytes",
+      "sample": 7
+    },
+    {
+      "name": "max_length",
+      "sample": 7
+    },
+    {
+      "name": "max_loop_iterations",
+      "sample": 7
+    },
+    {
+      "name": "max_supported_version",
+      "sample": "sample-max_supported_version"
+    },
+    {
+      "name": "maximum",
+      "sample": 7
+    },
+    {
+      "name": "mention",
+      "sample": null
+    },
+    {
+      "name": "message",
+      "sample": "sample-message"
+    },
+    {
+      "name": "message_type",
+      "sample": "sample-message_type"
+    },
+    {
+      "name": "messages",
+      "sample": [
+        "sample-messages"
+      ]
+    },
+    {
+      "name": "method_calls",
+      "sample": null
+    },
+    {
+      "name": "method_name",
+      "sample": "sample-method_name"
+    },
+    {
+      "name": "method_object",
+      "sample": null
+    },
+    {
+      "name": "method_return_profiles",
+      "sample": null
+    },
+    {
+      "name": "methods",
+      "sample": null
+    },
+    {
+      "name": "minimum",
+      "sample": 7
+    },
+    {
+      "name": "missing_services",
+      "sample": [
+        "sample-missing_services"
+      ]
+    },
+    {
+      "name": "model_id",
+      "sample": "sample-model_id"
+    },
+    {
+      "name": "model_name",
+      "sample": "sample-model_name"
+    },
+    {
+      "name": "msg",
+      "sample": "sample-msg"
+    },
+    {
+      "name": "mystery_parameter",
+      "sample": null
+    },
+    {
+      "name": "name",
+      "sample": "sample-name"
+    },
+    {
+      "name": "named_object",
+      "sample": null
+    },
+    {
+      "name": "new_type",
+      "sample": "sample-new_type"
+    },
+    {
+      "name": "next_step_time",
+      "sample": 7
+    },
+    {
+      "name": "number",
+      "sample": 7
+    },
+    {
+      "name": "operation",
+      "sample": "sample-operation"
+    },
+    {
+      "name": "opt_type",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-opt_type",
+        "mention": "<sample-opt_type>"
+      }
+    },
+    {
+      "name": "option",
+      "sample": "sample-option"
+    },
+    {
+      "name": "original",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-original"
+      }
+    },
+    {
+      "name": "original_error",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-original_error"
+      }
+    },
+    {
+      "name": "os_error",
+      "sample": {
+        "__sample__": "os_error",
+        "errno": 7,
+        "message": "sample-os-error"
+      }
+    },
+    {
+      "name": "output",
+      "sample": "sample-output"
+    },
+    {
+      "name": "output_time",
+      "sample": 7
+    },
+    {
+      "name": "package_name",
+      "sample": "sample-package_name"
+    },
+    {
+      "name": "param",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-param",
+        "mention": "<sample-param>",
+        "displayed_name": "sample-param"
+      }
+    },
+    {
+      "name": "params",
+      "sample": "sample-params"
+    },
+    {
+      "name": "parents",
+      "sample": [
+        "sample-parents"
+      ]
+    },
+    {
+      "name": "parse_errors",
+      "sample": [
+        "sample-parse_errors"
+      ]
+    },
+    {
+      "name": "path",
+      "sample": "sample-path"
+    },
+    {
+      "name": "payload",
+      "sample": "sample-payload"
+    },
+    {
+      "name": "pending_bytes",
+      "sample": 7
+    },
+    {
+      "name": "pending_messages",
+      "sample": [
+        "sample-pending_messages"
+      ]
+    },
+    {
+      "name": "per",
+      "sample": null
+    },
+    {
+      "name": "port",
+      "sample": 7
+    },
+    {
+      "name": "position",
+      "sample": 7
+    },
+    {
+      "name": "possible_specs",
+      "sample": [
+        "sample-possible_specs"
+      ]
+    },
+    {
+      "name": "progress_time",
+      "sample": 7
+    },
+    {
+      "name": "property_name",
+      "sample": "sample-property_name"
+    },
+    {
+      "name": "provider_name",
+      "sample": "sample-provider_name"
+    },
+    {
+      "name": "rate",
+      "sample": null
+    },
+    {
+      "name": "reason",
+      "sample": "sample-reason"
+    },
+    {
+      "name": "receipt",
+      "sample": {
+        "id": "sample-receipt"
+      }
+    },
+    {
+      "name": "receipt_path",
+      "sample": {
+        "__sample__": "path",
+        "value": "sample-receipt_path"
+      }
+    },
+    {
+      "name": "record",
+      "sample": {
+        "id": "sample-record"
+      }
+    },
+    {
+      "name": "ref_infos",
+      "sample": [
+        "sample-ref_infos"
+      ]
+    },
+    {
+      "name": "relpath",
+      "sample": null
+    },
+    {
+      "name": "remaining_size",
+      "sample": 7
+    },
+    {
+      "name": "replacement_state",
+      "sample": {
+        "before": "sample-before",
+        "after": "sample-after"
+      }
+    },
+    {
+      "name": "repo_filepath",
+      "sample": "sample-repo_filepath.py"
+    },
+    {
+      "name": "repo_path",
+      "sample": "sample-repo_path"
+    },
+    {
+      "name": "requested_size",
+      "sample": 7
+    },
+    {
+      "name": "requirement_chain",
+      "sample": [
+        "sample-requirement_chain"
+      ]
+    },
+    {
+      "name": "requirements",
+      "sample": [
+        "sample-requirements"
+      ]
+    },
+    {
+      "name": "resource_type",
+      "sample": "sample-resource_type"
+    },
+    {
+      "name": "response",
+      "sample": {
+        "__sample__": "response",
+        "status_code": 400,
+        "url": "https://example.invalid/sample",
+        "content": "{\"error\": \"sample-error\"}",
+        "text": "{\"error\": \"sample-error\"}",
+        "json": {
+          "error": "sample-error"
+        }
+      }
+    },
+    {
+      "name": "response_text",
+      "sample": "sample-response_text"
+    },
+    {
+      "name": "retry_after",
+      "sample": 7
+    },
+    {
+      "name": "retry_count",
+      "sample": 7
+    },
+    {
+      "name": "return_code",
+      "sample": 7
+    },
+    {
+      "name": "returncode",
+      "sample": 7
+    },
+    {
+      "name": "rev",
+      "sample": "sample-rev"
+    },
+    {
+      "name": "schema_name",
+      "sample": "sample-schema_name"
+    },
+    {
+      "name": "scored_successfully",
+      "sample": {
+        "sample-objective": 1.0
+      }
+    },
+    {
+      "name": "service",
+      "sample": "sample-service"
+    },
+    {
+      "name": "service_name",
+      "sample": "sample-service_name"
+    },
+    {
+      "name": "shared_lib_path",
+      "sample": "sample-shared_lib_path"
+    },
+    {
+      "name": "sid",
+      "sample": "sample-sid"
+    },
+    {
+      "name": "sim_id",
+      "sample": "sample-sim_id"
+    },
+    {
+      "name": "size",
+      "sample": 7
+    },
+    {
+      "name": "source",
+      "sample": "sample-source"
+    },
+    {
+      "name": "source_count",
+      "sample": 7
+    },
+    {
+      "name": "span",
+      "sample": [
+        0,
+        6
+      ]
+    },
+    {
+      "name": "spec",
+      "sample": {
+        "__sample__": "format_object",
+        "value": "sample-spec"
+      }
+    },
+    {
+      "name": "ssl",
+      "sample": null
+    },
+    {
+      "name": "stages",
+      "sample": [
+        {
+          "__sample__": "named_object",
+          "name": "sample-stage-one",
+          "relpath": "stage-one.dvc",
+          "addressing": "stage-one.dvc"
+        },
+        {
+          "__sample__": "named_object",
+          "name": "sample-stage-two",
+          "relpath": "stage-two.dvc",
+          "addressing": "stage-two.dvc"
+        }
+      ]
+    },
+    {
+      "name": "status",
+      "sample": "sample-status"
+    },
+    {
+      "name": "status_code",
+      "sample": 7
+    },
+    {
+      "name": "stderr",
+      "sample": "sample-stderr"
+    },
+    {
+      "name": "stdout",
+      "sample": "sample-stdout"
+    },
+    {
+      "name": "step_index",
+      "sample": 7
+    },
+    {
+      "name": "step_time",
+      "sample": 7
+    },
+    {
+      "name": "storage_key",
+      "sample": "sample-storage_key"
+    },
+    {
+      "name": "stream_name",
+      "sample": "sample-stream_name"
+    },
+    {
+      "name": "string",
+      "sample": null
+    },
+    {
+      "name": "string_like",
+      "sample": null
+    },
+    {
+      "name": "subject",
+      "sample": "sample-subject"
+    },
+    {
+      "name": "summary",
+      "sample": "sample-summary"
+    },
+    {
+      "name": "table_name",
+      "sample": "sample-table_name"
+    },
+    {
+      "name": "task_name",
+      "sample": "sample-task_name"
+    },
+    {
+      "name": "text",
+      "sample": null
+    },
+    {
+      "name": "timeout_seconds",
+      "sample": 7
+    },
+    {
+      "name": "todo_id",
+      "sample": "sample-todo_id"
+    },
+    {
+      "name": "topics",
+      "sample": [
+        "sample-topics"
+      ]
+    },
+    {
+      "name": "total",
+      "sample": 7
+    },
+    {
+      "name": "transformer",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-transformer",
+        "mention": "<sample-transformer>",
+        "_error_display_name": "sample-transformer"
+      }
+    },
+    {
+      "name": "txn_id",
+      "sample": "sample-txn_id"
+    },
+    {
+      "name": "type",
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-type",
+        "mention": "<sample-type>"
+      }
+    },
+    {
+      "name": "type_",
+      "sample": "sample-type_"
+    },
+    {
+      "name": "unparsed_data",
+      "sample": "sample-unparsed_data"
+    },
+    {
+      "name": "upper",
+      "sample": "sample-upper"
+    },
+    {
+      "name": "url",
+      "sample": "sample-url"
+    },
+    {
+      "name": "used",
+      "sample": 7
+    },
+    {
+      "name": "value",
+      "sample": "sample-value"
+    },
+    {
+      "name": "values",
+      "sample": [
+        "sample-values"
+      ]
+    },
+    {
+      "name": "var_name",
+      "sample": "sample-var_name"
+    },
+    {
+      "name": "version",
+      "sample": "sample-version"
+    },
+    {
+      "name": "window",
+      "sample": null
+    }
+  ],
+  "source": [
+    {
+      "name": "value",
+      "source": "class Broken(Exception):\n    def __init__(self, value):\n        self.value = value[0]\n",
+      "sample": "sample-value"
+    },
+    {
+      "name": "count",
+      "source": "class Broken(Exception):\n    def __init__(self, count):\n        self.value = count[0]\n",
+      "sample": 7
+    },
+    {
+      "name": "error",
+      "source": "class Broken(Exception):\n    def __init__(self, error):\n        self.value = error.stderr\n",
+      "sample": {
+        "__sample__": "called_process_error",
+        "returncode": 7,
+        "cmd": [
+          "sample-command"
+        ],
+        "stdout": "sample-stdout",
+        "stderr": "sample-stderr"
+      }
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.__cause__ = mystery_parameter\n",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-mystery_parameter"
+      }
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = mystery_parameter.__class__\n",
+      "sample": {
+        "__sample__": "exception",
+        "message": "sample-mystery_parameter"
+      }
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        assert mystery_parameter in (\"first\", \"second\")\n",
+      "sample": "first"
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = mystery_parameter.lower()\n",
+      "sample": "sample-mystery_parameter"
+    },
+    {
+      "name": "body",
+      "source": "class Broken(Exception):\n    def __init__(self, body):\n        self.value = f\"body={body}\"\n",
+      "sample": "sample-body"
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = mystery_parameter.code\n",
+      "sample": {
+        "__sample__": "named_object",
+        "code": 7,
+        "name": "sample-mystery_parameter"
+      }
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = mystery_parameter.meta.port\n",
+      "sample": {
+        "__sample__": "named_object",
+        "meta": {
+          "__sample__": "named_object",
+          "name": "sample-mystery_parameter-meta",
+          "port": 7
+        },
+        "name": "sample-mystery_parameter"
+      }
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = mystery_parameter._private\n",
+      "sample": null
+    },
+    {
+      "name": "mystery_parameter",
+      "source": "class Broken(Exception):\n    def __init__(self, mystery_parameter):\n        self.value = 1\n",
+      "sample": null
+    }
+  ],
+  "contracts": [
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "string_like",
+          "evidence": {}
+        }
+      },
+      "sample": "sample-mystery_parameter"
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "iterable_string_list",
+          "evidence": {}
+        }
+      },
+      "sample": [
+        "sample-mystery_parameter"
+      ]
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "attribute_object",
+          "evidence": {
+            "attributes": [
+              "code",
+              "_private"
+            ]
+          }
+        }
+      },
+      "sample": {
+        "__sample__": "named_object",
+        "name": "sample-mystery_parameter",
+        "mention": "<sample-mystery_parameter>",
+        "code": "sample-code"
+      }
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "mapping_object",
+          "evidence": {
+            "mapping_keys": [
+              "message",
+              "status"
+            ]
+          }
+        }
+      },
+      "sample": {
+        "message": "sample-message",
+        "status": "sample-status"
+      }
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "mapping_object",
+          "evidence": {
+            "mapping_keys": []
+          }
+        }
+      },
+      "sample": null
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "method_object",
+          "evidence": {
+            "method_calls": [
+              "read"
+            ],
+            "method_return_profiles": {
+              "read": "string"
+            }
+          }
+        }
+      },
+      "sample": {
+        "__sample__": "method_object",
+        "methods": {
+          "read": "sample-mystery_parameter"
+        }
+      }
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "method_object",
+          "evidence": {
+            "method_calls": [
+              "unknown"
+            ]
+          }
+        }
+      },
+      "sample": null
+    },
+    {
+      "contracts": {
+        "mystery_parameter": {
+          "contract_kind": "opaque_hold",
+          "evidence": {}
+        }
+      },
+      "sample": null
+    }
+  ],
+  "calls": [
+    {
+      "source": "class Broken(Exception):\n    def __init__(self, code, /, *, detail):\n        pass\n",
+      "required": [
+        "code",
+        "detail"
+      ],
+      "samples": [
+        7,
+        "detail"
+      ],
+      "args": [
+        7
+      ],
+      "kwargs": {
+        "detail": "detail"
+      }
+    },
+    {
+      "source": "class Broken(Exception):\n    def __init__(self, code):\n        pass\n",
+      "required": [
+        "unknown"
+      ],
+      "samples": [
+        7
+      ],
+      "args": [
+        7
+      ],
+      "kwargs": {}
+    },
+    {
+      "source": "class Broken(Exception):\n    def __init__(self, code):\n        pass\n",
+      "required": [],
+      "samples": [],
+      "args": [],
+      "kwargs": {}
+    }
+  ]
+}

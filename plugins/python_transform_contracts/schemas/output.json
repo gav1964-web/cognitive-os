@@ -1,0 +1,1 @@
+{"type":"object","additionalProperties":false,"required":["status","contract","tests","limitations"],"properties":{"status":{"enum":["proposed","not_applicable"]},"contract":{"type":"string"},"tests":{"type":"array","items":{"type":"object"}},"limitations":{"type":"string"},"source_executed":{"const":false},"reason":{"type":"string"},"variant_count":{"type":"integer"}}}

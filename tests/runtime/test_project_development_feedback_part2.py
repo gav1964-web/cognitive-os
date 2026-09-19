@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from tests.runtime.project_development_feedback_helpers import *
+import pytest
+from tests.corpus_requirements import require_boundary_contrast
 
+@pytest.mark.local_corpus
 def test_active_exception_pickle_operator_reaches_design_request(tmp_path: Path):
+    require_boundary_contrast(Path(__file__).resolve().parents[2], 'exception_pickle_reconstruction_boundary')
     target = "errors.py:PayloadError.__init__"
     (tmp_path / "errors.py").write_text(
         "class PayloadError(Exception):\n"

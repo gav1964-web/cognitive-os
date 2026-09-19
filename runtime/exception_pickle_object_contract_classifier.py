@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import Any
 
-from .exception_pickle_autonomous_shadow import _sample_constructor_value
+from .exception_pickle_sample_contract import sample_constructor_value as _sample_constructor_value
 
 SAFE_ZERO_ARG_METHOD_RETURNS = {
     "json": "mapping",

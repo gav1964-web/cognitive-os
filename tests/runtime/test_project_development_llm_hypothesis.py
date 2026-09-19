@@ -109,6 +109,9 @@ def test_llm_hypothesis_rejects_target_drift_and_patch_fields(tmp_path, monkeypa
     assert advisory["status"] == "rejected"
     assert "target_mismatch" in advisory["errors"]
     assert "forbidden_fields:patch" in advisory["errors"]
+    assert advisory['model_response_identity'] == {
+        'target': 'module.py:other', 'failure_signature': payload['failure_signature']}
+    assert 'patch' not in advisory['model_response_identity']
 
 
 def test_llm_hypothesis_rejects_low_confidence_and_unknown_schema(tmp_path, monkeypatch) -> None:
@@ -260,3 +263,25 @@ def test_project_development_reports_advisory_without_execution(tmp_path, monkey
     ]
     assert synthesis["repair_design"]["status"] == "llm_hypothesis_review_required"
     assert result["safety"]["source_changes"] is False
+
+
+def test_hypothesis_resolves_exact_qualified_method(tmp_path, monkeypatch):
+    project = _project(tmp_path)
+    (project / 'module.py').write_text(
+        "class Other:\n    def parse_value(self):\n        return 'unrelated'\n"
+        "class Parser:\n    def parse_value(self):\n        return 'selected'\n", encoding='utf-8')
+    issue = _issue()
+    issue['affected_targets'] = ['module.py:Parser.parse_value']
+    issue['failure_evidence'][0]['target'] = issue['affected_targets'][0]
+    seen = []
+    def provider(messages, config=None):
+        seen.append(messages)
+        return {**_payload(), 'target': issue['affected_targets'][0]}
+    monkeypatch.setattr('runtime.project_development_llm_hypothesis.call_json_chat', provider)
+    result = build_llm_failure_hypothesis(issue=issue, project_dir=project, config=_config())
+    assert result['status'] == 'accepted_hypothesis_only'
+    assert 'selected' in seen[0][1]['content'] and 'unrelated' not in seen[0][1]['content']
+    issue['affected_targets'] = ['module.py:Missing.parse_value']
+    issue['failure_evidence'][0]['target'] = issue['affected_targets'][0]
+    assert build_llm_failure_hypothesis(issue=issue, project_dir=project, config=_config())['status'] == 'rejected'
+    assert len(seen) == 1

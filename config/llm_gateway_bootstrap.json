@@ -3,6 +3,7 @@
   "enabled": true,
   "base_url": "http://127.0.0.1:8000",
   "health_path": "/health",
+  "max_output_tokens": 32768,
   "request_timeout_seconds": 2.0,
   "startup_timeout_seconds": 30.0,
   "poll_interval_seconds": 0.5,

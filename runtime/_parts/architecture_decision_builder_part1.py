@@ -124,7 +124,11 @@ def build_architecture_decision(
         "forbidden_actions_observed": [],
         "forbidden_actions_enforced": ["write_code", "edit_registry", "execute_pipeline", "promote_candidate"],
     }
-    return apply_architect_advisory(artifact, config=advisory_config)
+    from runtime.upstream_role_handoff import frame_architecture
+    artifact = frame_architecture(artifact, project_report)
+    artifact = apply_architect_advisory(artifact, config=advisory_config)
+    artifact['reasoning_provenance']['llm_advisory'] = dict(artifact.get('architect_advisory') or {})
+    return artifact
 
 def _first_slice_with_source_targets(
     first_slice: dict[str, Any], tasks: list[dict[str, Any]], *, plan: dict[str, Any] | None = None,

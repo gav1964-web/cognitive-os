@@ -1,0 +1,129 @@
+{
+  "provenance": "Pre-extraction composite records and routing, 2026-09-15; development regression only.",
+  "profiles_sha256": "fbcfedd819558d08aa68a3e86f77d2514a792e8d03f050ab51031ef4ef9e6f7d",
+  "contrasts_sha256": "dd54af2a45c42f78e4ddc1c0931a0855577d8575a707053ddf8d369d6a317984",
+  "profile_sha256": "f01ea3e7c19c2678c9e20399a37e5bee70643977745057228c02ccc524bc0b6c",
+  "contrast_sha256": "67cf50b27de6d0e97d641788c0b2a50336132072603517e4785f510210cade35",
+  "contexts": [
+    {
+      "context": {
+        "feedback": {
+          "reason": "no_unique_development_helper_extraction"
+        },
+        "source_facts": {
+          "source_backed": true,
+          "maximum_loop_depth": 2,
+          "dict_append_sites": 1
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "extract_append_mapping_helper",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "nested_loop_mapping_boundary",
+      "result_sha256": "f01ea3e7c19c2678c9e20399a37e5bee70643977745057228c02ccc524bc0b6c"
+    },
+    {
+      "context": {
+        "feedback": {
+          "reason": "no_unique_development_helper_extraction"
+        },
+        "source_facts": {
+          "source_backed": true,
+          "maximum_loop_depth": 1,
+          "dict_append_sites": 1
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "extract_append_mapping_helper",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "unsupported_reducer_shape",
+      "result_sha256": "f36703f2d1a153114a8d1af6f40ed7951f92a21ad7dd04db4b7899e0d631101f"
+    },
+    {
+      "context": {
+        "feedback": {
+          "reason": "no_unique_development_helper_extraction"
+        },
+        "source_facts": {
+          "source_backed": true,
+          "maximum_loop_depth": 2,
+          "dict_append_sites": 0
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "extract_append_mapping_helper",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "unsupported_reducer_shape",
+      "result_sha256": "f36703f2d1a153114a8d1af6f40ed7951f92a21ad7dd04db4b7899e0d631101f"
+    },
+    {
+      "context": {
+        "feedback": {
+          "reason": "no_unique_development_helper_extraction"
+        },
+        "source_facts": {
+          "source_backed": false,
+          "maximum_loop_depth": 2,
+          "dict_append_sites": 1
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "extract_append_mapping_helper",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "unsupported_reducer_shape_fallback",
+      "result_sha256": "7d0743d71d2180cdb6e0ae1bd624c4dca8f0338ebb12ca66ca8621eca72f67ef"
+    },
+    {
+      "context": {
+        "feedback": {
+          "reason": "ambiguous_development_helper_extraction"
+        },
+        "source_facts": {
+          "source_backed": true,
+          "maximum_loop_depth": 1,
+          "dict_append_sites": 1
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "extract_append_mapping_helper",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "cross_reducer_ambiguity",
+      "result_sha256": "846e3c9bc950eb3cbce2db0bdb4cbeb6b84b85aa19e68e4d2816fa7c260f6cec"
+    },
+    {
+      "context": {
+        "feedback": {
+          "reason": "no_verified_failure_reducer"
+        },
+        "source_facts": {
+          "source_backed": true,
+          "maximum_loop_depth": 2,
+          "dict_append_sites": 1
+        },
+        "reducer_attempts": [
+          {
+            "operation_kind": "guard_mapping_path_descent",
+            "reason": "append_mapping_helper_pattern_not_proven"
+          }
+        ]
+      },
+      "expected_id": "unsupported_reducer_shape",
+      "result_sha256": "f36703f2d1a153114a8d1af6f40ed7951f92a21ad7dd04db4b7899e0d631101f"
+    }
+  ]
+}

@@ -12,12 +12,14 @@ from .module_script_boundary import enrich_module_script_readiness
 from .source_target_policy import is_context_only_implementation_target
 
 
-def analyze_role_project(*, root: Path, project_dir: Path, goal: str) -> dict[str, Any]:
+def analyze_role_project(*, root: Path, project_dir: Path, goal: str, task_contract: dict | None = None, product_context: dict | None = None) -> dict[str, Any]:
     outputs = analyze_project(project_dir)
     outputs["project_map_report"] = prepare_role_project_report(
         root=root,
         goal=goal,
         analyzer_outputs=outputs,
+        task_contract=task_contract,
+        product_context=product_context,
     )
     return outputs
 
@@ -27,6 +29,8 @@ def prepare_role_project_report(
     root: Path,
     goal: str,
     analyzer_outputs: dict[str, Any],
+    task_contract: dict | None = None,
+    product_context: dict | None = None,
 ) -> dict[str, Any]:
     """Attach interpretation as evidence without replacing Architect authority."""
 
@@ -49,7 +53,8 @@ def prepare_role_project_report(
     )
     project_map_report = enrich_weak_contract_readiness(project_map_report)
     project_map_report = enrich_module_script_readiness(project_map_report)
-    return {
+    from .upstream_role_handoff import frame_analysis
+    return frame_analysis({
         **project_map_report,
         "level35_project_signals": interpretation.get("level35_project_signals", {}),
         "level4_project_interpretation": interpretation.get("level4_project_interpretation", {}),
@@ -62,7 +67,7 @@ def prepare_role_project_report(
             "architect_authority": "configured_architect_builder",
             "interpretation_authority": "advisory_only",
         },
-    }
+    }, task_contract, product_context)
 
 
 def _reselection_candidate_inventory(

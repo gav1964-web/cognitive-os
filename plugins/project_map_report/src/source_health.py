@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from .syntax_context import test_data_syntax_path
 
 
 def source_health(
@@ -23,6 +24,8 @@ def source_health(
         row for row in all_syntax_errors if _is_vendored_path(str(row.get("path") or ""))
     ]
     syntax_errors = [row for row in all_syntax_errors if row not in vendored_syntax_errors]
+    test_data_errors = [row for row in syntax_errors if test_data_syntax_path(str(row.get('path') or ''))]
+    syntax_errors = [row for row in syntax_errors if row not in test_data_errors]
     parser_incompatibilities = [
         row for row in py_skipped if str(row.get("reason")) == "ParserVersionIncompatible"
     ]
@@ -68,11 +71,13 @@ def source_health(
     status = "clean"
     if syntax_errors or inaccessible_count:
         status = "damaged"
-    elif vendored_syntax_errors or parser_incompatibilities or project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
+    elif test_data_errors or vendored_syntax_errors or parser_incompatibilities or project_shape in {"dirty_portfolio", "multi_project_workspace"} or generated_signals or packaged_copy_signals or artifact_noise_signals or env_file_signals:
         status = "noisy"
     blockers = []
     if syntax_errors:
         blockers.append("repair or quarantine files that fail Python AST parsing")
+    if test_data_errors:
+        blockers.append("retain test-data parse errors as context; verify executable tests and production separately")
     if vendored_syntax_errors:
         blockers.append("exclude vendored parser-incompatible source from active analysis")
     if inaccessible_count:
@@ -93,6 +98,9 @@ def source_health(
         "project_shape": project_shape,
         "syntax_error_count": len(syntax_errors),
         "syntax_error_samples": syntax_errors[:12],
+        "test_data_syntax_error_count": len(test_data_errors),
+        "test_data_syntax_error_samples": test_data_errors[:12],
+        "syntax_context_authority": "project_map_source_health.v1:root_relative_test_data_path; not execution proof",
         "vendored_syntax_error_count": len(vendored_syntax_errors),
         "vendored_syntax_error_samples": vendored_syntax_errors[:12],
         "parser_incompatibility_count": len(parser_incompatibilities),

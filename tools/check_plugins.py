@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 
@@ -22,12 +23,14 @@ def main() -> int:
 
     capabilities = load_capabilities(root)
     test_paths = [str(root / "plugins" / capability_id / "tests") for capability_id in sorted(capabilities)]
-    base_temp = root / ".pytest-tmp" / "plugins"
-    base_temp.mkdir(parents=True, exist_ok=True)
+    base_temp = root / ".pytest-tmp" / ("plugins-" + uuid.uuid4().hex[:10])
+    process_temp = base_temp / 'process'
+    process_temp.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
-    env.update({"TMP": str(base_temp), "TEMP": str(base_temp), "TMPDIR": str(base_temp)})
+    env.update({"TMP": str(process_temp), "TEMP": str(process_temp), "TMPDIR": str(process_temp)})
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", f"--basetemp={base_temp}", *test_paths],
+        [sys.executable, "-m", "pytest", f"--confcutdir={root}",
+         f"--basetemp={base_temp / 'tests'}", *test_paths],
         cwd=str(root),
         env=env,
         capture_output=True,

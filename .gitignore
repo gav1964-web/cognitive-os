@@ -37,6 +37,7 @@ Desktop.ini
 /.pde/
 
 # Machine-local credentials and scratch files
+/config.json
 /config/secret.key
 /sample
 

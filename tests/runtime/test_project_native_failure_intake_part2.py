@@ -62,6 +62,10 @@ def test_probe_path_bootstrap_prepends_project_source_and_overlay(tmp_path):
     (project / "src").mkdir(parents=True)
     overlay.mkdir()
 
+    import os
+    site = "Lib/site-packages" if os.name == "nt" else "lib/python3.10/site-packages"
+    (environment / site).mkdir(parents=True)
+
     bootstrap = _write_probe_path_bootstrap(
         environment,
         project,

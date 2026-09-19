@@ -110,7 +110,8 @@ def run_project_verification(project_dir: Path) -> dict[str, Any]:
     env["PYTHONPATH"] = str(project_dir / "src")
     commands = [
         ("python -m compileall -b .", [sys.executable, "-m", "compileall", "-b", "."]),
-        ("python -m pytest tests -q", [sys.executable, "-m", "pytest", "tests", "-q", "--basetemp=.pytest-tmp"]),
+        ("python -m pytest tests -q", [sys.executable, "-m", "pytest", "tests", "-q",
+                                     "--tb=short", "--disable-warnings", "--basetemp=.pytest-tmp"]),
     ]
     results = [_run_command(project_dir, env, label, command) for label, command in commands]
     return {

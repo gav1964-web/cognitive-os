@@ -1,41 +1,36 @@
 {
   "artifact_type": "ThreeRouteEvaluationManifest",
-  "authority": {
-    "legacy_metrics": "non_authoritative",
-    "route_self_scores": "forbidden",
-    "winner_requires_independent_blind_score": true
-  },
-  "frozen_at": "2026-09-08T01:57:40.036346+00:00",
-  "manifest_digest": "sha256:e8ad67d0b47877959385d4f509d1cfc4293f419942aff0cb5a8e3546d8907325",
+  "schema_version": "three_route_evaluation_manifest.v2",
+  "frozen_at": "2026-09-12T03:37:04.022653+00:00",
+  "source_commit": "19fba45dd0d5e170adfb357bc82ca1d88111bdef",
   "routes": [
     "direct_agent",
     "short_chain",
     "full_chain"
   ],
-  "schema_version": "three_route_evaluation_manifest.v2",
-  "source_commit": "03d4d5bd9fa915974e9fa18f60217ac402bb292b",
   "tasks": [
     {
+      "task_id": "task01_project5_improvement_plan",
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:e71f0beadc29c6395b71f76d34a4802369c9666e439b19ea1381ff65ef99e73a",
+      "prompt_digest": "sha256:d988df542b3cfcb169171cd539982519eff2e583c495a7ed3b5782a0adeb5a85",
+      "prompt_text": "Проанализировать проект `artifacts/evaluation_inputs/20260912/project5` и дать предложения по улучшению.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Only the frozen selected source tree is in scope; omissions and unavailable live behavior must be stated.",
         "Allowed tools: read-only project analysis, local runtime tools, tests that do not mutate the source project.",
         "Allowed network access: none required.",
         "Allowed dependencies: existing repository dependencies only.",
         "Source mutation policy: source project must remain unchanged."
       ],
       "expected_inputs": [
-        "Project directory: `F:\\ubuntu\\test\\5`.",
+        "Project directory: `artifacts/evaluation_inputs/20260912/project5`.",
         "User goal: improvement-oriented architectural analysis."
       ],
-      "input_digest": "sha256:31c40db34efb2ee9d0985812c85905f5c7830fc8463f5e67cf41139422d273f8",
-      "input_spec": {
-        "expected_inputs": [
-          "Project directory: `F:\\ubuntu\\test\\5`.",
-          "User goal: improvement-oriented architectural analysis."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:7b9e9123e0358b94d5a4e02cad1998cb0b973f2d611d65fbad1db56beb96e4b9",
-      "prompt_text": "Проанализировать проект `F:\\ubuntu\\test\\5` и дать предложения по улучшению.",
       "success_criteria": [
         "Finds concrete source-backed improvement themes.",
         "Separates facts from architectural judgments.",
@@ -43,42 +38,56 @@
         "Records evidence links or file references.",
         "Produces comparable direct-agent and Cognitive OS artifacts."
       ],
-      "task_class": "project_analysis",
-      "task_file_digest": "sha256:fc11afbca5e4ce53e2f5105dd0ebd5eeacf2f9cd289badfb66617bdff7139ad6",
-      "task_id": "task01_project5_improvement_plan"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/project5",
+        "selection_scope": "Only selected tracked source/docs/build files (project10: app/tests + README/pyproject); no datasets, live configs, private/editor state, scratch or live provider tests. Working-tree bytes, not a claim of clean HEAD.",
+        "tree_digest": "sha256:05aa95e921bc5300f1e74fe08e3fa1914007cb77e6d755e396ac0ecee0c9791b"
+      },
+      "input_digest": "sha256:f2eca3ecb1bea2a7bd99eada1f05378fd3b18e165eb246bd79b2f9fe5ad05b6f"
     },
     {
+      "task_id": "task02_map_project_analysis",
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:435c9c9347c3d7b5924dbb7a3437a949540e7e7b5959356fc036081ddc46b892",
+      "prompt_digest": "sha256:b1c261de75961e726959d28f57d719b69b46b604f50c2120af6a1ab2aebc7b34",
+      "prompt_text": "Проанализировать проект `artifacts/evaluation_inputs/20260912/map` и дать предложения по архитектурным улучшениям.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Only the frozen selected source tree is in scope; omissions and unavailable live behavior must be stated.",
         "Allowed tools: read-only project analysis, local runtime tools, non-mutating tests.",
         "Allowed network access: none required.",
         "Allowed dependencies: existing repository dependencies only.",
         "Source mutation policy: source project must remain unchanged."
       ],
       "expected_inputs": [
-        "Project directory: `F:\\ubuntu\\test\\map`.",
+        "Project directory: `artifacts/evaluation_inputs/20260912/map`.",
         "User goal: architecture and improvement analysis."
       ],
-      "input_digest": "sha256:66dc204e4136e74b57bb2bcaaf98f4336f14a7b7cfd7bdd493c266761cb24baf",
-      "input_spec": {
-        "expected_inputs": [
-          "Project directory: `F:\\ubuntu\\test\\map`.",
-          "User goal: architecture and improvement analysis."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:bbeee3ffc543cc1cee812f0ab45f0ea24b0ec8ed51dc328b885c5495b799c7f2",
-      "prompt_text": "Проанализировать проект `F:\\ubuntu\\test\\map` и дать предложения по архитектурным улучшениям.",
       "success_criteria": [
         "Identifies real entrypoints and provider-boundary risks.",
         "Avoids treating generated/scratch artifacts as core logic.",
         "Proposes bounded improvements rather than broad rewrites.",
         "Keeps source project read-only."
       ],
-      "task_class": "project_analysis",
-      "task_file_digest": "sha256:6eb1c670d447594ac29ca1b06bd02b21fff1641abf81e3809a83fbc7c197efd5",
-      "task_id": "task02_map_project_analysis"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/map",
+        "selection_scope": "Only selected tracked source/docs/build files (project10: app/tests + README/pyproject); no datasets, live configs, private/editor state, scratch or live provider tests. Working-tree bytes, not a claim of clean HEAD.",
+        "tree_digest": "sha256:7f3882e9f4883060e5add4bb64a7151c4c42d3a6dbbd98f818593bc44703ddd0"
+      },
+      "input_digest": "sha256:2858b98058f338d356e3434940f198e6406d9057a17066c06ee959538b4bf0c2"
     },
     {
+      "task_id": "task03_markdown_to_rtf_cli",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:d8522c18fef5a56f817d1e24b685d880d61a78be72a15929fc0237abc273186e",
+      "prompt_digest": "sha256:e339bf5df8a4e2bbbe92c5aca5756c29cbc76aaf5b765a8432428f00004fa738",
+      "prompt_text": "Напиши CLI-конвертер файлов `.md` в `.rtf`.",
       "constraints": [
         "Allowed tools: local file generation, local tests, no source mutation outside generated package.",
         "Allowed network access: none.",
@@ -89,27 +98,27 @@
         "CLI arguments: input Markdown path and output RTF path.",
         "Markdown text file encoded as UTF-8."
       ],
-      "input_digest": "sha256:52a23af179abfcba6d449e8f4179122fcc2c7e9f38ce29bec9ab4cd370d5c645",
-      "input_spec": {
-        "expected_inputs": [
-          "CLI arguments: input Markdown path and output RTF path.",
-          "Markdown text file encoded as UTF-8."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:e339bf5df8a4e2bbbe92c5aca5756c29cbc76aaf5b765a8432428f00004fa738",
-      "prompt_text": "Напиши CLI-конвертер файлов `.md` в `.rtf`.",
       "success_criteria": [
         "Provides a runnable CLI.",
         "Handles missing input file with a clear error.",
         "Produces valid RTF header/body structure.",
         "Includes tests and run instructions."
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:d8522c18fef5a56f817d1e24b685d880d61a78be72a15929fc0237abc273186e",
-      "task_id": "task03_markdown_to_rtf_cli"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": [
+          "CLI arguments: input Markdown path and output RTF path.",
+          "Markdown text file encoded as UTF-8."
+        ]
+      },
+      "input_digest": "sha256:52a23af179abfcba6d449e8f4179122fcc2c7e9f38ce29bec9ab4cd370d5c645"
     },
     {
+      "task_id": "task04_xlsx_csv_converter",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:975ae6e3ff351b5fe27349b1a980d596baf1c0656cae6ccd7de9a57e3aa0a3b1",
+      "prompt_digest": "sha256:934aa77126c5aa1ffbf33d685b1369585a8d27933686575401a5112b15b03f50",
+      "prompt_text": "Напиши CLI-конвертер `.xls/.xlsx` в `.csv` и обратно.",
       "constraints": [
         "Allowed tools: local file generation, local tests, no source mutation outside generated package.",
         "Allowed network access: none.",
@@ -120,27 +129,27 @@
         "CLI arguments specifying mode, input path and output path.",
         "Spreadsheet or CSV files."
       ],
-      "input_digest": "sha256:c70d7b6dadf4e5b99f205a9ee0e2fbe1bd1277b39a85002e4d54e4a76bfe6035",
-      "input_spec": {
-        "expected_inputs": [
-          "CLI arguments specifying mode, input path and output path.",
-          "Spreadsheet or CSV files."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:934aa77126c5aa1ffbf33d685b1369585a8d27933686575401a5112b15b03f50",
-      "prompt_text": "Напиши CLI-конвертер `.xls/.xlsx` в `.csv` и обратно.",
       "success_criteria": [
         "Distinguishes `.xlsx` from legacy `.xls` support.",
         "Handles missing files and unsupported extensions cleanly.",
         "Does not silently drop rows or columns in simple fixtures.",
         "Includes tests and run instructions."
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:975ae6e3ff351b5fe27349b1a980d596baf1c0656cae6ccd7de9a57e3aa0a3b1",
-      "task_id": "task04_xlsx_csv_converter"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": [
+          "CLI arguments specifying mode, input path and output path.",
+          "Spreadsheet or CSV files."
+        ]
+      },
+      "input_digest": "sha256:c70d7b6dadf4e5b99f205a9ee0e2fbe1bd1277b39a85002e4d54e4a76bfe6035"
     },
     {
+      "task_id": "task05_fastapi_csv_aggregator",
+      "task_class": "fastapi_service",
+      "task_file_digest": "sha256:53b21f23f219ac763993f74171a3df6f5e40c6c8ff8e0d3d3c90c1f00165bcd0",
+      "prompt_digest": "sha256:9c16917c89c40c762e87eb1dbe485399a8045d080f9b8aa62a0c6d480b04fe4e",
+      "prompt_text": "Сделай локальную FastAPI-службу, которая принимает CSV, валидирует колонки, считает агрегаты, сохраняет JSON-отчёт и имеет README, тесты и команду запуска.",
       "constraints": [
         "Allowed tools: local package generation and local tests.",
         "Allowed network access: none beyond local test server.",
@@ -151,16 +160,6 @@
         "HTTP request containing CSV data or uploaded CSV file.",
         "Required column list declared by the implementation."
       ],
-      "input_digest": "sha256:03ed31d51a1ea9d4dcfdd3d338cdd820d351541f0c5fa6a1084d3064f08a9f23",
-      "input_spec": {
-        "expected_inputs": [
-          "HTTP request containing CSV data or uploaded CSV file.",
-          "Required column list declared by the implementation."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:9c16917c89c40c762e87eb1dbe485399a8045d080f9b8aa62a0c6d480b04fe4e",
-      "prompt_text": "Сделай локальную FastAPI-службу, которая принимает CSV, валидирует колонки, считает агрегаты, сохраняет JSON-отчёт и имеет README, тесты и команду запуска.",
       "success_criteria": [
         "Exposes a documented FastAPI endpoint.",
         "Validates required columns.",
@@ -168,11 +167,21 @@
         "Saves a report file in a controlled path.",
         "Includes runnable tests and README."
       ],
-      "task_class": "fastapi_service",
-      "task_file_digest": "sha256:53b21f23f219ac763993f74171a3df6f5e40c6c8ff8e0d3d3c90c1f00165bcd0",
-      "task_id": "task05_fastapi_csv_aggregator"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": [
+          "HTTP request containing CSV data or uploaded CSV file.",
+          "Required column list declared by the implementation."
+        ]
+      },
+      "input_digest": "sha256:03ed31d51a1ea9d4dcfdd3d338cdd820d351541f0c5fa6a1084d3064f08a9f23"
     },
     {
+      "task_id": "task06_ambiguous_project_request",
+      "task_class": "negative",
+      "task_file_digest": "sha256:e02d45ec68c2de785383b38ad2af95af18296301af49526dee30399987778953",
+      "prompt_digest": "sha256:030631fe3cb3d7b0ca4daf4483a32132a8f5082bf8cfdbd1ed7b8c382317ad0a",
+      "prompt_text": "Сделай нормальный проект для работы с данными.",
       "constraints": [
         "Allowed tools: prompt analysis and clarification only unless sufficient requirements are provided.",
         "Allowed network access: none.",
@@ -182,27 +191,33 @@
       "expected_inputs": [
         "Ambiguous user prompt without clear system type, inputs, outputs or success criteria."
       ],
-      "input_digest": "sha256:bb5aea3e9634ad481bc859be8ec0ff7dcd748b7fa83654ffb70ecd354d1a3abb",
-      "input_spec": {
-        "expected_inputs": [
-          "Ambiguous user prompt without clear system type, inputs, outputs or success criteria."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:030631fe3cb3d7b0ca4daf4483a32132a8f5082bf8cfdbd1ed7b8c382317ad0a",
-      "prompt_text": "Сделай нормальный проект для работы с данными.",
       "success_criteria": [
         "Does not hallucinate a full product specification.",
         "Identifies missing inputs, outputs, constraints and acceptance criteria.",
         "Produces concise clarification questions.",
         "Avoids source changes."
       ],
-      "task_class": "negative",
-      "task_file_digest": "sha256:e02d45ec68c2de785383b38ad2af95af18296301af49526dee30399987778953",
-      "task_id": "task06_ambiguous_project_request"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": [
+          "Ambiguous user prompt without clear system type, inputs, outputs or success criteria."
+        ]
+      },
+      "input_digest": "sha256:bb5aea3e9634ad481bc859be8ec0ff7dcd748b7fa83654ffb70ecd354d1a3abb"
     },
     {
+      "task_id": "task07_role_pipeline_ablation",
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:dc3469af39f9b1609532ce39541e4befedbf1ecd6300af5c1c856441ff693a8f",
+      "prompt_digest": "sha256:eeeda7dddb60dda0ac8f1e471d571e6efc26ea7e67c69954a3ac96af3b82c054",
+      "prompt_text": "Compare full Cognitive OS role separation against a merged-role baseline for a bounded software task.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Use task15_uppercase_cli as the workload; compare merged planning/review against the configured full chain. Record skipped roles and actual model usage. No quality scores from the executors.",
         "Allowed tools: local role pipeline, local deterministic baselines, evaluation reports.",
         "Allowed network access: none required.",
         "Allowed dependencies: existing repository dependencies only.",
@@ -213,29 +228,36 @@
         "Route A: merged-role or reduced-role baseline.",
         "Route B: full role pipeline."
       ],
-      "input_digest": "sha256:98ef2536c616d1307d32220b3fd2ec639f3a4874abb808056d15d8e85447b178",
-      "input_spec": {
-        "expected_inputs": [
-          "One existing evaluation task selected as the workload.",
-          "Route A: merged-role or reduced-role baseline.",
-          "Route B: full role pipeline."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:eeeda7dddb60dda0ac8f1e471d571e6efc26ea7e67c69954a3ac96af3b82c054",
-      "prompt_text": "Compare full Cognitive OS role separation against a merged-role baseline for a bounded software task.",
       "success_criteria": [
         "Uses the same original task prompt for both routes.",
         "Records which roles were merged or skipped.",
         "Does not score conversation quality as artifact quality.",
         "Produces a clear keep/simplify recommendation."
       ],
-      "task_class": "architecture_hypothesis",
-      "task_file_digest": "sha256:8f68f78e76f1be2e49251f2e22884d9ba19ff55239bc2a93701c7f21d068ec0b",
-      "task_id": "task07_role_pipeline_ablation"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task07_role_pipeline_ablation",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:067fae5b9d485bc0f99c1e380ed0b2cc21a5a0d5e9cdc50095f02d7573eb1075"
+      },
+      "input_digest": "sha256:b6ff9a894f8401feff5610ea4813ede3632229f967aa96ec771d5e651d3d2f1d"
     },
     {
+      "task_id": "task08_registry_artifact_audit",
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:6e2306608011c260ae158df3c6f0d15aa8f7f027a7eb6344884b22e084fe6fce",
+      "prompt_digest": "sha256:60cfa7c669c86f31bd2a59b4b1e8b15f0a63a653a264b7dc62585b846bd28701",
+      "prompt_text": "Audit Cognitive OS registry separation and artifact/packet redundancy. Determine what should remain separate, what should become a derived view, and what should be merged or removed.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Audit the frozen COS registry/*.json, config/role_directory.json and runtime schema/packet producers and consumers. Cite produced-but-unused field evidence and propose changes only.",
         "Allowed tools: static code/documentation analysis, registry validation tools, evaluation reports.",
         "Allowed network access: none.",
         "Allowed dependencies: existing repository dependencies only.",
@@ -246,29 +268,36 @@
         "Runtime packet and role artifact definitions.",
         "Documentation describing registry and artifact responsibilities."
       ],
-      "input_digest": "sha256:795356117276a664c761c34ce154cd8560409ba5df8c42d5e6ca169031eab1b9",
-      "input_spec": {
-        "expected_inputs": [
-          "Registry files and plugin manifests.",
-          "Runtime packet and role artifact definitions.",
-          "Documentation describing registry and artifact responsibilities."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:60cfa7c669c86f31bd2a59b4b1e8b15f0a63a653a264b7dc62585b846bd28701",
-      "prompt_text": "Audit Cognitive OS registry separation and artifact/packet redundancy. Determine what should remain separate, what should become a derived view, and what should be merged or removed.",
       "success_criteria": [
         "Distinguishes conceptual separation from duplicated storage.",
         "Identifies produced-but-unused fields.",
         "Does not collapse artifacts solely because names are similar.",
         "Produces an actionable simplification backlog."
       ],
-      "task_class": "architecture_hypothesis",
-      "task_file_digest": "sha256:f158a0178d5810f35f403ad75aa1249c7212edf0503dca509b1e6ad67c0bdefb",
-      "task_id": "task08_registry_artifact_audit"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task08_registry_artifact_audit",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:bff41737e362ce1db0eb35e3ae91a762648ed0092533784cab39be5b7c38eb32"
+      },
+      "input_digest": "sha256:2e44ba51949eacd6e0bb4b021eb48cfa0b097c9450012855f75ccada9462726b"
     },
     {
+      "task_id": "task09_stage3_value_ablation",
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:d29b0e7959ce9f852cb4c6b28caba077ec3d63852b39bda17f0caa84bdae8d0e",
+      "prompt_digest": "sha256:d42f16b24cbd0be6d3b7f2b583c66409b0fb1409dbe385bebc04b2292d2c75d2",
+      "prompt_text": "Compare Stage 2 Verified System Package against Stage 3 Product Slice for one supported product-generation task. Determine whether Stage 3 reduces review cost or catches issues Stage 2 misses.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Use the exact task15_uppercase_cli product and the same generated package for Stage 2 and Stage 3 views. Time review separately; do not infer lower review cost from artifact count.",
         "Allowed tools: local Stage 2/Stage 3 package generation, tests, review reports.",
         "Allowed network access: none required.",
         "Allowed dependencies: existing repository dependencies only.",
@@ -279,29 +308,36 @@
         "Stage 2 package output.",
         "Stage 3 product-slice output."
       ],
-      "input_digest": "sha256:2ff40a20a3fa6fa30e14a6951c7503e5131842d6d0534b1cc0dbaec2f4b81410",
-      "input_spec": {
-        "expected_inputs": [
-          "One supported CLI or FastAPI product prompt.",
-          "Stage 2 package output.",
-          "Stage 3 product-slice output."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:d42f16b24cbd0be6d3b7f2b583c66409b0fb1409dbe385bebc04b2292d2c75d2",
-      "prompt_text": "Compare Stage 2 Verified System Package against Stage 3 Product Slice for one supported product-generation task. Determine whether Stage 3 reduces review cost or catches issues Stage 2 misses.",
       "success_criteria": [
         "Uses same underlying generated package where possible.",
         "Measures added value rather than artifact count.",
         "Records whether Stage 3 found issues Stage 2 missed.",
         "Produces keep/optional/demote recommendation."
       ],
-      "task_class": "architecture_hypothesis",
-      "task_file_digest": "sha256:f52a73810fdee05df2301ad91704cb70021afb7833d03ec9f65908b50c93965b",
-      "task_id": "task09_stage3_value_ablation"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task09_stage3_value_ablation",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:f79b526f2a3b8539e47b28adec6d18584d30789e64926ac1c2da5fd04bad11db"
+      },
+      "input_digest": "sha256:0108f46328a852f3c25e7cd68f49585026a0bee7bc000efe20fd0f6cc2dca9ce"
     },
     {
+      "task_id": "task10_strict_layering_bypass",
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:9394360ed76d35976fe89a9715b8800d3a78c2cd7ec8779b3702274998a81bf7",
+      "prompt_digest": "sha256:3df96089ebfdbd0f6875e8c5d7435c5d7c77e18554d5934a26fb073480a53512",
+      "prompt_text": "Compare strict layered routing against an explicitly declared bypass route for a simple supported task.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Use task15_uppercase_cli; bypass is a declared direct generation/verification path. Compare it with strict routing; record which orchestration steps were skipped. Default COS policy stays unchanged.",
         "Allowed tools: local runtime tools, evaluation reports.",
         "Allowed network access: none required.",
         "Allowed dependencies: existing repository dependencies only.",
@@ -312,219 +348,324 @@
         "Route A: explicit bypass route that skips at least one orchestration layer.",
         "Route B: strict Cognitive OS layered route."
       ],
-      "input_digest": "sha256:521eeef2cc5482583e73f673d7c652f5823e5d26b68b5844ad7629dedfcc9ebf",
-      "input_spec": {
-        "expected_inputs": [
-          "One simple supported task prompt.",
-          "Route A: explicit bypass route that skips at least one orchestration layer.",
-          "Route B: strict Cognitive OS layered route."
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:3df96089ebfdbd0f6875e8c5d7435c5d7c77e18554d5934a26fb073480a53512",
-      "prompt_text": "Compare strict layered routing against an explicitly declared bypass route for a simple supported task.",
       "success_criteria": [
         "Bypass is declared and logged, not implicit.",
         "Both routes use the same original prompt and constraints.",
         "Source safety and artifact traceability are measured.",
         "Result does not weaken default safety policy without evidence."
       ],
-      "task_class": "architecture_hypothesis",
-      "task_file_digest": "sha256:4ea5459ccc0fe5b3d6a2ca29d21536c170f0bfb1d6f4c5aa2bd9aeeb8f3aa198",
-      "task_id": "task10_strict_layering_bypass"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task10_strict_layering_bypass",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:62d0d3176d47b5c2ba997fad61c6014729ec959553cdc40cc7233f89e6636679"
+      },
+      "input_digest": "sha256:776e34518fc987ccdf4b9f1fe4b4a5db37d8d4ca72db3791a49761368368b0cd"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task11_image_contents_cli",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:9ddefce8aa9ec1e02bf4e4c96fc0e98d322ecda72e2f158feb34034a0b9043c9",
       "prompt_digest": "sha256:994c0651f3cb014f71e220ba485f45cdbd6c4d824cfac7a3295aa59c7039bba8",
       "prompt_text": "Напиши CLI .py, которая перечислит содержимое картинки.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Return JSON with width, height, image format and declared backend status. Semantic object recognition requires a real optional backend; metadata alone must be labelled metadata-only.",
+        "Check table.png, invalid.png and a missing path; never fabricate recognized objects."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "CLI accepts image path",
         "Output is structured text",
         "No source tree mutation"
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:0cc2d4cf1ceb9199f80b2953994774b4b6c968b421a877839848bc45fcaa31e0",
-      "task_id": "task11_image_contents_cli"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/fixtures",
+        "tree_digest": "sha256:7a1388a28683d53361d6375b59f3e2a5ef292855260c944dadf646f26e1403bb"
+      },
+      "input_digest": "sha256:35066f86e433a717b5e576e07b92e5cc795081f49f2a14208f642795394074cb"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task12_rotated_image_table",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:65bdce669f791c165a4760dfe48d4980f0465fda6486608c0459d50082b46171",
       "prompt_digest": "sha256:b63469017278c71a51a02b22573f57af65d1dc188cbea792e7b16f41fb29f6c2",
       "prompt_text": "Доработай CLI распознавания табличной картинки: что произойдет, если изображение повернуто на 90 градусов?",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "The input includes synthetic starter table_reader.py plus table.png and table90.png. Add explicit rotation handling to a copy of this starter.",
+        "Test 0/90-degree behavior with an injectable backend and a controlled missing-OCR result. Do not claim real OCR from a stub."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Rotation behavior is explicit",
         "Failure mode is tested",
         "No fabricated OCR claims"
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:f89ddfa590bb6a913d0ce260675f89aac12acaef8119bb91bc490f1da19c268e",
-      "task_id": "task12_rotated_image_table"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/fixtures",
+        "tree_digest": "sha256:7a1388a28683d53361d6375b59f3e2a5ef292855260c944dadf646f26e1403bb"
+      },
+      "input_digest": "sha256:35066f86e433a717b5e576e07b92e5cc795081f49f2a14208f642795394074cb"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task13_xls_to_png_converter",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:0cc4ef062874ba0fd07e3637681838fad083c1d8e3fbc095028a430037fe9a48",
       "prompt_digest": "sha256:da9c28d4fe11c75622c24290979f7fa39439b98570ec33ade22ef2610aa49c4f",
       "prompt_text": "Напиши конвертер .xls в .png.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "table.xls is a real BIFF8 workbook with Data/name/value. Produce PNG through an explicit XLS reader adapter; reject corrupt and missing inputs.",
+        "A missing optional XLS reader must yield a documented controlled block, not a successful conversion claim. Positive conversion requires a real installed reader."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Adapter boundary exists",
         "Missing dependencies are controlled",
         "Tests run without external files"
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:b01c8c8fba5ef1a8959bfd6e7908be3e187c69a04a8b22c830118f4e6a93683e",
-      "task_id": "task13_xls_to_png_converter"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/fixtures",
+        "tree_digest": "sha256:7a1388a28683d53361d6375b59f3e2a5ef292855260c944dadf646f26e1403bb"
+      },
+      "input_digest": "sha256:35066f86e433a717b5e576e07b92e5cc795081f49f2a14208f642795394074cb"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task14_jpg_to_doc_converter",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:06032739ef49f60c39ecbcc387760754ee2c7ea1875bb7620cb7abb49b7c93a3",
       "prompt_digest": "sha256:c331d510a13dea4c007f320fb8da90872ffcad4453012a0aa7f1bdb2c7714f4c",
       "prompt_text": "Напиши CLI для конвертации .jpg в .doc.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "page.jpg is the input. .doc means legacy Word binary format, not .docx and not HTML renamed .doc.",
+        "If no real .doc writer exists, return a controlled block and document an explicit opt-in alternative; never silently change the requested format."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Format ambiguity is surfaced",
         "Fallback path is explicit",
         "README documents limitations"
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:876bf12590b1a5d2eb7e9050646b6ffc6d15566465ba690ddc7a801f2744ee2b",
-      "task_id": "task14_jpg_to_doc_converter"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/fixtures",
+        "tree_digest": "sha256:7a1388a28683d53361d6375b59f3e2a5ef292855260c944dadf646f26e1403bb"
+      },
+      "input_digest": "sha256:35066f86e433a717b5e576e07b92e5cc795081f49f2a14208f642795394074cb"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task15_uppercase_cli",
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:70044db4f20cb692477cdaae34c580f0a2bfd1c20ad28e7e8de58a015bb107de",
       "prompt_digest": "sha256:308db0a1900803f4fe2d5927ee0d626edb4934122f3df8c438aa5241a8c33620",
       "prompt_text": "Напиши CLI .py, которая переводит текстовый файл в верхний регистр.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "CLI contract: python main.py INPUT OUTPUT; UTF-8, Python str.upper semantics, preserve line endings, standard library only.",
+        "Reject missing input, invalid UTF-8 and identical input/output paths with nonzero exit; do not change input or existing output on rejection.",
+        "Include README and pytest tests. Positive cases include Cyrillic, Straße, empty text and CRLF."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Input/output paths",
         "Deterministic transform",
         "pytest coverage"
       ],
-      "task_class": "cli_utility",
-      "task_file_digest": "sha256:3d1437b267dbbd25bd0786376ff1f70513a30208147f6f02335ad928f9256d95",
-      "task_id": "task15_uppercase_cli"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/fixtures",
+        "tree_digest": "sha256:7a1388a28683d53361d6375b59f3e2a5ef292855260c944dadf646f26e1403bb"
+      },
+      "input_digest": "sha256:35066f86e433a717b5e576e07b92e5cc795081f49f2a14208f642795394074cb"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task16_project7_analysis",
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:7cf5503dc3c420bd3cc069496116ca7bb244239cba9a7830776d5d3786b8536e",
       "prompt_digest": "sha256:d73d9919e4c571a9506e58c9755ac617c3278c32545cc51850c8c7b05398ec37",
       "prompt_text": "Проанализируй Python-проект 7 и дай предложения по развитию.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Analyze only the provided project7 source snapshot; omitted machine data and live behavior remain unverified. Cite paths and separate facts from recommendations."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Entrypoints detected",
         "Evidence refs exist",
         "Recommendations are project-specific"
       ],
-      "task_class": "project_analysis",
-      "task_file_digest": "sha256:4085a5d50e3aa64867f0deda749f0a7a11efb995b410d0d94bfbd5b6367c51c3",
-      "task_id": "task16_project7_analysis"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/project7",
+        "selection_scope": "Only selected tracked source/docs/build files (project10: app/tests + README/pyproject); no datasets, live configs, private/editor state, scratch or live provider tests. Working-tree bytes, not a claim of clean HEAD.",
+        "tree_digest": "sha256:dc12f8af93ecafb14a109af2e3efac97c3c4c2f35f34c837c31ff3180f159aea"
+      },
+      "input_digest": "sha256:9567ea7b9f0cfd1baec262bdbe1696b4ea4271ef2d1c58ee95b96a55b9ab8899"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task17_project10_analysis",
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:d322e70e83d0e44d8cb6736bdcc811759747310e3ae0e3ce6b26559a0033b740",
       "prompt_digest": "sha256:60e0386594d3d3d777960c481092d58d652fda6c7519edba87d718d3adb79894",
       "prompt_text": "Проанализируй Python-проект 10 и дай предложения по развитию.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Analyze only the provided project10 source snapshot; do not execute its application or touch its private agent memory. Cite evidence for state and side effects."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Capabilities identified",
         "State and side effects assessed",
         "Risks are actionable"
       ],
-      "task_class": "project_analysis",
-      "task_file_digest": "sha256:6b269ff27744780952d6183f6f72c1b7a30a0b55eb5772639a7c74ea5bf2da0e",
-      "task_id": "task17_project10_analysis"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/project10",
+        "selection_scope": "Only selected tracked source/docs/build files (project10: app/tests + README/pyproject); no datasets, live configs, private/editor state, scratch or live provider tests. Working-tree bytes, not a claim of clean HEAD.",
+        "tree_digest": "sha256:1886a54095a2584cd99d9904773dd1c22c04e6ad870eaf1b7f4eb9950d609eb9"
+      },
+      "input_digest": "sha256:08926e3c0366c97c6a862bca0db844896d90db946b1b94e02eb1f668d64f087e"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task18_kb_gap_resolution",
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:887b2474b92e6b73969d5f1863de377d648186f0e65c476caea3b84f3da247ea",
       "prompt_digest": "sha256:618903755f72f51dcc2e95fc18a3c9a4ed80e0406c1ffb0181a87ed1df16fbcc",
       "prompt_text": "Если KB не знает решения, попробуй решить через LLM и сформируй candidate или developer request.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Concrete KB-miss workload: propose a pure function normalizing RFC3339 timestamps to UTC while preserving fractional precision; fixture cases are supplied in workload.json.",
+        "Record the actual KB lookup; if supported already, report that the miss assumption is false. No KB mutation, candidate promotion or direct execution of model text.",
+        "Test KB resolution for the supplied timestamp normalization cases; generate candidate/developer request only. Candidate code is data and must not be executed or admitted."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "KB miss is recorded",
         "LLM output is not executed directly",
         "Next action is explicit"
       ],
-      "task_class": "architecture_hypothesis",
-      "task_file_digest": "sha256:3a363da293cdc1e74bedc8c5c0b0935bd446b777af797a3aa64d3be5eb93ed8d",
-      "task_id": "task18_kb_gap_resolution"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task18_kb_gap_resolution",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:786c23c5088927724636eed87deeb49c180aef6d51110cfbcccc6bc800964432"
+      },
+      "input_digest": "sha256:605a118cfbf6f30e62df81c8711580988cb1e1402add2e48dea863b5a93f260a"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task19_role_directory_extension",
+      "task_class": "configuration",
+      "task_file_digest": "sha256:754a01fc0ab1034e2882f61c77b99ada7f5735585ac11a504cf0cd8e887adc08",
       "prompt_digest": "sha256:3c16484d3877a2f3e1c303f9e40691a66c8dde984bb7d8dec0c83b84a4aaf828",
       "prompt_text": "Добавь новую роль через справочник ролей без изменения runtime-кода.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "Add a data-defined role named evaluation_evidence_reviewer to a copy of config/role_directory.json, using an existing compatible handler.",
+        "Require evidence references, emit a review artifact, and validate directory/contracts. Runtime/plugins/knowledge changes are forbidden; unsupported handler reuse must be reported as a block.",
+        "Extend only role configuration in a copy of the frozen COS source, as specified in the task constraints."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "Role is data-defined",
         "Gates are contract-based",
         "No role-specific facade added"
       ],
-      "task_class": "configuration",
-      "task_file_digest": "sha256:383c1b2952dc357b429ac0ec923d5aa456bae9c227450d36b1f100d3de29865f",
-      "task_id": "task19_role_directory_extension"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/evaluation_inputs/20260912/workloads/task19_role_directory_extension",
+        "supporting_input": {
+          "path": "artifacts/evaluation_inputs/20260912/cos",
+          "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+        },
+        "tree_digest": "sha256:23ab6509ff355279301f36e2b352ec54482d59e800b77641b4b53a04bfd1dcf7"
+      },
+      "input_digest": "sha256:afa6306e009de23ab6fbab055e5c4eb9daf0ce187e7a648025f340dfba3b1663"
     },
     {
-      "constraints": [],
-      "expected_inputs": [],
-      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
-      "input_spec": {
-        "expected_inputs": [],
-        "kind": "declared_prompt_inputs"
-      },
+      "task_id": "task20_prompt_adequacy_gate",
+      "task_class": "negative",
+      "task_file_digest": "sha256:8d63359348931bdb576da0ba4cebc84f6793c71813ca6365699816bafda95718",
       "prompt_digest": "sha256:819beb18c3ef67a98d060c4cf15f45372ed131d9681385412d8f15caf0627adf",
       "prompt_text": "Сделай что-нибудь полезное с моим проектом.",
+      "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
+        "This is intentionally under-specified. Return clarification questions or a controlled block; no project path or desired change is supplied and none may be invented."
+      ],
+      "expected_inputs": [],
       "success_criteria": [
         "ClarificationPacket or controlled block",
         "No invented requirements",
         "No implementation attempt without adequacy"
       ],
-      "task_class": "negative",
-      "task_file_digest": "sha256:e718d4a011657b4d4b27198f554439bd4e258fb6d60c267b5926c8860f05de47",
-      "task_id": "task20_prompt_adequacy_gate"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": []
+      },
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47"
     },
     {
+      "task_id": "task21_fastapi_durable_jobs",
+      "task_class": "fastapi_service",
+      "task_file_digest": "sha256:1adf3ee16c9a67330a4ac7074311bf0971fbbe8aeec4d545b309c0270b55850b",
+      "prompt_digest": "sha256:9d4060ca6a8c008a8bdce34da8a085b044318d4f7a05393860ede19c3e6fab2b",
+      "prompt_text": "Создай локальную FastAPI-службу постановки фоновых заданий: идемпотентная постановка, получение статуса, отмена и восстановление очереди после перезапуска.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network services",
         "SQLite or filesystem persistence only",
         "Generated package or sandbox only",
@@ -533,15 +674,6 @@
       "expected_inputs": [
         "An empty writable workspace"
       ],
-      "input_digest": "sha256:fffccf9333680d9ab2f7cab1daba31eef73d1654cf8b046cc58e6eebd05bd1ab",
-      "input_spec": {
-        "expected_inputs": [
-          "An empty writable workspace"
-        ],
-        "kind": "declared_prompt_inputs"
-      },
-      "prompt_digest": "sha256:9d4060ca6a8c008a8bdce34da8a085b044318d4f7a05393860ede19c3e6fab2b",
-      "prompt_text": "Создай локальную FastAPI-службу постановки фоновых заданий: идемпотентная постановка, получение статуса, отмена и восстановление очереди после перезапуска.",
       "success_criteria": [
         "API contract covers create, status and cancel",
         "Idempotency is tested",
@@ -549,12 +681,26 @@
         "Invalid transitions fail explicitly",
         "README contains exact run and test commands"
       ],
-      "task_class": "fastapi_service",
-      "task_file_digest": "sha256:a58a968abb7524059c5b5a658b942bdfda0d4a2a1e0ef08b8372dfd520604e74",
-      "task_id": "task21_fastapi_durable_jobs"
+      "input_spec": {
+        "kind": "declared_prompt_inputs",
+        "expected_inputs": [
+          "An empty writable workspace"
+        ]
+      },
+      "input_digest": "sha256:fffccf9333680d9ab2f7cab1daba31eef73d1654cf8b046cc58e6eebd05bd1ab"
     },
     {
+      "task_id": "task22_fastapi_event_docs",
+      "task_class": "documentation",
+      "task_file_digest": "sha256:25941427f71f59a57e3668e8c9216d33a8187a92d8ca87e77ddc3ee67b4141ad",
+      "prompt_digest": "sha256:742461b9de05fbc75235aae09e76a3702345e661d5e0095f4104f9991d2b895b",
+      "prompt_text": "Проведи evidence-based аудит документации проекта и подготовь улучшенный README для нового разработчика без изменения исходного кода.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network",
         "Treat the input tree as read-only",
         "Cite source paths for non-obvious claims"
@@ -562,16 +708,6 @@
       "expected_inputs": [
         "Frozen Python project tree"
       ],
-      "input_digest": "sha256:0e1b8467eba9c7596650dd3f90491eb7132393e31a030211bbd4544f922a9a81",
-      "input_spec": {
-        "kind": "project_tree",
-        "path": "artifacts/hypothesis_holdouts/hvp_a78713cac804/src/teamhide__fastapi-event",
-        "revision": "4e8502e5f1e6744ba7089c359f84e2fb5f5f263d",
-        "tree_digest": "sha256:aa4e2d06cbe5f6a9af7bfe9f5b8c061ad776e48364104f253cbfa4d6acd20690",
-        "url": "https://github.com/teamhide/fastapi-event.git"
-      },
-      "prompt_digest": "sha256:742461b9de05fbc75235aae09e76a3702345e661d5e0095f4104f9991d2b895b",
-      "prompt_text": "Проведи evidence-based аудит документации проекта и подготовь улучшенный README для нового разработчика без изменения исходного кода.",
       "success_criteria": [
         "Commands and entrypoints are verified against source",
         "Configuration and dependencies are documented",
@@ -579,12 +715,27 @@
         "Unknown behavior is not invented",
         "Only documentation artifacts are produced"
       ],
-      "task_class": "documentation",
-      "task_file_digest": "sha256:3de8c190d3752604f771696092d8cc6af8628ec08798933dae6698d1ce2c2228",
-      "task_id": "task22_fastapi_event_docs"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_a78713cac804/src/teamhide__fastapi-event",
+        "url": "https://github.com/teamhide/fastapi-event.git",
+        "revision": "4e8502e5f1e6744ba7089c359f84e2fb5f5f263d",
+        "tree_digest": "sha256:aa4e2d06cbe5f6a9af7bfe9f5b8c061ad776e48364104f253cbfa4d6acd20690"
+      },
+      "input_digest": "sha256:0e1b8467eba9c7596650dd3f90491eb7132393e31a030211bbd4544f922a9a81"
     },
     {
+      "task_id": "task23_supervisord_docs",
+      "task_class": "documentation",
+      "task_file_digest": "sha256:26d5f8958495469ab98c20fc27092b9e00e71acd0346b6db55fe16e8c054eee6",
+      "prompt_digest": "sha256:5d17bfe3080c2253b6d37e71447069146109922faf6df18410303c1de0b1800c",
+      "prompt_text": "Восстанови фактический пользовательский контракт проекта и подготовь README с установкой, конфигурацией, примером и диагностикой ошибок.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network",
         "Treat the input tree as read-only",
         "Do not claim unsupported compatibility"
@@ -592,16 +743,6 @@
       "expected_inputs": [
         "Frozen Python project tree"
       ],
-      "input_digest": "sha256:bb093cf800e1c8716b0e0e4c4599d64ccb3ab1c1d9aadffad73aa27dc6dbbf11",
-      "input_spec": {
-        "kind": "project_tree",
-        "path": "artifacts/hypothesis_holdouts/hvp_148e197a09f8_r2_w741fe387/src/isca__ordered-startup-supervisord",
-        "revision": "54e32080e673f1548c5d97ed483805d63754656a",
-        "tree_digest": "sha256:597e98646fa6cabfb05f7cbbf72b9519582cb1c12e406cc52771f1b02ceea15f",
-        "url": "https://gitlab.com/isca/ordered-startup-supervisord.git"
-      },
-      "prompt_digest": "sha256:5d17bfe3080c2253b6d37e71447069146109922faf6df18410303c1de0b1800c",
-      "prompt_text": "Восстанови фактический пользовательский контракт проекта и подготовь README с установкой, конфигурацией, примером и диагностикой ошибок.",
       "success_criteria": [
         "Documented behavior matches implementation",
         "Installation and configuration are reproducible",
@@ -609,12 +750,27 @@
         "Failure modes are evidence-backed",
         "Source tree remains unchanged"
       ],
-      "task_class": "documentation",
-      "task_file_digest": "sha256:780b270dbbfafa73e26b962892ca4dd2e3fbcb0c0daf6b0ad52f0eff05959cb7",
-      "task_id": "task23_supervisord_docs"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_148e197a09f8_r2_w741fe387/src/isca__ordered-startup-supervisord",
+        "url": "https://gitlab.com/isca/ordered-startup-supervisord.git",
+        "revision": "54e32080e673f1548c5d97ed483805d63754656a",
+        "tree_digest": "sha256:597e98646fa6cabfb05f7cbbf72b9519582cb1c12e406cc52771f1b02ceea15f"
+      },
+      "input_digest": "sha256:bb093cf800e1c8716b0e0e4c4599d64ccb3ab1c1d9aadffad73aa27dc6dbbf11"
     },
     {
+      "task_id": "task24_msgpack_packaging_change",
+      "task_class": "sandbox_project_change",
+      "task_file_digest": "sha256:8a2e3676a56e8db7abd91af35b840357949e93e56f380d4102344024e79df0d2",
+      "prompt_digest": "sha256:77a67a150c83154dddc5ab5dae024863893fce2600b0f0a17745e076c6bfa2e0",
+      "prompt_text": "В отдельной копии модернизируй packaging-конфигурацию проекта, сохранив публичное поведение, и докажи сборку и установку локальными проверками.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network",
         "Never mutate the frozen input",
         "Use only locally available build tools",
@@ -623,16 +779,6 @@
       "expected_inputs": [
         "Frozen Python project tree"
       ],
-      "input_digest": "sha256:f85ec5d32e9fa2c7a27a8f14e0e54e0ef986667adacd03e7b57f890fa803e930",
-      "input_spec": {
-        "kind": "project_tree",
-        "path": "artifacts/hypothesis_holdouts/hvp_e850e54e7010_r2_w57a22fbb/src/MusicScience37Projects__utility-libraries__py-msgpack-rpc",
-        "revision": "fe4aa4f3bb126c6ca47be3f8832156122a6598e6",
-        "tree_digest": "sha256:109d06f22eae22cb1c3a967a32157f1219c883a9ada47bae76c41861908ba9f5",
-        "url": "https://gitlab.com/MusicScience37Projects/utility-libraries/py-msgpack-rpc.git"
-      },
-      "prompt_digest": "sha256:77a67a150c83154dddc5ab5dae024863893fce2600b0f0a17745e076c6bfa2e0",
-      "prompt_text": "В отдельной копии модернизируй packaging-конфигурацию проекта, сохранив публичное поведение, и докажи сборку и установку локальными проверками.",
       "success_criteria": [
         "Change is limited to a sandbox copy",
         "Build metadata is internally consistent",
@@ -640,12 +786,27 @@
         "Existing public imports remain usable",
         "No placeholder implementation is introduced"
       ],
-      "task_class": "sandbox_project_change",
-      "task_file_digest": "sha256:f1c6e2c01cd36a9cd9a9f34f44c9688eb16e6f55fe852a1198bc425bfc8e282f",
-      "task_id": "task24_msgpack_packaging_change"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_e850e54e7010_r2_w57a22fbb/src/MusicScience37Projects__utility-libraries__py-msgpack-rpc",
+        "url": "https://gitlab.com/MusicScience37Projects/utility-libraries/py-msgpack-rpc.git",
+        "revision": "fe4aa4f3bb126c6ca47be3f8832156122a6598e6",
+        "tree_digest": "sha256:109d06f22eae22cb1c3a967a32157f1219c883a9ada47bae76c41861908ba9f5"
+      },
+      "input_digest": "sha256:f85ec5d32e9fa2c7a27a8f14e0e54e0ef986667adacd03e7b57f890fa803e930"
     },
     {
+      "task_id": "task25_amazon_tool_test_change",
+      "task_class": "sandbox_project_change",
+      "task_file_digest": "sha256:64c05657627ed9208bec0efb052b8a766ad599737c437daeff3f8b015940fa18",
+      "prompt_digest": "sha256:680787bdf1b68d3160b04514942b89bd4a345dd747dd79bb0ecdd7cee06af524",
+      "prompt_text": "В отдельной копии найди один подтверждаемый тестами дефект на границе ввода или конфигурации, исправь его минимально и предоставь regression evidence.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network",
         "Never mutate the frozen input",
         "Do not invent a defect",
@@ -654,16 +815,6 @@
       "expected_inputs": [
         "Frozen Python project tree"
       ],
-      "input_digest": "sha256:c79ff7cfc2a5ab2b90b96b33d9642300bceb2c228abc2188c56950dfac15a6ab",
-      "input_spec": {
-        "kind": "project_tree",
-        "path": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/amzn__amazon-frustration-free-setup-certification-tool",
-        "revision": "221b7cdc9cdf94a688716a499bf5eb6e87c890df",
-        "tree_digest": "sha256:594300721bf319f0ceac47a9fddf0c34eb93d82bd91563bec5c9349abbcb1389",
-        "url": "https://github.com/amzn/amazon-frustration-free-setup-certification-tool.git"
-      },
-      "prompt_digest": "sha256:680787bdf1b68d3160b04514942b89bd4a345dd747dd79bb0ecdd7cee06af524",
-      "prompt_text": "В отдельной копии найди один подтверждаемый тестами дефект на границе ввода или конфигурации, исправь его минимально и предоставь regression evidence.",
       "success_criteria": [
         "Defect is tied to concrete source evidence",
         "A failing regression test precedes or demonstrates the fix",
@@ -671,12 +822,27 @@
         "Relevant tests pass",
         "Frozen input remains unchanged"
       ],
-      "task_class": "sandbox_project_change",
-      "task_file_digest": "sha256:f510c56dc42a1fcd6b4cb6d73952bfa14d031c25ec5018df892c9abecdf74b6a",
-      "task_id": "task25_amazon_tool_test_change"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/amzn__amazon-frustration-free-setup-certification-tool",
+        "url": "https://github.com/amzn/amazon-frustration-free-setup-certification-tool.git",
+        "revision": "221b7cdc9cdf94a688716a499bf5eb6e87c890df",
+        "tree_digest": "sha256:594300721bf319f0ceac47a9fddf0c34eb93d82bd91563bec5c9349abbcb1389"
+      },
+      "input_digest": "sha256:c79ff7cfc2a5ab2b90b96b33d9642300bceb2c228abc2188c56950dfac15a6ab"
     },
     {
+      "task_id": "task26_atila_development_analysis",
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:4c1954b2fae326e145dacdefadba9877ef31f156b2759bc2940f7299f6886145",
+      "prompt_digest": "sha256:4f2558186cc68343129393d7ec7590fffc1dd71cbfe8aa7534a33d2a0f28e176",
+      "prompt_text": "Проанализируй проект как развиваемый Python-продукт: восстанови архитектуру, найди приоритетные недостатки и предложи проверяемую последовательность развития.",
       "constraints": [
+        "Use Python 3.10+; generation and verification run in a fresh output directory, with no changes to frozen inputs.",
+        "No network from produced programs or tests. Model inference may use the configured local gateway only; record every model attempt.",
+        "No package installation during a route. Use the frozen available dependencies; report missing optional adapters explicitly.",
+        "Per route budget: 20 model calls, 120000 reported total tokens, 900 seconds; record unknown usage as unknown, never invent zero cost.",
+        "All routes receive these same constraints and input bytes. Log every clarification, manual edit and retry; none are supplied silently.",
         "No network",
         "Treat the input tree as read-only",
         "Do not infer maturity from file counts alone"
@@ -684,16 +850,6 @@
       "expected_inputs": [
         "Frozen Python project tree"
       ],
-      "input_digest": "sha256:fde38832c81baf89daef96584248e12968279d3478fed7551c0b4744a44db325",
-      "input_spec": {
-        "kind": "project_tree",
-        "path": "artifacts/gitlab_blind_iteration_12_40_20260817/src/skitai__atila",
-        "revision": "1c82d9b3730d83bda065677f2faf63487f56a09f",
-        "tree_digest": "sha256:66f147683aba2bcd59fddbc05c63136291eddf9a0485b2126821598d16a14a1b",
-        "url": "https://gitlab.com/skitai/atila.git"
-      },
-      "prompt_digest": "sha256:4f2558186cc68343129393d7ec7590fffc1dd71cbfe8aa7534a33d2a0f28e176",
-      "prompt_text": "Проанализируй проект как развиваемый Python-продукт: восстанови архитектуру, найди приоритетные недостатки и предложи проверяемую последовательность развития.",
       "success_criteria": [
         "Architecture and entrypoints cite source evidence",
         "Risks distinguish facts from hypotheses",
@@ -701,9 +857,20 @@
         "Each top action has an acceptance check",
         "No source mutation occurs"
       ],
-      "task_class": "project_analysis",
-      "task_file_digest": "sha256:df30ff9877e2c5eb295a2661c865c844d48f4a7d72e3daadd618914ff6b4cd0e",
-      "task_id": "task26_atila_development_analysis"
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/gitlab_blind_iteration_12_40_20260817/src/skitai__atila",
+        "url": "https://gitlab.com/skitai/atila.git",
+        "revision": "1c82d9b3730d83bda065677f2faf63487f56a09f",
+        "tree_digest": "sha256:66f147683aba2bcd59fddbc05c63136291eddf9a0485b2126821598d16a14a1b"
+      },
+      "input_digest": "sha256:fde38832c81baf89daef96584248e12968279d3478fed7551c0b4744a44db325"
     }
-  ]
+  ],
+  "authority": {
+    "legacy_metrics": "non_authoritative",
+    "route_self_scores": "forbidden",
+    "winner_requires_independent_blind_score": true
+  },
+  "manifest_digest": "sha256:e320dbd7592461d83d44e92b6172f2529c1b3df87b514fcf5c51620a1bb1dd86"
 }

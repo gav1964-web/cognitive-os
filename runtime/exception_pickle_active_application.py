@@ -32,12 +32,13 @@ from .exception_pickle_active_application_selection import (
     _readmission_eligible_target_keys,
     _readmission_frontier_target_keys,
 )
-from .exception_pickle_autonomous_shadow import _changed_python_files, _compiles, _sample_constructor_value_for_source_file, _verify_project_native_semantic_replay
+from .exception_pickle_autonomous_shadow import _changed_python_files, _compiles, _verify_project_native_semantic_replay
+from .exception_pickle_sample_contract import sample_constructor_value_for_source_file as _sample_constructor_value_for_source_file
 from .exception_pickle_holdout_transaction import DEFAULT_AUDIT, DEFAULT_LEDGER
 from .exception_pickle_object_contract_admission import load_admitted_object_contracts
 from .generated_stub_admission import inspect_generated_function_stubs
-from .programmer_exception_pickle_patch import exception_pickle_reconstruction_patch
-from .project_development_boundary_interpreter import load_exception_pickle_patterns
+from .exception_pickle_contract import propose_exception_pickle_patch
+from .exception_pickle_catalog_contract import RESEARCH_CATALOG_PATH, read_research_patterns
 
 
 DEFAULT_APPLICATION_LEDGER = Path(
@@ -72,9 +73,7 @@ def run_exception_pickle_active_application_trial(
 ) -> dict[str, Any]:
     """Try active KB application on holdout candidates without source mutation."""
     root = root.resolve()
-    active_catalog = load_exception_pickle_patterns(
-        str(root / "knowledge" / "role_knowledge" / "exception_pickle_reconstruction_patterns.json")
-    )
+    active_catalog = read_research_patterns(root / RESEARCH_CATALOG_PATH)
     audit = _read_json(root, audit_path)
     transfer_ledger = _read_json(root, transfer_ledger_path)
     application_ledger = _read_optional_json(root, application_ledger_path)
@@ -345,7 +344,7 @@ def _attempt_candidate(
         return _attempt_result("blocked_copy", candidate, prechecks, sandbox=sandbox)
     sandbox_file = sandbox / path_text
     original = sandbox_file.read_text(encoding="utf-8")
-    patch = exception_pickle_reconstruction_patch(
+    patch = propose_exception_pickle_patch(
         original,
         class_name=str(source_row.get("class_name") or ""),
         recipe=recipe,
@@ -396,5 +395,3 @@ def _attempt_candidate(
         "source_apply": False,
         "kb_promotion": False,
     }
-
-

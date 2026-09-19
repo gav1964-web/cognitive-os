@@ -112,7 +112,7 @@ def test_cli_repair_knowledge_rejects_unknown_operator():
 
 def test_exception_pickle_reconstruction_knowledge_rejects_source_apply():
     catalog = json.loads(
-        (ROOT / "knowledge" / "role_knowledge" / "exception_pickle_reconstruction_patterns.json").read_text(
+        (ROOT / "plugins/exception_pickle/knowledge/exception_pickle_reconstruction_patterns.json").read_text(
             encoding="utf-8"
         )
     )

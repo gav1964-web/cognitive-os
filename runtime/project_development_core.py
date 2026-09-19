@@ -44,11 +44,44 @@ def run_project_development(
     human_approval: dict[str, Any] | None = None,
     architect_design: dict[str, Any] | None = None,
     authorize_training_replay: bool = False,
+    authorize_model_trial: bool = False,
     llm_hypothesis_config: LocalInferenceConfig | None = None,
+    validate_causal_proposals: bool = False,
+    task_contract: dict | None = None,
+    repair_nomination: dict | None = None,
+    repair_branch_evidence: dict | None = None,
+    repair_counterexample_comparison: dict | None = None,
+    repair_observations: dict | None = None,
+    repair_counterexample_history: list[dict] | None = None,
+    model_chat=None,
 ) -> dict[str, Any]:
     """Diagnose one project and select a bounded, measurable next experiment."""
+    if type(authorize_model_trial) is not bool or (authorize_model_trial and (
+            not validate_causal_proposals or llm_hypothesis_config is None)):
+        raise ValueError('model_trial_authorization_requires_configured_causal_trial')
+    if validate_causal_proposals and not (authorize_training_replay or authorize_model_trial):
+        raise ValueError('causal_comparison_requires_explicit_training_authorization')
+    if model_chat is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
+        raise ValueError('model_chat_requires_configured_causal_trial')
+    if task_contract is not None and not validate_causal_proposals:
+        raise ValueError('requested_native_repair_requires_causal_comparison')
+    if repair_nomination is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
+        raise ValueError('repair_nomination_requires_authorized_model_trial')
+    if repair_branch_evidence is not None and repair_nomination is None:
+        raise ValueError('branch_evidence_requires_repair_nomination')
+    if repair_counterexample_comparison is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
+        raise ValueError('counterexample_requires_authorized_model_trial')
+    if (repair_observations is not None or repair_counterexample_history is not None) and (
+            not validate_causal_proposals or llm_hypothesis_config is None):
+        raise ValueError('diagnostics_require_authorized_model_trial')
     policy = policy or load_project_development_policy()
-    report = analyze_role_project(root=root, project_dir=project_dir, goal=goal)["project_map_report"]
+    report = analyze_role_project(root=root, project_dir=project_dir, goal=goal,
+        **({'task_contract': task_contract} if task_contract is not None else {}))["project_map_report"]
+    request = None
+    if task_contract is not None:
+        from .upstream_requested_change import prepare_requested_change
+        request = prepare_requested_change(report, project_dir)
+        report['requested_change'] = request
     classification = None
     intake_stratum = str((chain_case or {}).get("project_stratum") or "")
     if intake_stratum:
@@ -81,17 +114,54 @@ def run_project_development(
         classification_consistency=classification_consistency,
         policy=policy,
     )
+    from .native_replay_settings import policy_replay_settings
+    replay_settings = policy_replay_settings(policy)
     diagnosis = attach_failure_evidence_packets(
-        diagnosis, project_dir=project_dir, chain_case=chain_case
+        diagnosis, project_dir=project_dir, chain_case=chain_case,
+        native_replay_settings=replay_settings if replay_settings != {'pytest_plugins': [], 'timeout_seconds': 20} else None,
     )
-    diagnosis = enrich_failure_diagnosis(
-        diagnosis, project_dir=project_dir, workspace_root=root,
-        authorize_training_replay=authorize_training_replay,
-    )
-    diagnosis = enrich_with_llm_failure_hypothesis(
-        diagnosis, project_dir=project_dir, config=llm_hypothesis_config,
-        training_replay_authorized=authorize_training_replay,
-    )
+    model_trial = validate_causal_proposals and llm_hypothesis_config is not None
+    if repair_nomination is not None:
+        from .repair_trial_binding import bind_repair_diagnosis
+        diagnosis = bind_repair_diagnosis(diagnosis, project=project_dir, bundle=repair_nomination)
+        if repair_branch_evidence is not None:
+            from .repair_branch_evidence import validate_branch_evidence
+            issue = next(i for i in diagnosis['issues'] if i.get('repair_trial_packet_digest'))
+            validate_branch_evidence(project_dir, issue['failure_evidence_packet'], repair_branch_evidence)
+            from copy import deepcopy
+            issue['repair_branch_evidence'] = deepcopy(repair_branch_evidence)
+    if model_trial:
+        if repair_observations is not None or repair_counterexample_history is not None:
+            from .repair_diagnostic_context import bind_diagnostic_context
+            diagnosis = bind_diagnostic_context(diagnosis, project_dir,
+                observations=repair_observations, history=repair_counterexample_history)
+        if repair_counterexample_comparison is not None:
+            from .repair_counterexamples import bind_saved_counterexample
+            diagnosis = bind_saved_counterexample(diagnosis, project_dir, repair_counterexample_comparison)
+        from .upstream_llm_trials import validate_llm_diagnosis_proposals
+        diagnosis = validate_llm_diagnosis_proposals(diagnosis, project=project_dir, root=root,
+            config=llm_hypothesis_config, authorized=True, delivery_authorized=run_sandbox_experiment,
+            request=request, format_retries=policy.get('model_candidate_format_retries', 0),
+            semantic_retries=policy.get('model_native_counterexample_retries', 0),
+            require_assertion_plan=policy.get('model_require_assertion_plan', False),
+            proposal_route=policy.get('model_proposal_route', 'hypothesis'), chat=model_chat,
+            include_dependency_context=policy.get('model_include_dependency_context', False),
+            same_class_repairs=policy.get('model_same_class_repairs', False))
+    else:
+        diagnosis = enrich_failure_diagnosis(
+            diagnosis, project_dir=project_dir, workspace_root=root,
+            authorize_training_replay=authorize_training_replay,
+        )
+        diagnosis = enrich_with_llm_failure_hypothesis(
+            diagnosis, project_dir=project_dir, config=llm_hypothesis_config,
+            training_replay_authorized=authorize_training_replay,
+        )
+    if validate_causal_proposals and not model_trial and (request is None or request['status'] == 'ready_for_candidate_check'):
+        from .upstream_causal_selection import validate_diagnosis_proposals
+        diagnosis = validate_diagnosis_proposals(diagnosis, project=project_dir, root=root, authorized=True)
+    if request is not None:
+        from .upstream_requested_change import bind_requested_change
+        diagnosis = bind_requested_change(diagnosis, request, project=project_dir, root=root)
     llm_advisories = [
         dict(issue.get("llm_hypothesis_advisory") or {})
         for issue in diagnosis.get("issues") or [] if isinstance(issue, dict)
@@ -122,7 +192,7 @@ def run_project_development(
         requested=run_sandbox_experiment,
         policy=policy,
         recognition=recognition,
-        use_l45_llm=bool(llm_hypothesis_config and authorize_training_replay),
+        use_l45_llm=bool(llm_hypothesis_config and authorize_training_replay and not model_trial),
     )
     execution_feedback = build_project_development_execution_feedback(
         handoff=handoff,
@@ -141,8 +211,8 @@ def run_project_development(
         architect_design=architect_design,
     )
     status = "ready_for_experiment" if decision.get("status") == "selected" else "controlled_stop"
-    if handoff.get("status") == "needs_replanning":
-        status = "needs_replanning"
+    if handoff.get("status") in {"needs_replanning", "research_required", "controlled_stop"}:
+        status = handoff['status']
     if run_sandbox_experiment:
         status = {
             "completed": "experiment_validated",
@@ -190,6 +260,8 @@ def run_project_development(
             ),
             "execution_authorized": False,
         },
+        "causal_comparison_requested": validate_causal_proposals,
+        "requested_change": dict(decision.get('selected_issue') or {}).get('requested_change', request),
         "safety": {
             "source_changes": False,
             "automatic_patch_apply": False,
@@ -200,6 +272,8 @@ def run_project_development(
             "feedback_developer_handoff": False,
             "replan_execution_authorized": False,
             "training_replay_authorized": authorize_training_replay,
+            "model_trial_authorized": authorize_model_trial,
+            "model_trial_scope": "source_bound_candidate_sandbox_only" if authorize_model_trial else None,
             "training_replay_scope": "consumed_case_sandbox_only" if authorize_training_replay else None,
             "llm_hypothesis_enabled": llm_hypothesis_config is not None,
             "llm_hypothesis_authority": "hypothesis_only" if llm_hypothesis_config is not None else None,

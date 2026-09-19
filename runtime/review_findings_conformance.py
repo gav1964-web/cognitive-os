@@ -5,6 +5,9 @@ from typing import Any
 from .review_findings_common import blocked_handoff, check_row
 from .review_findings_contracts import scope_violations, unmodeled_source_effects
 from .problem_outcome_contract import problem_outcome_conformance
+from .native_failure_acceptance import FORMAT as NATIVE_FORMAT, native_coverage
+from .narrow_type_evidence_binding import content_digest
+from .upstream_causal_review import causal_comparison_checks
 
 
 def conformance_checks(
@@ -40,10 +43,15 @@ def conformance_checks(
             forbidden_observed,
         )
         rows.insert(1, _problem_outcome_check(causal))
+        rows.extend(_upstream_task_checks(technical_spec, executable_acceptance_result))
+        rows.extend(causal_comparison_checks(technical_spec, executable_acceptance_result))
         return rows
     return [
         _artifact_chain_check(technical_spec, implementation_plan, test_plan),
         _problem_outcome_check(causal),
+        *_upstream_task_checks(technical_spec, executable_acceptance_result),
+        *causal_comparison_checks(technical_spec, executable_acceptance_result),
+        *_native_evidence_checks(technical_spec, executable, test_result, executable_acceptance_result),
         check_row(
             "traceability_present",
             bool(technical_spec.get("traceability_table")) and bool(implementation_plan.get("acceptance_mapping")),
@@ -93,6 +101,46 @@ def conformance_checks(
             "If ExecutableAcceptanceResult is present, it must pass.",
             {"status": executable_acceptance_result.get("status")},
         ),
+    ]
+
+
+def _upstream_task_checks(spec: dict, acceptance: dict | None = None) -> list[dict]:
+    if 'task_contract' not in spec:
+        return []
+    if spec.get('requested_change'):
+        from .upstream_requested_review import requested_change_checks
+        return requested_change_checks(spec, acceptance or {})
+    return [check_row('requested_change_design_verified', False,
+        'Explicit task contracts currently support planning only; supplied requirements and examples do not validate an implementation design.',
+        {'status': spec.get('task_handoff', {}).get('status')})]
+
+
+def _native_evidence_checks(spec: dict, contract: dict, test_result: dict, acceptance: dict) -> list[dict]:
+    if spec.get("contract_mode") != "failure_repair" and contract.get("format") != NATIVE_FORMAT:
+        return []
+    unsigned = {key: value for key, value in contract.items() if key != "contract_digest"}
+    bound = (contract.get("format") == NATIVE_FORMAT
+             and contract.get("contract_digest") == content_digest(unsigned))
+    executed = bool(test_result or acceptance)
+    if executed:
+        bound = (bound and acceptance.get("format") == NATIVE_FORMAT
+                 and acceptance.get("status") == "passed"
+                 and acceptance.get("contract_digest") == contract.get("contract_digest")
+                 and native_coverage(dict(acceptance.get("summary") or {}), {contract.get("target")}))
+    native = dict(test_result.get("project_native_verification") or {})
+    source_check = dict(test_result.get("post_regression_source_check") or {})
+    accepted_digest = acceptance.get("patched_inventory_digest")
+    regression = (not executed or (native.get("status") == "passed"
+                  and dict(native.get("targeted_replay") or {}).get("status") == "passed"
+                  and dict(native.get("regression_suite") or {}).get("status") == "passed"
+                  and source_check.get("status") == "passed" and bool(accepted_digest)
+                  and source_check.get("accepted_inventory_digest") == accepted_digest
+                  and source_check.get("current_inventory_digest") == accepted_digest))
+    return [
+        check_row("native_acceptance_bound_to_plan", bound,
+                  "Native result must match the TestPlan contract, target and all paired replay checks."),
+        check_row("native_regression_complete", regression,
+                  "Execution review requires native targeted and regression results; planning review remains separate."),
     ]
 
 

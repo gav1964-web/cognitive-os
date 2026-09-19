@@ -5,7 +5,13 @@ from __future__ import annotations
 from collections import defaultdict
 import hashlib
 import json
+import math
 from typing import Any
+from pathlib import Path
+
+from .evaluation_evidence import finite_nonnegative, payload_digest, validate_receipt
+from .evaluation_protocol_policy import numeric_policy_errors
+from .three_route_evaluation import validate_manifest
 
 
 def score_blind_evaluation(
@@ -15,8 +21,12 @@ def score_blind_evaluation(
     scorecard: dict[str, Any],
     receipts: list[dict[str, Any]],
     policy: dict[str, Any],
+    artifact_root: Path | None = None,
 ) -> dict[str, Any]:
     errors = _validate_inputs(bundle, blind_key, scorecard, policy)
+    errors.extend(_bound_receipt_errors(bundle, blind_key, receipts, policy, artifact_root))
+    if errors:
+        raise ValueError("blind score rejected: " + "; ".join(sorted(set(errors))))
     mapping = {str(row["candidate_id"]): str(row["route"]) for row in blind_key.get("mapping", [])}
     candidates = {str(row["candidate_id"]): row for row in bundle.get("candidates", [])}
     receipt_index = {(str(row["task_id"]), str(row["route"])): row for row in receipts}
@@ -42,7 +52,7 @@ def score_blind_evaluation(
         if missing:
             errors.append(f"missing_rubric:{candidate_id}:{','.join(missing)}")
             continue
-        if any(not isinstance(rubric[name], (int, float)) or not 0 <= rubric[name] <= 10 for name in weights):
+        if any(not finite_nonnegative(rubric[name]) or rubric[name] > 10 for name in weights):
             errors.append(f"invalid_rubric_score:{candidate_id}")
             continue
         weighted = round(sum(float(rubric[name]) * float(weight) for name, weight in weights.items()), 3)
@@ -90,7 +100,7 @@ def score_blind_evaluation(
         "product_task_count": len(product_tasks),
         "ablation_task_count": len(tasks) - len(product_tasks),
         "product_class_counts": class_counts,
-        "claim_eligible": complete >= minimum and class_coverage_ok,
+        "claim_eligible": all_tasks_complete and complete >= minimum and class_coverage_ok,
         "limitations": _limitations(complete, minimum, class_coverage_ok, class_minimum),
     }
 
@@ -98,7 +108,11 @@ def score_blind_evaluation(
 def _validate_inputs(
     bundle: dict[str, Any], key: dict[str, Any], scorecard: dict[str, Any], policy: dict[str, Any]
 ) -> list[str]:
-    errors = []
+    errors = numeric_policy_errors(policy)
+    if key.get('policy_digest') != payload_digest(policy):
+        errors.append('scoring_policy_changed')
+    if bundle.get('rubric') != policy.get('rubric'):
+        errors.append('bundle_rubric_mismatch')
     if bundle.get("bundle_digest") != _unsigned_digest(bundle, "bundle_digest"):
         errors.append("bundle_digest_mismatch")
     if key.get("key_digest") != _unsigned_digest(key, "key_digest"):
@@ -123,6 +137,32 @@ def _validate_inputs(
         errors.append("judge_independence_boundary_incomplete")
     if scorecard.get("bundle_digest") != bundle.get("bundle_digest"):
         errors.append("scorecard_bundle_mismatch")
+    return errors
+
+
+def _bound_receipt_errors(bundle, key, receipts, policy, artifact_root):
+    if artifact_root is None:
+        return ['artifact_root_required']
+    manifest = key.get('manifest')
+    if not isinstance(manifest, dict):
+        return ['bound_manifest_required']
+    errors = validate_manifest(manifest)
+    if manifest.get('manifest_digest') != bundle.get('manifest_digest'):
+        errors.append('bound_manifest_mismatch')
+    expected = {(r['task_id'], r['route']): r['digest'] for r in key.get('receipt_digests', [])}
+    observed = {}
+    for row in receipts:
+        errors.extend(validate_receipt(row, manifest, policy, artifact_root=artifact_root))
+        pair = (row.get('task_id'), row.get('route'))
+        if pair in observed:
+            errors.append('duplicate_receipt')
+        try:
+            observed[pair] = payload_digest(row)
+        except (ValueError, TypeError):
+            errors.append('receipt_not_finite_json')
+    required = {(r['task_id'], r['route']) for r in key.get('mapping', [])}
+    if observed != expected or set(expected) != required:
+        errors.append('bound_receipts_changed_or_missing')
     return errors
 
 
@@ -168,16 +208,26 @@ def _operational_metrics(receipts: dict[tuple[str, str], dict[str, Any]]) -> dic
     for route, rows in sorted(grouped.items()):
         result[route] = {
             "runs": len(rows),
-            "runtime_seconds": round(sum(float(row["runtime_seconds"]) for row in rows), 3),
-            "estimated_cost": round(sum(float(row["estimated_cost"]) for row in rows), 6),
+            "runtime_seconds": round(_checked_sum(row["runtime_seconds"] for row in rows), 3),
+            "estimated_cost": round(_checked_sum(row["estimated_cost"] for row in rows), 6),
             "manual_corrections": sum(len(row.get("manual_corrections") or []) for row in rows),
-            "human_correction_minutes": round(sum(
+            "human_correction_minutes": round(_checked_sum(
                 float(item.get("minutes") or 0)
                 for row in rows for item in row.get("manual_corrections") or []
             ), 3),
             "input_tokens": sum(int(dict(row["token_usage"]).get("input") or 0) for row in rows),
             "output_tokens": sum(int(dict(row["token_usage"]).get("output") or 0) for row in rows),
         }
+    return result
+
+
+def _checked_sum(values):
+    try:
+        result = math.fsum(values)
+    except OverflowError as exc:
+        raise ValueError('operational_metric_total_overflow') from exc
+    if not math.isfinite(result):
+        raise ValueError('operational_metric_total_nonfinite')
     return result
 
 

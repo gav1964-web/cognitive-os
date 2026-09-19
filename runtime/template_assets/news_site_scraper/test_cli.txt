@@ -117,7 +117,7 @@ def test_popular_topic_mode_falls_back_to_search_article_rows_when_homepages_mis
     monkeypatch.setattr(cli, 'discover_news_sources_with_llm', lambda topic, **kwargs: ['https://www.reuters.com/', 'https://www.bbc.com/'])
     monkeypatch.setattr(cli, 'summarize_rows_with_llm', lambda rows: 'Общее резюме: материалы описывают заявления Путина и переговоры по безопасности.')
     output = tmp_path / 'putin.md'
-    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Путин', '--source-discovery', 'search', '--top-per-site', '2', '--total-top', '2', '--summary-mode', 'llm', '--browser', 'off']) == 0
+    assert main(['popular', str(output), '--use-popular-sites', '--topic', 'Путин', '--source-discovery', 'search', '--top-per-site', '2', '--total-top', '2', '--summary-mode', 'llm', '--browser', 'off', '--no-llm-fallback']) == 0
     text = output.read_text(encoding='utf-8')
     assert 'Общее резюме: материалы описывают заявления Путина' in text
     assert 'Putin comments on peace talks' in text

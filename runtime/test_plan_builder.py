@@ -9,6 +9,7 @@ from .function_invocation_patterns import match_invocation_pattern
 from .executable_acceptance_policy import external_call_tokens, sample_value
 from .role_skill_common import now_iso
 from .problem_outcome_contract import propagate_problem_outcome_contract
+from .native_failure_acceptance import build_native_acceptance
 
 
 def build_test_plan(
@@ -44,7 +45,7 @@ def build_test_plan(
         "test_strategy": _test_strategy(patch_scope, evidence_scope, writable_scope, target, dependency_policy),
         "dependency_policy": dependency_policy,
         "acceptance_tests": _acceptance_tests(acceptance, target),
-        "executable_acceptance": {
+        "executable_acceptance": build_native_acceptance(technical_spec, target) or {
             **_executable_acceptance(executable_acceptance, contract_binding, target),
             "scope_binding": scope_binding,
         },

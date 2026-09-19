@@ -38,14 +38,12 @@ from .programmer_patch_synthesizer_guard import (
 )
 from .programmer_patch_synthesizer_helper_extractors import (
     _call_name,
-    _enclosing_loop,
     _extract_append_mapping_helper,
     _extract_json_dumps_helper,
     _extract_json_loads_helper,
     _extract_splitlines_helper,
     _find_top_level_function,
     _parent_map,
-    _returns_name,
 )
 from .programmer_patch_synthesizer_recovery import (
     _development_helper_extraction_package,

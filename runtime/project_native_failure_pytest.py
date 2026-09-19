@@ -143,8 +143,8 @@ def _pytest9_collection_compatibility_failure(output: str) -> bool:
 def _native_pytest_targets(project: Path, nodeids: list[str] | None) -> list[str]:
     if nodeids:
         return list(nodeids)
-    legacy_suite = project / "tests.py"
-    if not legacy_suite.is_file():
+    legacy_suites = [name for name in ("tests.py", "test.py") if (project / name).is_file()]
+    if not legacy_suites:
         return []
     default_candidates = {
         path
@@ -152,7 +152,7 @@ def _native_pytest_targets(project: Path, nodeids: list[str] | None) -> list[str
         for path in project.rglob(pattern)
         if path.is_file()
     }
-    return [] if default_candidates else ["tests.py"]
+    return [] if default_candidates else legacy_suites
 
 def _test_file_shards(project: Path, intake: dict[str, Any]) -> list[list[str]]:
     tests_root = project / "tests"

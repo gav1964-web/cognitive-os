@@ -100,3 +100,15 @@ def test_other_loopback_port_does_not_start_managed_gateway(tmp_path, monkeypatc
 
     assert result["status"] == "not_required"
     launch.assert_not_called()
+
+
+def test_managed_policy_forwards_output_limit(tmp_path, monkeypatch):
+    root = _root(tmp_path)
+    path = root / 'config/llm_gateway_bootstrap.json'
+    policy = json.loads(path.read_text())
+    policy['max_output_tokens'] = 4096
+    path.write_text(json.dumps(policy))
+    monkeypatch.setattr(bootstrap, '_health_ready', lambda *_: True)
+    result = bootstrap.ensure_llm_gateway_for_url(root, 'http://127.0.0.1:8000/v1')
+    assert result['status'] == 'already_running'
+    assert result['max_output_tokens'] == 4096

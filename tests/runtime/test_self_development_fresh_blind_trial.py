@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import pytest
+from tests.corpus_requirements import require_policy_corpus
 from pathlib import Path
 
 from runtime.self_development_fresh_blind_trial import (
@@ -12,7 +14,9 @@ from runtime.self_development_fresh_blind_trial import (
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.local_corpus
 def test_fresh_blind_batch_reaches_honest_evidence_exhaustion() -> None:
+    require_policy_corpus(ROOT, 'self_development_fresh_blind_trial.json')
     report = run_fresh_blind_trial(root=ROOT, write=False)
 
     assert report["status"] == "evidence_exhausted"
@@ -35,7 +39,9 @@ def test_fresh_blind_batch_reaches_honest_evidence_exhaustion() -> None:
     assert contrast["actual_project_type"] == "async_worker_scheduler"
 
 
+@pytest.mark.local_corpus
 def test_fresh_blind_trial_fails_when_one_target_type_loses_coverage() -> None:
+    require_policy_corpus(ROOT, 'self_development_fresh_blind_trial.json')
     policy = copy.deepcopy(load_fresh_blind_trial_policy())
     for row in policy["sources"]:
         if row["expected_project_type"] == "cli_local_tool":
