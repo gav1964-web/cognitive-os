@@ -1,0 +1,216 @@
+{
+  "artifact_type": "SelfDevelopmentChallengeManifest",
+  "candidate_counts": {
+    "cli_local_tool": 3,
+    "library_pure_transform": 24
+  },
+  "checks": {
+    "all_selected_untouched": true,
+    "external_only_after_local_shortage": true,
+    "external_revisions_bound": true,
+    "holdout_not_consumed": true,
+    "no_promotion_applied": true,
+    "no_source_apply": true,
+    "source_index_is_local_and_sufficient": true,
+    "split_content_independent": true,
+    "split_owner_independent": true
+  },
+  "dynamically_exposed_projects": 86,
+  "failed_checks": [],
+  "generated_at": "2026-09-06T02:43:55.443687+00:00",
+  "manifest_digest": "sha256:787522e523e2b86613f5e1fbb6a387330b72f89b9156695ffd3fbb11630c7a2c",
+  "network_fallback": {
+    "acquired_projects": [
+      {
+        "acquisition_reason": "measured_local_cli_shortage",
+        "canonical_project": "zingu-ai__zingu-apis",
+        "content_digest": "sha256:65d44e519cf160a6627a05b0ce3f4f6e38e1400d3f7a7d076c1cddf2c5045850",
+        "expected_project_type": "cli_local_tool",
+        "owner": "zingu-ai",
+        "project": "zingu-ai__zingu-apis",
+        "project_root": "artifacts/challenge_external_acquisition/src/zingu-ai__zingu-apis",
+        "revision": "1acee25772a43fc8aa561e4af4307668f9782cf8",
+        "source_kind": "targeted_external_acquisition",
+        "source_url": "https://github.com/zingu-ai/zingu-apis.git"
+      },
+      {
+        "acquisition_reason": "measured_local_cli_shortage",
+        "canonical_project": "ott2__isabelle-layout",
+        "content_digest": "sha256:b0aab849d7e9162225cd163ddbb4edaaabafd57d8c87fcdf0ed9bfd438d71966",
+        "expected_project_type": "cli_local_tool",
+        "owner": "ott2",
+        "project": "ott2__isabelle-layout",
+        "project_root": "artifacts/challenge_external_acquisition/src/ott2__isabelle-layout",
+        "revision": "f8b3f72f4fb41e3c9094c4745556bb07d804c696",
+        "source_kind": "targeted_external_acquisition",
+        "source_url": "https://github.com/ott2/isabelle-layout.git"
+      }
+    ],
+    "allowed": true,
+    "reason": "measured_local_shortage",
+    "used": true
+  },
+  "safety": {
+    "holdout_consumed": false,
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "scanned_projects": 1386,
+  "schema_version": "self_development_challenge_manifest.v1",
+  "shortages": {
+    "cli_local_tool": {
+      "acquisition": 0,
+      "holdout": 0
+    },
+    "library_pure_transform": {
+      "acquisition": 0,
+      "holdout": 0
+    }
+  },
+  "source_index": "artifacts/self_development/self_development_corpus_eligibility_20260831T052410743974Z.json",
+  "splits": [
+    {
+      "acquisition": [
+        {
+          "canonical_project": "design-patterns-practice__subscription-manager-cli",
+          "content_digest": "sha256:7838fcee5562f59a905b6ef81359cb3a9349dd306102b60cfa7f842e3d72193f",
+          "expected_project_type": "cli_local_tool",
+          "owner": "design-patterns-practice",
+          "project": "design-patterns-practice__subscription-manager-cli",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_148e197a09f8_w9ed998c8/src/design-patterns-practice__subscription-manager-cli",
+          "signal_scores": {
+            "cli_local_tool": 2,
+            "library_pure_transform": 0
+          }
+        },
+        {
+          "acquisition_reason": "measured_local_cli_shortage",
+          "canonical_project": "zingu-ai__zingu-apis",
+          "content_digest": "sha256:65d44e519cf160a6627a05b0ce3f4f6e38e1400d3f7a7d076c1cddf2c5045850",
+          "expected_project_type": "cli_local_tool",
+          "owner": "zingu-ai",
+          "project": "zingu-ai__zingu-apis",
+          "project_root": "artifacts/challenge_external_acquisition/src/zingu-ai__zingu-apis",
+          "revision": "1acee25772a43fc8aa561e4af4307668f9782cf8",
+          "source_kind": "targeted_external_acquisition",
+          "source_url": "https://github.com/zingu-ai/zingu-apis.git"
+        },
+        {
+          "acquisition_reason": "measured_local_cli_shortage",
+          "canonical_project": "ott2__isabelle-layout",
+          "content_digest": "sha256:b0aab849d7e9162225cd163ddbb4edaaabafd57d8c87fcdf0ed9bfd438d71966",
+          "expected_project_type": "cli_local_tool",
+          "owner": "ott2",
+          "project": "ott2__isabelle-layout",
+          "project_root": "artifacts/challenge_external_acquisition/src/ott2__isabelle-layout",
+          "revision": "f8b3f72f4fb41e3c9094c4745556bb07d804c696",
+          "source_kind": "targeted_external_acquisition",
+          "source_url": "https://github.com/ott2/isabelle-layout.git"
+        }
+      ],
+      "checks": {
+        "content_disjoint": true,
+        "owner_disjoint": true
+      },
+      "holdout": [
+        {
+          "canonical_project": "dagimg-dot__cjx-cli-tool",
+          "content_digest": "sha256:e5674cd235c8e41dac4ed4224c79f7bf1aede8f99798386ea450e53dae0a0551",
+          "expected_project_type": "cli_local_tool",
+          "owner": "dagimg-dot",
+          "project": "dagimg-dot__cjx-cli-tool",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/dagimg-dot__cjx-cli-tool",
+          "signal_scores": {
+            "cli_local_tool": 2,
+            "library_pure_transform": 0
+          }
+        },
+        {
+          "canonical_project": "mulaza__organizer-cli",
+          "content_digest": "sha256:0392f94ac172029ef1624703f65d1ad856c978f6a14393195ffebc166d6eb50e",
+          "expected_project_type": "cli_local_tool",
+          "owner": "mulaza",
+          "project": "Mulaza__Organizer-Cli",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/Mulaza__Organizer-Cli",
+          "signal_scores": {
+            "cli_local_tool": 4,
+            "library_pure_transform": 0
+          }
+        }
+      ],
+      "project_type": "cli_local_tool"
+    },
+    {
+      "acquisition": [
+        {
+          "canonical_project": "anaconda123324__parser_2",
+          "content_digest": "sha256:093c46ebda3466035c4ca3a45a1ddea4a0a17642dfe68438be2a3ab6da664cd4",
+          "expected_project_type": "library_pure_transform",
+          "owner": "anaconda123324",
+          "project": "Anaconda123324__parser_2",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_d5245ef25d64_wb813bf6e/src/Anaconda123324__parser_2",
+          "signal_scores": {
+            "cli_local_tool": 1,
+            "library_pure_transform": 2
+          }
+        },
+        {
+          "canonical_project": "aru-m-projects__wb-parser",
+          "content_digest": "sha256:af46ef38efc7af79494f99e924d84ebb53bfe658b6a8c114fd2822f04dbdd126",
+          "expected_project_type": "library_pure_transform",
+          "owner": "aru-m-projects",
+          "project": "aru-m-projects__wb-parser",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_d5245ef25d64_r2_w478ac8b2/src/aru-m-projects__wb-parser",
+          "signal_scores": {
+            "cli_local_tool": 1,
+            "library_pure_transform": 2
+          }
+        },
+        {
+          "canonical_project": "ioannakaragianni__repo_parser_for_agentic_pattern_detection",
+          "content_digest": "sha256:68533dc31837c2343ffa01c48d19aae2988558cecb745653c3721c50ba232239",
+          "expected_project_type": "library_pure_transform",
+          "owner": "ioannakaragianni",
+          "project": "ioannakaragianni__repo_parser_for_agentic_pattern_detection",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_r2_wce839d6c/src/ioannakaragianni__repo_parser_for_agentic_pattern_detection",
+          "signal_scores": {
+            "cli_local_tool": 1,
+            "library_pure_transform": 2
+          }
+        }
+      ],
+      "checks": {
+        "content_disjoint": true,
+        "owner_disjoint": true
+      },
+      "holdout": [
+        {
+          "canonical_project": "aphp-carpem__llm-data-parser",
+          "content_digest": "sha256:7bed109cb3873e2651835bd961d1a2a4faf206efcc0c8a028e4b002cdc5bdee4",
+          "expected_project_type": "library_pure_transform",
+          "owner": "aphp-carpem",
+          "project": "aphp-carpem__llm-data-parser",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_w36c03f7b/src/aphp-carpem__llm-data-parser",
+          "signal_scores": {
+            "cli_local_tool": 2,
+            "library_pure_transform": 6
+          }
+        },
+        {
+          "canonical_project": "combobulator__warcraftlogs-parser",
+          "content_digest": "sha256:fb6f2846890b7635e4bbda11a53898d9f3bb2e9fc1d93792b76a23d263a7527a",
+          "expected_project_type": "library_pure_transform",
+          "owner": "combobulator",
+          "project": "Combobulator__warcraftlogs-parser",
+          "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_w36c03f7b/src/Combobulator__warcraftlogs-parser",
+          "signal_scores": {
+            "cli_local_tool": 0,
+            "library_pure_transform": 2
+          }
+        }
+      ],
+      "project_type": "library_pure_transform"
+    }
+  ],
+  "status": "targeted_external_acquisition_ready"
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": "narrow_type_fresh_holdout.v1",
+  "status": "consumed_no_qualified_defect",
+  "evaluation_split": "owner_independent_unseen_project_holdout",
+  "frozen_at": "2026-09-08T11:28:57.229538+00:00",
+  "source_challenge_manifest": "artifacts/self_development/self_development_challenge_manifest_20260908T112857232355Z.json",
+  "source_challenge_manifest_digest": "sha256:cbf52f23a6ee7bd71cc6520960e6ef1322f8d97eebe7ca4747e4148012368439",
+  "holdout_consumed": true,
+  "consumed_at": "2026-09-08T11:37:40.761999+00:00",
+  "result_manifest": "config/narrow_type_fresh_holdout_results_20260908.json",
+  "cases": [
+    {
+      "id": "vzd3v_uxon",
+      "project": "vzd3v__uxon",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "vzd3v",
+      "source_url": "https://github.com/vzd3v/uxon.git",
+      "revision": "bd02f8e143bd3b3d559e02cd25b4684545b8ef82",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_3faea149ec70_r2/src/vzd3v__uxon",
+      "content_digest": "sha256:ff8df88695e21a5ef204eafed8825d77e2b0e159085625d299063438e29b7e9a",
+      "identity_evidence": "declared_script_entrypoint",
+      "declared_script_entrypoints": ["uxon=uxon.cli:main"],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "pennrobotics_shux",
+      "project": "PennRobotics__shux",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "pennrobotics",
+      "source_url": "https://gitlab.com/PennRobotics/shux.git",
+      "revision": "61739d8dcc61077cda8919e6d90afe86ca5a3baa",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_3900e299311c_w11d61a64/src/PennRobotics__shux",
+      "content_digest": "sha256:a406b080c692fb2ff66be4173951e0acd9e2b3d456e25cdecc1facb2db0c7ad2",
+      "identity_evidence": "declared_script_entrypoint",
+      "declared_script_entrypoints": ["shux=shux.shux:main"],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "aphp_carpem_llm_data_parser",
+      "project": "aphp-carpem__llm-data-parser",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "aphp-carpem",
+      "source_url": "https://gitlab.com/aphp-carpem/llm-data-parser.git",
+      "revision": "04e425fff75bc4cf5926a3e3c3e5dd37aaed7528",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_b7d4dba233a3_w36c03f7b/src/aphp-carpem__llm-data-parser",
+      "content_digest": "sha256:7bed109cb3873e2651835bd961d1a2a4faf206efcc0c8a028e4b002cdc5bdee4",
+      "identity_evidence": "project_name_token",
+      "declared_script_entrypoints": [],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "carlosm3011_cross_data_transform",
+      "project": "carlosm3011__cross-data-transform",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "carlosm3011",
+      "source_url": "https://gitlab.com/carlosm3011/cross-data-transform.git",
+      "revision": "19a788fd929a0263e39cf8777979a7f285333165",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_7ed6a0c2dbc6_r2_wfed3bc91/src/carlosm3011__cross-data-transform",
+      "content_digest": "sha256:15a60fb29cb0a6bca37b167f8d22fb030da8e5ed7dc86570576900ed66ff1c8b",
+      "identity_evidence": "project_name_token",
+      "declared_script_entrypoints": [],
+      "native_test_roots": ["tests"]
+    }
+  ],
+  "invariants": {
+    "two_projects_per_stratum": true,
+    "distinct_source_owners": true,
+    "content_disjoint": true,
+    "clean_git_worktrees": true,
+    "exact_revisions_bound": true,
+    "native_tests_present": true,
+    "project_development_unexposed_at_freeze": true,
+    "native_failure_unexposed_at_freeze": true,
+    "holdout_frozen_before_execution": true,
+    "source_apply": false,
+    "knowledge_updates_before_evaluation": false,
+    "automatic_promotion": false
+  }
+}

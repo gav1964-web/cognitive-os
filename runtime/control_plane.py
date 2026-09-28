@@ -69,6 +69,7 @@ def _registry_summary(root: Path) -> dict[str, Any]:
 
 def _job_brief(job: dict[str, Any]) -> dict[str, Any]:
     pipeline = dict(job.get("pipeline", {}))
+    result = dict(job.get("result") or {})
     return {
         "job_id": job.get("job_id"),
         "status": job.get("status"),
@@ -81,6 +82,7 @@ def _job_brief(job: dict[str, Any]) -> dict[str, Any]:
         "updated_at": job.get("updated_at"),
         "lease_expires_at": job.get("lease_expires_at"),
         "stale": _is_stale(job) if job.get("status") == "running" else False,
+        "packet_count": len(result.get("layer_packets", [])),
         "error": job.get("error"),
     }
 

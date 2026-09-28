@@ -20,7 +20,15 @@ def is_project_analysis(capabilities: list[str]) -> bool:
 def expected_artifacts(capabilities: list[str]) -> list[str]:
     artifacts = ["level4_decision", "level35_plan"]
     if is_project_analysis(capabilities):
-        artifacts.extend(["project_map_report", "level35_project_signals", "level4_project_interpretation", "analysis_tasks"])
+        artifacts.extend(
+            [
+                "project_map_report",
+                "level35_project_signals",
+                "level4_project_interpretation",
+                "analysis_tasks",
+                "architecture_synthesis",
+            ]
+        )
     return artifacts
 
 
@@ -30,6 +38,7 @@ def success_criteria(capabilities: list[str]) -> list[str]:
             "project_map_report answers include runtime extraction readiness",
             "level35_project_signals are valid SignalPacket payload",
             "analysis_tasks include proposed extraction or runtime-safety follow-up",
+            "architecture_synthesis turns findings into a project-specific first slice",
         ]
     return ["pipeline validates before execution", "execution result is captured in goal report"]
 

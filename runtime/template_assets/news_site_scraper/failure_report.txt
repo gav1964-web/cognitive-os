@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+
+def write_failure_report(path: str, *, url: str, requested_top: int, diagnosis: dict[str, Any] | None, rows_found: int) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = _payload(url=url, requested_top=requested_top, diagnosis=diagnosis, rows_found=rows_found)
+    if target.suffix.lower() == '.json':
+        target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+        return
+    target.write_text(_markdown(payload), encoding='utf-8')
+
+
+def _payload(*, url: str, requested_top: int, diagnosis: dict[str, Any] | None, rows_found: int) -> dict[str, Any]:
+    strategy = dict((diagnosis or {}).get('strategy_candidate') or {})
+    return {
+        'artifact_type': 'NewsExtractionFailureReport',
+        'status': 'blocked',
+        'url': url,
+        'requested_top': requested_top,
+        'rows_found': rows_found,
+        'diagnosis': (diagnosis or {}).get('diagnosis') or 'deterministic extraction did not produce enough news items',
+        'strategy_type': strategy.get('strategy_type') or 'unsupported',
+        'strategy_reason': strategy.get('reason') or '',
+        'requires_browser': bool(strategy.get('requires_browser')),
+        'risks': list((diagnosis or {}).get('risks') or []),
+        'next_actions': _next_actions(strategy),
+        'invariants': {
+            'no_placeholder_news_written': True,
+            'model_output_executed': False,
+            'same_host_validation_required': True,
+        },
+    }
+
+
+def _next_actions(strategy: dict[str, Any]) -> list[str]:
+    strategy_type = strategy.get('strategy_type') or 'unsupported'
+    if strategy_type == 'browser_required':
+        return ['enable optional browser backend with Playwright', 'rerun extraction with rendered HTML', 'keep deterministic same-host validation']
+    if strategy_type == 'feed_candidate':
+        return ['verify candidate feeds are same-host and RSS/Atom', 'add confirmed feed path to data profile only after repeated success']
+    return ['inspect whether the URL is a news listing', 'add a supported strategy only after evidence-based validation']
+
+
+def _markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        '# News extraction blocked',
+        '',
+        f"URL: {payload['url']}",
+        f"Requested top: {payload['requested_top']}",
+        f"Rows found: {payload['rows_found']}",
+        f"Strategy: {payload['strategy_type']}",
+        f"Requires browser: {payload['requires_browser']}",
+        '',
+        '## Diagnosis',
+        str(payload['diagnosis']),
+        '',
+        '## Next Actions',
+    ]
+    lines.extend(f"- {item}" for item in payload['next_actions'])
+    return '\n'.join(lines) + '\n'

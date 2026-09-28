@@ -1,0 +1,239 @@
+from __future__ import annotations
+
+import asyncio
+import socket
+import sys
+from pathlib import Path
+
+from runtime.executable_acceptance import run_executable_acceptance
+from tests.runtime.test_executable_acceptance import _plan
+
+
+def test_executable_acceptance_accepts_done_future_result(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "import asyncio\n\n"
+        "def nudge():\n"
+        "    loop = asyncio.new_event_loop()\n"
+        "    future = loop.create_future()\n"
+        "    future.set_result(None)\n"
+        "    return future\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:nudge", {}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+
+
+def test_executable_acceptance_creates_missing_event_loop_for_future(tmp_path: Path):
+    asyncio.run(asyncio.sleep(0))
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "import asyncio\n\n"
+        "def nudge():\n"
+        "    future = asyncio.Future()\n"
+        "    future.set_result(None)\n"
+        "    return future\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:nudge", {}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+
+
+def test_source_isolated_method_keeps_module_helper_closure(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "src" / "pkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "module.py").write_text(
+        "raise RuntimeError('import-time side effect')\n\n"
+        "PREFIX = 'seen:'\n\n"
+        "def helper(value):\n"
+        "    return PREFIX + value\n\n"
+        "class Handler:\n"
+        "    def handle(self, url):\n"
+        "        return {'parsed_url': helper(url)}\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("src/pkg/module.py:handle", {"url": "sample"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["source_isolated_targets"] == ["src/pkg/module.py:handle"]
+
+
+def test_method_falls_back_when_imported_name_masks_signature(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "from unavailable_package import get_download_url\n\n"
+        "class Downloader:\n"
+        "    def get_download_url(self):\n"
+        "        return 'https://host/{group}/{project}/{ref}'.format(\n"
+        "            group=self.group, project=self.project, ref=self.ref\n"
+        "        )\n",
+        encoding="utf-8",
+    )
+
+    target = "module.py:Downloader.get_download_url"
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan(target, {"receiver_state": "sample"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["source_isolated_targets"] == [target]
+    assert result["summary"]["dropped_surplus_payload_targets"] == [target]
+    assert result["summary"]["method_instance_attributes"][target] == {
+        "group": "sample",
+        "project": "sample",
+        "ref": "sample",
+    }
+
+
+def test_source_isolated_function_stubs_configured_socket_effect(tmp_path: Path):
+    project = tmp_path / "project"
+    module = project / "commands" / "check_connection.py"
+    module.parent.mkdir(parents=True)
+    module.write_text(
+        "import socket\n\n"
+        "def is_open(ip, port, timeout=30):\n"
+        "    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n"
+        "    client.settimeout(timeout)\n"
+        "    client.connect((ip, int(port)))\n"
+        "    client.shutdown(socket.SHUT_RDWR)\n"
+        "    client.close()\n"
+        "    return True\n\n"
+        "raise RuntimeError('import-time side effect')\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("commands/check_connection.py:is_open", {"ip": "127.0.0.1", "port": 9, "timeout": 1}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["source_isolated_targets"] == ["commands/check_connection.py:is_open"]
+    assert result["summary"]["effect_module_stub_targets"] == {"commands/check_connection.py:is_open": ["socket"]}
+    assert sys.modules["socket"] is socket
+
+
+def test_bound_method_ignores_explicit_receiver_state_surplus(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "class Preconfig:\n"
+        "    def set_template(self, name):\n"
+        "        self.files_made = []\n"
+        "        self.template = name\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:set_template", {"receiver_state": "sample", "name": "value"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["argument_mappings"]["module.py:set_template"] == {"name": "name"}
+
+
+def test_nested_closure_requires_contract_rebind(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "module.py").write_text(
+        "def outer(allowed):\n"
+        "    def filterfunc(item):\n"
+        "        return item in allowed\n"
+        "    return filterfunc\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("module.py:filterfunc", {"item": "sample"}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["summary"]["signal_strength"] == "meta_only"
+    assert result["summary"]["skipped_reason_counts"] == {"nested_function_requires_closure": 1}
+
+
+def test_source_isolated_method_uses_profiled_local_framework_helpers(tmp_path: Path):
+    project = tmp_path / "project"
+    package = project / "src" / "gradio"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "blocks.py").write_text(
+        "from collections.abc import Sequence, Set\n"
+        "from gradio import utils\n"
+        "from gradio.block_function import BlockFunction\n"
+        "from gradio.context import LocalContext\n"
+        "from gradio.helpers import special_args\n"
+        "from gradio.utils import check_function_inputs_match\n\n"
+        "raise RuntimeError('full framework import is too heavy')\n\n"
+        "class BlocksConfig:\n"
+        "    def set_event_trigger(self, targets, fn, inputs, outputs, trigger_mode='once', api_name=None):\n"
+        "        if isinstance(inputs, Set):\n"
+        "            inputs_as_dict = True\n"
+        "        else:\n"
+        "            inputs_as_dict = False\n"
+        "            if inputs is None:\n"
+        "                inputs = []\n"
+        "            elif not isinstance(inputs, Sequence):\n"
+        "                inputs = [inputs]\n"
+        "        if fn is not None:\n"
+        "            check_function_inputs_match(fn, inputs, inputs_as_dict)\n"
+        "        _, progress_index, event_data_index, component_prop_indices = special_args(fn)\n"
+        "        rendered_in = LocalContext.renderable.get(None)\n"
+        "        api_name = utils.append_unique_suffix(api_name or fn.__name__, [])\n"
+        "        block_fn = BlockFunction(fn, inputs, outputs, _id=self.fn_id, api_name=api_name, rendered_in=rendered_in)\n"
+        "        self.fns[self.fn_id] = block_fn\n"
+        "        self.fn_id += 1\n"
+        "        return block_fn, block_fn._id\n",
+        encoding="utf-8",
+    )
+
+    result = run_executable_acceptance(
+        root=tmp_path,
+        project_dir=project,
+        test_plan=_plan("src/gradio/blocks.py:set_event_trigger", {"targets": [], "inputs": [], "outputs": []}, malformed=False),
+        work_dir=tmp_path / "work",
+    )
+
+    assert result["status"] == "passed"
+    assert result["summary"]["signal_strength"] == "executable_callable"
+    assert result["summary"]["source_isolated_targets"] == ["src/gradio/blocks.py:set_event_trigger"]

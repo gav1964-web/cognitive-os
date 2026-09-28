@@ -1,0 +1,8 @@
+{
+  "kind": "project_tree",
+  "path": "artifacts/evaluation_inputs/20260912/workloads/task18_kb_gap_resolution",
+  "supporting_input": {
+    "path": "artifacts/evaluation_inputs/20260912/cos",
+    "tree_digest": "sha256:4e6368fbe8a309d82ecc29013ca61a2a8b7adc7fa44187f376d46aedc2b2f288"
+  }
+}

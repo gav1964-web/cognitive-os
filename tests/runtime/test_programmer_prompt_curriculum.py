@@ -55,6 +55,7 @@ def test_programmer_prompt_curriculum_can_emit_greenfield_scaffold(tmp_path: Pat
     assert ixbt["gap_analysis"]["missing_artifacts"] == []
     assert ixbt["gap_analysis"]["project_scoped_verification_missing"] is False
     assert ixbt["current_system_trace"]["verification"]["status"] == "passed"
+    assert not any(path.name.startswith(".pytest-tmp") for path in project_dir.rglob(".pytest-tmp*"))
     assert ixbt["gap_analysis"]["code_generation_missing"] is False
     assert "parser works from fixture without network" in ixbt["current_system_trace"]["acceptance_covered"]
     assert "greenfield_project_scaffold" not in report["summary"]["top_backlog"]

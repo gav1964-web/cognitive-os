@@ -1,0 +1,127 @@
+{
+  "artifact_type": "FrameworkPluginCertification",
+  "cell_checks": [
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "project_analyzer",
+      "score": 9.7,
+      "status": "failed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "architect",
+      "score": 9.7,
+      "status": "failed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "spec_writer",
+      "score": 9.7,
+      "status": "failed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "implementer",
+      "score": 9.8,
+      "status": "failed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "tester",
+      "score": 10.0,
+      "status": "failed"
+    },
+    {
+      "checks": {
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "promotion_eligible": false,
+        "score_at_target": true
+      },
+      "role_id": "reviewer",
+      "score": 9.8,
+      "status": "failed"
+    }
+  ],
+  "certificate_digest": "sha256:57d22a41fae04d798a10e296a5b6fdf4f478210c614cec300b4b6b4fe0e2f218",
+  "failed_cell_roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer",
+    "tester",
+    "reviewer"
+  ],
+  "failed_receipt_checks": [
+    "generated_stub_gate",
+    "independent_holdout",
+    "inputs_digest_bound",
+    "lineage_disjoint",
+    "no_role_regression",
+    "role_chain_continuity",
+    "ledger_receipt_verified",
+    "holdout_report_passed",
+    "zero_generated_stubs",
+    "multiple_holdout_lineages"
+  ],
+  "holdout_receipt": null,
+  "next_action": "run_fresh_framework_owner_holdout_with_stub_and_regression_receipts",
+  "project_stratum": "framework_plugin_build",
+  "promotion_applied": false,
+  "promotion_eligible": false,
+  "receipt_checks": {
+    "generated_stub_gate": false,
+    "holdout_report_passed": false,
+    "independent_holdout": false,
+    "inputs_digest_bound": false,
+    "ledger_receipt_verified": false,
+    "lineage_disjoint": false,
+    "multiple_holdout_lineages": false,
+    "no_role_regression": false,
+    "role_chain_continuity": false,
+    "zero_generated_stubs": false
+  },
+  "receipt_status": "not_provided",
+  "required_roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer",
+    "tester",
+    "reviewer"
+  ],
+  "schema_version": "framework_plugin_certification.v1",
+  "status": "evidence_required",
+  "target_score": 9.7
+}

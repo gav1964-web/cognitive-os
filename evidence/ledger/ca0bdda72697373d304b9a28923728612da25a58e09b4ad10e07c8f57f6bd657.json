@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/d7042f071688b3dc6ce6ef29eb5a9cec8e788cc9a7192857a07fe9fabb9ddcac.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:d7042f071688b3dc6ce6ef29eb5a9cec8e788cc9a7192857a07fe9fabb9ddcac",
+  "entry_digest": "sha256:ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657",
+  "evaluator_fingerprint": "evidence_ledger+narrow_type_certification:v2",
+  "producer_fingerprint": "narrow_type_certification:v2",
+  "replay_command": [
+    "python",
+    "tools/narrow_type_certification.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/verification/narrow_type_certification_latest.json",
+  "status": "promoted"
+}

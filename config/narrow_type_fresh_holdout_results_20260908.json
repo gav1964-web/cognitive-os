@@ -1,0 +1,51 @@
+{
+  "schema_version": "narrow_type_fresh_holdout_results.v1",
+  "status": "completed_no_qualified_defect",
+  "evaluation_split": "owner_independent_unseen_project_holdout",
+  "source_manifest": "config/narrow_type_fresh_holdout_20260908.json",
+  "completed_at": "2026-09-08T11:37:40.761999+00:00",
+  "cases": [
+    {
+      "project": "vzd3v__uxon",
+      "project_stratum": "cli_local_tool",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T113625650294Z.json",
+      "outcome": "environment_blocked",
+      "reason": "python_version_and_posix_pwd_unavailable"
+    },
+    {
+      "project": "PennRobotics__shux",
+      "project_stratum": "cli_local_tool",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T113625884809Z.json",
+      "outcome": "environment_blocked",
+      "reason": "invalid_native_test_source_and_build_backend_unavailable"
+    },
+    {
+      "project": "aphp-carpem__llm-data-parser",
+      "project_stratum": "library_pure_transform",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T113713399034Z.json",
+      "outcome": "environment_blocked",
+      "reason": "optional_heavy_vllm_dependency_unavailable"
+    },
+    {
+      "project": "carlosm3011__cross-data-transform",
+      "project_stratum": "library_pure_transform",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T113713624109Z.json",
+      "outcome": "clean_baseline",
+      "reason": "native_suite_passed_twice_31_tests"
+    }
+  ],
+  "summary": {
+    "projects_executed": 4,
+    "qualified_defects": 0,
+    "environment_blocked": 3,
+    "clean_baselines": 1,
+    "source_project_changes": 0,
+    "role_evidence_cases": 0,
+    "role_scores_changed": false
+  },
+  "safety": {
+    "source_apply": false,
+    "knowledge_updated_before_evaluation": false,
+    "automatic_promotion": false
+  }
+}

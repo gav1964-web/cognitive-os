@@ -1,0 +1,132 @@
+{
+  "cases": [
+    {
+      "id": "inline",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text())\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef parse_json(text):\n    return json.loads(text)\n\ndef load_json(path):\n    return parse_json(Path(path).read_text())\n",
+        "read_expression": "Path(path).read_text()",
+        "parse_line": 4
+      }
+    },
+    {
+      "id": "crlf",
+      "request": {
+        "source": "import json\r\nfrom pathlib import Path\r\ndef load_json(path):\r\n    return json.loads(Path(path).read_text())\r\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": {
+        "source": "import json\r\nfrom pathlib import Path\r\ndef parse_json(text):\r\n    return json.loads(text)\r\n\r\ndef load_json(path):\r\n    return parse_json(Path(path).read_text())\r\n",
+        "read_expression": "Path(path).read_text()",
+        "parse_line": 4
+      }
+    },
+    {
+      "id": "no_eof",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text())",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef parse_json(text):\n    return json.loads(text)\n\ndef load_json(path):\n    return parse_json(Path(path).read_text())",
+        "read_expression": "Path(path).read_text()",
+        "parse_line": 4
+      }
+    },
+    {
+      "id": "read_keywords",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text(encoding=\"utf-8\"))\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef parse_json(text):\n    return json.loads(text)\n\ndef load_json(path):\n    return parse_json(Path(path).read_text(encoding=\"utf-8\"))\n",
+        "read_expression": "Path(path).read_text(encoding=\"utf-8\")",
+        "parse_line": 4
+      }
+    },
+    {
+      "id": "loads_keywords",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text(), strict=False)\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "plain_text",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(path)\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "two_reads",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return [json.loads(Path(path).read_text()), json.loads(Path(\"second\").read_text())]\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "existing_helper",
+      "request": {
+        "source": "def parse_json(text):\n    return text\nimport json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text())\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "invalid",
+      "request": {
+        "source": "def broken(:",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "alias",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return decoder.loads(Path(path).read_text())\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    },
+    {
+      "id": "async",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\nasync def load_json(path):\n    return json.loads(Path(path).read_text())\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef parse_json(text):\n    return json.loads(text)\n\nasync def load_json(path):\n    return parse_json(Path(path).read_text())\n",
+        "read_expression": "Path(path).read_text()",
+        "parse_line": 4
+      }
+    },
+    {
+      "id": "not_read",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_bytes())\n",
+        "origin_symbol": "load_json",
+        "proposed_symbol": "parse_json"
+      },
+      "patch": null
+    }
+  ]
+}

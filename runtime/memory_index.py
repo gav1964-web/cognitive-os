@@ -42,11 +42,19 @@ class MemoryIndex:
             return {"updated_at": None, "entries": [], "templates": []}
         return json.loads(self.path.read_text(encoding="utf-8"))
 
-    def search(self, query: str, *, limit: int = 5) -> dict[str, Any]:
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        available_capabilities: set[str] | None = None,
+    ) -> dict[str, Any]:
         query_tokens = _tokens(query)
         payload = self.load()
         matches = []
         for entry in payload.get("entries", []):
+            if not _all_capabilities_available(entry.get("capabilities", []), available_capabilities):
+                continue
             entry_tokens = set(entry.get("tokens", []))
             score = _jaccard(query_tokens, entry_tokens)
             if score <= 0:
@@ -55,6 +63,8 @@ class MemoryIndex:
         matches.sort(key=lambda item: (-float(item["score"]), str(item["goal_id"])))
         template_matches = []
         for template in payload.get("templates", []):
+            if not _all_capabilities_available(template.get("capabilities", []), available_capabilities):
+                continue
             template_tokens = set(template.get("tokens", []))
             score = _jaccard(query_tokens, template_tokens)
             if score <= 0:
@@ -70,6 +80,12 @@ class MemoryIndex:
             "template_matches": template_matches[:limit],
             "template_recommendation": template_recommendation,
         }
+
+
+def _all_capabilities_available(capabilities: Any, available_capabilities: set[str] | None) -> bool:
+    if available_capabilities is None:
+        return True
+    return all(str(capability) in available_capabilities for capability in capabilities or [])
 
 
 def _entry_from_report(report: dict[str, Any], report_path: Path) -> dict[str, Any]:

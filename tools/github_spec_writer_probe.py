@@ -13,7 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runtime.project_benchmark import analyze_project
-from runtime.role_skills import run_architect_skill, run_spec_writer_skill
+from runtime.configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 
 
 FORBIDDEN_SOURCE_TOKENS = (
@@ -72,16 +72,21 @@ def run_probe(*, root: Path, projects_dir: Path, label: str) -> dict[str, Any]:
             "registry_changes": False,
             "teacher_reference_is_ground_truth": False,
             "automatic_code_changes_from_own_output": False,
-            "implementer_tester_reviewer_not_in_scope": True,
+            "downstream_roles_not_in_scope": True,
         },
         "cases": cases,
     }
 
 
 def _run_case(project_dir: Path) -> dict[str, Any]:
+    git_before = _git_status(project_dir)
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"GitHub SpecWriter probe for {project_dir.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    artifacts = run_configured_role_prefix(
+        goal=f"GitHub SpecWriter probe for {project_dir.name}",
+        project_report=project_report,
+        until_artifact_type="TechnicalSpec",
+    )
+    spec = artifact_by_type(artifacts, "TechnicalSpec")
     contract = dict(spec.get("extraction_contract", {}))
     candidate = str(contract.get("candidate") or "")
     ranked = [str(row.get("source")) for row in contract.get("ranked_candidates", []) if isinstance(row, dict)]
@@ -89,10 +94,13 @@ def _run_case(project_dir: Path) -> dict[str, Any]:
     forbidden = [source for source in [candidate, *ranked, *evidence] if _is_forbidden_source(source)]
     blocked_reason = _blocked_reason(project_report)
     quality = _quality_score(spec, candidate, ranked, evidence, forbidden)
-    status = "ok" if quality >= 0.8 and not forbidden else "needs_review"
+    semantic_quality = dict(contract.get("semantic_quality", {}))
+    semantic_status = str(semantic_quality.get("status") or "")
+    status = "ok" if quality >= 0.8 and not forbidden and semantic_status in {"strong", "acceptable"} else "needs_review"
     if blocked_reason == "no_safe_python_candidate" and not candidate and not forbidden:
         status = "blocked_ok"
         quality = 1.0
+        semantic_quality = {"status": "blocked", "score": 0, "reasons": ["no safe Python candidate"]}
     return {
         "project": project_dir.name,
         "project_dir": project_dir.as_posix(),
@@ -102,6 +110,7 @@ def _run_case(project_dir: Path) -> dict[str, Any]:
         "candidate": candidate,
         "candidate_score": contract.get("candidate_score"),
         "selection_reason": contract.get("selection_reason"),
+        "semantic_target_quality": semantic_quality,
         "ranked_candidates": ranked[:8],
         "source_evidence": evidence[:8],
         "forbidden_sources": sorted(set(forbidden)),
@@ -109,7 +118,7 @@ def _run_case(project_dir: Path) -> dict[str, Any]:
         "traceability_count": len(spec.get("traceability_table", [])),
         "handoff_role": dict(spec.get("implementation_handoff", {})).get("recommended_role"),
         "llm_invoked": False,
-        "source_code_changes": _git_dirty(project_dir),
+        "source_code_changes": _git_status(project_dir) != git_before,
     }
 
 
@@ -136,6 +145,10 @@ def _summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "avg_quality_score": round(sum(float(case["quality_score"]) for case in cases) / count, 3) if count else 0.0,
         "candidate_present": sum(1 for case in cases if case["candidate"]),
         "forbidden_sources": sum(len(case["forbidden_sources"]) for case in cases),
+        "semantic_strong": sum(1 for case in cases if dict(case.get("semantic_target_quality", {})).get("status") == "strong"),
+        "semantic_acceptable": sum(1 for case in cases if dict(case.get("semantic_target_quality", {})).get("status") == "acceptable"),
+        "semantic_suspicious": sum(1 for case in cases if dict(case.get("semantic_target_quality", {})).get("status") == "suspicious"),
+        "semantic_poor": sum(1 for case in cases if dict(case.get("semantic_target_quality", {})).get("status") == "poor"),
         "source_code_changes": sum(1 for case in cases if case["source_code_changes"]),
         "llm_invoked": sum(1 for case in cases if case["llm_invoked"]),
 }
@@ -157,7 +170,7 @@ def _quality_score(
     forbidden: list[str],
 ) -> float:
     score = 0.0
-    if spec.get("artifact_type") == "TechnicalSpec" and spec.get("role") == "spec_writer":
+    if spec.get("artifact_type") == "TechnicalSpec" and spec.get("role") == producer_for_artifact_type("TechnicalSpec"):
         score += 0.2
     if candidate:
         score += 0.2
@@ -175,7 +188,7 @@ def _is_forbidden_source(value: str) -> bool:
     return any(token in normalized for token in FORBIDDEN_SOURCE_TOKENS)
 
 
-def _git_dirty(project_dir: Path) -> bool:
+def _git_status(project_dir: Path) -> str:
     try:
         result = subprocess.run(
             ["git", "-C", str(project_dir), "status", "--porcelain"],
@@ -185,8 +198,8 @@ def _git_dirty(project_dir: Path) -> bool:
             timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return True
-    return bool(result.stdout.strip())
+        return "__git_status_unavailable__"
+    return result.stdout.strip()
 
 
 def _markdown(report: dict[str, Any]) -> str:
@@ -207,6 +220,7 @@ def _markdown(report: dict[str, Any]) -> str:
                 f"- status: `{case['status']}`",
                 f"- quality: `{case['quality_score']}`",
                 f"- candidate: `{case['candidate'] or 'none'}`",
+                f"- semantic target quality: `{dict(case.get('semantic_target_quality', {})).get('status', 'n/a')}`",
                 f"- forbidden sources: `{', '.join(case['forbidden_sources']) or 'none'}`",
                 "",
             ]

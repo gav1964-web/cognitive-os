@@ -3,28 +3,52 @@
 from __future__ import annotations
 
 import builtins
+import json
 from dataclasses import asdict, dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
-STDLIB_INLINE_IMPORTS = {"base64", "binascii", "codecs", "hashlib", "json", "math", "re", "uuid"}
-UNSAFE_EFFECTS = {"subprocess", "network", "filesystem_write", "database_side_effect", "secrets"}
-UNSAFE_CALL_ROOTS = {"subprocess", "requests", "socket"}
-SAFE_BARE_CALLS = {
-    "join",
-    "split",
-    "strip",
-    "lstrip",
-    "rstrip",
-    "lower",
-    "upper",
-    "replace",
-    "startswith",
-    "endswith",
-    "items",
-    "keys",
-    "values",
-}
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_POLICY_PATH = ROOT / "config" / "dependency_extraction_policy.json"
+
+
+@lru_cache(maxsize=8)
+def load_dependency_extraction_policy(path: str | None = None) -> dict[str, Any]:
+    source = Path(path).resolve() if path else DEFAULT_POLICY_PATH
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "dependency_extraction_policy.v1" or payload.get("status") != "active":
+        raise ValueError("dependency extraction policy must use active dependency_extraction_policy.v1")
+    for field_name in (
+        "stdlib_inline_imports",
+        "unsafe_effects",
+        "unsafe_call_roots",
+        "safe_bare_calls",
+        "safe_call_roots",
+        "bound_method_argument_names",
+    ):
+        value = payload.get(field_name)
+        if not isinstance(value, list) or not value:
+            raise ValueError(f"dependency extraction policy requires non-empty {field_name}")
+    recommendations = payload.get("recommendations")
+    if not isinstance(recommendations, dict) or not recommendations.get("blocked") or not recommendations.get("self_contained"):
+        raise ValueError("dependency extraction policy requires recommendations")
+    return payload
+
+
+def _string_set(field_name: str) -> set[str]:
+    return {str(item) for item in list(_POLICY[field_name])}
+
+
+_POLICY = load_dependency_extraction_policy()
+STDLIB_INLINE_IMPORTS = _string_set("stdlib_inline_imports")
+UNSAFE_EFFECTS = _string_set("unsafe_effects")
+UNSAFE_CALL_ROOTS = _string_set("unsafe_call_roots")
+SAFE_BARE_CALLS = _string_set("safe_bare_calls")
+SAFE_CALL_ROOTS = _string_set("safe_call_roots")
+BOUND_METHOD_ARGUMENT_NAMES = _string_set("bound_method_argument_names")
+RECOMMENDATIONS = {str(key): str(value) for key, value in dict(_POLICY["recommendations"]).items()}
 
 
 @dataclass(frozen=True)
@@ -47,7 +71,7 @@ def evaluate_dependency_policy(function: dict[str, Any], functions: dict[tuple[s
     unresolved = []
     blockers = []
     args = list(function.get("args", []))
-    if args and str(dict(args[0]).get("name") or "") in {"self", "cls"}:
+    if args and str(dict(args[0]).get("name") or "") in BOUND_METHOD_ARGUMENT_NAMES:
         blockers.append("instance/class-bound method requires explicit object adapter policy")
     effects = set(str(item) for item in function.get("side_effects", []))
     for effect in sorted(effects & UNSAFE_EFFECTS):
@@ -59,7 +83,7 @@ def evaluate_dependency_policy(function: dict[str, Any], functions: dict[tuple[s
             continue
         if not root or root in builtin_names or root in inline_imports or root in SAFE_BARE_CALLS:
             continue
-        if root in {"json", "SimpleNamespace"}:
+        if root in SAFE_CALL_ROOTS:
             continue
         if root in local_names:
             unresolved.append(str(call))
@@ -72,7 +96,7 @@ def evaluate_dependency_policy(function: dict[str, Any], functions: dict[tuple[s
         inline_imports=sorted(inline_imports),
         unresolved_calls=sorted(set(unresolved)),
         blockers=blockers,
-        recommendation="choose a more self-contained candidate or add dependency bundling policy" if blockers else "safe to sandbox",
+        recommendation=RECOMMENDATIONS["blocked" if blockers else "self_contained"],
     )
 
 

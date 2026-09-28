@@ -1,0 +1,70 @@
+{
+  "schema_version": "self_development_prospective_detection.v1",
+  "status": "active",
+  "evidence_cutoff": "2026-08-30T16:07:49.990978+00:00",
+  "source_directory": "artifacts/project_development",
+  "source_glob": "project_development_*.json",
+  "maturity_matrix": "artifacts/field_trials/role_project_type_evaluation_20260830T161442270918Z.json",
+  "allowed_project_types": [
+    "library_pure_transform",
+    "cli_local_tool",
+    "framework_plugin_build"
+  ],
+  "systematic_rule_ids": [
+    "recognition_gap",
+    "classification_contradiction",
+    "no_safe_candidate",
+    "role_handoff_gap",
+    "evaluator_mismatch",
+    "admission_gap",
+    "human_rejection",
+    "false_promotion_readiness"
+  ],
+  "derived_signals": [
+    {
+      "rule_id": "role_handoff_gap",
+      "category": "handoff",
+      "subject": "selected_target_alignment",
+      "when": [
+        {"path": "role_chain_handoff.status", "equals": "needs_replanning"}
+      ]
+    },
+    {
+      "rule_id": "human_rejection",
+      "category": "review",
+      "subject": "bounded_change_rejected",
+      "when": [
+        {"path": "feedback_continuation.status", "equals": "human_rejected"}
+      ]
+    },
+    {
+      "rule_id": "false_promotion_readiness",
+      "category": "authority",
+      "subject": "validated_memory_outside_eligible_route",
+      "when": [
+        {"path": "validated_memory.status", "equals": "validated"},
+        {"path": "recognition.pilot_route.status", "not_equals": "eligible_for_full_chain"}
+      ]
+    }
+  ],
+  "minimum_independent_projects": 3,
+  "target": "knowledge/role_knowledge/self_development_lessons.json",
+  "role_scope_by_rule": {
+    "recognition_gap": ["project_analyzer", "researcher", "architect"],
+    "classification_contradiction": ["project_analyzer", "researcher", "architect", "tester"],
+    "no_safe_candidate": ["researcher", "architect", "spec_writer"],
+    "role_handoff_gap": ["architect", "spec_writer", "implementer", "tester", "reviewer"],
+    "evaluator_mismatch": ["architect", "tester", "reviewer"],
+    "admission_gap": ["architect", "tester", "reviewer"],
+    "human_rejection": ["architect", "reviewer"],
+    "false_promotion_readiness": ["architect", "tester", "reviewer"]
+  },
+  "invariants": {
+    "pre_cutoff_evidence_forbidden": true,
+    "cross_project_independence_required": true,
+    "source_apply": false,
+    "promotion_applied": false,
+    "candidate_requires_future_holdout": true,
+    "latest_project_snapshot_required": true
+  }
+}

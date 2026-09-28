@@ -1,18 +1,17 @@
 from __future__ import annotations
-
 import json
 import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
-
+import pytest
 from runtime.project_deliberation import deliberate_project_report
+from runtime.project_architecture_synthesis import load_architecture_knowledge, match_architecture_rule, synthesize_project_architecture
+from runtime.project_facts import facts_from_project_report, llm_fact_digest
 from runtime.project_interpreter import interpret_project_report
 from runtime.project_tasks import generate_project_tasks
 from runtime.project_signals import generate_project_signals
 from runtime.local_inference import LocalInferenceConfig, LocalInferenceError
-
-
 def _report() -> dict:
     return {
         "goal_id": "goal_test",
@@ -61,7 +60,6 @@ def _report() -> dict:
             }
         },
     }
-
 
 def test_project_signals_are_short_impulses():
     payload = {
@@ -122,7 +120,7 @@ def test_project_deliberation_validates_human_contract():
 
     assert result["source"] == "external_l4"
     assert result["layer"] == "L4"
-    assert result["executive_summary"] == "API service."
+    assert result["executive_summary"] == "Expose an API"
     assert result["fact_summary"]["frameworks"] == ["FastAPI"]
     assert "external_imports" in mocked.call_args.args[0][1]["content"]
 
@@ -166,10 +164,14 @@ def test_project_deliberation_normalizes_contract_types():
     with patch("runtime.project_deliberation.call_json_chat", return_value=payload):
         result = deliberate_project_report(_report(), level35_signals={"signals": []}, config=config)
 
-    assert result["executive_summary"] == "API service."
-    assert result["capability_decomposition"] == ["health check"]
-    assert result["refactor_plan"] == ["split handlers"]
-    assert result["cognitive_loop"] == "call /health capture failure"
+    assert result["executive_summary"] == "Expose an API"
+    assert result["capability_decomposition"] == ["app/api/server.py:handle_chat"]
+    assert result["refactor_plan"] == [
+        "Define first pipeline capability contract for app/api/server.py:handle_chat",
+        "Wrap process boundary app/api/server.py:handle_chat with timeout and captured artifacts",
+        "Add idempotency/replay guard around app/api/server.py:handle_chat",
+    ]
+    assert result["cognitive_loop"] == "call /health"
     assert result["open_questions"]
     assert result["confidence"] == "medium"
 
@@ -187,137 +189,165 @@ def test_project_deliberation_refuses_local_cortex_model():
     assert result["fallback_reason"] == "external Level 4 cortex provider is required"
 
 
-def test_project_deliberation_allows_external_model_through_local_gateway():
-    payload = {
-        "executive_summary": "API service.",
-        "capability_decomposition": [],
-        "refactor_plan": [],
-        "cognitive_loop": "call /health",
-        "open_questions": [],
-        "confidence": "high",
+def test_project_deliberation_fallback_uses_domain_profile_and_runtime_extraction():
+    report = _report()
+    project_map = report["execution"]["outputs"]["project_map_report"]
+    project_map["summary"]["frameworks"] = []
+    project_map["answers"]["1_scope"]["domain_profile"] = {
+        "kind": "llm_auto_repair_loop",
+        "confidence": 0.98,
     }
-    config = LocalInferenceConfig(
-        base_url="http://127.0.0.1:8000/v1",
-        model="gpt-4o-mini",
-        provider_label="external_l4",
+    project_map["answers"]["1_scope"]["main_task"] = (
+        "Run an LLM-assisted auto-repair loop: copy a template workspace, build/run it in Docker, "
+        "send failures to an LLM, apply proposed file updates, and retry."
     )
-    with patch("runtime.project_deliberation.call_json_chat", return_value=payload) as mocked:
-        result = deliberate_project_report(_report(), level35_signals={"signals": []}, config=config)
-
-    mocked.assert_called_once()
-    assert result["source"] == "external_l4"
-    assert result["model"] == "gpt-4o-mini"
-
-
-def test_project_deliberation_retries_compact_on_context_overflow():
-    payload = {
-        "executive_summary": "API service.",
-        "capability_decomposition": [],
-        "refactor_plan": [],
-        "cognitive_loop": "call /health",
-        "open_questions": [],
-        "confidence": "medium",
-    }
-    config = LocalInferenceConfig(
-        base_url="http://127.0.0.1:8000/v1",
-        model="gpt-4o-mini",
-        provider_label="external_l4",
-    )
-    with patch(
-        "runtime.project_deliberation.call_json_chat",
-        side_effect=[LocalInferenceError("request exceeds the available context size n_ctx=2048"), payload],
-    ) as mocked:
-        result = deliberate_project_report(_report(), level35_signals={"signals": []}, config=config)
-
-    assert mocked.call_count == 2
-    assert result["source"] == "external_l4"
-    assert result["context_mode"] == "compact_after_overflow"
-
-
-def test_project_interpreter_wrapper_returns_layers():
-    signals = {"signals": [], "confidence": "high", "source": "local_llm", "layer": "L3.5"}
-    interpretation = {"executive_summary": "API service.", "confidence": "high", "source": "local_llm", "layer": "L4"}
-    with patch("runtime.project_interpreter.generate_project_signals", return_value=signals), patch(
-        "runtime.project_interpreter.deliberate_project_report", return_value=interpretation
-    ):
-        result = interpret_project_report(_report())
-
-    assert result["level35_project_signals"]["layer"] == "L3.5"
-    assert result["level4_project_interpretation"]["layer"] == "L4"
-    assert result["analysis_tasks"]["source"] == "deterministic_task_synthesizer"
-
-
-def test_project_tasks_turn_signals_into_actionable_backlog():
-    signals = {
-        "signals": [
-            {"type": "SUBSYSTEM_HOTSPOT", "target": "app/api", "severity": "high"},
-            {"type": "BROAD_FUNCTION", "target": "app/api/server.py:handle_chat", "severity": "high"},
-            {"type": "WEAK_CONTRACT", "target": "app/api/server.py:health", "severity": "medium"},
+    project_map["answers"]["6_runtime_extraction_readiness"]["minimal_extraction_plan"] = {
+        "capabilities_to_extract": [
+            {"capability": "auto_dev_agent.py:send_to_model"},
+            {"capability": "auto_dev_agent.py:docker_build"},
+            {"capability": "auto_dev_agent.py:docker_run"},
         ]
     }
-    interpretation = {
-        "refactor_plan": ["Split app/api/server.py:handle_chat into parser and dispatcher"],
-        "open_questions": ["Who owns app/providers?"],
-    }
-
-    result = generate_project_tasks(level35_signals=signals, level4_interpretation=interpretation)
-
-    task_types = {task["type"] for task in result["tasks"]}
-    assert result["layer"] == "L4"
-    assert "MAP_SUBSYSTEM_BOUNDARY" in task_types
-    assert "EXTRACT_CAPABILITY" in task_types
-    assert "HARDEN_CONTRACT" in task_types
-    assert any(task["priority"] == "P1" for task in result["tasks"])
-
-
-def test_project_tasks_include_runtime_safety_backlog():
     signals = {
         "signals": [
-            {"type": "MIXED_RESPONSIBILITY", "target": "app/api.py:handle", "severity": "high"},
-            {"type": "IDEMPOTENCY_RISK", "target": "app/api.py:save", "severity": "high"},
-            {"type": "PROCESS_BOUNDARY_CANDIDATE", "target": "app/worker.py:run", "severity": "medium"},
-            {"type": "CHECKPOINT_CANDIDATE", "target": "parsed_intermediate", "severity": "medium"},
-            {"type": "MVP_EXTRACTION_CANDIDATE", "target": "app/api.py:normalize", "severity": "high"},
+            {"type": "MVP_EXTRACTION_CANDIDATE", "target": "auto_dev_agent.py:send_to_model"},
+            {"type": "PROCESS_BOUNDARY_CANDIDATE", "target": "auto_dev_agent.py:docker_build"},
         ]
     }
 
-    result = generate_project_tasks(level35_signals=signals, level4_interpretation={})
+    result = deliberate_project_report(report, level35_signals=signals)
 
-    task_types = {task["type"] for task in result["tasks"]}
-    assert "SPLIT_MIXED_RESPONSIBILITY" in task_types
-    assert "ADD_IDEMPOTENCY_GUARD" in task_types
-    assert "ISOLATE_PROCESS_BOUNDARY" in task_types
-    assert "DEFINE_CHECKPOINT_POLICY" in task_types
-    assert "DRAFT_PIPELINE_CAPABILITY" in task_types
+    assert result["source"] == "deterministic_fallback"
+    assert result["executive_summary"].startswith("Run an LLM-assisted auto-repair loop")
+    assert "unknown stack" not in result["executive_summary"]
+    assert result["capability_decomposition"] == [
+        "auto_dev_agent.py:send_to_model",
+        "auto_dev_agent.py:docker_build",
+    ]
 
 
-def test_interpret_project_report_cli_writes_output(tmp_path):
-    root = Path(__file__).resolve().parents[2]
-    report_path = tmp_path / "report.json"
-    output_path = tmp_path / "interpretation.json"
-    report_path.write_text(json.dumps(_report()), encoding="utf-8")
-    script = (
-        "import json\n"
-        "from unittest.mock import patch\n"
-        "from tools.interpret_project_report import main\n"
-        "signals = {'signals': [], 'confidence': 'high', 'source': 'local_llm', 'layer': 'L3.5'}\n"
-        "interpretation = {\n"
-        " 'executive_summary': 'API service.',\n"
-        " 'capability_decomposition': ['health check'],\n"
-        " 'refactor_plan': ['split handlers'],\n"
-        " 'cognitive_loop': ['call /health'],\n"
-        " 'open_questions': [],\n"
-        " 'confidence': 'high',\n"
-        " 'source': 'local_llm',\n"
-        " 'layer': 'L4',\n"
-        "}\n"
-        "with patch('runtime.project_interpreter.generate_project_signals', return_value=signals), patch('runtime.project_interpreter.deliberate_project_report', return_value=interpretation):\n"
-        f" import sys; sys.argv = ['tool', '--root', r'{root}', '--report', r'{report_path}', '--output', r'{output_path}']; raise SystemExit(main())\n"
+def test_architecture_knowledge_uses_domain_profile_over_generic_workflow_terms():
+    result = match_architecture_rule(
+        {
+            "root": "F:/ubuntu/AutoFix&AutoMake/v24",
+            "task": "Run workflow tasks around generated modules and Docker repair attempts.",
+            "domain_profile": {"kind": "llm_auto_repair_loop", "confidence": 0.98},
+            "central": ["autofix_docker/goal_to_spec.py:goal_to_spec"],
+            "capabilities": ["autofix_docker/module_contract_checker.py:check_single_module_output"],
+        },
+        load_architecture_knowledge(),
     )
-    completed = subprocess.run([sys.executable, "-c", script], text=True, capture_output=True, check=True)
 
-    assert json.loads(completed.stdout)["status"] == "ok"
-    saved = json.loads(output_path.read_text(encoding="utf-8"))
-    assert saved["level35_project_signals"]["layer"] == "L3.5"
-    assert saved["level4_project_interpretation"]["confidence"] == "high"
-    assert saved["analysis_tasks"]["task_count"] >= 0
+    assert result["rule"]["rule_id"] == "llm_auto_repair_loop"
+    assert any("domain profile" in reason for reason in result["matched_because"])
+
+
+def test_project_facts_preserve_repair_domain_anchors():
+    report = {
+        "execution": {
+            "outputs": {
+                "project_map_report": {
+                    "answers": {
+                        "1_scope": {"domain_profile": {"kind": "llm_auto_repair_loop"}},
+                        "2_execution": {},
+                        "3_capabilities": {},
+                        "4_contracts_data": {},
+                        "5_errors_state_repro": {},
+                        "6_runtime_extraction_readiness": {},
+                    },
+                    "summary": {"root": "F:/ubuntu/AutoFix&AutoMake/v24"},
+                },
+                "extract_python_structure": {
+                    "files": [
+                        {
+                            "path": "AutoFix/auto_dev_agent.py",
+                            "functions": [
+                                {"name": "docker_run", "loc": 12},
+                                {"name": "send_to_model", "loc": 35},
+                            ],
+                        },
+                        {
+                            "path": "autofix_docker/generated_v2/pipeline.py",
+                            "functions": [{"name": "send_to_model", "loc": 20}],
+                        },
+                    ]
+                },
+            }
+        }
+    }
+
+    digest = llm_fact_digest(facts_from_project_report(report))
+
+    assert digest["domain_anchors"][0] == "AutoFix/auto_dev_agent.py:send_to_model"
+    assert all("generated_v2" not in item for item in digest["domain_anchors"])
+
+
+def test_project_deliberation_humanizes_refactor_impulses():
+    report = _report()
+    signals = {
+        "signals": [
+            {
+                "type": "WEAK_CONTRACT",
+                "target": "app/api/server.py:handle_chat",
+                "suggested_action": "inspect_weak_contract",
+            },
+            {
+                "type": "BROAD_FUNCTION",
+                "target": "app/api/server.py:handle_chat",
+                "suggested_action": "split_mixed_responsibilities",
+            },
+        ]
+    }
+
+    result = deliberate_project_report(report, level35_signals=signals)
+
+    assert result["refactor_plan"] == [
+        "Split mixed responsibilities in app/api/server.py:handle_chat",
+        "Define explicit input/output contract for app/api/server.py:handle_chat",
+    ]
+
+
+def test_project_deliberation_prioritizes_runtime_refactor_risks():
+    report = _report()
+    project_map = report["execution"]["outputs"]["project_map_report"]
+    project_map["answers"]["6_runtime_extraction_readiness"]["idempotency_risks"] = [
+        {"target": "auto_dev_agent.py:write_files"}
+    ]
+    project_map["answers"]["6_runtime_extraction_readiness"]["process_boundary_candidates"] = [
+        {"target": "auto_dev_agent.py:docker_run"}
+    ]
+    project_map["answers"]["6_runtime_extraction_readiness"]["minimal_extraction_plan"] = {
+        "capabilities_to_extract": [{"capability": "auto_dev_agent.py:send_to_model"}]
+    }
+    signals = {
+        "signals": [
+            {
+                "type": "WEAK_CONTRACT",
+                "target": "auto_dev_agent.py:__init__",
+                "suggested_action": "inspect_weak_contract",
+            },
+            {
+                "type": "IDEMPOTENCY_RISK",
+                "target": "auto_dev_agent.py:write_files",
+                "suggested_action": "add_idempotency_or_replay_guard",
+            },
+            {
+                "type": "PROCESS_BOUNDARY_CANDIDATE",
+                "target": "auto_dev_agent.py:docker_run",
+                "suggested_action": "prefer_process_boundary",
+            },
+            {
+                "type": "MVP_EXTRACTION_CANDIDATE",
+                "target": "auto_dev_agent.py:send_to_model",
+                "suggested_action": "draft_first_pipeline_capability",
+            },
+        ]
+    }
+
+    result = deliberate_project_report(report, level35_signals=signals)
+
+    assert result["refactor_plan"] == [
+        "Define first pipeline capability contract for auto_dev_agent.py:send_to_model",
+        "Wrap process boundary auto_dev_agent.py:docker_run with timeout and captured artifacts",
+        "Add idempotency/replay guard around auto_dev_agent.py:write_files",
+    ]

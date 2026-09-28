@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": ["root", "old_value", "new_value", "replacement_count", "changed_files", "skipped"],
+  "properties": {
+    "root": { "type": "string" },
+    "old_value": { "type": "string" },
+    "new_value": { "type": "string" },
+    "replacement_count": { "type": "integer" },
+    "changed_files": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "skipped": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "additionalProperties": false
+}

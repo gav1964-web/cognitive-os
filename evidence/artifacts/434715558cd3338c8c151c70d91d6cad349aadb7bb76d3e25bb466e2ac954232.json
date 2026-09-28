@@ -1,0 +1,31 @@
+{
+  "affected_scope": {
+    "downstream_mutation_evidence": "retained",
+    "historical_evidence": "retained_immutable",
+    "narrow_six_role_certification": "revoked",
+    "runtime_functionality": "not_revoked"
+  },
+  "artifact_type": "NarrowTypeCertificationReassessment",
+  "certificate_receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
+  "checks": {
+    "certificate_is_obsolete_v1": true,
+    "certificate_receipt_verified": true,
+    "holdout_is_obsolete_v1": true,
+    "holdout_receipt_verified": true,
+    "project_development_evidence_missing": true,
+    "role_artifact_audit_missing": true,
+    "semantic_role_quality_missing": true
+  },
+  "failed_checks": [],
+  "holdout_receipt": "evidence/ledger/3a8e427d7763e61831f23f5bedb85f44da2a80c15c7c0ebddc554dcce73f6f1d.json",
+  "next_action": "run_narrow_semantic_ground_truth_holdout",
+  "promotion_applied": false,
+  "promotion_eligible": false,
+  "reason_codes": [
+    "first_three_role_scores_not_semantically_auditable",
+    "derived_mutation_probe_not_project_understanding_evidence"
+  ],
+  "reassessment_digest": "sha256:94d56ea320ba58432053e797dd916cff55e77c638d5face501a8cd586b089254",
+  "schema_version": "narrow_type_certification_reassessment.v1",
+  "status": "revoked"
+}

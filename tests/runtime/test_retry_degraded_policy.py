@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from runtime.executor import execute_pipeline
 from runtime.pipeline import load_pipeline
 from runtime.registry import CapabilityRegistry
 
 
-def test_transient_error_retries_and_marks_capability_degraded():
-    root = Path(__file__).resolve().parents[2]
+def test_transient_error_retries_and_marks_capability_degraded(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = load_pipeline(root / "pipelines" / "fetch_parse_save.json")
 

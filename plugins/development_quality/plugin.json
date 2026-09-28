@@ -1,0 +1,17 @@
+{
+  "id": "development_quality",
+  "version": "0.1.2",
+  "entrypoint": "plugins.development_quality.src.main:run",
+  "determinism_grade": "A",
+  "side_effects": {
+    "filesystem": "read_only",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "test_paths": [
+    "plugins/development_quality/tests/test_contract.py",
+    "plugins/development_quality/tests/test_boundary_probes.py",
+    "plugins/development_quality/tests/test_draft_cases.py"
+  ]
+}

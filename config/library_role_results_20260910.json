@@ -1,0 +1,57 @@
+{
+  "schema_version": "library_role_results.v1",
+  "evaluation_split": "holdout",
+  "scope": "two_library_diagnostic_cases_not_full_lane_certification",
+  "baseline_revision": "19fba45dd0d5e170adfb357bc82ca1d88111bdef",
+  "workspace_changes": "source-backed library admission, fixture runner selection, UTF-8 Git reads",
+  "cases": [
+    {
+      "project": "zariiii9003__vblf",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "zariiii9003/vblf",
+      "source_owner": "zariiii9003",
+      "candidate_id": "cf27ec3ef5c794f61dce",
+      "qualification_receipt": "artifacts/self_development/historical_defect_mining/public_manifest_20260910T104259826289Z.json",
+      "role_report": "artifacts/project_development/project_development_library_vblf_20260910.json",
+      "execution_report": "artifacts/project_development/project_development_library_vblf_20260910.json",
+      "regression_scope_kind": "none",
+      "result": "research_required",
+      "limitation": "no_verified_failure_reducer; codec roundtrip includes local file adapters"
+    },
+    {
+      "project": "dp0148475__anitopy",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "igorcmoura/anitopy",
+      "source_owner": "igorcmoura",
+      "candidate_id": "7a2881d2a44771ed554a",
+      "qualification_receipt": "artifacts/self_development/historical_defect_mining/public_manifest_20260910T112803857443Z.json",
+      "role_report": "artifacts/project_development/project_development_library_dp0148475__anitopy_20260910.json",
+      "execution_report": "artifacts/project_development/project_development_library_dp0148475__anitopy_20260910.json",
+      "regression_scope_kind": "none",
+      "result": "controlled_stop",
+      "limitation": "reproducible_unbound_failure; mirrored repository counted as its original upstream lineage"
+    }
+  ],
+  "semantic_evaluation": {
+    "status": "evidence_required",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260910T113042436921Z.json",
+    "evidence_digest": "sha256:629a731eff80063fa8749adad4994080a4fdd37e47c76d15eb25cab9afae4e03",
+    "aggregation": "minimum_per_role_across_two_cases",
+    "role_scores": {
+      "project_analyzer": 3.33,
+      "architect": 0.0,
+      "spec_writer": 0.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "interpretation": "Missing role artifacts and missing verified repairs reduce rubric scores; these are not measured production success rates."
+  },
+  "authority": {
+    "certification_allowed": false,
+    "automatic_promotion_allowed": false,
+    "source_apply": false,
+    "production_oracle_disclosed_to_roles": false,
+    "reason": "Diagnostic evaluation covers libraries only; neither role attempt produced a verified repair."
+  }
+}

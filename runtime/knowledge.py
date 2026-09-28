@@ -5,12 +5,14 @@ from __future__ import annotations
 import hashlib
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from plugins.inspect_installed_packages.src.main import run as inspect_installed_packages
 from plugins.github_repository_search.src.main import run as github_repository_search
 from plugins.official_docs_fetch.src.main import run as official_docs_fetch
 from .goal_orchestrator import GoalDecision
+from .knowledge_usage_telemetry import record_knowledge_usage
 from .knowledge_source_policy import github_source_policy, official_docs_source_policy
 
 
@@ -42,12 +44,33 @@ class KnowledgeArtifact:
         return asdict(self)
 
 
-def knowledge_preflight(goal: str, root_input: dict[str, Any]) -> dict[str, Any]:
+def knowledge_preflight(goal: str, root_input: dict[str, Any], *, root: Path | str | None = None) -> dict[str, Any]:
     gap = _xls_backend_gap(goal, root_input)
     if gap is None:
+        record_knowledge_usage(
+            event_type="kb_preflight_skipped",
+            role="goal_orchestrator",
+            source="knowledge_preflight",
+            root=root,
+            status="skipped",
+            query=goal,
+            details={"reason": "no_applicable_gap_rule"},
+        )
         return {"status": "skipped", "knowledge_gaps": [], "knowledge_artifacts": [], "route_override": None}
     artifact = _inspect_xls_backends(gap)
     unresolved = artifact.confidence < gap.confidence_required
+    record_knowledge_usage(
+        event_type="kb_preflight_gap",
+        role="goal_orchestrator",
+        source=artifact.source,
+        root=root,
+        rule_id="legacy_xls_backend",
+        status="blocked" if unresolved else "ok",
+        confidence=artifact.confidence,
+        gap_id=gap.gap_id,
+        query=goal,
+        details={"fact": artifact.extracted_fact, "confidence_required": gap.confidence_required},
+    )
     return {
         "status": "blocked" if unresolved else "ok",
         "knowledge_gaps": [gap.to_dict()],
@@ -75,7 +98,7 @@ def apply_knowledge_route_override(goal: str, decision: GoalDecision, knowledge:
     )
 
 
-def github_repository_knowledge(query: str, *, needed_for: str, limit: int = 5) -> dict[str, Any]:
+def github_repository_knowledge(query: str, *, needed_for: str, limit: int = 5, root: Path | str | None = None) -> dict[str, Any]:
     policy = github_source_policy()
     gap = KnowledgeGap(
         gap_id=_gap_id("github_repository_search", query),
@@ -102,10 +125,28 @@ def github_repository_knowledge(query: str, *, needed_for: str, limit: int = 5) 
             "official docs and local contract tests are still required",
         ],
     )
+    record_knowledge_usage(
+        event_type="external_knowledge_probe",
+        role="researcher",
+        source=policy.source_type,
+        root=root,
+        status="ok" if repos else "no_results",
+        confidence=artifact.confidence,
+        gap_id=gap.gap_id,
+        query=query,
+        details={"needed_for": needed_for, "result_count": len(repos)},
+    )
     return {"status": "ok" if repos else "no_results", "knowledge_gaps": [gap.to_dict()], "knowledge_artifacts": [artifact.to_dict()]}
 
 
-def official_docs_knowledge(url: str, *, question: str, needed_for: str, max_chars: int = 4000) -> dict[str, Any]:
+def official_docs_knowledge(
+    url: str,
+    *,
+    question: str,
+    needed_for: str,
+    max_chars: int = 4000,
+    root: Path | str | None = None,
+) -> dict[str, Any]:
     policy = official_docs_source_policy()
     gap = KnowledgeGap(
         gap_id=_gap_id("official_docs_fetch", f"{url}:{question}"),
@@ -129,6 +170,17 @@ def official_docs_knowledge(url: str, *, question: str, needed_for: str, max_cha
             "local contract tests and runtime validation are still required",
             "only allowlisted documentation domains may be fetched",
         ],
+    )
+    record_knowledge_usage(
+        event_type="external_knowledge_probe",
+        role="researcher",
+        source=policy.source_type,
+        root=root,
+        status="ok",
+        confidence=artifact.confidence,
+        gap_id=gap.gap_id,
+        query=question,
+        details={"needed_for": needed_for, "url": url, "fetched_chars": evidence.get("fetched_chars")},
     )
     return {"status": "ok", "knowledge_gaps": [gap.to_dict()], "knowledge_artifacts": [artifact.to_dict()]}
 

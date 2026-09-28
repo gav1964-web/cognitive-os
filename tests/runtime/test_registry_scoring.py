@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from runtime.registry import CapabilityRegistry
 
 
-def test_registry_scoring_prefers_active_over_degraded():
-    root = Path(__file__).resolve().parents[2]
+def test_registry_scoring_prefers_active_over_degraded(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
 
@@ -24,4 +22,3 @@ def test_registry_scoring_prefers_active_over_degraded():
     )
 
     assert candidates[0].id == "parse_title_fallback"
-    registry.reset_from_plugins()

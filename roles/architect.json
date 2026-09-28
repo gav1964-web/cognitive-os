@@ -1,0 +1,24 @@
+{
+  "schema_version": "role_definition.v1",
+  "role_id": "architect",
+  "label": "Architect",
+  "order": 20,
+  "consumes": ["ProjectMapReport"],
+  "produces": ["ArchitectureDecisionRecord"],
+  "kb_filters": {"role_scope": ["architect"]},
+  "policy": {"llm_authority": "hypothesis_only", "source_mutation": "forbidden"},
+  "questions": [
+    {"id": "target_shape", "question": "Какую целевую архитектурную форму стоит выбрать?", "answer": {"provider": "helper", "name": "architecture_field", "args": ["target_shape"]}, "evidence": ["architecture_synthesis.target_shape"], "confidence": "medium"},
+    {"id": "first_boundary", "question": "Какая первая безопасная граница изменения?", "answer": {"provider": "helper", "name": "minimal_plan"}, "evidence": ["answers.6_runtime_extraction_readiness.minimal_extraction_plan"]},
+    {"id": "subsystem_boundaries", "question": "Какие subsystem boundaries нужно зафиксировать?", "answer": {"provider": "ctx", "path": ["readiness", "source_strata"]}, "evidence": ["answers.6_runtime_extraction_readiness.source_strata"], "confidence": "medium"},
+    {"id": "refactor_risks", "question": "Какие архитектурные риски блокируют быстрый рефакторинг?", "answer": {"provider": "ctx", "path": ["project_report", "risks"]}, "evidence": ["ProjectMapReport.risks"]},
+    {"id": "process_boundary", "question": "Где нужен process boundary?", "answer": {"provider": "ctx", "path": ["readiness", "process_boundary_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.process_boundary_candidates"]},
+    {"id": "capability_candidates", "question": "Какие capability candidates можно вынести первыми?", "answer": {"provider": "helper", "name": "capability_candidates"}, "evidence": ["answers.3_capabilities", "answers.6_runtime_extraction_readiness.minimal_extraction_plan"]},
+    {"id": "non_goals", "question": "Что нельзя трогать на первом шаге?", "answer": {"provider": "helper", "name": "non_goals"}, "evidence": ["role policy", "source_strata"]},
+    {"id": "quarantine", "question": "Где возможна on-demand quarantine политика?", "answer": {"provider": "ctx", "path": ["readiness", "quarantine_candidates"]}, "evidence": ["answers.6_runtime_extraction_readiness.quarantine_candidates"]},
+    {"id": "confidence", "question": "Какой уровень уверенности у решения?", "answer": {"provider": "helper", "name": "confidence"}, "evidence": ["level35_project_signals", "architecture_synthesis"]},
+    {"id": "kb_matches", "question": "Какие знания KB сработали?", "answer": {"provider": "helper", "name": "architecture_field", "args": ["knowledge_matches"]}, "evidence": ["architecture_synthesis.knowledge_matches"], "confidence": "medium"},
+    {"id": "manual_decisions", "question": "Какие решения должны остаться ручными?", "answer": {"provider": "helper", "name": "manual_decisions"}, "evidence": ["analysis_tasks", "architecture_synthesis"]},
+    {"id": "next_contract", "question": "Какой следующий контракт передать SpecWriter?", "answer": {"provider": "helper", "name": "spec_contract_target"}, "evidence": ["minimal_extraction_plan", "architecture_synthesis"]}
+  ]
+}

@@ -17,6 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--project-dir")
+    parser.add_argument("--active-root", help="Explicit active root inside --project-dir for mixed portfolio/snapshot roots")
     parser.add_argument("--benchmarks-dir", default="benchmarks/project_analyzer")
     parser.add_argument("--benchmark-project", default=None)
     parser.add_argument("--goal", default="Prepare ADR and TechnicalSpec for first safe transformation")
@@ -57,6 +58,7 @@ def main() -> int:
             project_dir=project_dir.resolve(),
             goal=args.goal,
             write=args.write,
+            active_root=args.active_root,
             architect_advisory_config=advisory_config,
         )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

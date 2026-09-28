@@ -1,0 +1,106 @@
+{
+  "schema_version": "project_symbol_query_patterns.v1",
+  "status": "active",
+  "patterns": [
+    {
+      "id": "functions_name_contains_token",
+      "target": "functions",
+      "all_markers": [["функц", "function"], ["назв", "name"], ["содерж", "contains"]],
+      "token_after_markers": ["слово", "word"],
+      "filters": [
+        {"field": "name", "op": "contains_ci", "value_from": "query_token"}
+      ],
+      "group_by": "path",
+      "sort": [
+        {"field": "path", "direction": "asc"}
+      ],
+      "answer_key_template": "functions_name_contains_{query_token_slug}",
+      "output_fields": ["path", "functions"],
+      "row_fields": ["name", "line", "loc"]
+    },
+    {
+      "id": "function_source_by_name_and_path",
+      "target": "functions",
+      "all_markers": [["текст", "source", "код"], ["функц", "function"], ["из", "from"]],
+      "function_after_markers": ["функции", "function"],
+      "path_after_markers": ["из", "from"],
+      "filters": [
+        {"field": "name", "op": "eq", "value_from": "function_name"},
+        {"field": "path", "op": "eq", "value_from": "source_path"}
+      ],
+      "group_by": "path",
+      "sort": [
+        {"field": "path", "direction": "asc"}
+      ],
+      "answer_key_template": "function_source_{function_name_slug}",
+      "output_fields": ["path", "functions"],
+      "row_fields": ["name", "line", "end_line", "loc", "source"],
+      "include_source": true,
+      "max_source_lines": 220
+    },
+    {
+      "id": "function_call_explanation_by_name_path_and_call",
+      "target": "functions",
+      "all_markers": [["что делает", "explain"], ["функц", "function"], ["из", "from"]],
+      "call_after_markers": ["функция", "вызов", "call"],
+      "function_after_markers": ["в функции", "inside function"],
+      "path_after_markers": ["из", "from"],
+      "filters": [
+        {"field": "name", "op": "eq", "value_from": "function_name"},
+        {"field": "path", "op": "eq", "value_from": "source_path"}
+      ],
+      "group_by": "path",
+      "sort": [
+        {"field": "path", "direction": "asc"}
+      ],
+      "answer_key_template": "function_call_explanation_{function_name_slug}_{call_target_slug}",
+      "output_fields": ["path", "functions"],
+      "row_fields": ["name", "line", "end_line", "loc", "call_explanation"],
+      "include_call_explanation": true,
+      "include_source": true,
+      "max_source_lines": 220
+    }
+  ],
+  "purpose_summary": {
+    "trigger_markers": ["для чего", "предназнач", "назначение", "саммари", "summary"],
+    "token_hints": {
+      "test": "проверяет поведение",
+      "load": "загружает данные или конфигурацию",
+      "read": "читает данные",
+      "write": "записывает данные",
+      "collect": "собирает набор объектов",
+      "upload": "загружает или передает объект во внешнее хранилище",
+      "prune": "очищает или удаляет лишние элементы",
+      "include": "решает, включать ли объект в дальнейшую обработку",
+      "get": "возвращает подготовленное значение",
+      "provider": "работает с провайдером",
+      "cache": "работает с кэшем",
+      "file": "работает с файлом",
+      "files": "работает с набором файлов",
+      "folder": "работает с каталогом",
+      "folders": "работает с каталогами",
+      "routing": "работает с маршрутизацией",
+      "profiles": "работает с профилями",
+      "aliases": "работает с алиасами",
+      "empty": "обрабатывает пустые значения"
+    },
+    "max_call_examples": 4
+  },
+  "call_explanation": {
+    "why_repeated_markers": ["почему", "дважды", "несколько раз", "why"],
+    "call_hints": {
+      "monkeypatch.setenv": {
+        "summary": "временно задает переменную окружения на время выполнения теста",
+        "typical_reason_repeated": "каждый вызов задает отдельную переменную окружения, нужную проверяемому коду"
+      },
+      "monkeypatch.setattr": {
+        "summary": "временно подменяет атрибут или объект на время выполнения теста",
+        "typical_reason_repeated": "несколько вызовов обычно подменяют разные зависимости"
+      },
+      "assert": {
+        "summary": "проверяет ожидаемое условие",
+        "typical_reason_repeated": "несколько assert проверяют разные свойства результата"
+      }
+    }
+  }
+}

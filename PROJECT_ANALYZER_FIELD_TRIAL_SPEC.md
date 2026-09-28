@@ -15,6 +15,7 @@ Python project
 -> L3.5 signals
 -> L4 interpretation
 -> analysis_tasks
+-> architecture_synthesis
 ```
 
 Цель этапа - повторяемый анализ Python-проектов, а не расширение архитектуры вширь.
@@ -35,7 +36,9 @@ Project Analyzer обязан разделять:
 
 * deterministic facts: найденные файлы, entrypoints, функции, схемы, side effects, routes, runtime commands;
 * L3.5 signals: короткие machine impulses;
-* L4 interpretation: человекочитаемая интерпретация и proposed tasks.
+* L4 interpretation: человекочитаемая интерпретация;
+* analysis_tasks: proposed backlog с evidence и acceptance criteria;
+* architecture_synthesis: проектный диагноз, целевая архитектурная форма, top bottlenecks, first slice, deferred scope и verification plan.
 
 Утверждение без evidence считается hypothesis, а не fact.
 
@@ -56,6 +59,24 @@ Project Analyzer обязан разделять:
 ```
 
 Summary и markdown являются вспомогательными слоями.
+
+## Architecture Synthesis
+
+`architecture_synthesis` не должен повторять общий checklist. Он обязан:
+
+* классифицировать форму проекта по evidence: API gateway, web GIS/data app, codegen toolkit, advisory runtime, CLI/tool;
+* объяснить главный архитектурный риск через конкретные файлы/functions;
+* выбрать один первый slice, который можно проверить контрактными тестами;
+* назвать, что пока не трогать, чтобы не расширить scope раньше проверки;
+* описать verification plan для выбранного slice.
+
+Синтез строится через knowledge-backed rule engine. Декларативные записи находятся в `knowledge/architecture_patterns/project_archetypes.json` и описывают match-признаки, diagnosis template, target architecture shape, first slice recipe, deferred scope и verification hints. Дополнительные advisory knowledge files: `capability_patterns.json` (типовые capability contracts/tests), `risk_patterns.json` (риски и mitigations) и `project_lessons.json` (уроки внешнего учителя/корректировщика по локальным и GitHub-прогонам). `source_scope_policy` в этой же базе знаний считает docs/examples/tests/extras/docs_src context-only evidence и не должен выбирать такие пути как first-slice targets при наличии core-source альтернатив. Runtime-код только загружает, валидирует, индексирует и применяет эти записи; knowledge base не содержит произвольного исполняемого кода.
+
+Кандидаты на следующие паттерны фиксируются в `knowledge/architecture_patterns/backlog.json` или как staged `KnowledgeCandidate`. Это backlog внешнего учителя/корректировщика, а не самообучение и не ground truth. Активное пополнение KB допускается только после нескольких подтвержденных кейсов, approval внешнего teacher/corrector и approval Codex/developer. `teacher_reference` является проверяемым ориентиром, а не истиной.
+
+Если `architecture_synthesis` остается generic (`python_project`) или low-confidence, project interpreter обязан вернуть `KnowledgeGapPacket` и `ResearchPlan`. Этот plan может включать GitHub repository search, official docs fetch или user clarification, но не выполняет внешний поиск автоматически. Результаты external research сохраняются как `SourceDigest` и могут породить только KB candidate, не активный record.
+
+Этот артефакт остается advisory: он не создает Pipeline DSL, не исполняет tasks и не меняет source/registry.
 
 ## Scoring
 

@@ -1,0 +1,73 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "proposed",
+        "not_applicable",
+        "prepared"
+      ]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "profile": {
+      "type": "object"
+    },
+    "catalog": {
+      "type": "object"
+    },
+    "patch": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "samples": {
+      "type": "array"
+    },
+    "args": {
+      "type": "array"
+    },
+    "kwargs": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "prepared"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "catalog"
+        ],
+        "properties": {
+          "catalog": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "active"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

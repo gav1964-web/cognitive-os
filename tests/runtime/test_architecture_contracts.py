@@ -36,3 +36,29 @@ def test_contract_registry_is_documented_and_enforced():
     assert "Contract Registry" in baseline
     assert "runtime/contract_registry.py" in spec
     assert (ROOT / "runtime" / "contract_registry.py").exists()
+
+
+def test_hypothesis_driven_self_improvement_docs_match_runtime():
+    self_improvement = (ROOT / "SELF_IMPROVEMENT.md").read_text(encoding="utf-8")
+    readme = (ROOT / "docs/architecture/research.md").read_text(encoding="utf-8")
+    baseline = (ROOT / "COGNITIVE_OS_TECHNICAL_BASELINE.md").read_text(encoding="utf-8")
+
+    for text in (self_improvement, readme, baseline):
+        normalized = " ".join(text.lower().split())
+        assert "HypothesisValidationPlan" in text
+        assert "post-training admission" in normalized
+        assert "newly discovered match" in normalized or "минимум новых matches" in normalized
+    assert "external_discovery_failed" in self_improvement
+    assert "insufficient_matching_holdouts" in self_improvement
+    assert "insufficient_new_matching_holdouts" in self_improvement
+    assert "hypothesis_validation_*.json" in self_improvement
+    assert "maximum_discovery_rounds" in self_improvement
+    assert "probe_failed" in self_improvement
+    assert "GitLab -> GitHub" in self_improvement
+    assert "large blind corpora remain release/calibration" in readme
+    assert (ROOT / "runtime" / "self_improvement_hypothesis_validation.py").exists()
+    assert (ROOT / "runtime" / "self_improvement_hypothesis_compiler.py").exists()
+    assert (ROOT / "config" / "hypothesis_compiler.json").exists()
+    assert "Hypothesis Compiler" in self_improvement
+    assert "HypothesisCandidate" in baseline
+    assert (ROOT / "tools" / "self_improvement_project_discovery.py").exists()

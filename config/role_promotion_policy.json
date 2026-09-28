@@ -1,0 +1,61 @@
+{
+  "schema_version": "role_promotion_policy.v1",
+  "status": "active",
+  "scope_boundary": {
+    "foundation_roles_1_3": {
+      "applies_to": "Python-owned boundary",
+      "included": ["pure Python packages", "Python services", "Python CLIs", "Python SDKs", "Python-facing adapters around native/frontend/data systems"],
+      "excluded": ["primary C/C++/Rust/native implementation", "frontend-owned product surface", "data/ML system correctness beyond Python orchestration"],
+      "rule": "Project Analyzer, Architect and SpecWriter readiness scores are valid only for a selected Python-owned boundary; non-Python-owned primary work is out_of_scope or requires a separate role contour."
+    }
+  },
+  "score_bands": {
+    "9_5": {
+      "minimum_projects": 40,
+      "minimum_pass_rate": 0.95,
+      "required_evidence": ["independent_holdout", "regression_tests", "config_doctor", "line_limit_check", "no_source_changes"]
+    },
+    "9_7": {
+      "minimum_projects": 80,
+      "minimum_pass_rate": 0.97,
+      "required_evidence": ["independent_holdout", "unseen_project_types", "runtime_rebuild_corpus", "regression_tests", "config_doctor", "line_limit_check", "no_source_changes"]
+    }
+  },
+  "first_four_roles": {
+    "project_analyzer": {
+      "target_score": 9.7,
+      "minimum_semantic_score": 9.6,
+      "minimum_artifact_score": 0.97,
+      "minimum_runtime_source_evidence_ratio": 0.97,
+      "required_checks": ["project_map_report_present", "project_report_has_answers", "project_map_report_quality_passed", "foundation_semantic_quality_passed"],
+      "required_semantic_checks": ["purpose_avoids_marketing_blurb", "generic_profile_not_masking_library_domain", "evidence_summary_is_source_backed", "minimal_extraction_plan_is_actionable"],
+      "growth_focus": ["source-backed domain classification", "actionable extraction plans", "negative evidence for generic projects"]
+    },
+    "architect": {
+      "target_score": 9.7,
+      "minimum_semantic_score": 9.6,
+      "minimum_artifact_score": 0.97,
+      "minimum_runtime_source_evidence_ratio": 0.97,
+      "required_checks": ["adr_present", "adr_has_chosen_option", "adr_has_traceability", "adr_quality_passed", "architect_red_team_passed"],
+      "required_semantic_checks": ["domain_profile_carried_to_architecture", "first_slice_not_generic_when_domain_cues_exist", "spec_target_is_within_architect_slice", "source_context_has_multiple_refs"],
+      "growth_focus": ["domain-specific first slices", "blocked handoff precision", "fact/judgment separation"]
+    },
+    "spec_writer": {
+      "target_score": 9.7,
+      "minimum_semantic_score": 9.6,
+      "minimum_artifact_score": 0.97,
+      "minimum_runtime_source_evidence_ratio": 0.97,
+      "required_checks": ["spec_present", "spec_has_requirements", "spec_has_acceptance", "spec_has_traceability", "spec_has_extraction_contract", "spec_writer_red_team_passed"],
+      "required_semantic_checks": ["io_contract_shapes_specific", "requirements_and_acceptance_are_implementable", "traceability_links_sources_to_acceptance", "implementation_handoff_bounded"],
+      "growth_focus": ["contract profiles with executable examples", "negative/edge cases", "bounded implementer handoff"]
+    },
+    "implementer": {
+      "target_score": 9.7,
+      "minimum_semantic_score": 9.5,
+      "minimum_artifact_score": 0.97,
+      "required_checks": ["implementation_plan_present", "implementation_plan_quality_passed", "contract_binding_present", "executor_handoff_present", "verification_commands_present"],
+      "required_semantic_checks": ["contract_binding_is_source_backed", "patch_scope_is_bounded", "acceptance_mapping_present", "rollback_plan_present"],
+      "growth_focus": ["task tree before patch plan", "executor-ready contract binding", "template solution library reuse"]
+    }
+  }
+}

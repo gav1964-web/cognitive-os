@@ -1,0 +1,10 @@
+{
+  "schema_version": "claim_obligation_cases.v1",
+  "cases": [
+    {"id": "case01", "source": "def dispatch(operation, token, reader, writer):\n    if operation == 'read':\n        return reader()\n    if not token:\n        raise PermissionError('token required')\n    return writer()\n", "claim": "Любая операция dispatch требует непустой токен.", "expected_verdict": "refuted", "rationale": "The read branch returns before the token guard; claim concerns enforcement by dispatch, not reader internals."},
+    {"id": "case02", "source": "def consume(resource):\n    try:\n        return resource.read()\n    finally:\n        resource.close()\n", "claim": "consume вызывает resource.close(), в том числе когда resource.read() выбрасывает исключение.", "expected_verdict": "supported", "rationale": "The finally suite invokes close on normal return and raised exceptions in ordinary Python control flow; success of close is not claimed."},
+    {"id": "case03", "source": "import html\n\ndef render(text, safe=False):\n    body = html.escape(text) if safe else text\n    return '<p>' + body + '</p>'\n", "claim": "render оборачивает текст в элемент p и всегда экранирует HTML-символы.", "expected_verdict": "refuted", "rationale": "Escaping is conditional on safe, whose default is false; wrapping is unconditional for normal string inputs."},
+    {"id": "case04", "source": "def store(event, registry):\n    sink = registry.lookup('durable')\n    return sink.append(event)\n", "claim": "store сохраняет событие на диск с гарантией восстановления после перезапуска процесса.", "expected_verdict": "uncertain", "rationale": "The alias durable does not expose the registry binding or append persistence implementation."},
+    {"id": "case05", "source": "def submit(value, publish):\n    if value < 0:\n        return False\n    publish(value)\n    return True\n", "claim": "При отрицательном числовом value submit возвращает False, не вызывая publish.", "expected_verdict": "supported", "rationale": "The negative-value branch returns before the publish call, under ordinary numeric comparison semantics."}
+  ]
+}

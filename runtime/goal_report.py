@@ -29,6 +29,7 @@ def build_goal_report(session: dict[str, Any], payload: dict[str, Any]) -> dict[
         "level35_project_signals": payload.get("level35_project_signals"),
         "level4_project_interpretation": payload.get("level4_project_interpretation"),
         "analysis_tasks": payload.get("analysis_tasks"),
+        "architecture_synthesis": payload.get("architecture_synthesis"),
         "llm_interpretation": payload.get("llm_interpretation"),
         "clarifications": session.get("clarifications", []),
         "events": session.get("events", []),

@@ -1,0 +1,65 @@
+{
+  "schema_version": "narrow_type_semantic_manifest.v1",
+  "evaluation_split": "training_replay",
+  "latest_evaluation": {
+    "status": "evidence_required",
+    "schema_version": "narrow_type_role_semantic_evidence.v2",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260908T102129049063Z.json",
+    "evidence_digest": "sha256:842b7b88716714054a8a6c0e932a9c6302c5c72ca05ba7e60c00bae25fcb02cb",
+    "role_scores": {
+      "project_analyzer": 9.4,
+      "architect": 8.5,
+      "spec_writer": 8.5,
+      "implementer": 9.0,
+      "tester": 8.8,
+      "reviewer": 8.8
+    }
+  },
+  "cases": [
+    {
+      "project": "click_strict_default_eq",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "pallets/click",
+      "source_owner": "pallets",
+      "regression_scope_kind": "full",
+      "role_report": "artifacts/project_development/project_development_20260908T080005548516Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T080005548516Z.json"
+    },
+    {
+      "project": "autoflake_incomplete_import",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "PyCQA/autoflake",
+      "source_owner": "PyCQA",
+      "regression_scope_kind": "full",
+      "role_report": "artifacts/project_development/project_development_20260908T081055463437Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T081055463437Z.json"
+    },
+    {
+      "project": "isort_trailing_backslash",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "PyCQA/isort",
+      "source_owner": "PyCQA-isort",
+      "regression_scope_kind": "full",
+      "role_report": "artifacts/project_development/project_development_20260908T081313132105Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T081313132105Z.json"
+    },
+    {
+      "project": "platformdirs",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "platformdirs/platformdirs",
+      "source_owner": "platformdirs",
+      "regression_scope_kind": "full",
+      "role_report": "artifacts/project_development/project_development_20260908T080952177227Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T080952177227Z.json"
+    },
+    {
+      "project": "marshmallow",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "marshmallow-code/marshmallow",
+      "source_owner": "marshmallow-code",
+      "regression_scope_kind": "full",
+      "role_report": "artifacts/project_development/project_development_20260908T080838137104Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260908T080838137104Z.json"
+    }
+  ]
+}

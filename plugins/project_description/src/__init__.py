@@ -1,0 +1,1 @@
+"""Read-only description competency."""

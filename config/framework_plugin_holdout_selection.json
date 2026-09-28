@@ -1,0 +1,42 @@
+{
+  "schema_version": "framework_plugin_holdout_selection.v1",
+  "status": "active",
+  "minimum_acquisition_projects": 3,
+  "minimum_holdout_projects": 3,
+  "split_seed": "framework-plugin-certification-v1",
+  "plugin_entrypoint_groups": [
+    "pytest11",
+    "mkdocs.plugins",
+    "flake8.extension",
+    "flake8.report",
+    "mypy.plugins",
+    "tox",
+    "hatch",
+    "sphinx.html_themes",
+    "babel.extractors"
+  ],
+  "owned_backend_required_functions": [
+    "build_wheel",
+    "build_sdist",
+    "prepare_metadata_for_build_wheel"
+  ],
+  "skip_directories": [
+    ".git",
+    ".tox",
+    ".venv",
+    "env",
+    "node_modules",
+    "site-packages",
+    "venv"
+  ],
+  "invariants": {
+    "untouched_only": true,
+    "root_manifest_authority": true,
+    "project_owned_source_required": true,
+    "owner_independence": true,
+    "content_independence": true,
+    "network_fallback_only_on_shortage": true,
+    "source_apply": false,
+    "promotion_applied": false
+  }
+}

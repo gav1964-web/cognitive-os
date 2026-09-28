@@ -1,0 +1,133 @@
+{
+  "schema_version": "architecture_synthesis_policy.v1",
+  "status": "active",
+  "fallback_target_shape": [
+    "Keep entrypoints thin and move decisions into named application services.",
+    "Extract first reusable capabilities around {capabilities}.",
+    "Wrap side-effecting dependencies behind adapters with timeout and failure contracts."
+  ],
+  "default_first_slice": {
+    "name": "first_bounded_capability_slice",
+    "goal": "Extract one useful capability with explicit input/output and tests.",
+    "target_task_types": ["DRAFT_PIPELINE_CAPABILITY", "EXTRACT_CAPABILITY"],
+    "steps": [
+      "Select one central callable with low external coupling.",
+      "Define input/output schema from signature and tests.",
+      "Move side effects behind a named adapter.",
+      "Add contract and negative tests."
+    ]
+  },
+  "first_slice_target_priority": {
+    "path_contains": [
+      {"token": "/service.py", "weight": 24},
+      {"token": "/services.py", "weight": 24},
+      {"token": "/factory.py", "weight": 24},
+      {"token": "/api.py", "weight": 14}
+    ],
+    "symbol_contains": [
+      {"token": "parse_file", "weight": 18},
+      {"token": "providers_from_config", "weight": 22}
+    ],
+    "symbol_prefixes": [
+      {"token": "build_", "weight": 18},
+      {"token": "create_", "weight": 18},
+      {"token": "resolve", "weight": 18},
+      {"token": "parse_", "weight": 12}
+    ],
+    "low_value_path_contains": [
+      {"token": "/helpers.py", "weight": 14},
+      {"token": "/utils.py", "weight": 12},
+      {"token": "/_llm_client.py", "weight": 16},
+      {"token": "/routing.py", "weight": 22}
+    ],
+    "low_value_symbol_prefixes": [
+      {"token": "should_", "weight": 20},
+      {"token": "has_", "weight": 18},
+      {"token": "is_", "weight": 14},
+      {"token": "get_", "weight": 8}
+    ]
+  },
+  "defer": {
+    "default_items": [
+      "Do not rewrite the whole project before one slice has passing contract tests."
+    ]
+  },
+  "verification": {
+    "default_steps": [
+      "Create or extend focused tests for slice `{slice_name}`; current detected test files: {existing_tests}.",
+      "Add one happy-path contract test and one malformed-input or failed-dependency test.",
+      "Record before/after ProjectMapReport to confirm fewer mixed responsibilities or clearer capability boundary."
+    ]
+  },
+  "bottlenecks": {
+    "rules": [
+      {
+        "kind": "process_boundary",
+        "source": "runtime_extraction.process_boundary",
+        "limit": 3,
+        "reason": "network/subprocess/filesystem work needs isolation",
+        "severity": "high"
+      },
+      {
+        "kind": "hidden_orchestration",
+        "source": "runtime_extraction.orchestrators",
+        "limit": 3,
+        "reason": "control flow is implicit and hard to replay",
+        "severity": "high"
+      },
+      {
+        "kind": "broad_function",
+        "source": "facts.broad",
+        "limit": 3,
+        "reason": "too many responsibilities behind one callable",
+        "severity": "high"
+      },
+      {
+        "kind": "replay_safety",
+        "source": "runtime_extraction.idempotency",
+        "limit": 3,
+        "reason": "retry or replay can duplicate side effects",
+        "severity": "medium"
+      },
+      {
+        "kind": "extraction_candidate",
+        "source": "analysis_tasks",
+        "task_types": ["DRAFT_PIPELINE_CAPABILITY", "EXTRACT_CAPABILITY"],
+        "limit": 8,
+        "reason": "candidate can become a first bounded pipeline step",
+        "severity": "medium"
+      }
+    ],
+    "severity_order": {"high": 0, "medium": 1, "low": 2},
+    "kind_order": {
+      "hidden_orchestration": 0,
+      "broad_function": 1,
+      "process_boundary": 2,
+      "replay_safety": 3,
+      "extraction_candidate": 4
+    }
+  },
+  "task_focus": {
+    "preferred_order": {
+      "DRAFT_PIPELINE_CAPABILITY": 0,
+      "MAKE_ORCHESTRATION_EXPLICIT": 1,
+      "ISOLATE_PROCESS_BOUNDARY": 2,
+      "SPLIT_MIXED_RESPONSIBILITY": 3,
+      "HARDEN_CONTRACT": 4,
+      "ADD_IDEMPOTENCY_GUARD": 5,
+      "DEFINE_CHECKPOINT_POLICY": 6
+    },
+    "default_rank": 20,
+    "limit": 6
+  },
+  "confidence": {
+    "high_requires_entrypoints": true,
+    "high_requires_capabilities": true,
+    "high_requires_bottlenecks": true,
+    "high_min_match_score_exclusive": 1,
+    "medium_requires_any": ["entrypoints", "capabilities"]
+  },
+  "primary_target": {
+    "fallback": "no dominant hotspot"
+  }
+}

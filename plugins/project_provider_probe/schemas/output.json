@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "required": ["root", "command", "exit_code", "status", "report_path", "stdout_tail", "stderr_tail"],
+  "properties": {
+    "root": { "type": "string" },
+    "command": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "exit_code": { "type": "integer" },
+    "status": { "type": "string" },
+    "report_path": { "type": ["string", "null"] },
+    "stdout_tail": { "type": "string" },
+    "stderr_tail": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,42 @@
+import csv
+import json
+
+from news_site_scraper.report_writer import FIELDS, write_news_csv, write_news_markdown, write_news_report
+
+
+def test_report_writer_writes_stable_csv_header(tmp_path):
+    output = tmp_path / 'news.csv'
+    write_news_csv(str(output), [{'title':'T','url':'U','date':'D','summary':'','source':'3dnews.ru'}])
+    assert list(csv.reader(output.open(encoding='utf-8')))[0] == FIELDS
+
+
+def test_report_writer_writes_markdown_links(tmp_path):
+    output = tmp_path / 'news.md'
+    write_news_markdown(str(output), [{'title':'T','url':'https://example.test/n','date':'D','summary':'S','source':'ixbt.com'}], fixture=True)
+    text = output.read_text(encoding='utf-8')
+    assert '# Сводка новостей' in text
+    assert 'not live site news' in text
+    assert '[T](https://example.test/n)' in text
+    assert ' | ixbt.com' not in text
+
+
+def test_markdown_report_has_one_russian_overall_summary_and_no_per_article_placeholder(tmp_path):
+    output = tmp_path / 'news.md'
+    rows = [
+        {'title':'Первая новость про политику','url':'https://example.test/a','date':'10:00','summary':'','source':'example.test'},
+        {'title':'Вторая новость про экономику','url':'https://example.test/b','date':'10:05','summary':'Описание второй новости.','source':'example.test'},
+    ]
+    write_news_markdown(str(output), rows)
+    text = output.read_text(encoding='utf-8')
+    assert text.count('## Общее резюме') == 1
+    assert '## Ссылки для проверки' in text
+    assert 'Общее резюме: собрано 2 релевантных материалов' in text
+    assert 'Summary unavailable' not in text
+    assert 'Описание второй новости.' in text
+    assert '10:00 | example.test' not in text
+
+
+def test_report_writer_dispatches_by_suffix(tmp_path):
+    output = tmp_path / 'news.md'
+    write_news_report(str(output), [{'title':'T','url':'U','date':'','summary':'','source':'ixbt.com'}], fixture=True)
+    assert output.read_text(encoding='utf-8').startswith('# Сводка новостей')

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/35254d214f5bcc4cac57de99b96e231b62723de78e9c81b6396bd21d9fb99935.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:35254d214f5bcc4cac57de99b96e231b62723de78e9c81b6396bd21d9fb99935",
+  "entry_digest": "sha256:d516e1c47a637b7b213942c4c73e96a7d1ac64ce68debc5f7ad2b5e85a354fb8",
+  "evaluator_fingerprint": "ast_transition_boundary_contract:v1",
+  "producer_fingerprint": "interpreter_coverage_audit:v1",
+  "replay_command": [
+    "python",
+    "tools/interpreter_coverage_audit.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/interpreter_coverage_audit_20260906T025343633962Z.json",
+  "status": "promoted"
+}

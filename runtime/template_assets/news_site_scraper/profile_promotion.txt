@@ -1,0 +1,208 @@
+from __future__ import annotations
+
+import json
+from dataclasses import asdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+from news_site_scraper.fetcher import fetch_html
+from news_site_scraper.parser import parse_news_items
+from news_site_scraper.site_profile import SiteProfile
+
+
+def run_profile_promotion_gate(proposal_path: str, output_path: str, *, html_path: str | None = None, requested_top: int = 10) -> dict[str, Any]:
+    proposal = json.loads(Path(proposal_path).read_text(encoding='utf-8'))
+    decision = evaluate_profile_promotion(proposal, html_path=html_path, requested_top=requested_top)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(decision, ensure_ascii=False, indent=2), encoding='utf-8')
+    return decision
+
+
+def run_kb_patch_proposal(decision_path: str, output_path: str) -> dict[str, Any]:
+    decision = json.loads(Path(decision_path).read_text(encoding='utf-8'))
+    patch = build_kb_patch_proposal(decision)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding='utf-8')
+    return patch
+
+
+def build_kb_patch_proposal(decision: dict[str, Any]) -> dict[str, Any]:
+    if decision.get('artifact_type') != 'ProfilePromotionDecision' or decision.get('decision') != 'promote':
+        return _patch_blocked(decision, 'promotion decision is not promote')
+    sample_rows = decision.get('sample_rows') if isinstance(decision.get('sample_rows'), list) else []
+    if not sample_rows:
+        return _patch_blocked(decision, 'promotion decision has no sample rows')
+    profile = _profile_entry_from_decision(decision)
+    if profile is None:
+        return _patch_blocked(decision, 'cannot derive profile entry from decision')
+    return {
+        'artifact_type': 'KBPatchProposal',
+        'status': 'awaiting_human_approval',
+        'target': 'news_site_profiles.json',
+        'operation': 'append_profile',
+        'profile': profile,
+        'evidence': {'rows_found': decision.get('rows_found'), 'sample_rows': sample_rows[:5]},
+        'approval': {'approved': False, 'approved_by': None},
+        'invariants': {
+            'not_applied_automatically': True,
+            'requires_human_approval': True,
+            'source_decision_required': True,
+        },
+    }
+
+
+def apply_approved_profile_patch(patch_path: str, output_path: str, *, profiles_path: str | None = None) -> dict[str, Any]:
+    patch = json.loads(Path(patch_path).read_text(encoding='utf-8'))
+    result = apply_profile_patch(patch, profiles_path=profiles_path)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+    return result
+
+
+def apply_profile_patch(patch: dict[str, Any], *, profiles_path: str | None = None) -> dict[str, Any]:
+    if patch.get('artifact_type') != 'KBPatchProposal' or patch.get('operation') != 'append_profile':
+        return _apply_result('rejected', 'unsupported patch artifact')
+    approval = patch.get('approval') if isinstance(patch.get('approval'), dict) else {}
+    if approval.get('approved') is not True:
+        return _apply_result('rejected', 'human approval is required')
+    profile = patch.get('profile') if isinstance(patch.get('profile'), dict) else {}
+    if not _valid_profile_entry(profile):
+        return _apply_result('rejected', 'profile entry failed validation')
+    path = Path(profiles_path) if profiles_path else Path(__file__).with_name('news_site_profiles.json')
+    data = json.loads(path.read_text(encoding='utf-8'))
+    profiles = data.setdefault('profiles', [])
+    host = str(profile.get('host_contains') or '').lower()
+    if any(str(item.get('host_contains') or '').lower() == host for item in profiles if isinstance(item, dict)):
+        return _apply_result('skipped', 'profile already exists', path)
+    profiles.append(profile)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return _apply_result('applied', 'approved profile appended', path)
+
+
+def evaluate_profile_promotion(proposal: dict[str, Any], *, html_path: str | None = None, requested_top: int = 10) -> dict[str, Any]:
+    if proposal.get('artifact_type') != 'SiteProfileProposal' or proposal.get('status') != 'candidate':
+        return _decision(proposal, 'reject', 'proposal is not a candidate', 0, [])
+    candidate = proposal.get('candidate_profile') if isinstance(proposal.get('candidate_profile'), dict) else {}
+    profile = _profile_from_candidate(candidate, proposal)
+    if profile is None:
+        return _decision(proposal, 'reject', 'candidate profile failed schema validation', 0, [])
+    html = _load_html_for_proposal(proposal, html_path)
+    if not html.strip():
+        return _decision(proposal, 'needs_more_evidence', 'no HTML evidence available for validation', 0, [])
+    rows = parse_news_items(html, profile)
+    rows = [row for row in rows if _same_host(row.get('url', ''), profile.base_url)]
+    min_required = max(1, min(requested_top, 3))
+    if len(rows) >= min_required:
+        return _decision(proposal, 'promote', 'candidate extracted enough same-host news items from validation evidence', len(rows), rows[:requested_top])
+    return _decision(proposal, 'needs_more_evidence', 'candidate did not extract enough validated news items', len(rows), rows[:requested_top])
+
+
+def _profile_from_candidate(candidate: dict[str, Any], proposal: dict[str, Any]) -> SiteProfile | None:
+    source = str(candidate.get('source') or '')
+    markers = candidate.get('link_markers') if isinstance(candidate.get('link_markers'), list) else []
+    patterns = candidate.get('article_path_patterns') if isinstance(candidate.get('article_path_patterns'), list) else []
+    if not source or not markers or not patterns:
+        return None
+    url = str(proposal.get('url') or '')
+    parsed = urlparse(url if '://' in url else 'https://' + url)
+    base_url = f'{parsed.scheme or "https"}://{parsed.netloc or parsed.path}/'
+    return SiteProfile(
+        base_url=base_url,
+        source=source,
+        link_markers=tuple(str(item) for item in markers),
+        article_path_patterns=tuple(str(item) for item in patterns),
+        blocked_path_markers=('/redirect', '/about', '/contact', '/search', '/login', '/subscribe', '/tag', '/tags'),
+        blocked_titles=('новости', 'читать далее', 'read more', 'subscribe'),
+    )
+
+
+def _load_html_for_proposal(proposal: dict[str, Any], html_path: str | None) -> str:
+    if html_path:
+        return Path(html_path).read_text(encoding='utf-8')
+    evidence = proposal.get('evidence') if isinstance(proposal.get('evidence'), dict) else {}
+    raw_html = evidence.get('html')
+    if isinstance(raw_html, str):
+        return raw_html
+    try:
+        return fetch_html(str(proposal.get('url') or ''), timeout=10.0)
+    except Exception:
+        return ''
+
+
+def _decision(proposal: dict[str, Any], decision: str, reason: str, rows_found: int, sample_rows: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        'artifact_type': 'ProfilePromotionDecision',
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'decision': decision,
+        'reason': reason,
+        'proposal_url': proposal.get('url'),
+        'rows_found': rows_found,
+        'sample_rows': sample_rows,
+        'candidate_profile': proposal.get('candidate_profile') if isinstance(proposal.get('candidate_profile'), dict) else None,
+        'promotion_target': 'news_site_profiles.json' if decision == 'promote' else None,
+        'invariants': {
+            'profile_not_written_to_kb': True,
+            'human_review_required': True,
+            'same_host_rows_required': True,
+        },
+    }
+
+
+def _profile_entry_from_decision(decision: dict[str, Any]) -> dict[str, Any] | None:
+    candidate = decision.get('candidate_profile') if isinstance(decision.get('candidate_profile'), dict) else {}
+    profile = {
+        'host_contains': candidate.get('host_contains') or _host(decision.get('proposal_url')),
+        'source': candidate.get('source') or _host(decision.get('proposal_url')),
+        'link_markers': candidate.get('link_markers'),
+        'article_path_patterns': candidate.get('article_path_patterns'),
+    }
+    return profile if _valid_profile_entry(profile) else None
+
+
+def _valid_profile_entry(profile: dict[str, Any]) -> bool:
+    return bool(
+        isinstance(profile.get('host_contains'), str)
+        and profile.get('host_contains')
+        and isinstance(profile.get('source'), str)
+        and profile.get('source')
+        and isinstance(profile.get('link_markers'), list)
+        and profile.get('link_markers')
+        and isinstance(profile.get('article_path_patterns'), list)
+        and profile.get('article_path_patterns')
+    )
+
+
+def _patch_blocked(decision: dict[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        'artifact_type': 'KBPatchProposal',
+        'status': 'blocked',
+        'reason': reason,
+        'source_decision': decision.get('artifact_type'),
+        'invariants': {'not_applied_automatically': True, 'requires_human_approval': True},
+    }
+
+
+def _apply_result(status: str, reason: str, path: Path | None = None) -> dict[str, Any]:
+    return {
+        'artifact_type': 'KBPatchApplyResult',
+        'status': status,
+        'reason': reason,
+        'target_path': str(path) if path else None,
+        'invariants': {'explicit_approval_checked': True},
+    }
+
+
+def _host(value: Any) -> str:
+    parsed = urlparse(str(value or ''))
+    return parsed.netloc.lower().removeprefix('www.') or 'unknown'
+
+
+def _same_host(url: str, base_url: str) -> bool:
+    left = urlparse(url).netloc.lower().removeprefix('www.')
+    right = urlparse(base_url).netloc.lower().removeprefix('www.')
+    return bool(left and right and left == right)

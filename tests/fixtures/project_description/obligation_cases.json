@@ -1,0 +1,41 @@
+{
+  "schema_version": "claim_obligation_cases.v1",
+  "scope": "Authored synthetic examples; not blind or independently certified",
+  "cases": [
+    {
+      "id": "case01",
+      "source": "def fetch(client):\n    try:\n        return client.get()\n    except TimeoutError:\n        return client.get()\n",
+      "claim": "При любой ошибке клиента запрос повторяется один раз.",
+      "expected_verdict": "refuted",
+      "rationale": "Only TimeoutError is caught; other client errors propagate. A universal error policy is not implemented."
+    },
+    {
+      "id": "case02",
+      "source": "import gzip\ndef encode(data, compressed=False):\n    raw = data.encode('utf-8')\n    if compressed:\n        return gzip.compress(raw)\n    return raw\n",
+      "claim": "Текст кодируется в UTF-8, а результат всегда сжимается gzip.",
+      "expected_verdict": "refuted",
+      "rationale": "UTF-8 encoding is present, but compression is conditional. Confirming the first part must not confirm the second."
+    },
+    {
+      "id": "case03",
+      "source": "def dispatch(payload, resolve):\n    backend = resolve('archive')\n    return backend.write(payload)\n",
+      "claim": "Запись через имя archive выполняется в локальный файл без сетевых обращений.",
+      "expected_verdict": "uncertain",
+      "rationale": "Resolver implementation and backend are absent; alias spelling proves neither locality nor lack of network."
+    },
+    {
+      "id": "case04",
+      "source": "def load(key, cache, fetch):\n    if key in cache:\n        return cache[key]\n    value = fetch(key)\n    cache[key] = value\n    return value\n",
+      "claim": "Если ключ уже есть в кэше, функция возвращает сохранённое значение без вызова fetch.",
+      "expected_verdict": "supported",
+      "rationale": "The early return directly supports the conditional claim. No product-wide absence is asserted."
+    },
+    {
+      "id": "case05",
+      "source": "def health():\n    return {'status': 'ready'}\n\ndef route(path):\n    if path == '/health':\n        return {'status': 'disabled'}\n    return {'status': 'missing'}\n",
+      "claim": "Маршрут /health вызывает функцию health и возвращает статус ready.",
+      "expected_verdict": "refuted",
+      "rationale": "A similarly named helper is not called; the route returns disabled. Both the binding and output claim are contradicted."
+    }
+  ]
+}

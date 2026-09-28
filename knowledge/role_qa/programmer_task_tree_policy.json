@@ -1,0 +1,16 @@
+{
+  "schema_version": "programmer_task_tree_policy.v1",
+  "status": "active",
+  "purpose": "Convert implementation evidence into a bounded dependency graph without embedding project-family recipes in runtime code.",
+  "limits": {"expected_files": 16, "changes": 12, "acceptance": 16, "max_nodes": 32},
+  "required_gates": ["sandbox_only", "writable_scope_only", "source_project_unchanged"],
+  "allowed_actions": ["synthesize_patch_in_sandbox", "run_verification", "emit_patch_package", "emit_test_result"],
+  "forbidden_actions": ["edit_source_project", "edit_registry", "skip_dependencies", "skip_verifier_gates", "invent_untraced_acceptance"],
+  "stop_conditions": [
+    "no_safe_bounded_target",
+    "required_change_leaves_writable_scope",
+    "acceptance_obligation_is_unmapped",
+    "dependency_policy_requires_unapproved_expansion",
+    "same_failure_class_repeats_twice"
+  ]
+}

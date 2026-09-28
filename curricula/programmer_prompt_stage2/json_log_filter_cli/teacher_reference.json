@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-утилиту, которая фильтрует JSONL-логи по уровню ERROR и сохраняет результат в новый JSONL-файл.",
+  "expected_steps": [
+    "clarify JSONL input format and default log level",
+    "create small CLI project scaffold with package module, README and tests",
+    "define contract for input path, output path, selected level and skipped malformed lines",
+    "implement JSONL parser that skips malformed lines with a counter",
+    "write deterministic JSONL output for matching records",
+    "add fixture-based tests for filter and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/json_log_filter/__init__.py",
+    "src/json_log_filter/cli.py",
+    "src/json_log_filter/filter.py",
+    "tests/fixtures/events.jsonl",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "JSONL fixture is filtered by level",
+    "CLI writes filtered JSONL output",
+    "malformed JSON lines are skipped with count",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

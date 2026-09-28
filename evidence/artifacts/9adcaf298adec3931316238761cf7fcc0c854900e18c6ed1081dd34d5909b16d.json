@@ -1,0 +1,1975 @@
+{
+  "cases": [
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "worker.py:handle_job",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "async_worker_queue",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "async_worker_queue",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "async_worker_scheduler",
+        "matched_markers": [
+          "async_worker",
+          "queue"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "async_worker_scheduler",
+        "project_shape": null,
+        "project_stratum": "async_worker_scheduler",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Async execution primitives"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "worker.py:handle_job",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:efed9bc84eb9da5d5c14d8188d32d0c42474dd02d7cc65392fd10fcad024e900",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "worker.py:handle_job"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:ad429a283ce50c8de7a68ceea706651e9bc353da1b287855f698639fc46454b9",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "worker.py:handle_job"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:c5d17d2ba4d9c123f317fde785a58570fc1e21b88e83c59c2d62bafb10f6d89e",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "worker.py:handle_job"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:9fad7797810385013f3a283e0d254e7f286c939685b5c0e24761f11888af6c90",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "worker.py:handle_job"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:6bafa8ac3156d745cc731e2e0c212f3b945eb248dde73bd14fe93a8ae921e72b",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "worker.py:handle_job"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "async_worker_queue",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 5,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "worker.py:handle_job",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "worker.py:handle_job",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "worker.py:handle_job",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "worker.py:handle_job",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "worker.py:handle_job",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "bot.py:parse_command",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "bot_with_handlers",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "bot_with_handlers",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "fallback",
+        "contract_family": null,
+        "effective_project_identity": "unknown_new_archetype",
+        "matched_markers": [],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": null,
+        "project_shape": null,
+        "project_stratum": "unknown_new_archetype",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Unknown or new archetype"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "bot.py:parse_command",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:12132b7bd086005b5764c71e53d1a3b4604ead2f28f03cf490bf34618be446db",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "bot.py:parse_command"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:846afdea1a8432a1c247974373741ec4bf70fb8a1c43168332f8102952351eb3",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "bot.py:parse_command"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:79fc16f4c20d2cd24604ee87173ceacb20754abfacc1612ed41bed82f2730cb4",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "bot.py:parse_command"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:4f04fc41e6fd332c544234dd8ce1804c377b8c1a923f00c37d1731d9f25dcfe1",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "bot.py:parse_command"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:93d13c70e149879f1f567e5b2c32f88d57646810f90f377dc57a0199d1d524c4",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "bot.py:parse_command"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "bot_with_handlers",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "bot.py:parse_command",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "bot.py:parse_command",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "bot.py:parse_command",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "bot.py:parse_command",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "bot.py:parse_command",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "pipeline.py:normalize_rows",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "data_pipeline_csv_json",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "data_pipeline_csv_json",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "data_tabular_pipeline",
+        "matched_markers": [
+          "data_pipeline"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "data_tabular_pipeline",
+        "project_shape": null,
+        "project_stratum": "data_tabular_pipeline",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Tabular and data pipelines"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "pipeline.py:normalize_rows",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:8265b5b57df4d9d2bef1c75733f685033b8b23c47bc04d79d8cfdf9dcd38c55c",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "pipeline.py:normalize_rows"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:51f712a54a41914ae78124a21fd39b1777d9b5922878c0c61238e496627a32ea",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "pipeline.py:normalize_rows"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:a3f9a2048de687f5b670aa949a2d1f90a240924bcee467f52db78a76f1e08df4",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "pipeline.py:normalize_rows"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:945602f4073b9b22d48d413b95071f952da31387f09df39886dbe164cd304a5f",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "pipeline.py:normalize_rows"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:317b2bf7734212a38183b1fb61444e2c8b4865554b912c597e20fb17219d02bb",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "pipeline.py:normalize_rows"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "data_pipeline_csv_json",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "pipeline.py:normalize_rows",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "pipeline.py:normalize_rows",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "pipeline.py:normalize_rows",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "pipeline.py:normalize_rows",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "pipeline.py:normalize_rows",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "main.py:price_item",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "fastapi_service_with_pydantic",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "fastapi_service_with_pydantic",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "web_api_middleware",
+        "matched_markers": [
+          "fastapi"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "web_api_middleware",
+        "project_shape": null,
+        "project_stratum": "web_api_middleware",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Web/API endpoint transforms"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "main.py:price_item",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:5025b8fa834030eb7a53e51be8e9836fbbf6fee7ef2a7bb2b8ab3234d500203d",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:price_item"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:9ce516893ca87643eb37fb89141a24663fd411f840c60de44ca179a5954a602d",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "main.py:price_item"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:46cbc2498abe98c3fe0b13134c033b7bf92d070b1669e8e1634f1250ab1d2b84",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:price_item"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:2db51096cd4b3fe06e2df0eadd2dfc435d572ae3b52f6567d3674a0f0b788d40",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:price_item"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:fb482cf8c80c66b27441e379bf70946056d74c9510824226b81a4fb2be6d89fb",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "main.py:price_item"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "fastapi_service_with_pydantic",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "main.py:price_item",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "main.py:price_item",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "main.py:price_item",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "main.py:price_item",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "main.py:price_item",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "app.py:parse_payload",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "flask_api_with_mixed_logic",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "flask_api_with_mixed_logic",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "web_api_middleware",
+        "matched_markers": [
+          "flask"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "web_api_middleware",
+        "project_shape": null,
+        "project_stratum": "web_api_middleware",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Web/API endpoint transforms"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "app.py:parse_payload",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:67557dd336fba6a28f6cfb4cdc32278890471e0ac23cf85d617d93ae419b76a5",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "app.py:parse_payload"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:3b2cffd94fbffde524334fabfcf832f9b8fe92a27c29d0df222db9900782842f",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "app.py:parse_payload"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:7b82521dcc6985de100a7d5fb1fc8a99bc11a925b8f6ec44a38c7a7ad5b63835",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "app.py:parse_payload"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:c6d3582040d90993075c252eb35c3a5cfdb283038b87747f8a97121673ea1aa6",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "app.py:parse_payload"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:fc226c1534772a8b3e15230490af6ae9506408f46cd7be720b3f13d80d4a5739",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "app.py:parse_payload"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "flask_api_with_mixed_logic",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "app.py:parse_payload",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "app.py:parse_payload",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "app.py:parse_payload",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "app.py:parse_payload",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "app.py:parse_payload",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "legacy.py:legacy_process_all",
+      "next_action": "rework_role_artifacts",
+      "no_safe_candidate_recovery": {
+        "architect_reentry_gate": {
+          "artifact_type": "ArchitectRecoveryGate",
+          "authority": "architect",
+          "can_enter_developer": true,
+          "can_enter_implementer": false,
+          "can_replace_controlled_stop": false,
+          "checks": {
+            "candidate_is_not_falsely_source_backed": true,
+            "confidence_is_sufficient": true,
+            "effect_adapters_cover_observed_effects": true,
+            "failure_packet_is_bounded": true,
+            "hypothesis_returns_to_gate": true,
+            "origin_is_source_backed": true,
+            "pure_core_declares_no_effects": true
+          },
+          "required_reentry": "normal_source_backed_first_slice_reselection",
+          "status": "accepted_for_bounded_rework"
+        },
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "automatic_promotion": false,
+        "created_at": "2026-09-04T07:26:58.619968+00:00",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "developer_request": {
+          "acceptance_focus": [
+            "source-backed callable exists",
+            "normal Architect reselection accepts it"
+          ],
+          "artifact_type": "DeveloperImprovementRequest",
+          "evidence_refs": [
+            "NoSafeCandidateFailurePacket",
+            "legacy.py:legacy_process_all"
+          ],
+          "forbidden_auto_actions": [
+            "edit_source",
+            "mutate_registry",
+            "promote_to_kb"
+          ],
+          "missing_capability": "legacy.py:normalize_record",
+          "next_step": "developer implements bounded change, then Architect reruns the normal gate",
+          "patch_recipe": {
+            "created_target": "legacy.py:normalize_record",
+            "execution_mode": "isolated_sandbox_no_source_edit",
+            "id": "extract_append_mapping_helper",
+            "origin_target": "legacy.py:legacy_process_all"
+          },
+          "problem": "The only source-backed callable mixes transformation logic with external effects.",
+          "request_id": "decompose_no_safe_candidate",
+          "requires_developer": true,
+          "status": "requested",
+          "suggested_work": [
+            "extract the proposed pure core without changing observable orchestration behavior",
+            "keep filesystem and subprocess operations behind explicit adapters",
+            "add pure-core and adapter-boundary tests"
+          ]
+        },
+        "failure_packet": {
+          "allowed_outcomes": [
+            "decomposition_hypothesis",
+            "knowledge_gap"
+          ],
+          "artifact_type": "NoSafeCandidateFailurePacket",
+          "created_at": "2026-09-04T07:26:58.614967+00:00",
+          "forbidden_actions": [
+            "edit_source",
+            "select_nonexistent_callable",
+            "mutate_kb",
+            "bypass_architect_gate"
+          ],
+          "project": "legacy_script_dump",
+          "rejected_candidates": [
+            {
+              "blocking_rules": [
+                "external_effect_boundary"
+              ],
+              "observed_side_effects": [
+                "filesystem",
+                "filesystem_read",
+                "subprocess"
+              ],
+              "semantic_score": 69,
+              "target": "legacy.py:legacy_process_all",
+              "viability_status": "deferred"
+            }
+          ],
+          "research_question": "Can the highest-value rejected callable be decomposed into a pure core and explicit effect adapters?",
+          "reselection_status": "exhausted",
+          "return_to_role": "architect",
+          "status": "requested",
+          "trigger": "no_semantically_safe_candidate_in_approved_first_slice"
+        },
+        "fallback": {
+          "active_until": "source_backed_candidate_passes_normal_architect_reselection",
+          "status": "blocked_no_safe_candidate"
+        },
+        "kb_changes": false,
+        "project": "legacy_script_dump",
+        "provisional_candidate": {
+          "artifact_type": "ProvisionalExtractionCandidate",
+          "candidate": "legacy.py:normalize_record",
+          "evidence_ref": "NoSafeCandidateFailurePacket",
+          "origin_target": "legacy.py:legacy_process_all",
+          "promotion_gate": {
+            "automatic_promotion": false,
+            "required_checks": [
+              "developer_adds_source_backed_callable",
+              "pure_contract_tests_pass",
+              "effect_adapter_tests_pass",
+              "normal_architect_reselection_selects_candidate"
+            ]
+          },
+          "selection_eligible": false,
+          "source_backed": false,
+          "status": "verified_for_bounded_implementation",
+          "verification_scope": "architecture_and_source_decomposition_plan"
+        },
+        "research_hypothesis": {
+          "actions": [
+            "request_bounded_decomposition",
+            "return_to_architect_gate"
+          ],
+          "artifact_type": "SemanticDecompositionHypothesis",
+          "confidence": 0.86,
+          "effect_adapters": [
+            {
+              "boundary": "file_gateway",
+              "effect": "filesystem"
+            },
+            {
+              "boundary": "file_gateway",
+              "effect": "filesystem_read"
+            },
+            {
+              "boundary": "process_runner",
+              "effect": "subprocess"
+            }
+          ],
+          "evidence": [
+            "legacy.py:legacy_process_all:source_lines=6-19",
+            "legacy.py:legacy_process_all:effectful_calls=read_text,subprocess.run,write_text",
+            "legacy.py:legacy_process_all:transform_signals=record_build,serialize_json,split,splitlines,strip"
+          ],
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "legacy.py:legacy_process_all",
+          "proposed_target": "legacy.py:normalize_record",
+          "pure_core_contract": {
+            "input": "parsed_row",
+            "output": "normalized_record",
+            "side_effects": []
+          },
+          "return_to_gate": true,
+          "risks": [
+            "proposed callable does not exist until Developer implements the decomposition",
+            "subprocess ordering and output behavior must remain explicit at the orchestration boundary"
+          ],
+          "status": "proposed"
+        },
+        "route": [
+          "reviewer",
+          "researcher",
+          "architect",
+          "developer",
+          "architect"
+        ],
+        "source_changes": false,
+        "status": "bounded_rework_ready"
+      },
+      "project": "legacy_script_dump",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "cli_local_tool",
+        "matched_markers": [
+          "script"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "cli_local_tool",
+        "project_shape": null,
+        "project_stratum": "cli_local_tool",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "CLI and local tools"
+      },
+      "recommendation": "request_rework",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [
+          {
+            "outcome": {
+              "artifact_type": "FirstSliceReselectionOutcome",
+              "authority": "architect",
+              "candidate_viability": [
+                {
+                  "architecture_significance": 0,
+                  "argument_count": 0,
+                  "argument_usage_types": {},
+                  "contract_shape_score": 100,
+                  "dependency_readiness": {
+                    "analysis": "function_scoped_static_import_graph",
+                    "external_imports": [],
+                    "local_imports": [],
+                    "local_modules_scanned": 1,
+                    "missing_external_modules": [],
+                    "module": "legacy.py",
+                    "status": "ready"
+                  },
+                  "environment_ready": true,
+                  "index": 0,
+                  "matched_rules": [
+                    {
+                      "reason": "network, subprocess, or external runtime I/O requires an adapter fixture and is deferred behind a pure contract",
+                      "rule_id": "external_effect_boundary",
+                      "score_delta": -65
+                    }
+                  ],
+                  "minimum_score": 0,
+                  "observed_side_effects": [
+                    "filesystem",
+                    "filesystem_read",
+                    "subprocess"
+                  ],
+                  "output_inference_basis": "return_expression",
+                  "property_accessor": false,
+                  "ranking_reasons": [
+                    "execution cost requires reselection: external_effect_boundary"
+                  ],
+                  "receiver_fixture_status": "not_required",
+                  "receiver_independent": true,
+                  "reselection_required": true,
+                  "return_paths": 1,
+                  "runtime_call_scope": "external_global",
+                  "score": -65,
+                  "semantic_score": 69,
+                  "semantic_status": "acceptable",
+                  "source": "knowledge/architecture_patterns/first_slice_viability.json",
+                  "state_mutation": false,
+                  "status": "deferred",
+                  "target": "legacy.py:legacy_process_all",
+                  "typed_argument_count": 0,
+                  "viability_eligible": false
+                }
+              ],
+              "declared_dependency_candidate_count": 0,
+              "environment_ready_candidate_count": 1,
+              "expanded_candidate_count": 2,
+              "iteration": 1,
+              "selected_targets": [],
+              "selection_policy_ids": [],
+              "semantic_qualified_candidate_count": 0,
+              "source": "ProjectMapReport expanded candidate evidence",
+              "status": "exhausted",
+              "trigger": "no_semantically_safe_candidate_in_approved_first_slice",
+              "viability_deferred_candidate_count": 1
+            },
+            "resolution_status": "exhausted",
+            "terminal": true,
+            "trigger": "no_semantically_safe_candidate_in_approved_first_slice"
+          }
+        ],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "bounded_decomposition_required",
+          "researcher": "semantic_recovery"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "blocked_no_safe_candidate",
+        "first_pass_acceptance": false,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:5541b340370cec62d7447faf4d898e7bcd2c8f6470d2ad6385426ba5878eb2a9",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": ""
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:a6fa2e5d8d4107f413f8d9a5f2d053eed94d85e6954a0017f0c94e80576bf2b5",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": ""
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:be5846267742cd158c072e3467f91bccdd39ddaf1fd02a63c58b8d292911ecad",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": ""
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:0e23111221f1ea3a4058e8a5126ad0051c44cd30702db02018863f2dbe5db6c2",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": ""
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:5be6e7ff29c0a2c6a9a5627cc9953a042abcc74ed0fb1414218213bebce2c6e2",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": ""
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "rework_role_artifacts",
+        "project": "legacy_script_dump",
+        "recovery_candidate_status": "verified_for_bounded_implementation",
+        "recovery_contract": null,
+        "recovery_status": "bounded_rework_ready",
+        "required_human_decision_count": 2,
+        "required_human_decisions": [
+          "semantic_escalation",
+          "bounded_rework_after_no_safe_candidate"
+        ],
+        "reselection_count": 1,
+        "review_risk_summary": {
+          "controlled": 5,
+          "requires_human_review": 1,
+          "requires_rework": 1
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer",
+          "researcher",
+          "architect"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "",
+        "status": "controlled_stop",
+        "terminal_reason": "no_safe_candidate_after_bounded_reselection",
+        "unresolved_uncertainties": [
+          "semantic_escalation_pending"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "blocked_no_safe_candidate",
+        "implementation_blocked_no_safe_candidate": true,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": false,
+        "implementation_target": "blocked_no_safe_candidate",
+        "implementation_targets_extraction_candidate": false,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "blocked_no_safe_candidate",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "",
+        "test_blocked_no_safe_candidate": true,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "blocked_no_safe_candidate",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "scraper.py:parse_links",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "scraper_with_retry_and_cache",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "scraper_with_retry_and_cache",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "async_worker_scheduler",
+        "matched_markers": [
+          "scraper"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "async_worker_scheduler",
+        "project_shape": null,
+        "project_stratum": "async_worker_scheduler",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "Async execution primitives"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "scraper.py:parse_links",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:35aff9e56d7943a6cb2041252524d48805773b5a51d98cd3bc17232742563bcb",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "scraper.py:parse_links"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:aef37afdfa200c589d90e446efbcc952b804cccee59f96d54786749526601ca8",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "scraper.py:parse_links"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:325292848828536b68809fc6a6614c64a49c31c2029cfee05741b9686359749d",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "scraper.py:parse_links"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:8f108e6fde3a554ea704ac5ae0452e9e209e195ea54233af32f8ba77d32d8127",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "scraper.py:parse_links"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:1caf2c46e925a0c1c97c5abb29f9e64665f057940e692f72b3f3b43e8f5ca16d",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "scraper.py:parse_links"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "scraper_with_retry_and_cache",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "scraper.py:parse_links",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "scraper.py:parse_links",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "scraper.py:parse_links",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "scraper.py:parse_links",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "scraper.py:parse_links",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    },
+    {
+      "advisory_quality": {
+        "accepted_risk_count": 0,
+        "quality_tag_counts": {},
+        "quality_tags": [],
+        "rejected_reason_counts": {}
+      },
+      "architect_advisory": {
+        "llm_invoked": false,
+        "source": "deterministic"
+      },
+      "expected_best_extraction_candidate": "main.py:normalize_text",
+      "next_action": "review_risks_then_run_project_transform",
+      "no_safe_candidate_recovery": {
+        "artifact_type": "NoSafeCandidateRecoveryRoute",
+        "developer_execution": {
+          "reason": "run_executor flag is false",
+          "status": "skipped"
+        },
+        "kb_changes": false,
+        "project": "simple_cli_tool",
+        "reason": "no_exhausted_no_safe_candidate_escalation",
+        "source_changes": false,
+        "status": "not_applicable"
+      },
+      "project": "simple_cli_tool",
+      "project_classification": {
+        "classification_conflict": false,
+        "classification_source": "evidence_match",
+        "contract_family": null,
+        "effective_project_identity": "cli_local_tool",
+        "matched_markers": [
+          "cli"
+        ],
+        "policy_version": "role_project_classification.2026-08-27.14",
+        "project_archetype": null,
+        "project_archetype_scope": "project_identity",
+        "project_name_stratum": "cli_local_tool",
+        "project_shape": null,
+        "project_stratum": "cli_local_tool",
+        "project_subtype": null,
+        "risk_profiles": [
+          "unspecified"
+        ],
+        "schema_version": "role_project_classification.v1",
+        "stratum_label": "CLI and local tools"
+      },
+      "recommendation": "approve_with_risks",
+      "role_chain_interaction": {
+        "arbitration_metrics": {
+          "accepted_override": false,
+          "eligible": false,
+          "fallback_used": false,
+          "invoked": false,
+          "selected_source": null,
+          "source": "deterministic"
+        },
+        "artifact_type": "RoleChainInteractionTrace",
+        "build_reselection_history": [],
+        "checks": {
+          "architect_gate_passed": true,
+          "control_plane_promotion_gate_passed": true,
+          "implementer_gate_passed": true,
+          "implementer_to_tester_target_preserved": true,
+          "project_analyzer_gate_passed": true,
+          "review_confirms_target_coverage": true,
+          "reviewer_gate_passed": true,
+          "spec_to_implementer_target_preserved": true,
+          "spec_writer_gate_passed": true,
+          "tester_gate_passed": true,
+          "tester_to_reviewer_target_preserved": true
+        },
+        "conditional_roles": {
+          "developer": "not_required",
+          "researcher": "not_required_for_known_project"
+        },
+        "execution_reselection_history": [],
+        "final_review_target": "main.py:normalize_text",
+        "first_pass_acceptance": true,
+        "handoff_contracts": [
+          {
+            "consumer": "architect",
+            "continuity_gate": "architect_gate_passed",
+            "contract_digest": "sha256:dbcb8a1b0d1a3b028c51bfbcf3cc9f265419f0f60ec0c293ecad36487b1a7695",
+            "loss_reason": null,
+            "producer": "project_analyzer",
+            "producer_gate": "project_analyzer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:normalize_text"
+          },
+          {
+            "consumer": "spec_writer",
+            "continuity_gate": "spec_writer_gate_passed",
+            "contract_digest": "sha256:3d6b60ab2d421a6691ee43675e1027ae0987715c56c112741cb10f4c015a107a",
+            "loss_reason": null,
+            "producer": "architect",
+            "producer_gate": "architect_gate_passed",
+            "status": "preserved",
+            "target": "main.py:normalize_text"
+          },
+          {
+            "consumer": "implementer",
+            "continuity_gate": "spec_to_implementer_target_preserved",
+            "contract_digest": "sha256:a83265227bbb77b66eb8d120395caf4e053980235ed3de2ef64d64557f52a8c7",
+            "loss_reason": null,
+            "producer": "spec_writer",
+            "producer_gate": "spec_writer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:normalize_text"
+          },
+          {
+            "consumer": "tester",
+            "continuity_gate": "implementer_to_tester_target_preserved",
+            "contract_digest": "sha256:5b19ce6eb3f07bac2ec276ece9e882747fe3a8e26a082b84a7915c023d037cb8",
+            "loss_reason": null,
+            "producer": "implementer",
+            "producer_gate": "implementer_gate_passed",
+            "status": "preserved",
+            "target": "main.py:normalize_text"
+          },
+          {
+            "consumer": "reviewer",
+            "continuity_gate": "tester_to_reviewer_target_preserved",
+            "contract_digest": "sha256:688b6fe30517b21ce906fcf0d1bdbf0c0775cc0aa0f8c63010addecfd082a420",
+            "loss_reason": null,
+            "producer": "tester",
+            "producer_gate": "tester_gate_passed",
+            "status": "preserved",
+            "target": "main.py:normalize_text"
+          }
+        ],
+        "handoff_loss": [],
+        "handoff_loss_count": 0,
+        "interaction_score": 1.0,
+        "next_action": "review_risks_then_run_project_transform",
+        "project": "simple_cli_tool",
+        "recovery_candidate_status": null,
+        "recovery_contract": null,
+        "recovery_status": "not_applicable",
+        "required_human_decision_count": 1,
+        "required_human_decisions": [
+          "material_risk_review"
+        ],
+        "reselection_count": 0,
+        "review_risk_summary": {
+          "controlled": 6,
+          "requires_human_review": 1,
+          "requires_rework": 0
+        },
+        "route": [
+          "project_analyzer",
+          "architect",
+          "spec_writer",
+          "implementer",
+          "tester",
+          "reviewer"
+        ],
+        "route_kind": "known_project",
+        "selected_target": "main.py:normalize_text",
+        "status": "ok",
+        "terminal_reason": null,
+        "unresolved_uncertainties": [
+          "material_risk_requires_human_review"
+        ]
+      },
+      "role_quality": {
+        "implementation_binding_status": "bound_to_extraction_contract",
+        "implementation_blocked_no_safe_candidate": false,
+        "implementation_has_input_contract": true,
+        "implementation_has_output_contract": true,
+        "implementation_target": "main.py:normalize_text",
+        "implementation_targets_extraction_candidate": true,
+        "review_confirms_target_coverage": true,
+        "review_contract_violations": 0,
+        "review_target": "main.py:normalize_text",
+        "review_targets_implementation_target": true,
+        "selected_extraction_candidate": "main.py:normalize_text",
+        "test_blocked_no_safe_candidate": false,
+        "test_has_contract_matrix": true,
+        "test_has_negative_tests_for_target": true,
+        "test_target": "main.py:normalize_text",
+        "test_targets_implementation_target": true
+      },
+      "score": {
+        "artifact_score": 1.0,
+        "checks": {
+          "all_artifacts_present": true,
+          "implementer_has_bound_input_contract": true,
+          "implementer_has_bound_output_contract": true,
+          "implementer_matches_expected_candidate": true,
+          "implementer_targets_extraction_candidate": true,
+          "llm_policy_ok": true,
+          "next_action_valid": true,
+          "no_foundry_by_default": true,
+          "no_registry_changes": true,
+          "no_source_changes": true,
+          "review_has_recommendation": true,
+          "reviewer_confirms_target_coverage": true,
+          "reviewer_has_no_contract_violations": true,
+          "reviewer_targets_implementation_target": true,
+          "tester_has_contract_matrix": true,
+          "tester_has_negative_tests_for_target": true,
+          "tester_targets_implementation_target": true
+        },
+        "implementation_score": 1.0,
+        "passed": true,
+        "qa_score": 1.0,
+        "safety_score": 1.0,
+        "warnings": []
+      },
+      "status": "ok"
+    }
+  ],
+  "generated_at": "2026-09-04T07:27:03.557765+00:00",
+  "milestone": "Role Pipeline Field Trial v0.1",
+  "passed": 8,
+  "project_count": 8,
+  "status": "ok",
+  "summary": {
+    "advisory_accepted": 0,
+    "advisory_delta_score": 0.0,
+    "advisory_quality": {
+      "accepted_risk_count": 0,
+      "quality_tag_counts": {},
+      "rejected_reason_counts": {}
+    },
+    "artifact_score": 1.0,
+    "implementation_score": 1.0,
+    "llm_invoked": 0,
+    "no_safe_candidate_recovery": {
+      "applicable": 1,
+      "bounded_rework_ready": 1,
+      "controlled_stop": 0
+    },
+    "qa_score": 1.0,
+    "role_chain": {
+      "arbitration_eligible_count": 0,
+      "arbitration_invoked_count": 0,
+      "arbitration_override_count": 0,
+      "blocked_role_return_count": 0,
+      "bounded_recovery_ready_count": 1,
+      "bounded_role_return_count": 0,
+      "controlled_known_stop_count": 1,
+      "controlled_unknown_stop_count": 0,
+      "first_pass_acceptance_count": 7,
+      "handoff_loss_count": 0,
+      "known_trace_count": 8,
+      "minimum_interaction_score": 1.0,
+      "required_human_decision_count": 9,
+      "reselection_count": 1,
+      "trace_count": 8,
+      "unresolved_uncertainty_count": 8
+    },
+    "safety_score": 1.0,
+    "warnings": 0
+  }
+}

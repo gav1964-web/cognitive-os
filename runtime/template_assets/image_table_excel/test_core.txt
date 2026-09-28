@@ -1,0 +1,124 @@
+import zipfile
+from pathlib import Path
+
+import pytest
+
+from image_table_excel.table_extractor import image_table_to_excel, parse_table_text
+
+
+SAMPLE_OCR = """
+Профлист шт 810 44 35 640,00
+Проф труба 60x60x2 6м м 1300 9 11700
+Краска, растворитель 2886
+Итого 79415
+"""
+
+
+def test_parse_table_text_extracts_rows_and_numbers():
+    rows = parse_table_text(SAMPLE_OCR)
+    assert rows[0].name == "Профлист"
+    assert rows[0].unit == "шт"
+    assert rows[0].price == 810
+    assert rows[0].quantity == 44
+    assert rows[0].total == 35640
+    assert rows[-1].name == "Итого"
+    assert rows[-1].total == 79415
+
+
+def test_image_table_to_excel_writes_same_stem_by_default(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR)
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.xlsx"
+    assert output.is_file()
+    with zipfile.ZipFile(output) as archive:
+        sheet = archive.read("xl/worksheets/sheet1.xml").decode("utf-8")
+    assert "Профлист" in sheet
+    assert "79415.0" in sheet
+
+
+def test_image_table_to_excel_accepts_ocr_text_file(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    text_file = tmp_path / "recognized.txt"
+    text_file.write_text(SAMPLE_OCR, encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_text_file=str(text_file))
+    assert Path(result["output_path"]).is_file()
+
+
+def test_image_table_to_excel_writes_csv_when_requested(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="csv")
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.csv"
+    assert "Профлист" in output.read_text(encoding="utf-8-sig")
+
+
+def test_image_table_to_excel_writes_xls_html_when_requested(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="xls")
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.xls"
+    text = output.read_text(encoding="utf-8")
+    assert "<table>" in text
+    assert "Профлист" in text
+
+
+def test_image_table_to_excel_writes_html_when_requested(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="html")
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.html"
+    text = output.read_text(encoding="utf-8")
+    assert "<table>" in text
+    assert "Профлист" in text
+
+
+def test_image_table_to_excel_writes_doc_html_when_requested(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="doc")
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.doc"
+    text = output.read_text(encoding="utf-8")
+    assert "<table>" in text
+    assert "Профлист" in text
+
+
+def test_image_table_to_excel_writes_rtf_when_requested(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    result = image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="rtf")
+    output = Path(result["output_path"])
+    assert output == tmp_path / "estimate.rtf"
+    text = output.read_text(encoding="utf-8")
+    assert text.startswith("{\\rtf1")
+    assert "Профлист" in text
+
+
+def test_missing_image_is_rejected():
+    with pytest.raises(ValueError, match="image file not found"):
+        image_table_to_excel("tests/fixtures/missing.webp", ocr_backend=lambda path: SAMPLE_OCR)
+
+
+def test_missing_ocr_backend_is_controlled():
+    with pytest.raises(RuntimeError, match="OCR backend unavailable"):
+        image_table_to_excel("tests/fixtures/sample.webp")
+
+
+def test_missing_ocr_text_file_is_rejected(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    with pytest.raises(ValueError, match="OCR text file not found"):
+        image_table_to_excel(str(image), ocr_text_file=str(tmp_path / "missing.txt"))
+
+
+def test_unsupported_output_format_is_rejected(tmp_path):
+    image = tmp_path / "estimate.webp"
+    image.write_text("fixture", encoding="utf-8")
+    with pytest.raises(ValueError, match="unsupported output format"):
+        image_table_to_excel(str(image), ocr_backend=lambda path: SAMPLE_OCR, output_format="pdf")

@@ -1,0 +1,709 @@
+{
+  "artifact_type": "ThreeRouteEvaluationManifest",
+  "authority": {
+    "legacy_metrics": "non_authoritative",
+    "route_self_scores": "forbidden",
+    "winner_requires_independent_blind_score": true
+  },
+  "frozen_at": "2026-09-08T01:57:40.036346+00:00",
+  "manifest_digest": "sha256:e8ad67d0b47877959385d4f509d1cfc4293f419942aff0cb5a8e3546d8907325",
+  "routes": [
+    "direct_agent",
+    "short_chain",
+    "full_chain"
+  ],
+  "schema_version": "three_route_evaluation_manifest.v2",
+  "source_commit": "03d4d5bd9fa915974e9fa18f60217ac402bb292b",
+  "tasks": [
+    {
+      "constraints": [
+        "Allowed tools: read-only project analysis, local runtime tools, tests that do not mutate the source project.",
+        "Allowed network access: none required.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: source project must remain unchanged."
+      ],
+      "expected_inputs": [
+        "Project directory: `F:\\ubuntu\\test\\5`.",
+        "User goal: improvement-oriented architectural analysis."
+      ],
+      "input_digest": "sha256:31c40db34efb2ee9d0985812c85905f5c7830fc8463f5e67cf41139422d273f8",
+      "input_spec": {
+        "expected_inputs": [
+          "Project directory: `F:\\ubuntu\\test\\5`.",
+          "User goal: improvement-oriented architectural analysis."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:7b9e9123e0358b94d5a4e02cad1998cb0b973f2d611d65fbad1db56beb96e4b9",
+      "prompt_text": "Проанализировать проект `F:\\ubuntu\\test\\5` и дать предложения по улучшению.",
+      "success_criteria": [
+        "Finds concrete source-backed improvement themes.",
+        "Separates facts from architectural judgments.",
+        "Does not propose automatic source edits.",
+        "Records evidence links or file references.",
+        "Produces comparable direct-agent and Cognitive OS artifacts."
+      ],
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:fc11afbca5e4ce53e2f5105dd0ebd5eeacf2f9cd289badfb66617bdff7139ad6",
+      "task_id": "task01_project5_improvement_plan"
+    },
+    {
+      "constraints": [
+        "Allowed tools: read-only project analysis, local runtime tools, non-mutating tests.",
+        "Allowed network access: none required.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: source project must remain unchanged."
+      ],
+      "expected_inputs": [
+        "Project directory: `F:\\ubuntu\\test\\map`.",
+        "User goal: architecture and improvement analysis."
+      ],
+      "input_digest": "sha256:66dc204e4136e74b57bb2bcaaf98f4336f14a7b7cfd7bdd493c266761cb24baf",
+      "input_spec": {
+        "expected_inputs": [
+          "Project directory: `F:\\ubuntu\\test\\map`.",
+          "User goal: architecture and improvement analysis."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:bbeee3ffc543cc1cee812f0ab45f0ea24b0ec8ed51dc328b885c5495b799c7f2",
+      "prompt_text": "Проанализировать проект `F:\\ubuntu\\test\\map` и дать предложения по архитектурным улучшениям.",
+      "success_criteria": [
+        "Identifies real entrypoints and provider-boundary risks.",
+        "Avoids treating generated/scratch artifacts as core logic.",
+        "Proposes bounded improvements rather than broad rewrites.",
+        "Keeps source project read-only."
+      ],
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:6eb1c670d447594ac29ca1b06bd02b21fff1641abf81e3809a83fbc7c197efd5",
+      "task_id": "task02_map_project_analysis"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local file generation, local tests, no source mutation outside generated package.",
+        "Allowed network access: none.",
+        "Allowed dependencies: Python standard library preferred; external dependencies must be justified.",
+        "Source mutation policy: generated package or sandbox only."
+      ],
+      "expected_inputs": [
+        "CLI arguments: input Markdown path and output RTF path.",
+        "Markdown text file encoded as UTF-8."
+      ],
+      "input_digest": "sha256:52a23af179abfcba6d449e8f4179122fcc2c7e9f38ce29bec9ab4cd370d5c645",
+      "input_spec": {
+        "expected_inputs": [
+          "CLI arguments: input Markdown path and output RTF path.",
+          "Markdown text file encoded as UTF-8."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:e339bf5df8a4e2bbbe92c5aca5756c29cbc76aaf5b765a8432428f00004fa738",
+      "prompt_text": "Напиши CLI-конвертер файлов `.md` в `.rtf`.",
+      "success_criteria": [
+        "Provides a runnable CLI.",
+        "Handles missing input file with a clear error.",
+        "Produces valid RTF header/body structure.",
+        "Includes tests and run instructions."
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:d8522c18fef5a56f817d1e24b685d880d61a78be72a15929fc0237abc273186e",
+      "task_id": "task03_markdown_to_rtf_cli"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local file generation, local tests, no source mutation outside generated package.",
+        "Allowed network access: none.",
+        "Allowed dependencies: external spreadsheet libraries are allowed only if declared and tested; legacy `.xls` support may be explicitly limited if dependency risk is high.",
+        "Source mutation policy: generated package or sandbox only."
+      ],
+      "expected_inputs": [
+        "CLI arguments specifying mode, input path and output path.",
+        "Spreadsheet or CSV files."
+      ],
+      "input_digest": "sha256:c70d7b6dadf4e5b99f205a9ee0e2fbe1bd1277b39a85002e4d54e4a76bfe6035",
+      "input_spec": {
+        "expected_inputs": [
+          "CLI arguments specifying mode, input path and output path.",
+          "Spreadsheet or CSV files."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:934aa77126c5aa1ffbf33d685b1369585a8d27933686575401a5112b15b03f50",
+      "prompt_text": "Напиши CLI-конвертер `.xls/.xlsx` в `.csv` и обратно.",
+      "success_criteria": [
+        "Distinguishes `.xlsx` from legacy `.xls` support.",
+        "Handles missing files and unsupported extensions cleanly.",
+        "Does not silently drop rows or columns in simple fixtures.",
+        "Includes tests and run instructions."
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:975ae6e3ff351b5fe27349b1a980d596baf1c0656cae6ccd7de9a57e3aa0a3b1",
+      "task_id": "task04_xlsx_csv_converter"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local package generation and local tests.",
+        "Allowed network access: none beyond local test server.",
+        "Allowed dependencies: FastAPI, pytest and ordinary local test dependencies.",
+        "Source mutation policy: generated package or sandbox only."
+      ],
+      "expected_inputs": [
+        "HTTP request containing CSV data or uploaded CSV file.",
+        "Required column list declared by the implementation."
+      ],
+      "input_digest": "sha256:03ed31d51a1ea9d4dcfdd3d338cdd820d351541f0c5fa6a1084d3064f08a9f23",
+      "input_spec": {
+        "expected_inputs": [
+          "HTTP request containing CSV data or uploaded CSV file.",
+          "Required column list declared by the implementation."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:9c16917c89c40c762e87eb1dbe485399a8045d080f9b8aa62a0c6d480b04fe4e",
+      "prompt_text": "Сделай локальную FastAPI-службу, которая принимает CSV, валидирует колонки, считает агрегаты, сохраняет JSON-отчёт и имеет README, тесты и команду запуска.",
+      "success_criteria": [
+        "Exposes a documented FastAPI endpoint.",
+        "Validates required columns.",
+        "Produces deterministic aggregate JSON.",
+        "Saves a report file in a controlled path.",
+        "Includes runnable tests and README."
+      ],
+      "task_class": "fastapi_service",
+      "task_file_digest": "sha256:53b21f23f219ac763993f74171a3df6f5e40c6c8ff8e0d3d3c90c1f00165bcd0",
+      "task_id": "task05_fastapi_csv_aggregator"
+    },
+    {
+      "constraints": [
+        "Allowed tools: prompt analysis and clarification only unless sufficient requirements are provided.",
+        "Allowed network access: none.",
+        "Allowed dependencies: none before clarification.",
+        "Source mutation policy: no generated package or source edits before clarification."
+      ],
+      "expected_inputs": [
+        "Ambiguous user prompt without clear system type, inputs, outputs or success criteria."
+      ],
+      "input_digest": "sha256:bb5aea3e9634ad481bc859be8ec0ff7dcd748b7fa83654ffb70ecd354d1a3abb",
+      "input_spec": {
+        "expected_inputs": [
+          "Ambiguous user prompt without clear system type, inputs, outputs or success criteria."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:030631fe3cb3d7b0ca4daf4483a32132a8f5082bf8cfdbd1ed7b8c382317ad0a",
+      "prompt_text": "Сделай нормальный проект для работы с данными.",
+      "success_criteria": [
+        "Does not hallucinate a full product specification.",
+        "Identifies missing inputs, outputs, constraints and acceptance criteria.",
+        "Produces concise clarification questions.",
+        "Avoids source changes."
+      ],
+      "task_class": "negative",
+      "task_file_digest": "sha256:e02d45ec68c2de785383b38ad2af95af18296301af49526dee30399987778953",
+      "task_id": "task06_ambiguous_project_request"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local role pipeline, local deterministic baselines, evaluation reports.",
+        "Allowed network access: none required.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: no source edits from this evaluation."
+      ],
+      "expected_inputs": [
+        "One existing evaluation task selected as the workload.",
+        "Route A: merged-role or reduced-role baseline.",
+        "Route B: full role pipeline."
+      ],
+      "input_digest": "sha256:98ef2536c616d1307d32220b3fd2ec639f3a4874abb808056d15d8e85447b178",
+      "input_spec": {
+        "expected_inputs": [
+          "One existing evaluation task selected as the workload.",
+          "Route A: merged-role or reduced-role baseline.",
+          "Route B: full role pipeline."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:eeeda7dddb60dda0ac8f1e471d571e6efc26ea7e67c69954a3ac96af3b82c054",
+      "prompt_text": "Compare full Cognitive OS role separation against a merged-role baseline for a bounded software task.",
+      "success_criteria": [
+        "Uses the same original task prompt for both routes.",
+        "Records which roles were merged or skipped.",
+        "Does not score conversation quality as artifact quality.",
+        "Produces a clear keep/simplify recommendation."
+      ],
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:8f68f78e76f1be2e49251f2e22884d9ba19ff55239bc2a93701c7f21d068ec0b",
+      "task_id": "task07_role_pipeline_ablation"
+    },
+    {
+      "constraints": [
+        "Allowed tools: static code/documentation analysis, registry validation tools, evaluation reports.",
+        "Allowed network access: none.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: no architectural code changes from this audit."
+      ],
+      "expected_inputs": [
+        "Registry files and plugin manifests.",
+        "Runtime packet and role artifact definitions.",
+        "Documentation describing registry and artifact responsibilities."
+      ],
+      "input_digest": "sha256:795356117276a664c761c34ce154cd8560409ba5df8c42d5e6ca169031eab1b9",
+      "input_spec": {
+        "expected_inputs": [
+          "Registry files and plugin manifests.",
+          "Runtime packet and role artifact definitions.",
+          "Documentation describing registry and artifact responsibilities."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:60cfa7c669c86f31bd2a59b4b1e8b15f0a63a653a264b7dc62585b846bd28701",
+      "prompt_text": "Audit Cognitive OS registry separation and artifact/packet redundancy. Determine what should remain separate, what should become a derived view, and what should be merged or removed.",
+      "success_criteria": [
+        "Distinguishes conceptual separation from duplicated storage.",
+        "Identifies produced-but-unused fields.",
+        "Does not collapse artifacts solely because names are similar.",
+        "Produces an actionable simplification backlog."
+      ],
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:f158a0178d5810f35f403ad75aa1249c7212edf0503dca509b1e6ad67c0bdefb",
+      "task_id": "task08_registry_artifact_audit"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local Stage 2/Stage 3 package generation, tests, review reports.",
+        "Allowed network access: none required.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: generated package or sandbox only."
+      ],
+      "expected_inputs": [
+        "One supported CLI or FastAPI product prompt.",
+        "Stage 2 package output.",
+        "Stage 3 product-slice output."
+      ],
+      "input_digest": "sha256:2ff40a20a3fa6fa30e14a6951c7503e5131842d6d0534b1cc0dbaec2f4b81410",
+      "input_spec": {
+        "expected_inputs": [
+          "One supported CLI or FastAPI product prompt.",
+          "Stage 2 package output.",
+          "Stage 3 product-slice output."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:d42f16b24cbd0be6d3b7f2b583c66409b0fb1409dbe385bebc04b2292d2c75d2",
+      "prompt_text": "Compare Stage 2 Verified System Package against Stage 3 Product Slice for one supported product-generation task. Determine whether Stage 3 reduces review cost or catches issues Stage 2 misses.",
+      "success_criteria": [
+        "Uses same underlying generated package where possible.",
+        "Measures added value rather than artifact count.",
+        "Records whether Stage 3 found issues Stage 2 missed.",
+        "Produces keep/optional/demote recommendation."
+      ],
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:f52a73810fdee05df2301ad91704cb70021afb7833d03ec9f65908b50c93965b",
+      "task_id": "task09_stage3_value_ablation"
+    },
+    {
+      "constraints": [
+        "Allowed tools: local runtime tools, evaluation reports.",
+        "Allowed network access: none required.",
+        "Allowed dependencies: existing repository dependencies only.",
+        "Source mutation policy: generated package or sandbox only."
+      ],
+      "expected_inputs": [
+        "One simple supported task prompt.",
+        "Route A: explicit bypass route that skips at least one orchestration layer.",
+        "Route B: strict Cognitive OS layered route."
+      ],
+      "input_digest": "sha256:521eeef2cc5482583e73f673d7c652f5823e5d26b68b5844ad7629dedfcc9ebf",
+      "input_spec": {
+        "expected_inputs": [
+          "One simple supported task prompt.",
+          "Route A: explicit bypass route that skips at least one orchestration layer.",
+          "Route B: strict Cognitive OS layered route."
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:3df96089ebfdbd0f6875e8c5d7435c5d7c77e18554d5934a26fb073480a53512",
+      "prompt_text": "Compare strict layered routing against an explicitly declared bypass route for a simple supported task.",
+      "success_criteria": [
+        "Bypass is declared and logged, not implicit.",
+        "Both routes use the same original prompt and constraints.",
+        "Source safety and artifact traceability are measured.",
+        "Result does not weaken default safety policy without evidence."
+      ],
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:4ea5459ccc0fe5b3d6a2ca29d21536c170f0bfb1d6f4c5aa2bd9aeeb8f3aa198",
+      "task_id": "task10_strict_layering_bypass"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:994c0651f3cb014f71e220ba485f45cdbd6c4d824cfac7a3295aa59c7039bba8",
+      "prompt_text": "Напиши CLI .py, которая перечислит содержимое картинки.",
+      "success_criteria": [
+        "CLI accepts image path",
+        "Output is structured text",
+        "No source tree mutation"
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:0cc2d4cf1ceb9199f80b2953994774b4b6c968b421a877839848bc45fcaa31e0",
+      "task_id": "task11_image_contents_cli"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:b63469017278c71a51a02b22573f57af65d1dc188cbea792e7b16f41fb29f6c2",
+      "prompt_text": "Доработай CLI распознавания табличной картинки: что произойдет, если изображение повернуто на 90 градусов?",
+      "success_criteria": [
+        "Rotation behavior is explicit",
+        "Failure mode is tested",
+        "No fabricated OCR claims"
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:f89ddfa590bb6a913d0ce260675f89aac12acaef8119bb91bc490f1da19c268e",
+      "task_id": "task12_rotated_image_table"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:da9c28d4fe11c75622c24290979f7fa39439b98570ec33ade22ef2610aa49c4f",
+      "prompt_text": "Напиши конвертер .xls в .png.",
+      "success_criteria": [
+        "Adapter boundary exists",
+        "Missing dependencies are controlled",
+        "Tests run without external files"
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:b01c8c8fba5ef1a8959bfd6e7908be3e187c69a04a8b22c830118f4e6a93683e",
+      "task_id": "task13_xls_to_png_converter"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:c331d510a13dea4c007f320fb8da90872ffcad4453012a0aa7f1bdb2c7714f4c",
+      "prompt_text": "Напиши CLI для конвертации .jpg в .doc.",
+      "success_criteria": [
+        "Format ambiguity is surfaced",
+        "Fallback path is explicit",
+        "README documents limitations"
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:876bf12590b1a5d2eb7e9050646b6ffc6d15566465ba690ddc7a801f2744ee2b",
+      "task_id": "task14_jpg_to_doc_converter"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:308db0a1900803f4fe2d5927ee0d626edb4934122f3df8c438aa5241a8c33620",
+      "prompt_text": "Напиши CLI .py, которая переводит текстовый файл в верхний регистр.",
+      "success_criteria": [
+        "Input/output paths",
+        "Deterministic transform",
+        "pytest coverage"
+      ],
+      "task_class": "cli_utility",
+      "task_file_digest": "sha256:3d1437b267dbbd25bd0786376ff1f70513a30208147f6f02335ad928f9256d95",
+      "task_id": "task15_uppercase_cli"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:d73d9919e4c571a9506e58c9755ac617c3278c32545cc51850c8c7b05398ec37",
+      "prompt_text": "Проанализируй Python-проект 7 и дай предложения по развитию.",
+      "success_criteria": [
+        "Entrypoints detected",
+        "Evidence refs exist",
+        "Recommendations are project-specific"
+      ],
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:4085a5d50e3aa64867f0deda749f0a7a11efb995b410d0d94bfbd5b6367c51c3",
+      "task_id": "task16_project7_analysis"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:60e0386594d3d3d777960c481092d58d652fda6c7519edba87d718d3adb79894",
+      "prompt_text": "Проанализируй Python-проект 10 и дай предложения по развитию.",
+      "success_criteria": [
+        "Capabilities identified",
+        "State and side effects assessed",
+        "Risks are actionable"
+      ],
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:6b269ff27744780952d6183f6f72c1b7a30a0b55eb5772639a7c74ea5bf2da0e",
+      "task_id": "task17_project10_analysis"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:618903755f72f51dcc2e95fc18a3c9a4ed80e0406c1ffb0181a87ed1df16fbcc",
+      "prompt_text": "Если KB не знает решения, попробуй решить через LLM и сформируй candidate или developer request.",
+      "success_criteria": [
+        "KB miss is recorded",
+        "LLM output is not executed directly",
+        "Next action is explicit"
+      ],
+      "task_class": "architecture_hypothesis",
+      "task_file_digest": "sha256:3a363da293cdc1e74bedc8c5c0b0935bd446b777af797a3aa64d3be5eb93ed8d",
+      "task_id": "task18_kb_gap_resolution"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:3c16484d3877a2f3e1c303f9e40691a66c8dde984bb7d8dec0c83b84a4aaf828",
+      "prompt_text": "Добавь новую роль через справочник ролей без изменения runtime-кода.",
+      "success_criteria": [
+        "Role is data-defined",
+        "Gates are contract-based",
+        "No role-specific facade added"
+      ],
+      "task_class": "configuration",
+      "task_file_digest": "sha256:383c1b2952dc357b429ac0ec923d5aa456bae9c227450d36b1f100d3de29865f",
+      "task_id": "task19_role_directory_extension"
+    },
+    {
+      "constraints": [],
+      "expected_inputs": [],
+      "input_digest": "sha256:d7ccb2e2351835a2ca4789619572a62d31c8b68ee00a094b64ec45a32a5f0a47",
+      "input_spec": {
+        "expected_inputs": [],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:819beb18c3ef67a98d060c4cf15f45372ed131d9681385412d8f15caf0627adf",
+      "prompt_text": "Сделай что-нибудь полезное с моим проектом.",
+      "success_criteria": [
+        "ClarificationPacket or controlled block",
+        "No invented requirements",
+        "No implementation attempt without adequacy"
+      ],
+      "task_class": "negative",
+      "task_file_digest": "sha256:e718d4a011657b4d4b27198f554439bd4e258fb6d60c267b5926c8860f05de47",
+      "task_id": "task20_prompt_adequacy_gate"
+    },
+    {
+      "constraints": [
+        "No network services",
+        "SQLite or filesystem persistence only",
+        "Generated package or sandbox only",
+        "No placeholder functions"
+      ],
+      "expected_inputs": [
+        "An empty writable workspace"
+      ],
+      "input_digest": "sha256:fffccf9333680d9ab2f7cab1daba31eef73d1654cf8b046cc58e6eebd05bd1ab",
+      "input_spec": {
+        "expected_inputs": [
+          "An empty writable workspace"
+        ],
+        "kind": "declared_prompt_inputs"
+      },
+      "prompt_digest": "sha256:9d4060ca6a8c008a8bdce34da8a085b044318d4f7a05393860ede19c3e6fab2b",
+      "prompt_text": "Создай локальную FastAPI-службу постановки фоновых заданий: идемпотентная постановка, получение статуса, отмена и восстановление очереди после перезапуска.",
+      "success_criteria": [
+        "API contract covers create, status and cancel",
+        "Idempotency is tested",
+        "Restart recovery is demonstrated",
+        "Invalid transitions fail explicitly",
+        "README contains exact run and test commands"
+      ],
+      "task_class": "fastapi_service",
+      "task_file_digest": "sha256:a58a968abb7524059c5b5a658b942bdfda0d4a2a1e0ef08b8372dfd520604e74",
+      "task_id": "task21_fastapi_durable_jobs"
+    },
+    {
+      "constraints": [
+        "No network",
+        "Treat the input tree as read-only",
+        "Cite source paths for non-obvious claims"
+      ],
+      "expected_inputs": [
+        "Frozen Python project tree"
+      ],
+      "input_digest": "sha256:0e1b8467eba9c7596650dd3f90491eb7132393e31a030211bbd4544f922a9a81",
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_a78713cac804/src/teamhide__fastapi-event",
+        "revision": "4e8502e5f1e6744ba7089c359f84e2fb5f5f263d",
+        "tree_digest": "sha256:aa4e2d06cbe5f6a9af7bfe9f5b8c061ad776e48364104f253cbfa4d6acd20690",
+        "url": "https://github.com/teamhide/fastapi-event.git"
+      },
+      "prompt_digest": "sha256:742461b9de05fbc75235aae09e76a3702345e661d5e0095f4104f9991d2b895b",
+      "prompt_text": "Проведи evidence-based аудит документации проекта и подготовь улучшенный README для нового разработчика без изменения исходного кода.",
+      "success_criteria": [
+        "Commands and entrypoints are verified against source",
+        "Configuration and dependencies are documented",
+        "At least one minimal working example is included",
+        "Unknown behavior is not invented",
+        "Only documentation artifacts are produced"
+      ],
+      "task_class": "documentation",
+      "task_file_digest": "sha256:3de8c190d3752604f771696092d8cc6af8628ec08798933dae6698d1ce2c2228",
+      "task_id": "task22_fastapi_event_docs"
+    },
+    {
+      "constraints": [
+        "No network",
+        "Treat the input tree as read-only",
+        "Do not claim unsupported compatibility"
+      ],
+      "expected_inputs": [
+        "Frozen Python project tree"
+      ],
+      "input_digest": "sha256:bb093cf800e1c8716b0e0e4c4599d64ccb3ab1c1d9aadffad73aa27dc6dbbf11",
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_148e197a09f8_r2_w741fe387/src/isca__ordered-startup-supervisord",
+        "revision": "54e32080e673f1548c5d97ed483805d63754656a",
+        "tree_digest": "sha256:597e98646fa6cabfb05f7cbbf72b9519582cb1c12e406cc52771f1b02ceea15f",
+        "url": "https://gitlab.com/isca/ordered-startup-supervisord.git"
+      },
+      "prompt_digest": "sha256:5d17bfe3080c2253b6d37e71447069146109922faf6df18410303c1de0b1800c",
+      "prompt_text": "Восстанови фактический пользовательский контракт проекта и подготовь README с установкой, конфигурацией, примером и диагностикой ошибок.",
+      "success_criteria": [
+        "Documented behavior matches implementation",
+        "Installation and configuration are reproducible",
+        "Example uses the real public interface",
+        "Failure modes are evidence-backed",
+        "Source tree remains unchanged"
+      ],
+      "task_class": "documentation",
+      "task_file_digest": "sha256:780b270dbbfafa73e26b962892ca4dd2e3fbcb0c0daf6b0ad52f0eff05959cb7",
+      "task_id": "task23_supervisord_docs"
+    },
+    {
+      "constraints": [
+        "No network",
+        "Never mutate the frozen input",
+        "Use only locally available build tools",
+        "A controlled block is preferable to fabricated success"
+      ],
+      "expected_inputs": [
+        "Frozen Python project tree"
+      ],
+      "input_digest": "sha256:f85ec5d32e9fa2c7a27a8f14e0e54e0ef986667adacd03e7b57f890fa803e930",
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_e850e54e7010_r2_w57a22fbb/src/MusicScience37Projects__utility-libraries__py-msgpack-rpc",
+        "revision": "fe4aa4f3bb126c6ca47be3f8832156122a6598e6",
+        "tree_digest": "sha256:109d06f22eae22cb1c3a967a32157f1219c883a9ada47bae76c41861908ba9f5",
+        "url": "https://gitlab.com/MusicScience37Projects/utility-libraries/py-msgpack-rpc.git"
+      },
+      "prompt_digest": "sha256:77a67a150c83154dddc5ab5dae024863893fce2600b0f0a17745e076c6bfa2e0",
+      "prompt_text": "В отдельной копии модернизируй packaging-конфигурацию проекта, сохранив публичное поведение, и докажи сборку и установку локальными проверками.",
+      "success_criteria": [
+        "Change is limited to a sandbox copy",
+        "Build metadata is internally consistent",
+        "Wheel or sdist build is verified",
+        "Existing public imports remain usable",
+        "No placeholder implementation is introduced"
+      ],
+      "task_class": "sandbox_project_change",
+      "task_file_digest": "sha256:f1c6e2c01cd36a9cd9a9f34f44c9688eb16e6f55fe852a1198bc425bfc8e282f",
+      "task_id": "task24_msgpack_packaging_change"
+    },
+    {
+      "constraints": [
+        "No network",
+        "Never mutate the frozen input",
+        "Do not invent a defect",
+        "Block with evidence if no bounded defect can be established"
+      ],
+      "expected_inputs": [
+        "Frozen Python project tree"
+      ],
+      "input_digest": "sha256:c79ff7cfc2a5ab2b90b96b33d9642300bceb2c228abc2188c56950dfac15a6ab",
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w841e325e/src/amzn__amazon-frustration-free-setup-certification-tool",
+        "revision": "221b7cdc9cdf94a688716a499bf5eb6e87c890df",
+        "tree_digest": "sha256:594300721bf319f0ceac47a9fddf0c34eb93d82bd91563bec5c9349abbcb1389",
+        "url": "https://github.com/amzn/amazon-frustration-free-setup-certification-tool.git"
+      },
+      "prompt_digest": "sha256:680787bdf1b68d3160b04514942b89bd4a345dd747dd79bb0ecdd7cee06af524",
+      "prompt_text": "В отдельной копии найди один подтверждаемый тестами дефект на границе ввода или конфигурации, исправь его минимально и предоставь regression evidence.",
+      "success_criteria": [
+        "Defect is tied to concrete source evidence",
+        "A failing regression test precedes or demonstrates the fix",
+        "Patch is minimal and preserves unrelated behavior",
+        "Relevant tests pass",
+        "Frozen input remains unchanged"
+      ],
+      "task_class": "sandbox_project_change",
+      "task_file_digest": "sha256:f510c56dc42a1fcd6b4cb6d73952bfa14d031c25ec5018df892c9abecdf74b6a",
+      "task_id": "task25_amazon_tool_test_change"
+    },
+    {
+      "constraints": [
+        "No network",
+        "Treat the input tree as read-only",
+        "Do not infer maturity from file counts alone"
+      ],
+      "expected_inputs": [
+        "Frozen Python project tree"
+      ],
+      "input_digest": "sha256:fde38832c81baf89daef96584248e12968279d3478fed7551c0b4744a44db325",
+      "input_spec": {
+        "kind": "project_tree",
+        "path": "artifacts/gitlab_blind_iteration_12_40_20260817/src/skitai__atila",
+        "revision": "1c82d9b3730d83bda065677f2faf63487f56a09f",
+        "tree_digest": "sha256:66f147683aba2bcd59fddbc05c63136291eddf9a0485b2126821598d16a14a1b",
+        "url": "https://gitlab.com/skitai/atila.git"
+      },
+      "prompt_digest": "sha256:4f2558186cc68343129393d7ec7590fffc1dd71cbfe8aa7534a33d2a0f28e176",
+      "prompt_text": "Проанализируй проект как развиваемый Python-продукт: восстанови архитектуру, найди приоритетные недостатки и предложи проверяемую последовательность развития.",
+      "success_criteria": [
+        "Architecture and entrypoints cite source evidence",
+        "Risks distinguish facts from hypotheses",
+        "Recommendations are project-specific and prioritized",
+        "Each top action has an acceptance check",
+        "No source mutation occurs"
+      ],
+      "task_class": "project_analysis",
+      "task_file_digest": "sha256:df30ff9877e2c5eb295a2661c865c844d48f4a7d72e3daadd618914ff6b4cd0e",
+      "task_id": "task26_atila_development_analysis"
+    }
+  ]
+}

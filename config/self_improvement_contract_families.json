@@ -1,0 +1,334 @@
+{
+  "schema_version": "self_improvement_contract_families.v1",
+  "families": {
+    "cached_analysis_transform": {
+      "input_contract": {"cache_paths": "Sequence[PathLike]", "analysis_data": "MappingLike"},
+      "output_contract": {"result": "Union[SequenceLike, TupleLike]"},
+      "side_effect_policy": {"declared": ["filesystem_read", "observability"], "requires_validation_gate": true},
+      "validation_gates": ["cache hit and computation paths return equivalent result shapes", "input mappings are not mutated"],
+      "failure_modes": ["cache_missing", "cache_invalid", "analysis_input_invalid"],
+      "reason": "AST evidence proves a bounded cached analysis stage"
+    },
+    "response_collection_ordering_transform": {
+      "input_contract": {"collection": "ProtocolLike", "selector": "KeyLike"},
+      "output_contract": {"result": "ResponseLike"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["ordering is deterministic for a stable selector", "the source collection is not mutated"],
+      "failure_modes": ["missing_selector", "incomparable_value", "malformed_collection_item"],
+      "reason": "AST evidence proves a bounded response collection ordering transform"
+    },
+    "external_authorization_policy": {
+      "input_contract": {"authorization_context": "AuthorizationContext(actor, resource, tenant?)"},
+      "output_contract": {"authorized": "bool", "failure_packet": "AuthorizationCheckFailure(kind, dependency?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["network"], "external_check": "authorization depends on an external membership or policy store", "requires_validation_gate": true},
+      "validation_gates": ["authorized, denied and dependency-unavailable paths return explicit booleans", "external membership lookup and cleanup are bounded", "diagnostic output does not expose credentials or private payloads"],
+      "failure_modes": ["dependency_unavailable", "duplicate_identity", "resource_not_allowed", "cleanup_failure"],
+      "reason": "AST and side-effect evidence prove an asynchronous external authorization policy"
+    },
+    "mapping_observability_report_command": {
+      "input_contract": {"report_data": "ReportInputMapping(values)"},
+      "output_contract": {"result": "VoidReportCommand", "failure_packet": "ReportRenderingFailure(kind, field?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["observability"], "output_policy": "rendered report is emitted to the configured observability sink", "requires_validation_gate": true},
+      "validation_gates": ["complete and partial mappings produce bounded report output", "missing comparison data is represented explicitly", "rendering does not mutate the supplied mapping"],
+      "failure_modes": ["empty_report_data", "unsupported_field_value", "rendering_failure"],
+      "reason": "AST and side-effect evidence prove a bounded mapping-to-observability report command"
+    },
+    "stateful_recursive_xml_serialization_boundary": {
+      "input_contract": {"modelObject": "XMLSerializableModel(properties, nested_values, type?)", "tagName": "XMLTagName", "level": "RecursionDepth", "receiver_state": "XMLSerializerState(merge_policy)"},
+      "output_contract": {"result": "Union[bytes, XMLNodeLike]", "failure_packet": "XMLSerializationFailure(kind, property_path?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["memory_state"], "input_mutation": "root Event type normalization mutates the supplied model before traversal", "local_tree_mutation": "XML node construction remains local to the call tree", "requires_validation_gate": true},
+      "validation_gates": ["root serialization returns bytes and nested serialization returns an XML node", "nested objects and lists preserve tag and attribute structure", "input type normalization and merge precedence are explicit"],
+      "failure_modes": ["unsupported_property_value", "recursive_object_cycle", "invalid_tag_name", "type_normalization_failure", "xml_merge_failure"],
+      "reason": "AST proves recursive model-to-XML serialization with explicit input normalization"
+    },
+    "dynamic_method_dispatch_boundary": {
+      "input_contract": {"method": "DispatchMethodName", "receiver_state": "DispatchReceiver(request_values, handlers)"},
+      "output_contract": {"result": "DispatchedResult", "failure_packet": "DispatchFailure(kind, method, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["dynamic_dispatch"], "delegation_policy": "effects and return behavior belong to the selected handler", "requires_validation_gate": true},
+      "validation_gates": ["known method names receive request values and return the delegated result", "missing or forbidden method names fail explicitly", "delegate exceptions and side effects are not hidden"],
+      "failure_modes": ["missing_method", "forbidden_method", "invalid_request_values", "delegate_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a dynamic method dispatcher over receiver state and request values"
+    },
+    "external_service_state_sync_boundary": {
+      "input_contract": {"request": "ExternalSyncRequest(actor, scope, options?)", "dependencies": "ExternalSyncDependencies(client, state_store, clock?, rate_gate?)"},
+      "output_contract": {"result": "ExternalSyncResult(created_count, updated_count, affected_ids?, warnings?)", "failure_packet": "ExternalSyncFailure(kind, retry_after?, evidence_ref)"},
+      "side_effect_policy": {"external_io": "external calls, retries and rate limits are explicit", "state_mutation": "local mutations and commit boundary are observable", "requires_validation_gate": true},
+      "validation_gates": ["empty input and successful synchronization return structured counts", "external failure and rate limit behavior are bounded", "state writes and commit boundary are explicit and idempotency is reviewed"],
+      "failure_modes": ["external_service_failure", "rate_limited", "partial_state_write", "invalid_session"],
+      "reason": "AST proves an external-service synchronization orchestration contract"
+    },
+    "external_api_command_boundary": {
+      "input_contract": {"command": "ExternalApiCommand(target, payload)", "receiver_state": "ApiClientState(transport, credentials?)"},
+      "output_contract": {"result": "ExternalApiCommandResult", "failure_packet": "ExternalApiCommandFailure(kind, status?, retry_after?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["network"], "delegation_policy": "transport call and payload are explicit", "requires_validation_gate": true},
+      "validation_gates": ["payload projection is deterministic", "transport failure and response shape remain explicit", "credentials and private payloads are not exposed"],
+      "failure_modes": ["transport_failure", "invalid_payload", "remote_rejection", "response_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded external API command delegated through receiver transport"
+    },
+    "file_extension_admission_policy": {
+      "input_contract": {"filename": "FileName(value)", "policy": "AllowedExtensionSet(values)"},
+      "output_contract": {"accepted": "bool", "failure_packet": "FileAdmissionFailure(kind, extension?)"},
+      "side_effect_policy": {"mutation_policy": "policy evaluation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["allowed, denied and missing-extension inputs are covered", "extension normalization is explicit", "filename is not interpreted as a filesystem path"],
+      "failure_modes": ["missing_extension", "disallowed_extension", "normalization_mismatch"],
+      "reason": "AST proves a side-effect-free file extension admission policy"
+    },
+    "filesystem_artifact_command": {
+      "input_contract": {"artifact_input": "ArtifactSource", "destination": "FilesystemDestination"},
+      "output_contract": {"result": "VoidSideEffect", "failure_packet": "ArtifactWriteFailure(kind, destination?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["filesystem"], "write_policy": "filesystem output is explicit and isolated", "requires_validation_gate": true},
+      "validation_gates": ["successful output and invalid destination paths are covered", "partial writes and overwrite behavior are explicit", "input objects are not mutated"],
+      "failure_modes": ["invalid_destination", "artifact_encoding_failure", "partial_write"],
+      "reason": "AST proves a bounded filesystem artifact command"
+    },
+    "array_artifact_projection": {
+      "input_contract": {"data": "ArrayLike", "projection_options": "ArrayProjectionOptions", "destination": "FilesystemDestination?"},
+      "output_contract": {"result": "ArrayLike", "failure_packet": "ArrayProjectionFailure(kind, shape?, evidence_ref?)"},
+      "side_effect_policy": {"declared": ["filesystem"], "write_policy": "optional artifact persistence is explicit", "requires_validation_gate": true},
+      "validation_gates": ["input and output array shapes are explicit", "save-disabled and save-enabled paths return equivalent array shapes", "filesystem failure does not hide projection state"],
+      "failure_modes": ["invalid_array_shape", "projection_failure", "artifact_write_failure"],
+      "reason": "AST proves an array projection with an explicit artifact boundary"
+    },
+    "numerical_array_transform_boundary": {
+      "input_contract": {"data": "ArrayLike", "options": "NumericalTransformOptions?"},
+      "output_contract": {"result": "ArrayLike", "failure_packet": "NumericalTransformFailure(kind, shape?, dtype?)"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "numerical transformation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["input and output shapes and dtypes are explicit", "invalid shape and non-finite inputs are covered", "input arrays are not mutated"],
+      "failure_modes": ["invalid_array_shape", "unsupported_dtype", "non_finite_input", "numerical_failure"],
+      "reason": "AST proves a side-effect-free numerical array transformation"
+    },
+    "sequence_array_translation_boundary": {
+      "input_contract": {"values": "IterableLike", "options": "TranslationOptions?"},
+      "output_contract": {"result": "Union[ArrayLike, SequenceLike]"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "translation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["sequence and array modes have explicit output shapes", "empty and malformed values are covered", "inputs are not mutated"],
+      "failure_modes": ["unsupported_value", "translation_failure", "output_shape_mismatch"],
+      "reason": "AST proves a side-effect-free sequence or array translation"
+    },
+    "object_mapping_projection": {
+      "input_contract": {"source": "ProtocolLike"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["public fields map deterministically", "private and callable values follow explicit inclusion policy", "source state is not mutated"],
+      "failure_modes": ["unsupported_source_shape", "field_projection_failure", "key_normalization_collision"],
+      "reason": "AST proves a bounded object-to-mapping projection"
+    },
+    "receiver_object_mapping_projection": {
+      "input_contract": {"receiver_state": "SerializableModelState(fields, values)"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "receiver projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["declared fields map deterministically", "nested model and enum values use explicit projection rules", "receiver and nested values are not mutated"],
+      "failure_modes": ["unsupported_nested_value", "field_projection_failure", "missing_declared_field"],
+      "reason": "AST proves a bounded receiver-model to mapping projection"
+    },
+    "receiver_state_predicate": {
+      "input_contract": {"receiver_state": "ReceiverState(signals)"},
+      "output_contract": {"decision": "bool"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "state inspection is read-only", "requires_validation_gate": true},
+      "validation_gates": ["ready and not-ready state combinations return explicit booleans", "missing optional state is handled deterministically", "receiver state is not mutated"],
+      "failure_modes": ["malformed_receiver_state", "state_signal_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded read-only receiver-state predicate"
+    },
+    "optional_type_annotation_normalization": {
+      "input_contract": {"annotation": "TypeAnnotation"},
+      "output_contract": {"normalized_annotation": "TypeAnnotation"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "annotation normalization is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["Optional[T] unwraps to T", "non-Optional annotations preserve identity", "input annotation metadata is not mutated"],
+      "failure_modes": ["malformed_optional_metadata", "unsupported_union_shape"],
+      "reason": "AST proves a bounded Optional type-annotation normalization"
+    },
+    "protocol_string_fallback_projection": {
+      "input_contract": {"source": "ProtocolLike"},
+      "output_contract": {"result": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "fallback projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["primary and fallback attribute paths are covered", "missing primary data selects the fallback deterministically", "source state is not mutated"],
+      "failure_modes": ["unsupported_source_shape", "primary_projection_failure", "fallback_projection_failure"],
+      "reason": "AST proves a bounded protocol-to-string projection with fallback paths"
+    },
+    "callable_decorator_factory": {
+      "input_contract": {"declaration": "DecoratorDeclaration", "options": "DecoratorOptions"},
+      "output_contract": {"result": "Callable"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "factory construction is isolated from invocation effects", "requires_validation_gate": true},
+      "validation_gates": ["factory returns a callable for valid options", "invalid declaration combinations fail explicitly", "invocation effects remain in the returned callable contract"],
+      "failure_modes": ["invalid_declaration", "unsupported_option_combination", "callable_construction_failure"],
+      "reason": "AST proves a bounded callable decorator factory"
+    },
+    "parameterized_text_builder": {
+      "input_contract": {"parameters": "TextBuilderParameters"},
+      "output_contract": {"result": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "text construction is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["all placeholders bind deterministically", "escaping and empty values are covered", "output is stable for identical parameters"],
+      "failure_modes": ["missing_parameter", "invalid_parameter_type", "template_render_failure"],
+      "reason": "AST proves a bounded parameterized text builder"
+    },
+    "cryptographic_digest_transform": {
+      "input_contract": {"source": "str"},
+      "output_contract": {"digest": "str"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "digest calculation is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["identical inputs produce identical digests", "input encoding is explicit", "source text is not mutated"],
+      "failure_modes": ["unsupported_input_type", "encoding_failure", "digest_algorithm_unavailable"],
+      "reason": "AST proves a bounded cryptographic digest transform"
+    },
+    "mapping_observability_validation_command": {
+      "input_contract": {"path": "PathLike", "values": "MappingLike"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["observability"], "output_policy": "validation findings are emitted explicitly", "requires_validation_gate": true},
+      "validation_gates": ["valid and obsolete mapping entries are covered", "diagnostics identify the failing key", "input mapping is not mutated"],
+      "failure_modes": ["invalid_mapping", "obsolete_entry", "diagnostic_sink_failure"],
+      "reason": "AST proves a mapping validation command with observable findings"
+    },
+    "validated_string_projection": {
+      "input_contract": {"source": "ProjectionSource", "projection_options": "StringProjectionOptions"},
+      "output_contract": {"result": "str", "failure_packet": "StringProjectionFailure(kind, evidence_ref?)"},
+      "side_effect_policy": {"declared": [], "mutation_policy": "projection is side-effect free", "requires_validation_gate": true},
+      "validation_gates": ["short and extended projection branches are covered", "missing required source data raises an explicit failure", "format options do not mutate source state"],
+      "failure_modes": ["missing_source_data", "unsupported_projection_mode", "formatting_failure"],
+      "reason": "AST proves a validated multi-branch string projection"
+    },
+    "route_tree_flatten_boundary": {
+      "input_contract": {"routes": "RouteTree(routes, mounted_routes?, compatibility_context?)"},
+      "output_contract": {"routes": "Iterator[MatchableRoute]", "failure_packet": "RouteFlattenFailure(kind, route_ref?)"},
+      "side_effect_policy": {"mutation_policy": "route traversal does not mutate router state", "requires_validation_gate": true},
+      "benign_runtime_boundary": true,
+      "validation_gates": ["flat and mounted route trees are covered", "framework compatibility branches yield equivalent route shapes", "empty route collections terminate deterministically"],
+      "failure_modes": ["unsupported_route_shape", "compatibility_branch_mismatch", "route_cycle"],
+      "reason": "AST proves a generator boundary over framework route-tree variants"
+    },
+    "persistence_append_command": {
+      "input_contract": {"unit_of_work": "PersistenceSession(add)", "record_data": "RecordAppendInput(values)"},
+      "input_bindings": {"unit_of_work": ["session", "db", "unit_of_work", "uow"], "record_data": ["*remaining"]},
+      "output_contract": {"result": "VoidPersistenceCommand", "failure_packet": "PersistenceAppendFailure(kind, record_ref?)"},
+      "side_effect_policy": {"declared": ["database"], "database_write": "record construction and unit-of-work append are explicit", "transaction_policy": "commit ownership remains with the caller", "requires_validation_gate": true},
+      "validation_gates": ["valid record construction and append are covered", "persistence failure does not hide transaction ownership", "duplicate/idempotency behavior is reviewed"],
+      "failure_modes": ["record_construction_error", "unit_of_work_rejected", "duplicate_record"],
+      "reason": "AST proves a bounded unit-of-work append command"
+    },
+    "subprocess_tuple_query_boundary": {
+      "input_contract": {"query_context": "SubprocessQueryContext"},
+      "output_contract": {"result": "TupleLike"},
+      "side_effect_policy": {"declared": ["subprocess"], "requires_validation_gate": true},
+      "validation_gates": ["subprocess exit and timeout behavior are explicit", "returned tuple positions have stable meanings"],
+      "failure_modes": ["subprocess_unavailable", "subprocess_timeout", "tuple_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded subprocess query returning a tuple contract"
+    },
+    "decorated_web_route_boundary": {
+      "input_contract": {"request": "WebRequest", "route_context": "RouteContext"},
+      "output_contract": {"response": "WebResponseLike"},
+      "side_effect_policy": {"declared": ["framework_dispatch"], "requires_validation_gate": true},
+      "validation_gates": ["route parameters and response shape are explicit", "framework errors preserve request evidence"],
+      "failure_modes": ["invalid_route_input", "handler_failure", "response_shape_mismatch"]
+    },
+    "decorated_web_error_boundary": {
+      "input_contract": {"error": "WebErrorContext"},
+      "output_contract": {"response": "ErrorResponseLike"},
+      "side_effect_policy": {"declared": ["framework_dispatch"], "requires_validation_gate": true},
+      "validation_gates": ["registered error classes map to stable response shapes", "error details follow disclosure policy"],
+      "failure_modes": ["unregistered_error", "error_rendering_failure", "unsafe_error_disclosure"]
+    },
+    "decorated_background_task_boundary": {
+      "input_contract": {"task_input": "BackgroundTaskInput"},
+      "output_contract": {"result": "BackgroundTaskResult"},
+      "side_effect_policy": {"declared": ["task_runtime"], "requires_validation_gate": true},
+      "validation_gates": ["retry and idempotency behavior are explicit", "task failure remains observable"],
+      "failure_modes": ["task_rejected", "task_failure", "retry_exhausted"]
+    },
+    "decorated_identity_loader_boundary": {
+      "input_contract": {"identity": "IdentityKey"},
+      "output_contract": {"principal": "Optional[AuthenticatedPrincipal]"},
+      "side_effect_policy": {"declared": ["identity_store_read"], "requires_validation_gate": true},
+      "validation_gates": ["known, missing and malformed identities have explicit results", "identity lookup does not mutate authentication state"],
+      "failure_modes": ["invalid_identity", "principal_not_found", "identity_store_failure"]
+    },
+    "async_batch_processing_boundary": {
+      "input_contract": {"items": "IterableLike"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["async_processing"], "requires_validation_gate": true},
+      "validation_gates": ["empty and partial batches terminate deterministically", "per-item failure policy is explicit"],
+      "failure_modes": ["invalid_item", "partial_batch_failure", "cancellation"]
+    },
+    "ordered_mapping_mutation_boundary": {
+      "input_contract": {"mapping": "MappingLike", "receiver_state": "MutableState"},
+      "output_contract": {"result": "VoidSideEffect"},
+      "side_effect_policy": {"declared": ["memory_state"], "requires_validation_gate": true},
+      "validation_gates": ["mapping order is deterministic", "state mutation and rollback behavior are explicit"],
+      "failure_modes": ["invalid_mapping", "partial_state_mutation", "ordering_conflict"]
+    },
+    "database_read_mapping_boundary": {
+      "input_contract": {"query": "DatabaseReadQuery"},
+      "output_contract": {"result": "MappingLike"},
+      "side_effect_policy": {"declared": ["database"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated reads return stable mapping shapes", "database failures preserve query evidence"],
+      "failure_modes": ["query_failure", "mapping_shape_mismatch", "record_not_found"]
+    },
+    "tabular_database_query_boundary": {
+      "input_contract": {"query": "TabularDatabaseQuery", "connection": "DatabaseConnection"},
+      "output_contract": {"result": "DataFrame"},
+      "side_effect_policy": {"declared": ["database_read"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated queries return stable tabular schemas", "connection and query failures remain explicit"],
+      "failure_modes": ["connection_failure", "query_failure", "tabular_schema_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded database-to-tabular read contract"
+    },
+    "filesystem_typed_collection_loader": {
+      "input_contract": {"location": "FilesystemLocation"},
+      "output_contract": {"result": "List[DomainRecord]"},
+      "side_effect_policy": {"declared": ["filesystem_read"], "requires_validation_gate": true},
+      "validation_gates": ["missing, empty and populated locations return explicit collection shapes", "malformed records fail without returning partial state"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "collection_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a typed collection loader over a filesystem read boundary"
+    },
+    "filesystem_typed_object_loader": {
+      "input_contract": {"location": "FilesystemLocation", "adapter": "ProtocolLike"},
+      "output_contract": {"result": "TypedDomainObject"},
+      "side_effect_policy": {"declared": ["filesystem_read"], "requires_validation_gate": true},
+      "validation_gates": ["valid delimited input returns the declared object shape", "missing and malformed input fail without partial state"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "object_shape_mismatch"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a typed object loader over a fixture-isolated filesystem and adapter boundary"
+    },
+    "iterable_observability_report_command": {
+      "input_contract": {"report_items": "IterableLike"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["observability"], "requires_validation_gate": true},
+      "validation_gates": ["empty and populated iterables produce bounded output", "reporting does not mutate input items"],
+      "failure_modes": ["invalid_report_item", "rendering_failure", "observability_sink_failure"]
+    },
+    "observability_render_command": {
+      "input_contract": {"render_input": "RenderInput"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["observability"], "requires_validation_gate": true},
+      "validation_gates": ["valid and malformed inputs have bounded render behavior", "rendering does not mutate the supplied input"],
+      "failure_modes": ["invalid_render_input", "rendering_failure", "observability_sink_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a bounded command whose sole effect is observable rendering"
+    },
+    "filesystem_read_observability_command": {
+      "input_contract": {"location": "PathLike"},
+      "output_contract": {"result": "VoidReportCommand"},
+      "side_effect_policy": {"declared": ["filesystem_read", "observability"], "requires_validation_gate": true},
+      "validation_gates": ["missing, empty and populated files have bounded output", "reporting does not mutate the source"],
+      "failure_modes": ["location_unavailable", "record_decode_failure", "observability_sink_failure"],
+      "benign_runtime_boundary": true,
+      "reason": "AST proves a read-only filesystem reporting boundary"
+    },
+    "multi_shape_prediction_boundary": {
+      "input_contract": {"model_input": "PredictionInput", "options": "PredictionOptions"},
+      "output_contract": {"result": "Union[ArrayLike, TupleLike]"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["each prediction mode has an explicit output shape", "invalid model state fails before returning partial output"],
+      "failure_modes": ["invalid_model_state", "unsupported_prediction_mode", "prediction_shape_mismatch"]
+    },
+    "protocol_operator_result_boundary": {
+      "input_contract": {"context": "ProtocolLike"},
+      "output_contract": {"result": "SetLike"},
+      "side_effect_policy": {"declared": [], "requires_validation_gate": true},
+      "validation_gates": ["protocol context requirements are explicit", "operator result tokens are stable and bounded"],
+      "failure_modes": ["invalid_protocol_context", "operator_failure", "invalid_result_token"]
+    }
+  }
+}

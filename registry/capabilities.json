@@ -1,6 +1,38 @@
 {
   "capabilities": [
     {
+      "id": "append_mapping",
+      "version": "0.4.0",
+      "entrypoint": "plugins.append_mapping.src.main:run",
+      "input_schema_ref": "plugins/append_mapping/schemas/input.json",
+      "output_schema_ref": "plugins/append_mapping/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:5b69e976842c1a356dfb5dc31711c1205e4acd8e4f187e1307fb5f1a7d219b93",
+      "fallback_for": []
+    },
+    {
+      "id": "apply_project_change_recipe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.apply_project_change_recipe.src.main:run",
+      "input_schema_ref": "plugins/apply_project_change_recipe/schemas/input.json",
+      "output_schema_ref": "plugins/apply_project_change_recipe/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:de6b3f98ab8e5a7dcaf9ab5d9ee1e09f8608ab380e9d72fd8baa2d0880902f49",
+      "fallback_for": []
+    },
+    {
       "id": "csv_to_spreadsheet",
       "version": "0.1.0",
       "entrypoint": "plugins.csv_to_spreadsheet.src.main:run",
@@ -29,7 +61,39 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:da12787c65b825863c0a1f837c8922a2142557f823e7ccec3b4ae61a530866df",
+      "version_hash": "sha256:bad10b45b615cbe3b2519f3206d2c5b00f25b47ae08afb6d77b325f63141fc93",
+      "fallback_for": []
+    },
+    {
+      "id": "development_quality",
+      "version": "0.1.2",
+      "entrypoint": "plugins.development_quality.src.main:run",
+      "input_schema_ref": "plugins/development_quality/schemas/input.json",
+      "output_schema_ref": "plugins/development_quality/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:6535d4b5fedcea478d868c94898ed87c7d2cbfe06f50891e564d0637744a22d6",
+      "fallback_for": []
+    },
+    {
+      "id": "exception_pickle",
+      "version": "0.4.0",
+      "entrypoint": "plugins.exception_pickle.src.main:run",
+      "input_schema_ref": "plugins/exception_pickle/schemas/input.json",
+      "output_schema_ref": "plugins/exception_pickle/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:d1b458c55574fac5e17a965033a92ee95aa5c4159719816180809e589053f102",
       "fallback_for": []
     },
     {
@@ -61,7 +125,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:9c11eaed03de6c12ea98c7f3984a6eab3ef3d4e296a4a9646696cc21a49bdd1a",
+      "version_hash": "sha256:7c887ba146546c38dc3951de27defa8f452ce7b08a8d5d0d13ecdbf2575a4063",
       "fallback_for": []
     },
     {
@@ -77,7 +141,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:580a9aebcad0a4da05d71725f23a4348007171c26d363e5805b1deeee082d483",
+      "version_hash": "sha256:3f99ae6cf7ded945d6f4e5b9ded7047dfba6a5a0909582fc453f0635ea2aec57",
       "fallback_for": []
     },
     {
@@ -145,6 +209,22 @@
       "fallback_for": []
     },
     {
+      "id": "json_parsing",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_parsing.src.main:run",
+      "input_schema_ref": "plugins/json_parsing/schemas/input.json",
+      "output_schema_ref": "plugins/json_parsing/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:06ac6596521162e653e8451183172c5bee3c44b3bdab0d066d9fa418b10a9dbe",
+      "fallback_for": []
+    },
+    {
       "id": "json_select",
       "version": "0.1.0",
       "entrypoint": "plugins.json_select.src.main:run",
@@ -158,6 +238,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:c348e5d0f7bb1357c053fa94b013e549c56fb3988850284d10ae31ef708e9eca",
+      "fallback_for": []
+    },
+    {
+      "id": "json_serialization",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_serialization.src.main:run",
+      "input_schema_ref": "plugins/json_serialization/schemas/input.json",
+      "output_schema_ref": "plugins/json_serialization/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:5d78fc1f9e32c27a8fecc0ec6bb051d1b7bd2f1a0ad026c3cc0220daaf8bbb52",
       "fallback_for": []
     },
     {
@@ -307,19 +403,83 @@
       ]
     },
     {
-      "id": "project_map_report",
+      "id": "project_description",
+      "version": "0.18.0",
+      "entrypoint": "plugins.project_description.src.main:run",
+      "input_schema_ref": "plugins/project_description/schemas/input.json",
+      "output_schema_ref": "plugins/project_description/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:d5cf5ff72f371241e7c0912dcf0c777e94ff320481c512bf777bf9bafa28097f",
+      "fallback_for": []
+    },
+    {
+      "id": "project_fact_questions",
       "version": "0.1.0",
+      "entrypoint": "plugins.project_fact_questions.src.main:run",
+      "input_schema_ref": "plugins/project_fact_questions/schemas/input.json",
+      "output_schema_ref": "plugins/project_fact_questions/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:1af98eb9a0483de187d4653003538bc91069821600849e1b176569037ae22dc1",
+      "fallback_for": []
+    },
+    {
+      "id": "project_map_report",
+      "version": "0.2.0",
       "entrypoint": "plugins.project_map_report.src.main:run",
       "input_schema_ref": "plugins/project_map_report/schemas/input.json",
       "output_schema_ref": "plugins/project_map_report/schemas/output.json",
       "determinism_grade": "A",
       "side_effects": {
-        "filesystem": "none",
+        "filesystem": "read_only",
         "network": "none",
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:3ecd3192b5b5513614ca29d36f548e09276ea58df8593911bd851a4b7ddd57e0",
+      "version_hash": "sha256:1b6021a335c610ec6065b8bc3ab7347612bc33c56857df98816e2972fd7a8af7",
+      "fallback_for": []
+    },
+    {
+      "id": "project_provider_probe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.project_provider_probe.src.main:run",
+      "input_schema_ref": "plugins/project_provider_probe/schemas/input.json",
+      "output_schema_ref": "plugins/project_provider_probe/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "allowlist",
+        "secrets": "declared"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:3a2e6d1606b61040debb3b2477f5a8a6acca8af1d87130e8f78191daf260dce1",
+      "fallback_for": []
+    },
+    {
+      "id": "python_transform_contracts",
+      "version": "0.2.0",
+      "entrypoint": "plugins.python_transform_contracts.src.main:run",
+      "input_schema_ref": "plugins/python_transform_contracts/schemas/input.json",
+      "output_schema_ref": "plugins/python_transform_contracts/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:94f85a26b95aa7036e29b3a3fb81990e53205a4350d22bf7412551185a354fd4",
       "fallback_for": []
     },
     {
@@ -335,7 +495,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f142e8c8fb71114d24117759423f2552cffbc638b5e4e9c36b8aba1853eea764",
+      "version_hash": "sha256:28bc62d7127a0364c1bbea6748d3c89753050510a9e3218f9f9a23bac28bc9e8",
       "fallback_for": []
     },
     {
@@ -352,6 +512,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:b36bb3dde5ab9626bc3b6b3b29ef2e2881098fd52bc510f3b43e5c1c5fc64520",
+      "fallback_for": []
+    },
+    {
+      "id": "replace_text_in_project",
+      "version": "0.1.0",
+      "entrypoint": "plugins.replace_text_in_project.src.main:run",
+      "input_schema_ref": "plugins/replace_text_in_project/schemas/input.json",
+      "output_schema_ref": "plugins/replace_text_in_project/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:8a3760ea508210d740664246a12552b01e9aeb35c4e918d4a9efdf9bf467dd85",
       "fallback_for": []
     },
     {
@@ -383,7 +559,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f6c7073072940cfa8412f9f51dcc832f9a9fab131b6d27ca104dbb77e2dedb19",
+      "version_hash": "sha256:50232dab74ce5152c044aa61ebe0fcfd6e77072429c0aef0b8d0d748b414bdb0",
       "fallback_for": []
     },
     {
@@ -400,6 +576,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:06269b8661589d36744d1edd460a7d98cf197508e0909e9df8f2f7f3addde5b8",
+      "fallback_for": []
+    },
+    {
+      "id": "text_splitting",
+      "version": "0.1.0",
+      "entrypoint": "plugins.text_splitting.src.main:run",
+      "input_schema_ref": "plugins/text_splitting/schemas/input.json",
+      "output_schema_ref": "plugins/text_splitting/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:abfa432b8bc695e7928b3f7c9d14b8fba5760bb37359336f5f4289d0640294ad",
       "fallback_for": []
     },
     {

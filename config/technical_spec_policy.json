@@ -1,0 +1,219 @@
+{
+  "schema_version": "technical_spec_policy.v1",
+  "snippet_analysis": {
+    "allowed_external_names": [
+      "Any",
+      "Dict",
+      "List",
+      "Optional",
+      "Path",
+      "model",
+      "np",
+      "pd",
+      "self",
+      "time",
+      "tokenizer",
+      "torch"
+    ],
+    "high_confidence_unresolved_sets": [
+      ["pipe", "output"]
+    ]
+  },
+  "contract_type_inference": {
+    "qualified_call_argument_types": {
+      "datetime.datetime.fromtimestamp": "NumberLike",
+      "datetime.datetime.utcfromtimestamp": "NumberLike",
+      "datetime.fromtimestamp": "NumberLike",
+      "datetime.utcfromtimestamp": "NumberLike"
+    },
+    "ignored_return_annotations": ["any", "typing.any", "none", "object"],
+    "argument_rules": [
+      {"type": "RequestLike", "exact": ["request", "req"], "contains_any": ["request"]},
+      {"type": "ResponseLike", "exact": ["response", "resp"], "contains_any": ["response"]},
+      {"type": "ActionLike", "exact": ["action"], "contains_any": []},
+      {"type": "Identifier", "exact": ["id"], "contains_any": ["_id"]},
+      {"type": "PathLike", "contains_any": ["path", "file", "filename"]},
+      {"type": "UrlString", "contains_any": ["url", "uri"]},
+      {"type": "StreamLike", "exact": ["stream"], "contains_any": []},
+      {"type": "str", "contains_any": ["text", "message", "content"]},
+      {"type": "MappingLike", "contains_any": ["headers", "options", "config", "data", "payload"]},
+      {"type": "SequenceLike", "contains_any": ["items", "args"]},
+      {"type": "MeanFlowLike", "contains_any": ["meanflow", "mean_flow"]},
+      {"type": "int", "contains_any": ["index", "count", "line"]}
+    ],
+    "payload_rules": [
+      {"type": "RenderContext", "source_contains_any": ["rich", "console", "format"]},
+      {"type": "CliInput", "source_contains_any": ["cli", "args", "command"]},
+      {"type": "ExceptionContext", "source_contains_any": ["exception"]},
+      {"type": "ScheduleTimeInput", "source_contains_any": ["schedule"], "source_suffixes": [":at"]},
+      {"type": "PluginHookContext", "source_contains_any": ["hook", "plugin"]}
+    ],
+    "result_rules": [
+      {"type": "VoidSideEffect", "source_contains_any": [":add_", ":save_", ":update_", ":delete_", ":remove_", ":register_", ":execute_"]},
+      {"type": "Iterable[ConsoleRenderable]", "source_contains_any": ["__rich_console__"]},
+      {"type": "FormattedHelpRenderable", "source_contains_any": ["rich_format", "format_help"]},
+      {"type": "FormattedText", "source_contains_any": ["format"]},
+      {"type": "ParsedStructure", "source_contains_any": ["interpret", "parse"]},
+      {"type": "ScheduleBuilder", "source_contains_any": ["schedule"], "source_suffixes": [":at"]},
+      {"type": "PluginHookResult", "source_contains_any": ["hook"]},
+      {"type": "Iterable[ResultItem]", "snippet_contains_any": ["yield "]},
+      {"type": "MappingLike", "snippet_contains_any": ["return {", "dict("]},
+      {"type": "SequenceLike", "snippet_contains_any": ["return ["]},
+      {"type": "str", "snippet_contains_any": ["return str", "return \"\""]}
+    ]
+  },
+  "side_effect_process_boundary": ["network", "subprocess", "filesystem", "filesystem_read", "filesystem_write", "database", "database_read"],
+  "side_effect_idempotency_required": ["network", "subprocess", "filesystem", "filesystem_write", "database", "memory_state"],
+  "semantic_rerank": {
+    "scan_limit": 12,
+    "strong_semantic_delta": 8,
+    "strong_score_slack": 35,
+    "strong_close_semantic_delta": 6,
+    "strong_close_score_slack": 10,
+    "bounded_transform_score_slack": 55,
+    "generic_semantic_delta": 18,
+    "generic_score_slack": 20
+  },
+  "candidate_arbitration": {
+    "normal_candidate_limit": 5,
+    "self_improvement_preferred_rank_limit": 16
+  },
+  "first_slice_scope": {
+    "enforce_candidate_within_targets": true,
+    "preserve_architecture_order_before_execution_failure": true,
+    "read_only_ranked_context_limit": 32,
+    "work_plan_target_limit": 32,
+    "selection_reason": "ArchitectureDecisionRecord first-slice targets define the executable SpecWriter candidate scope"
+  },
+  "target_binding_policy": {
+    "blocked_standalone_bindings": ["nested_function", "nested_method", "ambiguous_method_symbol"],
+    "blocked_reason_codes": {
+      "nested_function": "nested_function_requires_closure",
+      "nested_method": "nested_method_requires_closure",
+      "ambiguous_method_symbol": "ambiguous_method_requires_class_binding"
+    },
+    "blocked_reasons": {
+      "nested_function": "nested function depends on enclosing closure state and is not a standalone extraction target",
+      "nested_method": "method of a function-local class depends on enclosing closure state and is not a standalone extraction target",
+      "ambiguous_method_symbol": "method name has multiple class owners and requires a class-qualified target"
+    }
+  },
+  "dependency_readiness": {
+    "enabled": true,
+    "max_local_import_depth": 4,
+    "stdlib_compat_modules": ["ConfigParser", "urllib2", "urlparse"],
+    "unsupported_runtime_names": ["basestring", "long", "raw_input", "unicode", "xrange"],
+    "missing_external_penalty_each": 24,
+    "max_missing_external_penalty": 72,
+    "environment_ready_reselection_score_slack": 40,
+    "environment_ready_reselection_semantic_slack": 0,
+    "reason_prefix": "runtime environment misses external imports",
+    "profile_resolution_options": [
+      "select_environment_ready_ranked_candidate",
+      "provision_declared_project_dependencies_in_isolated_environment",
+      "use_controlled_stub_only_when_acceptance_does_not_depend_on_external_semantics"
+    ],
+    "profile_verification_gates": [
+      "dependency_source_is_declared_or_source_proven",
+      "isolated_import_probe_passes",
+      "callable_acceptance_passes_without_live_external_service",
+      "source_diff_remains_empty_until_profile_is_accepted"
+    ],
+    "profile_forbidden_actions": [
+      "auto_install_dependency",
+      "mutate_project_manifest",
+      "treat_stub_success_as_semantic_equivalence"
+    ],
+    "reselection_required_properties": [
+      "standalone_callable_target",
+      "environment_ready_or_isolated_dependency_profile_accepted",
+      "source_backed_input_output_contract",
+      "bounded_side_effect_policy"
+    ]
+  },
+  "first_slice_reselection": {
+    "enabled": true,
+    "production_triggers": [
+      "low_first_slice_viability",
+      "first_slice_semantic_quality_below_threshold",
+      "no_semantically_safe_candidate_in_approved_first_slice"
+    ],
+    "minimum_semantic_score": 95,
+    "semantic_override_viability_rules": [
+      "static_time_format_boundary",
+      "read_or_mapping_boundary"
+    ],
+    "execution_feedback_enabled": true,
+    "execution_feedback_max_iterations": 4,
+    "execution_feedback_max_resource_failures": 2,
+    "execution_rejection_reasons": [
+      "import_failed_import_error",
+      "import_failed_missing_module",
+      "import_failed_runtime_error",
+      "isolated_process_failed",
+      "first_slice_reselection_required",
+      "executable_acceptance_failed",
+      "method_target_needs_instance_fixture",
+      "positive_sample_execution_failed",
+      "positive_signature_mismatch",
+      "side_effectful_target",
+      "state_mutating_target"
+    ],
+    "allow_declared_dependency_candidates": true,
+  "max_iterations": 3,
+    "expanded_candidate_limit": 64,
+  "selected_target_limit": 32,
+    "domain_candidate_required_any": {
+      "scientific_compute_library": ["array", "tensor", "compute", "feature", "fit", "solve", "solver", "math/", "model", "predict", "transform", "domain", "derivative", "integral", "sequence", "protein"]
+    },
+    "candidate_sources": [
+      "pure_transforms",
+      "atomic_reusable_capabilities",
+      "too_broad_functions",
+      "process_boundary_candidates",
+      "mixed_responsibility_functions",
+      "hidden_orchestrators",
+      "dataflows",
+      "minimal_extraction_plan",
+      "project_callable_inventory",
+      "analysis_tasks"
+    ]
+  },
+  "semantic_review_override": {
+    "enabled": true,
+    "min_candidate_score": 60,
+    "allowed_statuses": ["suspicious"],
+    "required_reason_tokens": [
+      "domain utility/helper",
+      "inputs look materializable by executable acceptance fixtures"
+    ],
+    "required_candidate_in_first_slice": true,
+    "required_checks": [
+      "source_evidence_bound",
+      "io_contract_bound",
+      "no_side_effects"
+    ],
+    "verdict": "approved_with_constraints"
+  },
+  "process_boundary_review_override": {
+    "enabled": false,
+    "allowed_statuses": ["suspicious"],
+    "required_profile_ids": [],
+    "required_side_effects_any": ["filesystem", "filesystem_read", "filesystem_write", "subprocess", "database"],
+    "verdict": "approved_with_constraints"
+  },
+  "architecture_shape_score": {
+    "positive_source_tokens": ["service.py:", "providers/factory.py", "import_indoc.py:parse_file"],
+    "positive_source_bonus": 35,
+    "positive_source_reason": "architecture-useful service/parser/factory boundary",
+    "positive_symbol_tokens": ["resolve", "build_providers", "parse_file", "features_for_view", "incident_features"],
+    "positive_symbol_bonus": 18,
+    "positive_symbol_reason": "domain boundary function name",
+    "negative_source_tokens": ["api.py:describe_module", "_plugin_metadata.py", "/_version.py", "/extern/", ":__subclasshook__", "debug_", "smoke"],
+    "negative_source_penalty": 35,
+    "negative_source_reason": "generic introspection/debug helper is lower priority",
+    "background_worker_tokens": ["downloader.py:worker"],
+    "background_worker_penalty": 20,
+    "background_worker_reason": "background worker is evidence, not first writable contract"
+  }
+}

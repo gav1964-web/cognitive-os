@@ -25,7 +25,10 @@ def test_durable_queue_persists_and_claims_jobs(tmp_path):
     assert claimed["status"] == "running"
     assert job_pipeline(claimed).id == "queued_hash"
 
-    reloaded.complete(job_id, result={"status": "ok", "outputs": {}})
+    assert reloaded.complete(
+        job_id, worker_id="worker-1", lease_token=claimed["lease_token"],
+        result={"status": "ok", "outputs": {}},
+    )
     assert reloaded.load(job_id)["status"] == "succeeded"
 
 
@@ -80,7 +83,7 @@ def test_durable_queue_heartbeat_extends_lease(tmp_path):
     claimed = queue.claim_next("worker-1", lease_seconds=0.1)
     assert claimed is not None
 
-    assert queue.heartbeat(job_id, "worker-1", lease_seconds=30)
+    assert queue.heartbeat(job_id, "worker-1", claimed["lease_token"], lease_seconds=30)
     assert queue.requeue_stale_running(older_than_seconds=None) == []
 
 
@@ -94,10 +97,36 @@ def test_durable_queue_job_level_retry(tmp_path):
         retry_policy={},
     )
     job_id = queue.enqueue(pipeline, {"value": "retry"}, max_attempts=2)
-    assert queue.claim_next("worker-1") is not None
+    claimed = queue.claim_next("worker-1")
+    assert claimed is not None
 
-    queue.fail(job_id, error="boom")
+    assert queue.fail(job_id, worker_id="worker-1", lease_token=claimed["lease_token"], error="boom")
 
     job = queue.load(job_id)
     assert job["status"] == "queued"
     assert job["attempts"] == 1
+
+
+def test_stale_worker_cannot_finish_new_attempt(tmp_path):
+    queue = DurableQueue(tmp_path)
+    pipeline = Pipeline(
+        id="leased_hash", version="0.1.0",
+        nodes=[PipelineNode(id="hash", capability="hash_payload", input={})],
+        edges=[], retry_policy={},
+    )
+    job_id = queue.enqueue(pipeline, {}, max_attempts=2)
+    first = queue.claim_next("worker-a", lease_seconds=-1)
+    assert first is not None
+    assert queue.requeue_stale_running() == [job_id]
+    second = queue.claim_next("worker-b")
+    assert second is not None
+
+    assert not queue.heartbeat(job_id, "worker-a", first["lease_token"])
+    assert not queue.complete(
+        job_id, worker_id="worker-a", lease_token=first["lease_token"], result={"status": "ok"},
+    )
+    assert not queue.fail(job_id, worker_id="worker-a", lease_token=first["lease_token"], error="late")
+    assert queue.complete(
+        job_id, worker_id="worker-b", lease_token=second["lease_token"], result={"status": "ok"},
+    )
+    assert queue.load(job_id)["status"] == "succeeded"

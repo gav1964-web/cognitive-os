@@ -36,6 +36,7 @@ def build_summary(root: Path) -> dict[str, Any]:
                 "cognitive_os_status": cognitive.get("status", "unknown"),
                 "winner": metrics.get("comparison", {}).get("winner", "unknown"),
                 "confidence": metrics.get("comparison", {}).get("confidence", 0.0),
+                "authority": "v2" if metrics.get("protocol_version") == "v2" else "legacy_non_authoritative",
             }
         )
 
@@ -43,6 +44,7 @@ def build_summary(root: Path) -> dict[str, Any]:
         "task_count": len(rows),
         "task_classes": task_classes,
         "verdicts": verdicts,
+        "authority": "legacy_non_authoritative",
         "tasks": rows,
     }
 
@@ -54,14 +56,15 @@ def to_markdown(summary: dict[str, Any]) -> str:
         f"- Tasks: `{summary['task_count']}`",
         f"- Classes: `{summary['task_classes']}`",
         f"- Verdicts: `{summary['verdicts']}`",
+        "- Authority: `legacy_non_authoritative`; use the three-route v2 report for product claims.",
         "",
-        "| Task | Class | Direct | Cognitive OS | Winner | Verdict | Confidence |",
-        "| --- | --- | --- | --- | --- | --- | ---: |",
+        "| Task | Class | Direct | Cognitive OS | Winner | Verdict | Confidence | Authority |",
+        "| --- | --- | --- | --- | --- | --- | ---: | --- |",
     ]
     for row in summary["tasks"]:
         lines.append(
             "| `{task_id}` | `{task_class}` | `{direct_status}` | `{cognitive_os_status}` | "
-            "`{winner}` | `{verdict}` | `{confidence}` |".format(**row)
+            "`{winner}` | `{verdict}` | `{confidence}` | `{authority}` |".format(**row)
         )
     return "\n".join(lines) + "\n"
 
@@ -88,4 +91,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

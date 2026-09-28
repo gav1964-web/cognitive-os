@@ -1,0 +1,111 @@
+{
+  "patterns": [
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "hook_extra_wrapper_order_contract",
+      "id": "pluggy_call_extra_wrapper_order",
+      "operator_id": "order_extra_hooks_after_wrappers",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two sandbox copies",
+        "one unique assertion-causal production target",
+        "legacy while condition matches the bounded source shape",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original failing pytest nodeid passes in the patch sandbox",
+        "full project-native pytest suite passes",
+        "generated function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "HookCaller.call_extra insertion order with wrapper and tryfirst implementations",
+      "validated_evidence": {
+        "failing_nodeid": "testing/test_native_call_extra_order.py::test_call_extra_hook_order",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T155954601372Z.json",
+        "project": "pluggy_call_extra_order",
+        "project_development_report": "artifacts/project_development/project_development_20260830T160155912502Z.json",
+        "regression_result": "106 passed",
+        "target": "src/pluggy/_hooks.py:HookCaller.call_extra",
+        "targeted_result": "1 passed"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "wheel_dist_info_content_contract",
+      "id": "build_wheel_dist_info_from_contents",
+      "operator_id": "derive_dist_info_from_wheel_contents",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two sandbox copies",
+        "one unique assertion-causal production target",
+        "wheel fallback uses the bounded filename parser source shape",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "build-tag regression nodeid passes in the patch sandbox",
+        "configured project-native regression suite passes",
+        "generated function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "ProjectBuilder metadata fallback deriving dist-info from a wheel filename",
+      "validated_evidence": {
+        "failing_nodeid": "tests/test_native_metadata_path.py::test_metadata_path_reads_dist_info_from_build_tag_wheel[False]",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T155950508904Z.json",
+        "project": "build_wheel_dist_info",
+        "project_development_report": "artifacts/project_development/project_development_20260830T160217472143Z.json",
+        "regression_result": "1 passed",
+        "target": "src/build/_builder.py:ProjectBuilder.metadata_path",
+        "targeted_result": "1 passed"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "empty_theme_config_contract",
+      "id": "mkdocs_empty_theme_configuration",
+      "operator_id": "guard_empty_theme_config",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two sandbox copies",
+        "one unique traceback production target",
+        "empty YAML produces None before mapping operations",
+        "target opens configuration in literal read-only mode",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "empty-theme regression nodeid passes in the patch sandbox",
+        "configured project-native regression suite passes",
+        "generated function stub admission passes",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "theme loader using pop on a YAML mapping that may be None",
+      "validated_evidence": {
+        "failing_nodeid": "mkdocs/tests/test_native_empty_theme.py::test_empty_theme_configuration_is_accepted",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T155952485475Z.json",
+        "project": "mkdocs_empty_theme_config",
+        "project_development_report": "artifacts/project_development/project_development_20260830T160406737219Z.json",
+        "regression_result": "1 passed",
+        "target": "mkdocs/theme.py:Theme._load_theme_config",
+        "targeted_result": "1 passed"
+      }
+    }
+  ],
+  "promotion_policy": {
+    "automatic_promotion": false,
+    "minimum_independent_lineages": 3,
+    "minimum_project_native_transformations": 3,
+    "minimum_transformation_subtypes": 3,
+    "project_stratum": "framework_plugin_build",
+    "promoted_at": "2026-08-30T16:07:49.990978+00:00",
+    "promotion_authority": "explicit_verified_transaction",
+    "promotion_matrix": "artifacts/field_trials/role_project_type_evaluation_20260830T160556360317Z.json",
+    "status": "active"
+  },
+  "schema_version": "project_native_failure_repair_patterns.v1",
+  "status": "active"
+}

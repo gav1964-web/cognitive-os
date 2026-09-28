@@ -1,0 +1,109 @@
+{
+  "artifact_type": "FrameworkPluginCertification",
+  "cell_checks": [
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "project_analyzer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "architect",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "spec_writer",
+      "score": 9.7,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "implementer",
+      "score": 9.8,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "tester",
+      "score": 10.0,
+      "status": "passed"
+    },
+    {
+      "checks": {
+        "dedicated_lane_ready": true,
+        "evidence_complete": true,
+        "maturity_demonstrated": true,
+        "measured": true,
+        "score_at_target": true
+      },
+      "role_id": "reviewer",
+      "score": 9.8,
+      "status": "passed"
+    }
+  ],
+  "certificate_digest": "sha256:a6d3e6b23b97e2dcc6022c887f6bbce7f34e4e597683cf28454412fee4361237",
+  "failed_cell_roles": [],
+  "failed_receipt_checks": [],
+  "holdout_receipt": "evidence\\ledger\\c641cc575c989f30286fe3693ab59ba29e0be8cead6f3173fd2c520be6a551f8.json",
+  "next_action": "certification_complete",
+  "project_stratum": "framework_plugin_build",
+  "promotion_applied": false,
+  "promotion_eligible": true,
+  "receipt_checks": {
+    "generated_stub_gate": true,
+    "holdout_report_passed": true,
+    "independent_holdout": true,
+    "inputs_digest_bound": true,
+    "ledger_receipt_verified": true,
+    "lineage_disjoint": true,
+    "multiple_holdout_lineages": true,
+    "no_role_regression": true,
+    "role_chain_continuity": true,
+    "zero_generated_stubs": true
+  },
+  "receipt_status": "verified",
+  "required_roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer",
+    "tester",
+    "reviewer"
+  ],
+  "schema_version": "framework_plugin_certification.v1",
+  "status": "certified",
+  "target_score": 9.7
+}

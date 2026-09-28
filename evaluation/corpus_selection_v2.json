@@ -1,0 +1,20 @@
+{
+  "schema_version": "product_evaluation_corpus_selection.v2",
+  "split_seed": "product-evaluation-v2-2026-09",
+  "selection_policy": {
+    "local_corpus_first": true,
+    "untouched_only": true,
+    "owner_independent": true,
+    "content_independent": true,
+    "exclude_self_development_acquisition": true,
+    "exclude_self_development_holdout": true,
+    "network_fallback_used": false
+  },
+  "selected": [
+    {"task_id": "task22_fastapi_event_docs", "project": "teamhide__fastapi-event", "owner": "teamhide", "url": "https://github.com/teamhide/fastapi-event.git", "revision": "4e8502e5f1e6744ba7089c359f84e2fb5f5f263d", "content_fingerprint": "3a95dfaf1f35040c717eb087b2221fc1bd935ca3f5aa2833453d3cb314921f66"},
+    {"task_id": "task23_supervisord_docs", "project": "isca__ordered-startup-supervisord", "owner": "isca", "url": "https://gitlab.com/isca/ordered-startup-supervisord.git", "revision": "54e32080e673f1548c5d97ed483805d63754656a", "content_fingerprint": "45f5a86b7df834266c66546371bca1feca93b17b922bbd3c8a4729ea09138650"},
+    {"task_id": "task24_msgpack_packaging_change", "project": "MusicScience37Projects__utility-libraries__py-msgpack-rpc", "owner": "musicscience37projects", "url": "https://gitlab.com/MusicScience37Projects/utility-libraries/py-msgpack-rpc.git", "revision": "fe4aa4f3bb126c6ca47be3f8832156122a6598e6", "content_fingerprint": "22aaf787956252b35e61e4e326165920598693cce31bfceca9ff9422998d62fa"},
+    {"task_id": "task25_amazon_tool_test_change", "project": "amzn__amazon-frustration-free-setup-certification-tool", "owner": "amzn", "url": "https://github.com/amzn/amazon-frustration-free-setup-certification-tool.git", "revision": "221b7cdc9cdf94a688716a499bf5eb6e87c890df", "content_fingerprint": "ec27070ae255c7aece4e7e32960fef6380b90dae684e96ce42d713788c79914d"},
+    {"task_id": "task26_atila_development_analysis", "project": "skitai__atila", "owner": "skitai", "url": "https://gitlab.com/skitai/atila.git", "revision": "1c82d9b3730d83bda065677f2faf63487f56a09f", "content_fingerprint": "44708eea79ca804282c3630938c3e4d9c2df9667710e8341b06ead67cdd0c14e"}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/45722157a1fd397d89da9f98b3343eaaebf6e73fc22c06aff6506e27703a04b8.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:45722157a1fd397d89da9f98b3343eaaebf6e73fc22c06aff6506e27703a04b8",
+  "entry_digest": "sha256:11ef69e14f69c1d5e24a82fc7721620d1176bc4225f70f329fe8a38624113dec",
+  "evaluator_fingerprint": "pytest-registry-config:v1",
+  "producer_fingerprint": "canonical_verify:v1",
+  "replay_command": [
+    "python",
+    "tools/canonical_verify.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/verification/canonical_latest.json",
+  "status": "promoted"
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "narrow_type_causal_training_results.v1",
+  "evaluation_split": "training_replay",
+  "source_holdout_manifest": "config/narrow_type_defect_holdout_20260906.json",
+  "cases": [
+    {
+      "project": "tox",
+      "project_stratum": "cli_local_tool",
+      "source_lineage": "tox-dev/tox",
+      "source_owner": "tox-dev",
+      "expected_project_archetype": "test_framework_library",
+      "role_report": "artifacts/project_development/project_development_20260907T080345404867Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T080345404867Z.json",
+      "regression_scope": "tests/config/loader/ini",
+      "regression_scope_kind": "affected_subsystem",
+      "training_only": true
+    },
+    {
+      "project": "more-itertools",
+      "project_stratum": "library_pure_transform",
+      "source_lineage": "more-itertools/more-itertools",
+      "source_owner": "more-itertools",
+      "expected_project_archetype": "python_transform_library",
+      "role_report": "artifacts/project_development/project_development_20260907T074724193201Z.json",
+      "execution_report": "artifacts/project_development/project_development_20260907T074724193201Z.json",
+      "regression_scope": "complete_native_suite",
+      "regression_scope_kind": "full",
+      "training_only": true
+    }
+  ],
+  "semantic_evaluation": {
+    "status": "evidence_required",
+    "report": "artifacts/self_development/narrow_type_role_semantics_20260907T080616833384Z.json",
+    "evidence_digest": "sha256:fbb645657b1122d7a5715eca04b3a2d835688004d4d7e0e11c462b8556d5682e",
+    "role_scores": {
+      "project_analyzer": 9.4,
+      "architect": 8.5,
+      "spec_writer": 8.5,
+      "implementer": 8.8,
+      "tester": 8.5,
+      "reviewer": 8.5
+    },
+    "certification_granted": false,
+    "caps": ["training_replay", "scoped_regression"]
+  },
+  "authority": {
+    "certification_allowed": false,
+    "automatic_promotion_allowed": false,
+    "source_apply": false,
+    "reason": "The formerly independent defects were consumed to derive these causal operators."
+  }
+}

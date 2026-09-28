@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation"
+  ],
+  "properties": {
+    "operation": {
+      "enum": [
+        "patch_recipes",
+        "propose_patch",
+        "propose_helper"
+      ]
+    },
+    "source": {
+      "type": "string"
+    },
+    "origin_symbol": {
+      "type": "string"
+    },
+    "proposed_symbol": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "enum": [
+              "propose_patch",
+              "propose_helper"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "source",
+          "origin_symbol",
+          "proposed_symbol"
+        ]
+      }
+    }
+  ]
+}

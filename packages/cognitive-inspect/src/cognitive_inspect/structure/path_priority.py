@@ -1,0 +1,165 @@
+"""Path ordering helpers for Python structure extraction."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from cognitive_inspect.python_source_files import is_python_source_file
+
+
+EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
+LATE_DIRS = {
+    "_testing",
+    "artifacts",
+    "build",
+    "dist",
+    "doc",
+    "docs",
+    "docs_src",
+    "dummyserver",
+    "end_to_end_tests",
+    "examples",
+    "extras",
+    "generated",
+    "integration",
+    "integration_embedded",
+    "journey_tests",
+    "mock_tests",
+    "profiling",
+    "proto_test",
+    "scratch",
+    "test",
+    "testing",
+    "tests",
+    "tools",
+    "wasm-preview",
+}
+EARLY_DIRS = {
+    "airflow",
+    "airflow-core",
+    "app",
+    "apps",
+    "borg",
+    "core",
+    "dask",
+    "gradio",
+    "lib",
+    "mitmproxy",
+    "packages",
+    "prefect",
+    "pyinstaller",
+    "scrapy",
+    "spyder",
+    "src",
+}
+EARLY_FILES = {"api_server.py", "app.py", "main.py", "server.py", "api.py", "__init__.py"}
+LATE_FILES = {"conftest.py", "noxfile.py", "setup.py", "tasks.py"}
+
+
+def iter_python_files(root: Path):
+    stack = [root]
+    deferred_files = []
+    while stack:
+        current = stack.pop()
+        dirs = []
+        files = []
+        try:
+            children = list(current.iterdir())
+        except OSError:
+            continue
+        for item in children:
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                continue
+            if is_dir:
+                if item.name in EXCLUDED_DIRS or _is_generated_context_dir(item.name) or item.name.startswith("."):
+                    continue
+                dirs.append(item)
+            elif is_file and is_python_source_file(item):
+                files.append(item)
+        ordered_dirs = sorted(dirs, key=traversal_key)
+        early_files = [item for item in files if traversal_key(item)[0] < 3]
+        regular_files = [item for item in files if 3 <= traversal_key(item)[0] < 8]
+        deferred_files.extend(item for item in files if traversal_key(item)[0] >= 8)
+        for item in sorted(early_files, key=traversal_key):
+            yield item
+        stack.extend(reversed(ordered_dirs))
+        for item in sorted(regular_files, key=traversal_key):
+            yield item
+    yield from sorted(deferred_files, key=lambda item: (path_priority(item.as_posix()), item.as_posix().lower()))
+
+
+def is_test_path(path: str) -> bool:
+    name = Path(path).name
+    return path.startswith("tests/") or "/tests/" in path or name.startswith("test_") or name.endswith("_test.py")
+
+
+def traversal_key(path: Path) -> tuple[int, str]:
+    name = path.name.lower()
+    if path.is_dir():
+        if name == "src":
+            return (0, name)
+        if name in LATE_DIRS or _is_generated_context_dir(name):
+            return (9, name)
+        if (path / "__init__.py").is_file() or name in EARLY_DIRS:
+            return (1, name)
+        return (3, name)
+    if name in EARLY_FILES:
+        return (0, name)
+    if name in LATE_FILES:
+        return (8, name)
+    return (3, name)
+
+
+def path_priority(path: str) -> int:
+    lowered = path.replace("\\", "/").lower()
+    parts = lowered.split("/")
+    name = parts[-1] if parts else lowered
+    if any(
+        part
+        in {
+            "tests",
+            "test",
+            "_testing",
+            "bench",
+            "benchmarks",
+            "ci_tools",
+            "doc",
+            "docs",
+            "docs_src",
+            "dummyserver",
+            "downstream",
+            "examples",
+            "extras",
+            "failures-to-investigate",
+            "integration",
+            "integration_embedded",
+            "journey_tests",
+            "mock_tests",
+            "profiling",
+            "proto_test",
+            "scripts",
+            "tasks",
+            "testing",
+            "tools",
+            "wasm-preview",
+        }
+        for part in parts
+    ) or any(_is_generated_context_dir(part) for part in parts):
+        return 9
+    helper_names = {"benchmark.py", "bench.py", "run_tests.py", "testclient.py", "testing.py", *LATE_FILES}
+    if parts[:2] == ["packaging", "pep517_backend"] or name.endswith(("_benchmark.py", "_bench.py")) or name in helper_names:
+        return 8
+    if lowered.startswith("src/") or "/src/" in lowered:
+        return 0
+    if lowered.startswith(("airflow/", "airflow-core/", "app/", "lib/", "packages/")) or "/" not in lowered and name in EARLY_FILES:
+        return 1
+    if any(part in {"borg", "dask", "gradio", "mitmproxy", "prefect", "pyinstaller", "scrapy", "spyder"} for part in parts[:2]):
+        return 1
+    return 3
+
+
+def _is_generated_context_dir(name: str) -> bool:
+    lowered = name.lower()
+    return lowered == "generated" or lowered.startswith("generated_") or lowered.startswith("generated-")

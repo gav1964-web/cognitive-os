@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["artifact_type", "answers"],
+  "properties": {
+    "artifact_type": { "type": "string" },
+    "scope": { "type": "string" },
+    "answers": { "type": "object" },
+    "selected_answers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question", "answer_key", "answer"],
+        "properties": {
+          "question": { "type": "string" },
+          "answer_key": { "type": "string" },
+          "answer": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence_policy": { "type": "string" }
+  },
+  "additionalProperties": false
+}

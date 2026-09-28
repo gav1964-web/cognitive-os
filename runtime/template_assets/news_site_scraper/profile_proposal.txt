@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+import json
+import re
+from html.parser import HTMLParser
+from pathlib import Path
+from typing import Any, Callable
+from urllib.parse import urljoin, urlparse
+
+from news_site_scraper.llm_extractor import _call_openai_compatible
+
+
+class _ProposalEvidenceParser(HTMLParser):
+    def __init__(self, base_url: str) -> None:
+        super().__init__()
+        self.base_url = base_url
+        self.links: list[dict[str, str]] = []
+        self._href = ''
+        self._text: list[str] = []
+        self._skip = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {'script', 'style', 'noscript'}:
+            self._skip = True
+        if tag == 'a':
+            data = {key.lower(): value or '' for key, value in attrs}
+            self._href = data.get('href', '')
+            self._text = []
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip and self._href:
+            self._text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {'script', 'style', 'noscript'}:
+            self._skip = False
+        if tag == 'a' and self._href:
+            title = _squash(' '.join(self._text))
+            url = urljoin(self.base_url, self._href.split('#', 1)[0])
+            if title and _same_host(url, self.base_url):
+                self.links.append({'title': title[:180], 'url': url})
+            self._href = ''
+            self._text = []
+
+
+def write_profile_proposal(path: str, *, url: str, html: str, requested_top: int, error: str = '') -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    proposal = build_profile_proposal(url=url, html=html, requested_top=requested_top, error=error)
+    target.write_text(json.dumps(proposal, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def build_profile_proposal(
+    *,
+    url: str,
+    html: str,
+    requested_top: int,
+    error: str = '',
+    caller: Callable[[list[dict[str, str]]], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    evidence = _evidence(url, html, requested_top=requested_top)
+    if error or not evidence['links']:
+        return _blocked(url, evidence, error or 'no same-host link evidence')
+    try:
+        raw = caller(_messages(url, evidence)) if caller else _call_openai_compatible(_messages(url, evidence))
+    except Exception as exc:
+        return _blocked(url, evidence, f'model_unavailable: {exc}')
+    profile = _normalize_candidate(raw, url, evidence)
+    if not profile:
+        return _blocked(url, evidence, 'model candidate failed validation')
+    return {
+        'artifact_type': 'SiteProfileProposal',
+        'status': 'candidate',
+        'url': url,
+        'candidate_profile': profile,
+        'evidence': evidence,
+        'promotion_policy': 'human review plus repeated successful extraction before adding to news_site_profiles.json',
+        'invariants': {
+            'candidate_not_applied_automatically': True,
+            'same_host_evidence_required': True,
+            'code_changes_required': False,
+        },
+    }
+
+
+def _evidence(url: str, html: str, *, requested_top: int) -> dict[str, Any]:
+    parser = _ProposalEvidenceParser(_root_url(url))
+    parser.feed(html or '')
+    links: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for link in parser.links:
+        key = link['url'].lower().rstrip('/')
+        if key in seen:
+            continue
+        seen.add(key)
+        links.append(link)
+        if len(links) >= max(20, requested_top * 4):
+            break
+    paths = [urlparse(link['url']).path for link in links]
+    return {'base_url': _root_url(url), 'links': links, 'sample_paths': paths[:30]}
+
+
+def _messages(url: str, evidence: dict[str, Any]) -> list[dict[str, str]]:
+    return [
+        {
+            'role': 'system',
+            'content': (
+                'You propose a news site profile for a deterministic scraper. Return only JSON. '
+                'Use only evidence links and paths. Do not invent URLs. '
+                'Required keys: source, link_markers, article_path_patterns, reason. '
+                'link_markers must be short URL path fragments. article_path_patterns must be conservative regex strings.'
+            ),
+        },
+        {'role': 'user', 'content': json.dumps({'url': url, 'evidence': evidence}, ensure_ascii=False)},
+    ]
+
+
+def _normalize_candidate(raw: dict[str, Any], url: str, evidence: dict[str, Any]) -> dict[str, Any] | None:
+    source = _source_name(str(raw.get('source') or urlparse(url).netloc or 'unknown'))
+    link_markers = _safe_markers(raw.get('link_markers'))
+    patterns = _safe_patterns(raw.get('article_path_patterns'))
+    if not link_markers or not patterns:
+        return None
+    paths = evidence.get('sample_paths') if isinstance(evidence.get('sample_paths'), list) else []
+    if not _markers_match_evidence(link_markers, paths) and not _patterns_match_evidence(patterns, paths):
+        return None
+    host = urlparse(url).netloc.lower().removeprefix('www.')
+    return {
+        'host_contains': host,
+        'source': source,
+        'link_markers': link_markers,
+        'article_path_patterns': patterns,
+        'reason': _squash(str(raw.get('reason') or 'candidate derived from same-host link evidence'))[:500],
+    }
+
+
+def _safe_markers(value: Any) -> list[str]:
+    items = value if isinstance(value, list) else []
+    result: list[str] = []
+    for item in items[:8]:
+        marker = str(item).strip()
+        if marker.startswith('/') and len(marker) <= 80 and not marker.startswith('//'):
+            result.append(marker)
+    return result
+
+
+def _safe_patterns(value: Any) -> list[str]:
+    items = value if isinstance(value, list) else []
+    result: list[str] = []
+    for item in items[:8]:
+        pattern = str(item).strip()
+        if not pattern or len(pattern) > 160:
+            continue
+        try:
+            re.compile(pattern)
+        except re.error:
+            continue
+        result.append(pattern)
+    return result
+
+
+def _markers_match_evidence(markers: list[str], paths: list[str]) -> bool:
+    return any(marker in path for marker in markers for path in paths)
+
+
+def _patterns_match_evidence(patterns: list[str], paths: list[str]) -> bool:
+    return any(re.search(pattern, path) for pattern in patterns for path in paths)
+
+
+def _blocked(url: str, evidence: dict[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        'artifact_type': 'SiteProfileProposal',
+        'status': 'blocked',
+        'url': url,
+        'reason': reason,
+        'evidence': evidence,
+        'invariants': {'candidate_not_applied_automatically': True, 'code_changes_required': False},
+    }
+
+
+def _root_url(url: str) -> str:
+    parsed = urlparse(url if '://' in url else 'https://' + url)
+    return f'{parsed.scheme or "https"}://{parsed.netloc or parsed.path}/'
+
+
+def _same_host(url: str, base_url: str) -> bool:
+    left = urlparse(url).netloc.lower().removeprefix('www.')
+    right = urlparse(base_url).netloc.lower().removeprefix('www.')
+    return bool(left and right and left == right)
+
+
+def _source_name(value: str) -> str:
+    return re.sub(r'[^\wА-Яа-яЁё.-]+', '_', value.strip().lower())[:80] or 'unknown'
+
+
+def _squash(value: str) -> str:
+    return ' '.join(value.split())

@@ -1,0 +1,30 @@
+{
+  "schema_version": "followup_rules.v1",
+  "status": "active",
+  "question_markers": [
+    "есть ли",
+    "существует ли",
+    "какой",
+    "какая",
+    "какие",
+    "сколько",
+    "где",
+    "в каких",
+    "используется ли",
+    "дай рекомендации",
+    "рекомендации",
+    "имеет ли смысл"
+  ],
+  "change_markers": [
+    "убери",
+    "убрать",
+    "отключи",
+    "отключить",
+    "запрети",
+    "запретить",
+    "remove",
+    "disable"
+  ],
+  "replacement_action_markers": ["замени", "заменить", "replace"],
+  "replacement_reference_markers": ["его", "это", "it", "that"]
+}

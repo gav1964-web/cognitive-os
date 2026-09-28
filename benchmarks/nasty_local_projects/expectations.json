@@ -1,0 +1,83 @@
+{
+  "cases": [
+    {
+      "project": "dirty_snapshot_root",
+      "expected_status": "failed",
+      "expected_source_shape": "dirty_portfolio",
+      "required_risks": [
+        "packaged_copy_detected",
+        "artifact_noise_detected"
+      ]
+    },
+    {
+      "project": "ml_hf_workspace",
+      "expected_status": "ok",
+      "expected_archetype": "ml_competition_inference_script",
+      "expected_candidate": "x31.py:generate_response",
+      "expected_security_status": "attention_required",
+      "required_risks": [
+        "artifact_noise_detected",
+        "secret_material_in_source"
+      ]
+    },
+    {
+      "project": "fastapi_provider_not_gateway",
+      "expected_status": "ok",
+      "forbidden_archetypes": [
+        "llm_gateway_service"
+      ]
+    },
+    {
+      "project": "broken_evaluator_workspace",
+      "expected_status": "ok",
+      "expected_candidate": "model_eval.py:generate_response",
+      "required_spec_reason_fragments": [
+        "unresolved names"
+      ]
+    },
+    {
+      "project": "syntax_error_project",
+      "expected_status": "failed",
+      "expected_source_status": "damaged",
+      "required_risks": [
+        "source_health_not_clean"
+      ]
+    },
+    {
+      "project": "env_secret_project",
+      "expected_status": "ok",
+      "expected_security_status": "attention_required",
+      "required_risks": [
+        "secret_material_in_source"
+      ]
+    },
+    {
+      "project": "notebook_noise_project",
+      "expected_status": "failed",
+      "expected_source_status": "noisy",
+      "required_risks": [
+        "artifact_noise_detected"
+      ]
+    },
+    {
+      "project": "true_llm_gateway",
+      "expected_status": "ok",
+      "expected_archetype": "llm_gateway_service"
+    },
+    {
+      "project": "multi_agent_minimal",
+      "expected_status": "ok",
+      "expected_archetype": "multi_agent_orchestration_runtime",
+      "expected_candidate": "core/consensus/engine.py:run_consensus"
+    },
+    {
+      "project": "simple_cli_calculator",
+      "expected_status": "ok",
+      "forbidden_archetypes": [
+        "llm_gateway_service",
+        "ml_competition_inference_script",
+        "multi_agent_orchestration_runtime"
+      ]
+    }
+  ]
+}

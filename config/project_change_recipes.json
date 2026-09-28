@@ -1,0 +1,37 @@
+{
+  "schema_version": "project_change_recipes.v1",
+  "status": "active",
+  "recipes": {
+    "disable_gigachat_auto_model": {
+      "contract": "gigachat model=None now maps to explicit GigaChat default; classifier auto-selection is not used",
+      "files": {
+        "app/gigachat/orchestrator.py": [
+          {
+            "old": ":param model: Model name (if None, will classify)",
+            "new": ":param model: Model name (if None, defaults to GigaChat)"
+          },
+          {
+            "old": "        # Step 3: Classify if model not specified\n        if selected_model is None:\n            selected_model, search_flag, search_queries = await self.classifier.classify(messages)\n",
+            "new": "        # Step 3: Use explicit default instead of classifier-based auto-selection\n        if selected_model is None:\n            selected_model = \"GigaChat\"\n"
+          }
+        ],
+        "app/api/server.py": [
+          {
+            "old": "    # Normalize model name: add provider prefix if missing\n    # For gigachat, pass None for auto model selection\n    final_model_name = model_name\n    if provider_id.lower() == \"gigachat\":\n        final_model_name = model_name or None\n",
+            "new": "    # Normalize model name: add provider prefix if missing\n    # For GigaChat, use an explicit default model instead of auto-selection.\n    final_model_name = model_name\n    if provider_id.lower() == \"gigachat\":\n        final_model_name = model_name or \"GigaChat\"\n"
+          }
+        ],
+        "tests/test_gigachat_decomposition.py": [
+          {
+            "old": "    async def test_orchestrator_model_none_triggers_classifier(self):\n        \"\"\"If model=None, classifier should be called.\"\"\"",
+            "new": "    async def test_orchestrator_model_none_uses_default_model(self):\n        \"\"\"If model=None, GigaChat should be used without classifier auto-selection.\"\"\""
+          },
+          {
+            "old": "        # Classifier should have been called\n        classifier.classify.assert_called_once()",
+            "new": "        # Classifier should not be called; default model is explicit.\n        classifier.classify.assert_not_called()\n        transport.chat_completions.assert_awaited_once()\n        assert transport.chat_completions.await_args.args[1] == \"GigaChat\""
+          }
+        ]
+      }
+    }
+  }
+}

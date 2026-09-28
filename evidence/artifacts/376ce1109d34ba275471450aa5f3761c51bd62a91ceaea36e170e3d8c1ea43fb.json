@@ -1,0 +1,99 @@
+{
+  "artifact_type": "CanonicalVerificationReport",
+  "report_path": "artifacts/verification/canonical_latest.json",
+  "results": [
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "tools/registry_doctor.py",
+        "--root",
+        "."
+      ],
+      "name": "registry_doctor",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"status\": \"ok\",\n  \"diagnostics\": []\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "tools/config_doctor.py",
+        "--root",
+        "."
+      ],
+      "name": "config_doctor",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": "status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"project_evolution_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"project_probe_env_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"pypi_archetype_kb_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"system_knowledge_ir_backlog_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"role_promotion_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"llm_profiles_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"role_source_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"target_quality_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"technical_spec_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"architecture_decision_policy_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    },\n    {\n      \"code\": \"hypothesis_compiler_integrity\",\n      \"errors\": [],\n      \"status\": \"passed\",\n      \"warnings\": []\n    }\n  ],\n  \"root\": \"F:/ubuntu/test/9\",\n  \"status\": \"ok\",\n  \"summary\": {\n    \"failed\": 0,\n    \"passed\": 46,\n    \"warnings\": 0\n  }\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "tools/check_repo_lint.py",
+        "--root",
+        "."
+      ],
+      "name": "repo_lint",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"status\": \"ok\",\n  \"max_python_lines\": 400,\n  \"violations\": []\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "-m",
+        "compileall",
+        "-q",
+        "runtime",
+        "tools",
+        "plugins",
+        "tests"
+      ],
+      "name": "compileall",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "-q",
+        "--basetemp=.pytest-tmp/v-04faaae6/c"
+      ],
+      "name": "core_tests",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": "........ [ 70%]\n........................................................................ [ 73%]\n........................................................................ [ 75%]\n........................................................................ [ 78%]\n........................................................................ [ 81%]\n........................................................................ [ 83%]\n........................................................................ [ 86%]\n........................................................................ [ 89%]\n........................................................................ [ 91%]\n........................................................................ [ 94%]\n........................................................................ [ 96%]\n........................................................................ [ 99%]\n.............                                                            [100%]\n============================== warnings summary ===============================\ntests/runtime/test_executable_acceptance_adaptive_samples.py::test_source_isolated_method_infers_array_and_successful_boolean_receivers\n  F:\\ubuntu\\test\\9\\runtime\\executable_acceptance_materializers.py:150: UserWarning: The NumPy module was reloaded (imported a second time). This can in some cases result in small but subtle issues and is discouraged.\n    return __import__(\"numpy\").asarray(value.get(\"items\") or [0.0, 1.0])\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n2749 passed, 1 warning in 1137.25s (0:18:57)\n"
+    },
+    {
+      "command": [
+        "C:\\Users\\Алексей\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+        "-m",
+        "pytest",
+        "plugins",
+        "-q",
+        "--basetemp=.pytest-tmp/v-04faaae6/p"
+      ],
+      "name": "plugin_tests",
+      "returncode": 0,
+      "status": "ok",
+      "stderr_tail": "",
+      "stdout_tail": "........................................................................ [ 40%]\n........................................................................ [ 80%]\n...................................                                      [100%]\n179 passed in 2.20s\n"
+    }
+  ],
+  "root": "F:/ubuntu/test/9",
+  "status": "ok",
+  "summary": {
+    "checks": 6,
+    "failed": 0,
+    "passed": 6
+  }
+}

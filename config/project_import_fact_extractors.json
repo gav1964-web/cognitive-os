@@ -1,0 +1,16 @@
+{
+  "schema_version": "project_import_fact_extractors.v1",
+  "status": "active",
+  "extractors": [
+    {
+      "answer_key": "opencv_usage",
+      "import_roots_any": ["cv2", "opencv", "opencv_python", "opencv-python"],
+      "side_effects_any": []
+    },
+    {
+      "answer_key": "disk_work",
+      "import_roots_any": ["os", "pathlib", "shutil", "tempfile", "glob", "zipfile", "tarfile", "io"],
+      "side_effects_any": ["filesystem", "filesystem_read"]
+    }
+  ]
+}

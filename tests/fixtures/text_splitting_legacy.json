@@ -1,0 +1,132 @@
+{
+  "cases": [
+    {
+      "id": "inline",
+      "request": {
+        "source": "def load_lines(text):\n    return text.splitlines()\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": {
+        "source": "def split_lines(text):\n    return text.splitlines()\n\ndef load_lines(text):\n    return split_lines(text)\n",
+        "text_expression": "text",
+        "split_line": 2
+      }
+    },
+    {
+      "id": "crlf",
+      "request": {
+        "source": "def load_lines(text):\r\n    return text.splitlines()\r\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": {
+        "source": "def split_lines(text):\r\n    return text.splitlines()\r\n\r\ndef load_lines(text):\r\n    return split_lines(text)\r\n",
+        "text_expression": "text",
+        "split_line": 2
+      }
+    },
+    {
+      "id": "no_eof",
+      "request": {
+        "source": "def load_lines(text):\n    return text.splitlines()",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": {
+        "source": "def split_lines(text):\n    return text.splitlines()\n\ndef load_lines(text):\n    return split_lines(text)",
+        "text_expression": "text",
+        "split_line": 2
+      }
+    },
+    {
+      "id": "positional",
+      "request": {
+        "source": "def load_lines(text):\n    return text.splitlines(True)\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "keywords",
+      "request": {
+        "source": "def load_lines(text):\n    return text.splitlines(keepends=True)\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "multiple",
+      "request": {
+        "source": "def load_lines(text):\n    return [text.splitlines(), other.splitlines()]\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "existing_helper",
+      "request": {
+        "source": "def split_lines(text):\n    return text\ndef load_lines(text):\n    return text.splitlines()\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "invalid",
+      "request": {
+        "source": "def broken(:",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "missing_origin",
+      "request": {
+        "source": "def different(text):\n    return text.splitlines()\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "async",
+      "request": {
+        "source": "async def load_lines(text):\n    return text.splitlines()\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": {
+        "source": "def split_lines(text):\n    return text.splitlines()\n\nasync def load_lines(text):\n    return split_lines(text)\n",
+        "text_expression": "text",
+        "split_line": 2
+      }
+    },
+    {
+      "id": "no_split",
+      "request": {
+        "source": "def load_lines(text):\n    return text.split('\\n')\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": null
+    },
+    {
+      "id": "unicode_literal",
+      "request": {
+        "source": "def load_lines(text):\n    return 'α\\nβ'.splitlines()\n",
+        "origin_symbol": "load_lines",
+        "proposed_symbol": "split_lines"
+      },
+      "patch": {
+        "source": "def split_lines(text):\n    return text.splitlines()\n\ndef load_lines(text):\n    return split_lines('α\\nβ')\n",
+        "text_expression": "'α\\nβ'",
+        "split_line": 2
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/1056fb0d75afdc95852c175794feb1b554ab6a901b7bed6781810774975f0fde.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:1056fb0d75afdc95852c175794feb1b554ab6a901b7bed6781810774975f0fde",
+  "entry_digest": "sha256:dd80b0d4f9a6a076425bd7156661d32a60d45236da4292ffeb90d1a7cec96b0e",
+  "evaluator_fingerprint": "generated_function_stub_audit:v1",
+  "producer_fingerprint": "executor_profile_safe_role_probe:v2",
+  "replay_command": [
+    "python",
+    "tools/executor_profile_safe_role_probe.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/field_trials/narrow_holdout_cli_lineage26_20260904T080559365103Z.json",
+  "status": "promoted"
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "capability_routes.v1",
+  "status": "active",
+  "routes": [
+    {
+      "route_id": "disable_gigachat_auto_model",
+      "priority": 10,
+      "all_groups": [
+        ["gigachat"],
+        ["автовыбор", "авто-выбор", "автовыбора", "auto-selection", "auto selection", "auto model"],
+        ["убери", "убрать", "отключи", "отключить", "запрети", "запретить", "remove", "disable"]
+      ],
+      "capabilities": ["apply_project_change_recipe"],
+      "input_defaults": {
+        "recipe_id": "disable_gigachat_auto_model"
+      }
+    },
+    {
+      "route_id": "project_provider_probe",
+      "priority": 20,
+      "all_groups": [
+        ["project", "проект"],
+        ["server", "сервер", "gateway", "шлюз"],
+        ["provider", "providers", "провайдер", "провайдеры", "провайдерами"],
+        ["run", "start", "test", "probe", "запусти", "запустить", "протестируй", "проверь"]
+      ],
+      "capabilities": ["project_provider_probe"]
+    }
+  ],
+  "missing_capability_hints": [
+    {"markers": ["project", "проект"], "hint": "scan_project_tree"},
+    {"markers": ["translate", "translation"], "hint": "translate_text"},
+    {"markers": ["pdf"], "hint": "parse_pdf"},
+    {"markers": ["xlsx", "xls", "spreadsheet", "csv"], "hint": "spreadsheet_conversion"},
+    {"markers": ["image", "ocr"], "hint": "image_or_ocr_processing"},
+    {"markers": ["audio", "transcribe"], "hint": "transcribe_audio"}
+  ]
+}

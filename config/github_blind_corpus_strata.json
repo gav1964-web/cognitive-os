@@ -1,0 +1,90 @@
+{
+  "schema_version": "github_blind_corpus_strata.v1",
+  "projects_per_stratum": 8,
+  "minimum_stars": 100,
+  "maximum_size_kb": 30000,
+  "maximum_search_pages": 5,
+  "search_page_start": 1,
+  "excluded_name_tokens": ["awesome", "blogs", "boilerplate", "cookiecutter", "example", "examples", "interview-questions", "projects", "resources", "starter", "template", "tutorial", "udacity"],
+  "excluded_description_tokens": ["awesome list", "books, papers", "collection of", "course", "curated list", "example end to end", "examples of", "interview questions", "learning resource", "starter template", "tutorial", "udacity"],
+  "production_signal_tokens": ["api", "automation", "client", "command-line", "data", "framework", "library", "machine learning", "platform", "production", "sdk", "server", "service", "tool", "toolkit"],
+  "strata": [
+    {
+      "id": "web_api",
+      "queries": ["topic:fastapi", "topic:django", "topic:flask", "topic:aiohttp", "topic:rest-api", "topic:django-rest-framework"]
+    },
+    {
+      "id": "cli_automation",
+      "queries": [
+        "topic:cli",
+        "topic:automation",
+        "topic:command-line-tool",
+        "topic:terminal",
+        "topic:task-runner",
+        "topic:workflow-automation",
+        "topic:browser-automation",
+        "topic:devops-automation"
+      ]
+    },
+    {
+      "id": "data_ml",
+      "queries": ["topic:machine-learning", "topic:data-engineering", "topic:mlops", "topic:feature-engineering", "topic:data-pipeline", "topic:stream-processing"]
+    },
+    {
+      "id": "sdk_integrations",
+      "queries": [
+        "topic:sdk",
+        "topic:api-client",
+        "topic:python-sdk",
+        "topic:api-wrapper",
+        "topic:client-library",
+        "topic:integration",
+        "topic:bindings",
+        "topic:connector",
+        "topic:rest-client",
+        "topic:service-client",
+        "topic:cloud-sdk",
+        "topic:api-integration",
+        "topic:third-party-api",
+        "topic:webhook",
+        "topic:oauth-client",
+        "topic:openapi-client",
+        "topic:graphql-client",
+        "topic:payment-api",
+        "topic:kubernetes-client",
+        "topic:database-driver",
+        "topic:discord-api",
+        "topic:telegram-api",
+        "topic:aws-sdk",
+        "topic:google-cloud",
+        "topic:slack-api",
+        "topic:mqtt-client",
+        "topic:gitlab-api",
+        "api client in:name,description",
+        "python sdk in:name,description",
+        "service integration in:name,description",
+        "webhook client in:name,description",
+        "cloud client in:name,description",
+        "payment client in:name,description",
+        "database connector in:name,description",
+        "oauth client in:name,description"
+      ]
+    },
+    {
+      "id": "async_network",
+      "queries": [
+        "topic:asyncio",
+        "topic:networking",
+        "topic:websockets",
+        "topic:mqtt",
+        "topic:asgi",
+        "topic:network-automation",
+        "topic:async-python",
+        "topic:http-client",
+        "topic:network-programming",
+        "topic:socket",
+        "topic:async-library"
+      ]
+    }
+  ]
+}

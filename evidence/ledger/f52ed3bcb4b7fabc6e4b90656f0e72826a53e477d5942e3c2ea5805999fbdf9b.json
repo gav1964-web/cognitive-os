@@ -1,0 +1,16 @@
+{
+  "artifact": "evidence/artifacts/dbf4a305ae06267ced99f3c5d2c4f311fe5125ac5abd8781a443d47df32a97bd.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:dbf4a305ae06267ced99f3c5d2c4f311fe5125ac5abd8781a443d47df32a97bd",
+  "entry_digest": "sha256:f52ed3bcb4b7fabc6e4b90656f0e72826a53e477d5942e3c2ea5805999fbdf9b",
+  "evaluator_fingerprint": "project-development-evaluator:v1",
+  "producer_fingerprint": "challenge-campaign:v1",
+  "replay_command": [
+    "python",
+    "tools/self_development_challenge_campaign.py",
+    "run"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/self_development_challenge_campaign_20260906T052421809741Z.json",
+  "status": "promoted"
+}

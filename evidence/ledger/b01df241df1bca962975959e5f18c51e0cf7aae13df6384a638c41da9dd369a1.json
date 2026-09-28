@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/3b26420849d16eee5494e8fe65cfda17705c02a1ccf06f443483b6c7b875938e.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:3b26420849d16eee5494e8fe65cfda17705c02a1ccf06f443483b6c7b875938e",
+  "entry_digest": "sha256:b01df241df1bca962975959e5f18c51e0cf7aae13df6384a638c41da9dd369a1",
+  "evaluator_fingerprint": "prospective_split_integrity_contract:v1",
+  "producer_fingerprint": "self_development_challenge_campaign:v1",
+  "replay_command": [
+    "python",
+    "tools/self_development_challenge_campaign.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/self_development_challenge_manifest_20260906T024355445687Z.json",
+  "status": "promoted"
+}

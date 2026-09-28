@@ -1,0 +1,39 @@
+{
+  "artifact_type": "TeacherReference",
+  "case": "web_research_summarizer_cli",
+  "teacher_reference_not_ground_truth": true,
+  "prompt": "Создай CLI-проект поиска в интернете по фразе: программа принимает обычную поисковую фразу пользователя, получает топ-15 найденных страниц/статей через default web search adapter или optional JSON search endpoint, извлекает из них основной текст и выдает краткое суммари по найденным статьям с ссылками на источники. Тесты fixture-only без live network; зависимости по умолчанию stdlib.",
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/web_research_summarizer/__init__.py",
+    "src/web_research_summarizer/cli.py",
+    "src/web_research_summarizer/contracts.py",
+    "src/web_research_summarizer/search.py",
+    "src/web_research_summarizer/fetcher.py",
+    "src/web_research_summarizer/extractor.py",
+    "src/web_research_summarizer/summarizer.py",
+    "src/web_research_summarizer/report.py",
+    "tests/fixtures/search_results.json",
+    "tests/fixtures/search_page.html",
+    "tests/fixtures/article_one.html",
+    "tests/fixtures/article_two.html",
+    "tests/test_search.py",
+    "tests/test_fetcher.py",
+    "tests/test_extractor.py",
+    "tests/test_summarizer.py",
+    "tests/test_core.py",
+    "tests/test_report.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "CLI accepts a search phrase and top-N limit",
+    "plain query live search uses default adapter and default tests use fixtures without live network",
+    "top-15 result limit is enforced before article fetching",
+    "HTML article text extraction is covered by fixture tests",
+    "summary report contains links to source articles",
+    "empty search results and malformed HTML are handled with controlled output",
+    "README documents dependency and live-network policy",
+    "all tests run from generated project root"
+  ]
+}

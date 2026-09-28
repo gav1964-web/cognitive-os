@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .runtime_resume_plan import resume_reuse_plan
 from .core_paths import classify_source_path, is_core_path
+from .extraction_plan_filters import suppress_whole_workflow_wrappers
+from .extraction_ranking import add_extraction_candidate, extraction_candidate_sort_key
+from .first_slice import preferred_first_slice_candidates
 from .runtime_readiness_helpers import (
     all_functions,
     boundary_function_candidates,
@@ -17,7 +21,6 @@ from .runtime_readiness_helpers import (
     safe_node_id,
     weak_contract_zones,
 )
-
 
 def data_lifecycle(
     project_type: str,
@@ -40,6 +43,24 @@ def data_lifecycle(
             {"stage": "input", "shape": "CLI/script arguments and local files", "evidence": f"{len(commands)} runtime command groups"},
             {"stage": "processing", "shape": "Python function arguments / intermediate artifacts", "evidence": "entrypoint workflow"},
             {"stage": "output", "shape": "filesystem artifacts, stdout/stderr, or reports", "evidence": "script side effects"},
+        ]
+    active_functions = [
+        fn
+        for fn in all_functions(python_structure)
+        if is_core_path(str(fn.get("path", "")))
+    ]
+    public_refs = [
+        f"{fn.get('path')}:{fn.get('name')}"
+        for fn in active_functions
+        if not str(fn.get("name") or "").startswith("_")
+    ][:5]
+    if active_functions:
+        evidence = ", ".join(public_refs) if public_refs else f"{len(active_functions)} core Python functions"
+        return [
+            {"stage": "caller_input", "shape": "public package API arguments or imported Python objects", "evidence": evidence},
+            {"stage": "validation_or_coercion", "shape": schema_hint, "evidence": "signatures, schema-like classes, and weak contract zones"},
+            {"stage": "core_behavior", "shape": "domain objects, transforms, adapters, or runtime boundary calls", "evidence": "central nodes and extraction candidates"},
+            {"stage": "caller_output", "shape": "return values, raised exceptions, or documented side effects", "evidence": project_type},
         ]
     return [{"stage": "unknown", "shape": "not enough evidence", "evidence": "no routes or runtime commands detected"}]
 
@@ -153,10 +174,23 @@ def mixed_responsibility_functions(python_structure: dict[str, Any]) -> list[dic
 def hidden_orchestrators(python_structure: dict[str, Any]) -> list[dict[str, Any]]:
     obvious = ("manager", "controller", "runner", "orchestrator", "main")
     orchestration_tokens = ("dispatch", "pipeline", "process", "scrape", "loop", "worker", "handle")
+    preferred_names = {"download_file", "parse_file", "rtf_to_text"}
     route_functions = {str(route.get("function")) for route in python_structure.get("routes", []) if route.get("function")}
     rows = []
+    seen = set()
+    for fn in all_functions(python_structure):
+        if not is_core_path(str(fn.get("path", ""))):
+            continue
+        if str(fn.get("name")) not in preferred_names:
+            continue
+        source = f"{fn.get('path')}:{fn.get('name')}"
+        rows.append({**fn, "reason": "workflow_helper_name_indicates_hidden_orchestration"})
+        seen.add(source)
     for node in python_structure.get("central_nodes", []):
         if not is_core_path(str(node.get("path", ""))):
+            continue
+        source = f"{node.get('path')}:{node.get('name')}"
+        if source in seen:
             continue
         name = str(node.get("name", "")).lower()
         if str(node.get("name")) in route_functions or name.startswith("legacy"):
@@ -279,43 +313,66 @@ def contract_test_strategy(python_structure: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def resume_reuse_plan(routes: list[dict[str, Any]], commands: list[dict[str, Any]], imports: set[str]) -> list[dict[str, str]]:
-    if routes:
-        return [
-            {"step": "request_capture", "reuse": "yes", "reason": "raw request can be replayed"},
-            {"step": "validation", "reuse": "yes_if_schema_version_same", "reason": "validated payload can be checkpointed"},
-            {"step": "external_provider_call", "reuse": "cache_if_pure_response", "reason": "avoid duplicate network/API side effects"},
-            {"step": "response_formatting", "reuse": "recompute", "reason": "cheap deterministic formatting"},
-        ]
-    if commands:
-        return [
-            {"step": "input_discovery", "reuse": "yes", "reason": "file list/config snapshot can be checkpointed"},
-            {"step": "parsed_intermediate", "reuse": "yes_if_input_hash_same", "reason": "parsed artifacts can be cached"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "side effects may duplicate"},
-        ]
-    if imports & {"requests", "httpx", "openai", "gigachat"}:
-        return [
-            {"step": "external_api_response", "reuse": "cache_if_request_hash_same", "reason": "protect retry/replay from duplicate cost and drift"},
-            {"step": "input_discovery", "reuse": "yes", "reason": "filesystem/config inputs can be snapshotted"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "filesystem/process side effects may duplicate"},
-        ]
-    if imports & {"pathlib", "os", "json", "csv", "subprocess", "asyncio", "queue", "threading"}:
-        return [
-            {"step": "input_discovery", "reuse": "yes", "reason": "filesystem/config inputs can be snapshotted"},
-            {"step": "parsed_intermediate", "reuse": "yes_if_input_hash_same", "reason": "parsed artifacts can be cached"},
-            {"step": "write_or_publish", "reuse": "no_without_idempotency_key", "reason": "filesystem/process side effects may duplicate"},
-            {"step": "manual", "reuse": "unknown", "reason": "no explicit runtime command or route was detected"},
-        ]
-    return [{"step": "manual", "reuse": "unknown", "reason": "not enough execution evidence"}]
-
-
 def minimal_extraction_plan(
     python_structure: dict[str, Any],
     routes: list[dict[str, Any]],
     commands: list[dict[str, Any]],
+    *,
+    domain_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    plan = []
+    candidates: dict[str, dict[str, Any]] = {}
     route_functions = {str(route.get("function")) for route in routes if route.get("function")}
+    target_markers = [str(item).lower() for item in dict(domain_profile or {}).get("target_markers", [])]
+    for item in python_structure.get("pure_transform_candidates", []):
+        name = str(item.get("name") or "").lower()
+        if target_markers and any(marker in name for marker in target_markers) and is_safe_extraction_candidate(item):
+            add_extraction_candidate(candidates, item, "domain_preferred", "domain-specific deterministic contract")
+    for item in preferred_first_slice_candidates(python_structure):
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "preferred_anchor", "preferred bounded helper or boundary evidence")
+    for item in python_structure.get("domain_flow_anchors", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "domain flow anchor")
+    for item in python_structure.get("central_nodes", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "central flow or subsystem-level capability")
+    for item in hidden_orchestrators(python_structure):
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "core_flow", "hidden orchestration boundary candidate")
+    for item in boundary_function_candidates(python_structure)[:8]:
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "boundary", "I/O or runtime boundary candidate")
+    for item in python_structure.get("bounded_policy_candidates", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        add_extraction_candidate(candidates, item, "bounded_policy", "reproducible boolean policy decision")
+    for item in python_structure.get("wide_functions", []):
+        if not is_core_path(str(item.get("path", ""))):
+            continue
+        if not is_safe_extraction_candidate(item):
+            continue
+        if str(item.get("name")) in route_functions:
+            continue
+        add_extraction_candidate(candidates, item, "broad_split", "broad function to split")
     for item in python_structure.get("pure_transform_candidates", []):
         if not is_core_path(str(item.get("path", ""))):
             continue
@@ -325,27 +382,9 @@ def minimal_extraction_plan(
             continue
         if str(item.get("name")) in route_functions:
             continue
-        plan.append({"capability": f"{item.get('path')}:{item.get('name')}", "why": "pure transform candidate", "first_contract": "derive from signature/type hints"})
-        if len([row for row in plan if row["why"] == "pure transform candidate"]) >= 3:
-            break
-    for item in boundary_function_candidates(python_structure)[:4]:
-        if not is_safe_extraction_candidate(item):
-            continue
-        capability = f"{item.get('path')}:{item.get('name')}"
-        if any(row["capability"] == capability for row in plan):
-            continue
-        plan.append({"capability": capability, "why": "I/O or runtime boundary candidate", "first_contract": "input/output artifact contract"})
-    wide_added = 0
-    for item in python_structure.get("wide_functions", []):
-        if not is_core_path(str(item.get("path", ""))):
-            continue
-        if not is_safe_extraction_candidate(item):
-            continue
-        plan.append({"capability": f"{item.get('path')}:{item.get('name')}", "why": "broad function to split", "first_contract": "wrap current input/output before cutting internals"})
-        wide_added += 1
-        if wide_added >= 3:
-            break
-    capabilities = plan[:8]
+        add_extraction_candidate(candidates, item, "helper_transform", "pure transform candidate")
+    plan = suppress_whole_workflow_wrappers(sorted(candidates.values(), key=extraction_candidate_sort_key))
+    capabilities = plan[:10]
     blocked_by = [] if capabilities else ["no_safe_python_candidate"]
     return {
         "goal": "Build first Cognitive OS pipeline from this project",

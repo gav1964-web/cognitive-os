@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "required": ["summary", "risks", "markdown"],
+  "required": ["summary", "source_health", "security_health", "risks", "markdown"],
   "properties": {
     "summary": {
       "type": "object"
@@ -10,6 +10,18 @@
       "items": {
         "type": "object"
       }
+    },
+    "source_health": {
+      "type": "object"
+    },
+    "security_health": {
+      "type": "object"
+    },
+    "human_summary": {
+      "type": "object"
+    },
+    "evidence_summary": {
+      "type": "object"
     },
     "markdown": {
       "type": "string"

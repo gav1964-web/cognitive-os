@@ -1,0 +1,355 @@
+from __future__ import annotations
+import html as html_lib
+import json
+import os
+import re
+from html.parser import HTMLParser
+from typing import Any, Callable
+from urllib import request
+from urllib.parse import urljoin, urlparse
+from news_site_scraper.site_profile import SiteProfile
+DEFAULT_BASE_URL = 'http://127.0.0.1:8000/v1'
+DEFAULT_MODEL = 'deepseek/deepseek-chat'
+class _EvidenceParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[dict[str, str]] = []
+        self.text_parts: list[str] = []
+        self._href = ''
+        self._link_text: list[str] = []
+        self._skip = False
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {'script', 'style', 'noscript'}:
+            self._skip = True
+        if tag == 'a':
+            data = {key.lower(): value or '' for key, value in attrs}
+            self._href = data.get('href', '')
+            self._link_text = []
+    def handle_data(self, data: str) -> None:
+        if self._skip:
+            return
+        text = _squash(data)
+        if not text:
+            return
+        self.text_parts.append(text)
+        if self._href:
+            self._link_text.append(text)
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {'script', 'style', 'noscript'}:
+            self._skip = False
+        if tag == 'a' and self._href:
+            title = _squash(' '.join(self._link_text))
+            if title:
+                self.links.append({'title': title, 'url': self._href})
+            self._href = ''
+            self._link_text = []
+def extract_news_with_llm(
+    html: str,
+    profile: SiteProfile,
+    *,
+    requested_top: int,
+    caller: Callable[[list[dict[str, str]]], dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
+    diagnosis = diagnose_extraction_failure(html, profile, requested_top=requested_top, caller=caller)
+    strategy = dict(diagnosis.get('strategy_candidate') or {})
+    if strategy.get('strategy_type') != 'direct_evidence_items':
+        return []
+    rows = strategy.get('items')
+    return _normalize_model_rows(rows if isinstance(rows, list) else [], profile)[:requested_top]
+def execute_strategy_candidate(
+    strategy: dict[str, Any],
+    profile: SiteProfile,
+    *,
+    requested_top: int,
+    fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, str]]:
+    strategy_type = str(strategy.get('strategy_type') or 'unsupported')
+    if strategy_type in {'direct_evidence_items', 'json_candidate'}:
+        rows = strategy.get('items') if isinstance(strategy.get('items'), list) else []
+        return _normalize_model_rows(rows, profile)[:requested_top]
+    if strategy_type == 'feed_candidate' and fetcher is not None:
+        rows: list[dict[str, str]] = []
+        for url in _candidate_urls(strategy.get('feed_urls'), profile):
+            try:
+                rows.extend(_parse_feed_xml(fetcher(url), profile))
+            except Exception:
+                continue
+            if len(rows) >= requested_top:
+                break
+        return rows[:requested_top]
+    return []
+def diagnose_extraction_failure(
+    html: str,
+    profile: SiteProfile,
+    *,
+    requested_top: int,
+    caller: Callable[[list[dict[str, str]]], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    evidence = _evidence_from_html(html, profile, requested_top=requested_top)
+    if not evidence['links'] and not evidence['page_text']:
+        return _empty_diagnosis(profile, 'no_evidence')
+    try:
+        payload = caller(_diagnosis_messages(evidence, requested_top)) if caller else _call_openai_compatible(_diagnosis_messages(evidence, requested_top))
+    except Exception:
+        return _empty_diagnosis(profile, 'model_unavailable')
+    return _normalize_diagnosis(payload, profile)
+def summarize_rows_with_llm(
+    rows: list[dict[str, str]],
+    *,
+    caller: Callable[[list[dict[str, str]]], dict[str, Any]] | None = None,
+    max_rows: int = 40,
+) -> str:
+    evidence = [
+        {
+            'title': _squash(str(row.get('title') or ''))[:220],
+            'url': _squash(str(row.get('url') or ''))[:500],
+            'source': _squash(str(row.get('source') or ''))[:80],
+            'summary': _squash(str(row.get('summary') or ''))[:500],
+        }
+        for row in rows[:max_rows]
+    ]
+    if not evidence:
+        return ''
+    messages = _summary_messages(evidence)
+    try:
+        payload = caller(messages) if caller else _call_openai_compatible(messages)
+    except Exception:
+        return ''
+    summary = _squash(str(payload.get('summary') or ''))
+    if _valid_grounded_summary(summary, evidence):
+        return summary[:1600]
+    retry_messages = _summary_messages(evidence, strict_retry=True)
+    try:
+        retry_payload = caller(retry_messages) if caller else _call_openai_compatible(retry_messages)
+    except Exception:
+        return ''
+    retry_summary = _squash(str(retry_payload.get('summary') or ''))
+    return retry_summary[:1600] if _valid_grounded_summary(retry_summary, evidence) else ''
+def _summary_messages(evidence: list[dict[str, str]], *, strict_retry: bool = False) -> list[dict[str, str]]:
+    retry_hint = ' Это повторная попытка: предыдущий ответ был отклонен, потому что не был полноценным русским общим суммари.' if strict_retry else ''
+    return [
+        {
+            'role': 'system',
+            'content': (
+                'Ты редактор новостной сводки, работающий строго по предоставленным источникам. '
+                'Верни только JSON с ключом summary. Напиши одно общее резюме на русском языке по всем материалам, '
+                'а не отдельные резюме по статьям и не разбивку по сайтам. Используй только поля title, source, url и summary. '
+                'Не выдумывай даты, события или источники. Если текст статьи не извлечен, используй заголовок и источник; '
+                'никогда не пиши Summary unavailable. Сформулируй вывод как связный русский абзац для человека и уложись в 1200 символов.'
+                + retry_hint
+            ),
+        },
+        {'role': 'user', 'content': json.dumps({'items': evidence}, ensure_ascii=False)},
+    ]
+def _valid_grounded_summary(summary: str, evidence: list[dict[str, str]]) -> bool:
+    if len(summary) < 40:
+        return False
+    if not re.search(r'[А-Яа-яЁё]', summary):
+        return False
+    lower = summary.lower()
+    sources = {item['source'].lower() for item in evidence if item.get('source')}
+    source_hit = any(source and source in lower for source in sources)
+    title_words = set()
+    for item in evidence:
+        title_words.update(word for word in re.findall(r'[\wА-Яа-яЁё]{5,}', item.get('title', '').lower())[:8])
+    lexical_hit_count = sum(1 for word in title_words if word in lower)
+    return source_hit or lexical_hit_count >= 1
+def _evidence_from_html(html: str, profile: SiteProfile, *, requested_top: int) -> dict[str, Any]:
+    parser = _EvidenceParser()
+    parser.feed(html)
+    links: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for link in parser.links:
+        title = _squash(link.get('title', ''))
+        url = urljoin(profile.base_url, link.get('url', '').split('#', 1)[0])
+        key = (title.lower(), url.lower())
+        if key in seen or not title or not _same_host(url, profile.base_url):
+            continue
+        seen.add(key)
+        links.append({'title': title[:180], 'url': url})
+        if len(links) >= max(40, requested_top * 6):
+            break
+    return {
+        'source': profile.source,
+        'base_url': profile.base_url,
+        'links': links,
+        'page_text': _squash(' '.join(parser.text_parts))[:12000],
+    }
+def _diagnosis_messages(evidence: dict[str, Any], requested_top: int) -> list[dict[str, str]]:
+    return [
+        {
+            'role': 'system',
+            'content': (
+                'You are a bounded news extraction failure diagnostician. Return only JSON. '
+                'Diagnose why deterministic extraction may have failed and propose one strategy_candidate. '
+                'Allowed strategy_type values: direct_evidence_items, feed_candidate, json_candidate, browser_required, unsupported. '
+                'Use only URLs and facts present in evidence. Do not invent news. '
+                'If direct extraction is possible, put items under strategy_candidate.items. '
+                'Required JSON keys: diagnosis, strategy_candidate, evidence_refs, risks. '
+                'Schema example: {"diagnosis":"article links are present", "strategy_candidate":{"strategy_type":"direct_evidence_items", "reason":"same-host article links in evidence", "items":[{"title":"...", "url":"...", "date":"", "summary":"..."}]}, "evidence_refs":["link:..."], "risks":[]}.'
+            ),
+        },
+        {
+            'role': 'user',
+            'content': json.dumps({'requested_top': requested_top, 'evidence': evidence}, ensure_ascii=False),
+        },
+    ]
+def _normalize_diagnosis(payload: dict[str, Any], profile: SiteProfile) -> dict[str, Any]:
+    diagnosis = str(payload.get('diagnosis') or 'model did not provide diagnosis')
+    strategy = payload.get('strategy_candidate')
+    if not isinstance(strategy, dict):
+        strategy = {'strategy_type': 'unsupported', 'reason': 'missing strategy_candidate', 'items': []}
+    strategy_type = str(strategy.get('strategy_type') or 'unsupported')
+    allowed = {'direct_evidence_items', 'feed_candidate', 'json_candidate', 'browser_required', 'unsupported'}
+    if strategy_type not in allowed:
+        strategy_type = 'unsupported'
+    items = strategy.get('items') if isinstance(strategy.get('items'), list) else []
+    normalized_items = _normalize_model_rows(items, profile)
+    feed_urls = _candidate_urls(strategy.get('feed_urls'), profile)
+    return {
+        'artifact_type': 'SiteDiagnosis',
+        'status': 'ok',
+        'source': profile.source,
+        'diagnosis': diagnosis[:1000],
+        'strategy_candidate': {
+            'artifact_type': 'StrategyCandidate',
+            'strategy_type': strategy_type,
+            'reason': str(strategy.get('reason') or '')[:1000],
+            'items': normalized_items,
+            'feed_urls': feed_urls,
+            'requires_browser': strategy_type == 'browser_required',
+        },
+        'evidence_refs': [str(item)[:300] for item in payload.get('evidence_refs', [])] if isinstance(payload.get('evidence_refs'), list) else [],
+        'risks': [str(item)[:300] for item in payload.get('risks', [])] if isinstance(payload.get('risks'), list) else [],
+        'invariants': {
+            'model_output_executed': False,
+            'same_host_validation': True,
+            'items_validated_by_code': True,
+        },
+    }
+def _empty_diagnosis(profile: SiteProfile, reason: str) -> dict[str, Any]:
+    return {
+        'artifact_type': 'SiteDiagnosis',
+        'status': 'blocked',
+        'source': profile.source,
+        'diagnosis': reason,
+        'strategy_candidate': {'artifact_type': 'StrategyCandidate', 'strategy_type': 'unsupported', 'reason': reason, 'items': [], 'requires_browser': False},
+        'evidence_refs': [],
+        'risks': [reason],
+        'invariants': {'model_output_executed': False, 'same_host_validation': True, 'items_validated_by_code': True},
+    }
+def _candidate_urls(value: Any, profile: SiteProfile) -> list[str]:
+    urls = value if isinstance(value, list) else []
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in urls:
+        url = urljoin(profile.base_url, str(raw).split('#', 1)[0])
+        key = url.rstrip('/').lower()
+        if key not in seen and _same_host(url, profile.base_url):
+            seen.add(key)
+            result.append(url)
+    return result[:5]
+def _parse_feed_xml(xml_text: str, profile: SiteProfile) -> list[dict[str, str]]:
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(xml_text.strip().lstrip('\ufeff'))
+    except Exception:
+        return []
+    rows: list[dict[str, str]] = []
+    for item in root.findall('.//item'):
+        title = _child_text(item, 'title')
+        url = _child_text(item, 'link') or _child_text(item, 'guid')
+        if title and url:
+            rows.extend(_normalize_model_rows([{
+                'title': title,
+                'url': url,
+                'date': _child_text(item, 'pubDate'),
+                'summary': _clean_summary(_child_text(item, 'description')),
+            }], profile))
+    for entry in root.findall('.//{*}entry'):
+        title = _child_text_ns(entry, 'title')
+        url = ''
+        for link in entry.findall('{*}link'):
+            if (link.attrib.get('rel') or 'alternate').lower() == 'alternate' and link.attrib.get('href'):
+                url = link.attrib['href']
+                break
+        if title and url:
+            rows.extend(_normalize_model_rows([{
+                'title': title,
+                'url': url,
+                'date': _child_text_ns(entry, 'updated') or _child_text_ns(entry, 'published'),
+                'summary': _clean_summary(_child_text_ns(entry, 'summary') or _child_text_ns(entry, 'content')),
+            }], profile))
+    return rows
+def _child_text(element: Any, name: str) -> str:
+    child = element.find(name)
+    return _squash(child.text or '') if child is not None else ''
+def _child_text_ns(element: Any, local_name: str) -> str:
+    for child in list(element):
+        if str(child.tag).rsplit('}', 1)[-1] == local_name:
+            return _squash(child.text or '')
+    return ''
+def _clean_summary(value: str) -> str:
+    text = _squash(html_lib.unescape(re.sub(r'<[^>]+>', ' ', value or '')))
+    text = re.sub(r'\b(?:Читать далее|Read more)\b\.?$', '', text, flags=re.I).strip()
+    return _squash(text)
+def _call_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any]:
+    base_url = os.environ.get('COGNITIVE_OS_NEWS_LLM_BASE_URL') or os.environ.get('COGNITIVE_OS_L45_BASE_URL') or DEFAULT_BASE_URL
+    model = os.environ.get('COGNITIVE_OS_NEWS_LLM_MODEL') or os.environ.get('COGNITIVE_OS_L45_MODEL') or DEFAULT_MODEL
+    timeout = float(os.environ.get('COGNITIVE_OS_NEWS_LLM_TIMEOUT', os.environ.get('COGNITIVE_OS_L45_TIMEOUT', '60')))
+    body = json.dumps({'model': model, 'temperature': 0, 'messages': messages}).encode('utf-8')
+    http_request = request.Request(
+        base_url.rstrip('/') + '/chat/completions',
+        data=body,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    with request.urlopen(http_request, timeout=timeout) as response:
+        data = json.loads(response.read().decode('utf-8'))
+    content = str(data['choices'][0]['message']['content'])
+    return _loads_json_object(content)
+def _loads_json_object(content: str) -> dict[str, Any]:
+    try:
+        value = json.loads(content)
+    except json.JSONDecodeError:
+        start = content.find('{')
+        end = content.rfind('}')
+        if start < 0 or end <= start:
+            raise
+        value = json.loads(content[start:end + 1])
+    return value if isinstance(value, dict) else {}
+def _normalize_model_rows(rows: list[Any], profile: SiteProfile) -> list[dict[str, str]]:
+    normalized: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw in rows:
+        if not isinstance(raw, dict):
+            continue
+        title = _squash(str(raw.get('title') or ''))
+        url = urljoin(profile.base_url, str(raw.get('url') or '').split('#', 1)[0])
+        if not _valid_model_item(title, url, profile):
+            continue
+        key = url.rstrip('/').lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append({
+            'title': title,
+            'url': url,
+            'date': _squash(str(raw.get('date') or '')),
+            'summary': _clean_summary(str(raw.get('summary') or '')),
+            'source': profile.source,
+        })
+    return normalized
+def _valid_model_item(title: str, url: str, profile: SiteProfile) -> bool:
+    lower = title.lower()
+    if len(title) < 8 or lower in {'читать далее', 'read more', 'newsletters', 'subscribe'}:
+        return False
+    if re.fullmatch(r'\d+\s+(?:минут(?:у|ы)?|час(?:а|ов)?|д(?:ень|ня|ней))\s+назад', lower):
+        return False
+    return bool(urlparse(url).scheme) and _same_host(url, profile.base_url)
+def _same_host(url: str, base_url: str) -> bool:
+    left = urlparse(url).netloc.lower().removeprefix('www.')
+    right = urlparse(base_url).netloc.lower().removeprefix('www.')
+    return bool(left and right and left == right)
+def _squash(value: str) -> str:
+    return ' '.join(value.split())

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/3285ceea25cad0ef3cd2e877df3421578eeaf90515eb01ea68b4b6c906749e84.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:3285ceea25cad0ef3cd2e877df3421578eeaf90515eb01ea68b4b6c906749e84",
+  "entry_digest": "sha256:d18873738e2cb6b8a3a299aa5d4dc63bacbcaca277676acb3a32a8bb5de51766",
+  "evaluator_fingerprint": "role-project-type-evaluator:v1",
+  "producer_fingerprint": "framework-readiness:v1",
+  "replay_command": [
+    "python",
+    "tools/framework_plugin_readiness.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/framework_plugin_readiness_20260906T054026701573Z.json",
+  "status": "promoted"
+}

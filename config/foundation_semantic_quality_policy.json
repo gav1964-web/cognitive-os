@@ -1,0 +1,220 @@
+{
+  "schema_version": "foundation_semantic_quality_policy.v1",
+  "status_threshold": 8.8,
+  "role_score_caps": {
+    "project_analyzer": 9.7,
+    "architect": 9.7,
+    "spec_writer": 9.8
+  },
+  "narrow_holdout_validation_caps": {
+    "missing_causal_diagnosis": {
+      "project_analyzer": 8.0,
+      "architect": 6.0,
+      "spec_writer": 6.0
+    },
+    "missing_concrete_repair_design": {
+      "architect": 6.0,
+      "spec_writer": 6.0
+    },
+    "implementation_not_ready": {
+      "architect": 7.0,
+      "spec_writer": 6.5
+    },
+    "change_not_validated": {
+      "project_analyzer": 9.2,
+      "architect": 9.0,
+      "spec_writer": 8.8
+    }
+  },
+  "narrow_evaluation_split_caps": {
+    "training_replay": {
+      "project_analyzer": 9.4,
+      "architect": 8.5,
+      "spec_writer": 8.5,
+      "implementer": 9.0,
+      "tester": 8.8,
+      "reviewer": 8.8
+    },
+    "scoped_regression": {
+      "implementer": 8.8,
+      "tester": 8.5,
+      "reviewer": 8.5
+    }
+  },
+  "feedback_scoring": {
+    "unverified_handoff_caps": {
+      "project_analyzer": 9.2,
+      "architect": 9.0,
+      "spec_writer": 8.8
+    },
+    "meta_only_caps": {
+      "architect": 8.5,
+      "spec_writer": 7.5
+    },
+    "terminal_reselection_caps": {
+      "project_analyzer": 8.8,
+      "architect": 7.2,
+      "spec_writer": 5.0
+    },
+    "iteration_limit_architect_cap": 6.5,
+    "no_expanded_candidates_caps": {
+      "project_analyzer": 7.5,
+      "architect": 6.5
+    },
+    "executable_confirmation_signals": ["executable_callable", "effect_stubbed_callable"],
+    "executable_confirmation_resolves_reselection": true
+  },
+  "specific_text": {
+    "min_length": 32,
+    "generic_phrases": [
+      "improve",
+      "best practices",
+      "make it better",
+      "as needed",
+      "handle everything",
+      "not enough evidence"
+    ]
+  },
+  "domain_profile": {
+    "generic_kind": "generic",
+    "minimum_confidence": 0.55,
+    "generic_allowed_when_no_frameworks_and_entrypoints_lte": 1
+  },
+  "project_analyzer": {
+    "minimum_supported_scenarios": 2,
+    "minimum_data_lifecycle_stages": 3,
+    "minimum_source_refs": 3,
+    "minimum_evidence_claims": 3,
+    "safe_blockers": ["no_safe_python_candidate"],
+    "library_domain_marker_min_hits": 2,
+    "purpose_domain_marker_min_hits": 2,
+    "marketing_purpose_markers": [
+      "trusted by",
+      "mars missions",
+      "badge",
+      "sponsor",
+      "star history",
+      "downloads",
+      "since 20"
+    ],
+    "library_domain_markers": [
+      "library",
+      "parser",
+      "protocol",
+      "database",
+      "encoding",
+      "decoding",
+      "metadata",
+      "hook",
+      "converter",
+      "serializer"
+    ],
+    "purpose_domain_markers": [
+      "ansible",
+      "lint",
+      "playbook",
+      "rule",
+      "syntax",
+      "yaml",
+      "parser",
+      "protocol",
+      "database",
+      "serializer",
+      "converter",
+      "scheduler",
+      "workflow",
+      "plugin",
+      "api"
+    ],
+    "check_weights": {
+      "purpose_avoids_marketing_blurb": 4,
+      "generic_profile_not_masking_library_domain": 3,
+      "scenarios_inputs_outputs_are_rich": 2,
+      "problem_outcome_contract_valid": 3,
+      "baseline_failure_is_evidence_bound": 5
+    }
+  },
+  "architect": {
+    "minimum_options": 2,
+    "minimum_source_context_refs": 3,
+    "generic_archetypes": ["", "generic"],
+    "domain_slice_marker_min_hits": 2,
+    "generic_first_slice_names": [
+      "automation_task_execution_slice",
+      "workflow_state_transition_slice",
+      "configuration_parse_lookup_slice",
+      "minimal_safe_extraction"
+    ],
+    "domain_slice_markers": [
+      "workflow",
+      "plugin",
+      "sdk",
+      "wheel",
+      "raster",
+      "geospatial",
+      "tile",
+      "netcdf",
+      "msgpack",
+      "model",
+      "metric",
+      "codec",
+      "parser",
+      "protocol",
+      "frame",
+      "header",
+      "metadata",
+      "hook",
+      "database",
+      "converter",
+      "serializer"
+    ],
+    "check_weights": {
+      "first_slice_not_generic_when_domain_cues_exist": 4,
+      "domain_profile_carried_to_architecture": 3,
+      "spec_target_is_within_architect_slice": 3,
+      "problem_outcome_contract_valid": 3,
+      "causal_target_selected": 5,
+      "repair_mechanism_explicit": 4
+    }
+  },
+  "spec_writer": {
+    "minimum_requirements": 3,
+    "minimum_acceptance_criteria": 3,
+    "minimum_traceability_rows": 3,
+    "negative_case_tokens": [
+      "malformed",
+      "invalid",
+      "empty",
+      "timeout",
+      "failure",
+      "error",
+      "negative",
+      "bad input"
+    ],
+    "weak_contract_shapes": ["", "any", "none", "object"]
+    ,
+    "semantic_review_floor_score": 9.2,
+    "executable_confirmation_floor_score": 9.7,
+    "check_weights": {
+      "io_contract_shapes_specific": 4,
+      "requirements_and_acceptance_are_implementable": 3,
+      "traceability_links_sources_to_acceptance": 3,
+      "problem_outcome_contract_valid": 3,
+      "causal_target_preserved": 5,
+      "baseline_replay_acceptance_present": 5,
+      "causal_regression_acceptance_present": 5
+    }
+  },
+  "source_reference": {
+    "tokens": [":", "/", "\\"],
+    "suffixes": [".py"]
+  },
+  "side_effect_policy": {
+    "accepted_policy_fields": [
+      "requires_validation_gate",
+      "requires_process_boundary",
+      "idempotency_required",
+      "retry_policy"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "required": ["root"],
+  "properties": {
+    "root": { "type": "string" },
+    "base_url": {
+      "type": "string",
+      "default": "http://127.0.0.1:9000"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 60
+    },
+    "max_providers": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "message": {
+      "type": "string",
+      "default": "Привет!"
+    }
+  },
+  "additionalProperties": false
+}

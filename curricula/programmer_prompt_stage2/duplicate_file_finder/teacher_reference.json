@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-утилиту, которая ищет дубликаты файлов в каталоге по содержимому и сохраняет JSON со списком групп.",
+  "expected_steps": [
+    "clarify recursive scan depth and hash algorithm",
+    "create small CLI project scaffold with package module, README and tests",
+    "define JSON contract for duplicate groups",
+    "hash file contents and group identical files deterministically",
+    "exclude unique files from output",
+    "add tests with temporary files and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/duplicate_finder/__init__.py",
+    "src/duplicate_finder/cli.py",
+    "src/duplicate_finder/finder.py",
+    "tests/fixtures/sample.txt",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "duplicate files are detected by content hash",
+    "unique files are not reported",
+    "CLI writes JSON duplicate groups",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

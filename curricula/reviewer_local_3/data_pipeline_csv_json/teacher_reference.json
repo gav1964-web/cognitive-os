@@ -1,0 +1,26 @@
+{
+  "schema_version": "reviewer_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/data_pipeline_csv_json",
+  "teacher_profile": "reviewer",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_review": {
+    "candidate": "pipeline.py:normalize_rows",
+    "recommendation": "approve_with_risks",
+    "min_contract_matrix_rows": 2,
+    "min_negative_test_count": 2,
+    "min_conformance_check_count": 6,
+    "min_risk_count": 1,
+    "rework_task_count": 0
+  },
+  "teacher_review": {
+    "project_condition": "CSV pipeline, reviewer must approve bounded plan with IO risks",
+    "expected_review_behavior": [
+      "confirm normalize_rows is covered",
+      "block no scope drift",
+      "keep IO/idempotency risk visible"
+    ],
+    "known_risks": [
+      "writer idempotency remains a later execution concern"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "github_blind_corpus_strata.v1",
+  "projects_per_stratum": 1,
+  "minimum_stars": 50,
+  "maximum_size_kb": 12000,
+  "maximum_search_pages": 5,
+  "search_page_start": 1,
+  "unique_owners": true,
+  "excluded_name_tokens": ["awesome", "boilerplate", "cookiecutter", "example", "examples", "interview", "template", "tutorial"],
+  "excluded_description_tokens": ["awesome list", "collection of", "course", "examples of", "interview questions", "starter template", "tutorial"],
+  "production_signal_tokens": ["build", "codegen", "documentation", "framework", "library", "package", "plugin", "tool"],
+  "strata": [
+    {
+      "id": "framework_plugin_build",
+      "projects": 5,
+      "queries": [
+        "topic:python-plugin",
+        "topic:python-packaging",
+        "topic:documentation-generator",
+        "python build plugin in:name,description"
+      ]
+    }
+  ]
+}

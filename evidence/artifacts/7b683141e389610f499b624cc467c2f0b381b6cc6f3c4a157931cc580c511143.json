@@ -1,0 +1,65 @@
+{
+  "artifact_type": "FrameworkPluginHoldoutEvidence",
+  "checks": {
+    "generated_stub_gate": true,
+    "holdout_reports_match_selection": true,
+    "independent_holdout": true,
+    "inputs_digest_bound": true,
+    "lineage_disjoint": true,
+    "no_role_regression": true,
+    "project_development_evaluated": false,
+    "role_artifacts_auditable": true,
+    "role_cells_ready": true,
+    "role_chain_continuity": false,
+    "selection_frozen_and_complete": true,
+    "semantic_role_quality": false
+  },
+  "evidence_digest": "sha256:29d3f5910952fcab7faabb9251f39fe9d41dbf726ded287f8b0c814d8ab26de3",
+  "failed_checks": [
+    "role_chain_continuity",
+    "semantic_role_quality",
+    "project_development_evaluated"
+  ],
+  "generated_stub_count": 0,
+  "holdout_provenance": {
+    "case_count": 3,
+    "owners": [
+      "eclipse-kiso-testing",
+      "m-burst",
+      "orsinium-labs"
+    ],
+    "selection_digest": "sha256:b272057275c3fb3e18276481e04d35f27232d6abeb8c768081bd283aae8f11e0",
+    "source_lineages": 3,
+    "source_report_count": 3
+  },
+  "input_digests": {
+    "evaluation": "sha256:21edb621f1a1a2a63408ef6d7673a2d33cb49c42a7f829cc139258e0239b03ad",
+    "holdout:framework_semantic_final_flake8_20260906_20260906T142649223944Z.json": "sha256:9fc50b1b8f153294ef410e0fce7013afc2072f983200b400c8d7ffad01f37524",
+    "holdout:framework_semantic_final_kiso_20260906_20260906T142652836673Z.json": "sha256:7bea3b311280aac0f8d6bd8a863ae280e8cf6917c1c839552485cebba8ef26cf",
+    "holdout:framework_semantic_final_walnats_20260906_20260906T142708754394Z.json": "sha256:8c2bfe0e1c84b7d20638933c5b83a8a3fa4f9bd8d8ad59d742614b3913e830cb",
+    "role_regression": "sha256:6ec30d3a10f727d722fce967b883ea1e9136b50e9e05ee9fa2e53f58ad5cb986",
+    "selection": "sha256:f9d4b5e5b3b63687f6ed45ce34d34c7fa35e23a8e358f0b3ed1edd164a880be3",
+    "stub_audit": "sha256:23060028ceb3fee8f561b918c3e744ea3a9c8d9a30ff1b533958a8938bd8b651"
+  },
+  "matrix_role_scores": {
+    "architect": 9.7,
+    "implementer": 9.8,
+    "project_analyzer": 9.7,
+    "reviewer": 9.8,
+    "spec_writer": 9.7,
+    "tester": 10.0
+  },
+  "promotion_applied": false,
+  "role_scores": {
+    "architect": 2.0,
+    "implementer": null,
+    "project_analyzer": 4.0,
+    "reviewer": null,
+    "spec_writer": 1.67,
+    "tester": null
+  },
+  "schema_version": "framework_plugin_holdout_evidence.v2",
+  "source_apply": false,
+  "status": "evidence_required",
+  "target_score": 9.7
+}

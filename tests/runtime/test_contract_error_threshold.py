@@ -40,7 +40,12 @@ def _copy_workspace(tmp_path: Path) -> Path:
     source = Path(__file__).resolve().parents[2]
     workspace = tmp_path / "workspace"
     for name in ("runtime", "tools", "plugins", "pipelines", "registry", "generated"):
-        shutil.copytree(source / name, workspace / name, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+        src = source / name
+        dst = workspace / name
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+        else:
+            dst.mkdir(parents=True, exist_ok=True)
     (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
     return workspace
 

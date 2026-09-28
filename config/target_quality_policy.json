@@ -1,0 +1,682 @@
+{
+  "schema_version": "target_quality_policy.v1",
+  "target_quality": {
+    "suspicious_path_tokens": [
+      "/tests/",
+      "/test/",
+      "/docs/",
+      "/docs_src/",
+      "docs_src/",
+      "/examples/",
+      "/end_to_end_tests/",
+      "end_to_end_tests/",
+      "/samples/",
+      "_samples/",
+      "/scripts/",
+      "/tools/",
+      "/utils/",
+      "/helpers",
+      "documentation.py",
+      "runtests.py",
+      "hatch_build.py",
+      "install_dev_repos.py"
+    ],
+    "suspicious_symbol_tokens": [
+      "add_ctx",
+      "cancel",
+      "decorator",
+      "exists",
+      "install",
+      "version",
+      "pixmap",
+      "icon",
+      "paint",
+      "layout",
+      "json_schema",
+      "python_type",
+      "helper",
+      "example"
+    ],
+    "representative_tokens": [
+      "archive",
+      "blockwise",
+      "crawler",
+      "candidates",
+      "chunk",
+      "dag",
+      "event_trigger",
+      "flow",
+      "handle_",
+      "import_hook",
+      "modulegraph",
+      "estimate_",
+      "plugin_state",
+      "process_api",
+      "repos",
+      "rebuild",
+      "task_engine",
+      "task_run",
+      "template",
+      "trigger",
+      "widget"
+    ],
+    "strong_contract_tokens": [
+      "build_providers_from_config",
+      "calculate",
+      "compile",
+      "decode",
+    "deserialize",
+    "distance",
+    "encode",
+      "format",
+      "escape",
+      "load_payload",
+      "normalize",
+      "output_json",
+      "parse",
+      "resolve",
+      "search",
+      "serialize",
+      "sign",
+      "unsign",
+      "validate"
+    ],
+  "strong_contract_prefixes": [
+    "build_",
+    "create_",
+    "generate_",
+    "make_",
+    "register_",
+      "query_"
+    ],
+    "strong_contract_symbols": [
+      "create"
+    ],
+    "meta_infrastructure_tokens": [
+      "_capability_acquisition",
+      "acquire_capability",
+      "capability_registry",
+      "foundry",
+      "prompt_lab"
+    ],
+    "runtime_boundary_tokens": [
+      "handle_async_request",
+      "handle_request",
+      "middleware",
+      "proxy_to",
+      "provider_url",
+      "request",
+      "response",
+      "route",
+      "run"
+    ],
+    "runtime_boundary_exact_tokens": [
+      "request",
+      "response",
+      "route",
+      "run"
+    ],
+    "trivial_symbols": [
+      "capitalize",
+      "casefold",
+      "center",
+      "config",
+      "count",
+      "endswith",
+      "exists",
+      "find",
+      "get",
+      "has",
+      "index",
+      "is",
+      "join",
+      "lower",
+      "lstrip",
+      "provider_url",
+      "removeprefix",
+      "removesuffix",
+      "replace",
+      "rstrip",
+      "settings",
+      "target_model",
+      "split",
+      "startswith",
+      "strip",
+      "title",
+      "upper",
+      "version"
+    ],
+      "trivial_prefixes": [
+        "get",
+        "get_",
+      "has_",
+      "is_",
+      "to_",
+      "from_"
+    ],
+    "trivial_suffixes": [
+      "_url",
+      "_path",
+      "_name",
+      "_version"
+    ],
+    "trivial_suffix_allowed_contains_any": [
+      "parse",
+      "build",
+      "resolve",
+      "normalize",
+      "validate",
+      "candidates",
+      "repos"
+    ],
+    "constant_return_hook_prefixes": ["can_", "has_", "is_", "should_"],
+    "constant_return_hook_score_cap": ["69"],
+    "constant_return_hook_reason": ["constant-return hook is weak as first architectural slice"],
+    "unmodeled_effect_score_cap": ["74"],
+    "unmodeled_effect_reason": ["source-observed effects are absent from the declared side-effect contract: {effects}"],
+    "liveness_probe_symbols": [
+      "health",
+      "healthcheck",
+      "status",
+      "ping",
+      "ready",
+      "readiness",
+      "live",
+      "liveness"
+    ],
+    "bootstrap_symbols": [
+      "parse_args",
+      "arguments",
+      "main",
+      "is_ignored",
+      "should_ignore",
+      "ignored",
+      "setup",
+      "configure"
+    ],
+    "bootstrap_arg_path_tokens": [
+      "cli",
+      "main.py",
+      "prompt_lab.py",
+      "map.py"
+    ],
+    "suspicious_path_parts": [
+      "icons",
+      "icon"
+    ],
+    "generic_unprofiled_symbols": [
+      "_eval_subs",
+      "_normalize_field_type",
+      "_parse_module",
+      "_read_grdecl",
+      "_resolve_xref_inner",
+      "srcfilter"
+    ],
+    "generic_unprofiled_symbol_contains_any": [
+      "parse",
+      "normalize",
+      "resolve"
+    ],
+    "generic_unprofiled_path_tokens": [
+      "/core/",
+      "/domains/",
+      "/hazmat/",
+      "/utilities/",
+      "/subapi/",
+      "/rpm/"
+    ],
+    "generic_unprofiled_score_cap": [
+      "84"
+    ],
+    "non_implementation_decorators": ["abstractmethod"],
+    "unprofiled_strong_score_cap": [
+      "84"
+    ],
+    "unprofiled_strong_path_tokens": [
+      "/app/",
+      "/core.py",
+      "/sessions.py",
+      "/_py/path.py",
+      "/runtime.py",
+      "/template.py"
+    ],
+    "special_boundaries": [
+      {
+        "id": "llm_repair_hypothesis_boundary",
+        "target_contains_any": ["send_to_model"],
+        "reason_contains_any": ["llm hypothesis boundary", "repair-attempt contract"],
+        "score_bonus": 18,
+        "allow_runtime_boundary": true,
+        "reason": "LLM repair hypothesis boundary is a valid architectural contract target"
+      },
+      {
+        "id": "ml_generation_boundary",
+        "target_contains_any": ["generate_response"],
+        "reason_contains_any": ["ml inference/submission boundary", "ml generation"],
+        "score_bonus": 18,
+        "allow_runtime_boundary": true,
+        "reason": "ML generation boundary is a valid architectural contract target"
+      },
+      {
+        "id": "prompt_lab_run_artifact_boundary",
+        "target_contains_any": ["prompt_lab"],
+        "reason_contains_any": ["first-slice target", "prompt-lab", "run artifact"],
+        "score_bonus": 18,
+        "allow_meta_infrastructure": true,
+        "reason": "prompt-lab run/artifact boundary is a valid project-domain target"
+      }
+    ]
+  },
+  "spec_writer_ranking": {
+    "deterministic_shape_tokens": [
+      "parse_",
+      "normalize",
+      "validate",
+      "resolve",
+      "build_",
+      "make_",
+      "create_"
+    ],
+    "framework_boundary_tokens": [
+      "request",
+      "response",
+      "middleware",
+      "http",
+      "fastapi",
+      "flask"
+    ],
+    "handler_boundary_tokens": [
+      "handler",
+      "middleware",
+      "endpoint"
+    ],
+    "repair_loop": {
+      "control_surface_path_tokens": [
+        "auto_dev_agent.py",
+        "module_contract_checker.py",
+        "goal_to_spec.py",
+        "run_all_autofix.py"
+      ],
+      "llm_hypothesis_symbols": [
+        "send_to_model",
+        "extract_json_from_model_response"
+      ],
+      "module_validation_symbols": [
+        "check_single_module_output",
+        "clean_module_output"
+      ],
+      "goal_to_spec_symbols": [
+        "goal_to_spec"
+      ],
+      "orchestration_symbols": [
+        "fix_module_until_success",
+        "regenerate_module"
+      ],
+      "generated_path_tokens": [
+        "generated_v",
+        "/generated"
+      ]
+    },
+    "operational_boundary": {
+      "api_path_suffixes": [
+        "_api.py",
+        "/api.py"
+      ],
+      "api_runtime_symbols": [
+        "request",
+        "send",
+        "serve",
+        "run",
+        "main"
+      ],
+      "dispatcher_symbols": [
+        "handle_request",
+        "handle_async_request"
+      ],
+      "dynamic_dispatch_output_types": ["DispatchedResult"],
+      "dynamic_dispatch_penalty": [55],
+      "bounded_serialization_output_types": ["Union[XMLNodeLike, bytes]"],
+      "bounded_serialization_bonus": [75],
+      "route_flatten_output_prefixes": ["Iterator["],
+      "route_flatten_bonus": [45],
+      "control_symbol_contains_any": [
+        "reload",
+        "watch",
+        "listen",
+        "dispatch",
+        "route",
+        "emit"
+      ],
+      "lifecycle_symbols": [
+        "_run_forever",
+        "_to_run_forever",
+        "run",
+        "run_forever",
+        "setup",
+        "install",
+        "cancel",
+        "decorator"
+      ],
+      "lifecycle_suffixes": [
+        "_ctx",
+        "_context"
+      ],
+      "environment_coupling_tokens": [
+        "socket",
+        "subprocess",
+        "server",
+        "event loop",
+        "thread",
+        "process"
+      ],
+      "data_shape_symbol_tokens": [
+        "format",
+        "serialize",
+        "deserialize",
+        "encode",
+        "decode",
+        "canonical"
+      ]
+    },
+    "domain_contract": {
+      "query_symbols": [
+        "search",
+        "where",
+        "filter",
+        "matches",
+        "compile_query",
+        "parse_query"
+      ],
+      "query_path_tokens": [
+        "query",
+        "queries.py",
+        "table.py",
+        "database",
+        "db/"
+      ],
+      "query_symbol_contains_any": [
+        "query",
+        "condition",
+        "predicate"
+      ],
+      "query_module_path_token": "queries.py",
+      "query_module_excluded_symbols": [
+        "all",
+        "any",
+        "match"
+      ],
+      "weak_accessor_symbols": [
+        "get"
+      ],
+      "storage_path_tokens": [
+        "storages.py",
+        "/storage"
+      ],
+      "middleware_path_tokens": [
+        "middlewares.py"
+      ],
+      "core_text_tokens": [
+        "bcrypt",
+        "crypt",
+        "hash",
+        "password",
+        "salt",
+        "kdf",
+        "verify"
+      ]
+    },
+    "representative_slice": {
+      "flow_tokens": [
+        "create_window",
+        "setup_page",
+        "plugin_state",
+        "task_engine",
+        "task_run",
+        "trigger_dag",
+        "process_api",
+        "set_event_trigger",
+        "run_consensus",
+        "orchestrator",
+        "group_manager",
+        "a2a_protocol",
+        "agent",
+        "blockwise",
+        "modulegraph",
+        "import_hook",
+        "rebuild_archives",
+        "crawler",
+        "template"
+      ],
+      "utility_tokens": [
+        "pixmap",
+        "svg",
+        "paint",
+        "layout",
+        "documentation",
+        "json_schema",
+        "python_type",
+        "interpolate_string",
+        "version",
+        "exists",
+        "helper"
+      ],
+      "representative_path_tokens": [
+        "/plugins/",
+        "/plugin_registration/",
+        "/task_engine",
+        "/blocks.py",
+        "/modulegraph",
+        "/archive.py"
+      ],
+      "utility_path_tokens": [
+        "cli.py",
+        "/utils/",
+        "/widgets/mixins.py",
+        "/documentation.py"
+      ],
+      "ad_hoc_evaluator_symbols": [
+        "evaluate"
+      ],
+      "ad_hoc_evaluator_path_tokens": [
+        "x31.py",
+        "notebook",
+        "competition"
+      ]
+    },
+    "executable_readiness": {
+      "first_slice_symbol_tokens": [
+        "build_environ",
+        "parse_plugin_options"
+      ],
+      "simple_input_annotations": [
+        "str",
+        "int",
+        "float",
+        "bool",
+        "dict",
+        "list",
+        "mapping",
+        "sequence",
+        "bytesio",
+        "configparser"
+      ],
+      "hard_runtime_symbol_tokens": [
+        "client",
+        "worker",
+        "scheduler",
+        "session",
+        "connection",
+        "subprocess",
+        "queue",
+        "job",
+        "request",
+        "command",
+        "crawler"
+      ],
+      "hard_runtime_path_tokens": [
+        "/client",
+        "/scheduler",
+        "/commands/",
+        "/cli/",
+        "/sessions/",
+        "/connections/"
+      ]
+    },
+    "trivial_helper": {
+      "symbols": [
+        "capitalize",
+        "casefold",
+        "center",
+        "count",
+        "endswith",
+        "find",
+        "flush",
+        "format",
+        "get",
+        "index",
+        "join",
+        "lower",
+        "lstrip",
+        "match",
+        "removeprefix",
+        "removesuffix",
+        "replace",
+        "rstrip",
+        "split",
+        "startswith",
+        "storage",
+        "strip",
+        "title",
+        "upper",
+        "no_color",
+        "capabilities",
+        "all",
+        "any"
+      ],
+      "symbol_contains_any": [
+        "cache_key",
+        "build_key",
+        "memcache_key",
+        "get_path_for_link"
+      ],
+      "suffixes": [
+        "_path",
+        "_url",
+        "_name",
+        "_version"
+      ],
+      "suffix_allowed_contains_any": [
+        "parse",
+        "build",
+        "resolve",
+        "normalize",
+        "validate"
+      ],
+      "prefixes": [
+        "get",
+        "is_",
+        "has_",
+        "to_",
+        "from_",
+        "get_"
+      ]
+    },
+    "liveness_probe_symbols": [
+      "health",
+      "healthcheck",
+      "status",
+      "ping",
+      "ready",
+      "readiness",
+      "live",
+      "liveness"
+    ],
+    "bootstrap_support": {
+      "symbols": [
+        "parse_args",
+        "arguments",
+        "main",
+        "is_ignored",
+        "should_ignore",
+        "ignored",
+        "setup",
+        "configure"
+      ],
+      "arg_path_tokens": [
+        "cli",
+        "main.py",
+        "prompt_lab.py",
+        "map.py"
+      ]
+    },
+    "project_support_surface": {
+      "path_tokens": [
+        "/release.py",
+        "/build.py",
+        "/publish.py",
+        "/deploy.py",
+        "/noxfile.py"
+      ],
+      "symbols": [
+        "release",
+      "publish",
+        "deploy"
+      ],
+      "symbol_contains_any": [
+        "deploy",
+        "build_wheel",
+        "upload"
+      ]
+    },
+    "low_value_first_slice": {
+      "path_suffixes": [
+        "/__init__.py"
+      ],
+      "symbols": [
+      "__init__",
+      "__enter__",
+      "__exit__",
+        "configure_logging",
+        "setup_logging",
+        "basic_config",
+        "set_loglevel",
+        "config",
+        "configure",
+        "settings",
+        "target_model",
+        "setup",
+        "test_suite",
+        "decorator",
+        "parse_iso",
+      "build_digest_header"
+      ,"items"
+      ]
+    },
+    "mutation_like_first_slice": {
+      "symbols": [
+        "write",
+        "save",
+        "delete",
+        "remove",
+        "drop",
+        "insert",
+        "update",
+        "commit",
+        "flush",
+        "install",
+        "cancel"
+      ],
+      "prefixes": [
+        "write_",
+        "save_",
+        "delete_",
+        "remove_",
+        "drop_",
+        "insert_",
+        "update_",
+        "install_",
+        "cancel_"
+      ]
+    }
+  }
+}

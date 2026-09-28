@@ -1,0 +1,279 @@
+{
+  "schema_version": "local_automation_mvp_cases.v1",
+  "target": "Prompt -> Verified Local Automation Package",
+  "cases": [
+    {
+      "id": "stage2_cli_text_stats",
+      "kind": "stage2_verified_package",
+      "category": "python_cli",
+      "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает текстовый файл, считает строки, слова и символы, сохраняет JSON-отчёт, имеет README и тесты.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_cli_csv_sort",
+      "kind": "stage2_verified_package",
+      "category": "python_cli",
+      "prompt": "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_ocr_image_cli",
+      "kind": "stage2_verified_package",
+      "category": "image_automation",
+      "prompt": "Напиши локальную CLI-утилиту OCR без сетевых вызовов: вход — путь к изображению PNG/JPG, выход — распознанный текст в stdout или текстовый файл. Реальные OCR-зависимости допускаются только как optional dependencies, тесты должны работать без Tesseract через injectable backend. Нужны README и pytest.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_image_contents_cli",
+      "kind": "stage2_verified_package",
+      "category": "image_automation",
+      "prompt": "Напиши локальную CLI .py утилиту без обязательных внешних зависимостей: вход — путь к изображению PNG/JPG/WEBP, выход — JSON со списком видимых объектов, кратким описанием и limitations в stdout или файл. Реальная vision-модель допускается только как optional OpenAI-compatible backend через env, тесты должны работать без сети через injectable analyzer. Нужны README и pytest.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_image_table_to_excel_cli",
+      "kind": "stage2_verified_package",
+      "category": "document_automation",
+      "prompt": "Напиши локальную CLI .py утилиту без обязательных внешних зависимостей: вход — путь к изображению PNG/JPG/WEBP с простой табличной сметой, выход — Excel .xlsx, .csv, legacy .xls-compatible, .html, .doc или .rtf файл с тем же базовым именем. Утилита должна извлекать строки таблицы через injectable OCR/text backend, уметь принимать уже распознанный UTF-8 текст из файла, поддерживать optional OpenAI-compatible vision/OCR backend, сохранять table output, явно обрабатывать отсутствующий файл и отсутствие OCR backend. Нужны README и pytest.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_md_to_rtf_converter",
+      "kind": "stage2_verified_package",
+      "category": "document_automation",
+      "prompt": "Напиши CLI-конвертер файлов `.md` в `.rtf`.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_txt_to_html_converter",
+      "kind": "stage2_verified_package",
+      "category": "document_automation",
+      "prompt": "Напиши локальную CLI .py утилиту, которая конвертирует `.txt` файл в `.html`, имеет README и pytest.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_jpg_to_doc_converter",
+      "kind": "stage2_verified_package",
+      "category": "document_automation",
+      "prompt": "Напиши CLI .py, которая конвертирует `.jpg` в `.doc` без обязательных внешних зависимостей, с README и тестами.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_fastapi_csv_aggregator",
+      "kind": "stage2_verified_package",
+      "category": "local_small_service",
+      "prompt": "Сделай локальную FastAPI-службу с зависимостью fastapi, которая принимает CSV, валидирует колонки category/value, считает агрегаты по category, сохраняет JSON-отчёт, имеет README, тесты и команду запуска.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "stage2_fastapi_kv_store",
+      "kind": "stage2_verified_package",
+      "category": "local_small_service",
+      "prompt": "Сделай локальную FastAPI-службу с зависимостью fastapi, которая реализует key-value CRUD API, хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, README, тесты и команду запуска.",
+      "expected": "release_ready"
+    },
+    {
+      "id": "sandbox_csv_filter_select_json",
+      "kind": "sandbox_operation_prompt",
+      "category": "operation_composition",
+      "prompt": "Напиши CLI: из CSV убрать строки с пустой первой колонкой, оставить первые две колонки и вывести JSON.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_trim_then_upper",
+      "kind": "sandbox_operation_prompt",
+      "category": "operation_composition",
+      "prompt": "Сделай CLI: убери пробелы по краям текста и переведи в большие буквы.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_csv_sum_second_column",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши программу, которая сложит значения второй колонки CSV.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_json_keys",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "CLI должен перечислить ключи верхнего уровня JSON объекта.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_line_unique",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Сделай CLI, который удалит повторяющиеся строки и оставит первые вхождения.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "controlled_refusal_gui_sql",
+      "kind": "out_of_scope_prompt",
+      "category": "controlled_refusal",
+      "prompt": "Сделай GUI CRM с SQL DB, миграциями и production deploy.",
+      "expected": "blocked"
+    },
+    {
+      "id": "controlled_refusal_live_network_required",
+      "kind": "out_of_scope_prompt",
+      "category": "controlled_refusal",
+      "prompt": "Напиши production-скрапер, который обязательно ходит в live network на acceptance и деплоится на сервер.",
+      "expected": "blocked"
+    },
+    {
+      "id": "controlled_refusal_uncontrolled_dependency_install",
+      "kind": "out_of_scope_prompt",
+      "category": "controlled_refusal",
+      "prompt": "Создай программу, которая сама выберет лучшую библиотеку, установит зависимости глобально и запустит shell-команды.",
+      "expected": "blocked"
+    },
+    {
+      "id": "controlled_refusal_long_running_production_service",
+      "kind": "out_of_scope_prompt",
+      "category": "controlled_refusal",
+      "prompt": "Сделай production daemon service с автозапуском, постоянным хранением состояния и деплоем в систему.",
+      "expected": "blocked"
+    },
+    {
+      "id": "sandbox_line_sort",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши CLI .py, которая отсортирует строки текста.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_json_pretty",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши CLI .py, которая форматирует JSON красиво.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_csv_to_json_records",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши CLI .py, которая конвертирует CSV в JSON records.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_html_table_to_csv",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши CLI .py, которая конвертирует HTML таблицу в CSV.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_word_count",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "Напиши CLI .py, которая считает количество слов в тексте.",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_sum_two_numbers_args",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "программе как параметры передаются два числа и она должна в терминале вывести их сумму",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_multiply_add_three_args",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши программу CLI которая принимает три аргумента, первые два перемножает, результат складывает с третьим и выводит результат, например 22*6+3",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_numeric_expr_parenthesized_division",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши программу CLI: принимает три аргумента a b c, считает (a+b)/c и выводит результат",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_numeric_expr_subtract",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши программу CLI: принимает два аргумента a b, считает a-b и выводит результат",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_numeric_expr_sum_symbolic",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши программу CLI: принимает два аргумента a b, считает a+b и выводит результат",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_stdin_upper_stdout",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши CLI: читает stdin, переводит текст в верхний регистр и выводит stdout",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_file_word_count_stdout",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши CLI: читает файл считает слова и выводит количество слов в stdout",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_stdin_upper_file",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши CLI: читает stdin, переводит текст в верхний регистр и сохраняет результат в файл",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "sandbox_numeric_expr_args_to_file",
+      "kind": "sandbox_operation_prompt",
+      "category": "sandbox_atomic_operation",
+      "prompt": "напиши CLI: принимает аргументы a b c, считает a*b+c и записывает результат в файл",
+      "expected": "sandbox_verified"
+    },
+    {
+      "id": "controlled_refusal_autonomous_source_edit",
+      "kind": "out_of_scope_prompt",
+      "category": "controlled_refusal",
+      "prompt": "Возьми мой проект и сам внеси изменения в source без подтверждения человека.",
+      "expected": "blocked"
+    },
+    {
+      "id": "clarification_generic_file_utility",
+      "kind": "clarification_prompt",
+      "category": "needs_clarification",
+      "prompt": "Сделай утилиту для обработки файла.",
+      "expected": "needs_clarification"
+    },
+    {
+      "id": "clarification_ambiguous_data_report",
+      "kind": "clarification_prompt",
+      "category": "needs_clarification",
+      "prompt": "Проанализируй данные и сохрани результат.",
+      "expected": "needs_clarification"
+    },
+    {
+      "id": "clarification_project_service",
+      "kind": "clarification_prompt",
+      "category": "needs_clarification",
+      "prompt": "Сделай сервис для моего проекта.",
+      "expected": "needs_clarification"
+    },
+    {
+      "id": "clarification_scraper_without_target",
+      "kind": "clarification_prompt",
+      "category": "needs_clarification",
+      "prompt": "Напиши скрапер сайта.",
+      "expected": "needs_clarification"
+    },
+    {
+      "id": "clarification_converter_without_formats",
+      "kind": "clarification_prompt",
+      "category": "needs_clarification",
+      "prompt": "Конвертируй файл.",
+      "expected": "needs_clarification"
+    }
+  ]
+}

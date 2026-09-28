@@ -1,0 +1,13 @@
+{
+  "id": "apply_project_change_recipe",
+  "version": "0.1.0",
+  "entrypoint": "plugins.apply_project_change_recipe.src.main:run",
+  "determinism_grade": "B",
+  "side_effects": {
+    "filesystem": "write_scoped",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

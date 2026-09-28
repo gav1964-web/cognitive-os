@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "required": [
+    "action"
+  ],
+  "properties": {
+    "action": {
+      "enum": [
+        "policy",
+        "validate",
+        "boundary_probes",
+        "compare_draft"
+      ]
+    },
+    "role": {
+      "enum": [
+        "analyzer",
+        "architect",
+        "spec_writer"
+      ]
+    },
+    "artifact": {
+      "type": "object"
+    },
+    "previous": {
+      "type": "object"
+    },
+    "current": {
+      "type": "object"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "allOf": [{"if": {"properties": {"action": {"const": "compare_draft"}}},
+             "then": {"required": ["previous", "current"]}}],
+  "additionalProperties": false
+}

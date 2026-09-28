@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation",
+    "contract",
+    "module",
+    "function",
+    "keyword_literals",
+    "seed"
+  ],
+  "properties": {
+    "operation": {
+      "const": "acceptance_tests"
+    },
+    "contract": {
+      "enum": [
+        "python_text_to_valid_python.v1",
+        "python_text_preserves_ast.v1",
+        "python_formatting_independent_fragments.v1"
+      ]
+    },
+    "module": {
+      "type": "string"
+    },
+    "function": {
+      "type": "string"
+    },
+    "keyword_literals": {
+      "type": "object"
+    },
+    "seed": {
+      "type": "string",
+      "maxLength": 6000
+    },
+    "preservation_seed": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 6000
+    },
+    "preservation_expected": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 6000
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "contract": {
+            "const": "python_formatting_independent_fragments.v1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "preservation_seed",
+          "preservation_expected"
+        ]
+      }
+    }
+  ]
+}

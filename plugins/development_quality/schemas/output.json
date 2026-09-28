@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "required": [
+    "contract"
+  ],
+  "properties": {
+    "contract": {
+      "const": "development_quality.v1"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "missing": {"type": "array", "items": {"type": "string"}},
+    "unexplained": {"type": "array", "items": {"type": "string"}},
+    "instruction": {"type": "string"},
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

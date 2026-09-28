@@ -1,0 +1,101 @@
+{
+  "schema_version": "architecture_pattern_backlog.v1",
+  "records": [
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "orm_database_library",
+      "status": "implemented_v1",
+      "why": "Common Python projects expose ORM sessions, migrations, query builders, and transaction boundaries.",
+      "candidate_signals": ["session", "query", "model", "migration", "transaction", "sqlalchemy", "django/db"],
+      "first_slice_hint": "query_session_transaction_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "async_worker_queue",
+      "status": "implemented_v1",
+      "why": "Worker projects need queue ownership, retry, checkpoint, poison-message, and process boundary policies.",
+      "candidate_signals": ["worker", "queue", "job", "retry", "task", "celery", "rq", "asyncio"],
+      "first_slice_hint": "worker_job_execution_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "web_scraper_crawler",
+      "status": "implemented_v1",
+      "why": "Scrapers combine URL scheduling, fetch policy, parser drift, cache, rate limits, and output normalization.",
+      "candidate_signals": ["scrape", "crawler", "beautifulsoup", "html", "robots", "rate limit", "cache"],
+      "first_slice_hint": "fetch_parse_normalize_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "dataframe_pipeline",
+      "status": "implemented_v1",
+      "why": "Data projects need staged data lifecycle: raw input, parsed frame, normalized data, report/cache artifacts.",
+      "candidate_signals": ["pandas", "dataframe", "csv", "parquet", "etl", "pipeline"],
+      "first_slice_hint": "raw_to_normalized_dataset_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "test_framework_library",
+      "status": "implemented_v1",
+      "why": "Test frameworks have collection, fixture resolution, execution scheduling, reporting, and plugin hooks.",
+      "candidate_signals": ["pytest", "fixture", "collector", "assertion", "pluginmanager"],
+      "first_slice_hint": "test_collection_fixture_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "packaging_build_backend",
+      "status": "implemented_v1",
+      "why": "Build tools need source tree discovery, metadata contracts, artifact generation, and isolated subprocess execution.",
+      "candidate_signals": ["build backend", "wheel", "sdist", "pyproject", "metadata", "pep517"],
+      "first_slice_hint": "package_metadata_artifact_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "asgi_wsgi_server_runtime",
+      "status": "implemented_v1",
+      "why": "Server runtimes need lifecycle, protocol adapter, concurrency, timeout, and graceful shutdown policies.",
+      "candidate_signals": ["asgi", "wsgi", "uvicorn", "gunicorn", "lifespan", "serve", "socket"],
+      "first_slice_hint": "request_protocol_lifecycle_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "template_rendering_engine",
+      "status": "implemented_v1",
+      "why": "Template engines combine parsing, context validation, escaping, loader/cache policy, and render output contracts.",
+      "candidate_signals": ["template", "render", "jinja", "escape", "loader", "context"],
+      "first_slice_hint": "template_parse_render_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "auth_security_library",
+      "status": "implemented_v1",
+      "why": "Auth/security code needs identity, token/session lifecycle, secret handling, threat boundaries, and negative tests.",
+      "candidate_signals": ["auth", "oauth", "jwt", "token", "session", "permission", "csrf"],
+      "first_slice_hint": "identity_token_validation_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "observability_metrics_tracing",
+      "status": "implemented_v1",
+      "why": "Observability systems need event shape contracts, metric cardinality, sinks, sampling, and failure-safe export.",
+      "candidate_signals": ["metrics", "trace", "span", "telemetry", "prometheus", "opentelemetry", "log"],
+      "first_slice_hint": "event_to_metric_export_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "scientific_compute_library",
+      "status": "implemented_v1",
+      "why": "Scientific libraries need array/data contracts, numerical stability, backend policy, and reproducible fixtures.",
+      "candidate_signals": ["numpy", "scipy", "array", "tensor", "linear algebra", "solver"],
+      "first_slice_hint": "array_input_compute_result_slice"
+    },
+    {
+      "record_type": "architecture_pattern_backlog_item",
+      "pattern_id": "protocol_api_client",
+      "status": "implemented_v1",
+      "why": "Protocol clients need request construction, auth, transport retries, response normalization, and error taxonomy.",
+      "candidate_signals": ["client", "api", "request", "response", "transport", "retry", "auth"],
+      "first_slice_hint": "request_transport_response_slice"
+    }
+  ]
+}

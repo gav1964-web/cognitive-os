@@ -1,0 +1,79 @@
+{
+  "schema_version": "narrow_type_fresh_holdout.v1",
+  "status": "consumed_no_qualified_defect",
+  "evaluation_split": "owner_independent_unseen_project_holdout_round_2",
+  "frozen_at": "2026-09-08T12:03:50.348416+00:00",
+  "source_challenge_manifest": "artifacts/self_development/self_development_challenge_manifest_20260908T120350350920Z.json",
+  "source_challenge_manifest_digest": "sha256:de1676cb03a9e78afe2bb43b3ece27224f8c9b64de1117b42d1a38fed0080b92",
+  "holdout_consumed": true,
+  "consumed_at": "2026-09-08T12:08:35.388108+00:00",
+  "result_manifest": "config/narrow_type_fresh_holdout_results_20260908_b.json",
+  "cases": [
+    {
+      "id": "bagoetadrich_hermes_multi_agent_team",
+      "project": "bagoetadrich__hermes-multi-agent-team",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "bagoetadrich",
+      "source_url": "https://github.com/bagoetadrich/hermes-multi-agent-team.git",
+      "revision": "57129687ec04bd99496a034569f47709b6922a34",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_58668fbf4942_r2_w74411912/src/bagoetadrich__hermes-multi-agent-team",
+      "content_digest": "sha256:13652f50834eefecd62277d78ebba26dacccacc0d555d921f98986dc81a6310b",
+      "identity_evidence": "declared_script_entrypoint",
+      "declared_script_entrypoints": ["hermes-team=hermes_multi_agent_team.cli:cli"],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "ags4_standard_python_ags4",
+      "project": "ags4-standard__python_ags4",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "ags4-standard",
+      "source_url": "https://gitlab.com/ags4-standard/python_ags4.git",
+      "revision": "6ef965f0be0c59fae9e2a3aea199968d6911a933",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_7ed6a0c2dbc6_r3_w4f87cd2c/src/ags4-standard__python_ags4",
+      "content_digest": "sha256:ae6916a4651e0d2326cc56bbacd575ba77ed86fb15c29c01279b60e55a95feb3",
+      "identity_evidence": "declared_script_entrypoint",
+      "declared_script_entrypoints": ["ags4_cli=python_ags4.ags4_cli:main"],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "sites6821018_dataclass_parser",
+      "project": "sites6821018__dataclass_parser",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "sites6821018",
+      "source_url": "https://gitlab.com/sites6821018/dataclass_parser.git",
+      "revision": "950ed988e7fe167112b78e0bdf755c90afad7221",
+      "project_root": "artifacts/hypothesis_holdouts/hvp_d5245ef25d64_wb813bf6e/src/sites6821018__dataclass_parser",
+      "content_digest": "sha256:0492df21d61b148dbbbedb5122c13919c2c26ce9fca279bcabf84da208f8390a",
+      "identity_evidence": "project_name_token",
+      "declared_script_entrypoints": [],
+      "native_test_roots": ["tests"]
+    },
+    {
+      "id": "python_hyper_uritemplate",
+      "project": "python-hyper__uritemplate",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "python-hyper",
+      "source_url": "https://github.com/python-hyper/uritemplate.git",
+      "revision": "e7a947e7385de3e04bb05d73d4acbc4c4409f059",
+      "project_root": "artifacts/targeted_external_holdouts/python-hyper__uritemplate",
+      "content_digest": "sha256:92320a2ddad7d53ca16f2036f189b1ad90a94302dd2d4a73cc95a42d53a34418",
+      "identity_evidence": "targeted_external_rfc6570_library",
+      "declared_script_entrypoints": [],
+      "native_test_roots": ["tests"]
+    }
+  ],
+  "invariants": {
+    "two_projects_per_stratum": true,
+    "distinct_source_owners": true,
+    "content_disjoint": true,
+    "clean_git_worktrees": true,
+    "exact_revisions_bound": true,
+    "native_tests_present": true,
+    "project_development_unexposed_at_freeze": true,
+    "native_failure_unexposed_at_freeze": true,
+    "holdout_frozen_before_execution": true,
+    "source_apply": false,
+    "knowledge_updates_before_evaluation": false,
+    "automatic_promotion": false
+  }
+}

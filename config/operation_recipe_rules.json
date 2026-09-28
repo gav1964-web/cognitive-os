@@ -1,0 +1,88 @@
+{
+  "schema_version": "operation_recipe_rules.v1",
+  "status": "active",
+  "allowed_interface_contracts": [
+    "argv_stdout_numeric_expression",
+    "argv_to_file_numeric_expression",
+    "stdin_to_stdout_text_transform",
+    "stdin_to_file_text_transform",
+    "file_to_stdout_text_transform",
+    "file_to_file_text_transform"
+  ],
+  "allowed_transforms": ["numeric_expression", "uppercase", "lowercase", "trim", "reverse", "word_count"],
+  "numeric": {
+    "contracts": ["argv_stdout_numeric_expression", "argv_to_file_numeric_expression"],
+    "variables": ["a", "b", "c", "d", "e"],
+    "file_output_markers": ["в файл", "output file", "сохран", "запис"],
+    "argument_markers": ["аргумент", "параметр", "argument", "parameter", "argv"],
+    "math_markers": ["+", "-", "*", "/", "слож", "выч", "умнож", "перемнож", "дели", "делит"]
+  },
+  "text_transforms": {
+    "uppercase": {
+      "expression": "text.upper()",
+      "markers": ["верхн", "больш", "uppercase", "upper", "громк"]
+    },
+    "lowercase": {
+      "expression": "text.lower()",
+      "markers": ["нижн", "lowercase", "lower", "маленьк"]
+    },
+    "trim": {
+      "expression": "text.strip() + '\\n'",
+      "markers": ["пробел", "trim", "strip", "обрез"]
+    },
+    "reverse": {
+      "expression": "text[::-1]",
+      "markers": ["reverse", "обратн", "перевер"]
+    },
+    "word_count": {
+      "expression": "str(len(text.split())) + '\\n'",
+      "markers": ["количество слов", "считает слова", "word count", "words"]
+    }
+  },
+  "contract_profiles": {
+    "argv_stdout_numeric_expression": "numeric_args_expression",
+    "argv_to_file_numeric_expression": "numeric_args_file_expression",
+    "stdin_to_stdout_text_transform": "stdin_text_expression",
+    "stdin_to_file_text_transform": "stdin_file_text_expression",
+    "file_to_stdout_text_transform": "file_stdout_text_expression",
+    "file_to_file_text_transform": "text_expression"
+  },
+  "text_interface_markers": {
+    "stdin": ["stdin", "стандартный ввод", "стандартного ввода", "поток"],
+    "file_input": ["читает файл", "из файла", "input file", "текстовый файл"],
+    "file_output": ["в файл", "output file", "сохран", "запис"],
+    "stdout": ["stdout", "терминал", "консоль", "выводит", "покажи", "показать", "print"]
+  },
+  "text_interface_resolution": [
+    {
+      "when": {"input": "stdin", "output": "file_output"},
+      "interface_contract": "stdin_to_file_text_transform",
+      "input_shape": "utf8_text",
+      "output_shape": "output_path"
+    },
+    {
+      "when": {"input": "stdin", "output": "stdout"},
+      "interface_contract": "stdin_to_stdout_text_transform",
+      "input_shape": "utf8_text",
+      "output_shape": "utf8_text"
+    },
+    {
+      "when": {"input": "file_input", "output": "stdout"},
+      "interface_contract": "file_to_stdout_text_transform",
+      "input_shape": "input_path",
+      "output_shape": "utf8_text"
+    },
+    {
+      "when": {"input": "file_input", "output": "file_output"},
+      "interface_contract": "file_to_file_text_transform",
+      "input_shape": "input_path",
+      "output_shape": "output_path"
+    }
+  ],
+  "l45_prompt": {
+    "system_prefix": "You parse a user request into one safe OperationRecipe JSON object. Return JSON only.",
+    "schema": "{artifact_type:'OperationRecipe', status:'ready', interface_contract:string, transform:string, expression:string|null, input_shape:string, output_shape:string, evidence:string[], source:'l45'}",
+    "numeric_expression_rule": "For numeric_expression use only variables a,b,c,d,e, numbers, +,-,*,/, parentheses.",
+    "text_transform_rule": "Use null expression for text transforms."
+  }
+}

@@ -7,9 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .configured_role_pipeline import artifact_by_type, producer_for_artifact_type, run_configured_role_prefix
 from .project_benchmark import analyze_project
-from .role_architect import run_architect_skill
-from .role_spec_writer import run_spec_writer_skill
 
 
 REFERENCE_QUALITY = "teacher_reference_not_ground_truth"
@@ -39,8 +38,12 @@ def run_curriculum_case(*, root: Path, reference_path: Path) -> dict[str, Any]:
     _validate_teacher_reference(reference_path, reference)
     project_dir = _resolve_project_dir(root, reference_path, reference)
     project_report = analyze_project(project_dir)["project_map_report"]
-    adr = run_architect_skill(goal=f"SpecWriter curriculum pass for {reference_path.parent.name}", project_report=project_report)
-    spec = run_spec_writer_skill(architecture_decision=adr)
+    artifacts = run_configured_role_prefix(
+        goal=f"SpecWriter curriculum pass for {reference_path.parent.name}",
+        project_report=project_report,
+        until_artifact_type="TechnicalSpec",
+    )
+    spec = artifact_by_type(artifacts, "TechnicalSpec")
     actual = _actual_spec(spec)
     score = _score_spec(dict(reference.get("expected_spec", {})), actual)
     backlog = _improvement_backlog(score)
@@ -64,12 +67,15 @@ def run_curriculum_case(*, root: Path, reference_path: Path) -> dict[str, Any]:
 def _actual_spec(spec: dict[str, Any]) -> dict[str, Any]:
     contract = dict(spec.get("extraction_contract", {}))
     ranked = list(contract.get("ranked_candidates", []))
+    read_only_ranked = list(contract.get("read_only_ranked_context", []))
     return {
         "artifact_type": spec.get("artifact_type"),
         "role": spec.get("role"),
         "candidate": contract.get("candidate"),
         "ranked_first": dict(ranked[0]).get("source") if ranked else None,
-        "ranked_candidates": _sources(ranked, key="source"),
+        "ranked_candidates": sorted(set(
+            _sources(ranked, key="source") + _sources(read_only_ranked, key="source")
+        )),
         "source_evidence": _sources(spec.get("source_evidence", []), key="source"),
         "acceptance_sources": _sources(spec.get("acceptance_criteria", []), key="source"),
         "traceability_sources": _sources(spec.get("traceability_table", []), key="source"),
@@ -81,17 +87,25 @@ def _actual_spec(spec: dict[str, Any]) -> dict[str, Any]:
 
 
 def _score_spec(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    spec_producer = producer_for_artifact_type("TechnicalSpec")
+    plan_producer = producer_for_artifact_type("ImplementationPlan")
+    candidate = str(actual.get("candidate") or "")
+    reference_candidate = str(expected.get("candidate") or "")
+    alternatives = {str(item) for item in expected.get("acceptable_candidates") or []}
+    expected_ranked = [candidate] if candidate in alternatives and candidate != reference_candidate else expected.get("ranked_candidates", [])
     checks = {
-        "artifact_is_technical_spec": actual.get("artifact_type") == "TechnicalSpec" and actual.get("role") == "spec_writer",
-        "candidate_matches": actual.get("candidate") == expected.get("candidate"),
+        "artifact_is_technical_spec": actual.get("artifact_type") == "TechnicalSpec" and actual.get("role") == spec_producer,
+        "candidate_matches": actual.get("candidate") in {
+            expected.get("candidate"), *list(expected.get("acceptable_candidates") or [])
+        },
         "candidate_ranked_first": actual.get("ranked_first") == actual.get("candidate"),
-        "required_ranked_candidates_covered": _expected_covered(expected.get("ranked_candidates", []), actual.get("ranked_candidates", [])),
+        "required_ranked_candidates_covered": _expected_covered(expected_ranked, actual.get("ranked_candidates", [])),
         "required_source_evidence_covered": _expected_covered(expected.get("source_evidence", []), actual.get("source_evidence", [])),
         "required_acceptance_sources_covered": _expected_covered(expected.get("acceptance_sources", []), actual.get("acceptance_sources", [])),
         "required_non_goals_covered": _expected_covered(expected.get("required_non_goals", []), actual.get("non_goals", [])),
         "forbidden_candidates_absent": _forbidden_absent(expected.get("forbidden_candidates", []), [actual.get("candidate")]),
         "no_forbidden_actions_observed": not actual.get("forbidden_actions_observed"),
-        "handoff_role_is_implementer": actual.get("handoff_role") == "implementer",
+        "handoff_role_targets_next_configured_producer": actual.get("handoff_role") == plan_producer,
     }
     warnings = [name for name, ok in checks.items() if not ok]
     return {"score": _ratio(sum(1 for ok in checks.values() if ok), len(checks)), "checks": checks, "warnings": warnings}

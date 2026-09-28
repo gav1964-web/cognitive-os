@@ -1,0 +1,29 @@
+{
+  "scope": "evaluation only; never model prompts",
+  "owner_feedback": {
+    "map": "accepted with owner note on lower extraction accuracy without external LLM",
+    "vr": "accepted; owner confirms projection button; static review finding disputed",
+    "gateway": "user approved proceeding, no complete feature checklist supplied"
+  },
+  "baselines": [
+    {
+      "path": "artifacts/map_description_20260916/improved/product_brief.json",
+      "sha256": "848ef22b6c9208ad2f936c1a461a5cb58a76c85559ec09de159bf81596653585"
+    },
+    {
+      "path": "artifacts/vr_description_20260917/timeout240.json",
+      "sha256": "6ef1b46b41bcf6e9453d0e5e7dff6d8a7f82906015126364adff8a8dad4b4f2b"
+    },
+    {
+      "path": "artifacts/project5_description_20260917/report.json",
+      "sha256": "23084f3341ba24727a4fad8234022937e5e938da7d6654b52e26bfb3b5772d41"
+    }
+  ],
+  "criteria": [
+    "correct purpose",
+    "main supported workflows",
+    "no unsupported product claims",
+    "auxiliary scripts not product identity",
+    "review preserves supported claims"
+  ]
+}

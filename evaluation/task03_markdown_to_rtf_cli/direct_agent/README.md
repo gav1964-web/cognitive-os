@@ -1,22 +1,9 @@
-# Direct Agent Route
+# Direct Agent Baseline
 
-## Executor
+Status: completed
 
-- Tool: not run yet
-- Model: not run yet
-- Date: not run yet
+Release decision: completed
 
-## Run Summary
+Project dir: `F:/ubuntu/test/9/artifacts/evaluation_direct_agent/task03_markdown_to_rtf_cli`
 
-Pending.
-
-## Artifacts
-
-- Output: pending
-- Tests: pending
-- Logs: pending
-
-## Notes
-
-The direct route should build the package from the original prompt.
-
+Reason: 

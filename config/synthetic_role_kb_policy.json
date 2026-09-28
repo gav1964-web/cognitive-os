@@ -1,0 +1,24 @@
+{
+  "schema_version": "synthetic_role_kb_policy.v1",
+  "status": "active",
+  "default_records_per_role": 1000,
+  "trust_level": "synthetic_seed",
+  "evidence_strength": "synthetic",
+  "authority": "advisory_only",
+  "auto_promote": false,
+  "requires_codex_approval": true,
+  "requires_repeated_confirmed_cases": true,
+  "forbidden_uses": [
+    "ground_truth",
+    "direct_source_mutation",
+    "automatic_kb_promotion",
+    "bypassing_evidence_checks"
+  ],
+  "allowed_uses": [
+    "candidate_answer_retrieval",
+    "clarification_suggestion",
+    "role_prompt_bootstrap",
+    "coverage_experiment"
+  ],
+  "minimum_confirmed_cases_for_promotion": 3
+}

@@ -1,0 +1,12 @@
+from web_research_summarizer.contracts import Article
+from web_research_summarizer.summarizer import summarize_articles
+
+
+def test_summarizer_keeps_source_items_and_warnings():
+    report = summarize_articles('python packaging', [
+        Article('A', 'https://e.test/a', 'Python packaging makes reusable packages. Extra sentence about release verification.'),
+        Article('B', 'https://e.test/b', ''),
+    ])
+    assert report.items[0].url == 'https://e.test/a'
+    assert 'Python packaging' in report.items[0].summary
+    assert report.warnings == ['empty_article_text:https://e.test/b']

@@ -1,0 +1,41 @@
+{
+  "schema_version": "framework_plugin_external_candidates.v1",
+  "reason": "measured_owned_contract_shortage",
+  "projects": [
+    {
+      "canonical_project": "m-burst__flake8-pytest-style",
+      "owner": "m-burst",
+      "project_root": "artifacts/framework_plugin_external_20260906/src/m-burst__flake8-pytest-style",
+      "url": "https://github.com/m-burst/flake8-pytest-style",
+      "revision": "01b563d207193d3f1019654f21ad8d9d4f63adb7"
+    },
+    {
+      "canonical_project": "eclipse-kiso-testing__kiso-testing",
+      "owner": "eclipse-kiso-testing",
+      "project_root": "artifacts/framework_plugin_external_20260906/src/eclipse-kiso-testing__kiso-testing",
+      "url": "https://github.com/eclipse-kiso-testing/kiso-testing",
+      "revision": "3bf63bb73e51d75e5250068ac35887feb1d24c2c"
+    },
+    {
+      "canonical_project": "informalsystems__modelator",
+      "owner": "informalsystems",
+      "project_root": "artifacts/framework_plugin_external_20260906/src/informalsystems__modelator",
+      "url": "https://github.com/informalsystems/modelator",
+      "revision": "39ef36cc65dbcbdc347503399596a02733da3c1a"
+    },
+    {
+      "canonical_project": "timvink__mkdocs-print-site-plugin",
+      "owner": "timvink",
+      "project_root": "artifacts/framework_plugin_external_20260906/src/timvink__mkdocs-print-site-plugin",
+      "url": "https://github.com/timvink/mkdocs-print-site-plugin",
+      "revision": "f2bda538aedb4f467cb0615c97e3931ec792e353"
+    },
+    {
+      "canonical_project": "lukasgeiter__mkdocs-awesome-nav",
+      "owner": "lukasgeiter",
+      "project_root": "artifacts/framework_plugin_external_20260906/src/lukasgeiter__mkdocs-awesome-nav",
+      "url": "https://github.com/lukasgeiter/mkdocs-awesome-nav",
+      "revision": "49e057d8c26eaf1f604c63df1d135940db7180e8"
+    }
+  ]
+}

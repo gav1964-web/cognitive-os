@@ -1,0 +1,58 @@
+{
+  "schema_version": "narrow_type_fresh_holdout_results.v1",
+  "status": "completed_no_qualified_defect_with_evaluator_correction",
+  "evaluation_split": "owner_independent_unseen_project_holdout_round_2",
+  "source_manifest": "config/narrow_type_fresh_holdout_20260908_b.json",
+  "completed_at": "2026-09-08T12:08:35.388108+00:00",
+  "cases": [
+    {
+      "project": "bagoetadrich__hermes-multi-agent-team",
+      "project_stratum": "cli_local_tool",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T120643588983Z.json",
+      "observed_outcome": "clean_baseline",
+      "adjudicated_outcome": "clean_baseline",
+      "reason": "native_suite_passed_twice_22_tests"
+    },
+    {
+      "project": "ags4-standard__python_ags4",
+      "project_stratum": "cli_local_tool",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T120643588983Z.json",
+      "observed_outcome": "environment_blocked",
+      "adjudicated_outcome": "environment_blocked",
+      "reason": "poetry_backend_and_distribution_metadata_unavailable"
+    },
+    {
+      "project": "sites6821018__dataclass_parser",
+      "project_stratum": "library_pure_transform",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T120752178612Z.json",
+      "observed_outcome": "reproducible_unbound_failure",
+      "adjudicated_outcome": "environment_blocked",
+      "reason": "declared_pytest_asyncio_plugin_unavailable",
+      "evaluator_correction": "runtime/project_native_failure_binding.py"
+    },
+    {
+      "project": "python-hyper__uritemplate",
+      "project_stratum": "library_pure_transform",
+      "intake_report": "artifacts/field_trials/project_native_failure_intake_20260908T120752178612Z.json",
+      "observed_outcome": "clean_baseline",
+      "adjudicated_outcome": "clean_baseline",
+      "reason": "native_suite_passed_twice_58_tests_and_66_subtests"
+    }
+  ],
+  "summary": {
+    "projects_executed": 4,
+    "qualified_defects": 0,
+    "observed_environment_blocked": 1,
+    "adjudicated_environment_blocked": 2,
+    "clean_baselines": 2,
+    "source_project_changes": 0,
+    "role_evidence_cases": 0,
+    "role_scores_changed": false,
+    "evaluator_corrections": 1
+  },
+  "safety": {
+    "source_apply": false,
+    "knowledge_updated_before_evaluation": false,
+    "automatic_promotion": false
+  }
+}

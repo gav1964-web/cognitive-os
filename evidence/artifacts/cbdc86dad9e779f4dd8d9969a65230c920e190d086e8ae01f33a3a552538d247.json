@@ -1,0 +1,374 @@
+{
+  "artifact_type": "SelfDevelopmentProspectiveDetectionReport",
+  "audit": {
+    "eligible_observations": 5,
+    "eligible_project_reports": 47,
+    "eligible_reports_without_systematic_issue": 42,
+    "files_seen": 167,
+    "non_systematic_issue": 11,
+    "out_of_scope_project_type": 21,
+    "post_cutoff_files": 92,
+    "pre_cutoff_excluded": 75,
+    "superseded_project_reports": 24
+  },
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "dossier": {
+        "admissions": {
+          "apply": {
+            "action": "apply",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "evaluator_fingerprint": false,
+              "independent_holdout": false,
+              "regression": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "promotion_controller",
+            "required_gates": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          },
+          "promote": {
+            "action": "promote",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "evaluator_fingerprint": false,
+              "independent_holdout": false,
+              "regression": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "promotion_controller",
+            "required_gates": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          },
+          "propose": {
+            "action": "propose",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {},
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "cognitive_os",
+            "required_gates": [],
+            "source_changes_allowed": false,
+            "status": "allowed"
+          },
+          "sandbox": {
+            "action": "sandbox",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "patch_digest"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "patch_digest": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "cognitive_os",
+            "required_gates": [
+              "patch_digest",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          }
+        },
+        "architectural_delta": {
+          "change_class": "L0",
+          "components": [
+            "knowledge_admission",
+            "self_improvement_diagnosis"
+          ],
+          "contracts": [
+            "architecture:recognition_gap"
+          ],
+          "project_types": [
+            "framework_plugin_build"
+          ],
+          "roles": [
+            "architect",
+            "project_analyzer",
+            "researcher"
+          ],
+          "target": "knowledge/role_knowledge/self_development_lessons.json"
+        },
+        "artifact_type": "SelfDevelopmentShadowDossier",
+        "constraints": {
+          "apply_source": false,
+          "external_decision_not_inferred": true,
+          "promotion_applied": false
+        },
+        "proposal": {
+          "artifact_type": "SelfDevelopmentChangeProposal",
+          "change": {
+            "operation": "append_prospective_systematic_error_lesson",
+            "patch_digest": null,
+            "target": "knowledge/role_knowledge/self_development_lessons.json",
+            "target_kind": "lesson"
+          },
+          "classification": {
+            "basis": "declared_target_kind",
+            "class": "L0",
+            "classification_review_required": false,
+            "known_target_kind": true,
+            "target_kind": "lesson",
+            "variant": "L0"
+          },
+          "constraints": {
+            "execution_authorized": false,
+            "promotion_applied": false,
+            "proposal_is_not_authority": true,
+            "source_changes_allowed": false
+          },
+          "evidence": [
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-08-30T18:28:44.543588+00:00",
+              "project": "daneah__publishing-python-packages",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260830T182844544587Z.json",
+              "source_sha256": "cfcac6787cb8c3e3e420e2ee426c4067a90b17bd134b9da011a1ce3f3636c89f",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-09-06T02:28:06.686709+00:00",
+              "project": "deepadmax__clouscript",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260906T022806687752Z.json",
+              "source_sha256": "000ad7a5c7d6585f1f9f39c992fb4cd4d4a5c64d415bc60307825bec7763315d",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-09-06T02:30:07.617376+00:00",
+              "project": "pdftools__pdfjoin",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260906T023007619377Z.json",
+              "source_sha256": "efd0d1af6789a52c4061aebe5ce8c23080553fc4340a70d1b70ffd7c3ebb193c",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-08-30T23:15:03.766257+00:00",
+              "project": "scikit-build__scikit-build",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260830T231503767255Z.json",
+              "source_sha256": "37cb46225bcacf0d796f3d093b81e724bfa596971b1d6927e2807b748520a933",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            }
+          ],
+          "hypothesis": {
+            "expected_effect": "reduce the same systematic error on an unseen project",
+            "summary": "A scoped lesson can reduce recurrence of recognition_gap"
+          },
+          "impact_map": {
+            "changes_admission_or_promotion": false,
+            "changes_evaluator_architecture": false,
+            "changes_success_measure": false,
+            "components": [
+              "knowledge_admission",
+              "self_improvement_diagnosis"
+            ],
+            "contracts": [
+              "architecture:recognition_gap"
+            ],
+            "project_types": [
+              "framework_plugin_build"
+            ],
+            "roles": [
+              "architect",
+              "project_analyzer",
+              "researcher"
+            ]
+          },
+          "problem": {
+            "failure_signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build",
+            "summary": "Systematic recognition_gap recurs across independent projects"
+          },
+          "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+          "rollback_plan": {
+            "strategy": "discard staged lesson candidate"
+          },
+          "schema_version": "self_development_change_proposal.v1",
+          "status": "shadow_candidate",
+          "verification": {
+            "evaluator_fingerprint": "1594d6db9542a7fc5ab77593672cbc58431e1af6c036a0f0cc0475e2cebda160",
+            "independent_evaluator": false,
+            "independent_holdout_passed": false,
+            "regression_passed": false
+          }
+        },
+        "status": "shadow_only"
+      },
+      "independent_project_count": 4,
+      "next_required_evidence": [
+        "unseen_project_holdout",
+        "no_role_regression",
+        "independent_evaluator_review"
+      ],
+      "signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build"
+    }
+  ],
+  "checks": {
+    "latest_project_snapshot_enforced": true,
+    "mature_scope_configured": true,
+    "no_promotion_applied": true,
+    "no_source_apply": true,
+    "source_digests_captured": true,
+    "temporal_boundary_enforced": true
+  },
+  "eligible_project_types": [
+    "cli_local_tool",
+    "framework_plugin_build",
+    "library_pure_transform"
+  ],
+  "evidence_cutoff": "2026-08-30T16:07:49.990978+00:00",
+  "failed_checks": [],
+  "generated_at": "2026-09-06T05:37:20.744023+00:00",
+  "minimum_independent_projects": 3,
+  "safety": {
+    "mode": "prospective_shadow_detection",
+    "pre_cutoff_evidence_used": false,
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "schema_version": "self_development_prospective_detection_report.v1",
+  "source_digests": {
+    "artifacts/project_development/project_development_20260830T182805738091Z.json": "46e47371b9750cef2fb4319dda21a494b710d27b273ade5b023d76040c8c4511",
+    "artifacts/project_development/project_development_20260830T182830338430Z.json": "ad7b77d18e4d236a46ad8110694d2352b49a46cc2d7cd6825047cfc7c31a4bf5",
+    "artifacts/project_development/project_development_20260830T182834564667Z.json": "5ce7f84c49c7dd1acfd9c1e9b3e67c1042a9252617d3754a433058f766ddb5a9",
+    "artifacts/project_development/project_development_20260830T182840048696Z.json": "cd0858eaf8176a2db28a8951c2db70f0979148e34ba175f49a4b0bb92570697f",
+    "artifacts/project_development/project_development_20260830T182843224983Z.json": "84e540ce9a6d77eab6c940553e13dd744f1ef11fcf9652775c9ce45397beba03",
+    "artifacts/project_development/project_development_20260830T182844544587Z.json": "cfcac6787cb8c3e3e420e2ee426c4067a90b17bd134b9da011a1ce3f3636c89f",
+    "artifacts/project_development/project_development_20260830T182846342799Z.json": "1d677de415f64760b083feeedd240be4ba4a075d9b30507a047e49568f856313",
+    "artifacts/project_development/project_development_20260830T182850493059Z.json": "1763d0c547b3e972fbbe01796b2d0d0f24a47eab17d8f79537227143b63ad526",
+    "artifacts/project_development/project_development_20260830T182911311474Z.json": "82cbcee8727217aa432051acc2bcc92016bc06750ad44fb8f3ef7543c0831657",
+    "artifacts/project_development/project_development_20260830T225856059760Z.json": "d454d06d6a1a02747db94f3bdec458abf7b4cf9521e8579ddd1b3155400030d3",
+    "artifacts/project_development/project_development_20260830T225911004394Z.json": "e112152a45c77cedd86fc01f90c97b49ccf89e9a969f4dd961bf55258de88d95",
+    "artifacts/project_development/project_development_20260830T225923919740Z.json": "45e4f50035650d2ddef90d89447602366f0901c864d6afc6503aaf8462aa64e0",
+    "artifacts/project_development/project_development_20260830T225941951009Z.json": "fb9005bd39c06234a876acf496b62080370d8b70f8f51d4d39e93abb5712fa03",
+    "artifacts/project_development/project_development_20260830T225957431848Z.json": "a4f98912965845c758b4cae5d5ae7228b6fb02cf925104cc3f672fc6370e859d",
+    "artifacts/project_development/project_development_20260830T231503767255Z.json": "37cb46225bcacf0d796f3d093b81e724bfa596971b1d6927e2807b748520a933",
+    "artifacts/project_development/project_development_20260830T231652273801Z.json": "603e35ddd94103ff5d4cec54220df37555b1df5efe03a2866846a3b471aa6514",
+    "artifacts/project_development/project_development_20260830T231747137318Z.json": "b910231e36b635d33b5e8eed38fd52d25a9ba9f0d108ab8691939083d33665d4",
+    "artifacts/project_development/project_development_20260830T231841896677Z.json": "b311bd28c02567328cbccf3c4f7ac29ef83967dbae9283bc1d4e338479f87b25",
+    "artifacts/project_development/project_development_20260830T234511253680Z.json": "422832e1fa0e223761bad72af4cccb9706912140d1ef8bea7a3e9ecc34d4ea35",
+    "artifacts/project_development/project_development_20260830T234525801151Z.json": "fa33d9a18963eb070c2726dda4e8007b690541104546c76d0d62b44db1f35dc4",
+    "artifacts/project_development/project_development_20260830T234740582809Z.json": "99f163fe0826ccd78b708a0907188adc88048fd5b7ef088d8ef66fe074854fa6",
+    "artifacts/project_development/project_development_20260831T020245466432Z.json": "b3f3ca40c4ff98b5ab403b8ac33db02efe8ed36f038de56e043feaf288c9a401",
+    "artifacts/project_development/project_development_20260831T020312414586Z.json": "169f80f946cd787c2b711c3c99119dde59e86b296babdf4bccf3fffb9edf49e2",
+    "artifacts/project_development/project_development_20260831T020318485960Z.json": "b2cb3ee2789c5be1607c548674b1f939098ad0d2c5006429ce624183ce70e61e",
+    "artifacts/project_development/project_development_20260831T020513494006Z.json": "2503adda78faf12d98a80e5d946bb831e54c6bc5a6602d85a73c5c624d8f6cd6",
+    "artifacts/project_development/project_development_20260831T024930672067Z.json": "34bac1f16119be71c3b94fabe2cf13b20c0e4f52c276d4e4378d7303d1817824",
+    "artifacts/project_development/project_development_20260831T031555713330Z.json": "ba8d07f696aa1d9503dc5bf164c4aeba64ff76f43e2405a72e254f111498acd4",
+    "artifacts/project_development/project_development_20260831T031556961794Z.json": "cce684865f1a6653b5f07750b3e01b567edcb4a71bab73038f927778beb12802",
+    "artifacts/project_development/project_development_20260831T031558696193Z.json": "abbf00261ca85e465d3df6012e3998acc9484f88d1bc82771f7fb1e02dd2d72f",
+    "artifacts/project_development/project_development_20260831T060548304438Z.json": "e768d5f47bbb8374436e01a8fee9732a8af8229eb280fa44bbb4ed56b9fdddfe",
+    "artifacts/project_development/project_development_20260831T062528187092Z.json": "91b11595e1bc122dc53db7b1b1eb0452b7eb11dde0e34ca6151ad1c7460f0854",
+    "artifacts/project_development/project_development_20260831T080044961164Z.json": "590d793dc1ebf85289446e659ac743faa91d3b94f7ed963dd814d2927bc3c949",
+    "artifacts/project_development/project_development_20260831T105615186727Z.json": "23c27134385b3664aeea48b3d8e8dcb9f35c5bc8450383795918d27ac34b4479",
+    "artifacts/project_development/project_development_20260906T022806687752Z.json": "000ad7a5c7d6585f1f9f39c992fb4cd4d4a5c64d415bc60307825bec7763315d",
+    "artifacts/project_development/project_development_20260906T022814639267Z.json": "91fe09d198a41df35aec09bbb5853272423cb28be2d13aebca1153c8184d4274",
+    "artifacts/project_development/project_development_20260906T023007619377Z.json": "efd0d1af6789a52c4061aebe5ce8c23080553fc4340a70d1b70ffd7c3ebb193c",
+    "artifacts/project_development/project_development_20260906T023013700680Z.json": "1b265f2482f901b1ac9520dff82736339479f071c9866073c9e3698977108213",
+    "artifacts/project_development/project_development_20260906T023823670545Z.json": "c44f0f330831820685b2842fd858405eab9f18c82cfa2dc70a7e75873461b01c",
+    "artifacts/project_development/project_development_20260906T023836285802Z.json": "2606644de66c08e3e8418fffca2653658ac85a084d7f8c065b864e60a550a635",
+    "artifacts/project_development/project_development_20260906T024454538740Z.json": "c3a576b77fc84722e99bcc1caa9da233d2928c5768ddc71905b6965a5ee84bfe",
+    "artifacts/project_development/project_development_20260906T025155709815Z.json": "60c32b61a737faff21f70d187a94555233d18ffa3bab74bce0f8fa8d775a61f9",
+    "artifacts/project_development/project_development_20260906T025238587975Z.json": "acc0eff5ff57c4388098610ba8ac6321fce555e71b6f72c45d8bb6242f45b6ec",
+    "artifacts/project_development/project_development_20260906T025238589975Z.json": "e998fe394b87c96ae306ab4006b07f4717a90396a448c8cdd74035408dcc9cba",
+    "artifacts/project_development/project_development_20260906T052405627616Z.json": "56d2b3b3ab52632f34c8aa3413cec328e65dc6c8d67025b2ed784adfd445659d",
+    "artifacts/project_development/project_development_20260906T052412842307Z.json": "a1a22af24bde7f02fa6b8ce644f50c1950f50fea3484c7d60d784bf8e4c40057",
+    "artifacts/project_development/project_development_20260906T052415491007Z.json": "36a8033aea05ad39ab841d3ebc40f8c778919ce472d7c514a20c4acafe10f485",
+    "artifacts/project_development/project_development_20260906T052711234680Z.json": "08440b28c5ef44b80c9a78a9659b90600452b9f0057cb479edb2ae20497c9c31"
+  },
+  "status": "candidate_detected",
+  "watchlist": [
+    {
+      "additional_independent_projects_required": 2,
+      "evidence": [
+        {
+          "artifact_type": "ProspectiveSystematicErrorEvidence",
+          "category": "architecture",
+          "generated_at": "2026-09-06T02:51:55.708815+00:00",
+          "project": "design-patterns-practice__subscription-manager-cli",
+          "project_type": "library_pure_transform",
+          "rule_id": "recognition_gap",
+          "source": "artifacts/project_development/project_development_20260906T025155709815Z.json",
+          "source_sha256": "60c32b61a737faff21f70d187a94555233d18ffa3bab74bce0f8fa8d775a61f9",
+          "status": "ready_for_experiment",
+          "subject": "recognition_gap"
+        }
+      ],
+      "independent_project_count": 1,
+      "minimum_independent_projects": 3,
+      "projects": [
+        "design-patterns-practice__subscription-manager-cli"
+      ],
+      "signature": "recognition_gap:architecture:recognition_gap:library_pure_transform",
+      "status": "below_independence_threshold"
+    }
+  ],
+  "watchlist_count": 1
+}

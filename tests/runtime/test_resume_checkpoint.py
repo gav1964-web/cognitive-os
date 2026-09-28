@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from runtime.checkpoint import save_checkpoint
 from runtime.executor import resume_pipeline
 from runtime.models import ExecutionContext, Pipeline, PipelineNode
 from runtime.registry import CapabilityRegistry
 
 
-def test_resume_pipeline_continues_after_completed_nodes():
-    root = Path(__file__).resolve().parents[2]
+def test_resume_pipeline_continues_after_completed_nodes(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = Pipeline(
         id="resume_hash",

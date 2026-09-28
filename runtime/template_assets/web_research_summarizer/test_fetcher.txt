@@ -1,0 +1,7 @@
+from web_research_summarizer.fetcher import _iri_to_uri
+
+
+def test_iri_to_uri_quotes_cyrillic_path():
+    url = _iri_to_uri('https://example.test/tags/Владимир Зеленский?hl=ru')
+    assert '%D0%92%D0%BB' in url
+    assert ' ' not in url

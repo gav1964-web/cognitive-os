@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+import re
+
+from web_research_summarizer.contracts import Article, ResearchReport, SummaryItem
+
+
+WORD_RE = re.compile(r'[A-Za-zА-Яа-я0-9]{4,}')
+
+
+def summarize_articles(query: str, articles: list[Article], *, sentences_per_article: int = 2) -> ResearchReport:
+    terms = {word.lower() for word in WORD_RE.findall(query)}
+    items: list[SummaryItem] = []
+    warnings: list[str] = []
+    for article in articles:
+        text = (article.snippet + '. ' + article.text).strip() if article.snippet else article.text.strip()
+        if not text:
+            warnings.append(f'empty_article_text:{article.url}')
+            continue
+        summary = _summary_for(text, terms, sentences_per_article)
+        items.append(SummaryItem(title=article.title, url=article.url, summary=summary))
+    if not items:
+        warnings.append('no_articles_summarized')
+    return ResearchReport(query=query, items=items, warnings=warnings)
+
+
+def _summary_for(text: str, terms: set[str], limit: int) -> str:
+    sentences = [item.strip() for item in re.split(r'(?<=[.!?])\s+', text) if len(item.strip()) >= 30]
+    if not sentences:
+        return text[:240].strip()
+    ranked = sorted(enumerate(sentences), key=lambda row: (-_score(row[1], terms), row[0]))
+    selected = sorted(index for index, _ in ranked[:max(1, limit)])
+    return ' '.join(sentences[index] for index in selected)
+
+
+def _score(sentence: str, terms: set[str]) -> int:
+    words = {word.lower() for word in WORD_RE.findall(sentence)}
+    return len(words & terms) * 3 + min(len(words), 40)

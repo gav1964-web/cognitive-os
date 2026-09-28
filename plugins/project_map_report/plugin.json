@@ -1,10 +1,10 @@
 {
   "id": "project_map_report",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "entrypoint": "plugins.project_map_report.src.main:run",
   "determinism_grade": "A",
   "side_effects": {
-    "filesystem": "none",
+    "filesystem": "read_only",
     "network": "none",
     "secrets": "none"
   },

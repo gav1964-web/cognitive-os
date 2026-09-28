@@ -1,0 +1,37 @@
+{
+  "schema_version": "sandbox_programmer_compositions.v1",
+  "compositions": [
+    {
+      "id": "csv_filter_select_to_json_records",
+      "package": "csv_filter_select_to_json_records_cli",
+      "description": "Filter CSV rows with empty first column, keep first two columns, write JSON records.",
+      "match_all": ["csv", "json"],
+      "match_any_groups": [
+        ["непуст", "без значения", "пуст"],
+        ["первые две", "первые 2", "две колонки"]
+      ],
+      "sample": "name,qty,price\nalpha,2,10\n,3,20\nbeta,4,30\n",
+      "expected": "[{\"name\": \"alpha\", \"qty\": \"2\"}, {\"name\": \"beta\", \"qty\": \"4\"}]\n",
+      "steps": [
+        {"operation": "csv_filter_first_column_nonempty"},
+        {"operation": "csv_select_first_two_columns"},
+        {"operation": "csv_to_json_records"}
+      ]
+    },
+    {
+      "id": "trim_then_upper",
+      "package": "trim_then_upper_cli",
+      "description": "Trim leading/trailing whitespace, then convert text to upper case.",
+      "match_any_groups": [
+        ["пробел", "trim", "strip"],
+        ["верхний регистр", "большие буквы", "заглав"]
+      ],
+      "sample": "  One two  \n",
+      "expected": "ONE TWO\n",
+      "steps": [
+        {"operation": "trim"},
+        {"operation": "upper"}
+      ]
+    }
+  ]
+}

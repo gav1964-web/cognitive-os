@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+import argparse
+
+from web_research_summarizer.extractor import extract_article
+from web_research_summarizer.fetcher import fetch_article_from_fixture, fetch_article_html
+from web_research_summarizer.report import write_report
+from web_research_summarizer.search import load_fixture_results, search_web
+from web_research_summarizer.summarizer import summarize_articles
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('query')
+    parser.add_argument('output')
+    parser.add_argument('--top', type=int, default=15)
+    parser.add_argument('--fixture-search')
+    parser.add_argument('--fixture-dir')
+    parser.add_argument('--search-endpoint-template')
+    args = parser.parse_args(argv)
+    limit = max(1, min(args.top, 15))
+    if args.fixture_search:
+        results = load_fixture_results(args.fixture_search, limit=limit)
+    elif args.search_endpoint_template:
+        results = search_web(args.query, endpoint_template=args.search_endpoint_template, limit=limit)
+    else:
+        results = search_web(args.query, limit=limit)
+    articles = []
+    warnings = []
+    for result in results[:limit]:
+        try:
+            html = fetch_article_from_fixture(result.url, args.fixture_dir) if args.fixture_dir else fetch_article_html(result.url)
+            articles.append(extract_article(result, html))
+        except Exception as exc:
+            warnings.append(f'fetch_failed:{result.url}:{exc.__class__.__name__}')
+    report = summarize_articles(args.query, articles)
+    report.warnings.extend(warnings)
+    write_report(report, args.output)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

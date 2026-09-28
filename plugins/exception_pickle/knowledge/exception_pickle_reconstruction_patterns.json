@@ -1,0 +1,515 @@
+{
+  "activated_at": "2026-08-31T13:21:56.416441+00:00",
+  "operator": {
+    "applicability": {
+      "existing_reconstruction_hook_blocks": true,
+      "generated_function_stubs_forbidden": true,
+      "maximum_required_constructor_inputs": 4,
+      "required_constructor_inputs_must_be_stored_on_self": true,
+      "single_class_constructor_target": true
+    },
+    "hypothesis_kind": "exception_pickle_reconstruction_boundary",
+    "id": "preserve_exception_constructor_reconstruction",
+    "reconstruction_method": "__reduce__",
+    "state_strategy": "reuse_direct_assignments",
+    "status": "validated_active"
+  },
+  "post_promotion_application_evidence": {
+    "active_application_ledger": "artifacts/project_development/exception_pickle_active_application_ledger.json",
+    "admitted_case_count": 45,
+    "applied_count": 178,
+    "blocked_count": 414,
+    "blocker_intelligence": {
+      "class_state_contract_research_case_count": 6,
+      "current_frontier_case_count": 146,
+      "derived_import_audit": {
+        "case_count": 0,
+        "kb_promotion": false,
+        "lane_summary": {},
+        "llm_authority": "advisory_only",
+        "recommended_next_lane": null,
+        "source_apply": false
+      },
+      "derived_message_audit": {
+        "case_count": 0,
+        "kb_promotion": false,
+        "lane_summary": {},
+        "llm_authority": "advisory_only",
+        "recommended_next_lane": null,
+        "source_apply": false
+      },
+      "import_dependency_isolation_case_count": 25,
+      "import_isolation_summary": {
+        "attribute_base_metaclass_risk_count": 10,
+        "blocker_summary": {
+          "semantic_replay_behavior_mismatch": 4,
+          "semantic_replay_dependency_unavailable": 14,
+          "semantic_replay_import_failed": 6,
+          "semantic_sample_shape_unsupported": 1
+        },
+        "case_count": 25,
+        "direct_file_preferred_count": 14,
+        "missing_import_kind_summary": {
+          "external_dependency": 11,
+          "project_local_dependency": 2,
+          "stdlib_symbol_compat": 2
+        },
+        "subtype_summary": {
+          "attribute_base_metaclass_risk": 10,
+          "dependency_unavailable": 9,
+          "import_failed": 5,
+          "sample_supported_but_dependency_heavy": 1
+        },
+        "target_self_attribute_gap_count": 3,
+        "top_missing_imports": [
+          {
+            "count": 2,
+            "value": "librt"
+          },
+          {
+            "count": 1,
+            "value": "salt.utils"
+          },
+          {
+            "count": 1,
+            "value": "aiohttp"
+          },
+          {
+            "count": 1,
+            "value": "tomllib"
+          },
+          {
+            "count": 1,
+            "value": "aiopenapi3"
+          },
+          {
+            "count": 1,
+            "value": "loguru"
+          },
+          {
+            "count": 1,
+            "value": "awesomeversion"
+          },
+          {
+            "count": 1,
+            "value": "fastjsonschema"
+          },
+          {
+            "count": 1,
+            "value": "types:GenericAlias"
+          },
+          {
+            "count": 1,
+            "value": "multiaddr"
+          },
+          {
+            "count": 1,
+            "value": "isardvdi_common"
+          },
+          {
+            "count": 1,
+            "value": "blessed"
+          }
+        ],
+        "top_required_input_signatures": [
+          {
+            "count": 2,
+            "value": "messages"
+          },
+          {
+            "count": 2,
+            "value": "message"
+          },
+          {
+            "count": 2,
+            "value": "code"
+          },
+          {
+            "count": 2,
+            "value": "reason"
+          },
+          {
+            "count": 1,
+            "value": "storage_key,found_version,max_supported_version"
+          },
+          {
+            "count": 1,
+            "value": "env_var,provider_name,model_id"
+          },
+          {
+            "count": 1,
+            "value": "error,operation,repo_path"
+          },
+          {
+            "count": 1,
+            "value": "resource_type,current,limit"
+          }
+        ]
+      },
+      "latest_derived_import_audit": "artifacts/project_development/exception_pickle_derived_import_audit_20260902T045554559495Z.json",
+      "latest_derived_message_audit": "artifacts/project_development/exception_pickle_derived_message_audit_20260902T045536203364Z.json",
+      "latest_materializer_refinement": "project_local_direct_file_endpoint_and_temp_path_join_hardening",
+      "next_lane_order": [
+        "import_dependency_isolation_candidate",
+        "self_assignment_extraction_candidate",
+        "derived_constructor_value_reconstruction_candidate",
+        "patch_shape_operator_candidate",
+        "semantic_materializer_behavior_candidate",
+        "class_state_contract_research"
+      ],
+      "readmission_frontier_summary": {
+        "case_count": 0,
+        "dependency_light_count": 0,
+        "patchable_count": 0,
+        "ready_now_count": 0,
+        "subtype_summary": {},
+        "top_required_input_signatures": []
+      },
+      "recommended_next_operator_case_count": 25,
+      "recommended_next_operator_lane": "import_dependency_isolation_candidate",
+      "sample_supported_readmission_case_count": 0,
+      "source_backed_object_materializer_candidate_count": 0
+    },
+    "failed_probe_analyzer_summary": {
+      "failed_probe_case_count": 2,
+      "latest_report": "artifacts/project_development/exception_pickle_failed_probe_analyzer_20260903T065213416880Z.json",
+      "recommended_next_repair_lane": "constructor_state_contract_research",
+      "repair_lane_summary": {
+        "constructor_state_contract_research": 1,
+        "failed_probe_research": 1
+      }
+    },
+    "held_case_count": 20,
+    "import_cluster_planner_summary": {
+      "batch_readiness": "not_batch_ready",
+      "cluster_count": 18,
+      "failed_probe_reports": [],
+      "latest_report": "artifacts/project_development/exception_pickle_import_cluster_planner_20260903T065218069738Z.json",
+      "next_action": "class_state_contract_research_before_replay",
+      "recommended_next_cluster": "unknown:attribute_base_metaclass_risk"
+    },
+    "import_replay_isolation": {
+      "direct_file_fallback": true,
+      "standard_library_compat_shims": [
+        "typing.Self",
+        "typing.override",
+        "enum.StrEnum",
+        "types.GenericAlias",
+        "builtins.frozendict"
+      ],
+      "target_import_stubs": true,
+      "target_import_stubs_default": true,
+      "target_import_stubs_scope": "imports_declared_in_target_file_only"
+    },
+    "kb_promotion": false,
+    "latest_applied_project": "astronomer__agents",
+    "latest_applied_report": "artifacts/project_development/exception_pickle_active_application_20260903T065054426561Z.json",
+    "latest_applied_target": "astro-airflow-mcp/src/astro_airflow_mcp/adapters/base.py:NotFoundError.__init__",
+    "latest_blocker_intelligence": "artifacts/project_development/exception_pickle_blocker_intelligence_20260903T065159200878Z.json",
+    "latest_failed_probe_analyzer": "artifacts/project_development/exception_pickle_failed_probe_analyzer_20260903T065213416880Z.json",
+    "latest_import_cluster_planner": "artifacts/project_development/exception_pickle_import_cluster_planner_20260903T065218069738Z.json",
+    "latest_object_contract_admission": "artifacts/project_development/exception_pickle_object_contract_admission_20260902T100010126192Z.json",
+    "latest_object_contract_audit": "artifacts/project_development/exception_pickle_object_contract_audit_20260902T095949529132Z.json",
+    "latest_opaque_hold_audit": "artifacts/project_development/exception_pickle_opaque_hold_audit_20260901T082008388337Z.json",
+    "latest_selection_policy": "strict_readmission_frontier_with_current_object_contract_admission_precheck_patchability_dependency_light_project_static_budget_batch_profile_and_cluster_filter",
+    "llm_authority": "advisory_only",
+    "object_contract_summary": {
+      "attribute_object": 14,
+      "iterable_string_list": 4,
+      "opaque_hold": 24,
+      "string_like": 41
+    },
+    "opaque_hold_reason_summary": {
+      "no_supported_usage_evidence": 19,
+      "parameter_method_call": 5
+    },
+    "recent_applied_targets": [
+      "api_service/exceptions/api_exceptions.py:APIClientError.__init__",
+      "exceptions/EveExceptions.py:EVENG_Exception.__init__",
+      "td/exceptions.py:TknExpError.__init__",
+      "src/esaa/errors.py:ESAAError.__init__",
+      "telegraph/exceptions.py:RetryAfterError.__init__",
+      "cgt_calc/exceptions.py:IsinTranslationError.__init__",
+      "gidgethub/__init__.py:BadRequestUnknownError.__init__",
+      "dvc/exceptions.py:FileExistsLocallyError.__init__",
+      "sparkdq/exceptions.py:InvalidSeverityLevelError.__init__",
+      "vk_api/exceptions.py:VkRequestsPoolException.__init__",
+      "src/pact/error.py:PactVerificationError.__init__",
+      "python/src/ska_pst/lmc/validation/validation_error.py:ValidationError.__init__",
+      "src/hatch/env/lock.py:LockerNotFoundError.__init__",
+      "SOLIDserverRest/Exception.py:SDSServiceError.__init__",
+      "mosaik/exceptions.py:EventInNonRealTimeModeError.__init__",
+      "sources/matomo/helpers/matomo_client.py:MatomoResponseError.__init__",
+      "flama/models/exceptions.py:LLMUnsupportedModel.__init__",
+      "scrapy/spidermiddlewares/httperror.py:HttpError.__init__",
+      "scrapy/spidermiddlewares/httperror.py:HttpError.__init__",
+      "riko/exceptions.py:ReceiverUnavailableError.__init__",
+      "backend/app/jobs/daily_pipeline.py:PipelineStageError.__init__",
+      "ods/extensions/services/model-router/app/main.py:RouterError.__init__",
+      "backend/app/jobs/daily_pipeline.py:PipelineStageError.__init__",
+      "python/bolt-mcp/src/bolt_mcp/context.py:McpClientError.__init__",
+      "beanie/odm/utils/update_merge.py:MergeConflictError.__init__",
+      "src/agentacct/canonical_read.py:CanonicalReadUnavailable.__init__",
+      "tinyman/errors.py:OverspendError.__init__",
+      "backend/telescope/services/exceptions.py:ConnectionInUseError.__init__",
+      "src/hookman/exceptions.py:SharedLibraryLoadError.__init__",
+      "src/env_doctor/core/exceptions.py:StepExecutionError.__init__",
+      "src/arsenic/errors.py:SessionStartError.__init__",
+      "queryoptima/enhanced_retry.py:CircuitBreakerError.__init__",
+      "wally/swarm.py:FatalTimeoutError.__init__",
+      "djangae/tasks/test.py:TaskFailedError.__init__",
+      "singer_sdk/exceptions.py:InvalidRecord.__init__",
+      "end_to_end_tests/docstrings-on-attributes-golden-record/my_test_api_client/errors.py:UnexpectedStatus.__init__",
+      "evalml/exceptions/exceptions.py:PipelineScoreError.__init__",
+      "src/mcp_shell_server/process_manager.py:OutputLimitExceeded.__init__",
+      "src/werkzeug/utils.py:ImportStringError.__init__",
+      "pymongo/errors.py:EncryptionError.__init__",
+      "src/slack_watchman/exceptions.py:MissingEnvVarError.__init__",
+      "nats-core/src/nats/client/errors.py:SlowConsumerError.__init__",
+      "meshroom/core/exception.py:GraphCompatibilityError.__init__",
+      "src/celeste/exceptions.py:StreamingNotSupportedError.__init__",
+      "rope/base/exceptions.py:ModuleSyntaxError.__init__",
+      "end_to_end_tests/golden-record/my_test_api_client/errors.py:UnexpectedStatus.__init__",
+      "consortium/client/exceptions/rest_api_exceptions.py:RestAPIOperationError.__init__",
+      "vet/imbue_core/agents/agent_api/errors.py:AgentCLIJSONDecodeError.__init__",
+      "disnake/ext/commands/errors.py:CommandOnCooldown.__init__",
+      "disnake/ext/commands/errors.py:BadUnionArgument.__init__",
+      "disnake/ext/commands/errors.py:BadLiteralArgument.__init__",
+      "mosaik/exceptions.py:StepTimeMismatchError.__init__",
+      "mosaik/exceptions.py:MaxLoopIterationsExceededError.__init__",
+      "mosaik/exceptions.py:InvalidNextStepTimeError.__init__",
+      "mosaik/exceptions.py:InvalidOutputTimeError.__init__",
+      "mosaik/exceptions.py:SimulatorConnectError.__init__",
+      "nextcord/ext/commands/errors.py:CommandOnCooldown.__init__",
+      "nextcord/ext/commands/errors.py:BadUnionArgument.__init__",
+      "nextcord/ext/commands/errors.py:BadLiteralArgument.__init__",
+      "disnake/ext/commands/errors.py:TooManyFlags.__init__",
+      "nextcord/ext/commands/errors.py:TooManyFlags.__init__",
+      "dvc/repo/experiments/exceptions.py:MultipleBranchError.__init__",
+      "vet/imbue_core/agents/llm_apis/errors.py:LanguageModelInvalidModelNameError.__init__",
+      "discord/app_commands/errors.py:TransformerError.__init__",
+      "discord/ext/commands/errors.py:CommandOnCooldown.__init__",
+      "discord/ext/commands/errors.py:BadUnionArgument.__init__",
+      "discord/ext/commands/errors.py:BadLiteralArgument.__init__",
+      "discord/ext/commands/errors.py:BadFlagArgument.__init__",
+      "discord/app_commands/errors.py:CommandAlreadyRegistered.__init__",
+      "discord/app_commands/errors.py:CommandNotFound.__init__",
+      "python/bolt-mcp/src/bolt_mcp/context.py:_InputRequired.__init__",
+      "tableauserverclient/server/endpoint/exceptions.py:XMLError.__init__",
+      "lib/spack/spack/main.py:SpackCommandError.__init__",
+      "calfkit/exceptions.py:MissingTopicsError.__init__",
+      "cryptoxlib/clients/binance/exceptions.py:BinanceRestException.__init__",
+      "cryptoxlib/clients/bitforex/exceptions.py:BitforexRestException.__init__",
+      "cryptoxlib/clients/btse/exceptions.py:BtseRestException.__init__",
+      "cryptoxlib/clients/coinmate/exceptions.py:CoinmateRestException.__init__",
+      "cryptoxlib/clients/eterbase/exceptions.py:EterbaseRestException.__init__",
+      "cryptoxlib/clients/hitbtc/exceptions.py:HitbtcRestException.__init__",
+      "cryptoxlib/clients/onetrading/exceptions.py:OneTradingRestException.__init__",
+      "lib/spack/spack/repo.py:UnknownPackageError.__init__",
+      "odmantic/exceptions.py:DuplicateKeyError.__init__",
+      "simple_salesforce/exceptions.py:SalesforceAuthenticationFailed.__init__",
+      "odmantic/exceptions.py:DocumentNotFoundError.__init__",
+      "github/GithubException.py:GithubException.__init__",
+      "src/specklepy/logging/exceptions.py:SpeckleException.__init__",
+      "homeassistant/exceptions.py:MaxLengthExceeded.__init__",
+      "homeassistant/exceptions.py:ServiceNotFound.__init__",
+      "src/agentacct/canonical/cutover.py:CutoverPostReplaceError.__init__",
+      "src/agentacct/canonical/cutover.py:RollbackPostReplaceError.__init__",
+      "src/pip/_internal/exceptions.py:FailedToPrepareCandidate.__init__",
+      "src/pip/_internal/exceptions.py:FailedToPrepareCandidate.__init__",
+      "sqlit/domains/connections/app/credentials.py:CredentialsStoreError.__init__",
+      "flybirds/core/exceptions.py:FlybirdVerifyException.__init__",
+      "flybirds/core/exceptions.py:FlybirdCheckPageUIException.__init__",
+      "flybirds/core/exceptions.py:FlybirdNetworkTimeOutException.__init__",
+      "flybirds/core/exceptions.py:FlybirdPositionChanging.__init__",
+      "flybirds/core/exceptions.py:ScreenRecordException.__init__",
+      "flybirds/core/exceptions.py:FlybirdsException.__init__",
+      "setuptools/_vendor/backports/tarfile/__init__.py:LinkOutsideDestinationError.__init__",
+      "calfkit/_vendor/pydantic_ai/exceptions.py:ToolRetryError.__init__",
+      "leptonai/api/v2/api_resource.py:ClientError.__init__",
+      "leptonai/api/v2/api_resource.py:ServerError.__init__",
+      "aiohttp/client_exceptions.py:ClientConnectorError.__init__",
+      "aiohttp/client_exceptions.py:ClientConnectorError.__init__",
+      "mercadopago/webhook/validator.py:InvalidWebhookSignatureError.__init__",
+      "marvis/state_machine.py:IllegalTransition.__init__",
+      "Lib/tarfile.py:OutsideDestinationError.__init__",
+      "Lib/tarfile.py:LinkOutsideDestinationError.__init__",
+      "Lib/tarfile.py:LinkFallbackError.__init__",
+      "consortium/framework/_core/framework_exceptions/agent_generators_framework_exceptions.py:AgentGeneratorBuildStepOverridesFinalMethodError.__init__",
+      "proxy/http/exception/proxy_conn_failed.py:ProxyConnectionFailed.__init__",
+      "python/django_bolt/openapi/schema_generator.py:ComponentNameCollisionError.__init__",
+      "pybotters/_static_dependencies/starknet/serialization/_calldata_reader.py:OutOfBoundsError.__init__",
+      "backend/app/tickflow/capabilities.py:CapabilityDenied.__init__",
+      "backend/app/tickflow/capabilities.py:CapabilityDenied.__init__",
+      "nats-core/src/nats/client/errors.py:MaxPayloadError.__init__",
+      "nats-core/src/nats/client/errors.py:StatusError.__init__",
+      "riko/exceptions.py:PipelineStateError.__init__",
+      "src/celeste/exceptions.py:UnsupportedParameterError.__init__",
+      "src/envium/exceptions.py:RedefinedVarError.__init__",
+      "gunicorn/dirty/stash.py:StashKeyNotFoundError.__init__",
+      "sms/src/vonage_sms/errors.py:PartialFailureError.__init__",
+      "starknet_py/serialization/_calldata_reader.py:OutOfBoundsError.__init__",
+      "src/envium/exceptions.py:NoTypeError.__init__",
+      "gunicorn/dirty/stash.py:StashTableNotFoundError.__init__",
+      "src/storage/src/storage3/exceptions.py:StorageApiError.__init__",
+      "disnake/ext/commands/errors.py:MaxConcurrencyReached.__init__",
+      "mosaik/exceptions.py:InvalidNextStepTypeError.__init__",
+      "nextcord/ext/commands/errors.py:MaxConcurrencyReached.__init__",
+      "discord/ext/commands/errors.py:MaxConcurrencyReached.__init__",
+      "discord/ext/commands/errors.py:TooManyFlags.__init__",
+      "dvc/repo/experiments/exceptions.py:BaselineMismatchError.__init__",
+      "weaviate/exceptions.py:WeaviateInvalidInputError.__init__",
+      "weaviate/exceptions.py:WeaviateAddInvalidPropertyError.__init__",
+      "weaviate/exceptions.py:WeaviateBatchValidationError.__init__",
+      "weaviate/exceptions.py:WeaviateBatchFailedToReestablishStreamError.__init__",
+      "src/functions/src/supabase_functions/errors.py:FunctionsError.__init__",
+      "homeassistant/requirements.py:RequirementsNotFound.__init__",
+      "src/pact/error.py:InteractionVerificationError.__init__",
+      "discord/app_commands/errors.py:CommandInvokeError.__init__",
+      "channels_graphql_ws/client.py:GraphqlWsResponseError.__init__",
+      "alembic/script/revision.py:RangeNotAncestorError.__init__",
+      "alembic/script/revision.py:MultipleHeads.__init__",
+      "src/jmcomic/jm_exception.py:JmcomicException.__init__",
+      "redis/http/http_client.py:HttpError.__init__",
+      "dvc/exceptions.py:OutputDuplicationError.__init__",
+      "src/graphql_server/exceptions.py:GraphQLValidationError.__init__",
+      "chromadb/db/migrations.py:UnappliedMigrationsError.__init__",
+      "src/pipx/interpreter.py:InterpreterResolutionError.__init__",
+      "clientele/api/exceptions.py:APIException.__init__",
+      "agentkit/toolkit/executors/base_executor.py:ServiceNotEnabledException.__init__",
+      "http_client/src/vonage_http_client/errors.py:HttpRequestError.__init__",
+      "libs/core/langchain_core/_security/_exceptions.py:SSRFBlockedError.__init__",
+      "backend/app/services/pipeline_jobs.py:JobCancelledError.__init__",
+      "astro-airflow-mcp/src/astro_airflow_mcp/adapters/base.py:NotFoundError.__init__"
+    ],
+    "source_apply": false,
+    "latest_class_state_contract_audit": "artifacts/project_development/exception_pickle_class_state_contract_audit_20260903T070847705234Z.json",
+    "latest_source_line_limit_audit": "artifacts/project_development/source_line_limit_audit_20260903T230204065085Z.json",
+    "latest_post_split_audit": "artifacts/project_development/post_split_audit_20260903T230640450590Z.json",
+    "class_state_contract_audit_summary": {
+      "case_count": 10,
+      "latest_report": "artifacts/project_development/exception_pickle_class_state_contract_audit_20260903T070847705234Z.json",
+      "recommended_next_lane": "base_constructor_passthrough_contract",
+      "research_lane_summary": {
+        "attribute_base_state_contract": 2,
+        "base_constructor_passthrough_contract": 7,
+        "target_self_state_gap_research": 1
+      }
+    },
+    "source_line_limit_audit_summary": {
+      "latest_report": "artifacts/project_development/source_line_limit_audit_20260903T230204065085Z.json",
+      "line_limit": 400,
+      "status": "passed",
+      "scanned_python_file_count": 1513,
+      "violation_count": 0,
+      "violation_summary_by_root": {}
+    },
+    "post_split_audit_summary": {
+      "latest_report": "artifacts/project_development/post_split_audit_20260903T230640450590Z.json",
+      "status": "ok",
+      "facade_count": 24,
+      "helper_backed_test_count": 55,
+      "facade_summary_by_root": {
+        "runtime": 20,
+        "tests": 1,
+        "tools": 3
+      },
+      "source_apply": false,
+      "kb_promotion": false,
+      "recommended_next_lane": "replace mechanical split facades with cohesive policy/interpreter modules when behavior changes next"
+    }
+  },
+  "promotion_authority": "explicit_exception_pickle_promotion_transaction",
+  "promotion_evidence": {
+    "autonomous_reports": [
+      {
+        "kb_promotion": false,
+        "project": "agronholm__anyio",
+        "report": "artifacts/project_development/exception_pickle_autonomous_shadow_20260831T123815742912Z.json",
+        "semantic_replay_status": "passed",
+        "source_apply": false,
+        "status": "autonomous_verified_shadow",
+        "target": "src/anyio/_core/_exceptions.py:BrokenWorkerInterpreter.__init__",
+        "verified": true
+      }
+    ],
+    "holdout_candidate_count": 586,
+    "holdout_project_count": 229,
+    "independent_evaluator": {
+      "autonomous_project": "agronholm__anyio",
+      "autonomous_target": "src/anyio/_core/_exceptions.py:BrokenWorkerInterpreter.__init__",
+      "holdout": "artifacts/project_development/exception_pickle_holdout_transaction_20260831T124242422603Z.json",
+      "holdout_candidate_count": 586,
+      "holdout_project_count": 229,
+      "readiness": "artifacts/project_development/exception_pickle_promotion_readiness_20260831T124021424040Z.json",
+      "shadow": "artifacts/project_development/exception_pickle_autonomous_shadow_20260831T123815742912Z.json",
+      "supervised_projects": [
+        "maxtepkeev__python-redmine",
+        "pytest-socket",
+        "urllib3__urllib3"
+      ]
+    },
+    "supervised_reports": [
+      {
+        "memory_promotion": false,
+        "native_verified": true,
+        "project": "pytest-socket",
+        "report": "artifacts/project_development/authorized_implementation_20260831T081035446426Z.json",
+        "semantic_basis": "legacy_pickle_native_replay",
+        "semantic_verified": true,
+        "source_apply": false,
+        "source_unchanged": true,
+        "stub_clean": true,
+        "target": "src/pytest_socket/__init__.py:SocketConnectBlockedError.__init__",
+        "verified": true
+      },
+      {
+        "memory_promotion": false,
+        "native_verified": true,
+        "project": "urllib3__urllib3",
+        "report": "artifacts/project_development/authorized_implementation_20260831T110602578287Z.json",
+        "semantic_basis": "passed",
+        "semantic_verified": true,
+        "source_apply": false,
+        "source_unchanged": true,
+        "stub_clean": true,
+        "target": "src/urllib3/exceptions.py:LocationParseError.__init__",
+        "verified": true
+      },
+      {
+        "memory_promotion": false,
+        "native_verified": true,
+        "project": "maxtepkeev__python-redmine",
+        "report": "artifacts/project_development/authorized_implementation_20260831T115835185733Z.json",
+        "semantic_basis": "passed",
+        "semantic_verified": true,
+        "source_apply": false,
+        "source_unchanged": true,
+        "stub_clean": true,
+        "target": "redminelib/exceptions.py:UnknownError.__init__",
+        "verified": true
+      }
+    ]
+  },
+  "safety": {
+    "automatic_runtime_mutation_allowed": false,
+    "requires_sandbox_patch": true,
+    "requires_semantic_replay": true,
+    "source_apply_allowed": false
+  },
+  "schema_version": "exception_pickle_reconstruction_patterns.v1",
+  "status": "active"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

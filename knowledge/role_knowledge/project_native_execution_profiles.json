@@ -1,0 +1,500 @@
+{
+  "schema_version": "project_native_execution_profiles.v1",
+  "status": "staged",
+  "profiles": [
+    {
+      "id": "windows_short_native_sandbox",
+      "trigger": "project-native execution on Windows",
+      "policy": {
+        "work_directory": ".nfi",
+        "exclude_from_source_digest": true,
+        "hermetic_user_environment": true
+      },
+      "validated_evidence": {
+        "false_failure_project": "installer",
+        "before": "bytecode compilation failed under a deeply nested sandbox path",
+        "after": "clean baseline under the short sandbox path",
+        "report": "artifacts/field_trials/project_native_failure_intake_20260829T041141903895Z.json"
+      }
+    },
+    {
+      "id": "bounded_parameterized_pytest_refinement",
+      "trigger": "full suite timeout followed by a coarse test-file shard timeout",
+      "policy": {
+        "coarse_shards": 6,
+        "refined_shards": 16,
+        "per_shard_timeout_seconds": 60,
+        "maximum_collected_nodeids": 50000,
+        "maximum_collected_nodeid_chars": 4000000,
+        "maximum_single_nodeid_chars": 2048,
+        "normalize_only_nodeid_path_tokens": true,
+        "fail_closed_on_collection_limit": true
+      },
+      "validated_evidence": {
+        "project": "click",
+        "collected_nodeids": 30163,
+        "refined_result": "passed",
+        "execution_mode": "refined_shards_after_timeout",
+        "standard_timeout_report": "artifacts/field_trials/project_native_failure_intake_20260829T042820920174Z.json",
+        "four_shard_calibration_report": "artifacts/field_trials/project_native_failure_intake_20260829T044243749465Z.json"
+      }
+    },
+    {
+      "id": "subprocess_dependency_path_bootstrap",
+      "trigger": "editable install falls back and a project test replaces PYTHONPATH in a child process",
+      "policy": {
+        "runner": "probe virtual environment",
+        "bootstrap": "prepend sandbox src, sandbox root and dependency overlay through a controlled .pth file",
+        "global_install": false,
+        "grant_repair_authority_from_dependency_failure": false
+      },
+      "validated_evidence": {
+        "project": "typer",
+        "before": "subprocess cannot import shellingham",
+        "after": "dependency import passes and the suite reaches a later formatting assertion",
+        "remaining_status": "reproducible_unbound_failure",
+        "execution_mode": "sharded_after_timeout",
+        "before_report": "artifacts/field_trials/project_native_failure_intake_20260829T042822482228Z.json",
+        "after_report": "artifacts/field_trials/project_native_failure_intake_20260829T053050409996Z.json"
+      }
+    },
+    {
+      "id": "content_addressed_shard_pass_cache",
+      "trigger": "an unchanged project shard has a previously verified passed outcome",
+      "policy": {
+        "cached_statuses": ["passed"],
+        "cache_failures": false,
+        "disable_for_patch_verification": true,
+        "key_inputs": [
+          "project_digest",
+          "dependency_overlay_digest",
+          "python_version",
+          "platform",
+          "pytest_arguments",
+          "nodeids",
+          "shard_mode"
+        ]
+      },
+      "validated_evidence": {
+        "project": "click",
+        "first_native_shard_seconds": 5.751,
+        "cached_shard_seconds": 0.001,
+        "first_status": "passed",
+        "cached_status": "passed",
+        "cache_signal": "shard 1: cached pass"
+      }
+    },
+    {
+      "id": "assertion_causal_target_binding",
+      "trigger": "a repeated assertion failure has no production traceback frame",
+      "policy": {
+        "slice_origin": "assert expression",
+        "trace_local_assignments": true,
+        "require_unique_project_production_target": true,
+        "exclude_test_support_calls": true,
+        "exclude_external_dependency_calls": true,
+        "exclude_unresolved_instance_calls": true
+      },
+      "validated_evidence": {
+        "project": "typer",
+        "failure": "tests/test_tutorial/test_printing/test_tutorial001.py::test_cli",
+        "excluded_calls": [
+          "runner.invoke:local_or_instance_call",
+          "normalize_rich_output:test_support_call"
+        ],
+        "result": "reproducible_unbound_failure",
+        "repair_authority_granted": false,
+        "report": "artifacts/field_trials/project_native_failure_intake_20260829T101438223637Z.json"
+      }
+    },
+    {
+      "id": "dependency_complete_native_holdout",
+      "trigger": "project-native failure search across a fresh pure-transform corpus",
+      "policy": {
+        "git_discovery_ceiling": true,
+        "explicit_pip_install_hint_is_environment_blocker": true,
+        "module_not_found_is_environment_blocker": true,
+        "clean_baseline_is_transformation_evidence": false,
+        "incomplete_generated_data_is_transformation_evidence": false
+      },
+      "validated_evidence": {
+        "corpus": "github_fresh_40h_20260805 and github_fresh_40i_20260805",
+        "independent_projects": 31,
+        "final_clean_baselines": 19,
+        "final_environment_or_source_blockers": 12,
+        "qualified_failures": 0,
+        "false_authority_cases_closed": [
+          "validators optional crypto extra",
+          "markdown-it-py optional linkify module"
+        ],
+        "representative_clean_reports": [
+          "artifacts/field_trials/project_native_failure_intake_20260829T105957520027Z.json"
+        ],
+        "representative_blocker_reports": [
+          "artifacts/field_trials/project_native_failure_intake_20260829T103410563976Z.json",
+          "artifacts/field_trials/project_native_failure_intake_20260829T110105642494Z.json"
+        ],
+        "maturity_effect": "library_pure_transform remains 2/3 project-native transformations"
+      }
+    },
+    {
+      "id": "source_complete_external_native_holdout",
+      "trigger": "a source-complete external project uses dynamic build versioning or a legacy root unittest suite",
+      "policy": {
+        "preserve_git_build_metadata_only_for_declared_version_backends": true,
+        "maximum_git_metadata_files": 5000,
+        "maximum_git_metadata_bytes": 20000000,
+        "prefer_exact_git_tag_as_version_hint": true,
+        "explicit_root_tests_py_when_default_pytest_discovery_is_empty": true,
+        "record_selected_test_targets": true,
+        "clean_baseline_is_transformation_evidence": false
+      },
+      "validated_evidence": {
+        "corpus": "benchmarks/github_native_holdout_20260829",
+        "independent_projects": 8,
+        "clean_baselines": 7,
+        "environment_blockers": 1,
+        "qualified_failures": 0,
+        "source_project_changes": 0,
+        "closed_false_failures": {
+          "toolz": "dynamic version restored from bounded Git metadata; 186 tests passed twice",
+          "furl": "declared orderedmultidict dependency supplied; 77 tests passed twice",
+          "jsonpointer": "root tests.py selected explicitly; 23 tests passed twice"
+        },
+        "remaining_blocker": "bidict requires Python >=3.11 while the current probe interpreter is Python 3.10",
+        "report": "artifacts/field_trials/project_native_failure_intake_20260829T171056934889Z.json",
+        "maturity_effect": "execution coverage increased; library_pure_transform remains 2/3 project-native transformations"
+      }
+    },
+    {
+      "id": "opaque_test_observer_causal_boundary",
+      "trigger": "an asserted value is produced by a test or external observer wrapping a project value",
+      "policy": {
+        "observer_is_transparent": false,
+        "inspect_descendants_for_diagnostics": true,
+        "descendant_production_calls_grant_authority": false,
+        "excluded_descendant_reason": "opaque_observer_descendant"
+      },
+      "validated_evidence": {
+        "project": "rich",
+        "failure": "tests/test_card.py::test_card_render",
+        "observer": "render(card)",
+        "excluded_project_call": "rich/__main__.py:make_test_card",
+        "environment_contrast": "Pygments 2.21.0 fails the snapshot while locked Pygments 2.19.2 passes it",
+        "locked_targeted_result": "1 passed",
+        "before_report": "artifacts/field_trials/project_native_failure_intake_20260829T175706204509Z.json",
+        "after_report": "artifacts/field_trials/project_native_failure_intake_20260829T180210632313Z.json",
+        "repair_authority_granted": false
+      }
+    },
+    {
+      "id": "bounded_process_tree_termination",
+      "trigger": "a project-native process reaches its execution or install timeout after spawning descendants",
+      "policy": {
+        "windows_process_group": true,
+        "windows_tree_termination": "taskkill /PID <pid> /T /F",
+        "posix_new_session": true,
+        "posix_group_signal": "SIGKILL",
+        "timeout_status_is_repair_authority": false
+      },
+      "validated_evidence": {
+        "project": "pyproject-api",
+        "before": "descendant Python processes retained inherited pipes beyond the suite budget",
+        "after": "two independent copies returned timeout and the case closed as environment_blocked",
+        "probe_timeout_seconds": 10,
+        "source_project_changes": 0
+      }
+    },
+    {
+      "id": "historical_prefixed_failure_holdout_strategy",
+      "trigger": "broad current-head pure-transform sampling has low qualified-failure yield",
+      "policy": {
+        "stop_unbounded_current_head_expansion": true,
+        "next_selection_basis": "upstream issue-fix history with a reproducible pre-fix commit",
+        "require_source_complete_checkout": true,
+        "require_independent_lineage": true,
+        "require_original_test_or_upstream_regression_test": true,
+        "forbid_artificial_source_damage": true,
+        "keep_fix_commit_as_read_only_reference": true
+      },
+      "validated_evidence": {
+        "first_corpus_report": "artifacts/field_trials/project_native_failure_intake_20260829T180555104297Z.json",
+        "first_corpus": "8 clean baselines, 1 incomplete-source blocker, 0 qualified failures",
+        "second_corpus_report": "artifacts/field_trials/project_native_failure_intake_20260829T183327365876Z.json",
+        "second_corpus": "4 clean baselines, 6 environment blockers, 0 qualified failures",
+        "combined_new_projects": 19,
+        "qualified_failures": 0,
+        "maturity_effect": "library_pure_transform remains 2/3; change discovery strategy rather than lower authority gates"
+      }
+    },
+    {
+      "id": "historical_prefixed_deepmerge_repair",
+      "trigger": "an upstream pre-fix source tree fails its original regression test on a uniquely bound pure transform",
+      "policy": {
+        "preserve_parameterized_nodeid_spaces": true,
+        "intake_stratum_is_recognition_evidence": true,
+        "require_failure_specific_reducer": true,
+        "patch_only_in_sandbox": true,
+        "reassess_with_original_project_identity": true
+      },
+      "validated_evidence": {
+        "project": "deepmerge",
+        "pre_fix_commit": "f4822dec8ce4aec26fa142777ae949f543e341ad",
+        "read_only_fix_commit": "d180db58506391428b2adbdb245cd578f61d2eff",
+        "failure_kind": "falsy_primitive_empty_contract",
+        "target": "deepmerge/strategy/type_conflict.py:TypeConflictStrategies.strategy_override_if_not_empty",
+        "operator_id": "preserve_falsy_primitive_override",
+        "targeted_result": "1 passed",
+        "regression_result": "34 passed",
+        "source_project_changes": 0,
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260829T193356333564Z.json",
+        "project_development_report": "artifacts/project_development/project_development_20260829T194435875706Z.json",
+        "maturity_effect": "library_pure_transform reaches 3/3 independent project-native transformations; narrow lane evidence target met"
+      }
+    },
+    {
+      "id": "historical_prefixed_autoflake_cli_repair",
+      "trigger": "an upstream pre-fix CLI source tree fails its original malformed-import regression test",
+      "policy": {
+        "intake_stratum_is_recognition_evidence": true,
+        "require_failure_specific_reducer": true,
+        "patch_only_in_sandbox": true,
+        "require_targeted_and_full_project_native_verification": true,
+        "keep_cli_knowledge_staged_until_three_independent_lineages": true
+      },
+      "validated_evidence": {
+        "project": "autoflake",
+        "pre_fix_commit": "e2109ba97f0590c6b4410e195c426b62235b4a09",
+        "read_only_fix_commit": "aefc058d82c5f9973fc5022e0f8da0a0d7cb4acc",
+        "failure_kind": "incomplete_import_token_contract",
+        "target": "autoflake.py:extract_package_name",
+        "operator_id": "guard_incomplete_import_tokens",
+        "targeted_result": "1 passed",
+        "regression_result": "172 passed",
+        "source_project_changes": 0,
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T001848719989Z.json",
+        "project_development_report": "artifacts/project_development/project_development_20260830T001954206841Z.json",
+        "maturity_effect": "cli_local_tool reaches 1/3 independent project-native transformations; knowledge remains staged"
+      }
+    },
+    {
+      "id": "pytest9_removed_warning_compatibility_retry",
+      "trigger": "Pytest 9 collection raises PytestRemovedIn10Warning for a historical suite that treated warnings as errors",
+      "policy": {
+        "require_exact_warning_class": true,
+        "require_collection_failure": true,
+        "ignore_only_the_removed_warning": true,
+        "record_compatibility_retry": true,
+        "project_source_changes": false
+      },
+      "validated_evidence": {
+        "project": "click",
+        "before": "collection stopped in tests/test_basic.py before reaching the historical regression",
+        "after": "603 tests passed before the intended strict-default regression failed",
+        "failure_kind": "strict_default_string_comparison_contract",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T053628006699Z.json",
+        "promotion_evidence": false,
+        "reason": "execution compatibility only; project pilot route remained blocked"
+      }
+    },
+    {
+      "id": "project_development_pilot_route_admission",
+      "trigger": "a recognized project has an analysis_only_stop pilot route",
+      "policy": {
+        "experiment_admission_requires_eligible_for_full_chain": true,
+        "failure_backed_repair_bypasses_pilot_route": false,
+        "reject_prior_validated_memory_from_blocked_route": true,
+        "source_apply_allowed": false
+      },
+      "validated_evidence": {
+        "project": "rich-cli",
+        "before": "sandbox experiment bypassed analysis_only_stop and produced a false validated-memory claim",
+        "after": "experiment controlled_stop; validated_memory_count 0; rejected_validated_memory_count 1",
+        "report": "artifacts/project_development/project_development_20260830T052548525604Z.json",
+        "maturity_effect": "CLI remains 1/3; the invalid second outcome is excluded"
+      }
+    },
+    {
+      "id": "generated_function_stub_admission",
+      "trigger": "a synthesized sandbox patch adds a function stub or replaces an implemented function with a stub",
+      "policy": {
+        "ast_delta_required": true,
+        "blocked_markers": ["pass", "ellipsis", "raise_not_implemented_error", "return_not_implemented"],
+        "pre_existing_stubs_are_violations": false,
+        "native_verification_allowed_after_violation": false,
+        "validated_memory_allowed_after_violation": false,
+        "source_apply_allowed": false
+      },
+      "validation": {
+        "test_module": "tests/runtime/test_generated_stub_admission.py",
+        "integration_check": "no_generated_function_stubs",
+        "failure_status": "ProjectDevelopmentExperiment.failed"
+      }
+    },
+    {
+      "id": "installed_metadata_and_dependency_isolation",
+      "trigger": "a historical project requires installed entry-point metadata or dependency versions incompatible with the shared overlay",
+      "policy": {
+        "editable_install_attempted_first": true,
+        "offline_non_editable_install_fallback": true,
+        "network_allowed": false,
+        "source_path_plugin_metadata_failure_is_environment_blocker": true,
+        "relative_pytest_basetemp_moved_outside_project": true,
+        "per_distribution_dependency_overlay_supported": true
+      },
+      "validated_evidence": {
+        "project": "flake8",
+        "distribution": "flake8",
+        "dependency_versions": ["mccabe==0.7.0", "pycodestyle==2.12.1", "pyflakes==3.2.0"],
+        "result": "464 passed twice",
+        "report": "artifacts/field_trials/project_native_failure_intake_20260830T062524268470Z.json",
+        "promotion_evidence": false,
+        "reason": "the escaped-brace regression is active only on Python >=3.12; the Python 3.10 intake is a clean baseline"
+      }
+    },
+    {
+      "id": "distribution_bound_multi_interpreter_intake",
+      "trigger": "a historical contract is conditional on a Python major/minor runtime",
+      "policy": {
+        "distribution_identity_selects_interpreter_profile": true,
+        "exact_major_minor_required": true,
+        "silent_interpreter_fallback_allowed": false,
+        "interpreter_resolution_recorded_in_each_repetition": true,
+        "project_dependency_overlay_precedes_tool_overlay": true,
+        "external_pytest_plugin_autoload": false
+      },
+      "validated_evidence": {
+        "project": "flake8",
+        "runtime": "Python 3.12.9",
+        "failure_kind": "escaped_fstring_brace_offset_contract",
+        "target": "src/flake8/processor.py:FileProcessor.build_logical_line_tokens",
+        "operator_id": "adjust_fstring_middle_brace_offsets",
+        "targeted_result": "1 passed",
+        "regression_result": "465 passed",
+        "stub_gate": "passed",
+        "source_project_changes": 0,
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T090908287073Z.json",
+        "project_development_report": "artifacts/project_development/project_development_20260830T091122601066Z.json",
+        "maturity_effect": "CLI reaches staged 2/3; activation remains blocked"
+      }
+    },
+    {
+      "id": "target_scoped_stateful_project_admission",
+      "trigger": "a repeated failure binds one pure target inside a project whose aggregate profile includes stateful behavior",
+      "policy": {
+        "only_stateful_project_risk_is_waivable": true,
+        "network_subprocess_concurrent_and_provider_risks_remain_blocking": true,
+        "minimum_repeat_count": 2,
+        "target_ast_must_exclude_direct_external_effect_calls": true,
+        "source_apply_allowed": false,
+        "full_project_native_regression_required": true,
+        "git_worktree_metadata_pointer_supported": true,
+        "pyproject_distribution_identity_supported": true,
+        "external_pytest_plugins_require_distribution_allowlist": true,
+        "windows_basetemp_uses_short_digest_path": true
+      },
+      "validated_evidence": {
+        "project": "isort",
+        "runtime": "Python 3.10.11",
+        "failure_kind": "trailing_backslash_index_contract",
+        "target": "isort/parse.py:file_contents",
+        "operator_id": "guard_trailing_backslash_index",
+        "targeted_result": "1 passed",
+        "regression_result": "548 passed, 5 skipped",
+        "stub_gate": "passed",
+        "source_project_changes": 0,
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260830T102317789661Z.json",
+        "project_development_report": "artifacts/project_development/project_development_20260830T103915501988Z.json",
+        "boundary_contrast_report": "artifacts/field_trials/project_target_scope_contrast_20260830T161826182156Z.json",
+        "boundary_contrast_result": "4/4 frozen source-backed decisions matched across isort, MkDocs and Click",
+        "independent_positive_transfer": "passed at 2/2 positive lineages; literal read-only open is admitted while direct write and subprocess controls remain blocking",
+        "maturity_effect": "CLI 3/3 promoted active by artifacts/role_promotion/project_native_repair_promotion_20260830T104614251822Z.json"
+      }
+    },
+    {
+      "id": "evidence_bound_candidate_exhaustion",
+      "trigger": "Architect exhausts a source-backed candidate set and no target satisfies the semantic and execution gates",
+      "policy": {
+        "blocked_contract_status_required": "blocked_no_safe_candidate",
+        "candidate_must_be_absent": true,
+        "architect_authority_required": true,
+        "expanded_candidate_count_must_be_positive": true,
+        "candidate_viability_evidence_required": true,
+        "semantic_qualified_candidate_count_must_be_zero": true,
+        "selected_targets_must_be_empty": true,
+        "unverified_handoff_cap_applies": false,
+        "reason": "execution confirmation is impossible and forbidden when the verified outcome is no safe candidate"
+      },
+      "validated_evidence": {
+        "project": "awekrx__AutoDoc-ChatGPT",
+        "project_stratum": "framework_plugin_build",
+        "expanded_candidate_count": 21,
+        "semantic_qualified_candidate_count": 0,
+        "result": "blocked_ok",
+        "published_role_scores": {
+          "project_analyzer": 9.7,
+          "architect": 9.7,
+          "spec_writer": 9.8
+        },
+        "owner_holdout_result": "7 executable_callable and 1 evidence-bound controlled stop across 8 projects",
+        "source_project_changes": 0,
+        "field_trial_report": "artifacts/field_trials/role_foundation_min_field_trial_20260830T150833324291Z.json",
+        "matrix_report": "artifacts/field_trials/role_project_type_evaluation_20260830T150846767817Z.json",
+        "maturity_effect": "framework_plugin_build foundation roles reach 9.7/9.7/9.7; downstream roles remain usable pending project-native transformations"
+      }
+    },
+    {
+      "id": "framework_plugin_project_native_repair_promotion",
+      "trigger": "three independent framework/plugin historical failures bind unique production targets",
+      "policy": {
+        "minimum_independent_lineages": 3,
+        "minimum_transformation_subtypes": 3,
+        "source_apply_allowed": false,
+        "generated_function_stub_admission_required": true,
+        "targeted_and_project_regression_required": true,
+        "explicit_promotion_transaction_required": true
+      },
+      "validated_evidence": {
+        "projects": ["pluggy_call_extra_order", "build_wheel_dist_info", "mkdocs_empty_theme_config"],
+        "failure_kinds": ["hook_extra_wrapper_order_contract", "wheel_dist_info_content_contract", "empty_theme_config_contract"],
+        "role_scores": {
+          "project_analyzer": 9.7,
+          "architect": 9.7,
+          "spec_writer": 9.7,
+          "implementer": 9.8,
+          "tester": 10.0,
+          "reviewer": 9.8
+        },
+        "source_project_changes": 0,
+        "matrix_report": "artifacts/field_trials/role_project_type_evaluation_20260830T160556360317Z.json",
+        "promotion_report": "artifacts/role_promotion/project_native_repair_promotion_20260830T160749995978Z.json",
+        "promotion_regression": "174 passed",
+        "config_doctor": "44/44",
+        "maturity_effect": "all applicable framework_plugin_build role cells are mature with three project-native transformations"
+      }
+    },
+    {
+      "id": "workspace_scope_selection_controlled_stop",
+      "trigger": "a workspace contains multiple equally plausible active Python roots",
+      "policy": {
+        "minimum_candidate_roots": 2,
+        "preferred_candidate_must_be_absent": true,
+        "complete_scope_selection_checks_required": true,
+        "downstream_roles_must_not_run": true,
+        "source_and_registry_changes_forbidden": true,
+        "executable_confirmation_required": false
+      },
+      "validated_evidence": {
+        "project_stratum": "workspace_portfolio",
+        "project_count": 5,
+        "blind_project_count": 5,
+        "independent_report_count": 5,
+        "project_analyzer_score": 9.7,
+        "downstream_roles": "not_applicable",
+        "source_project_changes": 0,
+        "matrix_report": "artifacts/field_trials/role_project_type_evaluation_20260830T161442270918Z.json",
+        "maturity_effect": "workspace_portfolio Project Analyzer reaches 9.7 without fabricating an active root"
+      }
+    }
+  ]
+}

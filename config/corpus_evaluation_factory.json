@@ -1,0 +1,23 @@
+{
+  "schema_version": "corpus_evaluation_factory.v1",
+  "status": "active",
+  "split_seed": "cognitive-os-narrow-certification-v1",
+  "target_project_types": ["cli_local_tool", "library_pure_transform"],
+  "minimum_acquisition_per_type": 3,
+  "minimum_holdout_per_type": 2,
+  "unknown_cluster_thresholds": {
+    "minimum_projects": 3,
+    "minimum_lineages": 2,
+    "minimum_content_digests": 3,
+    "minimum_markers": 2
+  },
+  "invariants": {
+    "holdout_frozen_before_acquisition": true,
+    "content_disjoint": true,
+    "lineage_disjoint": true,
+    "untouched_only": true,
+    "network_fallback_only_on_shortage": true,
+    "source_apply": false,
+    "automatic_promotion": false
+  }
+}

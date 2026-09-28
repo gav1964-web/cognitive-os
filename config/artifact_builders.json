@@ -1,0 +1,49 @@
+{
+  "schema_version": "artifact_builders.v1",
+  "builders": {
+    "architecture_decision_v1": {
+      "callable": "runtime.architecture_decision_builder:build_architecture_decision",
+      "artifact_type": "ArchitectureDecisionRecord",
+      "role_id": "architect",
+      "kwargs": {
+        "role_id": "architect",
+        "next_role_id": "spec_writer"
+      }
+    },
+    "technical_spec_v1": {
+      "callable": "runtime.technical_spec_builder:build_technical_spec",
+      "artifact_type": "TechnicalSpec",
+      "role_id": "spec_writer",
+      "kwargs": {
+        "role_id": "spec_writer",
+        "next_role_id": "implementer"
+      }
+    },
+    "implementation_plan_v1": {
+      "callable": "runtime.implementation_plan_builder:build_implementation_plan",
+      "artifact_type": "ImplementationPlan",
+      "role_id": "implementer",
+      "kwargs": {
+        "role_id": "implementer",
+        "next_role_id": "tester"
+      }
+    },
+    "test_plan_v1": {
+      "callable": "runtime.test_plan_builder:build_test_plan",
+      "artifact_type": "TestPlan",
+      "role_id": "tester",
+      "kwargs": {
+        "role_id": "tester",
+        "next_role_id": "reviewer"
+      }
+    },
+    "review_findings_v1": {
+      "callable": "runtime.review_findings_builder:build_review_findings",
+      "artifact_type": "ReviewFindings",
+      "role_id": "reviewer",
+      "kwargs": {
+        "role_id": "reviewer"
+      }
+    }
+  }
+}

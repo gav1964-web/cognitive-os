@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import time
+from html.parser import HTMLParser
+
+
+class _ArticleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.meta_description = ''
+        self.paragraphs: list[str] = []
+        self._in_paragraph = False
+        self._buffer: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        data = {key.lower(): value or '' for key, value in attrs}
+        if tag == 'meta' and data.get('name', '').lower() == 'description':
+            self.meta_description = _squash(data.get('content', ''))
+        if tag == 'p':
+            self._in_paragraph = True
+            self._buffer = []
+
+    def handle_data(self, data: str) -> None:
+        if self._in_paragraph:
+            self._buffer.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == 'p' and self._in_paragraph:
+            text = _squash(' '.join(self._buffer))
+            if len(text) >= 80:
+                self.paragraphs.append(text)
+            self._in_paragraph = False
+            self._buffer = []
+
+
+def enrich_missing_summaries(rows: list[dict[str, str]], *, fetch_html, max_article_fetches: int = 3, total_timeout: float = 12.0) -> list[dict[str, str]]:
+    enriched: list[dict[str, str]] = []
+    started = time.monotonic()
+    fetched = 0
+    for row in rows:
+        item = dict(row)
+        if not item.get('summary') and item.get('url') and fetched < max_article_fetches and time.monotonic() - started < total_timeout:
+            try:
+                item['summary'] = extract_article_summary(_fetch_article(fetch_html, item['url']))
+                fetched += 1
+            except Exception:
+                item['summary'] = ''
+        enriched.append(item)
+    return enriched
+
+
+def _fetch_article(fetch_html, url: str) -> str:
+    try:
+        return fetch_html(url, timeout=4.0)
+    except TypeError:
+        return fetch_html(url)
+
+
+def extract_article_summary(html: str, *, max_chars: int = 360) -> str:
+    parser = _ArticleTextParser()
+    parser.feed(html)
+    text = parser.meta_description or ' '.join(parser.paragraphs[:2])
+    text = _squash(text)
+    if len(text) > max_chars:
+        text = text[:max_chars].rsplit(' ', 1)[0].rstrip('.,;:') + '...'
+    return text
+
+
+def _squash(value: str) -> str:
+    return ' '.join(value.split())

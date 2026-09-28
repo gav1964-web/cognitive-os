@@ -1,0 +1,16 @@
+from pathlib import Path
+
+from web_research_summarizer.contracts import SearchResult
+from web_research_summarizer.extractor import extract_article
+
+
+def test_extract_article_text_from_fixture():
+    html = Path('tests/fixtures/article_one.html').read_text(encoding='utf-8')
+    article = extract_article(SearchResult('Python packaging overview', 'https://example.test/article_one.html'), html)
+    assert 'Python packaging tools' in article.text
+    assert article.title == 'Python packaging overview'
+
+
+def test_extract_malformed_html_returns_empty_text():
+    article = extract_article(SearchResult('Broken', 'https://example.test/broken.html'), '<html><script>hidden</script></html>')
+    assert article.text == ''
