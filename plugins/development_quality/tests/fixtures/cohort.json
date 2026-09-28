@@ -1,0 +1,630 @@
+[
+  {
+    "id": "intervals",
+    "goal": "Improve merge_intervals(items) for integer closed intervals with start<=end: sort and merge overlaps AND touching endpoints, preserve separate intervals, handle empty/negative values, return list of tuples and never mutate input. No invalid-input policy needed.",
+    "original": "def merge_intervals(items):\n    return sorted(items)\n",
+    "reference": "def merge_intervals(items):\n    result = []\n    for start, end in sorted(items):\n        if result and start <= result[-1][1]:\n            result[-1] = (result[-1][0], max(end, result[-1][1]))\n        else:\n            result.append((start, end))\n    return result\n",
+    "checks": [
+      [
+        [
+          [
+            [
+              1,
+              3
+            ],
+            [
+              3,
+              5
+            ]
+          ]
+        ],
+        [
+          [
+            1,
+            5
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            [
+              1,
+              9
+            ],
+            [
+              2,
+              3
+            ]
+          ]
+        ],
+        [
+          [
+            1,
+            9
+          ]
+        ]
+      ],
+      [
+        [
+          []
+        ],
+        []
+      ],
+      [
+        [
+          [
+            [
+              -5,
+              -1
+            ],
+            [
+              -2,
+              3
+            ],
+            [
+              8,
+              9
+            ]
+          ]
+        ],
+        [
+          [
+            -5,
+            3
+          ],
+          [
+            8,
+            9
+          ]
+        ]
+      ]
+    ],
+    "preserved": "assert merge_intervals([(1, 2), (5, 6)]) == [(1, 2), (5, 6)]",
+    "cohort": "calibration",
+    "function": "merge_intervals",
+    "existing": "from engine import merge_intervals\ndef test_preserved():\n    assert merge_intervals([(1, 2), (5, 6)]) == [(1, 2), (5, 6)]\n",
+    "oracle": "from engine import merge_intervals\ndef test_case_0():\n    assert merge_intervals(*[[[1, 3], [3, 5]]]) == [(1, 5)]\ndef test_case_1():\n    assert merge_intervals(*[[[1, 9], [2, 3]]]) == [(1, 9)]\ndef test_case_2():\n    assert merge_intervals(*[[]]) == []\ndef test_case_3():\n    assert merge_intervals(*[[[-5, -1], [-2, 3], [8, 9]]]) == [(-5, 3), (8, 9)]\n",
+    "mutants": [
+      "def merge_intervals(items):\n    result = []\n    for start, end in sorted(items):\n        if result and start < result[-1][1]:\n            result[-1] = (result[-1][0], max(end, result[-1][1]))\n        else:\n            result.append((start, end))\n    return result\n",
+      "def merge_intervals(items):\n    result = []\n    for start, end in sorted(items):\n        if result and start <= result[-1][1]:\n            result[-1] = (result[-1][0], end)\n        else:\n            result.append((start, end))\n    return result\n"
+    ]
+  },
+  {
+    "id": "pagination",
+    "goal": "Fix page(items, offset, limit) for a list and integer bounds: clamp negative offset to zero; zero/negative limit gives empty list; offset beyond end empty. Preserve order and input, normal slicing otherwise.",
+    "original": "def page(items, offset, limit):\n    return items[offset:offset + limit]\n",
+    "reference": "def page(items, offset, limit):\n    offset = max(0, offset)\n    return items[offset:offset + limit] if limit > 0 else []\n",
+    "checks": [
+      [
+        [
+          [
+            1,
+            2,
+            3
+          ],
+          -1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      [
+        [
+          [
+            1,
+            2,
+            3
+          ],
+          0,
+          -1
+        ],
+        []
+      ],
+      [
+        [
+          [
+            1,
+            2
+          ],
+          8,
+          2
+        ],
+        []
+      ],
+      [
+        [
+          [],
+          0,
+          2
+        ],
+        []
+      ],
+      [
+        [
+          [
+            1
+          ],
+          0,
+          0
+        ],
+        []
+      ]
+    ],
+    "preserved": "assert page([1, 2, 3], 1, 1) == [2]",
+    "cohort": "calibration",
+    "function": "page",
+    "existing": "from engine import page\ndef test_preserved():\n    assert page([1, 2, 3], 1, 1) == [2]\n",
+    "oracle": "from engine import page\ndef test_case_0():\n    assert page(*[[1, 2, 3], -1, 2]) == [1, 2]\ndef test_case_1():\n    assert page(*[[1, 2, 3], 0, -1]) == []\ndef test_case_2():\n    assert page(*[[1, 2], 8, 2]) == []\ndef test_case_3():\n    assert page(*[[], 0, 2]) == []\ndef test_case_4():\n    assert page(*[[1], 0, 0]) == []\n",
+    "mutants": [
+      "def page(items, offset, limit):\n    offset = offset\n    return items[offset:offset + limit] if limit > 0 else []\n",
+      "def page(items, offset, limit):\n    offset = max(0, offset)\n    return items[offset:offset + limit] if limit != 0 else []\n"
+    ]
+  },
+  {
+    "id": "configuration",
+    "goal": "Fix choose(explicit, inherited, default): only None means absent; explicit False, 0 and empty string must be retained; otherwise inherited including falsey values, then default. Do not mutate values.",
+    "original": "def choose(explicit, inherited, default):\n    return explicit or inherited or default\n",
+    "reference": "def choose(explicit, inherited, default):\n    if explicit is not None:\n        return explicit\n    return inherited if inherited is not None else default\n",
+    "checks": [
+      [
+        [
+          false,
+          true,
+          true
+        ],
+        false
+      ],
+      [
+        [
+          0,
+          3,
+          4
+        ],
+        0
+      ],
+      [
+        [
+          "",
+          "x",
+          "z"
+        ],
+        ""
+      ],
+      [
+        [
+          null,
+          0,
+          3
+        ],
+        0
+      ],
+      [
+        [
+          null,
+          null,
+          9
+        ],
+        9
+      ]
+    ],
+    "preserved": "assert choose(\"a\", \"b\", \"c\") == \"a\"",
+    "cohort": "calibration",
+    "function": "choose",
+    "existing": "from engine import choose\ndef test_preserved():\n    assert choose(\"a\", \"b\", \"c\") == \"a\"\n",
+    "oracle": "from engine import choose\ndef test_case_0():\n    assert choose(*[False, True, True]) == False\ndef test_case_1():\n    assert choose(*[0, 3, 4]) == 0\ndef test_case_2():\n    assert choose(*['', 'x', 'z']) == ''\ndef test_case_3():\n    assert choose(*[None, 0, 3]) == 0\ndef test_case_4():\n    assert choose(*[None, None, 9]) == 9\n",
+    "mutants": [
+      "def choose(explicit, inherited, default):\n    if bool(explicit):\n        return explicit\n    return inherited if inherited is not None else default\n",
+      "def choose(explicit, inherited, default):\n    if explicit is not None:\n        return explicit\n    return inherited if bool(inherited) else default\n"
+    ]
+  },
+  {
+    "id": "stable_keys",
+    "goal": "Improve deduplicate(rows), a list of (string key, value) pairs: one pair per key, last value wins but position follows first occurrence of the key; preserve input and accept empty list.",
+    "original": "def deduplicate(rows):\n    return rows[:]\n",
+    "reference": "def deduplicate(rows):\n    return list(dict(rows).items())\n",
+    "checks": [
+      [
+        [
+          [
+            [
+              "z",
+              1
+            ],
+            [
+              "a",
+              2
+            ],
+            [
+              "z",
+              3
+            ]
+          ]
+        ],
+        [
+          [
+            "z",
+            3
+          ],
+          [
+            "a",
+            2
+          ]
+        ]
+      ],
+      [
+        [
+          []
+        ],
+        []
+      ],
+      [
+        [
+          [
+            [
+              "x",
+              0
+            ],
+            [
+              "x",
+              null
+            ]
+          ]
+        ],
+        [
+          [
+            "x",
+            null
+          ]
+        ]
+      ]
+    ],
+    "preserved": "assert deduplicate([(\"a\", 1), (\"b\", 2)]) == [(\"a\", 1), (\"b\", 2)]",
+    "cohort": "calibration",
+    "function": "deduplicate",
+    "existing": "from engine import deduplicate\ndef test_preserved():\n    assert deduplicate([(\"a\", 1), (\"b\", 2)]) == [(\"a\", 1), (\"b\", 2)]\n",
+    "oracle": "from engine import deduplicate\ndef test_case_0():\n    assert deduplicate(*[[['z', 1], ['a', 2], ['z', 3]]]) == [('z', 3), ('a', 2)]\ndef test_case_1():\n    assert deduplicate(*[[]]) == []\ndef test_case_2():\n    assert deduplicate(*[[['x', 0], ['x', None]]]) == [('x', None)]\n",
+    "mutants": [
+      "def deduplicate(rows):\n    return list(dict(reversed(rows)).items())\n",
+      "def deduplicate(rows):\n    return sorted(dict(rows).items())\n"
+    ]
+  },
+  {
+    "id": "weighted",
+    "goal": "Fix weighted_mean(pairs) for finite (value, nonnegative weight) numeric pairs: weighted arithmetic mean; zero weights contribute nothing; empty/all-zero weights return None; preserve input. No negative-weight or nonfinite requirements.",
+    "original": "def weighted_mean(pairs):\n    return sum(v for v, w in pairs) / len(pairs) if pairs else None\n",
+    "reference": "def weighted_mean(pairs):\n    weight = sum(w for v, w in pairs)\n    return sum(v * w for v, w in pairs) / weight if weight else None\n",
+    "checks": [
+      [
+        [
+          [
+            [
+              2,
+              1
+            ],
+            [
+              8,
+              3
+            ]
+          ]
+        ],
+        6.5
+      ],
+      [
+        [
+          [
+            [
+              900,
+              0
+            ],
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        2.0
+      ],
+      [
+        [
+          []
+        ],
+        null
+      ],
+      [
+        [
+          [
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        null
+      ]
+    ],
+    "preserved": "assert weighted_mean([(2, 1), (4, 1)]) == 3",
+    "cohort": "calibration",
+    "function": "weighted_mean",
+    "existing": "from engine import weighted_mean\ndef test_preserved():\n    assert weighted_mean([(2, 1), (4, 1)]) == 3\n",
+    "oracle": "from engine import weighted_mean\ndef test_case_0():\n    assert weighted_mean(*[[[2, 1], [8, 3]]]) == 6.5\ndef test_case_1():\n    assert weighted_mean(*[[[900, 0], [2, 1]]]) == 2.0\ndef test_case_2():\n    assert weighted_mean(*[[]]) == None\ndef test_case_3():\n    assert weighted_mean(*[[[2, 0]]]) == None\n",
+    "mutants": [
+      "def weighted_mean(pairs):\n    weight = sum(w for v, w in pairs)\n    return sum(v for v, w in pairs) / weight if weight else None\n",
+      "def weighted_mean(pairs):\n    weight = sum(w for v, w in pairs)\n    return sum(v * w for v, w in pairs) / weight if weight else 0\n"
+    ]
+  },
+  {
+    "id": "expiry",
+    "goal": "Fix expired(now, expires_at, grace=0): timestamp values are integers; None expiry never expires; grace is clamped to nonnegative; expired at now >= expires_at + grace, including exact boundary. Preserve usual before/after behavior.",
+    "original": "def expired(now, expires_at, grace=0):\n    return expires_at is not None and now > expires_at\n",
+    "reference": "def expired(now, expires_at, grace=0):\n    return expires_at is not None and now >= expires_at + max(0, grace)\n",
+    "checks": [
+      [
+        [
+          10,
+          10,
+          0
+        ],
+        true
+      ],
+      [
+        [
+          10,
+          10,
+          2
+        ],
+        false
+      ],
+      [
+        [
+          12,
+          10,
+          2
+        ],
+        true
+      ],
+      [
+        [
+          100,
+          null,
+          0
+        ],
+        false
+      ],
+      [
+        [
+          9,
+          10,
+          -3
+        ],
+        false
+      ]
+    ],
+    "preserved": "assert expired(9, 10) is False\n    assert expired(11, 10) is True",
+    "cohort": "reserved",
+    "function": "expired",
+    "existing": "from engine import expired\ndef test_preserved():\n    assert expired(9, 10) is False\n    assert expired(11, 10) is True\n",
+    "oracle": "from engine import expired\ndef test_case_0():\n    assert expired(*[10, 10, 0]) == True\ndef test_case_1():\n    assert expired(*[10, 10, 2]) == False\ndef test_case_2():\n    assert expired(*[12, 10, 2]) == True\ndef test_case_3():\n    assert expired(*[100, None, 0]) == False\ndef test_case_4():\n    assert expired(*[9, 10, -3]) == False\n",
+    "mutants": [
+      "def expired(now, expires_at, grace=0):\n    return expires_at is not None and now > expires_at + max(0, grace)\n",
+      "def expired(now, expires_at, grace=0):\n    return expires_at is not None and now >= expires_at + 0\n"
+    ]
+  },
+  {
+    "id": "csv_fields",
+    "goal": "Fix csv_row(fields) for a nonempty list of strings: comma-separated single CSV record without a trailing record terminator. Quote fields containing comma, double quote, CR or LF; double embedded quotes. Empty/plain fields unquoted. Unicode preserved. No file writes or input mutation.",
+    "original": "def csv_row(fields):\n    return \",\".join(fields)\n",
+    "reference": "def csv_row(fields):\n    return \",\".join(\"\\\"\" + f.replace(\"\\\"\", \"\\\"\\\"\") + \"\\\"\" if any(c in f for c in \",\\\"\\r\\n\") else f for f in fields)\n",
+    "checks": [
+      [
+        [
+          [
+            "a,b",
+            "c"
+          ]
+        ],
+        "\"a,b\",c"
+      ],
+      [
+        [
+          [
+            "say \"hi\""
+          ]
+        ],
+        "\"say \"\"hi\"\"\""
+      ],
+      [
+        [
+          [
+            "a\nb",
+            ""
+          ]
+        ],
+        "\"a\nb\","
+      ],
+      [
+        [
+          [
+            "a\rb"
+          ]
+        ],
+        "\"a\rb\""
+      ],
+      [
+        [
+          [
+            "Привет",
+            ""
+          ]
+        ],
+        "Привет,"
+      ]
+    ],
+    "preserved": "assert csv_row([\"a\", \"b\", \"\"]) == \"a,b,\"",
+    "cohort": "reserved",
+    "function": "csv_row",
+    "existing": "from engine import csv_row\ndef test_preserved():\n    assert csv_row([\"a\", \"b\", \"\"]) == \"a,b,\"\n",
+    "oracle": "from engine import csv_row\ndef test_case_0():\n    assert csv_row(*[['a,b', 'c']]) == '\"a,b\",c'\ndef test_case_1():\n    assert csv_row(*[['say \"hi\"']]) == '\"say \"\"hi\"\"\"'\ndef test_case_2():\n    assert csv_row(*[['a\\nb', '']]) == '\"a\\nb\",'\ndef test_case_3():\n    assert csv_row(*[['a\\rb']]) == '\"a\\rb\"'\ndef test_case_4():\n    assert csv_row(*[['Привет', '']]) == 'Привет,'\n",
+    "mutants": [
+      "def csv_row(fields):\n    return \",\".join(\"\\\"\" + f + \"\\\"\" if any(c in f for c in \",\\\"\\r\\n\") else f for f in fields)\n",
+      "def csv_row(fields):\n    return \",\".join(\"\\\"\" + f.replace(\"\\\"\", \"\\\"\\\"\") + \"\\\"\" if any(c in f for c in \",\\\"\") else f for f in fields)\n"
+    ]
+  },
+  {
+    "id": "retry_budget",
+    "goal": "Fix can_retry(attempts, maximum, permanent=False): attempts counts completed attempts (nonnegative integer); maximum total attempts allowed (integer); retries allowed only while attempts < maximum and permanent is false; maximum<=0 disables. Preserve input-independent boolean output.",
+    "original": "def can_retry(attempts, maximum, permanent=False):\n    return attempts <= maximum\n",
+    "reference": "def can_retry(attempts, maximum, permanent=False):\n    return not permanent and attempts < max(0, maximum)\n",
+    "checks": [
+      [
+        [
+          2,
+          2,
+          false
+        ],
+        false
+      ],
+      [
+        [
+          0,
+          3,
+          true
+        ],
+        false
+      ],
+      [
+        [
+          0,
+          0,
+          false
+        ],
+        false
+      ],
+      [
+        [
+          0,
+          -1,
+          false
+        ],
+        false
+      ],
+      [
+        [
+          1,
+          3,
+          false
+        ],
+        true
+      ]
+    ],
+    "preserved": "assert can_retry(0, 3) is True\n    assert can_retry(5, 3) is False",
+    "cohort": "reserved",
+    "function": "can_retry",
+    "existing": "from engine import can_retry\ndef test_preserved():\n    assert can_retry(0, 3) is True\n    assert can_retry(5, 3) is False\n",
+    "oracle": "from engine import can_retry\ndef test_case_0():\n    assert can_retry(*[2, 2, False]) == False\ndef test_case_1():\n    assert can_retry(*[0, 3, True]) == False\ndef test_case_2():\n    assert can_retry(*[0, 0, False]) == False\ndef test_case_3():\n    assert can_retry(*[0, -1, False]) == False\ndef test_case_4():\n    assert can_retry(*[1, 3, False]) == True\n",
+    "mutants": [
+      "def can_retry(attempts, maximum, permanent=False):\n    return not permanent and attempts <= max(0, maximum)\n",
+      "def can_retry(attempts, maximum, permanent=False):\n    return attempts < max(0, maximum)\n"
+    ]
+  },
+  {
+    "id": "unicode_tags",
+    "goal": "Fix normalize_tag(text): accept strings, strip leading/trailing whitespace, use Unicode casefold (not lower), return None if empty after stripping. Preserve internal whitespace/punctuation and normal lowercase text.",
+    "original": "def normalize_tag(text):\n    return text.lower()\n",
+    "reference": "def normalize_tag(text):\n    return text.strip().casefold() or None\n",
+    "checks": [
+      [
+        [
+          "  Straße  "
+        ],
+        "strasse"
+      ],
+      [
+        [
+          "   "
+        ],
+        null
+      ],
+      [
+        [
+          ""
+        ],
+        null
+      ],
+      [
+        [
+          " A  B! "
+        ],
+        "a  b!"
+      ]
+    ],
+    "preserved": "assert normalize_tag(\"hello!\") == \"hello!\"",
+    "cohort": "reserved",
+    "function": "normalize_tag",
+    "existing": "from engine import normalize_tag\ndef test_preserved():\n    assert normalize_tag(\"hello!\") == \"hello!\"\n",
+    "oracle": "from engine import normalize_tag\ndef test_case_0():\n    assert normalize_tag(*['  Straße  ']) == 'strasse'\ndef test_case_1():\n    assert normalize_tag(*['   ']) == None\ndef test_case_2():\n    assert normalize_tag(*['']) == None\ndef test_case_3():\n    assert normalize_tag(*[' A  B! ']) == 'a  b!'\n",
+    "mutants": [
+      "def normalize_tag(text):\n    return text.strip().lower() or None\n",
+      "def normalize_tag(text):\n    return text.strip().casefold()\n"
+    ]
+  },
+  {
+    "id": "truncate",
+    "goal": "Fix shorten(text, limit, suffix=\"...\") for string text/suffix and integer limit, counting Python characters: limit<=0 gives empty; if text already fits keep it; otherwise output at most limit chars, using text[:limit-len(suffix)]+suffix when suffix fits and suffix[:limit] when suffix longer than limit. Preserve Unicode and no mutation.",
+    "original": "def shorten(text, limit, suffix=\"...\"):\n    return text[:limit] + suffix if len(text) > limit else text\n",
+    "reference": "def shorten(text, limit, suffix=\"...\"):\n    if limit <= 0:\n        return \"\"\n    if len(text) <= limit:\n        return text\n    return text[:limit-len(suffix)] + suffix if len(suffix) <= limit else suffix[:limit]\n",
+    "checks": [
+      [
+        [
+          "abcdef",
+          5,
+          "..."
+        ],
+        "ab..."
+      ],
+      [
+        [
+          "abcdef",
+          2,
+          "..."
+        ],
+        ".."
+      ],
+      [
+        [
+          "abc",
+          0,
+          "..."
+        ],
+        ""
+      ],
+      [
+        [
+          "abc",
+          -1,
+          "..."
+        ],
+        ""
+      ],
+      [
+        [
+          "Привет",
+          3,
+          "!"
+        ],
+        "Пр!"
+      ]
+    ],
+    "preserved": "assert shorten(\"abc\", 3) == \"abc\"\n    assert shorten(\"\", 4) == \"\"",
+    "cohort": "reserved",
+    "function": "shorten",
+    "existing": "from engine import shorten\ndef test_preserved():\n    assert shorten(\"abc\", 3) == \"abc\"\n    assert shorten(\"\", 4) == \"\"\n",
+    "oracle": "from engine import shorten\ndef test_case_0():\n    assert shorten(*['abcdef', 5, '...']) == 'ab...'\ndef test_case_1():\n    assert shorten(*['abcdef', 2, '...']) == '..'\ndef test_case_2():\n    assert shorten(*['abc', 0, '...']) == ''\ndef test_case_3():\n    assert shorten(*['abc', -1, '...']) == ''\ndef test_case_4():\n    assert shorten(*['Привет', 3, '!']) == 'Пр!'\n",
+    "mutants": [
+      "def shorten(text, limit, suffix=\"...\"):\n    if limit <= 0:\n        return \"\"\n    if len(text) <= limit:\n        return text\n    return text[:limit] + suffix if len(suffix) <= limit else suffix[:limit]\n",
+      "def shorten(text, limit, suffix=\"...\"):\n    if limit <= 0:\n        return \"\"\n    if len(text) <= limit:\n        return text\n    return text[:limit-len(suffix)] + suffix if len(suffix) <= limit else suffix\n"
+    ]
+  }
+]

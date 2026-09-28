@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .inference_origin import capture_origin, response_origin
 
 
 def apply_architect_advisory(
@@ -17,6 +18,10 @@ def apply_architect_advisory(
     if config is None:
         artifact["architect_advisory"] = {"source": "deterministic", "llm_invoked": False}
         return artifact
+    from .structured_inference import with_response_contract
+    config = with_response_contract(config, {'chosen_option_id': {'type': ['string', 'null']},
+        'additional_risks': {'type': 'array', 'items': {'type': 'object'}}}, required=['chosen_option_id'])
+    config, origin = capture_origin(config)
     try:
         response = call_json_chat(_messages(artifact, config.advisory_context), config=config)
     except LocalInferenceError as exc:
@@ -30,7 +35,7 @@ def apply_architect_advisory(
     accepted = normalized["advisory_delta_score"] > 0
     artifact["architect_advisory"] = {
         "source": config.provider_label,
-        "model": config.model,
+        **response_origin(config, origin),
         "llm_invoked": True,
         "accepted": accepted,
         "advisory_delta_score": normalized["advisory_delta_score"],

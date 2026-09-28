@@ -21,6 +21,8 @@ def main():
     parser.add_argument('--python', type=Path)
     parser.add_argument('--authorize-native-trace', action='store_true', required=True)
     parser.add_argument('--request-model', action='store_true')
+    parser.add_argument('--source-file', action='append',
+                        help='Explicit owned Python file for cross-module function tracing; repeat as needed.')
     args = parser.parse_args()
     project, work = args.project.resolve(), args.work_dir.resolve()
     if work.is_relative_to(project) or project.is_relative_to(work):
@@ -37,7 +39,7 @@ def main():
     result = {'status': 'blocked', 'logical_model_calls': 0, 'execution_authorized': False, 'source_apply': False}
     try:
         trace = trace_failure_methods(project=project, packet=packet, work_dir=work / 'trace',
-            authorized=args.authorize_native_trace, python_executable=args.python)
+            authorized=args.authorize_native_trace, python_executable=args.python, source_files=args.source_file)
         context = nomination_context(project=project, packet=packet, trace=trace)
         save('context', context)
         result['status'] = 'context_ready'

@@ -81,6 +81,11 @@ Replay uses trusted-code subprocess copies, not an OS security sandbox.
             _validate(native_contract, inventory(project))
             from .repair_trial_binding import observed_packet, validate_repair_trial_source
             validate_repair_trial_source(project, packet)
+            if issue.get('preservation_evidence') is not None:
+                from .repair_preservation import validate_preservation
+                if proposal_route != 'hypothesis':
+                    raise ValueError('preservation_requires_explicit_hypothesis_design')
+                validate_preservation(packet, issue['preservation_evidence'], project)
             if include_dependency_context:
                 from .upstream_dependency_context import dependency_context
                 issue['source_dependency_context'] = dependency_context(project,target)
@@ -172,7 +177,7 @@ Replay uses trusted-code subprocess copies, not an OS security sandbox.
                     _persist(receipt, trial)
                     if (attempt == format_retries or str(exc) not in {
                             'candidate_response_schema', 'candidate_row_schema', 'replacement_must_be_single_function',
-                            'replacement_removes_or_changes_doctests'}
+                            'replacement_removes_or_changes_doctests', 'replacement_source_syntax_error'}
                             or len(encoded) > 40000):
                         raise
                     from .model_candidate_feedback import format_feedback
@@ -218,6 +223,11 @@ Replay uses trusted-code subprocess copies, not an OS security sandbox.
                 next_action='reconcile_design_and_candidate_with_native_counterexample')
         if trial.get('reason'):
             issue['causal_feedback']['reason'] = trial['reason']
+        advisory = trial.get('hypothesis_advisory', {})
+        if advisory.get('status') == 'scope_review_required':
+            issue['causal_feedback'].update(
+                next_action='collect_causal_evidence_before_binding_a_repair_target',
+                scope_review=deepcopy(advisory['scope_review']))
         from .candidate_rejection_feedback import REPLAN_REASONS, bind_rejection
         if semantic_retries and trial.get('reason') in REPLAN_REASONS:
             try:

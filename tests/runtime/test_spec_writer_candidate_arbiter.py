@@ -52,7 +52,7 @@ def test_arbiter_retries_once_with_compact_evidence():
     ]
     with patch(
         "runtime.spec_writer_candidate_arbiter.call_json_chat",
-        side_effect=[LocalInferenceError("too long"), {"selected_source": "b.py:second", "reason": "bounded"}],
+        side_effect=[LocalInferenceError("local inference response is not a JSON object"), {"selected_source": "b.py:second", "reason": "bounded"}],
     ) as mocked:
         result, advisory = arbitrate_candidates(ranked, config=_config())
 

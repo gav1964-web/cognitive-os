@@ -124,7 +124,9 @@ def test_model_cannot_rewrite_owner_statement(project):
 def test_description_model_profile_has_independent_default(monkeypatch):
     monkeypatch.delenv('COGNITIVE_OS_DESCRIPTION_MODEL', raising=False)
     monkeypatch.delenv('COGNITIVE_OS_L45_MODEL', raising=False)
-    assert description.description_model_config().model == 'deepseek/deepseek-v3.2'
+    assert description.description_model_config().model == 'deepseek/deepseek-chat'
+    assert description.description_model_config().response_format is False
+    assert description.description_model_config().max_output_tokens == 32768
     assert description.LocalInferenceConfig.from_l45_env().model == 'deepseek/deepseek-chat'
     monkeypatch.setenv('COGNITIVE_OS_DESCRIPTION_MODEL', 'explicit-model')
     assert description.description_model_config().model == 'explicit-model'

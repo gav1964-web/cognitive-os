@@ -1,6 +1,6 @@
 {
   "id": "project_description",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "entrypoint": "plugins.project_description.src.main:run",
   "determinism_grade": "B",
   "side_effects": {
@@ -8,5 +8,19 @@
     "network": "none",
     "secrets": "none"
   },
-  "lifecycle_status": "active"
+  "lifecycle_status": "active",
+  "test_paths": [
+    "tests/runtime/test_project_description.py",
+    "tests/runtime/test_description_shape.py",
+    "tests/runtime/test_description_requested_context.py",
+    "tests/runtime/test_description_lookup.py",
+    "tests/runtime/test_description_helper_context.py",
+    "tests/runtime/test_description_exception_paths.py",
+    "tests/runtime/test_description_document_lookup.py",
+    "tests/runtime/test_description_context_budget.py",
+    "tests/runtime/test_description_claim_review.py",
+    "tests/runtime/test_description_behavior_context.py",
+    "tests/runtime/test_description_api_inputs.py",
+    "tests/runtime/test_final_description_claims.py"
+  ]
 }

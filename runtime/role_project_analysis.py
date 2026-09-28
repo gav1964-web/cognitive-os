@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,7 @@ from .module_script_boundary import enrich_module_script_readiness
 from .source_target_policy import is_context_only_implementation_target
 
 
-def analyze_role_project(*, root: Path, project_dir: Path, goal: str, task_contract: dict | None = None, product_context: dict | None = None) -> dict[str, Any]:
+def analyze_role_project(*, root: Path, project_dir: Path, goal: str, task_contract: dict | None = None, product_context: dict | None = None, analyzer_config=None) -> dict[str, Any]:
     outputs = analyze_project(project_dir)
     outputs["project_map_report"] = prepare_role_project_report(
         root=root,
@@ -20,6 +21,7 @@ def analyze_role_project(*, root: Path, project_dir: Path, goal: str, task_contr
         analyzer_outputs=outputs,
         task_contract=task_contract,
         product_context=product_context,
+        analyzer_config=analyzer_config,
     )
     return outputs
 
@@ -31,6 +33,7 @@ def prepare_role_project_report(
     analyzer_outputs: dict[str, Any],
     task_contract: dict | None = None,
     product_context: dict | None = None,
+    analyzer_config=None,
 ) -> dict[str, Any]:
     """Attach interpretation as evidence without replacing Architect authority."""
 
@@ -44,7 +47,10 @@ def prepare_role_project_report(
             "outputs": analyzer_outputs,
         },
     }
-    interpretation = interpret_project_report(goal_report, root=root.as_posix())
+    inference = ({'signal_config': analyzer_config,
+                  'cortex_config': replace(analyzer_config, provider_label='external_l4')}
+                 if analyzer_config is not None else {})
+    interpretation = interpret_project_report(goal_report, root=root.as_posix(), **inference)
     project_map_report["reselection_candidate_inventory"] = _reselection_candidate_inventory(
         dict(analyzer_outputs.get("extract_python_structure") or {}),
         preferred_targets=list(

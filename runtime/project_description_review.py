@@ -24,7 +24,8 @@ def review_description(report, instruction, draft, *, root, chat, config, valida
     extra_instruction = ''
     for round_number in range(2):
         focused = invoke_knowledge('project_description', {'project_root': evidence['root'],
-            'action': 'review', 'evidence': evidence, 'claims': claims}, root=root)
+            'action': 'review', 'evidence': evidence, 'claims': claims,
+            'review_context_profile': report.get('review_context_profile', 'default')}, root=root)
         messages = [
             {'role': 'system', 'content': instruction + extra_instruction},
             {'role': 'user', 'content': json.dumps({
@@ -107,7 +108,8 @@ def review_description(report, instruction, draft, *, root, chat, config, valida
             remaining.remove(row['claim_id'])
         audited = invoke_knowledge('project_description', {'project_root': evidence['root'],
             'action': 'review', 'evidence': evidence, 'claims': claims, 'reviews': reviews,
-            'review_evidence': focused['evidence']}, root=root)
+            'review_evidence': focused['evidence'],
+            'review_context_profile': report.get('review_context_profile', 'default')}, root=root)
         report['review_audit'] = audited['review_audit']
         report['claim_reviews'] = reviews
         report['unverified_removals'] = [row['claim_id'] for row in reviews

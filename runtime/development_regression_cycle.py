@@ -33,7 +33,19 @@ def run_regression_cycle(*, root, project_dir, goal, task_contract, chain_case, 
         if inventory(project) != before:
             raise ValueError('source_changed_before_cycle_inference')
         outgoing = feedback_messages(messages,feedback,project) if feedback else messages
-        value = chat(outgoing,config=config)
+        from .local_inference import LocalInferenceError
+        from .inference_failure_evidence import failure_evidence
+        try:
+            value = chat(outgoing,config=config)
+        except LocalInferenceError as exc:
+            if evidence := failure_evidence(exc):
+                report['provider_failure'] = evidence
+                pending = {'goal': goal, 'project_dir': str(project), 'messages': outgoing,
+                    'task_contract': task_contract, 'source_inventory_digest': content_digest(before),
+                    'requested_model': getattr(config, 'model', None), 'resume_requires_source_check': True}
+                (work/'pending-inference.json').write_text(
+                    json.dumps(pending, ensure_ascii=False, indent=2), encoding='utf-8')
+            raise
         if rejected and isinstance(value,dict) and isinstance(value.get('candidates'),list):
             for candidate in value['candidates']:
                 if isinstance(candidate,dict) and isinstance(candidate.get('replacement_source'),str):
@@ -52,12 +64,18 @@ def run_regression_cycle(*, root, project_dir, goal, task_contract, chain_case, 
                 model_chat=model_chat,run_role_chain=True,run_sandbox_experiment=True,
                 validate_causal_proposals=True,authorize_training_replay=training_replay,
                 authorize_model_trial=not training_replay)
+            if report.get('provider_failure'):
+                result.update(provider_failure=report['provider_failure'], quality_evaluation='not_evaluated')
             path=work/f'attempt-{index+1}.json'
             path.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
             record.update(status=result['status'],result_path=str(path),result_digest=content_digest(result))
             persist()
             if inventory(project) != before:
                 raise ValueError('source_changed_during_development_cycle')
+            if report.get('provider_failure'):
+                report.update(status='controlled_stop', reason='provider_unavailable',
+                    quality_evaluation='not_evaluated', resume_path=str(work/'pending-inference.json'))
+                break
             if result['status']=='experiment_validated':
                 report['status']='experiment_validated'
                 break
@@ -77,6 +95,9 @@ def run_regression_cycle(*, root, project_dir, goal, task_contract, chain_case, 
             persist()
     except Exception as exc:
         report.update(status='controlled_stop',reason=str(exc),error_type=type(exc).__name__)
+        if report.get('provider_failure'):
+            report.update(reason='provider_unavailable', quality_evaluation='not_evaluated',
+                          resume_path=str(work/'pending-inference.json'))
         raise
     finally:
         report['source_unchanged']=inventory(project)==before

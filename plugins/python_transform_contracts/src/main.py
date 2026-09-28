@@ -49,7 +49,8 @@ def variants(source, maximum=6):
 
 def run(payload):
     policy = json.loads((Path(__file__).resolve().parents[1]/'knowledge/properties.json').read_text(encoding='utf-8'))
-    if payload['operation'] != 'acceptance_tests' or payload['contract'] not in (policy['contract'],policy['formatting_contract']):
+    if payload['operation'] != 'acceptance_tests' or payload['contract'] not in (
+            policy['contract'], policy['formatting_contract'], policy['composition_contract']):
         raise ValueError('unsupported_transform_contract')
     module, function = payload['module'], payload['function']
     if not isinstance(module, str) or not all(_identifier(part) for part in module.split('.')) or not _identifier(function):
@@ -63,6 +64,9 @@ def run(payload):
             raise ValueError('literal_keyword_required')
         ast.literal_eval(expression)
         arguments.append(key+'='+expression)
+    if payload['contract'] == policy['composition_contract']:
+        from .composition import propose
+        return propose(payload, arguments, policy['composition_limitations'])
     seed = payload['seed']
     if not isinstance(seed, str) or not 1 <= len(seed) <= 6000:
         raise ValueError('bounded_python_seed_required')

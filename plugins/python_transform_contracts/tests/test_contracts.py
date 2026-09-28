@@ -18,3 +18,15 @@ def test_installed_property_proposal_matches_declared_schema(contract):
     validate(result,json.loads((root/'schemas/output.json').read_text()))
     assert result['status']=='proposed' and result['variant_count']==2
     assert result['source_executed'] is False
+
+
+def test_composition_contract_matches_schemas():
+    root = Path(__file__).resolve().parents[1]
+    data = {'operation': 'acceptance_tests', 'contract': 'python_formatting_independent_fragments.v1',
+        'module': 'sample', 'function': 'format_source', 'keyword_literals': {},
+        'seed': 'stable = (1), 2\n', 'preservation_seed': 'other = [\n  1\n]\n',
+        'preservation_expected': 'other = [\n  1,\n]\n'}
+    validate(data, json.loads((root/'schemas/input.json').read_text()))
+    result = run(data)
+    validate(result, json.loads((root/'schemas/output.json').read_text()))
+    assert len(result['tests']) == 4

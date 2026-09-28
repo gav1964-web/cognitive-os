@@ -79,6 +79,18 @@ def test_packet_rejects_test_path_outside_project(tmp_path: Path) -> None:
     assert packet["checks"]["failing_test_source_is_present"] is False
 
 
+def test_observation_binding_does_not_certify_internal_root_cause(tmp_path: Path) -> None:
+    chain = _chain_case()
+    for row in chain['repetitions']:
+        row['target_binding'] = 'unique_assertion_causal_call'
+    packet = build_failure_evidence_packet(project_dir=_project(tmp_path), failure=_failure(), chain_case=chain)
+    assert packet['target_binding_evidence'] == {
+        'observed_target': 'pkg/parser.py:parse_value',
+        'binding_methods': ['unique_assertion_causal_call'],
+        'authority': 'observed_failure_location_only', 'root_cause_proven': False,
+    }
+
+
 def test_packet_is_attached_without_mutating_diagnosis(tmp_path: Path) -> None:
     diagnosis = {"issues": [{"failure_evidence": [_failure()]}]}
 

@@ -67,6 +67,10 @@ def build_llm_failure_hypothesis(
     branches = issue.get('repair_branch_evidence')
     from .repair_diagnostic_context import enrich_diagnostic_envelope
     enrich_diagnostic_envelope(envelope, issue, project_dir)
+    if issue.get('preservation_evidence') is not None:
+        from .repair_preservation import validate_preservation, preservation_context
+        validate_preservation(packet, issue['preservation_evidence'], project_dir)
+        envelope['preservation_context'] = preservation_context(issue['preservation_evidence'])
     if issue.get('model_edit_scope') is not None:
         from .model_edit_scope import same_class_edit_scope
         current = same_class_edit_scope(owned_path(project_dir,target.partition(':')[0]).read_bytes().decode('utf-8'),target)
@@ -91,16 +95,22 @@ def build_llm_failure_hypothesis(
         envelope['native_counterexamples'] = feedback
         if len(json.dumps(envelope, ensure_ascii=False)) > 24000:
             return _advisory('rejected', envelope, ['counterexample_prompt_budget_exceeded'])
-    if envelope.get('repair_trial_packet') and len(json.dumps(envelope, ensure_ascii=False)) > 24000:
+    if envelope.get('repair_trial_packet') and len(json.dumps(envelope, ensure_ascii=False)) > (48000 if envelope.get('preservation_context') else 24000):
         return _advisory('rejected', envelope, ['repair_hypothesis_prompt_budget_exceeded'])
     contract = issue.get('requested_task_contract')
     prompt_limit = 24000 if contract is not None or envelope.get('repair_trial_packet') or envelope.get('native_counterexamples') else 12000
+    if envelope.get('preservation_context'):
+        prompt_limit = 48000
+    if envelope.get('diagnostic_context', {}).get('native_test_observations', {}).get('state_projection'):
+        prompt_limit = 64000
     if contract is not None:
         envelope['task_contract'] = deepcopy(contract)
         envelope['task_contract_digest'] = contract['contract_digest']
+        from .requested_acceptance_context import requested_acceptance_context
+        envelope['requested_acceptance_context'] = requested_acceptance_context(project_dir, contract)
         if len(json.dumps(envelope, ensure_ascii=False)) > prompt_limit:
             return _advisory('rejected', envelope, ['requested_hypothesis_prompt_budget_exceeded'])
-    if (envelope.get('assertion_contract') or envelope.get('diagnostic_context')) and len(json.dumps(envelope, ensure_ascii=False)) > (
+    if (envelope.get('assertion_contract') or envelope.get('diagnostic_context') or envelope.get('preservation_context')) and len(json.dumps(envelope, ensure_ascii=False)) > (
             prompt_limit):
         return _advisory('rejected', envelope, ['assertion_prompt_budget_exceeded'])
     if (
@@ -111,9 +121,23 @@ def build_llm_failure_hypothesis(
     try:
         payload = (chat or call_json_chat)(_messages(envelope), config=config)
     except LocalInferenceError as exc:
-        return _advisory("unavailable", envelope, [str(exc)[:240]], model_invoked=True)
+        from .inference_failure_evidence import failure_evidence
+        advisory = _advisory("unavailable", envelope, [str(exc)[:240]], model_invoked=True)
+        if evidence := failure_evidence(exc):
+            advisory['provider_failure'] = evidence
+        return advisory
     if not isinstance(payload, dict):
         return _advisory("rejected", envelope, ["response_object_required"], payload=payload, model_invoked=True)
+    if 'scope_review' in payload:
+        from .repair_scope_review import validate_scope_review
+        errors = validate_scope_review(payload, envelope)
+        advisory = _advisory('rejected' if errors else 'scope_review_required', envelope,
+                            errors, payload=payload, model_invoked=True)
+        if not errors:
+            advisory['scope_review'] = deepcopy(payload['scope_review'])
+            advisory['scope_review']['authority'] = 'unverified_investigation_hints_only'
+            advisory['next_action'] = 'collect_causal_evidence_before_binding_a_repair_target'
+        return advisory
     normalized, errors = _validate_payload(payload, envelope)
     if errors:
         advisory = _advisory("rejected", envelope, errors, payload=payload, model_invoked=True)
@@ -162,6 +186,9 @@ def build_llm_failure_hypothesis(
     if envelope.get('assertion_contract'):
         advisory['repair_design']['assertion_contract'] = deepcopy(issue['assertion_contract'])
         advisory['repair_design']['assertion_plan'] = deepcopy(payload['assertion_plan'])
+    if envelope.get('preservation_context'):
+        advisory['repair_design']['preservation_evidence'] = deepcopy(issue['preservation_evidence'])
+        advisory['repair_design']['preservation_plan'] = deepcopy(payload['preservation_plan'])
     if envelope.get('diagnostic_context'):
         advisory['repair_design']['diagnostic_context'] = deepcopy(envelope['diagnostic_context'])
     if envelope.get('edit_scope'):
@@ -197,6 +224,11 @@ def _evidence_envelope(
         "assertion_evidence": _strings(packet.get("assertion_evidence"))[:24],
         "test_sources": test_source_groups([r for r in packet.get('test_sources') or [] if isinstance(r, dict)]),
         "helper_call_provenance": packet.get('helper_call_provenance'),
+        "target_binding_evidence": deepcopy(packet.get('target_binding_evidence') or {
+            'observed_target': packet.get('observed_target', target),
+            'binding_methods': [], 'root_cause_proven': False,
+            'authority': 'binding_provenance_unavailable',
+        }),
         "evidence_packet_digest": packet.get("packet_digest"),
     }
     if envelope['repair_trial_packet']:
@@ -238,6 +270,12 @@ def _target_source(project_dir: Path, target: str) -> str:
 
 def _messages(envelope: dict[str, Any]) -> list[dict[str, str]]:
     schema = hypothesis_response_schema(envelope)
+    if envelope.get('preservation_context'):
+        ids = [r['id'] for r in envelope['preservation_context']['cases']]
+        schema['required'].append('preservation_plan')
+        schema['properties']['preservation_plan'] = {'type': 'array', 'minItems': len(ids), 'maxItems': len(ids),
+            'items': {'type': 'object', 'additionalProperties': False, 'required': ['case_id', 'behavior'],
+                'properties': {'case_id': {'enum': ids}, 'behavior': {'type': 'string', 'minLength': 12, 'maxLength': 800}}}}
     if envelope.get('assertion_contract'):
         schema['properties']['assertion_plan'] = assertion_plan_schema(envelope['assertion_contract'])
         schema['required'].append('assertion_plan')
@@ -245,12 +283,30 @@ def _messages(envelope: dict[str, Any]) -> list[dict[str, str]]:
         schema['properties']['reached_return_ids'] = {'type': 'array', 'items': {'type': 'string',
             'enum': [r['id'] for r in envelope['reached_returns']]}, 'uniqueItems': True, 'minItems': 1}
         schema['required'].append('reached_return_ids')
+    from .repair_scope_review import with_scope_review
+    schema = with_scope_review(schema)
     return [
         {
             "role": "system",
             "content": (
                 "Return one JSON object only. Diagnose the supplied Python failure without writing code. "
                 "Use exactly the supplied target and failure_signature. "
+                "The bound target identifies an observation or nominated repair location, not a proven root cause. "
+                "Propose a causal hypothesis and repair design when the supplied source and acceptance explain "
+                "the failing branch and the behavior to preserve. Proof is obtained by subsequent native tests; "
+                "root_cause_proven=false alone is not a reason to abstain. "
+                "The explicit task_contract defines requested behavior; requested_acceptance_context provides "
+                "its test sources, not observed passing results. Do not request external documentation merely "
+                "to restate those explicit requirements. Before requesting evidence, inspect what is already supplied. "
+                "If repair there is unsupported or requires an unverified internal target, return ONLY target, "
+                "failure_signature and scope_review (reason, suspected_targets, requested_evidence). "
+                "Identify the concrete unresolved behavior that prevents a local design and the missing evidence "
+                "that would distinguish it; generic requests for more logs or tests are not sufficient reasons. "
+                "Suspected targets are unverified investigation hints, not permission to change those functions. "
+                "An empty suspected_targets list is valid when the location is unknown. "
+                "Do not invent a local workaround merely to fit the fixed target. "
+                "For scope_review, omit mechanism, mutation_contract and all other repair-design fields; "
+                "the assertion_plan and reached_return_ids requirements apply only to a repair hypothesis. "
                 "When repair_trial_packet is true, target is a nominated internal repair location and observed_target "
                 "is the original API; the failure_signature still belongs to that original observation. "
                 "Use repair_call_context to follow caller conditions and early returns before proposing a change. "
@@ -269,6 +325,10 @@ def _messages(envelope: dict[str, Any]) -> list[dict[str, str]]:
                 "A test can contain several sequential assertions: account for all of them, including those not reached in the baseline failure. "
                 "When assertion_contract is supplied, return assertion_plan in the given ID order. Explain the required "
                 "behavior for EACH assertion and how one coherent design satisfies all contexts. "
+                "When preservation_context is supplied, these existing native cases passed twice on the baseline. "
+                "Return preservation_plan in the given case ID order, explaining how the SAME proposed mechanism "
+                "preserves EACH exact input/expected outcome. Inspect callback and helper boundaries before replacing a branch. "
+                "A complete explanation is not proof: candidates must pass these cases and full regression. "
                 "Do not infer that an assertion passed merely because it appears before or after another in source. "
                 "A helper binding identifies an observed API, not the internal defect location. "
                 "Do not infer a root cause merely from that binding; express insufficient evidence in your confidence and risks. "
@@ -277,7 +337,7 @@ def _messages(envelope: dict[str, Any]) -> list[dict[str, str]]:
                 + json.dumps(schema, ensure_ascii=False)
             ),
         },
-        {"role": "user", "content": json.dumps(envelope, ensure_ascii=False) if envelope.get('task_contract') is not None or envelope.get('repair_trial_packet') or envelope.get('assertion_contract') or envelope.get('diagnostic_context')
+        {"role": "user", "content": json.dumps(envelope, ensure_ascii=False) if envelope.get('task_contract') is not None or envelope.get('repair_trial_packet') or envelope.get('assertion_contract') or envelope.get('diagnostic_context') or envelope.get('preservation_context')
             else bounded_prompt_json(envelope, max_chars=12000)},
     ]
 
@@ -298,6 +358,7 @@ def _advisory(
         "evidence_packet_digest": envelope.get("evidence_packet_digest"),
         "task_contract": deepcopy(envelope.get('task_contract')),
         "task_contract_digest": envelope.get('task_contract_digest'),
+        "requested_acceptance_context": deepcopy(envelope.get('requested_acceptance_context')),
         "model_response_digest": _digest(payload) if payload is not None else None,
         "model_response_identity": {
             key: str(payload.get(key) or '')[:1024]

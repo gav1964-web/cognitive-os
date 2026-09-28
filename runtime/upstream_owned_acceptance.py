@@ -40,6 +40,11 @@ def prepare_owned_acceptance(project, contract, plan, work_dir, *, authorized=Fa
         'source_apply':False}
     if result.get('status') != 'proposed':
         return receipt
+    fields = result.get('source_binding_fields', [])
+    if (not isinstance(fields, list) or len(fields) > 8 or
+            any(not isinstance(key, str) or not isinstance(payload.get(key), str)
+                or payload[key] not in constants for key in fields)):
+        raise ValueError('acceptance_example_not_present_in_source')
     if not isinstance(rows, list) or not 1 <= len(rows) <= 8:
         raise ValueError('bounded_owned_acceptance_tests_required')
     names = [r['name'] for r in rows]
@@ -65,6 +70,11 @@ def prepare_owned_acceptance(project, contract, plan, work_dir, *, authorized=Fa
                          for p in probes for r in p.get('test_reports',[]))
              and probes[0].get('intake_signature') == probes[1].get('intake_signature')
              and inventory(project)==before and inventory(output)==augmented)
+    required = [row.get('required_baseline_outcome') for row in rows]
+    if any(value not in (None, 'passes', 'fails') for value in required):
+        raise ValueError('invalid_owned_baseline_obligation')
+    valid = valid and all(expected is None or all(run[i] == expected for run in outcomes)
+                          for i, expected in enumerate(required))
     for node, outcome in zip(nodes, outcomes[0]):
         requirement['acceptance_examples'].append({'kind':'native_test','nodeid':node,
             'expectation':'passes','baseline_expectation':outcome,'origin':'competency_property',

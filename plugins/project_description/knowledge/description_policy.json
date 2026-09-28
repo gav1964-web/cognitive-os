@@ -30,6 +30,12 @@
     "max_catalog_entries": 60,
     "max_requested_source_characters": 10000
   },
+  "expanded_claim_review": {
+    "max_context_characters": 96000,
+    "max_source_characters": 32000,
+    "max_catalog_entries": 60,
+    "max_requested_source_characters": 10000
+  },
   "single_claim_review": {
     "max_context_characters": 12000,
     "max_source_characters": 10000,

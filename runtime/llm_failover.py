@@ -10,8 +10,18 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 RETRYABLE_STATUS = {402, 408, 429, 500, 502, 503, 504}
+ALLOWED_FALLBACK_CODES = {'refusal', 'suspected_stub', 'busy'}
 _COOLDOWNS = {}
 _LOCK = threading.Lock()
+
+
+def fallback_codes(profile):
+    from .local_inference import LlmProfileError
+    codes = profile.get('fallback_on_codes', [])
+    if (not isinstance(codes, list) or not all(isinstance(c, str) for c in codes)
+            or len(set(codes)) != len(codes) or not set(codes) <= ALLOWED_FALLBACK_CODES):
+        raise LlmProfileError('invalid fallback_on_codes')
+    return tuple(codes)
 
 
 def fallback_configs(profile: dict, config_class) -> tuple:
@@ -32,6 +42,7 @@ def fallback_configs(profile: dict, config_class) -> tuple:
             provider_label=str(candidate['provider_label']),
             response_format=bool(candidate.get('response_format', False)),
             timeout_seconds=float(candidate.get('timeout_seconds', 60)),
+            max_output_tokens=candidate.get('max_output_tokens'),
         ))
     return tuple(result)
 
@@ -52,6 +63,10 @@ def retry_after(value: str | None) -> float:
 def call_with_failover(messages, config, call_once):
     from .local_inference import LocalInferenceError
     routes = (config, *config.fallbacks)
+    if (not isinstance(config.fallback_on_codes, tuple)
+            or not all(isinstance(c, str) for c in config.fallback_on_codes)
+            or not set(config.fallback_on_codes) <= ALLOWED_FALLBACK_CODES):
+        raise LocalInferenceError('invalid fallback outcome policy')
     if len(routes) > 3 or len({_key(route) for route in routes}) != len(routes):
         raise LocalInferenceError('invalid or duplicate fallback routes')
     if not config.fallbacks:
@@ -69,20 +84,34 @@ def call_with_failover(messages, config, call_once):
         def sink(record, attempt=index):
             _emit(config, {**record, 'attempt_index': attempt, 'fallback_used': attempt > 0})
         selected = replace(route, fallbacks=(), telemetry_sink=sink,
+                           strict_json=config.strict_json, response_schema=config.response_schema,
+                           raw_response_sink=config.raw_response_sink,
+                           raw_response_limit_bytes=config.raw_response_limit_bytes,
                            advisory_context=config.advisory_context,
-                           max_output_tokens=config.max_output_tokens or route.max_output_tokens)
+                           max_output_tokens=(config.max_output_tokens if config.max_output_tokens is not None
+                                              else route.max_output_tokens))
         started = time.monotonic()
         try:
             return call_once(messages, config=selected)
         except LocalInferenceError as exc:
             status = getattr(exc, 'http_status', None)
-            retryable = status in RETRYABLE_STATUS or getattr(exc, 'transport_retryable', False)
+            from .inference_failure_evidence import safe_metadata
+            metadata = getattr(exc, 'provider_failure', {})
+            code = safe_metadata({'error': metadata}).get('code')
+            semantic = (status in {200, 422} and code in {'refusal', 'suspected_stub'}
+                        or status == 409 and code == 'busy') and code in config.fallback_on_codes
+            retryable = semantic or status in RETRYABLE_STATUS or getattr(exc, 'transport_retryable', False)
             _emit(config, {'event': 'attempt_failed', 'requested_model': route.model,
                           'provider_label': route.provider_label, 'http_status': status,
+                          'reason_code': code, 'semantic_fallback': bool(semantic),
                           'retryable': retryable, 'attempt_index': index, 'fallback_used': index > 0,
                           'latency_seconds': round(time.monotonic() - started, 3)})
             if not retryable:
                 raise
+            if semantic:
+                # A refusal is specific to this request, not a provider-wide outage.
+                last_error = exc
+                continue
             delay = max(3600 if status == 402 else config.failover_cooldown_seconds,
                         getattr(exc, 'retry_after_seconds', 0))
             with _LOCK:

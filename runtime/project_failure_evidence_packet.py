@@ -113,6 +113,13 @@ def build_failure_evidence_packet(
         "target_source": target_source,
         "test_sources": tests,
         "helper_call_provenance": helper_provenance,
+        "target_binding_evidence": {
+            "observed_target": target,
+            "binding_methods": sorted({str(row['target_binding']) for row in repetitions
+                                       if row.get('target_binding')}),
+            "authority": "observed_failure_location_only",
+            "root_cause_proven": False,
+        },
         "project_inventory_digest": _inventory_digest(project_dir),
         "reproduction": {
             "matching_repetitions": len(repetitions),
@@ -190,11 +197,14 @@ def _test_source(project_dir: Path, nodeid: str) -> dict[str, Any] | None:
     else:
         excerpt = text
     excerpt = excerpt or ""
+    from .failure_test_context import test_support_context
+    support = test_support_context(text, tree, matches[0]) if len(matches) == 1 else None
     return {
         "nodeid": nodeid,
         "path": path.relative_to(root).as_posix(),
         "excerpt": excerpt[:5000],
         "excerpt_complete": len(excerpt) <= 5000,
+        "support_context": support,
         "sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
         "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }

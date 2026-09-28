@@ -27,11 +27,19 @@ def selected_model_candidate(comparison: dict, packet: dict) -> dict:
             or not 1 <= len(attempts) <= 4 or len(supported) != 1
             or len({r.get('id') for r in attempts}) != len(attempts)
             or any(r.get('origin') != 'llm_structured_proposal' or r.get('outcome') not in {
-                'supported_by_targeted_tests', 'contradicted_by_targeted_tests'} for r in attempts)):
+                'supported_by_targeted_tests', 'contradicted_by_targeted_tests', 'contradicted_by_preservation_tests'} for r in attempts)):
         raise ValueError('model_delivery_comparison_invalid')
     selected = supported[0]
     evidence = selected.get('evidence') or {}
     proof = selected.get('provenance') or {}
+    preservation = proof.get('repair_design', {}).get('preservation_evidence')
+    if preservation is not None:
+        from .repair_preservation import _passed
+        check = selected.get('preservation_check') or {}
+        if (check.get('status') != 'passed' or check.get('preservation_digest') != preservation['digest']
+                or check.get('same_cases') is not True or not _passed(check.get('probe') or {}, preservation['nodeids'])
+                or check['probe']['data']['cases'] != preservation['probes'][0]['data']['cases']):
+            raise ValueError('model_delivery_preservation_not_verified')
     if (comparison.get('selected_candidate_id') != selected.get('id')
             or selected.get('operator_id') is not None
             or selected.get('source_sha256') != packet.get('target_source', {}).get('file_sha256')
@@ -111,6 +119,10 @@ def validate_delivery_source(project, intent: dict) -> tuple[dict, str]:
     selected = validate_delivery_intent(intent)
     from .repair_trial_binding import validate_repair_trial_source
     validate_repair_trial_source(project, intent['failure_evidence_packet'])
+    preservation = selected.get('provenance', {}).get('repair_design', {}).get('preservation_evidence')
+    if preservation is not None:
+        from .repair_preservation import validate_preservation
+        validate_preservation(intent['failure_evidence_packet'], preservation, project)
     before = inventory(project)
     ticket = intent['model_delivery']
     if content_digest(before) != ticket['source_inventory_digest']:

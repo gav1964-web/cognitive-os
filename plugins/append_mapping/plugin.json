@@ -11,5 +11,10 @@
   "lifecycle_status": "active",
   "implementation_packages": [
     "cognitive_inspect"
+  ],
+  "test_paths": [
+    "tests/runtime/test_append_mapping_competency.py",
+    "tests/runtime/test_append_mapping_extractor_contract.py",
+    "tests/runtime/test_append_mapping_recipe_contract.py"
   ]
 }

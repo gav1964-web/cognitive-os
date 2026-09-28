@@ -88,6 +88,33 @@ def test_model_candidates_use_real_native_evidence_without_delivery(tmp_path, re
     assert issue['allowed_operator_ids'] == ['old']
 
 
+def test_scope_review_stops_before_candidate_request_and_returns_to_analyzer(tmp_path, replay_case, monkeypatch):
+    project, issue = _inputs(replay_case)
+    before = inventory(project)
+    calls = []
+    def diagnosis(*args, **kwargs):
+        calls.append('diagnosis')
+        return {'target': TARGET, 'failure_signature': issue['failure_evidence'][0]['failure_signature'],
+                'scope_review': {'reason': 'The API may only delegate the corrupting operation to an internal handler.',
+                                 'suspected_targets': [],
+                                 'requested_evidence': ['Trace the failing call before choosing an internal repair location.']}}
+    monkeypatch.setattr('runtime.project_development_llm_hypothesis.call_json_chat', diagnosis)
+    def unexpected_candidate(*args, **kwargs):
+        pytest.fail('A scope review must not request or execute candidates')
+    monkeypatch.setattr('runtime.upstream_llm_trials.call_json_chat', unexpected_candidate)
+    result = _run(tmp_path, project, issue)
+    trial = result['llm_candidate_trial']
+    assert calls == ['diagnosis'] and trial['logical_model_calls'] == 1
+    assert trial['status'] == 'not_compared'
+    assert trial['hypothesis_advisory']['status'] == 'scope_review_required'
+    assert result['allowed_operator_ids'] == []
+    assert result['repair_design']['execution_authority'] is False
+    assert result['causal_feedback']['role'] == 'analyzer'
+    assert result['causal_feedback']['next_action'] == 'collect_causal_evidence_before_binding_a_repair_target'
+    assert result['causal_feedback']['automatic_retry'] is False
+    assert inventory(project) == before
+
+
 @pytest.mark.parametrize('corruption', ['stale_packet', 'wrong_failure', 'wrong_target'])
 def test_preflight_rejects_before_spending_or_writing(tmp_path, replay_case, monkeypatch, corruption):
     project, original = _inputs(replay_case)

@@ -6,7 +6,9 @@ import json
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .role_research import research_context
 from .project_deliberation_hardening import harden_deliberation
+from .inference_origin import capture_origin, response_origin
 from .project_facts import facts_from_project_report, llm_fact_digest
 
 
@@ -49,12 +51,18 @@ def deliberate_project_report(
             context_mode=context_mode,
         )
         return harden_deliberation(fallback, digest)
+    from .structured_inference import with_response_contract
+    config = with_response_contract(config, {
+        'executive_summary': {'type': 'string'}, 'capability_decomposition': {'type': 'array'},
+        'refactor_plan': {'type': 'array'}, 'cognitive_loop': {'type': 'object'},
+        'open_questions': {'type': 'array'}, 'confidence': {'type': 'string'}})
+    config, origin = capture_origin(config)
     try:
-        result = call_json_chat(_messages(evidence, signals, context_mode=context_mode), config=config)
+        result = call_json_chat(research_context(_messages(evidence, signals, context_mode=context_mode), config), config=config)
     except LocalInferenceError as exc:
         if context_mode == "expanded" and _is_context_overflow(str(exc)):
             try:
-                result = call_json_chat(_messages(digest, signals, context_mode="compact"), config=config)
+                result = call_json_chat(research_context(_messages(digest, signals, context_mode="compact"), config), config=config)
             except LocalInferenceError as compact_exc:
                 fallback = _fallback_deliberation(digest, signals, error=str(compact_exc), config=config, context_mode="compact_after_overflow")
                 return harden_deliberation(fallback, digest)
@@ -71,7 +79,7 @@ def deliberate_project_report(
             result = _normalize_deliberation(result)
             result["source"] = config.provider_label
             result["layer"] = "L4"
-            result["model"] = config.model
+            result.update(response_origin(config, origin))
             result["context_mode"] = "compact_after_overflow"
             result["fact_summary"] = digest
             result["signal_count"] = len(signals.get("signals", []))
@@ -88,7 +96,7 @@ def deliberate_project_report(
     if config and config.provider_label != "local":
         result["source"] = config.provider_label
     result["layer"] = "L4"
-    result["model"] = config.model if config else None
+    result.update(response_origin(config, origin))
     result["context_mode"] = context_mode
     result["fact_summary"] = digest
     result["signal_count"] = len(signals.get("signals", []))

@@ -1,6 +1,10 @@
 """Compact repeated test evidence without losing native node identities."""
 from copy import deepcopy
 
+HYPOTHESIS_TEXT_LIMIT = 4000
+MUTATION_TEXT_LIMIT = 2400
+RISK_TEXT_LIMIT = 1200
+
 
 def test_source_groups(rows: list[dict]) -> list[dict]:
     groups = {}
@@ -22,16 +26,16 @@ def hypothesis_response_schema(envelope: dict) -> dict:
         'properties': {
             'target': {'type': 'string', 'const': envelope['target']},
             'failure_signature': {'type': 'string', 'const': envelope['failure_signature']},
-            'mechanism': {'type': 'string', 'minLength': 24,
+            'mechanism': {'type': 'string', 'minLength': 24, 'maxLength': HYPOTHESIS_TEXT_LIMIT,
                 'description': 'Specific causal explanation accounting for all supplied failures.'},
-            'repair_mechanism': {'type': 'string', 'minLength': 24,
+            'repair_mechanism': {'type': 'string', 'minLength': 24, 'maxLength': HYPOTHESIS_TEXT_LIMIT,
                 'description': 'Abstract behavior change without code or patch text.'},
             'mutation_contract': {'type': 'object', 'additionalProperties': False,
                 'required': ['precondition', 'change', 'preserved_behavior'],
-                'properties': {key: {'type': 'string', 'minLength': 12} for key in
+                'properties': {key: {'type': 'string', 'minLength': 12, 'maxLength': MUTATION_TEXT_LIMIT} for key in
                     ['precondition', 'change', 'preserved_behavior']}},
-            'residual_risks': {'type': 'array', 'minItems': 1,
-                'items': {'type': 'string', 'minLength': 1}},
+            'residual_risks': {'type': 'array', 'minItems': 1, 'maxItems': 8,
+                'items': {'type': 'string', 'minLength': 1, 'maxLength': RISK_TEXT_LIMIT}},
             'confidence': {'type': 'number', 'minimum': 0, 'maximum': 1,
                 'description': 'Your assessed confidence in the diagnosis; no default value. Express uncertainty honestly.'}}}
     if envelope.get('edit_scope'):

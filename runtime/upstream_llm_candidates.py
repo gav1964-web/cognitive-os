@@ -17,6 +17,8 @@ from .repair_assertion_contract import repair_grounding, validate_assertion_desi
 
 
 def candidate_messages(packet: dict, advisory: dict, source: str) -> list[dict]:
+    if advisory.get('status') == 'scope_review_required' or advisory.get('scope_review') is not None:
+        raise ValueError('repair_scope_review_required_before_candidates')
     schema = candidate_response_schema()
     related = advisory.get('repair_design',{}).get('related_targets',[])
     if related:
@@ -37,10 +39,15 @@ def candidate_messages(packet: dict, advisory: dict, source: str) -> list[dict]:
         'hypothesis': advisory['causal_hypothesis'], 'design': advisory['repair_design']}
     if advisory.get('task_contract') is not None:
         evidence['task_contract'] = advisory['task_contract']
+    if advisory.get('requested_acceptance_context') is not None:
+        evidence['requested_acceptance_context'] = deepcopy(advisory['requested_acceptance_context'])
     if advisory.get('repair_call_context') is not None:
         evidence['repair_call_context'] = deepcopy(advisory['repair_call_context'])
     encoded = json.dumps(evidence, ensure_ascii=False)
-    if len(encoded) > 32000:
+    limit = 64000 if advisory['repair_design'].get('preservation_evidence') else 32000
+    if advisory['repair_design'].get('diagnostic_context', {}).get('native_test_observations', {}).get('state_projection'):
+        limit = 96000
+    if len(encoded) > limit:
         raise ValueError('candidate_prompt_budget_exceeded')
     messages = [{'role': 'system', 'content':
         'Return JSON only. Prefer one concise candidate implementing the supplied repair design. '

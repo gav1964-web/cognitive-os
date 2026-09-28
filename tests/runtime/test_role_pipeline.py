@@ -48,6 +48,7 @@ def test_role_pipeline_cli_writes_report():
             "benchmarks/project_analyzer/projects/simple_cli_tool",
             "--goal",
             "Extract first safe capability",
+            "--no-role-llm",
             "--write",
         ],
         check=True,

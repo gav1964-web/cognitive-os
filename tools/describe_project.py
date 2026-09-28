@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--output', required=True, help='JSON receipt; readable Markdown is saved alongside')
     parser.add_argument('--language', default='ru')
     parser.add_argument('--owner-note', action='append', default=[])
+    parser.add_argument('--review-context-profile', choices=['default', 'expanded'], default='default')
     parser.add_argument('--timeout', type=float, help='Per-request model timeout; defaults to configured profile')
     args = parser.parse_args()
     config = description_model_config()
@@ -23,7 +24,8 @@ def main():
         if args.timeout <= 0:
             parser.error('--timeout must be positive')
         config = replace(config, timeout_seconds=args.timeout)
-    report = describe_project(Path(args.project_dir), language=args.language, owner_notes=args.owner_note, config=config)
+    report = describe_project(Path(args.project_dir), language=args.language, owner_notes=args.owner_note,
+                              config=config, review_context_profile=args.review_context_profile)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

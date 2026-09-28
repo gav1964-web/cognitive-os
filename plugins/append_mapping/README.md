@@ -50,3 +50,7 @@ Ownership/evidence: `docs/architecture/append_mapping_owner_20260915.md` and
 `docs/architecture/helper_recovery_contract_20260915.md`.
 Tests: `tests/runtime/test_append_mapping_competency.py` and the existing boundary,
 feedback, field-trial and helper-extraction regression suites.
+
+Development verification: `plugin.json:test_paths` declares project-relative
+owned test suites consumed by `tools/check_plugins.py`. This metadata does not
+change runtime capability loading or grant execution authority.

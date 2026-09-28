@@ -20,8 +20,10 @@ def format_feedback(messages, payload, error):
                 nodes = ast.parse(textwrap.dedent(source).strip()).body
                 shapes.append({'candidate_index': index, 'top_level_statement_kinds':
                     [type(node).__name__ for node in nodes[:16]], 'statement_count': len(nodes)})
-            except SyntaxError:
-                shapes.append({'candidate_index': index, 'syntax_valid': False})
+            except SyntaxError as exc:
+                shapes.append({'candidate_index': index, 'syntax_valid': False,
+                    'parser_error': exc.msg, 'line': exc.lineno, 'column': exc.offset,
+                    'source_line': (exc.text or '').strip()[:300]})
     feedback = ('The response failed validation: ' + error + '. Return corrected complete JSON. '
         'Keep the original design, preserved behavior, reached-return evidence, task and source scope. '
         'The only top-level JSON key is candidates; retain the row fields required by the original JSON schema, '

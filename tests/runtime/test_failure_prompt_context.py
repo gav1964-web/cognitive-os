@@ -46,7 +46,7 @@ def test_large_parameter_source_is_marked_incomplete(tmp_path):
 
 def test_schema_describes_confidence_without_setting_an_answer():
     message = _messages({'target':'example.py:fn','failure_signature':'signature'})[0]['content']
-    schema = json.loads(message.split('JSON Schema: ',1)[1])
+    schema = json.loads(message.split('JSON Schema: ',1)[1])['oneOf'][0]
     assert schema['properties']['confidence']['type'] == 'number'
     assert 'default' not in schema['properties']['confidence']
     assert set(schema['required']) == set(_payload())

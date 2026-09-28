@@ -20,6 +20,7 @@ def test_canonical_verification_covers_integrity_lint_and_both_test_scopes():
     }
     assert commands["core_tests"][:4] == [sys.executable, "-m", "pytest", "tests"]
     assert commands["plugin_tests"][:4] == [sys.executable, "-m", "pytest", "plugins"]
+    assert "--import-mode=importlib" in commands["plugin_tests"]
     assert commands["repo_lint"] == [sys.executable, "tools/finalize_stage.py", "--root", "."]
 
 

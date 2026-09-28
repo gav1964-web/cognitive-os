@@ -2,6 +2,8 @@
   "schema_version": "python_transform_properties.v1",
   "contract": "python_text_to_valid_python.v1",
   "formatting_contract": "python_text_preserves_ast.v1",
+  "composition_contract": "python_formatting_independent_fragments.v1",
+  "composition_limitations": "Explicitly selected formatter whose independent module fragments must retain their individual formatting when combined. Requires a no-op seed and a positive input/output example from bound native test source. Not applicable to whole-module sorting, context-dependent formatting, imports cleanup or semantic migrations. Exact output and AST checks are bounded examples, not a completeness proof.",
   "applicability": "Explicitly selected text transformer accepting valid Python in the running interpreter grammar. The caller supplies source-bound seeds and invocation. Not inferred from a project name or README.",
   "variants": ["multiline_brackets", "comment_after_opening_bracket"],
   "maximum_variants": 6,

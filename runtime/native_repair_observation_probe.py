@@ -1,5 +1,6 @@
 """Observe original pytest calls with fixtures; never reevaluate assertions."""
 import ast
+import dis
 import json
 import sys
 import types
@@ -8,10 +9,14 @@ from pathlib import Path
 if __package__:
     from .repair_observation_probe import safe_value
     from .repair_target_trace_probe import method_catalog, code_digest
+    from .repair_function_catalog import function_catalog
+    from .native_observation_values import state_value
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from repair_observation_probe import safe_value
     from repair_target_trace_probe import method_catalog, code_digest
+    from repair_function_catalog import function_catalog
+    from native_observation_values import state_value
 
 
 def selected_fields(source, fields):
@@ -50,8 +55,12 @@ class NativeTracker:
     def __init__(self, project, request):
         self.project, self.request = project, request
         self.path = (project / request['observed_target'].partition(':')[0]).resolve()
-        catalog = observation_catalog(self.path.read_text(encoding='utf-8'), request['observed_target'])
+        catalog = (function_catalog(project, request['source_files'], request['observed_target'])[0]
+                   if 'source_files' in request else
+                   observation_catalog(self.path.read_text(encoding='utf-8'), request['observed_target']))
         by_target = {m['target']: m for m in catalog.values()}
+        self.callables = {(str((project / m['target'].partition(':')[0]).resolve()),
+                           m['target'].partition(':')[2].rsplit('.', 1)[-1]): m for m in catalog.values()}
         fields = request['method_fields']
         if not isinstance(fields, dict) or not 1 <= len(fields) <= 4 or set(fields) - set(by_target):
             raise ValueError('bounded_owned_methods_required')
@@ -59,7 +68,8 @@ class NativeTracker:
         for target, names in fields.items():
             method = by_target[target]
             selected_fields(method['source'], names)
-            self.methods[target.partition(':')[2].rsplit('.', 1)[-1]] = {**method, 'fields': names}
+            key = (str((project / target.partition(':')[0]).resolve()), target.partition(':')[2].rsplit('.', 1)[-1])
+            self.methods[key] = {**method, 'fields': names}
         self.selected, self.rows = [], []
         self.active = None
         self.frames, self.tick = {}, 0
@@ -91,8 +101,11 @@ class NativeTracker:
         sys.settrace(self.trace)
 
     def values(self, frame, names):
-        return {name: safe_value(frame.f_locals[name]) if name in frame.f_locals else {'type': 'unbound'}
+        return {name: self.value(frame.f_locals[name]) if name in frame.f_locals else {'type': 'unbound'}
                 for name in names}
+
+    def value(self, value):
+        return state_value(value, self.callables) if self.request.get('structured_values') else safe_value(value)
 
     def trace(self, frame, event, arg):
         if self.active is None:
@@ -108,8 +121,8 @@ class NativeTracker:
                         raise ValueError('assertion_observation_budget_exceeded')
                     assertion['snapshots'].append({'sequence': self.tick, 'line': frame.f_lineno,
                         'locals': self.values(frame, self.request['test_local_names'])})
-        if event == 'call' and Path(frame.f_code.co_filename) == self.path:
-            method = self.methods.get(frame.f_code.co_name)
+        if event == 'call' and id(frame) not in self.frames:
+            method = self.methods.get((frame.f_code.co_filename, frame.f_code.co_name))
             if method:
                 if code_digest(frame.f_code) != method['code_digest']:
                     raise ValueError('observed_method_code_changed')
@@ -117,22 +130,26 @@ class NativeTracker:
                     raise ValueError('native_observation_call_budget_exceeded')
                 row = {'target': method['target'], 'events': []}
                 self.active['calls'].append(row)
-                self.frames[id(frame)] = row, method['fields']
+                self.frames[id(frame)] = row, method['fields'], frame
         tracked = self.frames.get(id(frame))
         if tracked and event in {'line', 'return', 'exception'}:
-            row, names = tracked
+            row, names, _ = tracked
             if len(row['events']) >= 128:
                 raise ValueError('native_observation_line_budget_exceeded')
-            row['events'].append({'sequence': self.tick, 'event': event, 'line': frame.f_lineno,
+            suspended = event == 'return' and dis.opname[frame.f_code.co_code[frame.f_lasti]] in {'YIELD_VALUE', 'YIELD_FROM'}
+            row['events'].append({'sequence': self.tick, 'event': 'yield' if suspended else event, 'line': frame.f_lineno,
                                   'locals': self.values(frame, names)})
-            if event == 'return':
-                row['return'] = safe_value(arg)
+            if suspended:
+                row['events'][-1]['yielded'] = self.value(arg)
+            elif event == 'return':
+                row['return'] = self.value(arg)
                 self.frames.pop(id(frame), None)
         return self.trace
 
     def stop(self):
         intact = sys.gettrace() == self.trace and sys.getprofile() is None
         sys.settrace(None)
+        self.frames.clear()
         if not intact:
             raise ValueError('native_instrumentation_changed')
 
@@ -140,6 +157,8 @@ class NativeTracker:
         if call.when != 'call' or self.active is None:
             return
         self.active['test_outcome'] = report.outcome
+        if self.request.get('structured_values'):
+            self.active['xfail'] = hasattr(report, 'wasxfail')
         self.rows.append(self.active)
         self.active = None
 
@@ -168,7 +187,7 @@ def main():
     code = pytest.main(request['pytest_arguments'], plugins=[tracker, Hooks()])
     result = {'selected': tracker.selected, 'rows': tracker.rows}
     encoded = json.dumps(result)
-    if len(encoded) > 32000:
+    if len(encoded) > (240000 if request.get('structured_values') else 32000):
         raise ValueError('native_observation_output_budget_exceeded')
     output.write_text(encoded, encoding='utf-8')
     return code

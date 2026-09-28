@@ -20,3 +20,7 @@ Evidence: `docs/architecture/text_splitting_20260916.md`.
 Tests: `tests/runtime/test_text_splitting_owner.py`,
 `tests/runtime/test_text_splitting_contract.py`, frozen recovery packages and
 existing helper extraction/role recovery suites.
+
+Development verification: `plugin.json:test_paths` declares project-relative
+owned test suites consumed by `tools/check_plugins.py`. This metadata does not
+change runtime capability loading or grant execution authority.

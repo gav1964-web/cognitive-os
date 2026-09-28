@@ -14,6 +14,23 @@ def policy():
     return json.loads((ROOT / 'plugins/project_description/knowledge/description_policy.json').read_text(encoding='utf-8'))['claim_review']
 
 
+def test_expanded_profile_retains_cited_body_after_competing_lookup():
+    body = 'def workflow(value):\n' + '    value += 1\n' * 470 + '    return "CITED_TAIL"\n'
+    rows = [source('s1', body)]
+    rows += [source(f'x{i}', 'def selected():\n' + '    pass\n' * 850, True, f'other{i}.py')
+             for i in range(3)]
+    claim = {'id': 'purpose', 'text': 'Runs workflow.', 'evidence_ids': ['s1']}
+    payload = {'project_root': '.', 'action': 'review', 'evidence': {'root': '.', 'sources': rows}, 'claims': [claim]}
+    default = run(payload)
+    expanded = run({**payload, 'review_context_profile': 'expanded'})
+    assert default['context_characters'] <= 32000
+    assert default['evidence']['sources'][0]['excerpt'] != body
+    assert expanded['context_characters'] <= 96000
+    assert expanded['evidence']['sources'][0]['excerpt'] == body
+    assert all(s['supplied_excerpt_preserved'] for s in expanded['evidence']['sources'][1:])
+    assert expanded.get('review_audit', {}).get('semantic_verified') is not True
+
+
 def source(key, text, requested=False, path='app.py'):
     return {'id': key, 'path': path, 'excerpt': text, 'sha256': '0'*64,
             'authority': 'documentation_claims' if path == 'README.md' else 'source_excerpt',

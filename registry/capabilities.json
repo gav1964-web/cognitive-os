@@ -1,6 +1,22 @@
 {
   "capabilities": [
     {
+      "id": "append_mapping",
+      "version": "0.4.0",
+      "entrypoint": "plugins.append_mapping.src.main:run",
+      "input_schema_ref": "plugins/append_mapping/schemas/input.json",
+      "output_schema_ref": "plugins/append_mapping/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:5b69e976842c1a356dfb5dc31711c1205e4acd8e4f187e1307fb5f1a7d219b93",
+      "fallback_for": []
+    },
+    {
       "id": "apply_project_change_recipe",
       "version": "0.1.0",
       "entrypoint": "plugins.apply_project_change_recipe.src.main:run",
@@ -46,6 +62,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:bad10b45b615cbe3b2519f3206d2c5b00f25b47ae08afb6d77b325f63141fc93",
+      "fallback_for": []
+    },
+    {
+      "id": "development_quality",
+      "version": "0.1.2",
+      "entrypoint": "plugins.development_quality.src.main:run",
+      "input_schema_ref": "plugins/development_quality/schemas/input.json",
+      "output_schema_ref": "plugins/development_quality/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:6535d4b5fedcea478d868c94898ed87c7d2cbfe06f50891e564d0637744a22d6",
       "fallback_for": []
     },
     {
@@ -177,6 +209,22 @@
       "fallback_for": []
     },
     {
+      "id": "json_parsing",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_parsing.src.main:run",
+      "input_schema_ref": "plugins/json_parsing/schemas/input.json",
+      "output_schema_ref": "plugins/json_parsing/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:06ac6596521162e653e8451183172c5bee3c44b3bdab0d066d9fa418b10a9dbe",
+      "fallback_for": []
+    },
+    {
       "id": "json_select",
       "version": "0.1.0",
       "entrypoint": "plugins.json_select.src.main:run",
@@ -190,6 +238,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:c348e5d0f7bb1357c053fa94b013e549c56fb3988850284d10ae31ef708e9eca",
+      "fallback_for": []
+    },
+    {
+      "id": "json_serialization",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_serialization.src.main:run",
+      "input_schema_ref": "plugins/json_serialization/schemas/input.json",
+      "output_schema_ref": "plugins/json_serialization/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:5d78fc1f9e32c27a8fecc0ec6bb051d1b7bd2f1a0ad026c3cc0220daaf8bbb52",
       "fallback_for": []
     },
     {
@@ -339,6 +403,22 @@
       ]
     },
     {
+      "id": "project_description",
+      "version": "0.18.0",
+      "entrypoint": "plugins.project_description.src.main:run",
+      "input_schema_ref": "plugins/project_description/schemas/input.json",
+      "output_schema_ref": "plugins/project_description/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:d5cf5ff72f371241e7c0912dcf0c777e94ff320481c512bf777bf9bafa28097f",
+      "fallback_for": []
+    },
+    {
       "id": "project_fact_questions",
       "version": "0.1.0",
       "entrypoint": "plugins.project_fact_questions.src.main:run",
@@ -356,7 +436,7 @@
     },
     {
       "id": "project_map_report",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "entrypoint": "plugins.project_map_report.src.main:run",
       "input_schema_ref": "plugins/project_map_report/schemas/input.json",
       "output_schema_ref": "plugins/project_map_report/schemas/output.json",
@@ -384,6 +464,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:3a2e6d1606b61040debb3b2477f5a8a6acca8af1d87130e8f78191daf260dce1",
+      "fallback_for": []
+    },
+    {
+      "id": "python_transform_contracts",
+      "version": "0.2.0",
+      "entrypoint": "plugins.python_transform_contracts.src.main:run",
+      "input_schema_ref": "plugins/python_transform_contracts/schemas/input.json",
+      "output_schema_ref": "plugins/python_transform_contracts/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:94f85a26b95aa7036e29b3a3fb81990e53205a4350d22bf7412551185a354fd4",
       "fallback_for": []
     },
     {
@@ -483,6 +579,22 @@
       "fallback_for": []
     },
     {
+      "id": "text_splitting",
+      "version": "0.1.0",
+      "entrypoint": "plugins.text_splitting.src.main:run",
+      "input_schema_ref": "plugins/text_splitting/schemas/input.json",
+      "output_schema_ref": "plugins/text_splitting/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:abfa432b8bc695e7928b3f7c9d14b8fba5760bb37359336f5f4289d0640294ad",
+      "fallback_for": []
+    },
+    {
       "id": "translate_text",
       "version": "0.1.0",
       "entrypoint": "plugins.translate_text.src.main:run",
@@ -512,102 +624,6 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:afa67807cf314e9189c246c678e96e14beb4edf99681a9b02b2570b9d9519a75",
-      "fallback_for": []
-    },
-    {
-      "id": "append_mapping",
-      "version": "0.4.0",
-      "entrypoint": "plugins.append_mapping.src.main:run",
-      "input_schema_ref": "plugins/append_mapping/schemas/input.json",
-      "output_schema_ref": "plugins/append_mapping/schemas/output.json",
-      "determinism_grade": "B",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:f8f958f43047a48beaf2e6b97f9f250e7b8b83aefe12741f711082ca83481c67",
-      "fallback_for": []
-    },
-    {
-      "id": "json_serialization",
-      "version": "0.1.0",
-      "entrypoint": "plugins.json_serialization.src.main:run",
-      "input_schema_ref": "plugins/json_serialization/schemas/input.json",
-      "output_schema_ref": "plugins/json_serialization/schemas/output.json",
-      "determinism_grade": "B",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:34319de3f51b5b3e6ee9618347c8e504cd19570ab20b7bd3167bf9bfa333b6cf",
-      "fallback_for": []
-    },
-    {
-      "id": "json_parsing",
-      "version": "0.1.0",
-      "entrypoint": "plugins.json_parsing.src.main:run",
-      "input_schema_ref": "plugins/json_parsing/schemas/input.json",
-      "output_schema_ref": "plugins/json_parsing/schemas/output.json",
-      "determinism_grade": "B",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:f1184fd5e7d20e7e6e2e7b6272e3c2c5ae8236a43ade51d4b8b50f4ebfa2ab0d",
-      "fallback_for": []
-    },
-    {
-      "id": "text_splitting",
-      "version": "0.1.0",
-      "entrypoint": "plugins.text_splitting.src.main:run",
-      "input_schema_ref": "plugins/text_splitting/schemas/input.json",
-      "output_schema_ref": "plugins/text_splitting/schemas/output.json",
-      "determinism_grade": "B",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:1e7f21178f1203b56cc4106036c2a5f0da6b2a9be1bf9a6ca4321968b3fa175d",
-      "fallback_for": []
-    },
-    {
-      "id": "project_description",
-      "version": "0.17.0",
-      "entrypoint": "plugins.project_description.src.main:run",
-      "input_schema_ref": "plugins/project_description/schemas/input.json",
-      "output_schema_ref": "plugins/project_description/schemas/output.json",
-      "determinism_grade": "B",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:f658baff48ad2605bca45e65f075050efe858f8706a11132066a8bd2325d12da",
-      "fallback_for": []
-    },
-    {
-      "id": "python_transform_contracts",
-      "version": "0.1.0",
-      "entrypoint": "plugins.python_transform_contracts.src.main:run",
-      "input_schema_ref": "plugins/python_transform_contracts/schemas/input.json",
-      "output_schema_ref": "plugins/python_transform_contracts/schemas/output.json",
-      "determinism_grade": "A",
-      "side_effects": {
-        "filesystem": "read_only",
-        "network": "none",
-        "secrets": "none"
-      },
-      "lifecycle_status": "active",
-      "version_hash": "sha256:10900dd54bd26cbb0b65b1062203eb2e8f2f5a4bf8319743fe7acf9a14332a66",
       "fallback_for": []
     }
   ]

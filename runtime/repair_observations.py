@@ -74,7 +74,7 @@ def collect_repair_observations(project, packet, work_dir, *, argument_names=(),
 
 
 def validate_repair_observations(project, packet, evidence):
-    if evidence.get('schema_version') == 'native_repair_observations.v1':
+    if evidence.get('schema_version') in {'native_repair_observations.v1', 'native_repair_observations.v2'}:
         from .native_repair_observations import validate_native_repair_observations
         return validate_native_repair_observations(project, packet, evidence)
     before = inventory(project)
@@ -112,7 +112,7 @@ def validate_repair_observations(project, packet, evidence):
 
 
 def observation_context(evidence, *, compact=False):
-    if evidence.get('schema_version') == 'native_repair_observations.v1':
+    if evidence.get('schema_version') in {'native_repair_observations.v1', 'native_repair_observations.v2'}:
         from .native_repair_observations import native_observation_context
         return native_observation_context(evidence, compact=compact)
     rows = []

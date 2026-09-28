@@ -77,8 +77,11 @@ def create_budget(path, jobs):
 
 def _read(path):
     data = json.loads(path.read_text(encoding='utf-8'))
-    if data.get('schema_version') != 'claim_suite_budget.v1' or data.get('limit_exclusive') != LIMIT:
+    if data.get('schema_version') != 'claim_suite_budget.v1':
         raise ValueError('invalid_claim_suite_budget')
+    if data.get('limit_exclusive') != LIMIT:
+        from .budget_authorization import validate_grant
+        validate_grant(data.get('budget_authorization'), data.get('limit_exclusive'))
     if not isinstance(data.get('jobs'), dict) or not data['jobs']:
         raise ValueError('invalid_claim_suite_budget')
     for row in data['jobs'].values():
@@ -97,8 +100,8 @@ def _ready(data, jobs, *, allow_unknown_reservations=False):
     blocked = {'started'} if allow_unknown_reservations else {'started', 'unknown'}
     if any(row['state'] in blocked for row in data['jobs'].values()):
         raise ValueError('budget_unresolved_usage')
-    if sum(max(r['reserved_tokens'], r['reported_tokens'] or 0) for r in data['jobs'].values()) >= LIMIT:
-        raise ValueError('budget_not_below_million')
+    if sum(max(r['reserved_tokens'], r['reported_tokens'] or 0) for r in data['jobs'].values()) >= data['limit_exclusive']:
+        raise ValueError('budget_not_below_million' if data['limit_exclusive'] == LIMIT else 'budget_authorized_limit_exhausted')
     for job in jobs:
         row = data['jobs'].get(job['digest'])
         if row is None or row['state'] != 'ready' or row['reserved_tokens'] < estimate_reservation(job):

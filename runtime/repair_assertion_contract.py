@@ -9,7 +9,8 @@ from .narrow_type_evidence_binding import content_digest
 from .project_failure_prompt_context import test_source_groups
 
 GROUNDING_FIELDS = ('branch_digest', 'reached_return_ids', 'reached_returns',
-                    'assertion_contract', 'assertion_plan', 'proposal_route', 'request_context_digest')
+                    'assertion_contract', 'assertion_plan', 'proposal_route', 'request_context_digest',
+                    'preservation_evidence', 'preservation_plan')
 
 
 def repair_grounding(design):
@@ -68,6 +69,10 @@ def validate_assertion_plan(contract, plan):
 
 
 def validate_assertion_design(packet, design):
+    if 'preservation_evidence' in design or 'preservation_plan' in design:
+        from .repair_preservation import validate_preservation, validate_preservation_plan
+        validate_preservation(packet, design.get('preservation_evidence') or {})
+        validate_preservation_plan(design['preservation_evidence'], design.get('preservation_plan'))
     if 'assertion_contract' in design or 'assertion_plan' in design:
         contract = build_assertion_contract(packet)
         if design.get('assertion_contract') != contract:

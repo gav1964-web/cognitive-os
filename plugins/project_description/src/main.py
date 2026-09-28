@@ -85,7 +85,11 @@ def run(payload):
                               'mechanism_review': 'mechanism_instruction'}[payload['action']]]
         return {'status': 'ok', **result, 'instruction': instruction, 'review_instruction': instruction}
     if payload.get('action') == 'review':
-        result = review_context(payload['evidence'], payload['claims'], policy['claim_review'])
+        profile = payload.get('review_context_profile', 'default')
+        if profile not in ('default', 'expanded'):
+            raise ValueError('description_unknown_review_context_profile')
+        selected = 'expanded_claim_review' if profile == 'expanded' else 'claim_review'
+        result = review_context(payload['evidence'], payload['claims'], policy[selected])
         if 'reviews' in payload:
             result['review_audit'] = audit_review(payload['evidence'], payload['claims'], payload['reviews'],
                                                   visible_evidence=payload.get('review_evidence'))

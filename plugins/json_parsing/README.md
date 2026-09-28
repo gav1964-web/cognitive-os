@@ -22,3 +22,7 @@ Evidence: `docs/architecture/json_parsing_20260916.md`.
 Tests: `tests/runtime/test_json_parsing_owner.py`,
 `tests/runtime/test_json_parsing_contract.py`, shared full recovery package
 fixtures and existing helper/role recovery regressions.
+
+Development verification: `plugin.json:test_paths` declares project-relative
+owned test suites consumed by `tools/check_plugins.py`. This metadata does not
+change runtime capability loading or grant execution authority.

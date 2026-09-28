@@ -37,6 +37,8 @@ def direct_candidate_messages(issue, project):
         envelope['native_counterexamples'] = feedback
     if issue.get('requested_task_contract') is not None:
         envelope['task_contract'] = deepcopy(issue['requested_task_contract'])
+        from .requested_acceptance_context import requested_acceptance_context
+        envelope['requested_acceptance_context'] = requested_acceptance_context(project, envelope['task_contract'])
     encoded = json.dumps(envelope, ensure_ascii=False)
     if len(encoded) > 32000:
         raise ValueError('direct_candidate_prompt_budget_exceeded')

@@ -1,6 +1,6 @@
 {
   "id": "python_transform_contracts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "entrypoint": "plugins.python_transform_contracts.src.main:run",
   "determinism_grade": "A",
   "side_effects": {"filesystem": "read_only", "network": "none", "secrets": "none"},

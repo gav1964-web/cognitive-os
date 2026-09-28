@@ -1,5 +1,13 @@
 # Project description competency
 
+## 0.18.0: opt-in expanded review context
+
+`--review-context-profile expanded` retains up to96000 serialized context characters
+and32000 per ordinary source; explicitly requested excerpts retain their10000 cap.
+The default32k/4k policy remains available unchanged. This addresses evidence lost
+between draft and review, without changing acceptance or claiming semantic proof.
+External request/token budgets still apply; callers must reserve the larger input.
+
 ## 0.16.0: bounded exception flow
 
 The existing explicit-input/property analyzer now follows `try/except/else/finally`
@@ -397,3 +405,7 @@ records `claim_binding=not_established`: neither successful evaluation nor
 `status=described` certifies the natural-language description. The September 18
 paired experiment still produced a false default/guarantee in one final text.
 This opt-in context has not established a general quality improvement.
+
+Development verification: `plugin.json:test_paths` declares project-relative
+owned test suites consumed by `tools/check_plugins.py`. This metadata does not
+change runtime capability loading or grant execution authority.

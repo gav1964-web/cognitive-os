@@ -9,7 +9,7 @@ from .narrow_type_evidence_binding import content_digest
 from .project_failure_evidence_packet import (
     is_complete_failure_evidence_packet, _target_source, evidence_packet_digest,
 )
-from .repair_target_nomination import validate_nomination
+from .repair_target_nomination import validate_nomination, nomination_file_hash
 
 SCHEMA = 'repair_trial_packet.v1'
 COPIED = ('failure_signature', 'failure_kind', 'failing_nodeids', 'observed_failure',
@@ -76,9 +76,14 @@ def is_repair_trial_packet(packet: dict, *, target: str) -> bool:
             and trace['observation_packet_digest'] == context['observation_packet_digest'] == observation['packet_digest']
             and trace['project_inventory_digest'] == context['project_inventory_digest'] == observation['project_inventory_digest']
             and target in context['eligible_targets']
-            and nomination['file_sha256'] == context['file_sha256'] == packet['target_source']['file_sha256']
+            and nomination['file_sha256'] == nomination_file_hash(context, target) == packet['target_source']['file_sha256']
             and packet['target_source']['path'] + ':' + packet['target_source']['symbol'] == target
-            and target.partition(':')[0] == observation['target'].partition(':')[0])
+            and ((context['schema_version'] == 'repair_function_nomination_context.v1'
+                  and trace['schema_version'] == 'repair_function_trace.v1'
+                  and any(r['target'] == target and r['file_sha256'] == nomination['file_sha256']
+                          for r in context['methods']))
+                 or (context['schema_version'] == 'repair_target_nomination_context.v1'
+                     and target.partition(':')[0] == observation['target'].partition(':')[0])))
     except (KeyError, TypeError, ValueError, AttributeError):
         return False
 

@@ -1,6 +1,36 @@
 # COGNITIVE_OS_TECHNICAL_BASELINE.md
 **Инженерная спецификация и требования к MVP**
 
+**Failure accounting (2026-09-25).** Gateway text-completion validation rejects
+missing/empty choices, messages or text with a structured502 rather than an
+unhandled exception. Available bounded usage and reported upstream model travel
+with the error. COS retains integer usage from HTTP errors in failure evidence
+and budget telemetry; a failed call remains a failure even when its cost is known.
+Missing usage is unknown, never invented zero. No new retry is added by response
+validation. [Contract and evidence](docs/architecture/gateway_empty_20260925.md).
+
+**Development test ownership (2026-09-24).** Optional plugin manifest `test_paths`
+declares bounded project-relative suites for `tools/check_plugins.py`; absent
+metadata retains the legacy local tests directory. Invalid/missing ownership
+fails before pytest. Native failure packets include bounded same-module test
+support excerpts with source hashes and explicit resolution limitations.
+[Contract and evidence](docs/architecture/plugin_test_ownership_20260924.md).
+
+**Operational routes (2026-09-24).** Analyzer, Architect, SpecWriter and project
+description use qualified `deepseek/deepseek-chat` through gateway 5, 32768 output
+tokens and 180s timeout. GeminiVM is retained for explicit experiments only;
+no automatic COS profile selects it. Ultra is not promoted to a default or fallback.
+Environment overrides remain explicit operator choices. Provider-specific failures
+remain separate from semantic role quality. [Decision and trial](docs/architecture/api_roles_20260924.md).
+
+**Structured role responses (2026-09-24).** Role inference validates a whole
+JSON document and the consumer's response schema; a damaged document cannot be
+accepted as a nested fragment. Bounded final-response evidence is captured before
+parsing independently of usage metrics. Local schema/strictness/evidence survive
+failover, while native wire formats remain route-specific. Invalid standalone
+output limits fail before HTTP, including with fallback configured. Legacy generic
+prose extraction remains separate. [Contracts and evidence](docs/architecture/ultra_schema_20260924.md).
+
 **Pickle recipe coverage (2026-09-15).** Competency 0.1.1 rejects omitted,
 duplicate or used variadic constructor inputs before producing a patch. Ignored
 variadics retain the existing supported path; direct local-namespace capture blocks

@@ -11,5 +11,9 @@
   "lifecycle_status": "active",
   "implementation_packages": [
     "cognitive_inspect"
+  ],
+  "test_paths": [
+    "tests/runtime/test_text_splitting_owner.py",
+    "tests/runtime/test_text_splitting_contract.py"
   ]
 }

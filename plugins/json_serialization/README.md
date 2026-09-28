@@ -25,3 +25,7 @@ Evidence: `docs/architecture/json_serialization_20260916.md`.
 Tests: `tests/runtime/test_json_serialization_owner.py`,
 `tests/runtime/test_json_serialization_contract.py`, frozen recovery packages
 and the existing helper extraction/role recovery suites.
+
+Development verification: `plugin.json:test_paths` declares project-relative
+owned test suites consumed by `tools/check_plugins.py`. This metadata does not
+change runtime capability loading or grant execution authority.

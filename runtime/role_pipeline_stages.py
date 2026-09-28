@@ -11,6 +11,7 @@ from typing import Any
 from .configured_role_pipeline import artifact_by_type, configured_pipeline_phase, run_configured_role_prefix
 from .interpreter_authority import verify_interpreter_decision
 from .role_project_analysis import analyze_role_project
+from .role_inference import role_llm_invoked
 from .role_artifact_interpreter import run_role_artifact_pipeline
 from .role_lifecycle_interpreter import run_lifecycle_phase
 from .technical_spec_policy import load_technical_spec_policy
@@ -30,6 +31,8 @@ def stage_analyze(state: dict[str, Any]) -> None:
         extra = {'task_contract': state['task_contract']} if 'task_contract' in state else {}
         if 'product_context' in state:
             extra['product_context'] = state['product_context']
+        if state.get('analyzer_config') is not None:
+            extra['analyzer_config'] = state['analyzer_config']
         state["project_report"] = analyze_role_project(root=state["root"], project_dir=state["project_dir"], goal=state["goal"], **extra)["project_map_report"]
 
 
@@ -39,6 +42,7 @@ def stage_build(state: dict[str, Any]) -> None:
         goal=state["goal"],
         project_report=state["project_report"],
         architect_advisory_config=state["architect_advisory_config"],
+        spec_writer_advisory_config=state.get('spec_writer_advisory_config'),
         until_output_key="programmer_task_tree",
         reselection_triggers={str(item) for item in reselection.get("production_triggers") or []},
     )
@@ -105,6 +109,7 @@ def _close_execution_reselection_loop(state: dict[str, Any]) -> None:
             goal=state["goal"],
             project_report=state["project_report"],
             architect_advisory_config=state["architect_advisory_config"],
+            spec_writer_advisory_config=state.get('spec_writer_advisory_config'),
             until_output_key="programmer_task_tree",
             artifact_transform=_replace_architecture_decision(
                 dict(resolution.get("architecture_decision") or rejected)
@@ -143,6 +148,7 @@ def stage_review(state: dict[str, Any]) -> None:
         project_report=state["project_report"],
         initial_artifacts=state["artifacts"],
         architect_advisory_config=state["architect_advisory_config"],
+        spec_writer_advisory_config=state.get('spec_writer_advisory_config'),
         test_result=state["test_result"],
         pipeline=configured_pipeline_phase("review"),
     )
@@ -155,7 +161,7 @@ def stage_after_review(state: dict[str, Any]) -> None:
     context.update(
         {
             "artifacts": state["artifacts"],
-            "llm_invoked": bool(dict(state["adr"].get("architect_advisory", {})).get("llm_invoked")),
+            "llm_invoked": role_llm_invoked(state),
         }
     )
     outputs = run_lifecycle_phase("after_review", context=context)
@@ -256,7 +262,7 @@ def stage_assemble_result(state: dict[str, Any]) -> None:
             "source_code_changes": bool(executor.get("source_code_changes")),
             "registry_changes": False,
             "foundry_invoked": transform.get("status") in {"promotion_ready", "promoted"},
-            "llm_invoked": bool(dict(adr.get("architect_advisory", {})).get("llm_invoked")),
+            "llm_invoked": role_llm_invoked(state),
             "l4_5_required": bool(dict(control_plane.get("semantic_escalation", {})).get("l4_5_required")),
         },
     }
@@ -302,6 +308,10 @@ def _chain_telemetry(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def stage_after_result(state: dict[str, Any]) -> None:
+    if state.get('role_research'):
+        state['result']['role_research'] = state['role_research']
+    if 'role_inference' in state:
+        state['result']['role_inference'] = state['role_inference']
     state["lifecycle_context"]["result"] = state["result"]
     report_writer = run_lifecycle_phase("after_result", context=state["lifecycle_context"])["pipeline_report_writer"]
     if report_writer.get("report_path"):

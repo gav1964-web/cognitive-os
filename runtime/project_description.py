@@ -25,6 +25,7 @@ def description_model_config():
                    provider_label=profile['provider_label'], api_key=os.environ.get(key_env) or None,
                    timeout_seconds=float(os.environ.get('COGNITIVE_OS_DESCRIPTION_TIMEOUT', profile['timeout_seconds'])),
                    response_format=bool(profile.get('response_format', False)),
+                   max_output_tokens=profile.get('max_output_tokens'),
                    fallbacks=fallback_configs(profile, LocalInferenceConfig))
 
 
@@ -64,8 +65,11 @@ def _sources_current(evidence):
 
 
 def describe_project(project_dir: Path, *, root: Path = ROOT, language: str = 'ru',
-                     owner_notes: list[str] | None = None, config=None, chat=None, behavior_checks=None):
+                     owner_notes: list[str] | None = None, config=None, chat=None, behavior_checks=None,
+                     review_context_profile='default'):
     """No inspected-project execution or mutation; failed analysis has no invented fallback."""
+    if review_context_profile not in ('default', 'expanded'):
+        raise ValueError('description_unknown_review_context_profile')
     contribution = invoke_knowledge('project_description', {'project_root': str(project_dir.resolve())}, root=root)
     evidence = contribution['evidence']
     behavior = None
@@ -86,10 +90,12 @@ def describe_project(project_dir: Path, *, root: Path = ROOT, language: str = 'r
     ]
     telemetry = []
     base = config or description_model_config()
-    configured = replace(base, telemetry_sink=telemetry.append, max_output_tokens=3500,
-                         fallbacks=tuple(replace(c, telemetry_sink=telemetry.append, max_output_tokens=3500)
+    output_budget = base.max_output_tokens or 3500
+    configured = replace(base, telemetry_sink=telemetry.append, max_output_tokens=output_budget,
+                         fallbacks=tuple(replace(c, telemetry_sink=telemetry.append, max_output_tokens=output_budget)
                                          for c in base.fallbacks))
     report = {'schema_version': 'project_description.v1', 'status': 'failed',
+              'review_context_profile': review_context_profile,
               'evidence': evidence, 'owner_notes': notes, 'language': language,
               'request_sha256': hashlib.sha256(json.dumps(messages, ensure_ascii=False).encode()).hexdigest(),
               'request': messages, 'telemetry': telemetry, 'description': None,

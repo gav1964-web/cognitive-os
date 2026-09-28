@@ -7,6 +7,7 @@ from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
 from .technical_spec_policy import load_technical_spec_policy
+from .inference_origin import capture_origin, response_origin
 
 
 ARBITRATION_POLICY = dict(load_technical_spec_policy().get("candidate_arbitration") or {})
@@ -35,9 +36,25 @@ def arbitrate_candidates(
     if config is None or not _needs_arbitration(ranked):
         return ranked, {"source": "deterministic", "llm_invoked": False, "eligible": False}
     candidates = ranked[:NORMAL_CANDIDATE_LIMIT]
+    from .structured_inference import with_response_contract
+    config = with_response_contract(config, {'selected_source': {'type': 'string'}})
+    config, origin = capture_origin(config)
     try:
         response = call_json_chat(_messages(candidates, config.advisory_context), config=config)
     except LocalInferenceError as first_error:
+        # A new prompt cannot repair an unavailable provider or an in-flight
+        # browser request. Retry only a completed response with invalid format.
+        if str(first_error) not in {
+            'local inference response is not a JSON object',
+            'local inference response must decode to object',
+            'local inference response was truncated',
+        } or getattr(first_error, 'provider_failure', None):
+            from .inference_failure_evidence import failure_evidence
+            return ranked, {
+                'source': 'deterministic_fallback', 'llm_invoked': False,
+                'request_attempted': True, 'eligible': True, 'model': config.model,
+                'error': str(first_error), **failure_evidence(first_error),
+            }
         try:
             response = call_json_chat(_retry_messages(candidates[:3]), config=config)
         except LocalInferenceError as exc:
@@ -53,7 +70,7 @@ def arbitrate_candidates(
     if selected not in allowed:
         return ranked, {
             "source": config.provider_label,
-            "model": config.model,
+            **response_origin(config, origin),
             "llm_invoked": True,
             "eligible": True,
             "accepted": False,
@@ -64,7 +81,7 @@ def arbitrate_candidates(
     chosen["reasons"] = [*list(chosen.get("reasons") or []), "bounded LLM arbiter selected this existing top-N source"]
     return reordered, {
         "source": config.provider_label,
-        "model": config.model,
+        **response_origin(config, origin),
         "llm_invoked": True,
         "eligible": True,
         "accepted": selected != str(ranked[0].get("source") or ""),

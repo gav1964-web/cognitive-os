@@ -54,6 +54,7 @@ def run_project_development(
     repair_observations: dict | None = None,
     repair_counterexample_history: list[dict] | None = None,
     model_chat=None,
+    repair_preservation: dict | None = None,
 ) -> dict[str, Any]:
     """Diagnose one project and select a bounded, measurable next experiment."""
     if type(authorize_model_trial) is not bool or (authorize_model_trial and (
@@ -63,6 +64,8 @@ def run_project_development(
         raise ValueError('causal_comparison_requires_explicit_training_authorization')
     if model_chat is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
         raise ValueError('model_chat_requires_configured_causal_trial')
+    if repair_preservation is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
+        raise ValueError('preservation_requires_authorized_model_trial')
     if task_contract is not None and not validate_causal_proposals:
         raise ValueError('requested_native_repair_requires_causal_comparison')
     if repair_nomination is not None and (not validate_causal_proposals or llm_hypothesis_config is None):
@@ -131,6 +134,9 @@ def run_project_development(
             from copy import deepcopy
             issue['repair_branch_evidence'] = deepcopy(repair_branch_evidence)
     if model_trial:
+        if repair_preservation is not None:
+            from .repair_preservation import bind_preservation
+            diagnosis = bind_preservation(diagnosis, project_dir, repair_preservation)
         if repair_observations is not None or repair_counterexample_history is not None:
             from .repair_diagnostic_context import bind_diagnostic_context
             diagnosis = bind_diagnostic_context(diagnosis, project_dir,

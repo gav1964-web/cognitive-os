@@ -45,8 +45,8 @@ def diagnostic_context(issue, project):
         result['source_dependencies'] = current
     if issue.get('repair_observations') is not None:
         validate_repair_observations(project, packet, issue['repair_observations'])
-        key = ('native_test_observations' if issue['repair_observations'].get('schema_version') ==
-               'native_repair_observations.v1' else 'isolated_assertion_observations')
+        key = ('native_test_observations' if issue['repair_observations'].get('schema_version') in
+               {'native_repair_observations.v1', 'native_repair_observations.v2'} else 'isolated_assertion_observations')
         result[key] = observation_context(issue['repair_observations'], compact=True)
     if issue.get('repair_counterexample_history') is not None:
         history = issue['repair_counterexample_history']

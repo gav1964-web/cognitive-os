@@ -1,5 +1,13 @@
 # Research: корпус, обучение и оценка
 
+[Внешнее исследование через GeminiVM](geminivm_research_20260922.md):
+`KnowledgeGapPacket.acceptable_sources` может содержать `model_web_research`.
+План сохраняет `execute_by_default=false`; исполнение требует конкретного
+`model_research_request` с совпадающими question/role, owner, allowlist и
+applicability. Это разрешение на один ограниченный исследовательский вызов,
+а не свободный поиск от имени всех ролей. Standalone CLI:
+`tools/research_question.py --request REQUEST.json --output RECEIPT.json`.
+
 [Карта append mapping](append_mapping_owner_20260915.md) отделяет boundary KB
 извлечения helper из append-цикла от ремонта поиска по mapping path. Профиль и
 контраст принадлежат новому плагину; field trial/evidence остаются в Research.

@@ -90,6 +90,7 @@ def verification_commands(
                         "pytest",
                         "plugins",
                         "-q",
+                        "--import-mode=importlib",
                         f"--basetemp=.pytest-tmp/{run_id}/p",
                     ],
                 ),

@@ -54,6 +54,10 @@ def compare_causal_candidates(*, project: Path, packet: dict, candidates: list[d
         if candidate_origin == 'llm_structured_proposal':
             from .upstream_llm_candidates import validate_model_candidate
             validate_model_candidate(candidate, packet, source.read_bytes().decode('utf-8'))
+            preservation = candidate.get('provenance', {}).get('repair_design', {}).get('preservation_evidence')
+            if preservation is not None:
+                from .repair_preservation import validate_preservation
+                validate_preservation(packet, preservation, project)
     attempts = []
     work = work_dir / ('causal-' + uuid.uuid4().hex[:10])
     work.mkdir(parents=True, exist_ok=False)
@@ -82,6 +86,16 @@ def compare_causal_candidates(*, project: Path, packet: dict, candidates: list[d
                 'contradicted_by_targeted_tests' if stable and evidence['probes'][-1]['returncode'] == 1
                 else 'inconclusive')
             row.update(outcome=outcome, evidence=evidence, patched_project=str(candidate_root))
+            preservation = candidate.get('provenance', {}).get('repair_design', {}).get('preservation_evidence')
+            if preservation is not None and outcome == 'supported_by_targeted_tests':
+                from .repair_preservation import check_candidate_preservation
+                check = check_candidate_preservation(project, candidate_root, packet, preservation,
+                                                     work / f'preservation-{index}')
+                row['preservation_check'] = check
+                if check['status'] != 'passed':
+                    row['outcome'] = ('contradicted_by_preservation_tests'
+                        if check['same_cases'] and check['probe']['copy_unchanged'] and check['probe']['returncode'] == 1
+                        else 'inconclusive')
         fingerprints.add(fingerprint)
         attempts.append(row)
         # Preserve every attempt, including failed or interrupted later comparisons.

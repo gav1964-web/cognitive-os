@@ -5,6 +5,9 @@
     "project_root"
   ],
   "properties": {
+    "review_context_profile": {
+      "enum": ["default", "expanded"]
+    },
     "project_root": {
       "type": "string",
       "minLength": 1

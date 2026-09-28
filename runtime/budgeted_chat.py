@@ -31,6 +31,8 @@ class BudgetedChat:
             raise ValueError('budget_request_count_exceeded')
         slot = self.slots[len(self.attempts)]
         size = len(json.dumps(messages, ensure_ascii=False).encode('utf-8'))
+        if isinstance(config.response_format, dict):
+            size += len(json.dumps(config.response_format, ensure_ascii=False).encode('utf-8'))
         if (config.fallbacks or type(config.max_output_tokens) is not int
                 or not 0 < config.max_output_tokens <= slot['max_output_tokens']
                 or size > slot['max_input_bytes']):
@@ -48,6 +50,9 @@ class BudgetedChat:
                'request_digest': content_digest(messages), 'messages': deepcopy(messages),
                'input_bytes': size, 'max_output_tokens': config.max_output_tokens,
                'telemetry': [], 'allow_unknown_reservations': self.allow_unknown_reservations}
+        if isinstance(config.response_format, dict):
+            row['response_format'] = deepcopy(config.response_format)
+            row['response_format_digest'] = content_digest(config.response_format)
         if self.gateway_preflight is not None:
             row['gateway_preflight'] = deepcopy(self.gateway_preflight)
         self.attempts.append(row)
@@ -56,8 +61,13 @@ class BudgetedChat:
             row['telemetry'].append(deepcopy(event))
             if config.telemetry_sink:
                 config.telemetry_sink(event)
+        def capture(event):
+            row.setdefault('response_evidence', []).append(deepcopy(event))
+            self.persist(deepcopy(self.attempts))
+            if config.raw_response_sink:
+                config.raw_response_sink(event)
         try:
-            response = self.chat(messages, config=replace(config, telemetry_sink=record))
+            response = self.chat(messages, config=replace(config, telemetry_sink=record, raw_response_sink=capture))
             row.update(status='returned', raw_response=deepcopy(response))
         except Exception as exc:
             row.update(status='failed', error_kind=type(exc).__name__)

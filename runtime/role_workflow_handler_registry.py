@@ -26,7 +26,7 @@ class WorkflowHandlerRegistration:
 
 def workflow_handler_registry() -> dict[str, WorkflowHandlerRegistration]:
     return {
-        "role_pipeline.analyze": WorkflowHandlerRegistration(stage_analyze, ("filesystem_read", "temporary_cwd")),
+        "role_pipeline.analyze": WorkflowHandlerRegistration(stage_analyze, ("filesystem_read", "temporary_cwd", "model_inference")),
         "role_pipeline.build": WorkflowHandlerRegistration(stage_build, ("model_inference",)),
         "role_pipeline.after_build": WorkflowHandlerRegistration(stage_after_build, ("delegated_lifecycle",)),
         "role_pipeline.review": WorkflowHandlerRegistration(stage_review, ()),

@@ -30,6 +30,10 @@ def dependency_context(project, target, *, maximum_chars=7000):
                        if n is not function and isinstance(n,(ast.FunctionDef,ast.Assign,ast.AnnAssign)))
     calls={n.func.id for n in ast.walk(function) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)}
     calls.update(n.value.id for n in ast.walk(function) if isinstance(n,ast.Attribute) and isinstance(n.value,ast.Name))
+    # A function passed to partial(), a registry, or returned as a value is a
+    # dependency even without a direct Call node naming it. These are static
+    # declarations, not proof that the binding actually executes.
+    calls.update(n.id for n in ast.walk(function) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load))
     local={n.name:n for n in tree.body if isinstance(n,(ast.ClassDef,ast.FunctionDef))}
     for name in sorted(calls):
         if name in local and local[name] is not function:
@@ -64,6 +68,16 @@ def dependency_context(project, target, *, maximum_chars=7000):
             returns=getattr(node,'returns',None)
             names={n.id for n in ast.walk(returns) if isinstance(n,ast.Name)} if returns else set()
             pending.extend((imported,n,n.name) for n in module_tree.body if isinstance(n,ast.ClassDef) and n.name in names)
+    # One additional local hop exposes a callback's helper contract. Keep the
+    # existing byte/declaration limits; do not recursively expand the project.
+    for current,node,_ in list(pending):
+        if not isinstance(node,ast.FunctionDef):
+            continue
+        module_tree=ast.parse(current.read_text(encoding='utf-8'))
+        referenced={n.id for n in ast.walk(node) if isinstance(n,ast.Name) and isinstance(n.ctx,ast.Load)}
+        pending.extend((current,n,n.name) for n in module_tree.body
+            if isinstance(n,(ast.FunctionDef,ast.ClassDef)) and n.name in referenced
+            and (current!=path or n.lineno!=function.lineno))
     rows,omitted,seen=[],[],set()
     size=0
     for current,node,name in pending:
@@ -83,7 +97,8 @@ def dependency_context(project, target, *, maximum_chars=7000):
     result={'schema_version':'source_dependency_context.v1','target':target,
         'target_file_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'declarations':rows,
         'omitted':omitted,'unresolved':sorted(set(unresolved)),
-        'limitations':'Static direct imports, local declarations and same-class consumers only. '
+        'limitations':'Static direct imports, callable references, one additional local helper hop and same-class consumers only. '
+            'References may be shadowed; declaration inclusion does not prove execution. '
             'Dynamic dispatch, reexports, relative imports and external dependencies may be absent. '
             'Annotations are declared interfaces, not runtime type proof. No patch authority.'}
     result['digest']=content_digest(result)

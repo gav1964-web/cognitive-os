@@ -67,6 +67,9 @@ def build_research_plan(gap: dict[str, Any], *, query_hint: str | None = None) -
     sources = [str(item) for item in gap.get("acceptable_sources", [])]
     query = query_hint or str(gap.get("question") or "")
     steps: list[ResearchPlanStep] = []
+    if 'model_web_research' in sources:
+        steps.append(ResearchPlanStep('research_model_web', 'model_web_research', query,
+            'collect version-scoped external evidence for the owning competency', False))
     if "official_docs_fetch" in sources:
         steps.append(
             ResearchPlanStep(
@@ -116,15 +119,29 @@ def execute_research_plan(
     *,
     official_docs_urls: list[str] | None = None,
     github_limit: int = 5,
+    model_research_request: dict | None = None,
+    model_config=None,
+    root=None,
 ) -> dict[str, Any]:
     """Execute only concrete allowlisted research steps provided by the caller."""
 
     digests = []
+    model_results = []
     docs_urls = list(official_docs_urls or [])
     for step in plan.get("steps", []):
         if not isinstance(step, dict):
             continue
         source_type = str(step.get("source_type") or "")
+        if source_type == 'model_web_research' and model_research_request is not None:
+            from .role_research import research_question, persist_research
+            from pathlib import Path
+            if (model_config is None or model_research_request.get('question') != gap.get('question')
+                    or model_research_request.get('role') != gap.get('role')):
+                raise ValueError('research_request_does_not_match_gap')
+            owner_root = Path(root) if root is not None else Path(__file__).resolve().parents[1]
+            checked = research_question(model_research_request, config=model_config, root=owner_root)
+            checked['receipt'] = persist_research(checked, owner_root)
+            model_results.append(checked)
         if source_type == "official_docs_fetch":
             for url in docs_urls:
                 result = official_docs_knowledge(url, question=str(gap.get("question") or ""), needed_for=str(gap.get("needed_for") or ""))
@@ -132,12 +149,14 @@ def execute_research_plan(
         elif source_type == "github_repository_search":
             result = github_repository_knowledge(str(step.get("query") or gap.get("question") or ""), needed_for=str(gap.get("needed_for") or ""), limit=github_limit)
             digests.append(source_digest_from_knowledge_result(result, source_type=source_type))
-    status = "ok" if digests else "not_executed"
+    status = "ok" if digests else ('evidence_checked' if any(r['status'] == 'evidence_checked'
+        for r in model_results) else 'unresolved' if model_results else "not_executed")
     return {
         "artifact_type": "ResearchResult",
         "gap_id": gap.get("gap_id"),
         "status": status,
         "source_digests": digests,
+        "model_research": model_results,
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "limitations": [
             "research result is evidence, not ground truth",

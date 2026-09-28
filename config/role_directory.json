@@ -3,12 +3,12 @@
   "status": "active",
   "policy": {"roles_are_source_of_truth": true, "runtime_is_interpreter": true, "role_specific_python_facades": false},
   "workflow": {
-    "initial_state": ["root", "project_dir", "goal", "write", "run_transform", "run_executor", "force_transform", "architect_advisory_config", "spec_writer_advisory_config"],
+    "initial_state": ["root", "project_dir", "goal", "write", "run_transform", "run_executor", "force_transform", "architect_advisory_config", "spec_writer_advisory_config", "analyzer_config"],
     "stages": [
       {
         "stage_id": "analyze",
         "handler_id": "role_pipeline.analyze",
-        "effects": ["filesystem_read", "temporary_cwd"],
+        "effects": ["filesystem_read", "temporary_cwd", "model_inference"],
         "depends_on": [],
         "requires": ["root", "project_dir"],
         "provides": ["project_report"]
