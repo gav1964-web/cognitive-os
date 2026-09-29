@@ -25,7 +25,7 @@ class LlmProfileError(RuntimeError):
 
 _LOCAL_L35_DEFAULTS = {
     "api_key_env": "COGNITIVE_OS_LLM_API_KEY",
-    "base_url": "http://127.0.0.1:8000/v1",
+    "base_url": "http://127.0.0.1:8200/v1",
     "model": "local",
     "provider_label": "local",
     "response_format": True,
@@ -33,7 +33,7 @@ _LOCAL_L35_DEFAULTS = {
 }
 _L45_DEFAULTS = {
     "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-    "base_url": "http://127.0.0.1:8000/v1",
+    "base_url": "http://127.0.0.1:8200/v1",
     "model": "deepseek/deepseek-chat",
     "provider_label": "external_l45_intent_resolver",
     "response_format": False,

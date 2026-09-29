@@ -262,7 +262,7 @@ def _case_specific_checks(
             and "TestClient" in test_text,
             "web_research_fastapi_enforces_top_20": "le=20" in source_text
             and "min(max(top, 1), 20)" in source_text,
-            "web_research_fastapi_uses_gigachat_gateway": "DEFAULT_BASE_URL = 'http://127.0.0.1:8000/v1'" in source_text
+            "web_research_fastapi_uses_gigachat_gateway": "DEFAULT_BASE_URL = 'http://127.0.0.1:8200/v1'" in source_text
             and "DEFAULT_MODEL = 'GigaChat'" in source_text
             and "/chat/completions" in source_text,
             "web_research_fastapi_has_adapter_boundaries": "search_fn" in source_text

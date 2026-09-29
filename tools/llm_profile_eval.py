@@ -130,7 +130,7 @@ def _smoke(config: LocalInferenceConfig) -> dict[str, Any]:
 def _benchmark_l45(root: Path, profiles: dict[str, Any]) -> dict[str, Any]:
     profile = dict(profiles.get("external_l45_intent_resolver") or {})
     config = LocalInferenceConfig(
-        base_url=str(profile.get("base_url") or "http://127.0.0.1:8000/v1").rstrip("/"),
+        base_url=str(profile.get("base_url") or "http://127.0.0.1:8200/v1").rstrip("/"),
         model=str(profile.get("model") or "deepseek/deepseek-chat"),
         timeout_seconds=float(profile.get("timeout_seconds") or 60),
         response_format=bool(profile.get("response_format")),

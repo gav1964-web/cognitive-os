@@ -58,7 +58,7 @@ WEB_RESEARCH_SUMMARIZER_PROMPT = (
 WEB_RESEARCH_FASTAPI_PROMPT = (
     "Напиши приложение с интерфейсом FastAPI, которое принимает фразу для поиска в интернете, "
     "выполняет поиск, берет топ 20 найденных страниц, анализирует их содержимое и выдает одно "
-    "итоговое суммари с помощью LLM GigaChat через OpenAI-compatible gateway http://127.0.0.1:8000/v1."
+    "итоговое суммари с помощью LLM GigaChat через OpenAI-compatible gateway http://127.0.0.1:8200/v1."
 )
 
 def test_sandbox_attempt_spec_blocks_non_allowlisted_case(tmp_path: Path):

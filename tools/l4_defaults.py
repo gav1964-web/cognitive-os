@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 
-DEFAULT_L4_BASE_URL = "http://127.0.0.1:8000/v1"
+DEFAULT_L4_BASE_URL = "http://127.0.0.1:8200/v1"
 DEFAULT_L4_MODEL = "deepseek/deepseek-chat"
 DEFAULT_L4_RESPONSE_FORMAT = False
 

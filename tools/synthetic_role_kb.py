@@ -37,7 +37,7 @@ def main() -> int:
     generate_llm.add_argument("--records-per-role", type=int, default=20)
     generate_llm.add_argument("--output", default=None)
     generate_llm.add_argument("--replace", action="store_true", help="Do not append to an existing corpus")
-    generate_llm.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
+    generate_llm.add_argument("--base-url", default="http://127.0.0.1:8200/v1")
     generate_llm.add_argument("--model", default="deepseek/deepseek-chat")
     generate_llm.add_argument("--timeout", type=float, default=120.0)
     generate_llm.add_argument("--no-response-format", action="store_true")

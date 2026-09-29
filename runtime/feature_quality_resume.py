@@ -98,3 +98,18 @@ def restore_unaccepted_proposal(q, checkpoint, project, expected, goal, transcri
     q.unaccepted['spec_writer'] = {'binding': binding, 'proposal': row['raw_response']}
     q.record('unaccepted_proposal_restored', checkpoint=str(checkpoint),
              transcript=str(transcript), request_digest=row['request_digest'])
+
+
+def restore_qualified_spec(q, checkpoint, project, expected, goal):
+    """Resume a native-qualified stage; native gates still run before coding."""
+    checkpoint = Path(checkpoint).resolve()
+    load_roles(checkpoint, project, expected, goal)
+    report = json.loads((checkpoint / 'report.json').read_text(encoding='utf-8'))
+    spec = qualified_spec(checkpoint)
+    if (report.get('status') != 'spec_qualified' or report.get('attempts')
+            or not spec or not report.get('frozen_test_hashes')):
+        raise ValueError('quality_resume_requires_qualified_spec_boundary')
+    q.frozen = spec['accepted']['tests']
+    q.record('qualified_spec_restored', checkpoint=str(checkpoint),
+             frozen_test_hashes=report['frozen_test_hashes'])
+    return str(checkpoint)

@@ -1074,6 +1074,79 @@
       "updated_at": "2026-09-23T13:08:47+00:00"
     },
     {
+      "id": "work-c91edc5dee67324f",
+      "key": "remote-support-isolation-and-crash-accounting",
+      "kind": "feature",
+      "path": "runtime/remote_role_worker.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-28T15:26:06+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Separate existing Windows accounts completed offline file-worker repair with35 denied-access checks. Real FeatureChat/controller hard exits preserve budget; local post-termination reconciliation does not replay effects.80 focused tests and139 broader tests. Permanent deployment/live role smoke remain separately scoped.",
+        "evidence": [
+          "artifacts/remote_support_recovery_20260928/summary.json",
+          "artifacts/remote_support_recovery_20260928/acl-pilot-accounted-result.json",
+          "artifacts/remote_support_recovery_20260928/tests-final.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/remote_support_recovery_20260928/summary.json",
+            "sha256": "757f19534c2115fe2af4e3019714b441c6e1efd6c086b1680c0ba48e2514afbc"
+          },
+          {
+            "path": "artifacts/remote_support_recovery_20260928/acl-pilot-accounted-result.json",
+            "sha256": "566bcca0d53b8cf685edcad8c70cdc815b1012a474498c03c8573955efc9aaec"
+          },
+          {
+            "path": "artifacts/remote_support_recovery_20260928/tests-final.xml",
+            "sha256": "b6c977c3b717e931045b2f09aae18a996e81369d955cb4e967cf0115f52b0823"
+          }
+        ],
+        "resolved_at": "2026-09-28T17:18:54+00:00",
+        "source_sha256": "6ccab950fe1fa6bb75b3cd9b181c6ba724a9ee2ee8df5ddd0560c411fa36a5fd"
+      }
+    },
+    {
+      "id": "work-91f4bdb00782f149",
+      "key": "remote-support-live-role-deployment",
+      "kind": "feature",
+      "path": "runtime/remote_support_supervisor.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-28T14:18:56+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Real qualified-spec task repaired via signed messages; first three roles retained, COS-owned target candidate23/23 plus independent36/36;53225 reported/900000 unknown0.115 focused tests. One test-harness import correction required direct post-run audit; OS isolation/storage remain separate follow-up.",
+        "evidence": [
+          "artifacts/remote_role_support_20260928/summary.json",
+          "artifacts/remote_role_support_20260928/tests.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/remote_role_support_20260928/summary.json",
+            "sha256": "966fbe06da28636284aeabf562f69cbef2dfb0fa0d1430f7f58604c177a35a36"
+          },
+          {
+            "path": "artifacts/remote_role_support_20260928/tests.xml",
+            "sha256": "c90337ab7e7416ba69df4416610c5e61b212a87bd458b9a280005a2d8094f8da"
+          }
+        ],
+        "resolved_at": "2026-09-28T15:26:05+00:00",
+        "source_sha256": "dd91e30e568c19c3bbc50291522754e21226fda875aac9f4e8cfe863f96e80b3"
+      }
+    },
+    {
       "id": "work-60b11d6445bb4bb0",
       "key": "acceptance-proposal-adequacy",
       "kind": "evaluation",
@@ -1326,6 +1399,40 @@
       }
     },
     {
+      "id": "work-f9c4164fcceebb50",
+      "key": "stage-regression:tests/runtime/test_feature_checkpoint.py|tests/runtime/test_feature_development.py|tests/runtime/test_feature_quality.py|tests/runtime/test_feature_quality_resume.py|tests/runtime/test_feature_read_response.py|tests/runtime/test_remote_role_support.py|tests/runtime/test_remote_support.py|tests/runtime/test_remote_support_accounting.py|tests/runtime/test_remote_support_exchange.py|tests/runtime/test_remote_support_worker.py",
+      "kind": "test_failure",
+      "path": "tests/runtime/test_remote_support.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": true,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-28T17:16:26+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "139 tests passed; only DEVELOPMENT_DECISIONS.json and DEVELOPMENT_TASKS.json changed during verification, no source/test difference. Stop metadata mutations before repeat snapshot verification. Failed stage evidence preserved.",
+        "evidence": [
+          "artifacts/remote_support_recovery_20260928/metadata-race.json",
+          "artifacts/development/stage-fb60034dbe/checks/pytest.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/remote_support_recovery_20260928/metadata-race.json",
+            "sha256": "0273f8b769a254dfcf54249fd705e4241e9e6c978ecf21e13d18258451be3657"
+          },
+          {
+            "path": "artifacts/development/stage-fb60034dbe/checks/pytest.xml",
+            "sha256": "712b42c889a53606770c4577aaaa4f7d0a24515d49b7a09f4f29771f7b222678"
+          }
+        ],
+        "resolved_at": "2026-09-28T17:18:54+00:00",
+        "source_sha256": "b936caeb931e62c3f6b98bc8bba33abb0c25abb133c058d43679468c9cb5b148"
+      }
+    },
+    {
       "id": "work-0e7676eb6b51bf0e",
       "key": "stage-regression:tests/runtime/test_failure_prompt_context.py|tests/runtime/test_repair_function_nomination.py|tests/runtime/test_repair_function_role_chain.py|tests/runtime/test_repair_scope_review.py|tests/runtime/test_repair_target_nomination.py|tests/runtime/test_repair_trial_binding.py|tests/runtime/test_repair_trial_role_chain.py|tests/runtime/test_role_repair_handoff.py|tests/runtime/test_upstream_dependency_context.py|tests/runtime/test_upstream_llm_trials.py|tests/tools/test_nominate_repair_target.py",
       "kind": "test_failure",
@@ -1525,6 +1632,20 @@
         "2026-09-24 current defect reconfirmed offline; paired model designs rejected, no patch applied. See artifacts/api_roles_20260924/semantic-review.json; task remains open."
       ],
       "updated_at": "2026-09-24T12:40:06+00:00"
+    },
+    {
+      "id": "work-3872dabf1905fb2b",
+      "key": "remote-support-permanent-worker-deployment",
+      "kind": "architecture",
+      "path": "tools/remote_support_service.py",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 3,
+      "dependencies": [],
+      "next_action": "Installed service and live role continuation are verified; do NOT reinstall or repeat completed role task. Read docs/architecture/remote_worker_8200_20260929.md and artifacts/remote_worker_8200_20260929/summary.json. Gateway is8200;8000 retired. Remaining separate lifecycle check: SCM stop/restart during a harmless bounded job under administrator rights; current Alex token cannot control SCM. No LLM needed. If reusing this inference series, carry final ledger from live-cache-result.json: 57861 reported,unknown0,450000 total ceiling,13 counted slots of16. Pin known_calls history; original cache incident was superseded by exact reconciliation, not zeroed without evidence. Preserve all old releases, controller states and receipts.",
+      "notes": [],
+      "updated_at": "2026-09-29T00:11:46+00:00"
     },
     {
       "id": "work-5055158d3f6ff896",

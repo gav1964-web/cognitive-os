@@ -1867,6 +1867,66 @@
       },
       "reconsider_when": "Advisory contract schema or native acceptance admission contract changes.",
       "recorded_at": "2026-09-28T13:18:01+00:00"
+    },
+    {
+      "id": "remote-support-file-transport",
+      "decision": "Keep file exchange as the primary support transport; a controlled file-sharing service may deliver authenticated envelopes. Do not add email.",
+      "rationale": "File support envelopes and the separate local worker exchange have distinct authority. Local ACL checks do not qualify a remote storage service; preserve IDs, authentication, cumulative budget and complete atomic delivery.",
+      "source_hashes": {
+        "docs/architecture/remote_support.md": "91782fe88cc12aef64146a6b917241b0ece1614b91442ee6d03af8e58668b49e"
+      },
+      "reconsider_when": "Owner changes transport requirements or selects a remote storage service.",
+      "recorded_at": "2026-09-28T17:15:59+00:00"
+    },
+    {
+      "id": "message-only-cos-support",
+      "decision": "File envelopes carry assistant COS repairs; frozen controller policy governs checks, activation, accounting and separately provisioned Windows file-worker execution. Live role workers require role_ledger.v1.",
+      "rationale": "Real Luna repair previously succeeded. New offline FeatureChat/controller hard-exit tests preserve known/unknown cost; controller reserves allowance before spawn. Distinct Windows accounts completed an ACL fixture with35 denied-access checks. Local worker termination confirmation reconciles usage only, never replays effects. Ledger is trusted worker evidence, not provider attestation; local workspace fixture is not a production or whole-host sandbox. Reviewed service extension: cancellable checks preserve claims and accounting; real process-tree death and portable runtime tested offline. SCM installation and live distinct-identity role smoke remain pending Windows admin access.",
+      "source_hashes": {
+        "runtime/remote_support_protocol.py": "6916cfafc7d1ca255c061065dad18cc7321d12554fe2ea34cea83f6a1169bd21",
+        "runtime/remote_support_release.py": "87f3bdcc66433226af080a45b1421850442eeae4816be1ad0e8ce215b9c51fea",
+        "runtime/remote_support_supervisor.py": "660d983950faedbf081cdf5147c33c696936daba481895342f72a6ca6a2fbc89",
+        "runtime/remote_support_accounting.py": "8743b5546858bbf5f5088481063c3e05675e12323a680e177b9a16fa74485734",
+        "runtime/remote_support_exchange.py": "8974b00546467ecdc1f2178157d9f60db900f9876cdb0a15d33dfe36e6d437c0",
+        "runtime/remote_support_windows.py": "e9e61852a91fbaf9d87ecd63b768cc276f6f56c553c5b4d39913205c9d0ffa27",
+        "runtime/remote_role_worker.py": "6ccab950fe1fa6bb75b3cd9b181c6ba724a9ee2ee8df5ddd0560c411fa36a5fd",
+        "tools/remote_support.py": "473704d9d5adda0011ad5ec5f263fccca9542d92707cf0683cd710b93d2dfb3c",
+        "tools/remote_support_worker.py": "84ac6022d3bf1f8769a690a3edb496ae5eb6ae3478f63c5d7db675ecdf8d3dae"
+      },
+      "reconsider_when": "Changing deployment identities or ancestor ACLs, controller trust, reconciliation or arbitrary checkpoint migration.",
+      "recorded_at": "2026-09-28T18:03:45+00:00"
+    },
+    {
+      "id": "gateway-8200-and-bound-cache-history",
+      "decision": "Use loopback8200 for COS profiles, defaults and managed gateway launch. Carry optional hash-bound call history only for exact cache accounting, never decision replay.",
+      "rationale": "User explicitly requested8000->8200 and unblocked access. Service health200 and live continuation passed23 native +36 independent cases, first three role hashes retained. A real zero-usage cache response exposed missing history in worker adapter. Exact previously paid request/model/parameters/response match reconciled it; mismatches remain unknown. New usage4636; cumulative57861/450000, unknown0. Evidence artifacts/remote_worker_8200_20260929/summary.json. SCM lifecycle and independent role scores are not certified by this run.",
+      "source_hashes": {
+        "config/llm_profiles.json": "79867afadf51a73af84be7a2950882bba55de67d1961d3f1af913ec990aa5eb8",
+        "config/llm_gateway_bootstrap.json": "b41d419b59dc3724cd1f20d6ad468dce274e19c8c3691c0aca3093a0fdce98e5",
+        "runtime/local_inference.py": "20aa3eaddf32abd9bdd6451adbe02157fb8cc92caf94cfb18beb12fbc0d3c366",
+        "tools/l4_defaults.py": "214bc28053c5b9e93adc7394a148b3c4ff773f8404bae3cee4342eb186c0f36b",
+        "runtime/remote_role_job.py": "6a9d1db4d1cd7466a7ca780134b9260d279a49c602839555534da7466b2339df",
+        "runtime/remote_role_worker.py": "2c937df53ff3cfca9cbe8d43967516dc9fef852ea15f503daea7836c168a9544",
+        "tests/runtime/test_remote_role_cache.py": "fa1b96622532667ec986790c72771d56665b769fc2195ccbae4ca4e025a8d8d8",
+        "tests/runtime/test_remote_role_support.py": "45fa183e858662b31c5c5ca73b715e44d8802d6514ae47a8b240c6166da939a0"
+      },
+      "reconsider_when": "Gateway endpoint changes, cache evidence contract changes, or carried history cannot be independently matched.",
+      "recorded_at": "2026-09-29T00:11:45+00:00"
+    },
+    {
+      "id": "remote-support-permanent-service",
+      "decision": "Prepare a Windows virtual-account SCM worker in protected ProgramData with private Python/pywin32. Never treat a console pilot or missing admin token as installed isolation.",
+      "rationale": "Installed dedicated-SID SCM worker passed10 ACL denials and qualified-spec admission. 20260929: gateway migrated to8200 on user request, service health200. Actual role continuation completed23/23 native +36/36 external cases with unchanged first three roles. Cache history adapter repaired and tested; cumulative57861 tokens, unknown0. See remote_worker_8200_20260929.md. No production source install, no whole-host isolation claim; actual SCM stop/restart still requires administrator token.",
+      "source_hashes": {
+        "runtime/remote_support_daemon.py": "08b779ca81553b30693ee10dd7013690b81a461012f01001a14e2512343366c2",
+        "runtime/remote_support_deployment.py": "782f1db9a1534b50f182f4efd4099cd51fc286477e47efafa534279772e68eaf",
+        "tools/remote_support_service.py": "a517c47d72f95876c322efe89184e164067a552ab6a75ad19f3ca277047b9410",
+        "tools/remote_support_install.py": "6f48ed5537a8e628ab314b1d3c532199a5c9acfc8aa69177aceb0314b16c299d",
+        "tools/prepare_remote_worker.py": "3c0100f5c1e9c12832b72b69a72b6787ef2ad35387b39db7438b20924ce64714",
+        "tests/runtime/test_remote_support_daemon.py": "7619c25b5393af7f3f296285cb6b8a90f083f6ecd203872d5026f81299b4ff8c"
+      },
+      "reconsider_when": "Actual SCM install/ACL probe, arbitrary domain groups, service runtime updates, role dependency provisioning, or trusted-worker assumptions change.",
+      "recorded_at": "2026-09-29T00:11:46+00:00"
     }
   ]
 }

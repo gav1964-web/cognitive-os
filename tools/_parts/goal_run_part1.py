@@ -34,7 +34,7 @@ def main() -> int:
     parser.add_argument("--use-l4-llm", action="store_true")
     parser.add_argument("--interpret-project-llm", action="store_true")
     parser.add_argument("--dialogue-id", default=None)
-    parser.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
+    parser.add_argument("--base-url", default="http://127.0.0.1:8200/v1")
     parser.add_argument("--model", default="local")
     parser.add_argument("--timeout", type=float, default=60.0)
     parser.add_argument("--no-response-format", action="store_true")

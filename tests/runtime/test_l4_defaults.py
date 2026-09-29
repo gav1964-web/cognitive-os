@@ -5,7 +5,7 @@ def test_l4_defaults_use_explicit_deepseek_gateway_profile(monkeypatch):
     monkeypatch.delenv("COGNITIVE_OS_L4_BASE_URL", raising=False)
     monkeypatch.delenv("COGNITIVE_OS_L4_MODEL", raising=False)
 
-    assert l4_base_url() == DEFAULT_L4_BASE_URL == "http://127.0.0.1:8000/v1"
+    assert l4_base_url() == DEFAULT_L4_BASE_URL == "http://127.0.0.1:8200/v1"
     assert l4_model() == DEFAULT_L4_MODEL == "deepseek/deepseek-chat"
     assert l4_response_format() is DEFAULT_L4_RESPONSE_FORMAT is False
 

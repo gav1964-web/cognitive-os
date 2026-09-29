@@ -29,7 +29,7 @@ def acceptance_for(verification: dict[str, object]) -> list[str]:
         "API accepts a plain search phrase and top-N limit",
         "top-20 result limit is enforced before article fetching",
         "article fetching, extraction and LLM summarization are separated by adapters",
-        "LLM gateway defaults to http://127.0.0.1:8000/v1 and model GigaChat",
+        "LLM gateway defaults to http://127.0.0.1:8200/v1 and model GigaChat",
         "search, fetch and LLM failures are returned as controlled API errors or warnings",
         "default tests use fixtures and mocks without live network or real LLM calls",
         "README documents run command, environment variables and live-network policy",
@@ -94,7 +94,7 @@ def _readme(prompt: str) -> str:
         "Run tests: `python -m pytest tests -q`.\n"
         "Run app: `uvicorn web_research_service.app:app --app-dir src --reload`.\n\n"
         "Environment:\n"
-        "- `LLM_BASE_URL`, default `http://127.0.0.1:8000/v1`.\n"
+        "- `LLM_BASE_URL`, default `http://127.0.0.1:8200/v1`.\n"
         "- `LLM_MODEL`, default `GigaChat`.\n"
         "- `WEB_SEARCH_ENDPOINT_TEMPLATE`, optional JSON search endpoint containing `{query}`.\n"
         "- `REQUEST_TIMEOUT_SECONDS`, default `15`.\n\n"
@@ -244,7 +244,7 @@ def _llm_client() -> str:
         "import json\n"
         "import os\n"
         "from urllib.request import Request, urlopen\n\n\n"
-        "DEFAULT_BASE_URL = 'http://127.0.0.1:8000/v1'\n"
+        "DEFAULT_BASE_URL = 'http://127.0.0.1:8200/v1'\n"
         "DEFAULT_MODEL = 'GigaChat'\n\n\n"
         "def summarize_with_llm(query: str, articles: list[dict[str, str]], *, base_url: str | None = None, model: str | None = None, timeout: float = 30.0) -> str:\n"
         "    base = (base_url or os.environ.get('LLM_BASE_URL') or DEFAULT_BASE_URL).rstrip('/')\n"

@@ -1,7 +1,7 @@
 {
   "schema_version": "llm_gateway_bootstrap.v1",
   "enabled": true,
-  "base_url": "http://127.0.0.1:8000",
+  "base_url": "http://127.0.0.1:8200",
   "health_path": "/health",
   "max_output_tokens": 32768,
   "request_timeout_seconds": 2.0,
@@ -16,7 +16,7 @@
     "--host",
     "127.0.0.1",
     "--port",
-    "8000"
+    "8200"
   ],
   "log_path": "artifacts/runtime/llm_gateway.log"
 }

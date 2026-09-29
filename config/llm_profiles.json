@@ -2,7 +2,7 @@
   "profiles": {
     "geminivm_pro": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "geminivm/pro",
       "provider_label": "geminivm_pro",
       "response_format": true,
@@ -12,7 +12,7 @@
     },
     "deepseek_roles": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "deepseek/deepseek-chat",
       "provider_label": "deepseek_roles",
       "response_format": true,
@@ -21,7 +21,7 @@
     },
     "deepseek_role_backup": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "deepseek/deepseek-chat",
       "provider_label": "deepseek_role_backup",
       "response_format": true,
@@ -30,7 +30,7 @@
     },
     "external_l45_intent_resolver": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "deepseek/deepseek-chat",
       "model_tier": "Deepseek Chat",
       "provider_label": "external_l45_intent_resolver",
@@ -42,7 +42,7 @@
     },
     "gigachat_pro_backup": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "GigaChat-Pro",
       "provider_label": "gigachat_pro_backup",
       "response_format": false,
@@ -50,7 +50,7 @@
     },
     "local_l35": {
       "api_key_env": "COGNITIVE_OS_LLM_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "local",
       "model_tier": "local",
       "provider_label": "local",
@@ -59,7 +59,7 @@
     },
     "project_description": {
       "api_key_env": "COGNITIVE_OS_L45_API_KEY",
-      "base_url": "http://127.0.0.1:8000/v1",
+      "base_url": "http://127.0.0.1:8200/v1",
       "model": "deepseek/deepseek-chat",
       "model_tier": "DeepSeek Chat",
       "provider_label": "project_description",

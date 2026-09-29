@@ -1,6 +1,33 @@
 # COGNITIVE_OS_TECHNICAL_BASELINE.md
 **Инженерная спецификация и требования к MVP**
 
+**Remote support (2026-09-28).** Opt-in supervisor accepts authenticated incident/
+context/patch messages through a file mailbox. Frozen local policy governs source
+exports, edits, checks, budgets and task continuation. A patch must reproduce the
+baseline failure, pass candidate/regression checks and resume in a fresh process.
+Duplicate delivery reuses a receipt. Interrupted side effects require reconciliation;
+release-pointer rollback is not task-data rollback. Trusted subprocess copies are
+not an OS sandbox. [Contract and limits](docs/architecture/remote_support.md).
+Qualified-spec adapter pins goal/source/role/test/transcript hashes and carries
+the inference ledger. Offline admission rechecks native acceptance; live resume
+requires reviewed delivery plus a separately frozen external checker. Optional
+worker-result metadata must agree with process success; failed usage is retained.
+Scope: qualified SpecWriter boundary, not arbitrary state migration.
+Live role workers require controller accounting (`role_ledger.v1`): reserve the
+remaining allowance before spawn and reconcile the pinned durable ledger after
+termination. Controller loss or an unresolved separate worker retains the hold.
+Local `reconcile --worker-stopped` requires termination confirmation and never
+reexecutes task effects. Optional Windows file-worker execution separates SIDs
+and controller/request ACLs; verified local fixture is not whole-host isolation.
+Prepared Windows service lifecycle binds identity, excludes duplicate hosts,
+stops active children and retains interrupted claims. A private runtime and
+hash-checked fresh installer are available. SCM installation and actual service
+ACL/offline admission are verified. Gateway defaults and managed launch now use
+127.0.0.1:8200; the service role continuation completed with23 native and36 external
+checks. Optional hash-bound known_calls preserve cache accounting evidence without
+replaying role decisions. SCM stop/restart remains separately unverified.
+[Deployment evidence](docs/architecture/remote_worker_8200_20260929.md).
+
 **Failure accounting (2026-09-25).** Gateway text-completion validation rejects
 missing/empty choices, messages or text with a structured502 rather than an
 unhandled exception. Available bounded usage and reported upstream model travel
@@ -562,7 +589,7 @@ Level 4 обязан сохранять goal session trace: исходная ц�
 
 Level 4 deliberation является auditable reasoning snapshot, а не исполняемым протоколом. Он фиксирует route, capability summary, memory/dialogue context, risk list, route alternatives, selected alternative и recommendation. Deliberation не имеет права заменять typed route decision, Pipeline DSL validation или policy gates.
 
-Для project-analysis целей Уровень 4 отвечает за человеческую интерпретацию результата. Он получает expanded bounded deterministic facts и `level35_project_signals`, после чего сохраняет `level4_project_interpretation`: executive summary, capability decomposition, refactor plan, cognitive loop, open questions и confidence. После интерпретации допускается deterministic synthesis в `analysis_tasks`: proposed backlog с task id, типом, target, priority, evidence и acceptance criteria. Поверх backlog сохраняется `architecture_synthesis`: проектный диагноз, целевая архитектурная форма, top bottlenecks, matched capability/risk patterns, relevant lessons, recommended first slice, what-not-to-touch-yet и verification plan. Этот артефакт строится knowledge-backed rule engine: runtime загружает декларативные записи из `knowledge/architecture_patterns/project_archetypes.json`, `capability_patterns.json`, `risk_patterns.json` и `project_lessons.json`, подбирает rule/patterns по evidence, фиксирует `matched_rule`/`matched_because` и интерпретирует recipe через allowlisted код. Knowledge base хранит правила/паттерны/рецепты/уроки и `source_scope_policy`, который разрешает использовать docs/examples/tests/extras как evidence, но не как first-slice targets при наличии core-source альтернатив. `knowledge/architecture_patterns/backlog.json` хранит кандидатов на будущие паттерны; это не ground truth и не исполняемый код. Capability/risk/lesson records являются advisory API для L4/Architect/SpecWriter: они подсказывают contracts, mitigations, tests и lessons, но не исполняются и не могут менять registry/runtime state. `analysis_tasks` и `architecture_synthesis` помогают превратить анализ в дальнейшую работу, но не являются Pipeline DSL, не исполняются автоматически и не меняют registry/runtime state. Уровень 4 может быть подключен только к отдельной cortex model с большим контекстным окном; default-профиль использует `deepseek/deepseek-chat` через OpenAI-compatible gateway `http://127.0.0.1:8000/v1` и переопределяется переменными `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`. Этот профиль отделен от локального Уровня 3.5, модели которого запрещены для L4. Вызов L4 остается явным; при недоступности cortex provider Уровень 4 обязан использовать controlled deterministic fallback без обращения к локальной LLM. Это речь/смысловой слой и постановщик задач, а не машинный протокол исполнения.
+Для project-analysis целей Уровень 4 отвечает за человеческую интерпретацию результата. Он получает expanded bounded deterministic facts и `level35_project_signals`, после чего сохраняет `level4_project_interpretation`: executive summary, capability decomposition, refactor plan, cognitive loop, open questions и confidence. После интерпретации допускается deterministic synthesis в `analysis_tasks`: proposed backlog с task id, типом, target, priority, evidence и acceptance criteria. Поверх backlog сохраняется `architecture_synthesis`: проектный диагноз, целевая архитектурная форма, top bottlenecks, matched capability/risk patterns, relevant lessons, recommended first slice, what-not-to-touch-yet и verification plan. Этот артефакт строится knowledge-backed rule engine: runtime загружает декларативные записи из `knowledge/architecture_patterns/project_archetypes.json`, `capability_patterns.json`, `risk_patterns.json` и `project_lessons.json`, подбирает rule/patterns по evidence, фиксирует `matched_rule`/`matched_because` и интерпретирует recipe через allowlisted код. Knowledge base хранит правила/паттерны/рецепты/уроки и `source_scope_policy`, который разрешает использовать docs/examples/tests/extras как evidence, но не как first-slice targets при наличии core-source альтернатив. `knowledge/architecture_patterns/backlog.json` хранит кандидатов на будущие паттерны; это не ground truth и не исполняемый код. Capability/risk/lesson records являются advisory API для L4/Architect/SpecWriter: они подсказывают contracts, mitigations, tests и lessons, но не исполняются и не могут менять registry/runtime state. `analysis_tasks` и `architecture_synthesis` помогают превратить анализ в дальнейшую работу, но не являются Pipeline DSL, не исполняются автоматически и не меняют registry/runtime state. Уровень 4 может быть подключен только к отдельной cortex model с большим контекстным окном; default-профиль использует `deepseek/deepseek-chat` через OpenAI-compatible gateway `http://127.0.0.1:8200/v1` и переопределяется переменными `COGNITIVE_OS_L4_MODEL` / `COGNITIVE_OS_L4_BASE_URL`. Этот профиль отделен от локального Уровня 3.5, модели которого запрещены для L4. Вызов L4 остается явным; при недоступности cortex provider Уровень 4 обязан использовать controlled deterministic fallback без обращения к локальной LLM. Это речь/смысловой слой и постановщик задач, а не машинный протокол исполнения.
 
 Для project-analysis интерпретаций L4 дополнительно проходит deterministic quality gate. `runtime/project_l4_quality.py` оценивает `summary_grounding`, `capability_grounding`, `actionability` и `uncertainty_honesty`; `tools/github_l4_interpretation_probe.py` применяет этот gate к GitHub benchmark corpus. Успешный gate требует внешнего L4-вызова без fallback, отсутствия context-only capabilities и нулевого списка quality warnings. Это защищает систему от красивых, но незаземленных формулировок.
 

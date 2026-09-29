@@ -58,7 +58,7 @@ WEB_RESEARCH_SUMMARIZER_PROMPT = (
 WEB_RESEARCH_FASTAPI_PROMPT = (
     "Напиши приложение с интерфейсом FastAPI, которое принимает фразу для поиска в интернете, "
     "выполняет поиск, берет топ 20 найденных страниц, анализирует их содержимое и выдает одно "
-    "итоговое суммари с помощью LLM GigaChat через OpenAI-compatible gateway http://127.0.0.1:8000/v1."
+    "итоговое суммари с помощью LLM GigaChat через OpenAI-compatible gateway http://127.0.0.1:8200/v1."
 )
 
 def test_prompt_adequacy_gate_accepts_bounded_cli_prompt():
@@ -326,7 +326,7 @@ def test_verified_system_package_builds_web_research_fastapi_service(tmp_path: P
     assert report["generated_product_quality"]["score"] >= 0.92
     assert (project_dir / "src" / "web_research_service" / "app.py").is_file()
     llm_client = (project_dir / "src" / "web_research_service" / "llm_client.py").read_text(encoding="utf-8")
-    assert "DEFAULT_BASE_URL = 'http://127.0.0.1:8000/v1'" in llm_client
+    assert "DEFAULT_BASE_URL = 'http://127.0.0.1:8200/v1'" in llm_client
     assert "DEFAULT_MODEL = 'GigaChat'" in llm_client
 
 

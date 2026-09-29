@@ -89,7 +89,7 @@ def _test_llm_client() -> str:
         "    monkeypatch.setattr(llm_client, 'urlopen', fake_urlopen)\n"
         "    text = llm_client.summarize_with_llm('q', [{'title': 't', 'url': 'https://e.test', 'text': 'body'}])\n"
         "    assert text == 'Итоговое суммари'\n"
-        "    assert captured['url'] == 'http://127.0.0.1:8000/v1/chat/completions'\n"
+        "    assert captured['url'] == 'http://127.0.0.1:8200/v1/chat/completions'\n"
         "    assert captured['body']['model'] == 'GigaChat'\n"
     )
 

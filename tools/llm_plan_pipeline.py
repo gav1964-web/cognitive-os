@@ -12,7 +12,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--goal", required=True)
-    parser.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
+    parser.add_argument("--base-url", default="http://127.0.0.1:8200/v1")
     parser.add_argument("--model", default="local")
     parser.add_argument("--timeout", type=float, default=60.0)
     parser.add_argument("--no-response-format", action="store_true")

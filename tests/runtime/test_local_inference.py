@@ -143,7 +143,7 @@ def test_l45_inference_defaults_to_deepseek_profile(monkeypatch):
 
     config = LocalInferenceConfig.from_l45_env()
 
-    assert config.base_url == "http://127.0.0.1:8000/v1"
+    assert config.base_url == "http://127.0.0.1:8200/v1"
     assert config.model == "deepseek/deepseek-chat"
     assert config.timeout_seconds == 60
     assert config.response_format is True

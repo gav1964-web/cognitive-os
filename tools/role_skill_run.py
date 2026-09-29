@@ -33,7 +33,7 @@ def main() -> int:
     parser.add_argument("--test-result")
     parser.add_argument("--constraint", action="append", default=[])
     parser.add_argument("--use-architect-llm", action="store_true")
-    parser.add_argument("--architect-base-url", default="http://127.0.0.1:8000/v1")
+    parser.add_argument("--architect-base-url", default="http://127.0.0.1:8200/v1")
     parser.add_argument("--architect-model", default="local")
     parser.add_argument("--architect-timeout", type=float, default=20.0)
     parser.add_argument("--architect-no-response-format", action="store_true")

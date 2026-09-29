@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from .feature_acceptance import save
-from .feature_checkpoint import verified_candidate, rejected_candidate
+from .feature_checkpoint import verified_candidate, rejected_candidate, qualified_spec
 from .feature_spec_witness import RejectedCandidateWitness
 from .feature_quality_challenge import challenge_with_feedback
 from .feature_challenges import check_challenges
@@ -56,6 +56,10 @@ def run_quality_development(*, project, work, goal, python, chat, configs,
                 q.feedback = {'owner': owner, 'review': prior['artifacts']['reviewer'],
                               'instruction': 'Repair the rejected candidate or acceptance; preserve accepted tests.'}
                 report['resumed_rejected_review'] = str(resume_roles)
+            elif qualified_spec(resume_roles) is not None:
+                from .feature_quality_resume import restore_qualified_spec
+                resume_roles = restore_qualified_spec(q, resume_roles, project, expected, goal)
+                report['resumed_qualified_spec'] = resume_roles
             else:
                 from .feature_quality_resume import restore_spec_draft
                 resume_roles = restore_spec_draft(q, resume_roles, project, expected, goal)
