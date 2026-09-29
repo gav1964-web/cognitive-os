@@ -132,6 +132,17 @@ def test_context_roundtrip_and_denied_export(setup_support):
     assert denied['payload']['reason'] == 'support_context_not_authorized'
 
 
+def test_exported_utf8_bytes_match_bound_source_hash_on_windows(setup_support):
+    supervisor, incident, source, _ = setup_support()
+    # write_text in the fixture produces CRLF on Windows. Export must not
+    # silently normalize those bytes while advertising their original digest.
+    exported = incident['payload']['sources'][MODULE].encode('utf-8')
+    assert exported == (source / MODULE).read_bytes()
+    assert digest(exported) == incident['payload']['source_hashes'][MODULE]
+    context = supervisor.receive(response(incident, 'context_request'))
+    assert context['payload']['sources'][MODULE].encode('utf-8') == exported
+
+
 @pytest.mark.parametrize('failure', ['mac', 'incident', 'reply', 'stale'])
 def test_binding_rejects_tampering(setup_support, failure):
     supervisor, incident, _, _ = setup_support()

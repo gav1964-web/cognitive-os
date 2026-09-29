@@ -37,7 +37,7 @@ def main() -> int:
     env = os.environ.copy()
     env.update({"TMP": str(process_temp), "TEMP": str(process_temp), "TMPDIR": str(process_temp)})
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", f"--confcutdir={root}",
+        [sys.executable, "-m", "pytest", "--import-mode=importlib", f"--confcutdir={root}",
          f"--basetemp={base_temp / 'tests'}", *test_paths],
         cwd=str(root),
         env=env,

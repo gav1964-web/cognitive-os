@@ -1,10 +1,45 @@
 import json
+import hashlib
 
 import pytest
 
 from runtime.feature_inference import FeatureChat
 from runtime.feature_usage import reconcile_feature_usage
 from runtime.local_inference import LocalInferenceConfig
+
+
+@pytest.mark.parametrize('mismatch', [None, 'content', 'hash', 'truncated', 'model', 'request'])
+def test_failed_cache_requires_identical_complete_wire_evidence(tmp_path, mismatch):
+    from runtime.local_inference import LocalInferenceError
+    messages = [{'role': 'user', 'content': 'task'}]
+    cfg = LocalInferenceConfig('http://unused', 'fake', max_output_tokens=32768)
+    def transport(cached):
+        def call(messages, *, config):
+            content = '{} {}' if not cached or mismatch != 'content' else '{} []'
+            raw = content.encode('utf-8')
+            config.telemetry_sink({'requested_model': 'fake', 'total_tokens': 0 if cached else 5,
+                'usage_reported': True, 'gateway_route': {'cache_hit': cached}})
+            config.raw_response_sink({'requested_model': 'fake', 'model': 'fake',
+                'content': content, 'content_bytes': len(raw), 'finish_reason': 'stop',
+                'content_sha256': 'bad' if cached and mismatch == 'hash' else hashlib.sha256(raw).hexdigest(),
+                'truncated': bool(cached and mismatch == 'truncated')})
+            raise LocalInferenceError('structured response is not a complete JSON object')
+        return call
+    first = FeatureChat(tmp_path / 'first', transport=transport(False))
+    with pytest.raises(LocalInferenceError):
+        first(messages, config=cfg)
+    known = first.attempts
+    if mismatch == 'model':
+        known[0]['response_evidence'][0]['model'] = 'other'
+    if mismatch == 'request':
+        known[0]['messages'] = [{'role': 'user', 'content': 'other'}]
+    second = FeatureChat(tmp_path / 'second', carry=first.ledger,
+        known_calls=known, transport=transport(True))
+    with pytest.raises(LocalInferenceError):
+        second(messages, config=cfg)
+    assert second.unknown_stopped is (mismatch is not None)
+    assert second.attempts[-1]['status'] == 'failed'
+    assert second.attempts[-1]['usage_known'] is (mismatch is None)
 
 
 @pytest.mark.parametrize('complete', [True, False])

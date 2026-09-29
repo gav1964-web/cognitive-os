@@ -29,6 +29,25 @@ parameter combinations. Equivalent changes or masked predicate differences do
 not count as defects. No project names or fixture-specific algorithms enter
 production policy. Tests: `tests/test_boundary_probes.py`.
 
+Version0.1.3 asks Architect to connect changed decisions to observable preservation
+invariants and downstream consumers. SpecWriter supplies a small `contrast_pairs`
+index linking executable positive/negative or boundary/control examples. Optional
+pair metadata is checked for real, unambiguous new/selected test nodes; parameterized
+cases are allowed. This structural check does not prove different public results:
+for parametrized references it resolves the base test symbol, not collected case IDs.
+The existing semantic auditor inspects assertions and native qualification still
+runs. Missing metadata remains compatible with historical artifacts. Knowledge
+explicitly rejects blanket rejection/empty-result fixes that pass only negative
+examples. Tests: `tests/test_contrast_cases.py`.
+
+Auditors must bind requested changes to the explicit user-goal boundary. A
+pre-existing defect in an adjacent producer is separate debt unless its repair
+is necessary for that boundary. Unsupported end-to-end claims should be narrowed;
+they must not silently expand implementation and acceptance scope. This policy
+also applies when an earlier audit introduced the expansion. The three-project
+measurement and its retained failed attempt are documented in
+`docs/architecture/roles_package_20260929.md`.
+
 The sealed native evaluator accepts either the legacy single source string or
 a mapping of production paths to contents for reference/original/mutants. It
 copies all admitted candidate production files, including newly added helpers,

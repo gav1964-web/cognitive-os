@@ -1,6 +1,6 @@
 {
   "id": "development_quality",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "entrypoint": "plugins.development_quality.src.main:run",
   "determinism_grade": "A",
   "side_effects": {
@@ -12,6 +12,7 @@
   "test_paths": [
     "plugins/development_quality/tests/test_contract.py",
     "plugins/development_quality/tests/test_boundary_probes.py",
-    "plugins/development_quality/tests/test_draft_cases.py"
+    "plugins/development_quality/tests/test_draft_cases.py",
+    "plugins/development_quality/tests/test_contrast_cases.py"
   ]
 }

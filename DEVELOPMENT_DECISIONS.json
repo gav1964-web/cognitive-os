@@ -1715,21 +1715,6 @@
       "recorded_at": "2026-09-28T03:58:42+00:00"
     },
     {
-      "id": "bounded-role-quality-repair",
-      "decision": "Plugin owns role quality knowledge; runtime routes bounded feedback, freezes accepted tests and valid fault campaigns, and tries the prior verified candidate before another programming call.",
-      "rationale": "Calibration exposed false rejection of existing regression nodes, lost survivor feedback and moving mutation targets. A source-bound fixed campaign makes completion reviewable; a failed challenge is never success. Role numbers on small synthetic cohorts remain local evidence, not product certification. Final calibration also fixed witness filename collisions and explicitly declares edits as an array. Native tests cover freeze, retry and candidate reuse. Final policy adds separate coverage audit and immutable old-test context; five fresh transfer tasks execute with frozen source/KB. Native sensitivity still exposes a pagination gap; auditor approval is not proof of completeness. Keep quality route opt-in. Reviewed2026-09-27 boundary continuation: target ownership and carried unknown reserve preserved; AST boundary variants remain unvalidated until goal-backed native witness. See role_boundary report. Multi-file pilot review: source/target boundaries retained; empty-file reads preserve explicit empty evidence; missing expected exceptions count as contract assertions. Budget gate remains intact; draft is not promoted. Reviewed20260927 GeminiVM: no target patch or score gain. Pending draft/audit now persists across read for same goal/design; native qualification remains mandatory after audit. Offline checks only after this change; live effect unknown. Reviewed20260927 continuation: generic resume/routing and bounded append-only tests preserve prior candidate bytes; native/audit and usage gates retained. GeminiVM508/508 offline, manual target edits0; live SSH blocked; no new global score. Historical series ceilings unchanged; current GeminiVM series explicitly authorized2.5M,1564240 reported. Reviewed20260928 context stage:212/212 focused feature tests; exact catalogs and explicit SpecWriter reads retained; partial correction cannot replace complete draft; split transcript resume validates source excerpts. GeminiVM rich-format repair NOT complete; no new inference or target edits; budget admission417810 exceeds remaining321271. See stage-1395908cbd/report.json. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md.",
-      "source_hashes": {
-        "runtime/feature_quality.py": "e15580ca2a8325d72392b812617e7e233b89365e40c9ff30c42e9d8d687c4748",
-        "runtime/feature_quality_chat.py": "18297de93c6cbfa4ad80ec0602436d5fd14cc6c66809093cdc903e6486d0a431",
-        "runtime/feature_quality_challenge.py": "ba0e5ce71b54a2630199774dd7dc5fbe05194254972748f11ed73b9ee3827566",
-        "runtime/feature_challenges.py": "7d1b12e5a7ee2dda8abe6a5a1910a719b6029bb1a7fc5ac4f22f12bc4c387b80",
-        "plugins/development_quality/src/main.py": "a50bef8340c8e3efb0c35dc51ecede01f8a1d9b61c94d25e201c8e9ce6665160",
-        "plugins/development_quality/knowledge/policy.json": "100d6a212746edebe1dbac83ab5ea6155c0f4cc8284ce42a1f14985b79d3cf3e"
-      },
-      "reconsider_when": "Role contracts, candidate reuse, source hashes, fault validation, test freeze or budget rules change.",
-      "recorded_at": "2026-09-28T03:58:43+00:00"
-    },
-    {
       "id": "quality-feedback-survives-read",
       "decision": "Keep complete unaccepted draft and audit across reads and incomplete corrections for unchanged goal/design/source; admission still requires fresh audit and native qualification.",
       "rationale": "GeminiVM live attempt exposed loss of role feedback and impossible requests for native receipts before qualification. No manual target repair or audit bypass. Corrected offline; live task remains unfinished. Reviewed20260927 continuation: generic resume/routing and bounded append-only tests preserve prior candidate bytes; native/audit and usage gates retained. GeminiVM508/508 offline, manual target edits0; live SSH blocked; no new global score. Historical series ceilings unchanged; current GeminiVM series explicitly authorized2.5M,1564240 reported. Reviewed20260928 context stage:212/212 focused feature tests; exact catalogs and explicit SpecWriter reads retained; partial correction cannot replace complete draft; split transcript resume validates source excerpts. GeminiVM rich-format repair NOT complete; no new inference or target edits; budget admission417810 exceeds remaining321271. See stage-1395908cbd/report.json. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md.",
@@ -1787,22 +1772,6 @@
       },
       "reconsider_when": "Review requests preservation or nonbehavioral changes; witness cannot establish semantic relevance or source binding changes.",
       "recorded_at": "2026-09-28T04:52:18+00:00"
-    },
-    {
-      "id": "draft-test-case-continuity",
-      "decision": "Plugin-owned case continuity detects disappearing test functions before paid audit. Moves and explicitly explained replacements require fresh semantic audit; unaccepted bodies remain editable. case_plan capacity128 reports actual row count.",
-      "rationale": "Six lost cases reproduced from saved COS403 reply. Latest COS404 draft keeps prior cases,32 plan rows, native3 assertion failures/6passed.247 broad regressions before capacity correction and19 focused checks afterward pass; architecture5/5 and packages60. GeminiVM repair not completed: fresh audit requires536532 reserve >529638 remaining under user4M ceiling. No target install or role score increase.",
-      "source_hashes": {
-        "plugins/development_quality/src/draft_cases.py": "4039e7b2e711522d90dfb77b3f430c0e43b3a8fc5a4141e7b9b984d5683d59af",
-        "plugins/development_quality/src/main.py": "5e76bdc246cf0591d179ef71d8a9aec87085be4e1745c0a33c2ae255f1c49a6f",
-        "plugins/development_quality/knowledge/policy.json": "3acb3897a2de712d0a460f58c83deface3db5519ce8be38730faf51e51b89fe4",
-        "runtime/feature_quality_chat.py": "b174185ea12ab825415aefe25d6da68602812966efc98e89e78e1c220b51f25c",
-        "runtime/feature_quality_draft.py": "8b6e8b4e8aff6cc793e501da8b9ee147be2d8a3664e4204fb68ad6f8a3c7135f",
-        "tests/runtime/test_feature_draft_case_continuity.py": "a30931321dd19e17087a0e751346a92762bd34d9121a1f85cbc158745b92e862",
-        "plugins/development_quality/tests/test_contract.py": "8bfdccf0096669302d8133cd88d590f32b48fc482663f1e2a72ea548675f15cb"
-      },
-      "reconsider_when": "Need parameter-level coverage identity, legitimate case removal, or changed draft/admission contracts. Stable names and mappings are not semantic evidence.",
-      "recorded_at": "2026-09-28T06:06:30+00:00"
     },
     {
       "id": "immutable-test-drift-feedback",
@@ -1927,6 +1896,52 @@
       },
       "reconsider_when": "Actual SCM install/ACL probe, arbitrary domain groups, service runtime updates, role dependency provisioning, or trusted-worker assumptions change.",
       "recorded_at": "2026-09-29T00:11:46+00:00"
+    },
+    {
+      "id": "bounded-role-quality-repair",
+      "decision": "Plugin owns role quality knowledge; runtime routes bounded feedback, freezes accepted tests and valid fault campaigns, and tries the prior verified candidate before another programming call.",
+      "rationale": "Calibration exposed false rejection of existing regression nodes, lost survivor feedback and moving mutation targets. A source-bound fixed campaign makes completion reviewable; a failed challenge is never success. Role numbers on small synthetic cohorts remain local evidence, not product certification. Final calibration also fixed witness filename collisions and explicitly declares edits as an array. Native tests cover freeze, retry and candidate reuse. Final policy adds separate coverage audit and immutable old-test context; five fresh transfer tasks execute with frozen source/KB. Native sensitivity still exposes a pagination gap; auditor approval is not proof of completeness. Keep quality route opt-in. Reviewed2026-09-27 boundary continuation: target ownership and carried unknown reserve preserved; AST boundary variants remain unvalidated until goal-backed native witness. See role_boundary report. Multi-file pilot review: source/target boundaries retained; empty-file reads preserve explicit empty evidence; missing expected exceptions count as contract assertions. Budget gate remains intact; draft is not promoted. Reviewed20260927 GeminiVM: no target patch or score gain. Pending draft/audit now persists across read for same goal/design; native qualification remains mandatory after audit. Offline checks only after this change; live effect unknown. Reviewed20260927 continuation: generic resume/routing and bounded append-only tests preserve prior candidate bytes; native/audit and usage gates retained. GeminiVM508/508 offline, manual target edits0; live SSH blocked; no new global score. Historical series ceilings unchanged; current GeminiVM series explicitly authorized2.5M,1564240 reported. Reviewed20260928 context stage:212/212 focused feature tests; exact catalogs and explicit SpecWriter reads retained; partial correction cannot replace complete draft; split transcript resume validates source excerpts. GeminiVM rich-format repair NOT complete; no new inference or target edits; budget admission417810 exceeds remaining321271. See stage-1395908cbd/report.json. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md. Reviewed20260929: optional contrast references retain draft continuity/native gates; goal-bound audit prevents unrelated producer repair. Three real-source tasks73/73, intermediate scope failure retained; local assistant grades only. See roles_package_20260929.md.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "89c5fbab4004cfd4450971488ace849df525b2648131f0348ca2a52a49b3e1dc",
+        "runtime/feature_quality_chat.py": "2a6f49d71e72e908d0c42ba3dd74189c50d209565c9e0eab80909f16ac1d5eb4",
+        "runtime/feature_quality_challenge.py": "ba0e5ce71b54a2630199774dd7dc5fbe05194254972748f11ed73b9ee3827566",
+        "runtime/feature_challenges.py": "7d1b12e5a7ee2dda8abe6a5a1910a719b6029bb1a7fc5ac4f22f12bc4c387b80",
+        "plugins/development_quality/src/main.py": "72698c444879aad1c453dd9e8771fb8d93527756d0462e5e764662205b8ed496",
+        "plugins/development_quality/knowledge/policy.json": "aa997ba599a4bbd759c8dffde7c8c7659ccca4bfea86563d08669a4d447814ad"
+      },
+      "reconsider_when": "Role contracts, candidate reuse, source hashes, fault validation, test freeze or budget rules change.",
+      "recorded_at": "2026-09-29T02:06:43+00:00"
+    },
+    {
+      "id": "draft-test-case-continuity",
+      "decision": "Plugin-owned case continuity detects disappearing test functions before paid audit. Moves and explicitly explained replacements require fresh semantic audit; unaccepted bodies remain editable. case_plan capacity128 reports actual row count.",
+      "rationale": "Six lost cases reproduced from saved COS403 reply. Latest COS404 draft keeps prior cases,32 plan rows, native3 assertion failures/6passed.247 broad regressions before capacity correction and19 focused checks afterward pass; architecture5/5 and packages60. GeminiVM repair not completed: fresh audit requires536532 reserve >529638 remaining under user4M ceiling. No target install or role score increase. Reviewed20260929: optional contrast references retain draft continuity/native gates; goal-bound audit prevents unrelated producer repair. Three real-source tasks73/73, intermediate scope failure retained; local assistant grades only. See roles_package_20260929.md.",
+      "source_hashes": {
+        "plugins/development_quality/src/draft_cases.py": "4039e7b2e711522d90dfb77b3f430c0e43b3a8fc5a4141e7b9b984d5683d59af",
+        "plugins/development_quality/src/main.py": "72698c444879aad1c453dd9e8771fb8d93527756d0462e5e764662205b8ed496",
+        "plugins/development_quality/knowledge/policy.json": "aa997ba599a4bbd759c8dffde7c8c7659ccca4bfea86563d08669a4d447814ad",
+        "runtime/feature_quality_chat.py": "2a6f49d71e72e908d0c42ba3dd74189c50d209565c9e0eab80909f16ac1d5eb4",
+        "runtime/feature_quality_draft.py": "61ef2bbac02d219dcd41b4fc6f8877fb227d20c6491f83f32e7f85810aea05b7",
+        "tests/runtime/test_feature_draft_case_continuity.py": "a30931321dd19e17087a0e751346a92762bd34d9121a1f85cbc158745b92e862",
+        "plugins/development_quality/tests/test_contract.py": "8bfdccf0096669302d8133cd88d590f32b48fc482663f1e2a72ea548675f15cb"
+      },
+      "reconsider_when": "Need parameter-level coverage identity, legitimate case removal, or changed draft/admission contracts. Stable names and mappings are not semantic evidence.",
+      "recorded_at": "2026-09-29T02:06:43+00:00"
+    },
+    {
+      "id": "goal-bound-contrast-and-file-support-evidence",
+      "decision": "Keep quality/contrast/scope knowledge in development_quality; byte-exact support export and exact cached failure reconciliation stay in domain-neutral runtime.",
+      "rationale": "Real-source cohort exposed auditor-induced scope expansion, CRLF hash mismatch in file support and zero-usage parser failures from cache. Fixes preserve acceptance/usage boundaries. Final3 candidates73/73; introduced-fault service repair succeeds. Intermediate590023-token VR failure is retained and local scores are not certification.",
+      "source_hashes": {
+        "plugins/development_quality/knowledge/policy.json": "aa997ba599a4bbd759c8dffde7c8c7659ccca4bfea86563d08669a4d447814ad",
+        "plugins/development_quality/src/contrast_cases.py": "f63844969a34fdf5fb537a6f4604970ae7be6312a1c1abb08984dedec2c77e2c",
+        "runtime/remote_support_supervisor.py": "0f5a2eb9783359e1bbe06ea8716c765011271722b798cac380cc8fb3fc0ceb52",
+        "runtime/feature_usage.py": "9c44ff61565a4044db69873b0f6040e6ccbea04c66d19ba883e276bd70d8e88f",
+        "tests/runtime/test_feature_usage.py": "5ce08082d54b3f04e298e78527cee5ca1d42ebcf3f0a7a8f51881f7bc68fef79",
+        "tests/runtime/test_remote_support.py": "9be4042b166b5cd8af4f08cb95caa93a1df763494e3caeb9c51fafa0e97eb93c"
+      },
+      "reconsider_when": "Goal authority, case-ID validation, file encoding, response evidence or cache accounting rules change.",
+      "recorded_at": "2026-09-29T02:06:44+00:00"
     }
   ]
 }

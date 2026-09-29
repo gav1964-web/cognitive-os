@@ -1,5 +1,10 @@
 # Execution: исполнение и восстановление
 
+[Пакет29.09](roles_package_20260929.md): файловый ремонт через установленную
+службу проверен; экспорт исходников сохраняет CRLF и подписанные хеши.
+`feature_usage` сверяет полный wire-ответ кэшированной ошибки, не принимая
+ошибочный JSON как результат. Тесты: `test_remote_support.py`, `test_feature_usage.py`.
+
 [Постоянный Windows worker](remote_worker_service_20260928.md):
 `runtime/remote_support_daemon.py`, `runtime/remote_support_deployment.py`,
 `tools/remote_support_service.py`, `tools/prepare_remote_worker.py`,

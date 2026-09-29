@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from .boundary_probes import boundary_probes
 from .draft_cases import compare_draft
+from .contrast_cases import validate_contrasts
 
 
 def policy():
@@ -27,6 +28,7 @@ def validate(role, artifact, sources=()):
                     isinstance(row[f], str) and not row[f].strip() for f in fields) for row in rows):
                 issues.append(f'{key}: each case needs {fields}')
     elif role == 'spec_writer':
+        issues.extend(validate_contrasts(artifact, sources))
         names = set()
         existing = set()
         for source in sources:

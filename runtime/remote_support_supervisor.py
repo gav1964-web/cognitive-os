@@ -138,7 +138,7 @@ class SupportSupervisor:
                 state['status'] = 'needs_operator'
                 return self._reply(state, 'result', self._receipt(state, policy, 'unclassified_task_failure'))
             state['status'] = 'waiting'
-            contents = {name: owned(self.home / 'releases/baseline', name).read_text(encoding='utf-8')
+            contents = {name: owned(self.home / 'releases/baseline', name).read_bytes().decode('utf-8')
                         for name in policy['export']}
             return self._reply(state, 'incident', {
                 'task': policy['task'], 'checkpoint': policy['checkpoint'],
@@ -275,7 +275,7 @@ class SupportSupervisor:
         return self._reply(state, 'context', {'base': digest(state['baseline']),
             'diagnostic': diagnostic,
             'remaining_tokens': max(0, policy['max_tokens'] - state['tokens'] - state['unknown_reserved']),
-            'sources': {name: owned(root, name).read_text(encoding='utf-8') for name in paths}})
+            'sources': {name: owned(root, name).read_bytes().decode('utf-8') for name in paths}})
 
     def _patch(self, state, policy, payload):
         if state['attempts'] >= policy['max_attempts']:

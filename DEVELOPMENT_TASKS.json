@@ -289,9 +289,9 @@
       "blocking": false,
       "priority": 2,
       "dependencies": [],
-      "next_action": "Use this documented false approval as evidence for a generic role-quality evaluation: positive controls for negative fixtures, unknown structural content classes, batched substantive audit feedback and measured whole-cycle cost. Avoid Gemini-specific branches; intermediate green acceptance is not certification. Advisory future work; do not gate unrelated development.",
+      "next_action": "Generic positive controls, batched audit policy and goal-bound scope now tested on3 real-source tasks; see roles_package_20260929 report. Further structural-unknown content transfer remains advisory. Next preserve Reviewer-discovered concrete counterexamples in append-only acceptance; do not add target-specific branches or call local grades certification.",
       "notes": [],
-      "updated_at": "2026-09-28T08:00:23+00:00"
+      "updated_at": "2026-09-29T02:06:42+00:00"
     },
     {
       "id": "work-38582eea97b37757",
@@ -503,18 +503,52 @@
       "kind": "evaluation",
       "path": "docs/architecture/role_multifile_20260927.md",
       "owner": "assistant",
-      "status": "open",
+      "status": "resolved",
       "blocking": false,
       "priority": 1,
       "dependencies": [],
-      "next_action": "Multi-file pilot COMPLETED by COS: native27/27, independent18/18, no manual target edits. Final reference calibration INVALID: COS found reference long-decimal defect; no role-score promotion. Do not rerun this fixture for grades. Next select a concrete real-project change with independent acceptance, preserved data and assistant changes confined to COS. Revalidate reference boundaries before future scoring. Same series limit2.3M, reported1877296 + unknown182841. Carry artifacts/role_alignment_20260927/ledger-pointer.json; never reset usage.",
+      "next_action": "none",
       "notes": [
         "Owner corrected gateway output bottleneck: project5 default and API ceiling now32768, live restarted,41 gateway tests passed. New reasoning experiments must explicitly reserve/use32768 instead of recycling old4096 run scripts. Preserve old protocols and ledgers. Exact formerly empty GLM request repeated once in long-output-protocol.json; no new role-score credit.",
         "Exact GLM retry with32768 returned JSON using6339 prompt +17027 completion =23366 reported tokens in325.825s; previous4096 response was empty. See long-output-result.json and long-output-response.json. Only diagnosis obtained; candidate/native repair not yet run. Gateway41 and COS22 focused tests pass, stage-c2c0f54566.",
         "Bounded step1 completed: COS code unchanged at bd64a43f; GLM32768 repairs autoflake (175 native +7 review cases), comma consumes32768 output with empty final response. Two paid calls/55614 tokens; cached prior diagnosis reused on exact messages. See docs/architecture/step1_output_budget_20260919.md. All earlier outcomes and scores retained.",
         "Two new-to-series COS defects compared:4 calls18852 reported tokens, valid schemas4/4, admitted designs0/4; combined three-role artifacts, not production role certification. See docs/architecture/api_roles_20260924.md"
       ],
-      "updated_at": "2026-09-27T15:42:57+00:00"
+      "updated_at": "2026-09-27T15:42:57+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Three bounded real-source tasks completed by COS; sealed73/73. No manual target edits or global score certification. Old series history retained; new package explicitly authorized5M.",
+        "evidence": [
+          "docs/architecture/roles_package_20260929.md",
+          "artifacts/roles_package_20260929/summary.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "docs/architecture/roles_package_20260929.md",
+            "sha256": "d154d7057dd1e672bf649f95ae443c6f9925814ded07ffacc0ba0796e987d2b0"
+          },
+          {
+            "path": "artifacts/roles_package_20260929/summary.json",
+            "sha256": "aaaac85c2238d4e2aa04be8b59296e383db4e7f56cafe482dbce0276e7c78d3a"
+          }
+        ],
+        "resolved_at": "2026-09-29T02:06:42+00:00",
+        "source_sha256": "37c85b66db9102c6bc3e24ac456eb5628843ed3935b9370ac69d614af0a22886"
+      }
+    },
+    {
+      "id": "work-467d1b590b18f87f",
+      "key": "role-quality-fresh-transfer-scope-and-counterexamples",
+      "kind": "evaluation",
+      "path": "docs/architecture/roles_package_20260929.md",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "New bounded real-source cohort using final scope policy; measure first-attempt success, final artifact quality and whole-cycle cost separately. General COS changes only: preserve Reviewer counterexamples as tests; validate Analyzer source ranges. Do not replay completed3 tasks for grades. Read package summary; existing5M series carries1,351,098 reported,unknown0. Installation of isolated candidates requires separate integration review.",
+      "notes": [],
+      "updated_at": "2026-09-29T02:06:42+00:00"
     },
     {
       "id": "work-5485a32405eba4aa",
@@ -632,13 +666,38 @@
       "kind": "evaluation",
       "path": "runtime/claim_suite_budget.py",
       "owner": "assistant",
-      "status": "open",
+      "status": "resolved",
       "blocking": false,
       "priority": 3,
       "dependencies": [],
-      "next_action": "BudgetedChat marked gateway cached response unknown because total_tokens0. Specific call resolved by preserved local early-return evidence in artifacts/ultra_code_format_20260924/cache-audit.json. Future COS-owned change may distinguish verifiable gateway cache hits from genuinely unknown usage; keep fail-closed for noncache zero/missing/invalid telemetry. No calls required to reproduce.",
+      "next_action": "none",
       "notes": [],
-      "updated_at": "2026-09-24T19:08:28+00:00"
+      "updated_at": "2026-09-24T19:08:28+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "FeatureChat reconciles exact paid request/response history, including full captured parser failures, through carried ledger. Other zero/missing usage remains reserved; no blanket gateway cache trust.",
+        "evidence": [
+          "docs/architecture/roles_package_20260929.md",
+          "artifacts/roles_package_20260929/cache-reconciliation.json",
+          "artifacts/roles_package_20260929/cache-failure-tests.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "docs/architecture/roles_package_20260929.md",
+            "sha256": "d154d7057dd1e672bf649f95ae443c6f9925814ded07ffacc0ba0796e987d2b0"
+          },
+          {
+            "path": "artifacts/roles_package_20260929/cache-reconciliation.json",
+            "sha256": "1f17c04ae9bd855e4491953faad7fa5921399396b9588cf0c32924af63c43272"
+          },
+          {
+            "path": "artifacts/roles_package_20260929/cache-failure-tests.xml",
+            "sha256": "38eaac9d1a12d821ddbee8e048e34fad62dda159465afab906f3b05966c690ef"
+          }
+        ],
+        "resolved_at": "2026-09-29T02:06:42+00:00",
+        "source_sha256": "a78f0156b902fbbd427a52deade924ea96385920483f61b21d4dfa1b928fd367"
+      }
     },
     {
       "id": "work-0c3bac04ce227059",
@@ -1627,11 +1686,11 @@
       "blocking": false,
       "priority": 2,
       "dependencies": [],
-      "next_action": "20260924 first known check_plugins defect fixed and actual38-plugin check passed; see docs/architecture/plugin_test_ownership_20260924.md. Historical20260919 full core541 failures46 errors were not rerun or classified by this task. Preserve old receipts; next classify one remaining focused failure from saved output, do not claim full CI green or repeat broad suite to rediscover environment failures.",
+      "next_action": "Current38-plugin check passes after check_plugins explicitly uses importlib to avoid test_contract.py name collisions. See roles_package_20260929/plugin-verification-final.json. Historical20260919 core541 failures46 errors still unclassified; do not claim whole CI green or repeat broad suite merely for environment failures.",
       "notes": [
         "2026-09-24 current defect reconfirmed offline; paired model designs rejected, no patch applied. See artifacts/api_roles_20260924/semantic-review.json; task remains open."
       ],
-      "updated_at": "2026-09-24T12:40:06+00:00"
+      "updated_at": "2026-09-29T02:06:42+00:00"
     },
     {
       "id": "work-3872dabf1905fb2b",
@@ -1643,9 +1702,9 @@
       "blocking": false,
       "priority": 3,
       "dependencies": [],
-      "next_action": "Installed service and live role continuation are verified; do NOT reinstall or repeat completed role task. Read docs/architecture/remote_worker_8200_20260929.md and artifacts/remote_worker_8200_20260929/summary.json. Gateway is8200;8000 retired. Remaining separate lifecycle check: SCM stop/restart during a harmless bounded job under administrator rights; current Alex token cannot control SCM. No LLM needed. If reusing this inference series, carry final ledger from live-cache-result.json: 57861 reported,unknown0,450000 total ceiling,13 counted slots of16. Pin known_calls history; original cache incident was superseded by exact reconciliation, not zeroed without evidence. Preserve all old releases, controller states and receipts.",
+      "next_action": "Service installed and running; gateway8200. File-only controlled repair through service verified in roles_package_20260929, CRLF export fixed. Do not reinstall. Remaining separate admin check: SCM stop/restart with harmless active job; current token denied winerror5. No LLM required. Old live series57861/450000 retained; new package1,351,098/5M has separate ledger-pointer.",
       "notes": [],
-      "updated_at": "2026-09-29T00:11:46+00:00"
+      "updated_at": "2026-09-29T02:06:42+00:00"
     },
     {
       "id": "work-5055158d3f6ff896",

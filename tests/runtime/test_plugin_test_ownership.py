@@ -20,7 +20,7 @@ def workspace(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['check_plugins', '--root', str(tmp_path)])
     def run(argv, **kwargs):
         calls.append(argv)
-        paths = argv[5:]
+        paths = [arg for arg in argv[3:] if not arg.startswith('--')]
         # Model pytest's stable exit codes instead of an assertion containing
         # a generator repr with a process-specific address in native evidence.
         code = result_code[0] if paths and all(Path(p).exists() for p in paths) else 4
@@ -50,7 +50,8 @@ def test_migrated_file_is_selected(workspace):
     plugin(root, test_paths=['tests/test_alpha.py'])
     expected = test_file(root, 'tests/test_alpha.py')
     assert main() == 0
-    assert calls[0][5:] == [expected]
+    assert calls[0][6:] == [expected]
+    assert '--import-mode=importlib' in calls[0]
 
 
 def test_legacy_directory_remains_supported(workspace):
@@ -58,7 +59,7 @@ def test_legacy_directory_remains_supported(workspace):
     plugin(root)
     test_file(root, 'plugins/alpha/tests/test_alpha.py')
     assert main() == 0
-    assert calls[0][5:] == [str((root/'plugins/alpha/tests').resolve())]
+    assert calls[0][6:] == [str((root/'plugins/alpha/tests').resolve())]
 
 
 def test_declared_paths_override_legacy_and_deduplicate(workspace):
@@ -69,7 +70,7 @@ def test_declared_paths_override_legacy_and_deduplicate(workspace):
     expected = test_file(root,'tests/test_shared.py')
     test_file(root,'plugins/alpha/tests/test_old.py')
     assert main() == 0
-    assert calls[0][5:] == [expected]
+    assert calls[0][6:] == [expected]
 
 
 @pytest.mark.parametrize('declaration', [[], '', None, [''], [17], ['missing.py'],

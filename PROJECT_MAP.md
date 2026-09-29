@@ -1,5 +1,8 @@
 # Cognitive OS: карта проекта
 
+[Три реальные задачи и файловый ремонт COS](docs/architecture/roles_package_20260929.md):
+73/73 внешней приёмки, локальные оценки первых трёх ролей и сохранённые неудачи.
+
 [Постоянная служба файлового worker](docs/architecture/remote_worker_service_20260928.md):
 SCM host, отдельный runtime и проверяемый установочный пакет.
 [Установка проверена](docs/architecture/remote_worker_live_20260928.md): ACL и

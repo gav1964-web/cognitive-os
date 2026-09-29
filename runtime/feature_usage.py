@@ -1,5 +1,6 @@
 """Reconcile saved, locally trusted provider telemetry without another request."""
 import json
+import hashlib
 from pathlib import Path
 
 from .claim_suite_budget import _read
@@ -9,16 +10,36 @@ from .inference_failure_evidence import checked_usage
 from .narrow_type_evidence_binding import content_digest
 
 
+def _failed_response_identity(call):
+    """Bind a parser failure to complete captured wire content, never accept it."""
+    rows = call.get('response_evidence', [])
+    if call.get('status') != 'failed' or len(rows) != 1:
+        return None
+    row = rows[0]
+    content = row.get('content')
+    if not isinstance(content, str) or not content or row.get('truncated') is not False:
+        return None
+    raw = content.encode('utf-8')
+    if (row.get('content_bytes') != len(raw) or
+            row.get('content_sha256') != hashlib.sha256(raw).hexdigest()):
+        return None
+    return (row.get('requested_model'), row.get('model'), content, row.get('finish_reason'))
+
+
 def _known_cache_replay(call, previous):
     events = call.get('telemetry', [])
-    if (call.get('status') != 'returned' or not events
+    if (call.get('status') not in ('returned', 'failed') or len(events) != 1
             or not all(e.get('gateway_route', {}).get('cache_hit') is True
                        and e.get('total_tokens') == 0 for e in events)):
         return None
     for old in previous:
-        if (old.get('status') == 'returned' and old.get('usage_known') is True
+        returned = (call.get('status') == old.get('status') == 'returned'
+                    and 'raw_response' in call and old.get('raw_response') == call['raw_response'])
+        failed = (_failed_response_identity(call) is not None and
+                  _failed_response_identity(call) == _failed_response_identity(old))
+        if ((returned or failed) and old.get('usage_known') is True
                 and all(old.get(k) == call.get(k) for k in
-                        ('request_digest', 'max_output_tokens', 'response_format_digest', 'raw_response'))
+                        ('request_digest', 'max_output_tokens', 'response_format_digest'))
                 and [e.get('requested_model') for e in old['telemetry']]
                     == [e.get('requested_model') for e in events]):
             return old['slot_digest']
