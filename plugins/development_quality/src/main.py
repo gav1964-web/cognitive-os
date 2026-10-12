@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from .boundary_probes import boundary_probes
 from .draft_cases import compare_draft
-from .contrast_cases import validate_contrasts
+from .contrast_cases import validate_contrasts, _nodes
+from .source_evidence import validate_evidence, repair_citations
+from .spec_metadata import repair_metadata, allow_qualified_label_correction
+from .spec_disputes import revise
+from .baseline_expectations import validate as validate_baselines, compare as compare_baselines
+from .assertion_obligations import inventory as assertion_inventory, validate_review
 
 
 def policy():
@@ -13,6 +18,8 @@ def policy():
 
 def validate(role, artifact, sources=()):
     issues = []
+    if role == 'analyzer':
+        issues.extend(validate_evidence(artifact, sources))
     if role in ('analyzer', 'architect'):
         scope = artifact.get('scope')
         if not isinstance(scope, list) or not 1 <= len(scope) <= 4 or any(
@@ -34,12 +41,7 @@ def validate(role, artifact, sources=()):
         for source in sources:
             if not source.get('path', '').startswith('tests/'):
                 continue
-            try:
-                tree = ast.parse(source['content'])
-                existing.update(source['path'] + '::' + n.name for n in ast.walk(tree)
-                                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
-            except (SyntaxError, KeyError, TypeError):
-                continue
+            existing.update(_nodes(source['path'], source.get('content')))
         for test in artifact.get('tests', []):
             try:
                 tree = ast.parse(test['content'])
@@ -81,10 +83,38 @@ def validate(role, artifact, sources=()):
 
 def run(payload):
     data = policy()
+    if payload['action'] == 'allow_qualified_label_correction':
+        return {'contract': data['contract'], 'allowed': allow_qualified_label_correction(
+            payload['previous'], payload['current'], payload['artifact']), 'grants_approval': False}
+    if payload['action'] == 'assertion_inventory':
+        return {'contract': data['contract'], 'assertion_inventory': assertion_inventory(
+            payload['artifact'], payload.get('frozen_paths', [])), 'grants_approval': False}
+    if payload['action'] == 'validate_assertion_review':
+        return {'contract': data['contract'], 'issues': validate_review(
+            payload['artifact'], payload['audit'], payload.get('frozen_paths', [])), 'grants_approval': False}
+    if payload['action'] == 'validate_baseline_expectations':
+        return {'contract': data['contract'], 'issues': validate_baselines(
+            payload['artifact'], payload['goal'], payload['sources'],
+            required=payload.get('required', False)), 'grants_approval': False}
+    if payload['action'] == 'compare_baseline_expectations':
+        return {'contract': data['contract'], 'baseline_expectations': compare_baselines(
+            payload['artifact'], payload['outcomes']), 'grants_approval': False}
+    if payload['action'] == 'revise_preservation_assertions':
+        return {'contract': data['contract'], 'artifact': revise(payload['artifact'],
+            payload['proposal'], payload['goal'], payload['sources']), 'grants_approval': False}
+    if payload['action'] == 'repair_citations':
+        return {'contract': data['contract'], **repair_citations(
+            payload['artifact'], payload.get('sources', []))}
+    if payload['action'] == 'repair_metadata':
+        return {'contract': data['contract'], **repair_metadata(
+            payload['artifact'], payload.get('source_paths'))}
     if payload['action'] == 'policy':
         return {'contract': data['contract'], 'policy': data}
     if payload['action'] == 'validate':
-        return {'contract': data['contract'], 'issues': validate(payload['role'], payload['artifact'], payload.get('sources', []))}
+        issues = validate(payload['role'], payload['artifact'], payload.get('sources', []))
+        return {'contract': data['contract'], 'issues': issues,
+                'semantic_audit_ready': payload['role'] == 'spec_writer' and all(
+                    issue == 'case_plan lacks feature/preservation/boundary' for issue in issues)}
     if payload['action'] == 'boundary_probes':
         return {'contract': data['contract'], 'probes': boundary_probes(payload.get('sources', []))}
     if payload['action'] == 'compare_draft':

@@ -13,7 +13,7 @@
   ],
   "subsystems": {
     "inspect": {
-      "purpose": "Факты о репозитории: дерево, стек, Python, команды",
+      "purpose": "Р¤Р°РєС‚С‹ Рѕ СЂРµРїРѕР·РёС‚РѕСЂРёРё: РґРµСЂРµРІРѕ, СЃС‚РµРє, Python, РєРѕРјР°РЅРґС‹",
       "entrypoints": [
         "packages/cognitive-inspect/src/cognitive_inspect/__init__.py",
         "packages/cognitive-inspect/src/cognitive_inspect/ast_navigation.py"
@@ -52,7 +52,7 @@
       "brief": "docs/architecture/inspect.md"
     },
     "replay": {
-      "purpose": "Повтор дефекта и проверка исправления в отдельном окружении",
+      "purpose": "РџРѕРІС‚РѕСЂ РґРµС„РµРєС‚Р° Рё РїСЂРѕРІРµСЂРєР° РёСЃРїСЂР°РІР»РµРЅРёСЏ РІ РѕС‚РґРµР»СЊРЅРѕРј РѕРєСЂСѓР¶РµРЅРёРё",
       "entrypoints": [
         "packages/cognitive-replay/src/cognitive_replay/__init__.py",
         "packages/cognitive-replay/src/cognitive_replay/sandbox.py",
@@ -90,7 +90,7 @@
       "brief": "docs/architecture/replay.md"
     },
     "execution": {
-      "purpose": "Pipeline, очередь, leases, worker recovery",
+      "purpose": "Pipeline, РѕС‡РµСЂРµРґСЊ, leases, worker recovery",
       "entrypoints": [
         "runtime/executor.py",
         "runtime/durable_queue.py",
@@ -130,7 +130,10 @@
         "tests/runtime/test_remote_support_accounting.py",
         "tests/runtime/test_remote_support_exchange.py",
         "tests/runtime/test_remote_support_daemon.py",
-        "tests/runtime/test_remote_role_support.py"
+        "tests/runtime/test_remote_role_support.py",
+        "tests/runtime/test_plugin_import_scope.py",
+        "tests/runtime/test_async_executor.py",
+        "tests/tools/test_canonical_verify.py"
       ],
       "dependencies": [
         "evidence",
@@ -169,7 +172,17 @@
         "tools/remote_support.py",
         "tests/runtime/test_remote_support.py",
         "docs/architecture/remote_support.md",
-        "docs/architecture/remote_role_support_20260928.md"
+        "docs/architecture/remote_role_support_20260928.md",
+        "runtime/async_executor.py",
+        "runtime/plugin_import_scope.py",
+        "tests/runtime/test_async_executor.py",
+        "tests/runtime/test_plugin_import_scope.py",
+        "tools/canonical_verify.py",
+        "tests/tools/test_canonical_verify.py",
+        "docs/architecture/import_isolation_20260929.md",
+        "tools/check_plugins.py",
+        "tests/runtime/test_plugin_test_ownership.py",
+        "tests/runtime/test_stabilization_tools.py"
       ],
       "commands": [
         "python -m pytest tests/runtime/test_durable_queue.py tests/runtime/test_durable_queue_lock.py tests/runtime/test_worker_pool.py tests/runtime/test_executor_acceptance.py -q",
@@ -178,7 +191,7 @@
       "brief": "docs/architecture/execution.md"
     },
     "evidence": {
-      "purpose": "Контракты, schema validation и целостность артефактов",
+      "purpose": "РљРѕРЅС‚СЂР°РєС‚С‹, schema validation Рё С†РµР»РѕСЃС‚РЅРѕСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚РѕРІ",
       "entrypoints": [
         "runtime/evidence_ledger.py",
         "runtime/schema.py",
@@ -206,10 +219,16 @@
       "brief": "docs/architecture/evidence.md"
     },
     "roles": {
-      "purpose": "Ролевой анализ, планы, спецификации и review",
+      "purpose": "Р РѕР»РµРІРѕР№ Р°РЅР°Р»РёР·, РїР»Р°РЅС‹, СЃРїРµС†РёС„РёРєР°С†РёРё Рё review",
       "entrypoints": [
         "runtime/configured_role_pipeline.py",
         "runtime/feature_development.py",
+        "runtime/feature_competency.py",
+        "config/task_competencies.json",
+        "plugins/learned_fix_templates/src/main.py",
+        "plugins/learned_fix_templates/knowledge/templates.json",
+        "tools/fix_template_export.py",
+        "docs/architecture/knowledge_audit_20261003.md",
         "runtime/feature_case_compiler.py",
         "runtime/feature_extension.py",
         "tools/develop_feature.py",
@@ -314,7 +333,9 @@
         "tools/deliver_feature.py",
         "runtime/feature_quality.py",
         "tools/develop_feature_quality.py",
-        "plugins/development_quality/src/main.py"
+        "plugins/development_quality/src/main.py",
+        "runtime/feature_spec_delta.py",
+        "runtime/feature_programmer_syntax.py"
       ],
       "contracts": [
         "config/role_artifact_pipeline.json",
@@ -359,11 +380,17 @@
         "plugins/project_description/src/scalar_boundary.py",
         "plugins/project_description/src/mechanism_review.py",
         "plugins/development_quality/plugin.json",
-        "plugins/development_quality/knowledge/policy.json"
+        "plugins/development_quality/knowledge/policy.json",
+        "plugins/development_quality/src/baseline_expectations.py",
+        "runtime/feature_spec_delta.py",
+        "runtime/feature_programmer_syntax.py",
+        "docs/architecture/spec_delta_20261001.md"
       ],
       "tests": [
         "tests/runtime/test_role_project_analysis.py",
         "tests/runtime/test_feature_development.py",
+        "tests/runtime/test_feature_competency.py",
+        "tests/runtime/test_feature_competency_detector.py",
         "tests/runtime/test_feature_no_existing_suite.py",
         "tests/runtime/test_feature_rejected_review.py",
         "tests/runtime/test_feature_review_patch.py",
@@ -542,7 +569,28 @@
         "tests/runtime/test_feature_scope_feedback.py",
         "tests/runtime/test_feature_negative_review_status.py",
         "tests/runtime/test_feature_context_recovery.py",
-        "tests/runtime/test_feature_partial_draft.py"
+        "tests/runtime/test_feature_partial_draft.py",
+        "tests/runtime/test_feature_review_counterexample.py",
+        "tests/runtime/test_feature_target_rollback.py",
+        "tests/runtime/test_feature_native_spec_resume.py",
+        "tests/runtime/test_challenge_obligations.py",
+        "tests/runtime/test_spec_audit_batch.py",
+        "tests/runtime/test_feature_spec_dispute.py",
+        "plugins/development_quality/tests/test_spec_disputes.py",
+        "tests/runtime/test_feature_baseline_expectations.py",
+        "tests/runtime/test_feature_campaign_resume.py",
+        "plugins/development_quality/tests/test_baseline_expectations.py",
+        "tests/runtime/test_feature_accepted_metadata.py",
+        "tests/runtime/test_feature_prior_candidate.py",
+        "tests/runtime/test_feature_audit_history.py",
+        "tests/runtime/test_feature_graceful_stop.py",
+        "tests/runtime/test_feature_recoverable_stops.py",
+        "tests/runtime/test_feature_frozen_resume_chain.py",
+        "tests/runtime/test_qualified_label_correction.py",
+        "tests/runtime/test_feature_reference_feedback.py",
+        "tests/runtime/test_feature_post_native_resume.py",
+        "tests/runtime/test_feature_spec_delta.py",
+        "tests/runtime/test_feature_programmer_syntax.py"
       ],
       "dependencies": [
         "inspect",
@@ -902,7 +950,31 @@
         "tests/runtime/test_feature_spec_witness.py",
         "tests/runtime/test_feature_context_recovery.py",
         "tests/runtime/test_feature_partial_draft.py",
-        "docs/architecture/geminivm_format_candidate_20260928.md"
+        "docs/architecture/geminivm_format_candidate_20260928.md",
+        "tools/rollback_feature_target.py",
+        "tests/runtime/test_native_probe_reports.py",
+        "runtime/feature_spec_metadata.py",
+        "runtime/feature_frozen_references.py",
+        "tests/runtime/test_feature_spec_metadata.py",
+        "tests/runtime/test_feature_frozen_references.py",
+        "tests/runtime/test_feature_recoverable_stops.py",
+        "tests/runtime/test_challenge_obligations.py",
+        "tests/runtime/test_spec_audit_batch.py",
+        "runtime/feature_accepted_metadata.py",
+        "runtime/feature_candidate_reuse.py",
+        "tests/runtime/test_feature_accepted_metadata.py",
+        "tests/runtime/test_feature_prior_candidate.py",
+        "docs/architecture/accepted_metadata_20260930.md",
+        "runtime/feature_audit_history.py",
+        "tests/runtime/test_feature_audit_history.py",
+        "tests/runtime/test_feature_graceful_stop.py",
+        "docs/architecture/audit_feedback_20260930.md",
+        "tests/runtime/test_feature_frozen_resume_chain.py",
+        "tests/runtime/test_qualified_label_correction.py",
+        "tests/runtime/test_feature_reference_feedback.py",
+        "tests/runtime/test_feature_post_native_resume.py",
+        "docs/architecture/map_completion_20260930.md",
+        "docs/architecture/spec_delta_20261001.md"
       ],
       "commands": [
         "python -m pytest tests/runtime/test_role_project_analysis.py -q"
@@ -910,10 +982,18 @@
       "brief": "docs/architecture/roles.md"
     },
     "research": {
-      "purpose": "Корпус, qualification admission, обучение и независимая оценка",
+      "purpose": "РљРѕСЂРїСѓСЃ, qualification admission, РѕР±СѓС‡РµРЅРёРµ Рё РЅРµР·Р°РІРёСЃРёРјР°СЏ РѕС†РµРЅРєР°",
       "entrypoints": [
         "runtime/local_historical_defect_mining.py",
         "runtime/local_historical_defect_policy.py",
+        "runtime/fix_template_tree.py",
+        "runtime/fix_template_mining.py",
+        "runtime/fix_template_learning.py",
+        "tools/fix_template_study.py",
+        "runtime/fix_template_detector.py",
+        "tools/fix_template_detector_mine.py",
+        "tools/fix_template_detector_study.py",
+        "docs/architecture/fix_templates_20261003.md",
         "runtime/library_admission.py",
         "tools/library_admission.py",
         "runtime/historical_defect_qualification.py",
@@ -937,6 +1017,8 @@
       ],
       "tests": [
         "tests/runtime/test_local_historical_defect_mining.py",
+        "tests/runtime/test_fix_templates.py",
+        "tests/runtime/test_fix_template_detector.py",
         "tests/runtime/test_historical_root_tests.py",
         "tests/runtime/test_library_admission.py",
         "tests/runtime/test_historical_defect_qualification.py",

@@ -45,10 +45,20 @@ class QueueLock:
         if self.fd is not None:
             os.close(self.fd)
             self.fd = None
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            pass
+        deadline = time.monotonic() + self.timeout_seconds
+        while True:
+            try:
+                self.path.unlink()
+                return
+            except FileNotFoundError:
+                return
+            except PermissionError as exc:
+                # A contender briefly opens this file to read its owner. Windows
+                # denies deletion while that reader is open; do not strand our
+                # lock or mistake this transient race for an ACL failure.
+                if getattr(exc, "winerror", None) not in (32, 33) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(self.poll_seconds)
 
     def __enter__(self) -> "QueueLock":
         self.acquire()

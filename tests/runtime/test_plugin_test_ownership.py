@@ -54,6 +54,24 @@ def test_migrated_file_is_selected(workspace):
     assert '--import-mode=importlib' in calls[0]
 
 
+def test_test_copies_are_not_nested_under_a_deep_workspace(workspace, monkeypatch):
+    root, calls, _ = workspace
+    plugin(root, test_paths=['tests/test_alpha.py'])
+    test_file(root, 'tests/test_alpha.py')
+    process_temp = root.parent / 'process-temp'
+    process_temp.mkdir()
+    requested = []
+    def temporary_directory(*, prefix):
+        requested.append(prefix)
+        result = process_temp / 'run'
+        result.mkdir()
+        return str(result)
+    monkeypatch.setattr('tools.check_plugins.tempfile.mkdtemp', temporary_directory)
+    assert main() == 0
+    assert requested == ['cp-']
+    assert f'--basetemp={process_temp / "run/tests"}' in calls[0]
+
+
 def test_legacy_directory_remains_supported(workspace):
     root, calls, _ = workspace
     plugin(root)

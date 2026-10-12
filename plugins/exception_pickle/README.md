@@ -109,3 +109,19 @@ Tests: `plugins/exception_pickle/tests`, `tests/runtime/test_competency_knowledg
 `tests/runtime/test_programmer_exception_pickle_patch.py` and existing boundary,
 application and promotion regressions. Runtime declarations/static lint are not an
 OS sandbox for untrusted plugins.
+
+## Goal-level task change (0.5.0, 3 October 2026)
+
+`task_change` implements `task_competency.v1` for the model-free route
+`runtime/feature_competency.py`. Input: user `goal` and project Python `sources`.
+The competency answers only when the goal mentions pickling and exactly one
+production exception (or the one named in the goal) is a supported candidate.
+It returns a new pytest oracle (`tests/test_cos_pickle_<class>.py`: real
+`pickle.dumps/loads`, equal type, args and full instance state) and the patched
+module; otherwise `not_applicable` with a reason. The runtime, not the plugin,
+qualifies red/green and regression outcomes. The candidate detector moved here
+from `runtime/exception_pickle_candidate_audit.py`, which now re-exports it.
+
+The previous active-application ledger replayed only the patched class with
+import stubs. The 3 October holdout re-run adds the original (red) replay:
+see `docs/architecture/knowledge_audit_20261003.md`.

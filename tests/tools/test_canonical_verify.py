@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 
-from tools.canonical_verify import verification_commands
+from tools.canonical_verify import _run, verification_commands
 
 
 def test_canonical_verification_covers_integrity_lint_and_both_test_scopes():
@@ -39,3 +39,18 @@ def test_canonical_verification_scopes_basetemp_to_run_identity():
 
     assert "--basetemp=.pytest-tmp/run-123/c" in commands["core_tests"]
     assert "--basetemp=.pytest-tmp/run-123/p" in commands["plugin_tests"]
+    for name in ('core_tests', 'plugin_tests', 'package_tests'):
+        assert f'--junitxml=artifacts/verification/run-123/{name}.xml' in commands[name]
+
+
+def test_failure_preserves_full_streams_beyond_report_tail(tmp_path):
+    result = _run(root=tmp_path, name='core_tests', run_id='failed-run', command=[
+        sys.executable, '-c',
+        "import sys;print('FIRST FAILURE');print('x'*3000);"
+        "print('diagnostic',file=sys.stderr);sys.exit(3)",
+    ])
+    assert result['status'] == 'failed' and result['returncode'] == 3
+    assert 'FIRST FAILURE' not in result['stdout_tail']
+    assert (tmp_path / result['stdout_path']).read_text().startswith('FIRST FAILURE')
+    assert (tmp_path / result['stderr_path']).read_text().strip() == 'diagnostic'
+    assert result['junit_path'] is None

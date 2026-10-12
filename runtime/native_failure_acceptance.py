@@ -260,13 +260,33 @@ def _probe(project, control, nodeids, plugins, timeout, python, *, collect_nodei
                       cwd=project, timeout=timeout, env=isolated_environment(control / 'environment', python))
     output = run['stdout'] + '\n' + run['stderr']
     (control / 'output.txt').write_text(output, encoding='utf-8')
+    (control / 'process.json').write_text(json.dumps({
+        'returncode': run['returncode'], 'timeout_seconds': timeout,
+        'timed_out': run['returncode'] == 124,
+    }), encoding='utf-8')
     parsed = _interpret_pytest_result(project, run['returncode'], output, {})
     collected, passing, skipped = [], 0, 0
+    report_error = None
     if junit.is_file():
-        for case in ET.parse(junit).iter('testcase'):
+        try:
+            cases = list(ET.parse(junit).iter('testcase'))
+        except ET.ParseError:
+            cases = []
+            report_error = 'invalid_or_incomplete_junit'
+        for case in cases:
             collected.append([case.get('classname'), case.get('name')])
             passing += not any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped'))
             skipped += case.find('skipped') is not None
+    else:
+        report_error = 'missing_junit'
+    if run['returncode'] == 124 or report_error:
+        # A partial report is not native assertion evidence, even if the process
+        # claims exit 0/1. Preserve the actual exit in process.json for diagnosis.
+        return {'returncode': run['returncode'] if run['returncode'] not in (0, 1) else 2,
+                'junit': str(junit), 'passing': 0, 'skipped': 0, 'collected': [],
+                'selected_nodeids': None, 'test_reports': None, 'intake_signature': None,
+                'reason': 'native_probe_timeout' if run['returncode'] == 124 else report_error,
+                'output': str(control / 'output.txt')}
     selection = json.loads(selection_path.read_text(encoding='utf-8')) if selection_path.exists() else {}
     return {'returncode': run['returncode'], 'junit': str(junit), 'passing': passing,
             'selected_nodeids': selection.get('selected'), 'test_reports': selection.get('reports'),

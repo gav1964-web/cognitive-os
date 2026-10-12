@@ -1,13 +1,16 @@
 """Lossless prompt references for repeated complete test bodies; never source filtering."""
 from copy import deepcopy
+from hashlib import sha256
 
 
 CANONICAL = ('immutable_previous_tests', 'specification.tests')
 TARGETS = ('quality_contract_feedback.rejected.tests',
            'quality_contract_feedback.incomplete_correction.tests',
            'artifacts.spec_writer.tests', 'previous_unaccepted_draft.rejected.tests',
-           'previous_unaccepted_draft.incomplete_correction.tests')
-CONTRACT = 'same_path_exact_test_content.v1'
+           'previous_unaccepted_draft.incomplete_correction.tests',
+           'feedback.rejected_spec.tests')
+CONTRACT = 'same_path_exact_test_content.v2'
+FIELDS = CANONICAL + TARGETS
 
 
 def _get(value, path):
@@ -28,10 +31,11 @@ def _bodies(payload, field):
 
 def expand_test_references(payload):
     result = deepcopy(payload)
-    if result.pop('test_reference_contract', None) != CONTRACT:
+    version = result.pop('test_reference_contract', None)
+    if version not in (CONTRACT, 'same_path_exact_test_content.v1'):
         raise ValueError('feature_test_reference_contract')
-    canonical = {field: _bodies(result, field) for field in CANONICAL}
-    for path in TARGETS:
+    canonical = {}
+    for path in FIELDS:
         for test in _get(result, path) or []:
             if not isinstance(test, dict) or 'content_reference' not in test:
                 continue
@@ -39,6 +43,9 @@ def expand_test_references(payload):
             if 'content' in test or field not in canonical or test.get('path') not in canonical[field]:
                 raise ValueError('feature_test_reference_unresolved')
             test['content'] = canonical[field][test['path']]
+            if version == CONTRACT and test.pop('content_sha256', None) != sha256(test['content'].encode('utf-8')).hexdigest():
+                raise ValueError('feature_test_reference_digest')
+        canonical[path] = _bodies(result, path)
     return result
 
 
@@ -46,11 +53,12 @@ def compact_test_references(payload):
     if not isinstance(payload, dict) or 'test_reference_contract' in payload:
         return payload, 0
     result, count = deepcopy(payload), 0
-    canonical = {field: _bodies(result, field) for field in CANONICAL}
-    for path in TARGETS:
+    canonical = {}
+    for path in FIELDS:
         rows = _get(result, path)
         if not isinstance(rows, list):
             continue
+        original = _bodies(payload, path)
         for test in rows:
             if not isinstance(test, dict) or 'content_reference' in test:
                 continue
@@ -61,8 +69,10 @@ def compact_test_references(payload):
                 if bodies.get(test.get('path')) == body:
                     test.pop('content')
                     test['content_reference'] = field
+                    test['content_sha256'] = sha256(body.encode('utf-8')).hexdigest()
                     count += 1
                     break
+        canonical[path] = original
     if count:
         result['test_reference_contract'] = CONTRACT
         if expand_test_references(result) != payload:

@@ -10,6 +10,7 @@ from runtime.feature_acceptance import save
 from runtime.feature_development import run_feature_development
 from runtime.feature_workspace import inventory
 from runtime.feature_inference import FeatureChat
+from runtime.feature_competency import run_competency_first
 
 
 def main():
@@ -37,6 +38,7 @@ def main():
     parser.add_argument('--max-calls', type=int, default=12)
     parser.add_argument('--max-input-bytes', type=int, default=80000)
     parser.add_argument('--max-output-tokens', type=int, default=32768)
+    parser.add_argument('--competency-first', action='store_true', help='Try registered model-free task competencies first; fall back to the role workflow on refusal or failed qualification')
     args = parser.parse_args()
     if not 1 <= args.max_calls <= 12 or not 1000 <= args.max_input_bytes <= 160000:
         parser.error('max-calls1..12 and max-input-bytes1000..160000 required')
@@ -76,7 +78,20 @@ def main():
          'resume_review_draft': args.resume_review_draft,
          'resume_analysis_draft': args.resume_analysis_draft,
          'budget_authorization': args.budget_authorization,
-         'budget_limit_exclusive': args.budget_limit})
+         'budget_limit_exclusive': args.budget_limit,
+         'competency_first': args.competency_first})
+    competency = None
+    if args.competency_first:
+        if args.resume_roles or args.resume_context or args.replay_from or args.stop_after:
+            parser.error('competency-first starts a fresh task without resume/replay/stop flags')
+        competency = run_competency_first(project=project, work=output / 'competency', goal=args.goal,
+                                          python=python, apply_source=args.apply_source)
+        if competency['status'] in ('verified', 'installed'):
+            competency['inference'] = {'calls': 0, 'replayed_calls': 0, 'reported_tokens': 0, 'new_unknown_calls': 0}
+            save(output / 'result.json', competency)
+            print(json.dumps({k: competency.get(k) for k in ('status', 'route', 'change', 'source_apply',
+                             'limitations', 'inference')}, ensure_ascii=False))
+            return 0
     previous = []
     if args.replay_from:
         prior = Path(args.replay_from)
@@ -97,6 +112,8 @@ def main():
                max_output_tokens=args.max_output_tokens, resume_candidate=args.resume_candidate,
                observations=args.observations, resume_review_draft=args.resume_review_draft,
                resume_analysis_draft=args.resume_analysis_draft)
+    if competency is not None:
+        result['competency_attempt'] = {k: competency.get(k) for k in ('status', 'reason', 'attempts')}
     result['inference'] = {'calls': len(chat.attempts),
         'replayed_calls': len(chat.replayed),
         'reported_tokens': sum(e.get('total_tokens', 0) or 0 for row in chat.attempts for e in row['telemetry']),

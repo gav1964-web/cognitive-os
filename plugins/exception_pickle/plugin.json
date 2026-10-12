@@ -1,6 +1,6 @@
 {
   "id": "exception_pickle",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "entrypoint": "plugins.exception_pickle.src.main:run",
   "determinism_grade": "B",
   "side_effects": {

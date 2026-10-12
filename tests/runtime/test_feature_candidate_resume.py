@@ -108,7 +108,8 @@ def test_programmer_retains_requested_test_source_after_interruption(project, tm
 
 def test_rejected_candidate_reproduces_feedback_before_model_correction(project, tmp_path):
     first = run(project, tmp_path, chat=fake_chat(project, bad=True))
-    assert first['reason'] == 'feature_acceptance_failed'
+    assert first['reason'] == 'feature_candidate_no_progress'
+    assert len(first['attempts']) == 1
     delegate = fake_chat(project)
     called = []
     def correct(messages, *, config):

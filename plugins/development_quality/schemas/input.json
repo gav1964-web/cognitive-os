@@ -9,7 +9,15 @@
         "policy",
         "validate",
         "boundary_probes",
-        "compare_draft"
+        "compare_draft",
+        "repair_metadata",
+        "repair_citations",
+        "revise_preservation_assertions",
+        "validate_baseline_expectations",
+        "compare_baseline_expectations",
+        "assertion_inventory",
+        "validate_assertion_review",
+        "allow_qualified_label_correction"
       ]
     },
     "role": {
@@ -33,9 +41,180 @@
       "items": {
         "type": "object"
       }
+    },
+    "source_paths": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "proposal": {
+      "type": "object"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "required": {
+      "type": "boolean"
+    },
+    "outcomes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "audit": {
+      "type": "object"
+    },
+    "frozen_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
-  "allOf": [{"if": {"properties": {"action": {"const": "compare_draft"}}},
-             "then": {"required": ["previous", "current"]}}],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "compare_draft"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "previous",
+          "current"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "repair_metadata"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "source_paths"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "repair_citations"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "sources"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "revise_preservation_assertions"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "proposal",
+          "goal",
+          "sources"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "validate_baseline_expectations"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "goal",
+          "sources"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "compare_baseline_expectations"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "outcomes"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "assertion_inventory"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "validate_assertion_review"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "artifact",
+          "audit"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "allow_qualified_label_correction"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "previous",
+          "current",
+          "artifact"
+        ]
+      }
+    }
+  ],
   "additionalProperties": false
 }

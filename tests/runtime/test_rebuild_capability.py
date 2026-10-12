@@ -9,7 +9,6 @@ from pathlib import Path
 
 def test_rebuild_quarantined_capability_promotes_repaired_plugin(tmp_path):
     workspace = _copy_workspace(tmp_path)
-    sys.path.insert(0, str(workspace))
     from runtime.registry import CapabilityRegistry
 
     registry = CapabilityRegistry(workspace)

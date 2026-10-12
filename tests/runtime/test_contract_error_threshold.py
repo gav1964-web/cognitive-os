@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import sys
 from pathlib import Path
 
 from runtime.executor import execute_pipeline
@@ -24,9 +23,7 @@ def test_repeated_contract_error_quarantines_capability(tmp_path):
     pipeline = load_pipeline(workspace / "pipelines" / "fetch_parse_save.json")
     payload = {"url": "mock://ok", "output_path": "artifacts/outputs/contract_error.json"}
 
-    _clear_plugin_modules("plugins")
     first = execute_pipeline(workspace, pipeline, payload)
-    _clear_plugin_modules("plugins")
     second = execute_pipeline(workspace, pipeline, payload)
 
     registry.load()
@@ -48,9 +45,3 @@ def _copy_workspace(tmp_path: Path) -> Path:
             dst.mkdir(parents=True, exist_ok=True)
     (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
     return workspace
-
-
-def _clear_plugin_modules(prefix: str) -> None:
-    for name in list(sys.modules):
-        if name == prefix or name.startswith(prefix + "."):
-            sys.modules.pop(name, None)

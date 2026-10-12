@@ -7,7 +7,7 @@ import json
 import os
 import subprocess
 import sys
-import uuid
+import tempfile
 from pathlib import Path
 
 
@@ -31,7 +31,9 @@ def main() -> int:
                          ensure_ascii=False, indent=2))
         return 2
     test_paths = list(dict.fromkeys(str(path) for paths in owners.values() for path in paths))
-    base_temp = root / ".pytest-tmp" / ("plugins-" + uuid.uuid4().hex[:10])
+    # A staged workspace can already be several levels deep. Nesting test copies
+    # underneath it exceeds Windows path limits; use the caller's process temp.
+    base_temp = Path(tempfile.mkdtemp(prefix="cp-"))
     process_temp = base_temp / 'process'
     process_temp.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
@@ -48,6 +50,7 @@ def main() -> int:
         "status": "ok" if result.returncode == 0 else "failed",
         "capabilities": sorted(capabilities),
         "pytest_returncode": result.returncode,
+        "pytest_basetemp": str(base_temp / 'tests'),
         "test_owners": {name: [p.relative_to(root).as_posix() for p in paths]
                         for name, paths in owners.items()},
     }

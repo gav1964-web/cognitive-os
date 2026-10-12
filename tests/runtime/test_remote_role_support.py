@@ -117,8 +117,12 @@ def test_resume_cannot_promote_other_boundaries(bound_job, tmp_path, change):
     result = offline_probe(job, tmp_path / 'rejected-probe', configs)
     assert not result['passed']
     assert result['calls'] == []
-    assert result['reason'] in ('quality_resume_requires_qualified_spec_boundary',
-                                'feature_checkpoint_frozen_spec_mismatch')
+    expected_reason = {
+        'status': 'quality_resume_requires_qualified_spec_boundary',
+        'attempt': 'quality_resume_requires_pending_candidate_review',
+        'accepted_test': 'feature_checkpoint_frozen_spec_mismatch',
+    }
+    assert result['reason'] == expected_reason[change]
 
 
 def test_live_worker_requires_controller_accounting(bound_job, monkeypatch):

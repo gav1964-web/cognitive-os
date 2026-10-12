@@ -43,12 +43,43 @@ def missing_draft_files(previous, value):
     return sorted(old - new)
 
 
+def audit_policy_matches(instruction, policy):
+    """Legacy receipts include the policy plus an optional lossless-ref suffix."""
+    expected = 'Return one JSON object only.\n' + policy
+    return instruction == expected or instruction.startswith(
+        expected + '\nInput tests with content_reference ')
+
+
+def historical_audit(audit, payload):
+    """Keep a superseded rejection as evidence, without authorizing its demands."""
+    previous = payload.get('previous_unaccepted_draft') or {}
+    return {'request_digest': audit['request_digest'],
+            'instruction_sha256': sha256(audit['messages'][0]['content'].encode()).hexdigest(),
+            'audit': audit['raw_response'],
+            'prior_audit_issues': payload.get('prior_audit_issues', []),
+            'previous_issues': previous.get('issues', []),
+            'prior_issues': previous.get('prior_issues', []),
+            'authority': 'historical_only_requires_current_audit'}
+
+
 def correction_feedback(value, issues, previous=None):
     feedback = {'rejected': value, 'issues': issues,
                 'instruction': 'Correct only these contract/design defects. Preserve verified facts. '
                 'Return the COMPLETE proposal preserving required coverage. Unaccepted files may '
                 'be reorganized; the fresh auditor receives the previous draft for comparison. Drafts are '
                 'not accepted, frozen, or present on disk; fresh audit and native checks are required.'}
+    audit_issues = list((previous or {}).get('prior_audit_issues', []))
+    for issue in issues:
+        if isinstance(issue, dict):
+            audit = issue.get('acceptance_audit', {})
+            if isinstance(audit, dict) and isinstance(audit.get('issues'), list):
+                for item in audit['issues']:
+                    if item not in audit_issues:
+                        audit_issues.append(item)
+    if audit_issues:
+        feedback['prior_audit_issues'] = audit_issues
+    if previous and previous.get('historical_audits'):
+        feedback['historical_audits'] = previous['historical_audits']
     lost_cases = any(isinstance(issue, dict) and issue.get('draft_case_continuity', {}).get('unexplained')
                      for issue in issues)
     if previous and (missing_draft_files(previous['rejected'], value) or lost_cases):

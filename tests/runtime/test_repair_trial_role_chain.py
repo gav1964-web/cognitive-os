@@ -11,7 +11,7 @@ from runtime.project_native_failure_binding import _interpret_pytest_result
 from runtime.repair_target_nomination import trace_failure_methods, nomination_context, validate_nomination
 from runtime.repair_trial_binding import build_repair_trial_packet
 from runtime.stage_finalization_workspace import inventory
-from tests.runtime.test_repair_target_nomination import prepare, proposal
+from tests.runtime.test_repair_target_nomination import prepare, proposal, REPLAY_TIMEOUT
 from tests.runtime.test_repair_trial_binding import provider
 
 
@@ -69,7 +69,8 @@ def test_nominated_method_reaches_native_regression_and_final_reviewer(tmp_path,
     policy['model_require_assertion_plan'] = True
     policy['model_proposal_route'] = route
     policy['native_failure_intake'].update(local_editable_install=False, python_executable=sys.executable,
-        regression_targets=[], nested_pytest_plugins=[], timeout_seconds=20)
+        regression_targets=[], nested_pytest_plugins=[], timeout_seconds=REPLAY_TIMEOUT,
+        targeted_timeout_seconds=REPLAY_TIMEOUT)
     before = inventory(project)
     result = run_project_development(root=Path(__file__).resolve().parents[2], project_dir=project,
         goal='Repair internal conversion while preserving existing public behavior.',

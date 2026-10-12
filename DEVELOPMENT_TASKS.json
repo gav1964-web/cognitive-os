@@ -16,6 +16,20 @@
       "updated_at": "2026-09-10T23:50:45+00:00"
     },
     {
+      "id": "work-68c341175920b9be",
+      "key": "task-competency-real-goals",
+      "kind": "evaluation",
+      "path": "config/task_competencies.json",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 3,
+      "dependencies": [],
+      "next_action": "0/27 recorded feature-route goals belong to any compiled competency class; static helper triggers fired on 12/27 scopes without task relevance. Before adding competencies, mine recurring defect classes with a mechanical oracle from corpus history and measure frequency; goal applicability must stay goal-level, not file-level.",
+      "notes": [],
+      "updated_at": "2026-10-03T00:47:29+00:00"
+    },
+    {
       "id": "work-a9c4e6c466400649",
       "key": "gateway-empty-choices-before-usage",
       "kind": "provider",
@@ -455,6 +469,26 @@
       "updated_at": "2026-09-16T08:51:06+00:00"
     },
     {
+      "id": "work-467d1b590b18f87f",
+      "key": "role-quality-fresh-transfer-scope-and-counterexamples",
+      "kind": "evaluation",
+      "path": "docs/architecture/map_completion_20260930.md",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "Point-edit contract implemented (01 Oct), live efficacy pending. Resume DNS at artifacts/spec_delta_20261001/runs/dns-live/run/cycle-1; quote at map_completion_20260930/runs/quote-tail/run/cycle-0 with prior reviewed candidate. Latest ledger-pointer: artifacts/spec_delta_20261001/ledger-pointer.json. Reported 8083141/8373647, remaining 290506 (admission 290446); both next Writer requests exceed available reserve. Preserve all frozen tests and original first-run outcomes. COS must author missing coverage and target patches; no fresh-budget reset.",
+      "notes": [
+        {
+          "date": "2026-10-01",
+          "evidence": "artifacts/spec_delta_20261001/summary.json",
+          "summary": "COS repaired DNS syntax; Reviewer independently found Kelvin-sign normalization defect, SpecWriter authored native failing witness. Auditor still requires duplicate-row and all-rejected capture coverage. Delta offline regressions pass, no live effectiveness claim."
+        }
+      ],
+      "updated_at": "2026-09-30T19:52:59+00:00"
+    },
+    {
       "id": "work-ffa4d2544f070f79",
       "key": "plugin-owned-knowledge-migration",
       "kind": "architecture",
@@ -537,20 +571,6 @@
       }
     },
     {
-      "id": "work-467d1b590b18f87f",
-      "key": "role-quality-fresh-transfer-scope-and-counterexamples",
-      "kind": "evaluation",
-      "path": "docs/architecture/roles_package_20260929.md",
-      "owner": "assistant",
-      "status": "open",
-      "blocking": false,
-      "priority": 1,
-      "dependencies": [],
-      "next_action": "New bounded real-source cohort using final scope policy; measure first-attempt success, final artifact quality and whole-cycle cost separately. General COS changes only: preserve Reviewer counterexamples as tests; validate Analyzer source ranges. Do not replay completed3 tasks for grades. Read package summary; existing5M series carries1,351,098 reported,unknown0. Installation of isolated candidates requires separate integration review.",
-      "notes": [],
-      "updated_at": "2026-09-29T02:06:42+00:00"
-    },
-    {
       "id": "work-5485a32405eba4aa",
       "key": "gateway-provider-bad-request-http-mapping",
       "kind": "provider",
@@ -622,6 +642,79 @@
       }
     },
     {
+      "id": "work-2d0fec8c5d7e9efc",
+      "key": "knowledge-audit-archetype-precision",
+      "kind": "evaluation",
+      "path": "knowledge/architecture_patterns/project_archetypes.json",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "Holdout 2026-10-03: archetype KB fires on 55% of untouched projects, judged correct 2/20 (exposed 5/20, mostly name matches). Decide with evidence: restrict to project-identity matches or demote from Analyzer/Architect input; re-measure precision on a fresh sample. Evidence artifacts/knowledge_audit_20261003/archetype_*.json",
+      "notes": [],
+      "updated_at": "2026-10-03T00:47:28+00:00"
+    },
+    {
+      "id": "work-b4a8a116408b81ed",
+      "key": "specification-boundary-class-coverage-before-qualification",
+      "kind": "feature",
+      "path": "plugins/development_quality/knowledge/policy.json",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-30T04:17:06+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Implemented plugin-owned goal/source-bound native baseline predictions before freeze;2 historical wrong preservation declarations caught offline. COS closed gas task20native+3external,2retained faults killed,102514new/600000. Legacy contracts preserved; fresh scores and live savings not claimed.",
+        "evidence": [
+          "artifacts/baseline_expectations_20260930/summary.json",
+          "artifacts/baseline_expectations_20260930/historical-preservation.json",
+          "artifacts/baseline_expectations_20260930/latest-focused.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/baseline_expectations_20260930/summary.json",
+            "sha256": "482740bd76262f96cffec5e46a407512708532e582056c1e1daf5bcb1ab59ac3"
+          },
+          {
+            "path": "artifacts/baseline_expectations_20260930/historical-preservation.json",
+            "sha256": "50f471fd145e4f6e611801a2a2bca82a502831da7c8d68f550dcfc82d2a45f99"
+          },
+          {
+            "path": "artifacts/baseline_expectations_20260930/latest-focused.xml",
+            "sha256": "c6b0f393b9513a8a37d51105ba9f44c1ad5b4cc7f6663e4c864e601e9525658d"
+          }
+        ],
+        "resolved_at": "2026-09-30T06:07:16+00:00",
+        "source_sha256": "e527e1041c670f7e14ce0e98f0c67395b53fead839999ef31f3682557f3001e1"
+      }
+    },
+    {
+      "id": "work-eba372d52f2e9f2d",
+      "key": "audit-preservation-controls-no-recursion",
+      "kind": "evaluation",
+      "path": "plugins/development_quality/knowledge/policy.json",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "Inspect immutable fresh-gas calls.json response index12: auditor demands independent controls for test_cli_empty_input_writes_zero_count_and_empty_geojson even though preceding Writer classified that node preservation. Earlier BOM/id-normalization findings were valid; separate this false-positive cost from SpecWriter deficiencies. Quote audit also demands splitting an already frozen assertion (quote-envelope-fixed call6); accepted tests cannot be rewritten. Reproduce selected paid transcripts offline and design source/contract-bound audit-owner feedback without silently approving semantic issues or editing target tests. Keep frozen fresh1/3 original outcome unchanged.",
+      "notes": [
+        {
+          "date": "2026-10-01",
+          "evidence": "artifacts/spec_delta_20261001/runs/dns-live/run/spec-audit-1-0.json",
+          "summary": "Current DNS rejection contains concrete goal-supported missing duplicate-row/all-rejected cases; not recursive controls. Keep historical false-control audit review open; do not suppress this rejection."
+        }
+      ],
+      "updated_at": "2026-09-30T18:48:09+00:00"
+    },
+    {
       "id": "work-767fe05a2b35e09d",
       "key": "pickle-optional-state-preservation",
       "kind": "feature",
@@ -659,6 +752,20 @@
         "resolved_at": "2026-09-15T09:23:01+00:00",
         "source_sha256": "8c0aada795a1139dc8a452451813d71c10ab09aeedc6de1d7e9dc3cfec6142fa"
       }
+    },
+    {
+      "id": "work-d6d9dcece63a5ccb",
+      "key": "helper-extractor-decorator-insertion",
+      "kind": "feature",
+      "path": "plugins/json_parsing/src/extractor.py",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "All four helper extractors (json_parsing, json_serialization, text_splitting, append_mapping; src/extractor.py insert_at = origin.lineno - 1) insert the helper between a decorator and its def. Observed: fgmacedo__python-statemachine statemachine/io/validation.py load_schema -> @lru_cache moves to parse_json. Compiles, changes behavior. Insert above the first decorator; add a decorated-origin regression per plugin; rehash registry; re-check recovery differential verification catches it.",
+      "notes": [],
+      "updated_at": "2026-10-03T01:36:00+00:00"
     },
     {
       "id": "work-46f8784c7a586142",
@@ -755,6 +862,20 @@
       "updated_at": "2026-09-18T16:50:11+00:00"
     },
     {
+      "id": "work-4d549f37b3b98a2c",
+      "key": "pickle-ledger-red-phase",
+      "kind": "evaluation",
+      "path": "runtime/exception_pickle_active_application.py",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "Active application ledger counts applied_active_kb without replaying the ORIGINAL class; 5/16 green cases in the 2026-10-03 re-run were already picklable. Add the red replay to the trial and annotate the historical 178 as an upper bound. Evidence artifacts/knowledge_audit_20261003/pickle_redgreen.json",
+      "notes": [],
+      "updated_at": "2026-10-03T00:47:28+00:00"
+    },
+    {
       "id": "work-a65fa35615367e21",
       "key": "collector-mutation-binding",
       "kind": "test_failure",
@@ -792,6 +913,20 @@
         "resolved_at": "2026-09-25T03:58:28+00:00",
         "source_sha256": "f571de620ba4e077e1676f706b4cbd0c1d6516ccd146b05a4949824c4103734a"
       }
+    },
+    {
+      "id": "work-741ec3712b2b1d7d",
+      "key": "competency-route-environment",
+      "kind": "feature",
+      "path": "runtime/feature_competency.py",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "Model-free route verified 2 projects but 4/11 fresh proposals were blocked by missing dependencies or Python<3.11; feature inventory limit (2001 files) blocked 4 large repos. Reuse Replay frozen environment profiles and a scoped inventory before measuring competency coverage again.",
+      "notes": [],
+      "updated_at": "2026-10-03T00:47:29+00:00"
     },
     {
       "id": "work-bc717212f3f89ba9",
@@ -840,6 +975,201 @@
         ],
         "resolved_at": "2026-09-26T18:53:54+00:00",
         "source_sha256": "a1c33576815d50a5ed302fab2bd3b3b0ee2852fe1d24172bbed9d1de3c87570b"
+      }
+    },
+    {
+      "id": "work-dcab2dcb78550fa0",
+      "key": "programmer-syntax-feedback-before-materialization",
+      "kind": "feature",
+      "path": "runtime/feature_development.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-30T18:08:02+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Bounded model-owned syntax feedback and source-bound qualified checkpoint recovery implemented; 25 focused regressions and live COS DNS syntax correction followed by 15 native passes. Semantic DNS counterexample remains a separate open product task.",
+        "evidence": [
+          "artifacts/spec_delta_20261001/new-contracts.json",
+          "artifacts/spec_delta_20261001/new-contracts.xml",
+          "artifacts/spec_delta_20261001/runs/dns-live/summary.json",
+          "artifacts/spec_delta_20261001/runs/dns-live/run/cycle-0/attempt-1/verification.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/spec_delta_20261001/new-contracts.json",
+            "sha256": "91886d7026027527e1d85d71253f6134c825b4a9ef148ec7da267358bdeb78e0"
+          },
+          {
+            "path": "artifacts/spec_delta_20261001/new-contracts.xml",
+            "sha256": "3ab7c9a606e1b11ecc5f48dba602e038005a3112d7ed9915e0621353a8ad8247"
+          },
+          {
+            "path": "artifacts/spec_delta_20261001/runs/dns-live/summary.json",
+            "sha256": "73aed82f75adf11467c7882c716873992da0c0135b5ce574e2d8f7a7e60940d3"
+          },
+          {
+            "path": "artifacts/spec_delta_20261001/runs/dns-live/run/cycle-0/attempt-1/verification.json",
+            "sha256": "26b471b6d9b2fbd28ca136bcd5d344c6ef72c3486495098fda03847212fd4717"
+          }
+        ],
+        "resolved_at": "2026-10-01T00:33:11+00:00",
+        "source_sha256": "e40d1dc7df6ad115567cc59a6f250e4f859f1f1cdaa66729f5c5189a01f25dc8"
+      }
+    },
+    {
+      "id": "work-b3f90671b07174da",
+      "key": "verified-specification-dispute-and-no-progress-stop",
+      "kind": "feature",
+      "path": "runtime/feature_quality.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-30T00:29:01+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Generic no-progress stopping and narrow native/audit-bound preservation revisions implemented. Offline historical replay stops after1native instead of8. COS/Luna closes known task with25native+10external after2revisions; all204650new tokens/24calls retained, original projects unchanged. Disjoint assertion failures can select an earlier bound candidate; ordinary frozen/native gates preserved.",
+        "evidence": [
+          "artifacts/spec_dispute_20260930/summary.json",
+          "artifacts/spec_dispute_20260930/conflict.xml",
+          "artifacts/spec_dispute_20260930/replay-receipt.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/spec_dispute_20260930/summary.json",
+            "sha256": "8cf46527af5411dc80e8623ce7bb696f2ce160f25ff71707707fa6bf1e3478a9"
+          },
+          {
+            "path": "artifacts/spec_dispute_20260930/conflict.xml",
+            "sha256": "4945de2ea6a982f9c12c0a5aea32de3ecbaf29a076ace7b77abb0ef7d9e100cd"
+          },
+          {
+            "path": "artifacts/spec_dispute_20260930/replay-receipt.json",
+            "sha256": "0b25e2c807f590c7c7b23ab1a26624f4cbf6b0f3dd3fa86cb4961af911cf17a0"
+          }
+        ],
+        "resolved_at": "2026-09-30T04:17:06+00:00",
+        "source_sha256": "3525eee34b314e30a373b66beb85676ff367cae063b86cb6ba5487d28c7bf21f"
+      }
+    },
+    {
+      "id": "work-9a3e4b77d2ccd0c9",
+      "key": "challenger-preserve-valid-survivors-across-invalid-retry",
+      "kind": "feature",
+      "path": "runtime/feature_quality_challenge.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-29T20:05:18+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Native-valid variants are retained monotonically across bounded Challenger retries, deduplicated by exact content and rechecked as a bounded union after specification extension. Historical paid proposals preserve both dict-subclass and falsey-callable witnesses; old final tests correctly require further specification. Empty/invalid retry and source changes cannot approve.361 regression tests passed; no target reauthoring or new inference.",
+        "evidence": [
+          "artifacts/roles_obligations_20260930/final-replay/historical-replay.json",
+          "artifacts/roles_obligations_20260930/regression-final.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/roles_obligations_20260930/final-replay/historical-replay.json",
+            "sha256": "6f13be7f17bde0411af94b1421bab7a8e23327142377806e96ce422c0232c87c"
+          },
+          {
+            "path": "artifacts/roles_obligations_20260930/regression-final.xml",
+            "sha256": "e7e90b2908d34c646993faf597531067eca672cffadeeb9df2cf078e3b441667"
+          }
+        ],
+        "resolved_at": "2026-09-29T23:22:14+00:00",
+        "source_sha256": "58a8cef35521542e56ba6eb6ebbeaeb2d05e71d900d2085dba068f8196210b1f"
+      }
+    },
+    {
+      "id": "work-d9e66fad0abcecfc",
+      "key": "policy-versioned-audit-feedback",
+      "kind": "evaluation",
+      "path": "runtime/feature_quality_resume.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-30T14:03:30+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Saved-run stale authority fixed; source-bound audit history survives resume, current issues/frozen tests/counterexamples preserved. Cooperative STOP preserves settled replies/usage and resume.216 broader snapshot regressions before final frozen-ref edge fix;56 focused regressions after it. No live calls or changed historical scores.",
+        "evidence": [
+          "artifacts/audit_feedback_20260930/before/result.json",
+          "artifacts/audit_feedback_20260930/after/result.json",
+          "artifacts/audit_feedback_20260930/regression.xml",
+          "artifacts/audit_feedback_20260930/stage-before-reference-fix.json",
+          "artifacts/audit_feedback_20260930/reference.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/audit_feedback_20260930/before/result.json",
+            "sha256": "c898604fc4d2e7e8a93f72f72dd8c507cf7db99dd283bc4851893e64abb8e091"
+          },
+          {
+            "path": "artifacts/audit_feedback_20260930/after/result.json",
+            "sha256": "d12893e70304dec8ae5dab7433ccd0d72cdc56e09b9fa14cf0c8be36aea49c8c"
+          },
+          {
+            "path": "artifacts/audit_feedback_20260930/regression.xml",
+            "sha256": "c7bf3a33126012e8d7f9d97f96292afc5f656a2dd336b86fcee2fc3bb37b4211"
+          },
+          {
+            "path": "artifacts/audit_feedback_20260930/stage-before-reference-fix.json",
+            "sha256": "f454bb1f4e303df97d3d15853d3db133a797d0ec3526d9248faed7ff268fbbab"
+          },
+          {
+            "path": "artifacts/audit_feedback_20260930/reference.xml",
+            "sha256": "48d845c5c83c4875e9470645026b60a8b57c473ba721f9df0d7cc6620a8e72b8"
+          }
+        ],
+        "resolved_at": "2026-09-30T15:39:46+00:00",
+        "source_sha256": "88582b583a0a36281ad5c8bf8a7b94a43e6f2a777f4845cd28e07c0245a37e19"
+      }
+    },
+    {
+      "id": "work-f0c35367431ec293",
+      "key": "fix-templates-detector-anchored",
+      "kind": "evaluation",
+      "path": "runtime/fix_template_learning.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 2,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-10-03T05:28:43+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Detector-anchored (ruff) templates on 56 full-history repos: 4605 edits/124 rules, 393 correct of 1236 suggested cross-project, 545 detector-verified on current code; no-detector 69975 alarms. Best rules already have ruff autofix; 86 correct on 55 rules without autofix. Report docs/architecture/fix_templates_20261003.md",
+        "evidence": [
+          "artifacts/fix_templates_20261003/detector/detector_study.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/fix_templates_20261003/detector/detector_study.json",
+            "sha256": "df04272465b5c15dba3bc869c8353ab383ebdc23a6fe2e8324015b57206c954a"
+          }
+        ],
+        "resolved_at": "2026-10-03T10:15:32+00:00",
+        "source_sha256": "96289338b0fe9f693ede67a249240bd03625d9568744323665daf0b23a1cc861"
       }
     },
     {
@@ -1206,6 +1536,20 @@
       }
     },
     {
+      "id": "work-936a5f25d3ab6e93",
+      "key": "implementer-live-reference-evidence-gap-20260929",
+      "kind": "evaluation",
+      "path": "runtime/role_source_context.py",
+      "owner": "assistant",
+      "status": "open",
+      "blocking": false,
+      "priority": 3,
+      "dependencies": [],
+      "next_action": "Current unfrozen external curriculum: map/test004=1.0, test5=0.963 and needs_improvement because read-only evidence omits app/providers/adapters.py:generate_result from historical teacher reference. Preserve artifacts/roles_transfer_20260929/curriculum-diagnosis.json. Review current call context and ambiguous method ownership before changing planner or teacher reference; no quality promotion from green engineering tests. Source projects unchanged; no paid inference required for attribution.",
+      "notes": [],
+      "updated_at": "2026-09-29T12:02:28+00:00"
+    },
+    {
       "id": "work-60b11d6445bb4bb0",
       "key": "acceptance-proposal-adequacy",
       "kind": "evaluation",
@@ -1303,6 +1647,69 @@
       }
     },
     {
+      "id": "work-46b5c47294852f72",
+      "key": "stage-regression:plugins/development_quality/tests|tests/runtime/test_audit_schedule.py|tests/runtime/test_durable_queue_lock.py|tests/runtime/test_feature_accepted_metadata.py|tests/runtime/test_feature_assertion_controls.py|tests/runtime/test_feature_baseline_expectations.py|tests/runtime/test_feature_campaign_resume.py|tests/runtime/test_feature_prior_candidate.py|tests/runtime/test_feature_quality.py|tests/runtime/test_feature_quality_resume.py|tests/runtime/test_spec_audit_batch.py",
+      "kind": "test_failure",
+      "path": "tests/runtime/test_audit_schedule.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": true,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-30T14:03:41+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Prior 160 passing tests were invalidated only by concurrent queue update. Repeated final verification passes all160 with unchanged source inventories; no test/code failure remains. Keep original failed receipt.",
+        "evidence": [
+          "artifacts/paired_workflow_20260930/stage-before-closure.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/paired_workflow_20260930/stage-before-closure.json",
+            "sha256": "6f35727edfa4e5a0c89fdf922698bfb888595858d5928a3fa1c26a46ddfa6c92"
+          }
+        ],
+        "resolved_at": "2026-09-30T14:11:16+00:00",
+        "source_sha256": "f79bb4ad76be015f12f6ae214c41ac58b6dd7595fbf1c997bba31911259c9415"
+      }
+    },
+    {
+      "id": "work-b793f9df560ed6ae",
+      "key": "stage-regression:tests/runtime/test_async_executor.py|tests/runtime/test_contract_error_threshold.py|tests/runtime/test_contract_transform_contract_profiles.py|tests/runtime/test_documentation_contract_sync.py|tests/runtime/test_executor_acceptance.py|tests/runtime/test_goal_runtime.py|tests/runtime/test_implementer_curriculum.py|tests/runtime/test_plugin_import_scope.py|tests/runtime/test_plugin_loader.py|tests/runtime/test_product_context.py|tests/runtime/test_rebuild_capability.py|tests/runtime/test_registry_doctor.py|tests/runtime/test_role_skills.py|tests/runtime/test_role_spec_writer_ranking.py|tests/runtime/test_role_spec_writer_ranking_part2.py|tests/runtime/test_role_spec_writer_ranking_part3.py|tests/runtime/test_role_spec_writer_ranking_part4.py|tests/runtime/test_role_spec_writer_ranking_part5.py|tests/runtime/test_self_improvement_route_contract.py|tests/runtime/test_spec_writer_dependency_readiness.py|tests/runtime/test_spec_writer_first_slice_window.py|tests/runtime/test_spec_writer_target_binding.py|tests/runtime/test_stabilization_tools.py|tests/runtime/test_technical_spec_policy.py|tests/runtime/test_upstream_role_handoff.py|tests/runtime/test_worker_pool.py|tests/tools/test_canonical_verify.py|tests/tools/test_executor_profile_safe_role_probe.py|tests/tools/test_run_claim_obligation_suite.py",
+      "kind": "test_failure",
+      "path": "tests/runtime/test_contract_transform_contract_profiles.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": true,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-29T12:12:03+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "The only failing snapshot test was nested smoke: two plugin ownership tests exceeded Windows path length. check_plugins now uses isolated process temp; real isolated smoke and ownership checks pass24 with1platform skip. Prior snapshot177passed preserved; native report failure handling also passes112 with1skip.",
+        "evidence": [
+          "artifacts/roles_transfer_20260929/smoke-short-temp-check.json",
+          "artifacts/roles_transfer_20260929/final-probe-repair.xml"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/roles_transfer_20260929/smoke-short-temp-check.json",
+            "sha256": "b26cf5023e68315811fc83cf569f10282154c8c6f18163b9d9ce1f499afe23eb"
+          },
+          {
+            "path": "artifacts/roles_transfer_20260929/final-probe-repair.xml",
+            "sha256": "9e975005836dce955977b2111e472400e08adac7a0dda095bdfb3df9241fd048"
+          }
+        ],
+        "resolved_at": "2026-09-29T13:18:21+00:00",
+        "source_sha256": "0f57bdccb470483ede37148497db5c58998a1818c48dae63e43a98264a3ad274"
+      }
+    },
+    {
       "id": "work-785f5b894c12b94a",
       "key": "stage-regression:tests/runtime/test_budgeted_chat.py|tests/runtime/test_budgeted_gateway_preflight.py|tests/runtime/test_claim_suite_budget.py|tests/runtime/test_description_api_inputs.py|tests/runtime/test_description_exception_paths.py|tests/runtime/test_direct_model_route.py|tests/runtime/test_local_inference.py|tests/runtime/test_offline_inference.py|tests/runtime/test_project_description.py|tests/runtime/test_return_flag_analysis.py|tests/runtime/test_return_flag_review.py|tests/runtime/test_return_property_review.py|tests/runtime/test_success_api_contracts.py",
       "kind": "test_failure",
@@ -1392,6 +1799,64 @@
         ],
         "resolved_at": "2026-09-26T00:56:58+00:00",
         "source_sha256": "2120dc80f71d3c7cb1be5012ea523a67e6d1c6a89ad2009d00bdc92aaf5717a8"
+      }
+    },
+    {
+      "id": "work-1e5fe807976eb477",
+      "key": "stage-regression:tests/runtime/test_competency_knowledge.py|tests/runtime/test_exception_pickle_active_application.py|tests/runtime/test_exception_pickle_active_application_batches.py|tests/runtime/test_exception_pickle_active_application_contracts.py|tests/runtime/test_exception_pickle_active_application_dependencies.py|tests/runtime/test_exception_pickle_active_application_direct_file.py|tests/runtime/test_exception_pickle_active_application_frontiers.py|tests/runtime/test_exception_pickle_active_application_materializers.py|tests/runtime/test_exception_pickle_active_application_priorities.py|tests/runtime/test_exception_pickle_active_application_readmission.py|tests/runtime/test_exception_pickle_active_application_risk.py|tests/runtime/test_exception_pickle_active_application_samples.py|tests/runtime/test_exception_pickle_active_application_stubs.py|tests/runtime/test_exception_pickle_autonomous_shadow.py|tests/runtime/test_exception_pickle_autonomous_shadow_part2.py|tests/runtime/test_exception_pickle_blocker_intelligence.py|tests/runtime/test_exception_pickle_blocker_intelligence_part2.py|tests/runtime/test_exception_pickle_blocker_intelligence_part3.py|tests/runtime/test_exception_pickle_candidate_audit.py|tests/runtime/test_exception_pickle_catalog_contract.py|tests/runtime/test_exception_pickle_class_state_contract_audit.py|tests/runtime/test_exception_pickle_contract.py|tests/runtime/test_exception_pickle_derived_import_audit.py|tests/runtime/test_exception_pickle_derived_message_audit.py|tests/runtime/test_exception_pickle_failed_probe_analyzer.py|tests/runtime/test_exception_pickle_holdout_transaction.py|tests/runtime/test_exception_pickle_import_cluster_planner.py|tests/runtime/test_exception_pickle_independent_evaluator.py|tests/runtime/test_exception_pickle_materializer_audit.py|tests/runtime/test_exception_pickle_object_contract_admission.py|tests/runtime/test_exception_pickle_object_contract_audit.py|tests/runtime/test_exception_pickle_opaque_hold_audit.py|tests/runtime/test_exception_pickle_promotion_contract.py|tests/runtime/test_exception_pickle_promotion_readiness.py|tests/runtime/test_exception_pickle_promotion_transaction.py|tests/runtime/test_exception_pickle_samples_contract.py|tests/runtime/test_feature_competency.py|tests/runtime/test_feature_development.py|tests/runtime/test_plugin_loader.py|tests/runtime/test_programmer_exception_pickle_patch.py|tests/runtime/test_registry_doctor.py",
+      "kind": "test_failure",
+      "path": "tests/runtime/test_feature_competency.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": true,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-10-03T01:38:53+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Only failure was test_registry_doctor_detects_hash_drift: subprocess could not import uninstalled cognitive_inspect. Dev requirements installed in ../venvs/cos-py310; same 42 targets rerun: 252 passed, 0 failed, boundaries ok, finalization complete.",
+        "evidence": [
+          "artifacts/development/stage-b2c0150b14/report.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/development/stage-b2c0150b14/report.json",
+            "sha256": "19dafe61f0ad6ac98ec2978cedcf43d28acab9a506a2ab82bcdeb10d37f2b7e7"
+          }
+        ],
+        "resolved_at": "2026-10-03T04:07:51+00:00",
+        "source_sha256": "987e43c5f716ffd834da2930402da9fe0be59f7f41064034181eb58d2e6957b1"
+      }
+    },
+    {
+      "id": "work-7937fc5a5a802dc5",
+      "key": "stage-regression:tests/runtime/test_competency_knowledge.py|tests/runtime/test_feature_competency.py|tests/runtime/test_feature_competency_detector.py|tests/runtime/test_fix_template_detector.py|tests/runtime/test_fix_templates.py|tests/runtime/test_plugin_loader.py|tests/runtime/test_registry_doctor.py",
+      "kind": "test_failure",
+      "path": "tests/runtime/test_feature_competency.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": true,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-10-03T12:59:02+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Only failure was the navigation check rejecting a glob entrypoint (plugins/learned_fix_templates/**); replaced with concrete files, project_context --check ok, same 7 targets 34 passed.",
+        "evidence": [
+          "artifacts/development/stage-80d2ac1362/report.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/development/stage-80d2ac1362/report.json",
+            "sha256": "91161d4480f94fb87adeca53029dd08b97dc1a71be73e006a70ca767ccb3fc1b"
+          }
+        ],
+        "resolved_at": "2026-10-03T13:00:32+00:00",
+        "source_sha256": "6e351b24cb128b416b543b8d3b45a3b1aeedc9970ec4d29fd6f13406cd9a16c2"
       }
     },
     {
@@ -1643,6 +2108,45 @@
       }
     },
     {
+      "id": "work-d923c4d3b76cca7e",
+      "key": "canonical-full-core-order-sensitive-failures-20260929",
+      "kind": "test_failure",
+      "path": "tools/canonical_verify.py",
+      "owner": "assistant",
+      "status": "resolved",
+      "blocking": false,
+      "priority": 1,
+      "dependencies": [],
+      "next_action": "none",
+      "notes": [],
+      "updated_at": "2026-09-29T08:54:07+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Reproduced and fixed cross-workspace plugin import leakage, optional context compatibility, test configuration isolation and native report validation. Full core 5140 passed/5 failed; all five policy-fixture failures fixed and verified in 30-test direct and snapshot follow-ups. Packages60/plugins237 pass. Full historical failed receipts retained; external curriculum quality gap remains separate.",
+        "evidence": [
+          "artifacts/roles_transfer_20260929/verification-repair-summary.json",
+          "artifacts/development/stage-03a623dff8/report.json",
+          "docs/architecture/import_isolation_20260929.md"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/roles_transfer_20260929/verification-repair-summary.json",
+            "sha256": "23d5fe410a577417150d7b5be5f0cb2a313b9c0f92537ee0a6788f570d1efca8"
+          },
+          {
+            "path": "artifacts/development/stage-03a623dff8/report.json",
+            "sha256": "7afc7f14d87d566cc84af96ec2a9d5a895ed4648476c6289c1b4a6dd326831a3"
+          },
+          {
+            "path": "docs/architecture/import_isolation_20260929.md",
+            "sha256": "39f88c2e67c35490b4a8a607b6dceda3c76e0692cfdf24d915e43bc90771bc22"
+          }
+        ],
+        "resolved_at": "2026-09-29T14:22:32+00:00",
+        "source_sha256": "a5ee10a7777b38014d8561a2dfd976ca2a25bf2042c8f0e8566d7c550042a214"
+      }
+    },
+    {
       "id": "work-dbcd84a8af2e963e",
       "key": "plugin-test-ownership-repair",
       "kind": "test_failure",
@@ -1682,15 +2186,45 @@
       "kind": "test_failure",
       "path": "tools/check_plugins.py",
       "owner": "assistant",
-      "status": "open",
+      "status": "resolved",
       "blocking": false,
       "priority": 2,
       "dependencies": [],
-      "next_action": "Current38-plugin check passes after check_plugins explicitly uses importlib to avoid test_contract.py name collisions. See roles_package_20260929/plugin-verification-final.json. Historical20260919 core541 failures46 errors still unclassified; do not claim whole CI green or repeat broad suite merely for environment failures.",
+      "next_action": "none",
       "notes": [
         "2026-09-24 current defect reconfirmed offline; paired model designs rejected, no patch applied. See artifacts/api_roles_20260924/semantic-review.json; task remains open."
       ],
-      "updated_at": "2026-09-29T02:06:42+00:00"
+      "updated_at": "2026-09-29T02:06:42+00:00",
+      "resolution": {
+        "kind": "assistant_review",
+        "summary": "Historical widespread failures repaired. Full core now5159 passed,1 failure,6 skipped; sole remaining failure is stale remote-resume error-name expectation, corrected with strict per-case mapping and16/16 focused checks. Packages60/60 and plugins254/254. Final delivery-context addition passes48/48 focused snapshot. This resolves observed failures by combined evidence; does not claim a single green full final-revision run.",
+        "evidence": [
+          "artifacts/roles_transfer_20260929/verification-repair-summary.json",
+          "artifacts/roles_efficiency_20260929/canonical-final.json",
+          "artifacts/roles_efficiency_20260929/remote-boundary-after.log",
+          "artifacts/roles_efficiency_20260929/stage-final.json"
+        ],
+        "receipt_digests": [
+          {
+            "path": "artifacts/roles_transfer_20260929/verification-repair-summary.json",
+            "sha256": "23d5fe410a577417150d7b5be5f0cb2a313b9c0f92537ee0a6788f570d1efca8"
+          },
+          {
+            "path": "artifacts/roles_efficiency_20260929/canonical-final.json",
+            "sha256": "29d7b179b1225a66ffacd570970d80a8a203d621550c6b45720054c4b82d3a38"
+          },
+          {
+            "path": "artifacts/roles_efficiency_20260929/remote-boundary-after.log",
+            "sha256": "2aafd3a4eb85f427f5b2f1bb4399273cac116355a88fadd78fe4837633716ee7"
+          },
+          {
+            "path": "artifacts/roles_efficiency_20260929/stage-final.json",
+            "sha256": "bd18f1060978c3d266721b5b1cd7121d011732427fcdbce2ba0ab9f949d4cf00"
+          }
+        ],
+        "resolved_at": "2026-09-29T20:32:33+00:00",
+        "source_sha256": "a3809ef2e848f21cd91aec769c7999b6166218543329de9137d90654f40f6304"
+      }
     },
     {
       "id": "work-3872dabf1905fb2b",

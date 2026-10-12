@@ -52,7 +52,12 @@ def merge_extension(base, extra):
         raise ValueError('feature_extension_environment_changed')
     if not extra.get('acceptance') or not extra.get('limitations'):
         raise ValueError('feature_extension_acceptance_and_limits_required')
-    return {**inherited, 'tests': [*inherited['tests'], *tests],
+    metadata = {}
+    if 'baseline_expectations' in inherited or 'baseline_expectations' in extra:
+        if 'baseline_expectations' not in inherited or 'baseline_expectations' not in extra:
+            raise ValueError('feature_baseline_extension_requires_complete_expectations')
+        metadata['baseline_expectations'] = [*inherited['baseline_expectations'], *extra['baseline_expectations']]
+    return {**inherited, **metadata, 'tests': [*inherited['tests'], *tests],
             'acceptance': [*inherited['acceptance'], *extra['acceptance']],
             'limitations': extra['limitations'],
             'regression_tests': list(dict.fromkeys([

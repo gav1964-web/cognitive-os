@@ -75,12 +75,14 @@ def verification_commands(
                         "tests",
                         "-q",
                         f"--basetemp=.pytest-tmp/{run_id}/c",
+                        f"--junitxml=artifacts/verification/{run_id}/core_tests.xml",
                     ],
                 ),
                 (
                     "package_tests",
                     [sys.executable, "-m", "pytest", "packages", "-q", "--import-mode=importlib",
-                     f"--basetemp=.pytest-tmp/{run_id}/pkg"],
+                     f"--basetemp=.pytest-tmp/{run_id}/pkg",
+                     f"--junitxml=artifacts/verification/{run_id}/package_tests.xml"],
                 ),
                 (
                     "plugin_tests",
@@ -92,6 +94,7 @@ def verification_commands(
                         "-q",
                         "--import-mode=importlib",
                         f"--basetemp=.pytest-tmp/{run_id}/p",
+                        f"--junitxml=artifacts/verification/{run_id}/plugin_tests.xml",
                     ],
                 ),
             ]
@@ -114,23 +117,31 @@ def _run(*, root: Path, name: str, command: list[str], run_id: str) -> dict[str,
     temp_dir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update({"TMP": str(temp_dir), "TEMP": str(temp_dir), "TMPDIR": str(temp_dir)})
-    completed = subprocess.run(
-        command,
-        cwd=root,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    logs = root / "artifacts" / "verification" / run_id
+    logs.mkdir(parents=True, exist_ok=True)
+    stdout_path, stderr_path = logs / f"{name}.stdout.log", logs / f"{name}.stderr.log"
+    # Stream to disk: a failed or interrupted run must retain its first failure,
+    # not just the last summary lines. The compact report keeps navigation links.
+    with stdout_path.open('wb') as stdout, stderr_path.open('wb') as stderr:
+        completed = subprocess.run(command, cwd=root, env=env, stdout=stdout, stderr=stderr)
     return {
         "name": name,
         "status": "ok" if completed.returncode == 0 else "failed",
         "returncode": completed.returncode,
         "command": command,
-        "stdout_tail": completed.stdout[-1600:],
-        "stderr_tail": completed.stderr[-1600:],
+        "stdout_path": stdout_path.relative_to(root).as_posix(),
+        "stderr_path": stderr_path.relative_to(root).as_posix(),
+        "junit_path": (logs / f"{name}.xml").relative_to(root).as_posix()
+                      if (logs / f"{name}.xml").exists() else None,
+        "stdout_tail": _tail(stdout_path),
+        "stderr_tail": _tail(stderr_path),
     }
+
+
+def _tail(path: Path) -> str:
+    with path.open('rb') as stream:
+        stream.seek(max(0, path.stat().st_size - 6400))
+        return stream.read().decode('utf-8', errors='replace')[-1600:]
 
 
 if __name__ == "__main__":

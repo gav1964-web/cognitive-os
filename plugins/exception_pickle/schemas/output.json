@@ -39,6 +39,21 @@
     },
     "kwargs": {
       "type": "object"
+    },
+    "change": {
+      "type": "object",
+      "required": [
+        "contract",
+        "competency",
+        "target",
+        "tests",
+        "edits",
+        "acceptance",
+        "limitations"
+      ]
+    },
+    "reason": {
+      "type": "string"
     }
   },
   "allOf": [

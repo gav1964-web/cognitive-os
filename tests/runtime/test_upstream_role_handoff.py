@@ -99,3 +99,10 @@ def test_invalid_task_contract_rejected(inputs, mutation):
         contract['requirements'] *= 33
     with pytest.raises(ValueError):
         normalize_task_contract(contract)
+
+
+def test_optional_product_context_does_not_require_legacy_project_field():
+    from runtime.upstream_role_handoff import frame_specification
+    assert 'product_context' not in frame_specification({}, {})
+    with pytest.raises(ValueError, match='product_context_project_required'):
+        frame_specification({}, {'product_context': {}})

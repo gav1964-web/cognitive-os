@@ -2,16 +2,39 @@
 import ast
 
 
+def _test_classes(tree):
+    modules, bases = set(), set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            modules.update(a.asname or a.name for a in node.names if a.name == 'unittest')
+        elif isinstance(node, ast.ImportFrom) and node.module == 'unittest':
+            bases.update(a.asname or a.name for a in node.names if a.name == 'TestCase')
+    classes = set()
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        unittest_base = any(
+            isinstance(b, ast.Name) and b.id in bases or
+            isinstance(b, ast.Attribute) and b.attr == 'TestCase'
+            and isinstance(b.value, ast.Name) and b.value.id in modules for b in node.bases)
+        if unittest_base:
+            bases.add(node.name)
+        if unittest_base or node.name.startswith('Test'):
+            classes.add(node.name)
+    return classes
+
+
 def _nodes(path, content):
     try:
         tree = ast.parse(content)
     except (SyntaxError, TypeError):
         return set()
     result = set()
+    classes = _test_classes(tree)
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test_'):
             result.add(path + '::' + node.name)
-        elif isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+        elif isinstance(node, ast.ClassDef) and node.name in classes:
             result.update(path + '::' + node.name + '::' + child.name for child in node.body
                           if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
                           and child.name.startswith('test_'))

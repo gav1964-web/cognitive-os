@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from pathlib import Path
 from typing import Any
 
 from .checkpoint import hash_payload, save_checkpoint
 from .error_thresholds import increment_error_count
-from .executor import PacketSink, RecoveryHandler, _clear_plugin_modules, _emit_packet, _execute_node, _registry_statuses
+from .executor import PacketSink, RecoveryHandler, _emit_packet, _execute_node, _registry_statuses
 from .failure_log import append_failure_event
 from .interrupt import build_interrupt
 from .layer_packets import execution_event_packet, interrupt_packet
@@ -18,8 +17,10 @@ from .pipeline import topological_node_batches, validate_pipeline
 from .policy_stub import decide
 from .quarantine import classify_exception, should_quarantine, traceback_hash
 from .registry import CapabilityRegistry
+from .plugin_import_scope import plugin_import_session
 
 
+@plugin_import_session
 async def execute_pipeline_async(
     root: Path,
     pipeline: Pipeline,
@@ -36,11 +37,6 @@ async def execute_pipeline_async(
     A node failure pauses scheduling, records checkpoint/interrupt data, then
     applies the same deterministic policy path as the synchronous executor.
     """
-
-    root_text = str(root)
-    sys.path = [item for item in sys.path if item != root_text]
-    sys.path.insert(0, root_text)
-    _clear_plugin_modules()
 
     registry = CapabilityRegistry(root)
     if reset_registry:

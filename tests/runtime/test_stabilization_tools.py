@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -37,6 +38,12 @@ def test_queue_cleanup_and_registry_selection_report_cli(runtime_workspace):
 
 def test_runtime_smoke_skip_pytest_cli(runtime_workspace):
     source = Path(__file__).resolve().parents[2]
+    # Smoke includes the plugin suites. Their manifest-owned tests and editable
+    # package implementations are part of this fixture, unlike a runtime-only copy.
+    for name in ('tests', 'packages', 'skills'):
+        shutil.copytree(source / name, runtime_workspace / name,
+                        ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache'))
+    shutil.copy2(source / 'pytest.ini', runtime_workspace / 'pytest.ini')
     result = _run_tool(source, runtime_workspace, "runtime_smoke.py", "--skip-pytest")
 
     assert result["status"] == "ok"

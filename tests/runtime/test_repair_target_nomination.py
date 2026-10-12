@@ -13,6 +13,8 @@ from runtime.repair_target_nomination import (
 from runtime.narrow_type_evidence_binding import content_digest
 from runtime.stage_finalization_workspace import inventory
 
+REPLAY_TIMEOUT = 60
+
 PRODUCTION = '''class Worker:
     def convert(self, value):
         return getattr(self, 'convert_' + value)()
@@ -38,14 +40,18 @@ def prepare(root, *, body=None, production=PRODUCTION):
     import sys
     records = []
     for i in range(2):
-        probe = _probe(project, root / f'intake-{i}', ['tests/test_case.py::test_case'], [], 20, Path(sys.executable))
+        probe = _probe(project, root / f'intake-{i}', ['tests/test_case.py::test_case'], [], REPLAY_TIMEOUT, Path(sys.executable))
         output = Path(probe['output']).read_text(encoding='utf-8')
         record = _interpret_pytest_result(project, probe['returncode'], output, {})
         records.append({**record, 'output': output})
     first = records[0]
     failure = {'target': 'core.py:Worker.convert', 'failure_signature': first['failure_signature'],
         'failing_nodeids': ['tests/test_case.py::test_case'], 'detail': records[0]['output'], 'failure_kind': 'test_failed'}
-    packet = build_failure_evidence_packet(project_dir=project, failure=failure, chain_case={'repetitions': records})
+    # This fixture checks attribution, not startup latency under a full-suite
+    # Windows load. Keep the same explicit bound throughout its replay chain.
+    packet = build_failure_evidence_packet(project_dir=project, failure=failure,
+        chain_case={'repetitions': records},
+        native_replay_settings={'pytest_plugins': [], 'timeout_seconds': REPLAY_TIMEOUT})
     assert packet['status'] == 'complete', packet
     return project, packet
 

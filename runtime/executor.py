@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sys
+from contextlib import nullcontext
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -16,6 +16,7 @@ from .layer_packets import execution_event_packet, interrupt_packet
 from .models import ExecutionContext, Pipeline, PolicyDecision, RuntimeFailure
 from .pipeline import resolve_node_input, topological_nodes, validate_pipeline
 from .plugin_loader import load_entrypoint
+from .plugin_import_scope import plugin_import_scope, plugin_import_session
 from .policy_stub import decide
 from .process_runner import run_entrypoint_in_process
 from .quality import record_quality_event
@@ -84,6 +85,7 @@ def resume_pipeline(
     return _execute_pipeline_context(root, pipeline, context, reset_registry=reset_registry)
 
 
+@plugin_import_session
 def _execute_pipeline_context(
     root: Path,
     pipeline: Pipeline,
@@ -94,11 +96,6 @@ def _execute_pipeline_context(
     packet_sink: PacketSink | None = None,
     recovery_handler: RecoveryHandler | None = None,
 ) -> dict[str, Any]:
-    root_text = str(root)
-    sys.path = [item for item in sys.path if item != root_text]
-    sys.path.insert(0, root_text)
-    _clear_plugin_modules()
-
     registry = CapabilityRegistry(root)
     if reset_registry:
         registry.reset_from_plugins()
@@ -310,8 +307,9 @@ def _execute_node(
                 raise RuntimeError("process boundary requires workspace root")
             output = run_entrypoint_in_process(root, capability.entrypoint, node_input, timeout_seconds=timeout_seconds)
         else:
-            fn = load_entrypoint(capability.entrypoint)
-            output = fn(node_input)
+            with plugin_import_scope(root) if root is not None else nullcontext():
+                fn = load_entrypoint(capability.entrypoint)
+                output = fn(node_input)
         if not isinstance(output, dict):
             raise SchemaValidationError(f"{capability.id}.output must be object")
         validate_payload(output, capability.output_schema, label=f"{capability.id}.output")
@@ -348,12 +346,6 @@ def _execute_node(
 
 def _registry_statuses(registry: CapabilityRegistry) -> dict[str, str]:
     return {key: value.lifecycle_status for key, value in sorted(registry.capabilities.items())}
-
-
-def _clear_plugin_modules() -> None:
-    for name in list(sys.modules):
-        if name == "plugins" or name.startswith("plugins."):
-            sys.modules.pop(name, None)
 
 
 def _emit_packet(packet_sink: PacketSink | None, packet: dict[str, Any]) -> None:

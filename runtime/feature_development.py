@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .feature_acceptance import prepare, verify, save, specification_feedback, execution_feedback, review_baseline_context
-from .feature_workspace import (inventory, catalog, read_sources, materialize_edits,
+from .feature_workspace import (inventory, catalog, read_sources,
                                 install, digest, owned_path, merge_reads, proposal_for_context)
 from .feature_prompts import COMMON, ROLE, JSON_CASES
 from .feature_case_compiler import compile_cases
@@ -21,6 +21,7 @@ from .feature_checkpoint import verified_candidate, rejected_candidate, review_r
 from .narrow_type_evidence_binding import content_digest
 from .local_inference import LocalInferenceError
 from .feature_review_patch import candidate_patch
+from .feature_programmer_syntax import materialize_with_feedback, restored_feedback
 
 
 def run_feature_development(*, project, work, goal, python, chat, apply_source=False,
@@ -28,7 +29,8 @@ def run_feature_development(*, project, work, goal, python, chat, apply_source=F
                             resume_roles=None, stop_after=None, max_spec_attempts=2,
                             fresh_spec=False, spec_format='python', extend_spec=False,
                             max_output_tokens=32768, resume_candidate=False, observations=None,
-                            resume_review_draft=False, resume_analysis_draft=False):
+                            resume_review_draft=False, resume_analysis_draft=False, progress=None,
+                            resume_candidate_from=None):
     project, work = Path(project).resolve(), Path(work).resolve()
     if (not goal.strip() or work.exists() or work.is_relative_to(project)
             or project.is_relative_to(work) or max_attempts not in (1, 2)
@@ -37,10 +39,12 @@ def run_feature_development(*, project, work, goal, python, chat, apply_source=F
             or type(max_output_tokens) is not int or not 1 <= max_output_tokens <= 32768
             or (resume_candidate and (not resume_roles or fresh_spec or extend_spec or stop_after))
             or (resume_review_draft and not resume_candidate)
+            or (resume_candidate_from and (not resume_roles or resume_candidate or resume_review_draft or extend_spec))
             or (resume_analysis_draft and (not resume_context or resume_roles))
             or (extend_spec and (not resume_roles or fresh_spec or spec_format != 'python'))):
         raise ValueError('feature_requires_goal_and_fresh_external_workdir')
     work.mkdir(parents=True)
+    progress = [] if progress is None else progress
     report = {'schema_version': 'feature_development.v1', 'goal': goal,
               'project': str(project), 'status': 'running', 'source_apply': False,
               'authors': {'goal': 'user', 'analysis_design_tests_code': 'COS model roles',
@@ -299,27 +303,49 @@ def run_feature_development(*, project, work, goal, python, chat, apply_source=F
                           limitations=spec['limitations'])
             save(work / 'report.json', report)
             return report
-        feedback = None
+        feedback = restored_feedback(resume_roles, project, expected, tests,
+                                     report['artifacts']['architect']['scope'])
         candidate = verified_candidate(resume_roles) if resume_candidate else None
+        if resume_candidate_from:
+            from .feature_candidate_reuse import load_candidate
+            candidate = load_candidate(resume_candidate_from, project=project, expected=expected,
+                goal=goal, design=report['artifacts']['architect'], specification=spec)
         rejected = rejected_candidate(resume_roles) if not resume_candidate else None
         if candidate:
-            report['resumed_candidate'] = str(Path(resume_roles).resolve())
+            report['resumed_candidate'] = str(Path(resume_candidate_from or resume_roles).resolve())
         for ordinal in range(1, max_attempts + 1):
             proposal = (candidate['proposal'] if candidate else rejected['proposal'] if rejected and ordinal == 1
                         else ask('programmer', {'feedback': feedback}))
-            save(work / f'proposal-{ordinal}.json', proposal)
-            edits = materialize_edits(project, expected, proposal['edits'],
-                                      report['artifacts']['architect']['scope'], frozen_tests=tests)
+            proposal, edits = materialize_with_feedback(project=project, expected=expected,
+                proposal=proposal, allowed=report['artifacts']['architect']['scope'],
+                tests=tests, ask=ask, work=work, ordinal=ordinal)
+            from .feature_progress import repeated_candidate
+            repeated = repeated_candidate(progress, tests, edits)
+            if repeated and not report['attempts']:
+                # The dispute loader requires a fresh, checkpoint-bound native
+                # receipt. Stop this cross-cycle replay without granting repair.
+                report['no_progress'] = {**repeated, 'proposal': proposal}
+                raise ValueError('feature_repeated_cycle_without_progress')
+            if repeated:
+                report['no_progress'] = {**repeated, 'proposal': proposal}
+                raise ValueError('feature_candidate_no_progress')
             report['exact_frozen_test_echoes'] = [e['path'] for e in proposal['edits'] if e['path'] in tests]
             checked = verify(project, work / f'attempt-{ordinal}', expected,
                              tests, edits, spec, baseline, python)
             report['attempts'].append(checked)
+            progress.append(checked)
             save(work / 'report.json', report)
             if rejected and ordinal == 1 and not candidate_matches(rejected['candidate_hashes'], checked['candidate_hashes'], tests, allow_test_extension=fresh_spec):
                 raise ValueError('feature_rejected_candidate_changed')
-            if candidate and (not checked['passed'] or checked['candidate_hashes'] != candidate['candidate_hashes']):
-                raise ValueError('feature_resumed_candidate_changed_or_failed')
-            if checked['passed'] and not (rejected and ordinal == 1 and rejected.get('review')):
+            if candidate:
+                if not candidate_matches(candidate['candidate_hashes'], checked['candidate_hashes'], tests,
+                                         allow_test_extension=bool(resume_candidate_from)):
+                    raise ValueError('feature_resumed_candidate_changed_or_failed')
+                if not checked['passed']:
+                    if not resume_candidate_from:
+                        raise ValueError('feature_resumed_candidate_changed_or_failed')
+                    candidate = None  # Expanded tests exposed a defect; normal Programmer repair owns it.
+            if checked['passed'] and (fresh_spec or not (rejected and ordinal == 1 and rejected.get('review'))):
                 break
             feedback = {'rejected_proposal': proposal_for_context(proposal, tests), 'verification': execution_feedback(checked),
                         'review': rejected.get('review') if rejected and ordinal == 1 else None}
@@ -338,6 +364,11 @@ def run_feature_development(*, project, work, goal, python, chat, apply_source=F
             report['resumed_unaccepted_review_draft'] = True
         review = ask('reviewer', {'proposal': proposal_for_context(proposal, tests), 'verification': checked,
                                   'candidate_patch': candidate_patch(project, expected, edits),
+                                  'delivery_contract': {
+                                      'production_patch_scope': 'candidate_patch contains production edits only',
+                                      'frozen_acceptance_tests': report['frozen_test_hashes'],
+                                      'composition': 'Installation and deliver_feature include these exact frozen tests together with production edits; Programmer must not rewrite them.',
+                                      'already_installed': False},
                                   'baseline': review_baseline,
                                   'additional_evidence': additional_evidence,
                                   'unaccepted_previous_draft': draft,

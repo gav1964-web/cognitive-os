@@ -3,9 +3,18 @@ import json
 
 import pytest
 
-from runtime.local_inference import LocalInferenceError
+from runtime.local_inference import LocalInferenceConfig, LocalInferenceError
 from tools.prepare_claim_obligation_suite import prepare_suite, DEFAULT_CASES
 from tools.run_claim_obligation_suite import run_suite, preflight
+
+
+@pytest.fixture(autouse=True)
+def frozen_protocol_model(monkeypatch):
+    # This historical suite fixes the model in its protocol. Offline accounting
+    # tests must not inherit today's machine-local production model selection.
+    monkeypatch.setattr('tools.run_claim_obligation_suite.description_model_config',
+        lambda: LocalInferenceConfig(base_url='http://example.invalid',
+                                     model='deepseek/deepseek-v3.2'))
 
 
 @pytest.fixture

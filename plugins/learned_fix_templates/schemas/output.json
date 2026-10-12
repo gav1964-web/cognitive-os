@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status"],
+  "properties": {
+    "status": {"enum": ["ok", "proposed", "not_applicable"]},
+    "rules": {"type": "object"},
+    "change": {"type": "object",
+               "required": ["contract", "competency", "target", "tests", "edits", "oracle", "acceptance", "limitations"]},
+    "reason": {"type": "string"}
+  }
+}

@@ -1,6 +1,42 @@
 # COGNITIVE_OS_TECHNICAL_BASELINE.md
 **Инженерная спецификация и требования к MVP**
 
+**Unaccepted draft edits and syntax recovery (2026-10-01).**
+`unaccepted_spec_delta.v1` binds explicit model-authored test additions/text edits
+to the complete draft digest and goal/design/source identity. Unmentioned tests
+and metadata survive unchanged; deletion and frozen-test edits are prohibited.
+The expanded artifact still requires ordinary contract, audit and native gates;
+checkpoint replay must reconstruct the same artifact from its recorded request.
+Programmer SyntaxError feedback permits one model correction per native attempt;
+saved syntax failures require reproduction before qualified-spec resumption.
+No target semantics are authored by these transport helpers.
+[Evidence and remaining tasks](docs/architecture/spec_delta_20261001.md).
+
+**Baseline assertion controls (2026-09-30).** Strict quality workflows inventory
+direct Python asserts in unaccepted feature-gap tests. The auditor partitions
+them into changed behavior and preserved behavior, linking the latter to separate
+preservation nodes. Native baseline qualification must pass those controls.
+The digest-bound partition is a structural contract; semantic equivalence remains
+an auditor responsibility, and indirect/helper assertions are not certified.
+Malformed auditor mappings receive bounded auditor-local correction, never an
+automatic rewrite of tests. Accepted tests remain immutable. Goal/source/design
+bindings and fresh native checks remain mandatory on resume; saved counterexample
+campaigns survive unaccepted extensions. [Evidence and limits](docs/architecture/assertion_controls_20260930.md).
+
+**Preservation-specification dispute (2026-09-30).** The opt-in quality workflow
+stops repeated native-failing candidates with unchanged code/test hashes.
+`development_quality.v1` may propose a new version of at most two erroneous
+preservation equality assertions, changing only RHS literal values with identical
+calls, fixtures, operators, container shape and test identities. Existing project
+regression tests remain immutable. Both original and candidate must fail the old
+assertion, the corrected preservation tests must pass both, and other original
+outcomes remain unchanged. A separate digest-bound semantic audit is mandatory;
+passing tests alone cannot establish that a goal permits the revision. Original
+acceptance and receipts are retained. Fresh ordinary qualification, candidate
+review and challenge gates remain required. At most one revision per invocation;
+unsupported conflicts stop. This does not authorize arbitrary acceptance editing
+or change the remote worker's frozen-policy contract.
+
 **Remote support (2026-09-28).** Opt-in supervisor accepts authenticated incident/
 context/patch messages through a file mailbox. Frozen local policy governs source
 exports, edits, checks, budgets and task continuation. A patch must reproduce the
@@ -816,3 +852,7 @@ Project-description0.15.0: opt-in return_field_equals_for_inputs checks a review
 Runtime-регрессии блокируют живой urllib chat/completions transport; mock-ответы
 и отдельно бюджетированные экспериментальные runner остаются доступны.
 См. docs/architecture/interface_trial_20260918.md.
+
+### 30.09: прогноз baseline до заморозки
+
+development_quality0.1.11 задаёт per-case baseline_expectations: preservation/feature_control проходят исходник, feature_gap assertion-fail; каждая collected identity покрывается ровно один раз. Цитаты goal/source связывают прогноз, семантический аудит проверяет смысл, runtime — native исход. Quality CLI/file-worker требуют контракт для новых спецификаций; Python API opt-in, старые frozen checkpoints сохраняют старый контракт. Ни аудит, ни прогноз не изменяют тесты автоматически. При resume прежняя Challenger campaign восстанавливается по хешам и исполняется повторно. Область, доказательства и ограничения: [отчёт](docs/architecture/baseline_expectations_20260930.md).

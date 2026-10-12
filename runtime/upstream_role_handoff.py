@@ -82,7 +82,10 @@ def frame_specification(artifact: dict, architecture: dict) -> dict:
         'requirements': 'architecture_brief_and_configured_rules',
         'acceptance': 'configured_templates_and_source_inference', 'semantic_completeness': 'not_measured'}
     from .product_context import forward_product_context
-    forward_product_context(artifact, architecture, architecture['project'])
+    if 'product_context' in architecture:
+        if not architecture.get('project'):
+            raise ValueError('product_context_project_required')
+        forward_product_context(artifact, architecture, architecture['project'])
     if 'task_contract' not in architecture:
         return artifact
     contract = normalize_task_contract(architecture['task_contract'])

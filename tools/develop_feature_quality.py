@@ -27,6 +27,7 @@ def main():
     series.add_argument('--new-series', action='store_true',
                         help='Explicitly start a separately authorized series; never use to reset a continuation')
     parser.add_argument('--max-calls', type=int, default=40)
+    parser.add_argument('--stop-file', help='Stop before the next model call when this path exists; default OUTPUT/STOP')
     parser.add_argument('--max-cycles', type=int, default=4)
     parser.add_argument('--require-rejected-candidate-witness', action='store_true',
                         help='Require new acceptance to expose a reviewed behavioral defect before paid audit')
@@ -45,10 +46,11 @@ def main():
     carry = args.carry_ledger
     chat = FeatureChat(out, max_calls=args.max_calls, max_input_bytes=100000,
         carry=carry, budget_limit=args.budget_limit, budget_authorization=args.budget_authorization,
-        start_new_series=args.new_series)
+        start_new_series=args.new_series, stop_file=args.stop_file)
     save(out / 'request.json', vars(args))
     result = run_quality_development(project=args.project_dir, work=out / 'run', goal=args.goal,
         python=Path(args.python), chat=chat, configs=configs, max_cycles=args.max_cycles,
+        require_baseline_expectations=True,
         require_rejected_candidate_witness=args.require_rejected_candidate_witness)
     print(json.dumps({k: result.get(k) for k in ('status', 'reason', 'checkpoint', 'autonomy')}, ensure_ascii=True))
     return 0 if result['status'] == 'verified' else 1

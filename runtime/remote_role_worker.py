@@ -28,7 +28,8 @@ def run_continuation(job, work, chat, configs):
     from .feature_quality import run_quality_development
     return run_quality_development(project=job['project'], work=work, goal=job['goal'],
         python=Path(job['python']), chat=chat, configs=configs,
-        resume_roles=job['checkpoint'], challenges=False, max_cycles=1)
+        resume_roles=job['checkpoint'], challenges=False, max_cycles=1,
+        require_baseline_expectations=True)
 
 
 def offline_probe(job, work, configs):

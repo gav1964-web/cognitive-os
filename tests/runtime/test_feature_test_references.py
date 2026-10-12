@@ -48,6 +48,27 @@ def test_missing_canonical_body_cannot_be_decoded():
         expand_test_references(encoded)
 
 
+def test_feedback_and_audit_dedup_without_frozen_tests():
+    test = {'path': 'tests/test_x.py', 'content': '# unchanged\r\n' * 100}
+    payload = {'quality_contract_feedback': {'rejected': {'tests': [test]}},
+               'feedback': {'rejected_spec': {'tests': [deepcopy(test)]}}}
+    encoded, count = compact_test_references(payload)
+    assert count == 1 and expand_test_references(encoded) == payload
+    encoded['quality_contract_feedback']['rejected']['tests'][0]['content'] += 'changed'
+    with pytest.raises(ValueError, match='digest'):
+        expand_test_references(encoded)
+
+
+def test_different_draft_and_frozen_bodies_survive_reference_chain():
+    old = {'path': 'tests/test_x.py', 'content': '# old\n' * 150}
+    new = {**old, 'content': '# revised\n' * 150}
+    payload = {'immutable_previous_tests': [old], 'specification': {'tests': [deepcopy(old), new]},
+        'previous_unaccepted_draft': {'rejected': {'tests': [new]}},
+        'feedback': {'rejected_spec': {'tests': [deepcopy(new)]}}}
+    encoded, _ = compact_test_references(payload)
+    assert expand_test_references(encoded) == payload
+
+
 def test_quality_chat_keeps_full_internal_draft_and_audits_literal_output(tmp_path):
     from runtime.feature_quality_chat import QualityChat
     from runtime.feature_quality_draft import draft_binding

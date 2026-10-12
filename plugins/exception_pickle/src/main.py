@@ -7,6 +7,7 @@ from .constructor_samples import _sample_constructor_value
 from .source_samples import _constructor_sample_call, _sample_constructor_value_for_source
 from .knowledge import validate_patterns_document
 from .promotion import prepare_promotion_catalog
+from .task_change import task_change
 
 
 def run(payload: dict) -> dict:
@@ -44,6 +45,8 @@ def run(payload: dict) -> dict:
     if operation == 'decorate_profile':
         profile = decorate_profile(payload['profile'])
         return {'status': 'ok', 'profile': profile}
+    if operation == 'task_change':
+        return task_change(payload['goal'], payload['sources'])
     if operation == 'propose_patch':
         result = exception_pickle_reconstruction_patch(
             payload['source'], class_name=payload['class_name'], recipe=payload['recipe'],

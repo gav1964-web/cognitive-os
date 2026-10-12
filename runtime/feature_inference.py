@@ -19,7 +19,8 @@ Extra upstream-attempt headroom is an estimate, not billing attestation.
 """
     def __init__(self, output, *, max_calls=12, max_input_bytes=80000,
                  carry=None, previous=None, transport=None, budget_limit=1000000,
-                 budget_authorization=None, start_new_series=False, known_calls=None):
+                 budget_authorization=None, start_new_series=False, known_calls=None,
+                 stop_file=None):
         if type(budget_limit) is not int or not 1 <= budget_limit <= 10000000:
             raise ValueError('feature_budget_limit_invalid')
         grant = None
@@ -33,6 +34,7 @@ Extra upstream-attempt headroom is an estimate, not billing attestation.
             raise ValueError('new_feature_series_requires_fresh_uncarried_ledger')
         self.budget_limit = budget_limit
         self.output, self.limit = Path(output), max_calls
+        self.stop_file = Path(stop_file) if stop_file is not None else self.output / 'STOP'
         self.max_input_bytes, self.transport = max_input_bytes, transport
         self.attempts, self.transcript, self.replayed = [], [], []
         self.unknown_stopped = False
@@ -57,6 +59,13 @@ Extra upstream-attempt headroom is an estimate, not billing attestation.
     def __call__(self, messages, *, config):
         if self.unknown_stopped:
             raise ValueError('new_unknown_usage_stops_feature_run')
+        if self.stop_file.exists():
+            save(self.output / 'stop-receipt.json', {
+                'reason': 'feature_stop_requested', 'stop_file': str(self.stop_file),
+                'provider_label': config.provider_label, 'request_digest': content_digest(messages),
+                'completed_calls': len(self.attempts), 'inference_started': False,
+                'ledger': str(self.ledger), 'in_flight_call_cancelled': False})
+            raise ValueError('feature_stop_requested')
         if self.previous:
             row = self.previous.pop(0)
             if (row.get('status') == 'returned' and row.get('usage_known')

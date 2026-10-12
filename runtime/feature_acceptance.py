@@ -164,6 +164,11 @@ def prepare(project, work, expected, spec, python):
                       'scope': 'No existing test_*.py suite; new model-authored preservation only.'})
     result = {'new_tests': new, 'regression': regression,
               'test_hashes': {n: digest(b) for n, b in tests.items()}}
+    if 'baseline_expectations' in spec:
+        from plugins.development_quality.src.main import run as quality_contract
+        result['baseline_expectations'] = quality_contract({
+            'action': 'compare_baseline_expectations', 'artifact': spec,
+            'outcomes': new['tests']})['baseline_expectations']
     case_matches = True
     if spec.get('test_authoring', {}).get('python_scaffolding') == 'runtime.feature_case_compiler':
         result['case_baselines'] = []
@@ -173,6 +178,8 @@ def prepare(project, work, expected, spec, python):
             result['case_baselines'].append({'id': case['id'], 'expected': wanted, 'observed': observed})
             case_matches = case_matches and observed == [wanted]
     save(work / 'baseline.json', result)
+    if result.get('baseline_expectations', {}).get('status') == 'rejected':
+        raise ValueError('feature_baseline_expectations_not_qualified')
     if (new['returncode'] != 1 or not new['counts']['failed'] or new['counts']['error']
             or len(new['assertion_failures']) != new['counts']['failed']
             or new['counts']['skipped'] or not new['source_unchanged']
@@ -206,6 +213,8 @@ def specification_feedback(baseline):
     result = {name: execution_feedback(baseline[name]) for name in ('new_tests', 'regression')}
     if 'case_baselines' in baseline:
         result['case_baselines'] = baseline['case_baselines']
+    if 'baseline_expectations' in baseline:
+        result['baseline_expectations'] = baseline['baseline_expectations']
     return result
 
 

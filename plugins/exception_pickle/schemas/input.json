@@ -15,7 +15,8 @@
         "sample_values",
         "constructor_call",
         "validate_patterns",
-        "prepare_promotion"
+        "prepare_promotion",
+        "task_change"
       ]
     },
     "profile": {
@@ -68,6 +69,29 @@
     },
     "generated_at": {
       "type": "string"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "allOf": [
@@ -177,6 +201,21 @@
           "evaluator",
           "holdout",
           "generated_at"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task_change"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "goal",
+          "sources"
         ]
       }
     }

@@ -1727,22 +1727,6 @@
       "recorded_at": "2026-09-28T03:58:44+00:00"
     },
     {
-      "id": "quality-resume-and-test-extension",
-      "decision": "Resume only source/goal-bound artifacts; rejected drafts grant no approval. New qualified tests may append, not alter prior candidate bytes. Repeated review ownership can be reconsidered without waiving checks.",
-      "rationale": "GeminiVM exposed repeated wrong repair owner, stale unaccepted draft context and four-file capacity exhaustion. Offline target508/508; full autonomy and live readiness are not claimed. Reviewed20260928 context stage:212/212 focused feature tests; exact catalogs and explicit SpecWriter reads retained; partial correction cannot replace complete draft; split transcript resume validates source excerpts. GeminiVM rich-format repair NOT complete; no new inference or target edits; budget admission417810 exceeds remaining321271. See stage-1395908cbd/report.json. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md.",
-      "source_hashes": {
-        "runtime/feature_quality_resume.py": "092c40fb4c9265c1938e69cd13700edfc578e2718dac9d11082fe2aa77bbd169",
-        "runtime/feature_quality_routing.py": "1051b5aeb184fa217e37c489f207a42a1182f76ef638f5d3e213dce64602aae1",
-        "runtime/feature_quality.py": "e15580ca2a8325d72392b812617e7e233b89365e40c9ff30c42e9d8d687c4748",
-        "runtime/feature_checkpoint.py": "bd55cfa055e84081436cbff97fe89ba827eec401a567a2c2075d977034b1e36b",
-        "runtime/feature_acceptance.py": "3cf5eb98664ea7d8e67b5cfa49588cffd81c8b426970f496011575e8d0349550",
-        "runtime/feature_extension.py": "e5411dceaa8d5d5f6562232a43aebf068f0a66267870790035d38ecdab5e308b",
-        "tests/runtime/test_feature_test_extension_bounds.py": "4d9a3a34b68ab20fb7c2c77d884f93d89690f07f4c21682a578795ee1cbb4870"
-      },
-      "reconsider_when": "Role authority, source binding, capacity, append-only tests or resume semantics change.",
-      "recorded_at": "2026-09-28T03:58:44+00:00"
-    },
-    {
       "id": "feature-context-evidence-preservation",
       "decision": "Preserve full unaccepted drafts and all explicit SpecWriter reads; keep exact source catalog names and return recoverable missing-path errors. Never silently filter requested evidence to fit a budget.",
       "rationale": "212 feature regressions pass. Native GeminiVM continuation blocked before inference, preserving the 2.5M carried ceiling, output32768 and upstream reserve. Repair is not target completion or role certification. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md.",
@@ -1898,21 +1882,6 @@
       "recorded_at": "2026-09-29T00:11:46+00:00"
     },
     {
-      "id": "bounded-role-quality-repair",
-      "decision": "Plugin owns role quality knowledge; runtime routes bounded feedback, freezes accepted tests and valid fault campaigns, and tries the prior verified candidate before another programming call.",
-      "rationale": "Calibration exposed false rejection of existing regression nodes, lost survivor feedback and moving mutation targets. A source-bound fixed campaign makes completion reviewable; a failed challenge is never success. Role numbers on small synthetic cohorts remain local evidence, not product certification. Final calibration also fixed witness filename collisions and explicitly declares edits as an array. Native tests cover freeze, retry and candidate reuse. Final policy adds separate coverage audit and immutable old-test context; five fresh transfer tasks execute with frozen source/KB. Native sensitivity still exposes a pagination gap; auditor approval is not proof of completeness. Keep quality route opt-in. Reviewed2026-09-27 boundary continuation: target ownership and carried unknown reserve preserved; AST boundary variants remain unvalidated until goal-backed native witness. See role_boundary report. Multi-file pilot review: source/target boundaries retained; empty-file reads preserve explicit empty evidence; missing expected exceptions count as contract assertions. Budget gate remains intact; draft is not promoted. Reviewed20260927 GeminiVM: no target patch or score gain. Pending draft/audit now persists across read for same goal/design; native qualification remains mandatory after audit. Offline checks only after this change; live effect unknown. Reviewed20260927 continuation: generic resume/routing and bounded append-only tests preserve prior candidate bytes; native/audit and usage gates retained. GeminiVM508/508 offline, manual target edits0; live SSH blocked; no new global score. Historical series ceilings unchanged; current GeminiVM series explicitly authorized2.5M,1564240 reported. Reviewed20260928 context stage:212/212 focused feature tests; exact catalogs and explicit SpecWriter reads retained; partial correction cannot replace complete draft; split transcript resume validates source excerpts. GeminiVM rich-format repair NOT complete; no new inference or target edits; budget admission417810 exceeds remaining321271. See stage-1395908cbd/report.json. Reviewed20260928 format continuation:219 feature regressions, architecture5/5, packages60. Unaccepted file reorganization goes to fresh comparative audit; source fragments completed for AST; paid proposals revalidated without writer replay. COS authored candidate31/31 and external528/528; Reviewer rejected unknown siblings outside panel, confirmed by2 external behavioral failures. Not installed or certified. Same GeminiVM series user-authorized3M,2563903 reported,unknown0. Next SpecWriter admission460014 exceeds436097 remaining. See geminivm_format_candidate_20260928.md. Reviewed20260929: optional contrast references retain draft continuity/native gates; goal-bound audit prevents unrelated producer repair. Three real-source tasks73/73, intermediate scope failure retained; local assistant grades only. See roles_package_20260929.md.",
-      "source_hashes": {
-        "runtime/feature_quality.py": "89c5fbab4004cfd4450971488ace849df525b2648131f0348ca2a52a49b3e1dc",
-        "runtime/feature_quality_chat.py": "2a6f49d71e72e908d0c42ba3dd74189c50d209565c9e0eab80909f16ac1d5eb4",
-        "runtime/feature_quality_challenge.py": "ba0e5ce71b54a2630199774dd7dc5fbe05194254972748f11ed73b9ee3827566",
-        "runtime/feature_challenges.py": "7d1b12e5a7ee2dda8abe6a5a1910a719b6029bb1a7fc5ac4f22f12bc4c387b80",
-        "plugins/development_quality/src/main.py": "72698c444879aad1c453dd9e8771fb8d93527756d0462e5e764662205b8ed496",
-        "plugins/development_quality/knowledge/policy.json": "aa997ba599a4bbd759c8dffde7c8c7659ccca4bfea86563d08669a4d447814ad"
-      },
-      "reconsider_when": "Role contracts, candidate reuse, source hashes, fault validation, test freeze or budget rules change.",
-      "recorded_at": "2026-09-29T02:06:43+00:00"
-    },
-    {
       "id": "draft-test-case-continuity",
       "decision": "Plugin-owned case continuity detects disappearing test functions before paid audit. Moves and explicitly explained replacements require fresh semantic audit; unaccepted bodies remain editable. case_plan capacity128 reports actual row count.",
       "rationale": "Six lost cases reproduced from saved COS403 reply. Latest COS404 draft keeps prior cases,32 plan rows, native3 assertion failures/6passed.247 broad regressions before capacity correction and19 focused checks afterward pass; architecture5/5 and packages60. GeminiVM repair not completed: fresh audit requires536532 reserve >529638 remaining under user4M ceiling. No target install or role score increase. Reviewed20260929: optional contrast references retain draft continuity/native gates; goal-bound audit prevents unrelated producer repair. Three real-source tasks73/73, intermediate scope failure retained; local assistant grades only. See roles_package_20260929.md.",
@@ -1942,6 +1911,257 @@
       },
       "reconsider_when": "Goal authority, case-ID validation, file encoding, response evidence or cache accounting rules change.",
       "recorded_at": "2026-09-29T02:06:44+00:00"
+    },
+    {
+      "id": "counterexample-regression-and-citation-binding",
+      "decision": "Bind citations to supplied text with actionable location hints; matching quotes do not prove semantics. Structured behavioral Reviewer feedback routes to an append-only native witness. Caller impact evidence is not new scope authority.",
+      "rationale": "First frozen cohort1/5 disproved sufficiency of generic citation errors. Both Analyzer failures recovered with hints. Native Reviewer witness is unit-proven but not observed live in this cohort; live counterexamples came from Challenger. Final4/5 and diagnostic fifth are distinct; no general score upgrade.",
+      "source_hashes": {
+        "plugins/development_quality/src/source_evidence.py": "01f63dd1609aa2569bf84b14f5f3bdc018bd6ec34f0f680d1c53241ce0b30865",
+        "plugins/development_quality/knowledge/policy.json": "1a19502e5522ec93678121599b880a93a7126497c1c46c4c26da0f2b3b2c317e",
+        "runtime/feature_quality.py": "5d889cd77d7a29c0f5a9db110def70e476df99d58908ea5d98cfceb36f4384d1",
+        "runtime/feature_quality_chat.py": "61d7ae7ac5c2bbfd890e5c358c057e05f6657328da869226261ade7fc216a931",
+        "tests/runtime/test_feature_review_counterexample.py": "2bff30b7678732cd3f1712daf1677e123639fe119f8ab12b86b700d9896bba64"
+      },
+      "reconsider_when": "Citation binding, review schema, goal boundaries or witness admission changes.",
+      "recorded_at": "2026-09-29T08:06:37+00:00"
+    },
+    {
+      "id": "quality-resume-and-test-extension",
+      "decision": "Resume source/goal-bound native-rejected specs and audited drafts without granting approval. Restore historical accepted tests and a later paid unaccepted proposal; reapply native/audit/review gates.",
+      "rationale": "Real strict-JSON continuation restored immutable tests and paid draft then completed44native/16external. Native-rejected GeoJSON resumed but later budget admission stopped a metadata repair. Stale/frozen/digest tests and native scripted continuation passed. Preserve this limitation rather than silently certifying an unclosed candidate.",
+      "source_hashes": {
+        "runtime/feature_quality_resume.py": "fd4c6edb8c605b8fc90fca073f21619409d4afa629c3258f3662645e14908e7f",
+        "runtime/feature_quality.py": "5d889cd77d7a29c0f5a9db110def70e476df99d58908ea5d98cfceb36f4384d1",
+        "runtime/feature_checkpoint.py": "c38ad692c4d29aef33f0ac6673e56283c645a88d765d82f1eceb4ec4d18ed07a",
+        "tests/runtime/test_feature_quality_resume.py": "dd7bfd6df6a6e710a027d8b9f6c15c6959f3a540ed95c7075ec4074183cfab8c",
+        "tests/runtime/test_feature_native_spec_resume.py": "8ccdaa92d2bc59a791481e2697bf02ca08dee8e1d841b4a4f567edbcb803dc69"
+      },
+      "reconsider_when": "Checkpoint journal ordering, source/goal identity, test immutability or paid draft binding changes.",
+      "recorded_at": "2026-09-29T08:06:37+00:00"
+    },
+    {
+      "id": "executor-workspace-import-lifetime",
+      "decision": "Keep plugins in a per-pipeline import session; restore host modules and paths after each direct call. Serialize direct calls; process-bound execution does not mutate parent imports.",
+      "rationale": "Reproduced async executor followed by claim alignment: temporary workspace plugin imports leaked into host and triggered origin mismatch. Preserve transient retry globals within the pipeline, never across pipelines; do not relax origin checks.",
+      "source_hashes": {
+        "runtime/plugin_import_scope.py": "7a87700e7e12580fc6fa635491f8133852e4ca8fe3faa546fbc51c6fa9b8ed1e",
+        "runtime/executor.py": "ec139d67fdeadbcef2a8bf82b7b66df083a7993d07253fa088702b80288386b3",
+        "runtime/async_executor.py": "134e63ec667fb9f7c863037cca86e76298c340e68e67963161b2777d9282b95a",
+        "tests/runtime/test_plugin_import_scope.py": "00a8d18873e7a020378ac4fb0c64622bdde0cf7c258964e56850a08f9fad17d6"
+      },
+      "reconsider_when": "Changing executor concurrency, plugin lifetime or knowledge-loader import behavior",
+      "recorded_at": "2026-09-29T10:50:08+00:00"
+    },
+    {
+      "id": "native-probe-complete-report-required",
+      "decision": "A native probe cannot prove success or provide a grounded counterexample from a missing, malformed, incomplete or timed-out JUnit report; preserve process exit and timeout receipt.",
+      "rationale": "Broad regression produced empty reports whose OS cause could not be reconstructed from prior diagnostics; explicit evidence is required before accepting a repair.",
+      "source_hashes": {
+        "runtime/native_failure_acceptance.py": "b1d7e26b750ca1c3570662eb542694dd4519d8212ffcde38db13f8f355e13494",
+        "tests/runtime/test_native_probe_reports.py": "1f5db672d9574219e8a8f0ff30fee678b3925e8a678378696e37cbe5404f23a6"
+      },
+      "reconsider_when": "Native runner or report protocol changes; review exit code and completeness semantics together.",
+      "recorded_at": "2026-09-29T14:23:02+00:00"
+    },
+    {
+      "id": "roles-efficiency-frozen-cohort-and-followups",
+      "decision": "Keep frozen cohort completion 2/5 separate from repaired continuations; targeted task implementations remain COS authored. Exact frozen-test references and narrow metadata normalization grant no approval.",
+      "rationale": "The 4/5 autonomous completion target failed. Later repairs improve recoverability but cannot retroactively change that outcome. Reviewer must know that delivery composes production edits and exact frozen tests.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "ec3ae23543552299691d2acec2f74711be74056fe43f773ffd1121bd7a75e36a",
+        "runtime/feature_development.py": "b22c0abebdaf30158d18cedc4477b2ca91783b85ccbc43600a62ac9cb5a545e0",
+        "runtime/feature_quality_resume.py": "5438713947e2d5fee9fcf2695c4b43278bec7bbb8867469654688419c871b7c1",
+        "runtime/feature_frozen_references.py": "3c40d7216a1cea08e702c5ecdc8419b9878a3e29cec2a4230965de9c69f4dcf2",
+        "plugins/development_quality/src/spec_metadata.py": "ae9f3cd9e76785cbe5ccbdfda95a726b910b57c2f9a8686e4e3e34883d097cd7"
+      },
+      "reconsider_when": "Change in evidence binding, delivery composition or fresh cohort protocol; never reinterpret old cohort outcomes.",
+      "recorded_at": "2026-09-29T20:05:52+00:00"
+    },
+    {
+      "id": "bounded-role-quality-repair",
+      "decision": "Retain the exact union of native-valid Challenger variants across bounded invalid retries; recheck all variants against the same production candidate after test extensions. Batch compatible draft-continuity and semantic audit issues; never waive native or frozen-test gates.",
+      "rationale": "Reviewed stale quality-feedback-survives-read, feature-context-evidence-preservation and rejected-candidate-spec-witness decisions. Binding and native witness-before-audit remain. Historical callable_dump replay retains two surviving faults and correctly rejects incomplete old final tests; new batching changes draft-continuity audit ordering only. No live cost or role score claim.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "08cb84fa40b2929825d9c37937a5b6b1a00a8377f5c04e4900add91a0cc1e060",
+        "runtime/feature_quality_challenge.py": "58a8cef35521542e56ba6eb6ebbeaeb2d05e71d900d2085dba068f8196210b1f",
+        "runtime/feature_quality_chat.py": "845f87c4470c47655de6883fd2d75f22637c922f7bc875ff0cc5eab801bbeb9e",
+        "runtime/feature_quality_draft.py": "975444dc96679b98a238a82ac55912de2db35c4b6658cc1c05562418b00bd553",
+        "plugins/development_quality/knowledge/policy.json": "18cf6ab30f2a535c41bd48b270724d52c3cb96df45deed9ad8713e33ff749c12"
+      },
+      "reconsider_when": "Candidate binding, campaign capacity, audit ordering, source identity, native/frozen checks or empirical cycle cost changes.",
+      "recorded_at": "2026-09-29T23:09:08+00:00"
+    },
+    {
+      "id": "frozen-cohort-spec-conflict-priority",
+      "decision": "Keep frozen cohort20260930 at3/5; do not claim audit savings. Prioritize verified specification disputes and unchanged-candidate stopping before another quality cohort.",
+      "rationale": "Programmer correctly identified string3.9 converter conflict; fixed test blocked8 identical native attempts. Controls incomplete at reservation cap with5 cached responses. Evidence: artifacts/roles_cohort_20260930/summary.json.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "08cb84fa40b2929825d9c37937a5b6b1a00a8377f5c04e4900add91a0cc1e060",
+        "runtime/feature_quality_chat.py": "845f87c4470c47655de6883fd2d75f22637c922f7bc875ff0cc5eab801bbeb9e",
+        "docs/architecture/roles_cohort_20260930.md": "6df74641fc205bb054aefda235ff5d967f4602bc8ffd60e1fc75ef2c24f528d2"
+      },
+      "reconsider_when": "Native replay proves safe specification dispute resolution and fresh bounded cohort measures completion; completed balanced paired controls are required for cost claims.",
+      "recorded_at": "2026-09-30T00:29:26+00:00"
+    },
+    {
+      "id": "verified-preservation-spec-revision",
+      "decision": "Default frozen-test immutability remains. Only a plugin-validated expected-literal preservation revision may replace it, with both-source native evidence, an independent digest-bound audit and fresh qualification/review. Stop identical failed candidates; disjoint failures only trigger investigation, never automatic revision.",
+      "rationale": "Reviewed immutable-test-drift-feedback, rejected-candidate-spec-witness and bounded-role-quality-repair: ordinary drift rejection, behavioral witness-before-audit and retained Challenger campaign gates remain. Known Gemini task closes after2 recorded model-authored revisions,25native+10external; assistant changed generic COS only. Frozen3/5 and general scores unchanged; failed first live run remains charged.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "3525eee34b314e30a373b66beb85676ff367cae063b86cb6ba5487d28c7bf21f",
+        "runtime/feature_development.py": "124f2b64a532fa567557462444b56ab5c52fdf64a8f1cc28c31907666472ca8b",
+        "runtime/feature_spec_dispute.py": "6c43b1fdd865e240d6983b1ea6e187bef4788a66d7876b6f23cf0474a1047a84",
+        "runtime/feature_progress.py": "39fb897a513785c16d5f2ebc1a9e11011d7ed0242365ab8c7ec9724e4b83ab00",
+        "runtime/feature_quality_resume.py": "84a0be9984fb6200747e894b60c19500c9fe74dffa114562da1a3c36ba4d263d",
+        "plugins/development_quality/src/spec_disputes.py": "180c2707f0d44466e993c523afc9d4d989db44c09474ab5a29c838e1ad470a19",
+        "tests/runtime/test_feature_spec_dispute.py": "81fd3b3fc022d9fa7fa8ae60fdde234dae173342ff816de52aef51098aec43e0"
+      },
+      "reconsider_when": "Revision applicability, allowed AST changes, candidate-selection evidence, audit binding or resume authority changes; independent new tasks needed for broader autonomy claims.",
+      "recorded_at": "2026-09-30T04:17:06+00:00"
+    },
+    {
+      "id": "source-bound-baseline-predictions-and-resume-campaign",
+      "decision": "Qualify each new test prediction on original source before freeze; semantic classification stays plugin-owned and audited. Restore known fault campaigns across paid invocations, bound to candidate hashes and reexecuted. Legacy checkpoints preserve their original contract; new CLI/worker specs require predictions.",
+      "rationale": "Reviewed verified-preservation-spec-revision, bounded-role-quality-repair and frozen-cohort-spec-conflict-priority: narrow revision gates, witness-before-audit, no-progress stop and old3/5 remain. New checks detect2historic incorrect preservation assertions; COS closes gas20native+3external without assistant target changes. No savings or fresh role-score claim.",
+      "source_hashes": {
+        "runtime/feature_acceptance.py": "6a12e55561c3d41f9de84a36d52388ca16af1ca32fdd414cf6de69a0d7eb28dc",
+        "runtime/feature_quality.py": "37181c16173ac15d2d52ca093d235b1271b3c05fe1570bc330d6c40207709209",
+        "runtime/feature_quality_chat.py": "4b38b45ebe7b498695e4a7822860d235b6bb6a2ff115617fd116df2e2b8596c7",
+        "runtime/feature_quality_challenge.py": "4774752e1e93534a12b24db3130d1f3c0749796b7d291218b000b7581a5ffeea",
+        "runtime/feature_extension.py": "fd74cd2a2f9897fb0f186e17da107d46491444c26da9acbb3ad1d9040281f9a0",
+        "plugins/development_quality/src/baseline_expectations.py": "8efc203b97ad1b07335f0d73e1d98befd698b9c4dbee1bcf151b8ba07071d6df",
+        "plugins/development_quality/knowledge/policy.json": "e527e1041c670f7e14ce0e98f0c67395b53fead839999ef31f3682557f3001e1",
+        "tests/runtime/test_feature_baseline_expectations.py": "05568c533fe782da1bd6585401b83e5232732e2808b45aa46c99aa5c341e260a",
+        "tests/runtime/test_feature_campaign_resume.py": "6cef87f23556bfe8e62bdfc82f1fb76c7907c1ced04eb6d9050807d93dc87615"
+      },
+      "reconsider_when": "Prediction semantics, legacy migration, native identity mapping, frozen revision or campaign binding changes; fresh paired evidence needed for efficiency claims.",
+      "recorded_at": "2026-09-30T06:07:17+00:00"
+    },
+    {
+      "id": "fresh-cohort-budget-and-audit-boundaries",
+      "decision": "Frozen new cohort0/5 remains separate from repairs; stop resource-exhausted role routing. Baseline classification differs from coverage categories; semantic inspection may batch missing category but cannot waive admission. Spec-auditor output cap8192 applies before reservation, writer/code32768 retained. Mixed feature-gap tests can mask wrong preservation assertions; native predictions are not semantic proof.",
+      "rationale": "Reviewed bounded-role-quality-repair, verified-preservation-spec-revision and source-bound-baseline-predictions-and-resume-campaign. Frozen tests, native witness, source-bound expectations and campaign retention remain mandatory. Offline saved resource stop runs one native cycle instead of three; last trim draft matches baseline yet fails known candidate on wrong empty-list expectation. Five new tasks and repair/transfer cost748206 within1M; incomplete cached comparison proves no end-to-end savings. Evidence artifacts/roles_fresh_20260930/summary.json and offline-latest.json.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "e8f31ffa4e5f45075d20b152e38b4940bc34cce9d22e1dfca07aaf6cb428e373",
+        "runtime/feature_quality_chat.py": "72dd5e6f71d07e066294f34b1be3d014596c87c28ada01d5775e5128d7281c72",
+        "plugins/development_quality/src/main.py": "4003117be7cb446449f7db78eb46545a67c08d510434e09e07d0b2b5bff29671",
+        "plugins/development_quality/src/baseline_expectations.py": "45cdc10f8a530af4651d9ef15531063c818daf7b42596a740ee52a1b3b2499f4",
+        "plugins/development_quality/knowledge/policy.json": "b95a9d22957217b132b31ae1ad3f3479bc51fb3248e82ebc3e4dbc53d421c619",
+        "tests/runtime/test_spec_audit_batch.py": "9fe31bece177be12678810c3083fc9d28b4816d7db2a4aa79add02405792675c",
+        "tests/runtime/test_feature_recoverable_stops.py": "f71680fd3ad5ba72443a97618a991d4a52ca9a36463f3b62e119a5ff313d978f"
+      },
+      "reconsider_when": "Changes to batching eligibility, classification semantics, output limits, reservation, witness ordering or resume/campaign binding; new balanced completed cohort needed for cost and maturity claims.",
+      "recorded_at": "2026-09-30T07:55:02+00:00"
+    },
+    {
+      "id": "queue-release-windows-reader-race",
+      "decision": "QueueLock.release retries unlink only for Windows sharing or lock violations32/33, within existing timeout_seconds. Other PermissionError values propagate; deadline expiry retains error. Do not strand a live-PID queue lock because a contender briefly reads its owner.",
+      "rationale": "Full canonical v-7260f812 failed worker_pool drain: release WinError32 followed by queue.fail timeout. Deterministic reader-conflict/permanent-error tests and queue/worker regressions17passed. No evidence to alter stale-owner protocol or increase unrelated timeouts.",
+      "source_hashes": {
+        "runtime/durable_queue_lock.py": "b6f35d2f2c6f3ab43f96c0a42eed812c66de1cb183f8a763ca0a641f7d1350ef",
+        "tests/runtime/test_durable_queue_lock.py": "0e8052fdba4ad63debf2807dca1cc2b417ad1ac02c93afa74f9c98f2e7c02fdb"
+      },
+      "reconsider_when": "Queue locking protocol, OS sharing semantics, release ownership, or persistent sharing violations change.",
+      "recorded_at": "2026-09-30T10:57:43+00:00"
+    },
+    {
+      "id": "paired-conditional-audit-20260930",
+      "decision": "Keep full audit as default; opt-in on_feedback is a measured scheduling experiment, skips never approve semantics. Keep native and Reviewer checks and retained obligations.",
+      "rationale": "Previous spec/audit loops dominate cost without comparable autonomy evidence. Compare fixed known tasks with separate equal limits, preserve cache provenance and complete native VR integration. Existing accepted metadata omission/restoration remains shared by both arms.",
+      "source_hashes": {
+        "runtime/feature_quality.py": "8f5166cacf9798c06b2be176d0e6b65afcb89a94f240bd0d77f9a831d91b2716",
+        "runtime/feature_quality_chat.py": "1b2dfb79c5f5062127671dd259e81a2b78ea52ba024fab30ca2601641ac903be",
+        "plugins/development_quality/src/audit_schedule.py": "933995b2511d0a544b36df4914070a223cc61189713ef04487b44e13704eef0e",
+        "tests/runtime/test_audit_schedule.py": "f79bb4ad76be015f12f6ae214c41ac58b6dd7595fbf1c997bba31911259c9415"
+      },
+      "reconsider_when": "Audit triggers, native gates, retained campaign handling or paired/heldout outcome evidence changes.",
+      "recorded_at": "2026-09-30T12:57:29+00:00"
+    },
+    {
+      "id": "paired-audit-outcome-and-full-vr",
+      "decision": "Keep always default: conditional completed1/3 vs0/3, not broad autonomy/cost evidence. Full VR completed after two general COS repairs; qualify that intervention explicitly. Retain separate native gates for old regressions and forecasts for new tests.",
+      "rationale": "Saved paid answer exposed class-node inventory defect; live feedback exposed auditor/native scope conflict. Full native121passed1skip and external8 passed; all failures and1075306 new tokens retained. No target edits by assistant.",
+      "source_hashes": {
+        "plugins/development_quality/src/main.py": "52791219a68a9a4c2e9cf5734a195fefe8274203761f962ed17cb8998d6d07b2",
+        "plugins/development_quality/src/contrast_cases.py": "ecb54d4013090ee543be5911483cd8ac2104cf16e82a13d1eeb7f5f627dab2d1",
+        "plugins/development_quality/knowledge/policy.json": "7be0a6b52fd1fb107a3ec26e77cc62ab1aedea4e9140a2a6642558470fce2f40",
+        "runtime/feature_quality.py": "8f5166cacf9798c06b2be176d0e6b65afcb89a94f240bd0d77f9a831d91b2716",
+        "runtime/feature_quality_chat.py": "1b2dfb79c5f5062127671dd259e81a2b78ea52ba024fab30ca2601641ac903be"
+      },
+      "reconsider_when": "An independently fixed paired/heldout protocol establishes reliable completion and whole-cycle savings, or native/admission/audit contracts change.",
+      "recorded_at": "2026-09-30T14:08:19+00:00"
+    },
+    {
+      "id": "policy-bound-audit-feedback-and-settled-stop",
+      "decision": "On changed/unknown auditor policy retire prior rejection authority, preserve its evidence for current audit and bind history to goal/design/source across interrupted resumes. Current-policy defects, frozen tests and native/counterexample gates remain mandatory. FeatureChat STOP acts before the next call, settles in-flight usage and never masks unknown usage or reroutes the stop.",
+      "rationale": "Saved full-resume cycle3 retained an obsolete existing-regression forecast demand despite advisory wording. Offline before/after proves corrected routing without editing old evidence.63 focused tests cover current issue revalidation, split receipts, history loss/tamper, frozen/counterexample preservation, stop accounting and native resume. No new model result, score increase or cost saving is claimed. Final review found that history-assisted resume of an unaudited output reference needs expansion before comparative audit. Paid raw output stays intact; only exact qualified frozen refs expand in feedback.56 focused regressions pass after the fix, including lossless prompt compaction.",
+      "source_hashes": {
+        "runtime/feature_quality_resume.py": "88582b583a0a36281ad5c8bf8a7b94a43e6f2a777f4845cd28e07c0245a37e19",
+        "runtime/feature_quality_chat.py": "17b37bd181ef44fbe747bf3420f6c6794aea54e300f5bebb06c8984e30d0c726",
+        "runtime/feature_quality_draft.py": "f71229c69378ff5f75930dc9389aee53fb2e0c126b446fedb99c8b88b68be261",
+        "runtime/feature_audit_history.py": "f5c2ef776feedfbcd9445e4f1b2411d782df928d1fbbb2d615ece04277a76e04",
+        "runtime/feature_inference.py": "a67b17e229a26359ff7d5da43d7a6f710790f194f56a1e8cfa702cd3bb7a853d",
+        "runtime/feature_quality.py": "26beedf20d7bd6b7d1b13621a9bf2b9673f1d6ba98f2c0b0aef97ba19cf809fc",
+        "plugins/development_quality/knowledge/policy.json": "d6fd2eabfc0f09bf0767bc716c77a54aa721f4835ea687d8d7335a2a29d59d96",
+        "tests/runtime/test_feature_audit_history.py": "e365b4bf9cbf821c5ce243c6336004d520267f6bc56f212cb849b0f6587e1519",
+        "tests/runtime/test_feature_graceful_stop.py": "2e62deaab1ca867f3beaf6a72aa5c51a57b38e87e12a43edc920f2b9102fe272",
+        "tests/runtime/test_feature_recoverable_stops.py": "3ef0eec722a36c97775a60b2f620c9c82cc21b7133ada1f4fc133af4ba81ed3a"
+      },
+      "reconsider_when": "Auditor policies, history bindings, interruption boundaries or native/frozen/counterexample gates change; semantic reliability needs a separate live outcome measurement.",
+      "recorded_at": "2026-09-30T15:39:47+00:00"
+    },
+    {
+      "id": "qualified-metadata-and-candidate-reuse",
+      "decision": "Restore qualified metadata for byte-identical tests bound to goal/design/source. Admit only model-authored legacy cross-axis case_plan label correction allowed by development_quality0.1.23, with all other fields and native forecasts unchanged. Preserve frozen ancestry across rejected continuations. Fresh audit, native qualification, candidate identity, Reviewer and retained challenges remain mandatory. Only specification_authority.immutable_paths are frozen; native-rejected draft tests outside that list remain editable by COS. A later audited correction explicitly consuming the rejected native draft takes resume precedence; fresh-spec candidate reuse still requires native qualification and exact prior test/candidate checks.",
+      "rationale": "Live quote continuation exposed repeated cosmetic reclassification and loss of older frozen ancestry. Native resume/label regressions cover goal/source/test tampering and historical replay. A green feature control is not automatically preservation. Historical receipts retain old semantics via versioned payload markers. Additional authority clarification passed44 focused tests after live model confused a native-rejected preservation test with accepted tests. Offline50+12 tests cover this precedence, invalid identities and no premature candidate review. Previous failure receipts and budget admission remain unchanged.",
+      "source_hashes": {
+        "runtime/feature_accepted_metadata.py": "5fd125fe75c2f3ee01c7a4a2746d15ff666b45654ad534eb985e4726fcd94903",
+        "runtime/feature_quality_chat.py": "c988e73e6ca0f5a32f7fc63f370a9f0ba5f3615113c25535cf4e369bc92c7983",
+        "runtime/feature_quality_resume.py": "cbcd5cc3e0a52f3d38e941b0d1256e82b08aa3454c3404cacc65c43857c11f7d",
+        "plugins/development_quality/src/spec_metadata.py": "bb5b8193a680012eef35535b56de23cfb23fa1559079b0af1e4405266f7cd653",
+        "plugins/development_quality/knowledge/policy.json": "e11c14f9f2a45f246325c4fb5e28dc1e3874eefd4ea8f0544359528d1f9b2ea2",
+        "runtime/feature_quality.py": "d8b16770ebd634ac9cff826ad7afcae2a1a2985f1987fc7ef748504421b9c41c",
+        "runtime/feature_development.py": "f5baa23de9afad1670a8df125264a507de82d7baf650f69679313b7331c57e99",
+        "tests/runtime/test_feature_post_native_resume.py": "86a93caad676bae1ea3f3794df61bb83c25c26f7fd7dbd950c72adc5df988551",
+        "tests/runtime/test_feature_prior_candidate.py": "e994670143e4e1169f368c5f4068991eed9cf768ff87fe270762b3fc565fa6e3"
+      },
+      "reconsider_when": "The allowed label mapping, forecast authority, historical replay or frozen ancestry contract changes.",
+      "recorded_at": "2026-09-30T19:30:34+00:00"
+    },
+    {
+      "id": "assertion-controls-and-audit-owner",
+      "decision": "Keep assertion partition semantics plugin-owned and audit response repairs with the auditor. Preserve bound paid drafts and campaigns; expand frozen output references before admission. A wrong hash is returned to Writer within existing limits, never silently corrected. New separate reference envelope is admitted only with exact hashes and unique paths; historical audits use their recorded contract. Only specification_authority.immutable_paths are frozen; native-rejected draft tests outside that list remain editable by COS. A later audited correction explicitly consuming the rejected native draft takes resume precedence; fresh-spec candidate reuse still requires native qualification and exact prior test/candidate checks.",
+      "rationale": "61 focused reference/metadata/resume tests passed. Live quote failure showed valid reference objects in a separate field were ignored and caused repeated wrong structural feedback. Exact-byte reference expansion authors no target test and grants no approval. Additional authority clarification passed44 focused tests after live model confused a native-rejected preservation test with accepted tests. Offline50+12 tests cover this precedence, invalid identities and no premature candidate review. Previous failure receipts and budget admission remain unchanged.",
+      "source_hashes": {
+        "runtime/feature_frozen_references.py": "2ad19e116cb570ef78c8acfb5a2ffe48a0760b0cb75baa4c66650d358c79eca5",
+        "runtime/feature_quality_chat.py": "c988e73e6ca0f5a32f7fc63f370a9f0ba5f3615113c25535cf4e369bc92c7983",
+        "runtime/feature_quality_resume.py": "cbcd5cc3e0a52f3d38e941b0d1256e82b08aa3454c3404cacc65c43857c11f7d",
+        "tests/runtime/test_feature_frozen_references.py": "e288a271cb13b7ad135a769196a5faa2b8d1534e5786c1c1ec9f842223796ab8",
+        "tests/runtime/test_feature_reference_feedback.py": "17d19f88baeea1d279431bec24d49055674ef1654b8dca0eb0383a0f31408edf",
+        "runtime/feature_quality.py": "d8b16770ebd634ac9cff826ad7afcae2a1a2985f1987fc7ef748504421b9c41c",
+        "runtime/feature_development.py": "f5baa23de9afad1670a8df125264a507de82d7baf650f69679313b7331c57e99",
+        "tests/runtime/test_feature_post_native_resume.py": "86a93caad676bae1ea3f3794df61bb83c25c26f7fd7dbd950c72adc5df988551",
+        "tests/runtime/test_feature_prior_candidate.py": "e994670143e4e1169f368c5f4068991eed9cf768ff87fe270762b3fc565fa6e3"
+      },
+      "reconsider_when": "Reference sources, hash repair rules, admission limits or historical receipt semantics change.",
+      "recorded_at": "2026-09-30T19:30:35+00:00"
+    },
+    {
+      "id": "unaccepted-spec-delta-and-syntax-recovery",
+      "decision": "Preserve unmentioned draft tests via explicit model-authored hash-bound deltas; frozen test edits/deletion prohibited. Normalize replay against saved base before fresh gates. Return syntax errors to Programmer with one bounded repair and reproduce saved failures before qualified resume.",
+      "rationale": "Whole-spec rewrites repeatedly lost coverage. New transport preserves exact bytes without interpreting domain knowledge or granting acceptance. Live syntax repair progressed to a real Reviewer/SpecWriter counterexample; delta efficiency is not yet measured.",
+      "source_hashes": {
+        "runtime/feature_spec_delta.py": "c60467d5b4e987987749b14665029836511014e3844577803543c7a335efacbd",
+        "runtime/feature_programmer_syntax.py": "d57e382d666e51aa3376c21bd745681aab0632cad7e73ae0a1eed2274dc517f7",
+        "runtime/feature_quality_chat.py": "3d43aa90fed3165359533f6ac672a045c32f1e283ebb699c53c1a50c48a35dd5",
+        "runtime/feature_quality_resume.py": "9d8a47ea717e0dd23063c1da9b98a837d1d66bdbde9e08f3e6e407bdcb799a9c",
+        "runtime/feature_development.py": "e40d1dc7df6ad115567cc59a6f250e4f859f1f1cdaa66729f5c5189a01f25dc8",
+        "tests/runtime/test_feature_spec_delta.py": "126e83a8a91dfa82d71735a1d27d5a752f09d4ce67e078ea978e66a083eb1575",
+        "tests/runtime/test_feature_programmer_syntax.py": "7ffd93a9dc33b67ebd3b3828b957029c313339859868c84f7da943f08ce2adbc"
+      },
+      "reconsider_when": "Delta paths or binding/replay schema changes, accepted test identity differs, or live runs show coverage drift. Preserve full native/audit gates and carried budget.",
+      "recorded_at": "2026-10-01T00:33:12+00:00"
     }
   ]
 }
