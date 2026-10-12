@@ -13,9 +13,14 @@ _IGNORED_PARTS = {"__pycache__", ".pytest_cache"}
 _IGNORED_SUFFIXES = {".pyc", ".pyo"}
 
 
+def _portable_order(plugin_dir: Path):
+    # Case-insensitive per-part order, as WindowsPath sorts: registered hashes must match on every OS.
+    return lambda path: [part.lower() for part in path.relative_to(plugin_dir).parts]
+
+
 def hash_plugin_dir(plugin_dir: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(item for item in plugin_dir.rglob("*") if item.is_file()):
+    for path in sorted((item for item in plugin_dir.rglob("*") if item.is_file()), key=_portable_order(plugin_dir)):
         rel = path.relative_to(plugin_dir)
         if any(part in _IGNORED_PARTS for part in rel.parts):
             continue
