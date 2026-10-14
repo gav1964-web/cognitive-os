@@ -1,30 +1,9 @@
-# Cognitive OS Route
+# Cognitive OS
 
-## Executor
+Status: ok
 
-- Tool: not run yet
-- Model: not run yet
-- Date: not run yet
+Release decision: release_ready
 
-## Run Summary
+Project dir: `F:/ubuntu/test/9/artifacts/programmer_prompt_curriculum/generic_file_converter_cli_20260720T055047537206Z`
 
-Pending.
-
-## Artifact APIs
-
-- `GoalSpec`: pending
-- `TechnicalSpec`: pending
-- `ImplementationPlan`: pending
-- `TestPlan`: pending
-- `ReviewFindings`: pending
-
-## Artifacts
-
-- Output: pending
-- Tests: pending
-- Logs: pending
-
-## Notes
-
-This route should make dependency and legacy-format limits explicit.
-
+Report path: `F:/ubuntu/test/9/artifacts/verified_system_packages/verified_system_package_20260720T055048349280Z.json`

@@ -1,0 +1,175 @@
+{
+  "schema_version": "interface_contracts.v1",
+  "contracts": [
+    {
+      "id": "argv_stdout_numeric_expression",
+      "label": "Numeric argv expression CLI",
+      "description": "Read numeric command-line arguments, compute a safe arithmetic expression, and write the result to stdout.",
+      "input": {
+        "channel": "argv",
+        "shape": "numeric_args",
+        "min_args": 1,
+        "max_args": 5
+      },
+      "output": {
+        "channel": "stdout",
+        "shape": "text_number"
+      },
+      "errors": [
+        "missing_required_argument",
+        "non_numeric_argument"
+      ],
+      "verification": [
+        "contract_function_test",
+        "stdout_cli_test",
+        "negative_non_numeric_argument_test"
+      ],
+      "authority": {
+        "may_read_files": false,
+        "may_write_files": false,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    },
+    {
+      "id": "file_to_file_text_transform",
+      "label": "File to file text transform CLI",
+      "description": "Read an input file, transform its contents, and write an output file.",
+      "input": {
+        "channel": "file",
+        "shape": "input_path"
+      },
+      "output": {
+        "channel": "file",
+        "shape": "output_path"
+      },
+      "errors": [
+        "missing_input_file"
+      ],
+      "verification": [
+        "transform_contract_test",
+        "cli_writes_output_test",
+        "negative_missing_input_test"
+      ],
+      "authority": {
+        "may_read_files": true,
+        "may_write_files": true,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    },
+    {
+      "id": "stdin_to_stdout_text_transform",
+      "label": "Stdin to stdout text transform CLI",
+      "description": "Read UTF-8 text from stdin, transform it, and write UTF-8 text to stdout.",
+      "input": {
+        "channel": "stdin",
+        "shape": "utf8_text"
+      },
+      "output": {
+        "channel": "stdout",
+        "shape": "utf8_text"
+      },
+      "errors": [
+        "unexpected_cli_argument"
+      ],
+      "verification": [
+        "transform_contract_test",
+        "stdout_cli_test",
+        "negative_unexpected_argument_test"
+      ],
+      "authority": {
+        "may_read_files": false,
+        "may_write_files": false,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    },
+    {
+      "id": "file_to_stdout_text_transform",
+      "label": "File to stdout text transform CLI",
+      "description": "Read an input file, transform its contents, and write UTF-8 text to stdout.",
+      "input": {
+        "channel": "file",
+        "shape": "input_path"
+      },
+      "output": {
+        "channel": "stdout",
+        "shape": "utf8_text"
+      },
+      "errors": [
+        "missing_input_file"
+      ],
+      "verification": [
+        "transform_contract_test",
+        "stdout_cli_test",
+        "negative_missing_input_test"
+      ],
+      "authority": {
+        "may_read_files": true,
+        "may_write_files": false,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    },
+    {
+      "id": "stdin_to_file_text_transform",
+      "label": "Stdin to file text transform CLI",
+      "description": "Read UTF-8 text from stdin, transform it, and write UTF-8 text to an output file.",
+      "input": {
+        "channel": "stdin",
+        "shape": "utf8_text"
+      },
+      "output": {
+        "channel": "file",
+        "shape": "output_path"
+      },
+      "errors": [
+        "missing_output_argument",
+        "unexpected_extra_argument"
+      ],
+      "verification": [
+        "transform_contract_test",
+        "cli_writes_output_test",
+        "negative_missing_output_argument_test"
+      ],
+      "authority": {
+        "may_read_files": false,
+        "may_write_files": true,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    },
+    {
+      "id": "argv_to_file_numeric_expression",
+      "label": "Numeric argv expression to file CLI",
+      "description": "Read numeric command-line arguments, compute a safe arithmetic expression, and write the result to an output file.",
+      "input": {
+        "channel": "argv",
+        "shape": "numeric_args_plus_output_path",
+        "min_args": 1,
+        "max_args": 5
+      },
+      "output": {
+        "channel": "file",
+        "shape": "output_path"
+      },
+      "errors": [
+        "missing_required_argument",
+        "non_numeric_argument",
+        "missing_output_argument"
+      ],
+      "verification": [
+        "contract_function_test",
+        "cli_writes_output_test",
+        "negative_non_numeric_argument_test"
+      ],
+      "authority": {
+        "may_read_files": false,
+        "may_write_files": true,
+        "may_call_network": false,
+        "may_modify_source": false
+      }
+    }
+  ]
+}

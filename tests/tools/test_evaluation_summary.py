@@ -26,5 +26,6 @@ def test_evaluation_summary_reads_metrics(tmp_path: Path) -> None:
 
     assert summary["task_count"] == 1
     assert summary["task_classes"] == {"project_analysis": 1}
+    assert summary["authority"] == "legacy_non_authoritative"
+    assert summary["tasks"][0]["authority"] == "legacy_non_authoritative"
     assert "`task01_demo`" in markdown
-

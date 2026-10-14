@@ -9,7 +9,6 @@ from pathlib import Path
 
 def test_rebuild_quarantined_capability_promotes_repaired_plugin(tmp_path):
     workspace = _copy_workspace(tmp_path)
-    sys.path.insert(0, str(workspace))
     from runtime.registry import CapabilityRegistry
 
     registry = CapabilityRegistry(workspace)
@@ -38,6 +37,11 @@ def _copy_workspace(tmp_path: Path) -> Path:
     source = Path(__file__).resolve().parents[2]
     workspace = tmp_path / "workspace"
     for name in ("runtime", "tools", "plugins", "pipelines", "registry", "generated"):
-        shutil.copytree(source / name, workspace / name, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+        src = source / name
+        dst = workspace / name
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+        else:
+            dst.mkdir(parents=True, exist_ok=True)
     (workspace / "artifacts").mkdir(parents=True, exist_ok=True)
     return workspace

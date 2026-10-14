@@ -1,0 +1,58 @@
+{
+  "task_id": "task19_role_directory_extension",
+  "task_class": "configuration",
+  "prompt_hash": "sha256:3c16484d3877a2f3e1c303f9e40691a66c8dde984bb7d8dec0c83b84a4aaf828",
+  "routes": {
+    "direct_agent": {
+      "executor": "not_run",
+      "model": "not_run",
+      "status": "not_run",
+      "requirement_coverage": 0.0,
+      "missed_requirements": 0,
+      "invented_requirements": 0,
+      "tests_passed": 0,
+      "tests_total": 0,
+      "verification_status": "not_run",
+      "repair_cycles": 0,
+      "runtime_seconds": null,
+      "estimated_cost": null,
+      "artifact_completeness": 0.0,
+      "source_safety_violations": 0,
+      "review_blockers": 0,
+      "human_correction_minutes": null
+    },
+    "cognitive_os": {
+      "executor": "not_run",
+      "model": "not_run",
+      "status": "not_run",
+      "requirement_coverage": 0.0,
+      "missed_requirements": 0,
+      "invented_requirements": 0,
+      "tests_passed": 0,
+      "tests_total": 0,
+      "verification_status": "not_run",
+      "repair_cycles": 0,
+      "runtime_seconds": null,
+      "estimated_cost": null,
+      "artifact_completeness": 0.0,
+      "source_safety_violations": 0,
+      "review_blockers": 0,
+      "human_correction_minutes": null
+    }
+  },
+  "comparison": {
+    "winner": "undecided",
+    "cognitive_os_advantages": [],
+    "direct_agent_advantages": [],
+    "no_difference": [],
+    "confidence": 0.0
+  },
+  "invariants": {
+    "same_original_prompt": true,
+    "same_constraints": true,
+    "manual_corrections_recorded": false,
+    "teacher_reference_is_ground_truth": false,
+    "source_mutation_detected": false
+  },
+  "verdict": "not_evaluated"
+}

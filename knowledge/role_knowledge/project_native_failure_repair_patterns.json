@@ -1,0 +1,112 @@
+{
+  "patterns": [
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "missing_registry_value",
+      "id": "windows_registry_missing_value_env_fallback",
+      "operator_id": "fallback_missing_registry_to_env",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique leaf production target",
+        "FileNotFoundError originates from QueryValueEx",
+        "fallback function exists in the same module",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original failing pytest nodeid passes in the patch sandbox",
+        "full project-native pytest suite passes",
+        "patch remains inside the selected function target",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "registry resolver with an existing environment-variable fallback",
+      "validated_evidence": {
+        "failing_nodeid": "tests/test_api.py::test_no_ctypes[user_data_dir]",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260829T024956983822Z.json",
+        "project": "platformdirs",
+        "project_development_report": "artifacts/project_development/project_development_20260829T025515649054Z.json",
+        "regression_result": "895 passed, 79 skipped",
+        "target": "src/platformdirs/windows.py:get_win_folder_from_registry",
+        "targeted_result": "1 passed"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "timestamp_overflow_error_contract",
+      "id": "timestamp_overflow_error_contract_normalization",
+      "operator_id": "normalize_timestamp_range_error",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique direct production call in the failing test",
+        "both range handlers raise ValueError with literal messages",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original failing pytest nodeid passes in the patch sandbox",
+        "full project-native pytest suite passes",
+        "patch changes only the two bounded error-message literals",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "timestamp converter with explicit OverflowError and OSError normalization handlers",
+      "validated_evidence": {
+        "failing_nodeid": "tests/test_utils.py::test_from_timestamp_with_overflow_value",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260829T034047806138Z.json",
+        "project": "marshmallow",
+        "project_development_report": "artifacts/project_development/project_development_20260829T034147219636Z.json",
+        "regression_result": "1184 passed",
+        "target": "src/marshmallow/utils.py:from_timestamp",
+        "target_binding": "unique_direct_test_call",
+        "targeted_result": "1 passed"
+      }
+    },
+    {
+      "authority": "repeated_project_native_failure",
+      "failure_kind": "falsy_primitive_empty_contract",
+      "id": "falsy_primitive_empty_contract",
+      "operator_id": "preserve_falsy_primitive_override",
+      "promotion_blockers": [],
+      "promotion_ready": true,
+      "required_preconditions": [
+        "same failure signature in two independent sandbox copies",
+        "one unique assertion-causal production target",
+        "parameterized regression nodeid identifies falsy primitive behavior",
+        "target body is exactly candidate-if-candidate-else-fallback apart from a docstring",
+        "original source digest is unchanged"
+      ],
+      "required_verification": [
+        "original parameterized pytest nodeid passes in the patch sandbox",
+        "full project-native pytest suite passes",
+        "patch remains inside the selected class method",
+        "source project digest remains unchanged"
+      ],
+      "status": "validated_active",
+      "target_shape": "empty-value override strategy implemented as a truthiness conditional",
+      "validated_evidence": {
+        "failing_nodeid": "deepmerge/tests/strategy/test_type_conflict.py::test_merge_if_not_empty_falsy[zero int]",
+        "intake_report": "artifacts/field_trials/project_native_failure_intake_20260829T193356333564Z.json",
+        "project": "deepmerge",
+        "project_development_report": "artifacts/project_development/project_development_20260829T194435875706Z.json",
+        "regression_result": "34 passed",
+        "target": "deepmerge/strategy/type_conflict.py:TypeConflictStrategies.strategy_override_if_not_empty",
+        "target_binding": "unique_assertion_causal_call",
+        "targeted_result": "1 passed"
+      }
+    }
+  ],
+  "promotion_policy": {
+    "automatic_promotion": false,
+    "minimum_independent_lineages": 2,
+    "minimum_project_native_transformations": 3,
+    "minimum_transformation_subtypes": 3,
+    "promoted_at": "2026-08-30T00:08:05.896554+00:00",
+    "promotion_authority": "explicit_verified_transaction",
+    "promotion_matrix": "artifacts/field_trials/role_project_type_evaluation_20260829T194149902566Z.json",
+    "status": "active"
+  },
+  "schema_version": "project_native_failure_repair_patterns.v1"
+}

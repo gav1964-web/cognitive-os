@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -11,8 +12,11 @@ from typing import Any
 
 from .project_benchmark import analyze_project
 from .project_rebuild_app_templates import build_app_py, build_contract_tests, build_requirements, project_kind
-from .project_rebuild_behavior import collect_source_response_blueprints, compare_project_behavior
+from .project_rebuild_behavior import compare_project_behavior
 from .project_rebuild_cleanup import clean_generated_runtime_artifacts
+from .project_rebuild_ir import build_project_rebuild_ir, build_rebuild_spec_from_ir
+from .project_rebuild_package_scaffold import build_package_entrypoint_files
+from .project_rebuild_roundtrip import verify_rebuild_round_trip
 from .project_rebuild_samples import build_sample_data_files
 from .project_rebuild_ui import smoke_test_static_ui
 from .project_probe_env import probe_env_readiness
@@ -24,7 +28,8 @@ def run_project_rebuild_trial(
     if output_dir.exists() and any(output_dir.iterdir()) and not force:
         return {"status": "blocked", "reason": "output_dir_not_empty", "output_dir": output_dir.as_posix()}
     outputs = analyze_project(source_dir)
-    spec = build_rebuild_spec(source_dir=source_dir, analyzer_outputs=outputs, source_python=source_python)
+    ir = build_project_rebuild_ir(source_dir=source_dir, analyzer_outputs=outputs, source_python=source_python)
+    spec = build_rebuild_spec_from_ir(source_dir=source_dir, ir=ir)
     scaffold = write_rebuild_scaffold(output_dir=output_dir, spec=spec, force=force)
     comparison = compare_rebuild(
         source_dir=source_dir,
@@ -33,15 +38,18 @@ def run_project_rebuild_trial(
         analyzer_outputs=outputs,
         source_python=source_python,
     )
+    round_trip = verify_rebuild_round_trip(source_ir=ir, target_dir=output_dir)
     report = {
         "status": "ok" if comparison["score"] >= 0.85 and not comparison.get("missing") else "needs_work",
         "kind": "project_rebuild_trial",
         "created_at": _now(),
         "source_project": source_dir.as_posix(),
         "rebuilt_project": output_dir.as_posix(),
+        "knowledge_ir": ir,
         "spec": spec,
         "scaffold": scaffold,
         "comparison": comparison,
+        "round_trip": round_trip,
         "next_steps": _next_steps(comparison),
     }
     report_path = _write_report(root, report, output_dir.name)
@@ -50,35 +58,8 @@ def run_project_rebuild_trial(
 
 
 def build_rebuild_spec(*, source_dir: Path, analyzer_outputs: dict[str, Any], source_python: Path | None = None) -> dict[str, Any]:
-    project_report = dict(analyzer_outputs["project_map_report"])
-    summary = dict(project_report.get("summary", {}))
-    answers = dict(project_report.get("answers", {}))
-    scope = dict(answers.get("1_scope", {}))
-    execution = dict(answers.get("2_execution", {}))
-    readiness = dict(answers.get("6_runtime_extraction_readiness", {}))
-    python_structure = dict(analyzer_outputs.get("extract_python_structure", {}))
-    routes = _active_routes(python_structure.get("routes", []))
-    capabilities = [str(row.get("capability")) for row in dict(readiness.get("minimal_extraction_plan", {})).get("capabilities_to_extract", [])]
-    spec = {
-        "artifact_type": "ProjectRebuildSpec",
-        "source_project": source_dir.as_posix(),
-        "target_name": f"{source_dir.name}_x",
-        "main_task": _main_task(scope, routes),
-        "framework": "Flask-like Python web app" if "Flask-like Python web app" in summary.get("frameworks", []) else "Python app",
-        "entrypoints": _unique([*summary.get("entrypoints", []), *execution.get("entrypoints", [])]),
-        "routes": routes,
-        "supported_scenarios": _scenarios(scope, routes),
-        "data_artifacts": _data_artifacts(source_dir),
-        "core_capabilities": capabilities[:8],
-        "quality_targets": {
-            "single_file_app_limit": 400,
-            "source_project_read_only": True,
-            "generated_project_can_compile": True,
-            "comparison_report_required": True,
-        },
-    }
-    spec["behavior_blueprints"] = collect_source_response_blueprints(source_dir, spec, source_python)
-    return spec
+    ir = build_project_rebuild_ir(source_dir=source_dir, analyzer_outputs=analyzer_outputs, source_python=source_python)
+    return build_rebuild_spec_from_ir(source_dir=source_dir, ir=ir)
 
 
 def write_rebuild_scaffold(*, output_dir: Path, spec: dict[str, Any], force: bool) -> dict[str, Any]:
@@ -95,6 +76,11 @@ def write_rebuild_scaffold(*, output_dir: Path, spec: dict[str, Any], force: boo
         "app.py": build_app_py(spec),
         "tests/test_contract.py": build_contract_tests(spec),
     }
+    if spec.get("knowledge_ir_snapshot"):
+        files[".cognitive_os/system_knowledge_ir.json"] = (
+            json.dumps(spec["knowledge_ir_snapshot"], ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        )
+    files.update(build_package_entrypoint_files(spec))
     files.update(_sample_data_files(spec))
     written = []
     for relative, content in files.items():
@@ -216,8 +202,9 @@ def _readme(spec: dict[str, Any]) -> str:
     routes = "\n".join(f"- `{row['route']}` -> `{row['function']}`" for row in spec.get("routes", [])[:12])
     return (
         f"# {spec['target_name']}\n\n"
-        "Generated by Cognitive OS rebuild trial.\n\n"
+        f"{spec['main_task']}\n\n"
         f"## Task\n{spec['main_task']}\n\n"
+        "Generated by Cognitive OS rebuild trial.\n\n"
         f"## Scenarios\n{scenarios}\n\n"
         f"## Routes\n{routes}\n\n"
         "## Run\n`python app.py`\n"
@@ -229,12 +216,13 @@ def _sample_data_files(spec: dict[str, Any]) -> dict[str, str]:
 
 
 def _compile_project(output_dir: Path) -> bool:
-    result = subprocess.run([sys.executable, "-m", "compileall", str(output_dir)], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, "-m", "compileall", "-b", str(output_dir)], capture_output=True, text=True)
     return result.returncode == 0
 
 
 def _pytest_project(output_dir: Path) -> bool:
-    result = subprocess.run([sys.executable, "-m", "pytest", "tests", "-q"], cwd=str(output_dir), capture_output=True, text=True)
+    env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", **dict(os.environ)}
+    result = subprocess.run([sys.executable, "-m", "pytest", "tests", "-q"], cwd=str(output_dir), capture_output=True, text=True, env=env)
     return result.returncode == 0
 
 
@@ -267,6 +255,19 @@ def _unique(items: list[Any]) -> list[str]:
         if value and value not in result:
             result.append(value)
     return result
+
+
+def _list(value: object) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [item for item in value if item is not None and item != ""]
+    if isinstance(value, tuple):
+        return [item for item in value if item is not None and item != ""]
+    if isinstance(value, set):
+        return sorted(item for item in value if item is not None and item != "")
+    text = str(value).strip()
+    return [text] if text else []
 
 
 def _now() -> str:

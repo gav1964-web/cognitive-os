@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 
-TEXT_EXTENSIONS = {".bat", ".css", ".example", ".html", ".js", ".json", ".md", ".py", ".ps1", ".rst", ".sh", ".txt", ".toml", ".yaml", ".yml"}
+TEXT_EXTENSIONS = {".bat", ".cfg", ".css", ".example", ".html", ".ini", ".js", ".json", ".md", ".py", ".ps1", ".rst", ".sh", ".txt", ".toml", ".yaml", ".yml"}
 EXCLUDED_DIRS = {".git", ".venv", "__pycache__", "node_modules", "venv"}
-DISCOVERY_EXCLUDED_DIRS = {"artifacts", "generated", "reports", "scratch"}
+DISCOVERY_EXCLUDED_DIRS = {"artifacts", "fixlog", "generated", "reports", "scratch", "workspace"}
 HIGH_VALUE_NAMES = {
     ".env.example",
     "docker-compose.yml",
@@ -21,6 +21,7 @@ HIGH_VALUE_NAMES = {
     "readme.rst",
     "requirements.txt",
     "run_map.bat",
+    "setup.cfg",
     "setup.py",
 }
 HIGH_VALUE_PREFIXES = ("readme", "start_", "run_")
@@ -81,12 +82,34 @@ def _candidate_score(path: Path) -> int:
         score -= 40
     if name in {"pyproject.toml", "requirements.txt", "package.json", "readme.md", "readme.rst"}:
         score -= 20
-    if name in {"app.py", "main.py", "server.py"}:
+    if name in {"api_server.py", "app.py", "main.py", "plugin.py", "server.py"}:
         score -= 15
     if path.suffix.lower() in {".bat", ".ps1", ".sh"}:
         score -= 10
-    if parts & {"changes", "changelog", "downstream", "tests", "tools", "scratch", "examples", "docs"}:
+    if parts & {
+        "changes",
+        "changelog",
+        "downstream",
+        "fixlog",
+        "tests",
+        "test",
+        "tools",
+        "scratch",
+        "examples",
+        "docs",
+        "integration",
+        "integration_embedded",
+        "journey_tests",
+        "mock_tests",
+        "profiling",
+        "proto_test",
+        "workspace",
+    }:
         score += 25
+    if any(_is_generated_context_dir(part) for part in parts):
+        score += 35
+    if name.startswith("pipeline_backup_") or "_backup_" in name:
+        score += 50
     return score
 
 
@@ -94,12 +117,26 @@ def _iter_files(root: Path):
     stack = [root]
     while stack:
         current = stack.pop()
-        for item in sorted(current.iterdir(), key=lambda path: path.name.lower()):
-            if item.is_dir():
-                if item.name in EXCLUDED_DIRS or item.name in DISCOVERY_EXCLUDED_DIRS or item.name.startswith("."):
+        try:
+            children = sorted(current.iterdir(), key=lambda path: path.name.lower())
+        except OSError:
+            continue
+        for item in children:
+            try:
+                is_dir = item.is_dir()
+                is_file = item.is_file()
+            except OSError:
+                continue
+            if is_dir:
+                if (
+                    item.name in EXCLUDED_DIRS
+                    or item.name in DISCOVERY_EXCLUDED_DIRS
+                    or _is_generated_context_dir(item.name)
+                    or item.name.startswith(".")
+                ):
                     continue
                 stack.append(item)
-            elif item.is_file():
+            elif is_file:
                 yield item
 
 
@@ -131,3 +168,8 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _is_generated_context_dir(name: str) -> bool:
+    lowered = name.lower()
+    return lowered == "generated" or lowered.startswith("generated_") or lowered.startswith("generated-")

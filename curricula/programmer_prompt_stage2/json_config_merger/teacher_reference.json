@@ -1,0 +1,40 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-утилиту, которая рекурсивно объединяет base.json и override.json и сохраняет merged.json.",
+  "expected_steps": [
+    "clarify merge precedence and allowed JSON top-level type",
+    "create small CLI project scaffold with package module, README and tests",
+    "define contract for base override and merged output",
+    "implement recursive object merge",
+    "reject non-object top-level JSON inputs",
+    "add fixture-based tests for merge and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/json_config_merger/__init__.py",
+    "src/json_config_merger/cli.py",
+    "src/json_config_merger/merger.py",
+    "tests/fixtures/base.json",
+    "tests/fixtures/override.json",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "base and override JSON fixtures are merged recursively",
+    "CLI writes merged JSON output",
+    "invalid top-level JSON type is rejected",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

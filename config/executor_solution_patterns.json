@@ -1,0 +1,119 @@
+{
+  "schema_version": "executor_solution_patterns.v1",
+  "status": "active",
+  "admission_policy": {
+    "automatic_source_mutation_allowed": false,
+    "automatic_kb_promotion_allowed": false,
+    "required_evidence": [
+      "field_trial_case",
+      "regression_test",
+      "blind_trial_delta",
+      "config_doctor"
+    ]
+  },
+  "patterns": [
+    {
+      "id": "executor_pattern_contract_backed_identity_transform",
+      "label": "Identity return can be replaced by a contract-derived allowlisted transform",
+      "match": {
+        "patch_synthesis": "prepared",
+        "patch_quality_level": "contract_backed_identity_transform"
+      },
+      "action": "verify_identity_transform_patch",
+      "safe_next_step": "run verifier gates against the sandbox transform patch",
+      "required_evidence": [
+        "single_input_contract",
+        "explicit_output_expectation",
+        "identity_return_body_detected",
+        "source_project_unchanged"
+      ],
+      "risk": "single-sample transform inference is safe only for allowlisted simple operations",
+      "confidence": 0.72
+    },
+    {
+      "id": "executor_pattern_contract_backed_notimplemented_completion",
+      "label": "NotImplemented placeholder completion is backed by an explicit literal return contract",
+      "match": {
+        "patch_synthesis": "prepared",
+        "patch_quality_level": "contract_backed_notimplemented_return"
+      },
+      "action": "verify_notimplemented_completion_patch",
+      "safe_next_step": "run verifier gates against the sandbox literal-return patch",
+      "required_evidence": [
+        "explicit_literal_return_expectation",
+        "notimplemented_body_detected",
+        "source_project_unchanged"
+      ],
+      "risk": "placeholder completion is safe only for narrow literal contracts, not inferred business behavior",
+      "confidence": 0.74
+    },
+    {
+      "id": "executor_pattern_contract_backed_stub_completion",
+      "label": "Stub completion is backed by an explicit literal return contract",
+      "match": {
+        "patch_synthesis": "prepared",
+        "patch_quality_level": "contract_backed_return_literal"
+      },
+      "action": "verify_stub_completion_patch",
+      "safe_next_step": "run verifier gates against the sandbox literal-return patch",
+      "required_evidence": [
+        "explicit_literal_return_expectation",
+        "stub_body_detected",
+        "source_project_unchanged"
+      ],
+      "risk": "literal completion is safe only for narrow stub contracts, not inferred business behavior",
+      "confidence": 0.76
+    },
+    {
+      "id": "executor_pattern_verified_no_patch_callable",
+      "label": "Callable acceptance passed and no deterministic patch is needed",
+      "match": {
+        "acceptance_signal": "executable_callable",
+        "patch_synthesis": "skipped",
+        "patch_quality_level": "verified_no_patch"
+      },
+      "action": "preserve_verified_no_patch_record",
+      "safe_next_step": "mine upstream tests before adding a new deterministic patch recipe",
+      "required_evidence": [
+        "callable_acceptance_passed",
+        "source_project_unchanged",
+        "unsupported_patch_pattern_recorded"
+      ],
+      "risk": "may hide a missing business change if upstream intent is underspecified",
+      "confidence": 0.74
+    },
+    {
+      "id": "executor_pattern_signature_fallback_review",
+      "label": "Guard was derived from signature rather than an explicit negative contract",
+      "match": {
+        "patch_quality_level": "signature_fallback_guard"
+      },
+      "action": "request_contract_negative_case_or_rebind",
+      "safe_next_step": "send missing-input contract evidence back to Spec Writer or Implementer before promotion",
+      "required_evidence": [
+        "signature_required_parameters",
+        "review_required",
+        "negative_contract_case_missing"
+      ],
+      "risk": "signature-derived guard can be mechanically correct but semantically wrong",
+      "confidence": 0.69
+    },
+    {
+      "id": "executor_pattern_blocked_handoff",
+      "label": "Executor found no safe bounded source candidate",
+      "match": {
+        "patch_synthesis": "blocked",
+        "patch_quality_level": "blocked_handoff"
+      },
+      "action": "preserve_no_patch_handoff",
+      "safe_next_step": "route back to target selection or split native/context boundary as separate work",
+      "required_evidence": [
+        "no_safe_candidate",
+        "source_project_unchanged",
+        "handoff_reason_recorded"
+      ],
+      "risk": "project may need a different first slice rather than Executor patching",
+      "confidence": 0.71
+    }
+  ]
+}

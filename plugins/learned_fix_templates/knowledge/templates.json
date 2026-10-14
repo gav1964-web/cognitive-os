@@ -1,0 +1,928 @@
+{
+ "schema_version": "learned_fix_templates.v1",
+ "learner": "runtime.fix_template_learning",
+ "selection": "most concrete matching template first",
+ "rules": {
+  "TRY004": {
+   "detector": {
+    "tool": "ruff",
+    "rule": "TRY004"
+   },
+   "provenance": {
+    "anchored_edits": 12,
+    "projects": [
+     "celery__celery",
+     "delgan__loguru",
+     "jazzband__pip-tools",
+     "marshmallow-code__marshmallow",
+     "pallets__click",
+     "scrapy__scrapy"
+    ],
+    "source": "artifacts/fix_templates_20261003/detector/anchored.jsonl",
+    "source_sha256": "b02a0f2f48742bdd544d44782ef0dfb4dcbe11c49866a04e4ac7081b3468ab80"
+   },
+   "evaluation_leave_one_project_out": {
+    "edits": 12,
+    "projects": 6,
+    "ruff_fixable_share": 0.0,
+    "test_edits": 12,
+    "suggested": 9,
+    "correct": 8,
+    "autofix_applicable": 0,
+    "autofix_correct": 0,
+    "head_sites": 24,
+    "head_suggested": 19,
+    "head_verified": 19,
+    "head_unanchored_suggestions": 122
+   },
+   "templates": [
+    {
+     "support": 8,
+     "projects": 3,
+     "before_text": "raise ValueError(H0)",
+     "after_text": "raise TypeError(H0)",
+     "before": {
+      "l": "Raise",
+      "c": [
+       {
+        "l": "N:exc",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Name",
+              "c": [
+               {
+                "l": "f:id",
+                "v": "ValueError"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "?0"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "l": "f:cause",
+        "v": null
+       }
+      ]
+     },
+     "after": {
+      "l": "Raise",
+      "c": [
+       {
+        "l": "N:exc",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Name",
+              "c": [
+               {
+                "l": "f:id",
+                "v": "TypeError"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "?0"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "l": "f:cause",
+        "v": null
+       }
+      ]
+     }
+    },
+    {
+     "support": 6,
+     "projects": 2,
+     "before_text": "raise ValueError(H0)",
+     "after_text": "raise TypeError(H0)",
+     "before": {
+      "l": "Raise",
+      "c": [
+       {
+        "l": "N:exc",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Name",
+              "c": [
+               {
+                "l": "f:id",
+                "v": "ValueError"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "?0"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "l": "f:cause",
+        "v": null
+       }
+      ]
+     },
+     "after": {
+      "l": "Raise",
+      "c": [
+       {
+        "l": "N:exc",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Name",
+              "c": [
+               {
+                "l": "f:id",
+                "v": "TypeError"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "?0"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "l": "f:cause",
+        "v": null
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "G002": {
+   "detector": {
+    "tool": "ruff",
+    "rule": "G002"
+   },
+   "provenance": {
+    "anchored_edits": 17,
+    "projects": [
+     "benoitc__gunicorn",
+     "cookiecutter__cookiecutter",
+     "encode__uvicorn",
+     "mkdocs__mkdocs",
+     "psf__black",
+     "python-babel__babel",
+     "python-pillow__pillow",
+     "scrapy__scrapy",
+     "sqlalchemy__alembic"
+    ],
+    "source": "artifacts/fix_templates_20261003/detector/anchored.jsonl",
+    "source_sha256": "b02a0f2f48742bdd544d44782ef0dfb4dcbe11c49866a04e4ac7081b3468ab80"
+   },
+   "evaluation_leave_one_project_out": {
+    "edits": 17,
+    "projects": 9,
+    "ruff_fixable_share": 0.0,
+    "test_edits": 17,
+    "suggested": 16,
+    "correct": 8,
+    "autofix_applicable": 0,
+    "autofix_correct": 0,
+    "head_sites": 5,
+    "head_suggested": 5,
+    "head_verified": 5,
+    "head_unanchored_suggestions": 44
+   },
+   "templates": [
+    {
+     "support": 2,
+     "projects": 2,
+     "before_text": "Expr(N:value(Call(N:func(Attribute(N:value(Attribute(N:value(Name(f:id=str:'self')),f:attr=str:'log')),?0)),L:args(BinOp(N:left(Constant(?1)),N:op(Mod),N:right(Attribute(N:value(Name(f:id=str:'self')),?2)))),L:keywords)))",
+     "after_text": "Expr(N:value(Call(N:func(Attribute(N:value(Attribute(N:value(Name(f:id=str:'self')),f:attr=str:'log')),?0)),L:args(Constant(?1),Attribute(N:value(Name(f:id=str:'self')),?2)),L:keywords)))",
+     "before": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "Attribute",
+                  "c": [
+                   {
+                    "l": "N:value",
+                    "c": [
+                     {
+                      "l": "Name",
+                      "c": [
+                       {
+                        "l": "f:id",
+                        "v": "self"
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "l": "f:attr",
+                    "v": "log"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "?0"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "BinOp",
+              "c": [
+               {
+                "l": "N:left",
+                "c": [
+                 {
+                  "l": "Constant",
+                  "c": [
+                   {
+                    "l": "?1"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "N:op",
+                "c": [
+                 {
+                  "l": "Mod"
+                 }
+                ]
+               },
+               {
+                "l": "N:right",
+                "c": [
+                 {
+                  "l": "Attribute",
+                  "c": [
+                   {
+                    "l": "N:value",
+                    "c": [
+                     {
+                      "l": "Name",
+                      "c": [
+                       {
+                        "l": "f:id",
+                        "v": "self"
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "l": "?2"
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "after": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "Attribute",
+                  "c": [
+                   {
+                    "l": "N:value",
+                    "c": [
+                     {
+                      "l": "Name",
+                      "c": [
+                       {
+                        "l": "f:id",
+                        "v": "self"
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "l": "f:attr",
+                    "v": "log"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "?0"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "Constant",
+              "c": [
+               {
+                "l": "?1"
+               }
+              ]
+             },
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "Name",
+                  "c": [
+                   {
+                    "l": "f:id",
+                    "v": "self"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "?2"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "support": 3,
+     "projects": 2,
+     "before_text": "Expr(N:value(Call(N:func(Attribute(N:value(?0),?1)),L:args(BinOp(N:left(Constant(?2)),N:op(Mod),N:right(Tuple(L:elts(?3,?4))))),L:keywords)))",
+     "after_text": "Expr(N:value(Call(N:func(Attribute(N:value(?0),?1)),L:args(Constant(?2),?3,?4),L:keywords)))",
+     "before": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "?0"
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "BinOp",
+              "c": [
+               {
+                "l": "N:left",
+                "c": [
+                 {
+                  "l": "Constant",
+                  "c": [
+                   {
+                    "l": "?2"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "N:op",
+                "c": [
+                 {
+                  "l": "Mod"
+                 }
+                ]
+               },
+               {
+                "l": "N:right",
+                "c": [
+                 {
+                  "l": "Tuple",
+                  "c": [
+                   {
+                    "l": "L:elts",
+                    "c": [
+                     {
+                      "l": "?3"
+                     },
+                     {
+                      "l": "?4"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "after": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "?0"
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "Constant",
+              "c": [
+               {
+                "l": "?2"
+               }
+              ]
+             },
+             {
+              "l": "?3"
+             },
+             {
+              "l": "?4"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "support": 6,
+     "projects": 2,
+     "before_text": "Expr(N:value(Call(N:func(Attribute(N:value(Name(?0)),?1)),L:args(BinOp(N:left(Constant(?2)),N:op(Mod),N:right(?3))),L:keywords)))",
+     "after_text": "Expr(N:value(Call(N:func(Attribute(N:value(Name(?0)),?1)),L:args(Constant(?2),?3),L:keywords)))",
+     "before": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "Name",
+                  "c": [
+                   {
+                    "l": "?0"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "BinOp",
+              "c": [
+               {
+                "l": "N:left",
+                "c": [
+                 {
+                  "l": "Constant",
+                  "c": [
+                   {
+                    "l": "?2"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "N:op",
+                "c": [
+                 {
+                  "l": "Mod"
+                 }
+                ]
+               },
+               {
+                "l": "N:right",
+                "c": [
+                 {
+                  "l": "?3"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "after": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "Name",
+                  "c": [
+                   {
+                    "l": "?0"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "Constant",
+              "c": [
+               {
+                "l": "?2"
+               }
+              ]
+             },
+             {
+              "l": "?3"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "support": 8,
+     "projects": 4,
+     "before_text": "Expr(N:value(Call(N:func(Attribute(N:value(?0),?1)),L:args(BinOp(N:left(Constant(?2)),N:op(Mod),N:right(?3))),L:keywords)))",
+     "after_text": "Expr(N:value(Call(N:func(Attribute(N:value(?0),?1)),L:args(Constant(?2),?3),L:keywords)))",
+     "before": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "?0"
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "BinOp",
+              "c": [
+               {
+                "l": "N:left",
+                "c": [
+                 {
+                  "l": "Constant",
+                  "c": [
+                   {
+                    "l": "?2"
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "l": "N:op",
+                "c": [
+                 {
+                  "l": "Mod"
+                 }
+                ]
+               },
+               {
+                "l": "N:right",
+                "c": [
+                 {
+                  "l": "?3"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "after": {
+      "l": "Expr",
+      "c": [
+       {
+        "l": "N:value",
+        "c": [
+         {
+          "l": "Call",
+          "c": [
+           {
+            "l": "N:func",
+            "c": [
+             {
+              "l": "Attribute",
+              "c": [
+               {
+                "l": "N:value",
+                "c": [
+                 {
+                  "l": "?0"
+                 }
+                ]
+               },
+               {
+                "l": "?1"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "l": "L:args",
+            "c": [
+             {
+              "l": "Constant",
+              "c": [
+               {
+                "l": "?2"
+               }
+              ]
+             },
+             {
+              "l": "?3"
+             }
+            ]
+           },
+           {
+            "l": "L:keywords"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

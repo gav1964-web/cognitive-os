@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/9adcaf298adec3931316238761cf7fcc0c854900e18c6ed1081dd34d5909b16d.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:9adcaf298adec3931316238761cf7fcc0c854900e18c6ed1081dd34d5909b16d",
+  "entry_digest": "sha256:5171b4f57bc61ff0724177a36a7a538c85c20b4cd114937bb8b4f4bcea001721",
+  "evaluator_fingerprint": "narrow_certification_input_review:v1",
+  "producer_fingerprint": "role_pipeline_field_trial:v1",
+  "replay_command": [
+    "python",
+    "tools/role_pipeline_benchmark.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/field_trials/role_pipeline_field_trial_20260904T072703557765Z.json",
+  "status": "promoted"
+}

@@ -1,0 +1,10 @@
+@echo off
+setlocal
+set "ROOT=%~dp0"
+set "PYTHONPATH=%ROOT%src"
+if "%~1"=="" (
+  python -m news_site_scraper.cli popular "%ROOT%trump-news.md" --use-popular-sites --topic "Trump" --source-discovery search --total-top 20 --summary-mode llm
+) else (
+  python -m news_site_scraper.cli %*
+)
+exit /b %ERRORLEVEL%

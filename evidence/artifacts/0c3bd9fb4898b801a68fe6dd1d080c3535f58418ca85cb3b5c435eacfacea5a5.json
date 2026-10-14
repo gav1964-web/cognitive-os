@@ -1,0 +1,37 @@
+{
+  "artifact_type": "SelfDevelopmentExperimentQueue",
+  "certification": {
+    "project_strata": [
+      "cli_local_tool",
+      "library_pure_transform"
+    ],
+    "receipt": "evidence/ledger/ca0bdda72697373d304b9a28923728612da25a58e09b4ad10e07c8f57f6bd657.json",
+    "status": "certified"
+  },
+  "checks": {
+    "certification_receipt_verified": true,
+    "certified_scope_nonempty": true,
+    "detection_verified": true,
+    "no_active_apply": true,
+    "no_automatic_promotion": true
+  },
+  "deferred": [],
+  "deferred_count": 0,
+  "detection": {
+    "candidate_count": 0,
+    "report_digest": "sha256:4ddda8cd3d90e4d0da67fc2d0c69ca9bf096ca67ec9a58b344a58e98a5d558da",
+    "status": "waiting_for_evidence"
+  },
+  "failed_checks": [],
+  "next_action": "collect_new_independent_project_evidence",
+  "queue_digest": "sha256:55feffd0883ecd4bd2e6d15fc91f23b08d229f6a2e3697cbb7639967ff05f7c6",
+  "ready": [],
+  "ready_count": 0,
+  "safety": {
+    "active_kb_write": false,
+    "promotion_applied": false,
+    "source_apply": false
+  },
+  "schema_version": "self_development_experiment_queue.v1",
+  "status": "waiting_for_candidate"
+}

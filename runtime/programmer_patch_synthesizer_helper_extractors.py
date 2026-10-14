@@ -1,0 +1,10 @@
+"""Compatibility aliases for plugin-owned helper extraction and neutral AST APIs."""
+
+from __future__ import annotations
+
+from .python_parser_compatibility import parse_compatible_source
+from cognitive_inspect.ast_navigation import parent_map as _parent_map, find_top_level_function as _find_top_level_function, call_name as _call_name
+from .append_mapping_contract import propose_append_mapping_helper as _extract_append_mapping_helper
+from .json_serialization_contract import propose_json_serialization_patch as _extract_json_dumps_helper
+from .json_parsing_contract import propose_json_parsing_patch as _extract_json_loads_helper
+from .text_splitting_contract import propose_text_splitting_patch as _extract_splitlines_helper

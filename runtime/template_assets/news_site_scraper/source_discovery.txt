@@ -1,0 +1,319 @@
+from __future__ import annotations
+
+import html as html_lib
+import json
+import re
+from typing import Any
+from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
+
+
+BLOCKED_HOST_TOKENS = (
+    'duckduckgo.', 'google.', 'bing.', 'yahoo.', 'facebook.', 'twitter.', 'x.com',
+    'youtube.', 'instagram.', 'linkedin.', 'wikipedia.', 'reddit.', 'tiktok.',
+    'w3.org', 'mozilla.org', 'schema.org', 'example.', 'iana.org', 'github.com',
+)
+
+
+DEFAULT_LLM_BASE_URL = 'http://127.0.0.1:8000/v1'
+DEFAULT_LLM_MODEL = 'deepseek/deepseek-chat'
+
+
+NEWS_HOST_HINTS = (
+    'news', 'reuters', 'apnews', 'bbc', 'cnn', 'nbc', 'cbs', 'abc', 'foxnews',
+    'nytimes', 'washingtonpost', 'theguardian', 'bloomberg', 'politico', 'axios',
+    'npr', 'pbs', 'usatoday', 'wsj', 'cnbc', 'aljazeera', 'rbc', '3dnews', 'ixbt', 'cnews', 'habr',
+)
+
+
+def discover_news_sources(
+    topic: str,
+    *,
+    max_sites: int = 10,
+    fetcher,
+    search_url: str = 'https://duckduckgo.com/html/',
+    timeout: float = 15.0,
+) -> list[str]:
+    query = _search_query(topic)
+    url = _search_url(search_url, query)
+    try:
+        html = fetcher(url, timeout=timeout)
+    except TypeError:
+        html = fetcher(url)
+    candidates = _candidate_urls(html, base_url=search_url)
+    ranked = _rank_news_hosts(candidates)
+    return ranked[:max_sites]
+
+
+def discover_news_article_rows(
+    topic: str,
+    *,
+    max_items: int = 20,
+    fetcher,
+    search_url: str = 'https://duckduckgo.com/html/',
+    timeout: float = 15.0,
+) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for query in _search_query_variants(topic):
+        url = _search_url(search_url, query)
+        try:
+            html = fetcher(url, timeout=timeout)
+        except TypeError:
+            html = fetcher(url)
+        for link in _search_result_links(html, base_url=search_url):
+            article_url = link['url']
+            host = urlparse(article_url).netloc.lower()
+            key = article_url.lower().rstrip('/')
+            if key in seen or _is_blocked_host(host) or not _looks_like_news_article(article_url, host):
+                continue
+            seen.add(key)
+            title = link['title'] or _title_from_url(article_url)
+            rows.append({'title': title[:240], 'url': article_url, 'date': '', 'summary': '', 'source': _source_name(host)})
+            if len(rows) >= max_items:
+                return rows
+        if len(rows) < max_items:
+            try:
+                rss = fetcher(_bing_rss_url(query), timeout=timeout)
+            except TypeError:
+                rss = fetcher(_bing_rss_url(query))
+            except Exception:
+                rss = ''
+            for row in _rows_from_search_rss(rss):
+                key = row['url'].lower().rstrip('/')
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(row)
+                if len(rows) >= max_items:
+                    return rows
+    return rows
+
+
+def discover_news_sources_with_llm(
+    topic: str,
+    *,
+    max_sites: int = 10,
+    caller=None,
+    base_url: str = DEFAULT_LLM_BASE_URL,
+    model: str = DEFAULT_LLM_MODEL,
+) -> list[str]:
+    messages = [
+        {
+            'role': 'system',
+            'content': 'Return only JSON. Propose reputable news source homepages for the topic. Do not include search engines, social media, encyclopedias, specs, or developer sites.',
+        },
+        {
+            'role': 'user',
+            'content': f'Topic: {topic}\nNeed up to {max_sites} source homepage URLs. JSON schema: {{"sources":[{{"name":"...","url":"https://.../","reason":"..."}}]}}',
+        },
+    ]
+    payload = caller(messages) if caller is not None else _call_openai_compatible(messages, base_url=base_url, model=model)
+    sources = _sources_from_model_payload(payload)
+    return _rank_news_hosts(sources)[:max_sites]
+
+
+def _call_openai_compatible(messages: list[dict[str, str]], *, base_url: str, model: str) -> dict[str, Any]:
+    body = json.dumps({'model': model, 'messages': messages, 'temperature': 0, 'response_format': {'type': 'json_object'}}, ensure_ascii=False).encode('utf-8')
+    url = base_url.rstrip('/') + '/chat/completions'
+    request = Request(url, data=body, headers={'Content-Type': 'application/json'}, method='POST')
+    with urlopen(request, timeout=30) as response:
+        raw = response.read().decode('utf-8', errors='replace')
+    data = json.loads(raw)
+    content = str(data.get('choices', [{}])[0].get('message', {}).get('content') or '{}')
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', content, flags=re.S)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
+        urls = re.findall(r'https?://[^\s"<>]+', content)
+        return {'urls': [url.rstrip('.,);]') for url in urls]}
+
+
+def _sources_from_model_payload(payload: Any) -> list[str]:
+    data = payload if isinstance(payload, dict) else {}
+    rows = data.get('sources') or data.get('sites') or data.get('urls') or []
+    urls: list[str] = []
+    for row in rows:
+        url = str(row.get('url') if isinstance(row, dict) else row).strip()
+        if url.startswith(('http://', 'https://')):
+            urls.append(url)
+    return urls
+
+
+def load_seed_sites(max_sites: int) -> list[str]:
+    path = Path(__file__).with_name('popular_news_sites.json')
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    raw_sites = payload.get('sites', payload) if isinstance(payload, dict) else payload
+    urls: list[str] = []
+    for item in raw_sites:
+        url = str(item.get('url') if isinstance(item, dict) else item).strip()
+        if url.startswith(('http://', 'https://')):
+            urls.append(_site_root(url))
+    return _dedupe(urls)[:max_sites]
+
+
+def _search_query(topic: str) -> str:
+    cleaned = ' '.join(str(topic or '').split()) or 'top news'
+    return cleaned if 'news' in cleaned.lower() or 'новост' in cleaned.lower() else f'{cleaned} news'
+
+
+def _search_query_variants(topic: str) -> list[str]:
+    primary = _search_query(topic)
+    aliases = {
+        'путин': 'Putin',
+        'путина': 'Putin',
+        'трамп': 'Trump',
+        'зеленский': 'Zelensky',
+        'зеленского': 'Zelensky',
+    }
+    normalized = _normalize_for_query(topic)
+    alias = aliases.get(normalized)
+    variants = [primary]
+    if alias:
+        variants.append(_search_query(alias))
+    return _dedupe(variants)
+
+
+def _normalize_for_query(value: str) -> str:
+    lowered = value.lower().replace('ё', 'е')
+    return ' '.join(''.join(ch if ch.isalnum() or ch.isspace() else ' ' for ch in lowered).split())
+
+
+def _search_url(search_url: str, query: str) -> str:
+    separator = '&' if '?' in search_url else '?'
+    return f'{search_url}{separator}q={quote_plus(query)}'
+
+
+def _bing_rss_url(query: str) -> str:
+    return f'https://www.bing.com/search?format=rss&q={quote_plus(query)}'
+
+
+def _candidate_urls(html: str, *, base_url: str) -> list[str]:
+    urls: list[str] = []
+    for match in re.finditer(r'href=["\\\']([^"\\\']+)["\\\']', html, flags=re.I):
+        href = match.group(1).replace('&amp;', '&')
+        urls.append(_unwrap_search_href(href, base_url=base_url))
+    for match in re.finditer(r'https?://[^\s"<>]+', html):
+        urls.append(_unwrap_search_href(match.group(0), base_url=base_url))
+    return [url for url in urls if url.startswith(('http://', 'https://'))]
+
+
+def _search_result_links(html: str, *, base_url: str) -> list[dict[str, str]]:
+    links: list[dict[str, str]] = []
+    for match in re.finditer(r'<a\b[^>]*href=["\\\']([^"\\\']+)["\\\'][^>]*>(.*?)</a>', html, flags=re.I | re.S):
+        href = match.group(1).replace('&amp;', '&')
+        url = _unwrap_search_href(href, base_url=base_url)
+        title = _squash(html_lib.unescape(_strip_tags(match.group(2))))
+        if url.startswith(('http://', 'https://')) and title:
+            links.append({'title': title, 'url': url})
+    if links:
+        return links
+    return [{'title': _title_from_url(url), 'url': url} for url in _candidate_urls(html, base_url=base_url)]
+
+
+def _strip_tags(value: str) -> str:
+    return re.sub(r'<[^>]+>', ' ', value)
+
+
+def _rows_from_search_rss(xml: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for item in re.findall(r'<item\b[^>]*>(.*?)</item>', xml or '', flags=re.I | re.S):
+        title = _squash(html_lib.unescape(_strip_tags(_tag_text(item, 'title'))))
+        url = html_lib.unescape(_tag_text(item, 'link')).strip()
+        summary = _squash(html_lib.unescape(_strip_tags(_tag_text(item, 'description'))))
+        host = urlparse(url).netloc.lower()
+        if not title or not url.startswith(('http://', 'https://')) or _is_blocked_host(host) or not _looks_like_news_article(url, host):
+            continue
+        rows.append({'title': title[:240], 'url': url, 'date': '', 'summary': summary[:500], 'source': _source_name(host)})
+    return rows
+
+
+def _tag_text(xml: str, tag: str) -> str:
+    match = re.search(rf'<{tag}\b[^>]*>(.*?)</{tag}>', xml, flags=re.I | re.S)
+    return match.group(1) if match else ''
+
+
+def _unwrap_search_href(href: str, *, base_url: str) -> str:
+    absolute = urljoin(base_url, href)
+    parsed = urlparse(absolute)
+    params = parse_qs(parsed.query)
+    for key in ('uddg', 'url', 'u'):
+        values = params.get(key)
+        if values:
+            return unquote(values[0])
+    return absolute
+
+
+def _rank_news_hosts(urls: list[str]) -> list[str]:
+    scores: dict[str, int] = {}
+    first_seen: dict[str, int] = {}
+    for index, url in enumerate(urls):
+        root = _site_root(url)
+        host = urlparse(root).netloc.lower()
+        if not host or _is_blocked_host(host) or not _looks_like_news_source(url, host):
+            continue
+        hint_score = 3 if any(token in host for token in NEWS_HOST_HINTS) else 1
+        scores[root] = scores.get(root, 0) + hint_score
+        first_seen.setdefault(root, index)
+    ranked = sorted(scores, key=lambda item: (first_seen[item], item))
+    return ranked
+
+
+def _site_root(url: str) -> str:
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        return ''
+    return f'{parsed.scheme}://{parsed.netloc}/'
+
+
+def _is_blocked_host(host: str) -> bool:
+    return any(token in host for token in BLOCKED_HOST_TOKENS)
+
+
+def _looks_like_news_source(url: str, host: str) -> bool:
+    path = urlparse(url).path.lower()
+    if any(token in host for token in NEWS_HOST_HINTS):
+        return True
+    return any(token in path for token in ('/news', '/article', '/articles', '/politics', '/world', '/story'))
+
+
+def _looks_like_news_article(url: str, host: str) -> bool:
+    path = urlparse(url).path.lower().rstrip('/')
+    if not path or path in {'', '/', '/news', '/world', '/politics'}:
+        return False
+    if any(marker in path for marker in ('/person/', '/profile/', '/people/', '/bio', '/biography', '/tag/', '/tags/')):
+        return False
+    if path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf')):
+        return False
+    return _looks_like_news_source(url, host) and (len(path.rsplit('/', 1)[-1]) >= 6 or re.search(r'/20\d{2}/', path) is not None)
+
+
+def _title_from_url(url: str) -> str:
+    leaf = urlparse(url).path.rstrip('/').rsplit('/', 1)[-1]
+    leaf = re.sub(r'\.(?:html?|php)$', '', leaf)
+    text = leaf.replace('-', ' ').replace('_', ' ').strip()
+    return text[:1].upper() + text[1:] if text else url
+
+
+def _source_name(host: str) -> str:
+    return host.lower().removeprefix('www.') or 'unknown'
+
+
+def _squash(value: str) -> str:
+    return ' '.join(value.split())
+
+
+def _dedupe(urls: list[str]) -> list[str]:
+    result = []
+    seen = set()
+    for url in urls:
+        if url and url not in seen:
+            seen.add(url)
+            result.append(url)
+    return result

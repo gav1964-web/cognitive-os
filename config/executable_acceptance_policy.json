@@ -1,0 +1,543 @@
+{
+  "schema_version": "executable_acceptance_policy.v1",
+  "target_path_resolution": {
+    "enabled": true,
+    "max_candidate_files": 2000,
+    "max_unique_matches": 1,
+    "ignored_directories": [".git", ".tox", ".venv", "build", "dist", "node_modules", "site-packages", "venv"]
+  },
+  "execution_context": {
+    "isolate_process_arguments": true,
+    "program_name": "acceptance-probe"
+  },
+  "foundation_evidence": {
+    "isolated_process_timeout_seconds": 20,
+    "isolated_transitive_effects": ["memory_state", "observability"],
+    "process_isolated_direct_effects": ["memory_state"],
+    "process_isolated_direct_effect_profiles": {
+      "logging_sink_adapter": ["network"]
+    },
+    "isolated_delegated_effect_profiles": {
+      "external_api_command_boundary": ["network"],
+      "logging_record_projection": ["observability"]
+    },
+    "isolated_direct_effect_profiles": {
+      "filesystem_typed_object_loader": ["filesystem_read"],
+      "logging_adapter_factory": ["observability"],
+      "observability_render_command": ["observability"]
+    },
+    "shadow_target_admission": {
+      "enabled": true,
+      "allowed_reselection_triggers": ["low_first_slice_viability"],
+      "require_process_isolation": true,
+      "require_complete_source_body": true,
+      "require_no_declared_effects": true,
+      "require_no_direct_effects": true,
+      "require_no_state_mutation": true
+    },
+    "promoted_selection_policy_admission": {
+      "enabled": true,
+      "allowed_reselection_triggers": [
+        "low_first_slice_viability",
+        "executable_acceptance_rejected"
+      ],
+      "require_process_isolation": true,
+      "require_complete_source_body": true,
+      "require_no_declared_effects": false,
+      "require_no_direct_effects": false,
+      "require_no_state_mutation": true
+    }
+  },
+  "structural_sample_policy": {
+    "parameter_strategies": {
+      "absolute_url": false,
+      "callable_arity": false,
+      "derived_conversion": false,
+      "directory_path": false,
+      "indexed_sequence": false,
+      "nested_mapping_paths": true
+    },
+    "priorities": {
+      "allowed_collection_domain": 105,
+      "array_axis": 116,
+      "comparison_literal": 70,
+      "conversion": 80,
+      "declared_default": 110,
+      "dynamic_type_check": 114,
+      "importable_module_path": 110,
+      "iterated_literal_domain": 106,
+      "allowed_collection_domain": 105,
+      "keyword_payload": 95,
+      "length_constraint": 88,
+      "literal_buffer_method": 109,
+      "numeric_arithmetic": 92,
+      "numeric_sequence": 107,
+      "parameter_callable": 112,
+      "parameter_unpack": 96,
+      "parameter_attributes": 87,
+      "qualified_call_argument": 111,
+      "required_mapping_keys": 90,
+      "strptime_format": 100,
+      "split_unpack": 108,
+      "tensor_window_contract": 118,
+      "validation_format_hint": 98
+    },
+    "conversion_samples": {"float": "1.0", "int": "1", "sorted": []},
+    "dynamic_type_check_sample": "sample",
+    "numeric_sequence_calls": ["absolute", "array", "asarray", "flipud", "mean", "std"],
+    "numeric_sequence_sample": [0.0, 1.0],
+    "numeric_arithmetic_sample": 1,
+    "qualified_call_argument_samples": {
+      "datetime.datetime.fromtimestamp": 0,
+      "datetime.datetime.utcfromtimestamp": 0,
+      "datetime.fromtimestamp": 0,
+      "datetime.utcfromtimestamp": 0,
+      "inspect.isclass": {"__fixture__": "callable_identity"},
+      "inspect.ismethod": {"__fixture__": "callable_identity"},
+      "inspect.isroutine": {"__fixture__": "callable_identity"},
+      "inspect.signature": {"__fixture__": "callable_identity"},
+      "inspect.unwrap": {"__fixture__": "callable_identity"},
+      "torch.from_numpy": {"__fixture__": "numpy_array", "items": [0.0, 1.0]}
+    },
+    "parameter_callable_fixture": "callable_identity",
+    "protocol_method_prefixes": ["collect_", "fetch_", "find_", "get_", "iter_", "list_", "load_", "query_", "read_", "resolve_", "select_"],
+    "mapping_protocol_methods": ["get", "items", "keys", "values"],
+    "mapping_protocol_sample": {"__fixture__": "empty_mapping"},
+    "maximum_inferred_length": 32,
+    "literal_buffer_methods": {
+      "positions": {"startswith": "prefix", "endswith": "suffix"},
+      "minimum_length": 32
+    },
+    "length_constraint_samples": {
+      "default_element": 0,
+      "string_element": "0"
+    },
+    "unpack_samples": {
+      "element": 1.0,
+      "maximum_items": 16,
+      "split_methods": ["rsplit", "split"],
+      "split_part": "sample"
+    },
+    "tensor_window_contract": {
+      "enabled": true,
+      "dimension": 2
+    },
+    "attribute_samples": {
+      "callable_protocol_fixtures": {
+        "add": "safe_method_attribute",
+        "getMessage": "logging_log_record"
+      },
+      "inherited_method_fixtures": [
+        {
+          "base_contains": "logging.Formatter",
+          "methods": ["format"],
+          "parameter": "record",
+          "fixture": "logging_log_record"
+        },
+        {
+          "base_contains": "logging.Handler",
+          "methods": ["_format_record", "format_record", "formatMessage", "emit"],
+          "parameter": "record",
+          "fixture": "logging_log_record"
+        }
+      ],
+      "boolean_names": ["disabled", "enabled", "nullable"],
+      "boolean_prefixes": ["has_", "is_"],
+      "integer_names": ["count", "index", "length", "size"],
+      "boolean_value": false,
+      "integer_value": 0,
+      "default": "sample"
+    },
+    "format_samples": {
+      "HH:MM:SS": "04:05:06",
+      "YYYY-MM-DD": "2024-02-03",
+      "YYYY-MM-DDTHH:MM:SS": "2024-02-03T04:05:06",
+      "YYYY/MM/DD": "2024/02/03"
+    },
+    "format_pattern": "FORMAT(?: OF|:)?\\s+([A-Z][A-Z0-9_./:-]{2,})",
+    "module_attribute_calls": ["getattr", "hasattr"],
+    "collection_difference_method": "difference"
+  },
+  "dependency_policy": {
+    "controlled_stubs": {
+      "enabled": true,
+      "max_missing_modules": 6,
+      "max_namespace_modules_per_dependency": 8,
+      "stub_external_missing_modules": true,
+      "stub_object_features": [
+        "bool_false",
+        "callable",
+        "context_manager",
+        "getitem",
+        "iter_empty",
+        "mro_entries"
+      ],
+      "pre_stub_modules": [
+        "stevedore"
+      ]
+    },
+    "metadata_profiles": {
+      "enabled": true,
+      "default_version": "0.0.0",
+        "packages": [
+          "cookiecutter",
+          "invoke",
+          "isort",
+          "paramiko",
+          "pre_commit"
+        ]
+      },
+      "generated_module_profiles": {
+        "enabled": true,
+        "modules": {
+          "borg._version": {"attrs": {"version": "1.2.3"}},
+          "filelock.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
+          "gradio.block_function": {"attrs": {"BlockFunction": {"__fixture__": "gradio_block_function_class"}}},
+          "gradio.context": {"attrs": {"LocalContext": {"__fixture__": "gradio_local_context"}}},
+          "gradio.helpers": {"attrs": {"special_args": {"__fixture__": "callable_gradio_special_args"}}},
+          "gradio.utils": {"attrs": {"append_unique_suffix": {"__fixture__": "callable_append_unique_suffix"}, "check_function_inputs_match": {"__fixture__": "callable_noop"}}},
+          "great_expectations.experimental.rule_based_profiler.helpers.util": {"attrs": {"build_domains_from_column_names": {"__fixture__": "callable_empty_list"}, "get_parameter_value_and_validate_return_type": {"__fixture__": "callable_ge_parameter_value"}}},
+          "great_expectations.util": {"attrs": {"is_candidate_subset_of_target": {"__fixture__": "callable_true"}}},
+          "hatch.env.virtual": {"attrs": {"VirtualEnvironment": {"__fixture__": "hatch_virtual_environment_class"}}},
+          "gradio_client.data_classes": {"attrs": {"ParameterInfo": {"__fixture__": "stub_class"}}},
+          "gradio_client.exceptions": {"attrs": {"AppError": {"__fixture__": "stub_class"}, "AuthenticationError": {"__fixture__": "stub_class"}, "ValidationError": {"__fixture__": "stub_class"}}},
+          "jupyter_core.paths": {"attrs": {"ENV_CONFIG_PATH": [], "SYSTEM_CONFIG_PATH": [], "jupyter_config_dir": {"__fixture__": "callable_empty_string"}, "jupyter_config_path": {"__fixture__": "callable_empty_list"}, "jupyter_path": {"__fixture__": "callable_empty_list"}}},
+          "lightning_utilities.core.enums": {"attrs": {"StrEnum": {"__fixture__": "str_enum_class"}}},
+          "mcp_types": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
+          "mcp_types.jsonrpc": {"attrs": {"__all__": ["INTERNAL_ERROR", "INVALID_PARAMS", "INVALID_REQUEST", "PARSE_ERROR", "ErrorData", "JSONRPCError", "JSONRPCMessage", "JSONRPCRequest", "JSONRPCResponse", "RequestId", "jsonrpc_message_adapter"], "__getattr__": {"__fixture__": "module_getattr_stub"}, "INTERNAL_ERROR": -32603, "INVALID_PARAMS": -32602, "INVALID_REQUEST": -32600, "PARSE_ERROR": -32700, "ErrorData": {"__fixture__": "stub_class"}, "JSONRPCError": {"__fixture__": "stub_class"}, "JSONRPCMessage": {"__fixture__": "stub_class"}, "JSONRPCRequest": {"__fixture__": "stub_request_class"}, "JSONRPCResponse": {"__fixture__": "stub_class"}, "RequestId": {"__fixture__": "stub_class"}, "jsonrpc_message_adapter": {"__fixture__": "jsonrpc_adapter"}}},
+          "mcp_types.methods": {"attrs": {"__all__": [], "__getattr__": {"__fixture__": "module_getattr_stub"}}},
+          "mcp_types.version": {"attrs": {"__all__": ["DEFAULT_NEGOTIATED_VERSION", "LATEST_PROTOCOL_VERSION", "is_version_at_least"], "DEFAULT_NEGOTIATED_VERSION": "2025-06-18", "LATEST_PROTOCOL_VERSION": "2025-06-18", "is_version_at_least": {"__fixture__": "callable_true"}}},
+          "pants.engine.internals.native_engine": {"attrs": {"__getattr__": {"__fixture__": "module_getattr_stub"}, "EngineError": {"__fixture__": "stub_class"}, "ProcessExecutionEnvironment": {"__fixture__": "stub_class"}}},
+          "passlib.context": {"attrs": {"CryptContext": {"__fixture__": "crypt_context_class"}}},
+          "platformdirs.version": {"attrs": {"__version__": "0.0.0", "__version_tuple__": [0, 0, 0]}},
+          "status": {"attrs": {"HTTP_401_UNAUTHORIZED": 401, "HTTP_403_FORBIDDEN": 403, "HTTP_404_NOT_FOUND": 404, "is_client_error": {"__fixture__": "callable_false"}, "is_server_error": {"__fixture__": "callable_false"}}},
+          "semantic_version": {"attrs": {"__all__": ["Version", "SimpleSpec"], "Version": {"__fixture__": "stub_class"}, "SimpleSpec": {"__fixture__": "stub_class"}}},
+          "traitlets.config.loader": {"attrs": {"Config": {"__fixture__": "stub_class"}, "ConfigFileNotFound": {"__fixture__": "stub_class"}}},
+          "tox.version": {"attrs": {"__version__": "0.0.0", "version": "0.0.0"}},
+          "virtualenv.version": {"attrs": {"__version__": "0.0.0"}},
+          "urllib3._version": {"attrs": {"__version__": "0.0.0"}}
+        }
+      },
+    "external_call_tokens": [
+      "api",
+      "browser",
+      "external_boundary_failure",
+      "http",
+      "llm",
+      "network",
+      "provider",
+      "subprocess"
+    ]
+  },
+  "method_fixture_policy": {
+    "enabled": true,
+    "safe_uninitialized_instance": true,
+    "default_constructor_first": true,
+    "delegated_transport_methods": ["_post", "post", "_put", "put", "_patch", "patch", "_delete", "delete", "_request", "request"],
+    "delegated_transport_fixture": "callable_transport_result",
+    "numeric_receiver_calls": ["arange", "range"],
+    "numeric_receiver_attribute_sample": 1,
+    "comparison_receiver_attribute_sample": 16,
+    "required_mapping_key_sample": "0000000000000000000000000000000000000000000000000000000000000000",
+    "required_mapping_value_fixture": "safe_method_attribute",
+    "callable_attribute_fixtures": {
+      "format": "callable_logging_record_message"
+    },
+    "boolean_condition_value": false,
+    "nullable_comparison_enabled": true,
+    "mapping_value_sample": "sample",
+    "local_import_stub_functions": ["create_application", "determine_local_workspace_environment"],
+    "local_import_stub_methods": ["BlocksConfig.set_event_trigger", "StreamableHTTPServerTransport._handle_post_request"],
+    "instance_attribute_profiles": {
+      "WsgiToAsgiInstance.build_environ": {
+        "scope": {
+          "type": "http",
+          "method": "GET",
+          "path": "/",
+          "query_string": {"__fixture__": "bytes_empty"},
+          "http_version": "1.1",
+          "headers": [],
+          "server": ["testserver", 80],
+          "client": ["127.0.0.1", 12345],
+          "scheme": "http",
+          "root_path": ""
+        },
+        "duplicate_header_limit": 0
+      },
+      "Queue.task_done": {
+        "all_tasks_done": {"__fixture__": "noop_condition"},
+        "unfinished_tasks": 1
+      },
+      "AbstractArchiveFileSystem.ls": {
+        "_get_dirs": {"__fixture__": "callable_noop"},
+        "dir_cache": {"file.txt": {"name": "file.txt", "type": "file", "size": 1}},
+        "root_marker": "",
+        "protocol": "file"
+      },
+      "LocalCollection.search": {
+        "config": {"__fixture__": "qdrant_collection_config"},
+        "deleted": {"__fixture__": "qdrant_deleted_false"},
+        "deleted_per_vector": {"__fixture__": "qdrant_deleted_per_vector"},
+        "ids_inv": [1],
+        "multivectors": {},
+        "payload": [{}],
+        "sparse_vectors": {},
+        "vectors": {"__fixture__": "qdrant_dense_vectors"}
+      },
+      "AsyncCollection.search": {
+        "_client": {"__fixture__": "chroma_search_client"},
+        "_model": {"__fixture__": "chroma_collection_model"}
+      },
+      "ZMQChannelsWebsocketConnection.nudge": {
+        "kernel_manager": {"__fixture__": "jupyter_busy_kernel_manager"},
+        "kernel_id": "kernel-id",
+        "log": {"__fixture__": "logger_noop"}
+      },
+      "StreamableHTTPServerTransport._handle_post_request": {
+        "_read_stream_writer": {"__fixture__": "async_writer_noop"},
+        "is_json_response_enabled": false,
+        "mcp_session_id": null
+      },
+      "BlocksConfig.set_event_trigger": {
+        "fn_id": 0,
+        "fns": {},
+        "root_block": {"__fixture__": "gradio_root_block"}
+      },
+      "DataProfilerColumnDomainBuilder._get_domains": {
+        "domain_type": "column",
+        "get_batch_ids": {"__fixture__": "callable_batch_ids"},
+        "get_filtered_column_names": {"__fixture__": "callable_column_names"},
+        "get_table_column_names": {"__fixture__": "callable_column_names"},
+        "get_validator": {"__fixture__": "callable_ge_validator"},
+        "semantic_type_filter": {"__fixture__": "ge_semantic_filter"}
+      },
+      "MultinomialHMM.decode": {
+        "parameters": {
+          "A": {"__fixture__": "numpy_array", "items": [[0.8, 0.2], [0.3, 0.7]]},
+          "B": {"__fixture__": "numpy_array", "items": [[0.6, 0.4], [0.2, 0.8]]},
+          "pi": {"__fixture__": "numpy_array", "items": [0.5, 0.5]}
+        },
+        "hyperparameters": {"eps": 2.220446049250313e-16},
+        "derived_variables": {"N": 2, "V": 2}
+      }
+    },
+    "recipes": {
+      "method_target_needs_instance_fixture": "add explicit class fixture or constructor defaults for the unique method target",
+      "ambiguous_nested_callable_target": "bind the target to ClassName.method or provide a source-specific callable path"
+    }
+  },
+  "source_isolation_policy": {
+    "preserved_stdlib_class_bases": ["logging.Formatter", "logging.Handler"],
+    "stdlib_import_fallbacks": [
+      {"module": "datetime", "name": "UTC", "fallback_name": "timezone", "fallback_attribute": "utc"}
+    ],
+    "global_factory_fixtures": {
+      "Client": "safe_symbolic_attribute"
+    },
+    "local_import_factory_fixtures": {
+      "enabled": true,
+      "fixture": "safe_symbolic_attribute",
+      "maximum_symbols": 2
+    },
+    "framework_contexts": {
+      "flask_application": {
+        "trigger_modules": ["flask.helpers", "flask.templating"],
+        "factory_module": "flask",
+        "factory_name": "Flask",
+        "context_method": "test_request_context",
+        "source_root": "parent",
+        "template_folder": "templates"
+      }
+    },
+    "global_symbol_fixtures": {
+      "StaticFiles": {"__fixture__": "safe_symbolic_attribute"}
+    },
+      "effect_module_stubs": {
+        "ntptime": {
+          "attributes": {"settime": {"__fixture__": "callable_object_noop"}}
+        },
+        "smtplib": {
+          "attributes": {"SMTP": {"__fixture__": "callable_object_noop"}}
+        },
+        "socket": {
+        "attributes": {
+          "AF_INET": 2,
+          "gethostname": {"__fixture__": "callable_constant", "value": "acceptance-host"},
+          "SHUT_RDWR": 2,
+          "SOCK_STREAM": 1,
+          "socket": {"__fixture__": "callable_object_noop"}
+        }
+        }
+      }
+  },
+  "skipped_recovery": {
+    "ambiguous_nested_callable_target": "disambiguate the nested callable with class or enclosing function context",
+    "import_failed_missing_module": "install the optional dependency or add a controlled dependency profile when it is external",
+    "import_failed_runtime_error": "isolate import-time side effects or move the acceptance target behind a lightweight import boundary",
+    "method_target_needs_instance_fixture": "provide an instance fixture recipe for the owning class",
+    "nested_function_requires_closure": "rebind to the enclosing callable or specify explicit closure fixtures",
+    "positive_sample_execution_failed": "extend sample_values or fixture recipes for the failing signature and domain shape",
+    "positive_signature_mismatch": "add argument mapping rules or tighten the TechnicalSpec contract binding",
+    "target_not_callable": "choose a concrete function or method target instead of a module constant or generated symbol",
+    "unsupported_target_format": "use a file.py:symbol target inside the project"
+  },
+  "sample_values": {
+    "field_values": {
+      "annotation": "sample",
+      "all_environment_targets": {"__fixture__": "pants_all_environment_targets"},
+      "api_description": null,
+      "api_visibility": "public",
+      "argv": ["program"],
+      "batch_size": 1,
+      "beta": 1,
+      "cancels": [],
+      "component_prop_inputs": [],
+      "connection": "sse",
+      "date_parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "database": "data",
+      "datasette": {"__fixture__": "datasette_minimal"},
+      "dayfirst": false,
+      "digest_size": 8,
+      "display_value": "sample",
+      "edge_attr": "label",
+      "environment": {"__fixture__": "hatch_environment_minimal"},
+      "evt": {"__fixture__": "event_detail_envelope"},
+      "fuzzy": false,
+      "filename": "acceptance-output.tmp",
+      "fn": {"__fixture__": "callable_noop"},
+      "function": {"__fixture__": "callable_identity"},
+      "g": {"__fixture__": "networkx_graph_path"},
+      "gl": {"__fixture__": "resource_collection_client"},
+      "graph": {"__fixture__": "networkx_graph_path"},
+      "cfg": {"__fixture__": "configparser_flake8_empty"},
+      "cfg_dir": ".",
+      "ctx": {"__fixture__": "click_context_noop"},
+      "idx": 0,
+      "index": 0,
+      "index_errors": false,
+      "info": {"__fixture__": "dateutil_parserinfo_minimal"},
+      "include_initial_labels": false,
+      "input_dictionary": {"__fixture__": "multinode_host_inventory"},
+      "input_array": {"__fixture__": "numpy_cube"},
+      "iterations": 1,
+      "arity": 1,
+      "is_path_param": false,
+      "image": [[1.0, 2.0], [3.0, 4.0]],
+      "ignore_update_check": true,
+      "inputs": [],
+      "flag": false,
+      "js": null,
+      "key": null,
+      "many": false,
+      "n": 8,
+      "o": {"__fixture__": "numpy_array", "items": [0, 1, 1, 0]},
+      "markup_mode": "rich",
+      "name": "value",
+      "node_id": "0000000000000000000000000000000000000000000000000000000000000000",
+      "node_attr": "label",
+      "obj": "sample",
+      "partial": false,
+      "outputs": [],
+      "optional_variables": "unused:value",
+      "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "parse_context": {},
+      "parse_float": {"__fixture__": "callable_float"},
+      "param_name": "value",
+      "path": {"__fixture__": "readable_temp_path"},
+      "pos": 0,
+      "query_filter": null,
+      "query_vector": [1.0, 0.0],
+      "response": {"__fixture__": "http_response_ok"},
+      "request": {"__fixture__": "asgi_request_no_accept"},
+      "receive": {"__fixture__": "asgi_receive_empty"},
+      "renderable": null,
+      "res": {"__fixture__": "dateutil_result"},
+      "return_value": "sample",
+      "rv": "sample",
+      "scope": {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "query_string": {"__fixture__": "bytes_empty"},
+        "http_version": "1.1",
+        "headers": [],
+        "server": ["testserver", 80],
+        "client": ["127.0.0.1", 12345],
+        "scheme": "http",
+        "root_path": ""
+      },
+      "score_threshold": null,
+      "searches": [],
+      "send": {"__fixture__": "asgi_send_noop"},
+      "show_progress": "full",
+      "status_headers": {},
+      "study": {"__fixture__": "optuna_study_empty"},
+      "targets": [],
+      "time_limit": null,
+      "tokens": ["2026", "-", "01", "-", "02"],
+      "transform_fn": {"__fixture__": "callable_identity"},
+      "training_dataframe": {"__fixture__": "pandas_dataframe"},
+      "testing_dataframe": {"__fixture__": "pandas_dataframe"},
+      "trigger_mode": "once",
+      "unknown": false,
+      "body": {"__fixture__": "bytes_io_empty"},
+      "src": "\"sample\"",
+      "sql": "select 1",
+      "value": "sample",
+      "yearfirst": false,
+      "ymd": {"__fixture__": "dateutil_ymd"},
+      "nest_lvl": 0
+    },
+    "nullable_fields": ["enable_extensions", "require_plugins"],
+    "optional_nullable_fields": ["astnode", "frame"],
+    "fixture_fields": {
+      "applicable_validators": "callable_items",
+      "id_of": "callable_id_of"
+    },
+    "fixture_field_type_contains": {
+      "row": {
+        "mappinglike": "record_row_empty",
+        "protocollike": "record_row_empty"
+      }
+    },
+    "fixture_type_contains": {
+      "applicablevalidators": "callable_items",
+      "datetime": "datetime_utc",
+      "id_of": "callable_id_of",
+      "logging.logrecord": "declared_model",
+      "source": "pytest_source_minimal",
+      "type[": "python_type_str"
+    },
+      "type_contains": {
+      "array": [],
+      "bool": true,
+      "bytes": {"__fixture__": "bytes_empty"},
+      "dict": {},
+      "indexable": {},
+      "mapping": {},
+      "object": {},
+      "int": 1,
+      "iterable": [],
+      "list": [],
+        "number": 1,
+        "pathlike": {"__fixture__": "readable_temp_path"},
+      "parts": {"day": 2, "hour": 3, "minute": 4, "month": 1, "second": 5, "year": 2026},
+      "sequence": [],
+      "tuple": [],
+      "callable": {"__fixture__": "callable_identity"}
+    },
+    "signature_type_contains": {
+      "bool": false,
+      "dict": {},
+      "int": 0,
+      "list": [],
+      "mapping": {},
+      "sequence": [],
+      "tuple": []
+    },
+    "field_prefix_values": {
+      "is_": false
+    },
+    "default": "sample"
+  }
+}

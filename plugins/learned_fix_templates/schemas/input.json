@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["operation"],
+  "properties": {
+    "operation": {"enum": ["rules", "task_change"]},
+    "goal": {"type": "string", "minLength": 1},
+    "sources": {
+      "type": "array",
+      "items": {"type": "object", "required": ["path", "content"], "additionalProperties": false,
+                "properties": {"path": {"type": "string"}, "content": {"type": "string"}}}
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {"type": "object", "required": ["path", "code", "row"], "additionalProperties": false,
+                "properties": {"path": {"type": "string"}, "code": {"type": "string"},
+                               "row": {"type": "integer"}, "end_row": {"type": "integer"}}}
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"operation": {"const": "task_change"}}},
+     "then": {"required": ["goal", "sources", "diagnostics"]}}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "self_improvement_proposal_recipes.v1",
+  "recipes": [
+    {
+      "id": "missing_module_getattr_adapter",
+      "reason": "import_failed_missing_module",
+      "failure_class": "dependency_boundary",
+      "detail_prefix": "No module named ",
+      "proposal_type": "capability_adapter_proposal",
+      "kind": "generated_module_profile",
+      "activation": "acceptance_sandbox_only",
+      "profile": {
+        "attrs": {
+          "__getattr__": {
+            "__fixture__": "module_getattr_stub"
+          }
+        }
+      }
+    }
+  ]
+}

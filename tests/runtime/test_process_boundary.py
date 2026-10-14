@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from runtime.executor import execute_pipeline
 from runtime.models import Pipeline, PipelineNode
 from runtime.registry import CapabilityRegistry
 
 
-def test_process_boundary_executes_plugin_in_child_process():
-    root = Path(__file__).resolve().parents[2]
+def test_process_boundary_executes_plugin_in_child_process(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
     pipeline = Pipeline(
         id="process_hash",

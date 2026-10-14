@@ -1,0 +1,1 @@
+<html><head><title>Python packaging overview</title></head><body><article><p>Python packaging tools help developers publish reusable libraries and command line utilities.</p><p>Modern packaging workflows separate metadata, build backends, dependency declarations and release verification.</p></article></body></html>

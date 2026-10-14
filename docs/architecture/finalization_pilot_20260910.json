@@ -1,0 +1,245 @@
+{
+  "schema_version": "source_finalization_calibration.v1",
+  "evaluation_split": "synthetic_calibration",
+  "date": "2026-09-10",
+  "model_route": "deepseek/deepseek-chat",
+  "underlying_model_weights_verified": false,
+  "first_run": {
+    "attempted": 24,
+    "expectations_met": 18,
+    "applied": 12,
+    "duration_seconds": 281.457,
+    "total_tokens": 87691,
+    "cost_usd": null,
+    "cost_note": "Gateway tariff not configured; token usage is recorded."
+  },
+  "selected_retry": {
+    "attempted": 6,
+    "expectations_met": 1,
+    "applied": 1,
+    "duration_seconds": 40.053,
+    "total_tokens": 8530,
+    "cost_usd": null,
+    "cost_note": "Gateway tariff not configured; token usage is recorded."
+  },
+  "unique_cases": 24,
+  "supported_cases": 18,
+  "unsupported_cases": 6,
+  "first_attempt_verified_repairs": 12,
+  "verified_repairs_after_selected_retry": 13,
+  "correct_unsupported_stops": 6,
+  "remaining_gateway_http_500_cases": [
+    "calibration-04",
+    "calibration-05",
+    "calibration-06",
+    "calibration-10",
+    "calibration-16"
+  ],
+  "certification_allowed": false,
+  "independent_production_benchmark": false,
+  "scope_note": "Synthetic families with varied import, annotation, state and API boundaries. Selected retries do not replace first-run outcomes. A later diagnostic request recovered on one HTTP-500 case but was not applied or counted as a repair.",
+  "evidence": [
+    {
+      "path": "artifacts/stage_finalization_pilot/pilot-e18e861b5c/report.json",
+      "sha256": "8e620dbed7748adb742f47fa0699e8f2a888b83bf6301c39cc651130725d4872"
+    },
+    {
+      "path": "artifacts/stage_finalization_pilot/pilot-dc861a4e90/report.json",
+      "sha256": "8bca03af3516ccbf71025a7fd3b9259b2ee38f3eaa9dc33e76e41331bfcb6c03"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "calibration-00",
+      "kind": "flat_module",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-01",
+      "kind": "package_relative_imports",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-02",
+      "kind": "future_annotations",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-03",
+      "kind": "explicit_exports",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-04",
+      "kind": "crlf_source",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": "http_500"
+    },
+    {
+      "case_id": "calibration-05",
+      "kind": "unused_module_state",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": "http_500"
+    },
+    {
+      "case_id": "calibration-06",
+      "kind": "shared_label_constant",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": "http_500"
+    },
+    {
+      "case_id": "calibration-07",
+      "kind": "immutable_defaults",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-08",
+      "kind": "shared_counter_constant",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-09",
+      "kind": "forward_builtin_annotation",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-10",
+      "kind": "comprehension_scope",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": "http_500"
+    },
+    {
+      "case_id": "calibration-11",
+      "kind": "unicode_source",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-12",
+      "kind": "public_alias",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-13",
+      "kind": "importing_consumer",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-14",
+      "kind": "module_docstring",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-15",
+      "kind": "mixed_decorated_functions",
+      "expected": "completed",
+      "first_status": "completed",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-16",
+      "kind": "keyword_only_defaults",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": "http_500"
+    },
+    {
+      "case_id": "calibration-17",
+      "kind": "literal_tuple_defaults",
+      "expected": "completed",
+      "first_status": "needs_replanning",
+      "latest_status": "completed",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-18",
+      "kind": "shared_state",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-19",
+      "kind": "decorators",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-20",
+      "kind": "dynamic_namespace",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-21",
+      "kind": "classes",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-22",
+      "kind": "global_dependencies",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    },
+    {
+      "case_id": "calibration-23",
+      "kind": "oversized_function",
+      "expected": "needs_replanning",
+      "first_status": "needs_replanning",
+      "latest_status": "needs_replanning",
+      "latest_failure_kind": null
+    }
+  ]
+}

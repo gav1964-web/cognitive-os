@@ -1,0 +1,13 @@
+{
+  "schema_version": "upstream_diagnostic_inputs.v1",
+  "origin": "assistant_supplied_diagnostic_input",
+  "scope": "Only corrected-input diagnostic variants; not original role input or independent truth certification",
+  "cases": {
+    "empty_average": {"hypothesis": "Empty input reaches division by len(values)==0.", "steps": ["Handle empty samples before division.", "Preserve sum/length behavior for nonempty samples."], "preserve": ["Public average(values) signature", "Normal arithmetic mean"]},
+    "missing_path": {"hypothesis": "A scalar is returned before remaining path elements are consumed.", "steps": ["Check the current container before each path step.", "Return the final value only after the full path is consumed."], "preserve": ["Caller default identity", "Existing values and subtrees"]},
+    "stable_unique": {"hypothesis": "Constructing a set does not retain the specified occurrence ordering.", "steps": ["Track previously observed values.", "Append only the first occurrence while traversing the original order."], "preserve": ["Empty input returns an empty list", "Return type remains list"]},
+    "unicode_receipt": {"hypothesis": "ASCII encoding with ignore drops characters; the returned string has no terminator.", "steps": ["Retain the Unicode name in string formatting.", "Emit the required single trailing newline."], "preserve": ["Amount formatting", "Public render(name, amount) signature"]},
+    "storage_boundary": {"hypothesis": "The public function currently performs both file I/O and calculation.", "steps": ["Keep total(path) as the public adapter.", "Move calculation into a function receiving loaded values.", "Test the calculation without filesystem access and the adapter with a temporary file."], "preserve": ["Existing core.total imports", "Existing numeric totals"]},
+    "contradictory_order": {"hypothesis": "For [3, 1], input order and ascending order cannot both hold.", "steps": ["Obtain precedence between ordering requirements before implementation."], "preserve": ["Do not silently discard a mandatory requirement"]}
+  }
+}

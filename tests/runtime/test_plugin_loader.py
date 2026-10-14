@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 import shutil
-import sys
 from pathlib import Path
 
 import pytest
 
 from runtime.plugin_loader import PluginLoadError, load_capabilities
+from runtime.plugin_import_scope import plugin_import_scope
 
 
 def test_loader_rejects_plugin_id_that_differs_from_directory(tmp_path):
@@ -65,9 +65,5 @@ def test_loader_rejects_entrypoint_with_wrong_signature(tmp_path):
 
     from runtime.plugin_loader import load_entrypoint
 
-    sys.path = [str(root)] + [item for item in sys.path if item != str(root)]
-    for name in list(sys.modules):
-        if name == "plugins" or name.startswith("plugins."):
-            sys.modules.pop(name, None)
-    with pytest.raises(TypeError, match="exactly one"):
+    with plugin_import_scope(root), pytest.raises(TypeError, match="exactly one"):
         load_entrypoint(capabilities["fetch_html"].entrypoint)

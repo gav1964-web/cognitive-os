@@ -1,0 +1,62 @@
+{
+  "schema_version": "source_side_effect_inference.v1",
+  "contract_only_effects": ["database_read"],
+  "effects": [
+    {
+      "id": "filesystem",
+      "call_exact": [],
+      "call_contains": ["write_text", "write_bytes", "unlink", "mkdir", "rmtree", "copyfile", "chmod", "savefig"]
+    },
+    {
+      "id": "filesystem_read",
+      "call_contains": ["read_text", "read_bytes", "read_csv", "read_parquet", "read_excel", "read_feather", "elementtree.parse"]
+    },
+    {
+      "id": "filesystem_write",
+      "call_exact": ["json.dump", "joblib.dump", "pickle.dump", "sf.write", "soundfile.write", "shutil.copy", "shutil.copy2", "shutil.move"],
+      "call_contains": ["to_csv", "to_parquet", "to_excel", "to_feather", "to_pickle"]
+    },
+    {
+      "id": "network",
+      "call_exact": ["urlopen"],
+      "call_contains": ["socket", ".send", ".recv", ".sismember", "session.get", "session.post", "requests.get", "requests.post", "httpx.", "call_api", "request_port_forward", "cancel_port_forward", "forward_tunnel", "hdfs.create", "hdfs.mkdirs", "sftp", "upload", "download"]
+    },
+    {
+      "id": "subprocess",
+      "call_contains": ["subprocess.", "popen", "check_call", "check_output", "os.system"]
+    },
+    {
+      "id": "database",
+      "call_contains": ["cursor.execute", "connection.execute", "cur.execute", ".executemany", ".commit", ".rollback"]
+    },
+    {
+      "id": "database_read",
+      "call_contains": ["get_object_or_404", ".objects.", ".filter", ".order_by", ".select_related", ".prefetch_related", ".read_sql"]
+    },
+    {
+      "id": "memory_state",
+      "call_exact": ["importlib.invalidate_caches", "importlib.reload", "linecache.clearcache"],
+      "call_contains": [".set_state", ".change_state", ".update_state", ".before_request", ".after_request", ".cache_clear"]
+    },
+    {
+      "id": "credential_store",
+      "call_contains": ["secitemadd", "secitemcopymatching", "secitemdelete", "secretservice", "keyring.set_password", "keyring.delete_password"]
+    },
+    {
+      "id": "observability",
+      "call_exact": ["print"],
+      "call_contains": ["cprint.", "logger.", "logging.", "log.critical", "log.error", "log.warning", ".inc", ".observe", ".print_ascii", ".print_tty", "sys.__excepthook__"],
+      "exclude_prefix": ["logging.makelogrecord"]
+    },
+    {
+      "id": "external_runtime",
+      "call_exact": ["os.read", "os.write", "select.select", "self.wr"],
+      "call_contains": ["time.sleep", ".move_to", ".click", ".press", ".send_keys", "self.goto", "self.attr_color", "self.attr_reset", ".addstr", ".refresh"]
+    }
+  ],
+  "memory_state": {
+    "ast_nodes": ["Global", "Nonlocal"],
+    "argument_mutation_calls": ["add", "append", "clear", "discard", "extend", "insert", "pop", "remove", "setdefault", "update"],
+    "text_contains": ["threading.lock", "with incident_lock", "with import_lock"]
+  }
+}

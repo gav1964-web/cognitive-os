@@ -1,0 +1,231 @@
+{
+  "schema_version": "project_code_fact_analyzers.v1",
+  "status": "active",
+  "analyzers": [
+    {
+      "answer_key": "gigachat_model_auto_selection",
+      "path_contains": ["gigachat"],
+      "path_suffixes": ["providers.yaml", "providers.yml"],
+      "exact_paths": [
+        "app/api/server.py",
+        "app/api/routing.py",
+        "app/api/handlers_openai.py",
+        "app/api/handlers_chat.py"
+      ],
+      "python_structure_path_contains": ["gigachat"],
+      "exclude_tests": true,
+      "max_files": 80,
+      "max_file_size_bytes": 160000,
+      "signals": {
+        "classifier": {
+          "any_markers": ["classifier.classify"],
+          "all_groups": [["model is none", "classif"]]
+        },
+        "config": {
+          "any_markers": ["available_models", "default_model", "- \"GigaChat", "model: \"GigaChat"]
+        }
+      },
+      "cases": [
+        {
+          "if_signals_any": ["classifier"],
+          "result": {
+            "status": "found",
+            "answer": "yes",
+            "confidence": "high",
+            "summary": "Автоматический выбор модели для GigaChat есть: при отсутствии явно заданной модели код передает управление классификатору, который возвращает selected_model.",
+            "caveats": [
+              "Вывод сделан статически по коду и конфигурации; фактический runtime-путь зависит от выбранного endpoint/route.",
+              "При явно указанной модели автоматический выбор не применяется."
+            ]
+          },
+          "evidence_signals": ["classifier", "config"],
+          "evidence_limit": 8
+        },
+        {
+          "if_signals_any": ["config"],
+          "result": {
+            "status": "found",
+            "answer": "no_runtime_auto_selection_config_has_explicit_models",
+            "confidence": "high",
+            "summary": "Автоматический выбор модели внутри GigaChat provider не найден. В конфигурации есть несколько явных моделей/маршрутов GigaChat, но это не runtime auto-selection.",
+            "caveats": ["Явный выбор модели через alias/routing profile остается возможным."]
+          },
+          "evidence_signals": ["config"],
+          "evidence_limit": 8
+        }
+      ],
+      "default_result": {
+        "status": "not_found",
+        "answer": "no_evidence",
+        "confidence": "low",
+        "summary": "Статический анализ не нашел доказательств автоматического выбора модели GigaChat.",
+        "caveats": ["Отсутствие evidence не доказывает отсутствие механизма, если он спрятан в динамическом коде."]
+      }
+    },
+    {
+      "answer_key": "llm_cache_exists",
+      "path_contains": ["cache", "provider"],
+      "exact_paths": ["app/api/server.py", "app/api/handlers_chat.py", "app/api/openai_compat.py"],
+      "python_structure_path_contains": ["cache"],
+      "exclude_tests": true,
+      "python_only": true,
+      "max_files": 100,
+      "max_file_size_bytes": 180000,
+      "signals": {
+        "implementation": {
+          "any_markers": [
+            "class LLMCache",
+            "class JsonFileCacheBackend",
+            "class CacheBackend",
+            "def build_key",
+            "def get_cached_response",
+            "def store_response",
+            "self.cache_storage",
+            "json.dump(self.cache_storage"
+          ],
+          "all_groups": [["json.load", "cache"]]
+        },
+        "usage": {
+          "any_markers": [
+            "provider_caches",
+            "cache_backend = JsonFileCacheBackend",
+            "cache = LLMCache",
+            "cache=provider_caches.get",
+            "get_cached_response",
+            "store_response",
+            "cache_hit"
+          ]
+        },
+        "bypass": {
+          "any_markers": ["bypass_cache"]
+        }
+      },
+      "cases": [
+        {
+          "if_signals_all": ["implementation", "usage"],
+          "result": {
+            "status": "found",
+            "answer": "yes",
+            "confidence": "high",
+            "summary": "Кэш обращений к LLM существует: есть единый LLMCache, JSON-файловый backend, инициализация кэшей провайдеров и проверка/запись кэша перед вызовом модели.",
+            "caveats": ["Вывод сделан статически по production-коду.", "Кэш можно обходить через параметр bypass_cache."]
+          },
+          "evidence_signals": ["implementation", "usage", "bypass"],
+          "evidence_limit": 10
+        },
+        {
+          "if_signals_all": ["implementation"],
+          "result": {
+            "status": "partial",
+            "answer": "partly",
+            "confidence": "medium",
+            "summary": "Реализация кэша найдена, но статический анализ не подтвердил место подключения к runtime-вызовам LLM.",
+            "caveats": ["Нужна проверка wiring в provider factory/server."]
+          },
+          "evidence_signals": ["implementation", "bypass"],
+          "evidence_limit": 10
+        }
+      ],
+      "default_result": {
+        "status": "not_found",
+        "answer": "no_evidence",
+        "confidence": "low",
+        "summary": "Статический анализ не нашел evidence для запрошенного факта о кэше LLM.",
+        "caveats": ["Нужна ручная проверка cache wiring."]
+      }
+    },
+    {
+      "answer_key": "llm_cache_sharing",
+      "path_contains": ["cache", "provider"],
+      "exact_paths": ["app/api/server.py", "app/api/handlers_chat.py", "app/api/openai_compat.py"],
+      "python_structure_path_contains": ["cache"],
+      "exclude_tests": true,
+      "python_only": true,
+      "max_files": 100,
+      "max_file_size_bytes": 180000,
+      "signals": {
+        "per_provider": {
+          "any_markers": ["llm_cache_", "def _provider_cache_file", "provider_caches[provider_id]"]
+        },
+        "key_separation": {
+          "any_markers": ["\"provider\": provider_id", "\"model\": model_name", "LLMCache.build_key"]
+        },
+        "shared_backend": {
+          "any_markers": ["class LLMCache", "JsonFileCacheBackend"]
+        }
+      },
+      "cases": [
+        {
+          "if_signals_all": ["per_provider", "key_separation"],
+          "result": {
+            "status": "found",
+            "answer": "separate_per_provider_and_model_keyed",
+            "confidence": "high",
+            "summary": "Для разных LLM не используется один общий физический кэш-файл. В проекте общий механизм LLMCache/JsonFileCacheBackend, но factory создает отдельный cache-файл на provider, а cache key дополнительно включает provider и model.",
+            "caveats": [
+              "Под LLM здесь статически понимаются provider/model из кода проекта.",
+              "Если две модели идут через один provider, они могут жить в одном provider-файле, но ключи различаются по model."
+            ]
+          },
+          "evidence_signals": ["per_provider", "key_separation", "shared_backend"],
+          "evidence_limit": 10
+        },
+        {
+          "if_signals_all": ["key_separation"],
+          "result": {
+            "status": "partial",
+            "answer": "same_backend_but_key_separated",
+            "confidence": "medium",
+            "summary": "Найдена логическая изоляция по provider/model в ключе, но физическое разделение файлов не подтверждено.",
+            "caveats": ["Нужна проверка provider factory для ответа о файлах кэша."]
+          },
+          "evidence_signals": ["key_separation", "shared_backend"],
+          "evidence_limit": 8
+        }
+      ],
+      "default_result": {
+        "status": "not_found",
+        "answer": "no_evidence",
+        "confidence": "low",
+        "summary": "Статический анализ не нашел evidence для запрошенного факта о кэше LLM.",
+        "caveats": ["Нужна ручная проверка cache wiring."]
+      }
+    }
+  ],
+  "derived_answers": [
+    {
+      "answer_key": "llm_cache_key_recommendation",
+      "depends_on": "llm_cache_sharing",
+      "if_dependency_status": "found",
+      "positive": {
+        "status": "found",
+        "answer": "do_not_remove_provider_or_model_from_cache_key",
+        "confidence": "high",
+        "recommendation": "Убирать признаки provider и model из cache key не имеет смысла для основного LLM-кэша. Они являются частью контракта ответа: разные провайдеры и модели могут вернуть разные тексты на одинаковые messages, поэтому общий ключ только по messages создаст ложные cache hit.",
+        "rationale": [
+          "provider/model уже используются как логическая изоляция cache key",
+          "физический cache-file разделяется по provider",
+          "удаление provider/model повысит риск подмены ответа одной модели ответом другой"
+        ],
+        "acceptable_exceptions": [
+          "отдельный normalization-cache для предобработанных входов, где результат не зависит от LLM",
+          "ручной экспериментальный режим cross-model cache только с явной пометкой approximate/unsafe",
+          "дедупликация хранения одинаковых значений ниже уровня key-value API без изменения публичного cache key"
+        ],
+        "caveats": [
+          "Рекомендация относится к кэшу ответов LLM, а не к независимым артефактам preprocessing/postprocessing.",
+          "Если появится provably equivalent model alias, его лучше решать alias-normalization перед build_key, а не удалением model из ключа."
+        ]
+      },
+      "fallback": {
+        "status": "blocked",
+        "answer": "insufficient_evidence",
+        "confidence": "low",
+        "recommendation": "Не менять cache key без подтвержденного evidence о текущем устройстве кэша.",
+        "rationale": ["Cognitive OS не подтвердила, как устроены provider/model признаки в кэше."],
+        "acceptable_exceptions": [],
+        "caveats": ["Сначала нужен фактологический анализ cache wiring."]
+      }
+    }
+  ]
+}

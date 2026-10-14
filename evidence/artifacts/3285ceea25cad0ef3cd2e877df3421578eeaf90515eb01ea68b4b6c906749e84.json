@@ -1,0 +1,320 @@
+{
+  "artifact_type": "FrameworkPluginReadinessReport",
+  "certification_granted": false,
+  "checks": {
+    "all_role_scores_at_target": true,
+    "candidate_independence_threshold_met": true,
+    "generated_stub_gate_receipt": false,
+    "independent_certification_holdout": false,
+    "no_automatic_certification": true,
+    "no_role_regression_receipt": false,
+    "prospective_candidate_detected": true
+  },
+  "failed_checks": [
+    "independent_certification_holdout",
+    "generated_stub_gate_receipt",
+    "no_role_regression_receipt"
+  ],
+  "next_action": "run_framework_plugin_independent_holdout_and_stub_audit",
+  "promotion_applied": false,
+  "prospective_candidates": [
+    {
+      "dossier": {
+        "admissions": {
+          "apply": {
+            "action": "apply",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "evaluator_fingerprint": false,
+              "independent_holdout": false,
+              "regression": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "promotion_controller",
+            "required_gates": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          },
+          "promote": {
+            "action": "promote",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "evaluator_fingerprint": false,
+              "independent_holdout": false,
+              "regression": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "promotion_controller",
+            "required_gates": [
+              "regression",
+              "independent_holdout",
+              "evaluator_fingerprint",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          },
+          "propose": {
+            "action": "propose",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {},
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "cognitive_os",
+            "required_gates": [],
+            "source_changes_allowed": false,
+            "status": "allowed"
+          },
+          "sandbox": {
+            "action": "sandbox",
+            "artifact_type": "SelfDevelopmentChangeAdmission",
+            "authority_present": false,
+            "blocking_reasons": [
+              "patch_digest"
+            ],
+            "change_class": "L0",
+            "change_variant": "L0",
+            "execution_authorized": false,
+            "gate_results": {
+              "patch_digest": false,
+              "rollback_plan": true
+            },
+            "promotion_applied": false,
+            "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+            "provided_authority": null,
+            "required_authority": "cognitive_os",
+            "required_gates": [
+              "patch_digest",
+              "rollback_plan"
+            ],
+            "source_changes_allowed": false,
+            "status": "blocked"
+          }
+        },
+        "architectural_delta": {
+          "change_class": "L0",
+          "components": [
+            "knowledge_admission",
+            "self_improvement_diagnosis"
+          ],
+          "contracts": [
+            "architecture:recognition_gap"
+          ],
+          "project_types": [
+            "framework_plugin_build"
+          ],
+          "roles": [
+            "architect",
+            "project_analyzer",
+            "researcher"
+          ],
+          "target": "knowledge/role_knowledge/self_development_lessons.json"
+        },
+        "artifact_type": "SelfDevelopmentShadowDossier",
+        "constraints": {
+          "apply_source": false,
+          "external_decision_not_inferred": true,
+          "promotion_applied": false
+        },
+        "proposal": {
+          "artifact_type": "SelfDevelopmentChangeProposal",
+          "change": {
+            "operation": "append_prospective_systematic_error_lesson",
+            "patch_digest": null,
+            "target": "knowledge/role_knowledge/self_development_lessons.json",
+            "target_kind": "lesson"
+          },
+          "classification": {
+            "basis": "declared_target_kind",
+            "class": "L0",
+            "classification_review_required": false,
+            "known_target_kind": true,
+            "target_kind": "lesson",
+            "variant": "L0"
+          },
+          "constraints": {
+            "execution_authorized": false,
+            "promotion_applied": false,
+            "proposal_is_not_authority": true,
+            "source_changes_allowed": false
+          },
+          "evidence": [
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-08-30T18:28:44.543588+00:00",
+              "project": "daneah__publishing-python-packages",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260830T182844544587Z.json",
+              "source_sha256": "cfcac6787cb8c3e3e420e2ee426c4067a90b17bd134b9da011a1ce3f3636c89f",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-09-06T02:28:06.686709+00:00",
+              "project": "deepadmax__clouscript",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260906T022806687752Z.json",
+              "source_sha256": "000ad7a5c7d6585f1f9f39c992fb4cd4d4a5c64d415bc60307825bec7763315d",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-09-06T02:30:07.617376+00:00",
+              "project": "pdftools__pdfjoin",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260906T023007619377Z.json",
+              "source_sha256": "efd0d1af6789a52c4061aebe5ce8c23080553fc4340a70d1b70ffd7c3ebb193c",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            },
+            {
+              "artifact_type": "ProspectiveSystematicErrorEvidence",
+              "category": "architecture",
+              "generated_at": "2026-08-30T23:15:03.766257+00:00",
+              "project": "scikit-build__scikit-build",
+              "project_type": "framework_plugin_build",
+              "rule_id": "recognition_gap",
+              "source": "artifacts/project_development/project_development_20260830T231503767255Z.json",
+              "source_sha256": "37cb46225bcacf0d796f3d093b81e724bfa596971b1d6927e2807b748520a933",
+              "status": "ready_for_experiment",
+              "subject": "recognition_gap"
+            }
+          ],
+          "hypothesis": {
+            "expected_effect": "reduce the same systematic error on an unseen project",
+            "summary": "A scoped lesson can reduce recurrence of recognition_gap"
+          },
+          "impact_map": {
+            "changes_admission_or_promotion": false,
+            "changes_evaluator_architecture": false,
+            "changes_success_measure": false,
+            "components": [
+              "knowledge_admission",
+              "self_improvement_diagnosis"
+            ],
+            "contracts": [
+              "architecture:recognition_gap"
+            ],
+            "project_types": [
+              "framework_plugin_build"
+            ],
+            "roles": [
+              "architect",
+              "project_analyzer",
+              "researcher"
+            ]
+          },
+          "problem": {
+            "failure_signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build",
+            "summary": "Systematic recognition_gap recurs across independent projects"
+          },
+          "proposal_id": "sdcp_fa70ddbb25e1970b7829",
+          "rollback_plan": {
+            "strategy": "discard staged lesson candidate"
+          },
+          "schema_version": "self_development_change_proposal.v1",
+          "status": "shadow_candidate",
+          "verification": {
+            "evaluator_fingerprint": "1594d6db9542a7fc5ab77593672cbc58431e1af6c036a0f0cc0475e2cebda160",
+            "independent_evaluator": false,
+            "independent_holdout_passed": false,
+            "regression_passed": false
+          }
+        },
+        "status": "shadow_only"
+      },
+      "independent_project_count": 4,
+      "next_required_evidence": [
+        "unseen_project_holdout",
+        "no_role_regression",
+        "independent_evaluator_review"
+      ],
+      "signature": "recognition_gap:architecture:recognition_gap:framework_plugin_build"
+    }
+  ],
+  "report_digest": "sha256:627f997405fdf4d64390682d25ce7addbb4c695e037daa49a8b968fad7928a89",
+  "role_checks": [
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "project_analyzer",
+      "score": 9.7
+    },
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "architect",
+      "score": 9.7
+    },
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "spec_writer",
+      "score": 9.7
+    },
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "implementer",
+      "score": 9.8
+    },
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "tester",
+      "score": 10.0
+    },
+    {
+      "maturity": "mature",
+      "passed": true,
+      "role_id": "reviewer",
+      "score": 9.8
+    }
+  ],
+  "schema_version": "framework_plugin_readiness.v1",
+  "status": "holdout_required",
+  "target_score": 9.7
+}

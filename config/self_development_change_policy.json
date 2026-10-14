@@ -1,0 +1,98 @@
+{
+  "schema_version": "self_development_change_policy.v1",
+  "status": "active",
+  "default_unknown_class": "L4",
+  "class_precedence": ["L4", "L3", "L2", "L1", "L0"],
+  "actions": ["propose", "sandbox", "promote", "apply"],
+  "classes": {
+    "L0": {
+      "description": "Append-only knowledge, evidence, lessons, and staged patterns",
+      "target_kinds": ["kb_entry", "evidence_record", "lesson", "staged_pattern"],
+      "authority": {
+        "propose": "cognitive_os",
+        "sandbox": "cognitive_os",
+        "promote": "promotion_controller",
+        "apply": "promotion_controller"
+      },
+      "required_gates": {
+        "sandbox": ["patch_digest", "rollback_plan"],
+        "promote": ["regression", "independent_holdout", "evaluator_fingerprint", "rollback_plan"],
+        "apply": ["regression", "independent_holdout", "evaluator_fingerprint", "rollback_plan"]
+      }
+    },
+    "L1": {
+      "description": "Bounded configuration, role rules, weights, and thresholds",
+      "target_kinds": ["config_rule", "role_rule", "weight", "threshold", "admission_threshold", "promotion_threshold"],
+      "sensitive_target_kinds": ["admission_threshold", "promotion_threshold"],
+      "authority": {
+        "propose": "cognitive_os",
+        "sandbox": "cognitive_os",
+        "promote": "promotion_controller",
+        "apply": "promotion_controller"
+      },
+      "sensitive_authority": {
+        "propose": "cognitive_os",
+        "sandbox": "cognitive_os",
+        "promote": "external_architect",
+        "apply": "external_architect"
+      },
+      "required_gates": {
+        "sandbox": ["patch_digest", "rollback_plan"],
+        "promote": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"],
+        "apply": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"]
+      }
+    },
+    "L2": {
+      "description": "Role, artifact schema, and cross-role contract changes",
+      "target_kinds": ["new_role", "role_schema", "artifact_schema", "cross_role_contract"],
+      "authority": {
+        "propose": "cognitive_os",
+        "sandbox": "cognitive_os",
+        "promote": "external_architect",
+        "apply": "human_merge_authority"
+      },
+      "required_gates": {
+        "sandbox": ["patch_digest", "regression", "rollback_plan"],
+        "promote": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"],
+        "apply": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"]
+      }
+    },
+    "L3": {
+      "description": "Runtime component and executable self-improvement capability changes",
+      "target_kinds": ["runtime_component", "improvement_plugin", "execution_component"],
+      "authority": {
+        "propose": "cognitive_os",
+        "sandbox": "cognitive_os",
+        "promote": "external_architect",
+        "apply": "human_merge_authority"
+      },
+      "required_gates": {
+        "sandbox": ["patch_digest", "regression", "generated_stub_gate", "rollback_plan"],
+        "promote": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "generated_stub_gate", "rollback_plan"],
+        "apply": ["regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "generated_stub_gate", "rollback_plan"]
+      }
+    },
+    "L4": {
+      "description": "Architecture, evaluator architecture, authority, and execution model changes",
+      "target_kinds": ["architecture", "evaluator_architecture", "authority_policy", "execution_model", "self_development_policy"],
+      "authority": {
+        "propose": "cognitive_os",
+        "sandbox": "external_architect",
+        "promote": "architecture_board",
+        "apply": "architecture_board"
+      },
+      "required_gates": {
+        "sandbox": ["classification_review", "patch_digest", "regression", "rollback_plan"],
+        "promote": ["classification_review", "regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"],
+        "apply": ["classification_review", "regression", "independent_holdout", "independent_evaluator", "evaluator_fingerprint", "rollback_plan"]
+      }
+    }
+  },
+  "invariants": {
+    "proposal_is_not_execution_authority": true,
+    "unknown_target_kind_fails_closed": true,
+    "same_change_cannot_replace_its_success_evaluator": true,
+    "runtime_patch_auto_promotion": false,
+    "source_apply_requires_separate_authority": true
+  }
+}

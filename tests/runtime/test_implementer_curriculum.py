@@ -24,6 +24,10 @@ def test_implementer_curriculum_local_three_scores_teacher_references():
     assert report["milestone"] == "Implementer Curriculum Local-3 v0.1"
     assert report["project_count"] == 3
     assert report["summary"]["score"] == 1.0
+    assert report["summary"]["avg_score"] == 1.0
+    assert report["summary"]["worst_case_score"] == 1.0
+    assert report["summary"]["ready_threshold"] == 0.92
+    assert report["summary"]["ready_by_worst_case"] is True
     assert report["summary"]["backlog_items"] == 0
     assert report["invariants"]["teacher_reference_is_ground_truth"] is False
     assert report["invariants"]["source_code_changes"] is False
@@ -49,10 +53,13 @@ def test_implementer_curriculum_cli_writes_report():
 
     assert payload["status"] == "ok"
     assert payload["summary"]["score"] == 1.0
+    assert payload["summary"]["worst_case_score"] == 1.0
+    assert payload["summary"]["ready_by_worst_case"] is True
     assert Path(payload["report_path"]).exists()
 
 
-def test_implementer_curriculum_external_three_when_projects_exist():
+@pytest.mark.local_corpus
+def test_implementer_curriculum_reports_current_external_measurement():
     curriculum_dir = ROOT / "curricula" / "implementer_external_local_3"
     refs = list(curriculum_dir.glob("*/teacher_reference.json"))
     if not refs or not all(Path(json.loads(path.read_text(encoding="utf-8"))["project_dir"]).exists() for path in refs):
@@ -60,11 +67,42 @@ def test_implementer_curriculum_external_three_when_projects_exist():
 
     report = run_implementer_curriculum(root=ROOT, curriculum_dir=curriculum_dir, write=False)
 
-    assert report["status"] == "ok"
     assert report["milestone"] == "Implementer Curriculum External-3 v0.1"
     assert report["project_count"] == 3
-    assert report["summary"]["score"] == 1.0
-    assert report["summary"]["backlog_items"] == 0
+    # These external worktrees change independently of COS. Test that the
+    # measurement reports failures honestly, not that live projects always
+    # reproduce a dated teacher score. Frozen local cases above retain 1.0 gates.
+    scores = [case['score']['score'] for case in report['cases']]
+    assert report['summary']['worst_case_score'] == min(scores)
+    assert report['summary']['ready_threshold'] == 0.92
+    assert report['summary']['ready_by_worst_case'] == (min(scores) >= 0.92)
+    gaps = [gap for case in report['cases'] for gap in case['improvement_backlog']]
+    assert report['summary']['backlog_items'] == len(gaps)
+    ready = not gaps and min(scores) >= 0.92
+    assert report['status'] == ('ok' if ready else 'needs_improvement')
+    for case in report["cases"]:
+        candidate = case["actual"]["candidate"]
+        actions = case["actual"]["implementation_actions"]
+        assert any(candidate in action for action in actions)
+        assert all(" only inside writable_scope" not in action or candidate in action for action in actions)
+
+
+def test_missing_required_evidence_remains_a_reported_quality_failure():
+    from runtime.implementer_curriculum import _report, _score_plan, _improvement_backlog
+    reference = ROOT / 'curricula/implementer_local_3'
+    baseline = run_implementer_curriculum(root=ROOT, curriculum_dir=reference)
+    case = baseline['cases'][0]
+    actual = dict(case['actual'])
+    actual['evidence_scope'] = []
+    expected = json.loads((reference / case['case'] / 'teacher_reference.json').read_text(encoding='utf-8'))['expected_plan']
+    score = _score_plan(expected, actual)
+    assert score['checks']['required_evidence_scope_covered'] is False
+    gaps = _improvement_backlog(score)
+    assert {'type': 'IMPLEMENTER_GAP', 'check': 'required_evidence_scope_covered'} in gaps
+    result = _report([{**case, 'score': score, 'status': 'needs_improvement',
+                       'improvement_backlog': gaps}], curriculum_dir=reference)
+    assert result['status'] == 'needs_improvement'
+    assert result['summary']['backlog_items'] >= 1
 
 
 def test_implementer_curriculum_rejects_ground_truth_reference(tmp_path):

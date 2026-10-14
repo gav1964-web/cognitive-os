@@ -1,0 +1,50 @@
+{
+  "schema_version": "cli_role_results.v1",
+  "evaluation_split": "holdout",
+  "scope": "two_first_cli_role_attempts_after_qualification_not_blind_certification",
+  "cases": [
+    {
+      "project": "martin-wieser__granny",
+      "project_stratum": "cli_local_tool",
+      "candidate_id": "a46ab76d183949ec413f",
+      "role_report": "artifacts/self_development/cli_independent_roles_20260910/martin-wieser__granny/role_report.json",
+      "execution_report": "artifacts/self_development/cli_independent_roles_20260910/martin-wieser__granny/role_report.json",
+      "regression_scope_kind": "none",
+      "result": "research_required",
+      "limitation": "qualified_failure; no_verified_failure_reducer",
+      "source_lineage": "martin-wieser/granny",
+      "source_owner": "martin-wieser"
+    },
+    {
+      "project": "ternaris__rosbags",
+      "project_stratum": "cli_local_tool",
+      "candidate_id": "3c0ca57801a1d8fc8a48",
+      "role_report": "artifacts/self_development/cli_independent_roles_20260910/ternaris__rosbags/role_report.json",
+      "execution_report": "artifacts/self_development/cli_independent_roles_20260910/ternaris__rosbags/role_report.json",
+      "regression_scope_kind": "none",
+      "result": "controlled_stop",
+      "limitation": "reproducible_unbound_failure; experiment_admission_blocked",
+      "source_lineage": "ternaris/rosbags",
+      "source_owner": "ternaris"
+    }
+  ],
+  "semantic_evaluation": {
+    "status": "evidence_required",
+    "report": "artifacts/verification/cli_role_semantics_20260910.json",
+    "role_scores": {
+      "project_analyzer": 3.33,
+      "architect": 0.0,
+      "spec_writer": 0.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "evidence_digest": "sha256:b9ff7ae898dc0a25779e070d29130e145be3e64eb4bd89caa1d839fbe22df666"
+  },
+  "authority": {
+    "certification_allowed": false,
+    "automatic_promotion_allowed": false,
+    "source_apply": false,
+    "production_oracle_disclosed_to_roles": false
+  }
+}

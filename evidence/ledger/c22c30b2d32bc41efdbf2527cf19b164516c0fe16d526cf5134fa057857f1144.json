@@ -1,0 +1,14 @@
+{
+  "artifact": "evidence/artifacts/6313525d094d21e8e50d11e3693f1e4dfd8cfe56f6e93fa155766aae51d6b80e.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:6313525d094d21e8e50d11e3693f1e4dfd8cfe56f6e93fa155766aae51d6b80e",
+  "entry_digest": "sha256:c22c30b2d32bc41efdbf2527cf19b164516c0fe16d526cf5134fa057857f1144",
+  "evaluator_fingerprint": "evidence-ledger-governance:v2",
+  "producer_fingerprint": "self-development-experiment-queue:v1",
+  "replay_command": [
+    "python tools/self_development_experiment_queue.py --write"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/self_development_experiment_queue_20260906T150654334541Z.json",
+  "status": "promoted"
+}

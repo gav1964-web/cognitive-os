@@ -1,0 +1,240 @@
+"""Minimum-based field trial for Project Analyzer -> Architect -> SpecWriter."""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+from typing import Any, Callable
+
+from .foundation_semantic_quality import evaluate_foundation_semantic_quality
+from .foundation_execution_feedback import run_foundation_execution_feedback
+from ._parts.role_foundation_field_trial_scope import (
+    _child_python_projects,
+    _has_project_manifest,
+    _is_python_project,
+    _is_workspace_portfolio_candidate,
+    _primary_language_scope,
+)
+from .role_foundation_pipeline import run_role_foundation_pipeline
+from .role_foundation_feedback_scores import (
+    apply_role_score_caps as _apply_role_score_caps,
+    role_score_evaluation,
+    role_scores as _role_scores,
+)
+from .role_foundation_trial_status import case_status as _case_status
+from .role_project_type_evaluation import classify_project_case
+from .python_module_transaction import python_module_transaction
+from .role_foundation_case_runner import run_bounded_foundation_case
+from .role_foundation_field_trial_report import (
+    build_field_trial_report as _report,
+    write_field_trial_report as _write_report,
+)
+
+
+DEFAULT_GOAL = "Produce ADR and TechnicalSpec for first safe transformation"
+def run_role_foundation_field_trial(
+    *,
+    root: Path,
+    project_roots: list[Path],
+    exact_project_roots: list[Path] | None = None,
+    limit: int = 0,
+    write: bool = False,
+    target_score: float = 9.2,
+    executable_acceptance: bool = False,
+    progress: Callable[[dict[str, Any]], None] | None = None,
+    case_timeout_seconds: float = 0.0,
+) -> dict[str, Any]:
+    projects = (
+        sorted(dict.fromkeys(path.resolve() for path in exact_project_roots), key=lambda path: path.as_posix().lower())
+        if exact_project_roots is not None
+        else discover_python_projects(project_roots)
+    )
+    if limit > 0:
+        projects = projects[:limit]
+    cases = []
+    for index, project in enumerate(projects, start=1):
+        _emit_progress(progress, "field_trial_case_started", index, len(projects), project)
+        started = time.monotonic()
+        case = run_bounded_foundation_case(
+            _run_isolated_case, {
+                "root": root, "project_dir": project, "write": write,
+                "executable_acceptance": executable_acceptance,
+            }, case_timeout_seconds,
+        )
+        cases.append(case)
+        _emit_progress(
+            progress, "field_trial_case_completed", index, len(projects), project,
+            status=str(case.get("status") or "unknown"),
+            elapsed_seconds=round(time.monotonic() - started, 3),
+        )
+    report = _report(cases, target_score=target_score)
+    if write:
+        report["report_path"] = _write_report(root, report).as_posix()
+    return report
+
+
+def _emit_progress(
+    sink: Callable[[dict[str, Any]], None] | None, stage: str,
+    index: int, total: int, project: Path, **details: Any,
+) -> None:
+    if sink:
+        sink({"stage": stage, "index": index, "total": total, "project": project.name, **details})
+
+
+def _run_isolated_case(
+    *, root: Path, project_dir: Path, write: bool, executable_acceptance: bool
+) -> dict[str, Any]:
+    with python_module_transaction():
+        return _run_case(
+            root=root,
+            project_dir=project_dir,
+            write=write,
+            executable_acceptance=executable_acceptance,
+        )
+
+
+def discover_python_projects(roots: list[Path]) -> list[Path]:
+    projects: list[Path] = []
+    for root in roots:
+        base = root.resolve()
+        if (base / "projects").is_dir():
+            projects.extend(_child_python_projects(base / "projects"))
+            continue
+        if (base / ".git").exists():
+            projects.append(base)
+            continue
+        if _has_project_manifest(base):
+            projects.append(base)
+            continue
+        git_children = [path for path in base.iterdir() if path.is_dir() and (path / ".git").exists()]
+        if git_children:
+            projects.extend(git_children)
+            projects.extend(
+                path for path in _child_python_projects(base)
+                if path not in git_children
+            )
+            continue
+        child_projects = _child_python_projects(base)
+        if child_projects:
+            projects.extend(child_projects)
+            continue
+        if _is_python_project(base):
+            projects.append(base)
+            continue
+    return sorted(dict.fromkeys(projects), key=lambda path: path.as_posix().lower())
+
+
+def _run_case(
+    *, root: Path, project_dir: Path, write: bool, executable_acceptance: bool = False
+) -> dict[str, Any]:
+    primary_scope = _primary_language_scope(project_dir)
+    if primary_scope["status"] == "out_of_scope" and not _is_workspace_portfolio_candidate(project_dir):
+        return {
+            "project": project_dir.name,
+            "project_dir": project_dir.as_posix(),
+            "status": "out_of_scope",
+            "pipeline_status": "not_run",
+            "blocker": primary_scope["reason_code"],
+            "role_scores": {"project_analyzer": None, "architect": None, "spec_writer": None},
+            "project_min_score": 0.0,
+            "selected_extraction_candidate": None,
+            "selected_candidate_quality": {},
+            "architect_first_slice": None,
+            "warnings": [primary_scope["reason_code"]],
+            "safety": {"source_code_changes": False, "llm_invoked": False},
+            "artifacts": {},
+            "human_documents": {},
+            "scope_classification": primary_scope,
+        }
+    result = run_role_foundation_pipeline(
+        root=root,
+        project_dir=project_dir,
+        goal=f"{DEFAULT_GOAL} in {project_dir.name}",
+        write=write,
+        include_artifact_contents=True,
+    )
+    downstream_evidence = {}
+    if executable_acceptance and result.get("status") == "ok":
+        result, downstream_evidence = run_foundation_execution_feedback(
+            root=root,
+            project_dir=project_dir,
+            initial_result=result,
+            rerun=lambda target: run_role_foundation_pipeline(
+                root=root,
+                project_dir=project_dir,
+                goal=f"{DEFAULT_GOAL} in {project_dir.name}",
+                write=write,
+                include_artifact_contents=True,
+                _evaluation_target=target,
+            ),
+        )
+        result["downstream_evidence"] = downstream_evidence
+    loaded_result = _result_with_loaded_artifacts(result)
+    semantic_quality = dict(dict(result.get("score") or {}).get("foundation_semantic_quality") or {})
+    if not semantic_quality:
+        semantic_quality = evaluate_foundation_semantic_quality(loaded_result)
+    result["foundation_semantic_quality"] = semantic_quality
+    scored_result = {**result, "artifacts": loaded_result["artifacts"]}
+    project_classification = classify_project_case({
+        "project": project_dir.name,
+        "artifacts": loaded_result["artifacts"],
+        "scope_classification": result.get("scope_classification"),
+        "selected_candidate_quality": result.get("selected_candidate_quality", {}),
+    })
+    score_evaluation = role_score_evaluation(scored_result)
+    role_scores = dict(score_evaluation["role_scores"])
+    available_scores = [score for score in role_scores.values() if score is not None]
+    return {
+        "project": project_dir.name,
+        "project_dir": project_dir.as_posix(),
+        "status": _case_status(scored_result),
+        "pipeline_status": result.get("status"),
+        "blocker": result.get("blocker"),
+        "role_scores": role_scores,
+        "local_role_scores": score_evaluation["local_role_scores"],
+        "score_adjustments": score_evaluation["adjustments"],
+        "acceptance_signal": score_evaluation["acceptance_signal"],
+        "downstream_evidence": downstream_evidence,
+        "execution_reselection_status": result.get("execution_reselection_status"),
+        "execution_reselection_history": result.get("execution_reselection_history", []),
+        "semantic_quality": semantic_quality,
+        "project_min_score": round(min(available_scores), 2) if available_scores else 0.0,
+        "selected_extraction_candidate": result.get("selected_extraction_candidate"),
+        "selected_candidate_quality": result.get("selected_candidate_quality", {}),
+        "architect_first_slice": dict(result.get("architect_red_team") or {}).get("checked_first_slice"),
+        "warnings": _warnings(result),
+        "safety": result.get("safety", {}),
+        "artifacts": result.get("artifacts", {}),
+        "human_documents": result.get("human_documents", {}),
+        "project_classification": project_classification,
+    }
+
+
+def _result_with_loaded_artifacts(result: dict[str, Any]) -> dict[str, Any]:
+    in_memory = dict(result.get("artifact_contents") or {})
+    loaded = {}
+    for key, value in dict(result.get("artifacts") or {}).items():
+        if key in in_memory:
+            loaded[key] = in_memory[key]
+            continue
+        row = dict(value or {})
+        path = row.get("path")
+        if path:
+            try:
+                loaded[key] = json.loads(Path(str(path)).read_text(encoding="utf-8"))
+                continue
+            except (OSError, json.JSONDecodeError):
+                pass
+        loaded[key] = value
+    return {**result, "artifacts": loaded}
+
+
+def _warnings(result: dict[str, Any]) -> list[str]:
+    score = dict(result.get("score") or {})
+    warnings = [str(item) for item in score.get("warnings", [])]
+    for key in ("architect_red_team", "spec_writer_red_team"):
+        payload = dict(result.get(key) or {})
+        warnings.extend(str(row.get("code") or row) for row in payload.get("blocking_findings", []) if row)
+        warnings.extend(str(row.get("code") or row) for row in payload.get("warnings", []) if row)
+    return sorted(dict.fromkeys(warnings))

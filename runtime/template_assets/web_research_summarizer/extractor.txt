@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+from html.parser import HTMLParser
+
+from web_research_summarizer.contracts import Article, SearchResult
+
+
+class _TextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.title = ''
+        self.parts: list[str] = []
+        self._skip = 0
+        self._capture_title = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {'script', 'style', 'nav', 'footer'}:
+            self._skip += 1
+        if tag == 'title':
+            self._capture_title = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {'script', 'style', 'nav', 'footer'} and self._skip:
+            self._skip -= 1
+        if tag == 'title':
+            self._capture_title = False
+
+    def handle_data(self, data: str) -> None:
+        text = ' '.join(data.split())
+        if not text:
+            return
+        if self._capture_title and not self.title:
+            self.title = text
+        if self._skip == 0 and len(text) >= 20:
+            self.parts.append(text)
+
+
+def extract_article(result: SearchResult, html: str) -> Article:
+    parser = _TextExtractor()
+    parser.feed(html)
+    title = result.title or parser.title
+    text = ' '.join(parser.parts)
+    return Article(title=title, url=result.url, text=text, snippet=result.snippet)

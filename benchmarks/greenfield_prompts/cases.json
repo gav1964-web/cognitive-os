@@ -1,0 +1,188 @@
+{
+  "schema_version": "greenfield_prompt_benchmark.v1",
+  "status": "active",
+  "cases": [
+    {
+      "id": "openvpn_server",
+      "prompt": "создай сервер для работы с клиентом OpenVPN",
+      "expected_status": "ok",
+      "expected_pattern_id": "openvpn_server",
+      "expected_components": ["client_provisioning_service", "certificate_authority_adapter", "openvpn_process_adapter"],
+      "expected_primary_contract": "ClientProvisionRequest -> ClientProfileResponse",
+      "expected_research_markers": ["OpenVPN Management Interface", "OpenVPN Access Server", "pure_python_openvpn_protocol_server"]
+    },
+    {
+      "id": "openvpn_clarification_mode",
+      "prompt": "создай сервер для работы с клиентом OpenVPN",
+      "question_mode": "ask_user",
+      "expected_status": "needs_clarification",
+      "expected_pattern_id": "openvpn_server",
+      "expected_clarification_markers": ["HTTP API", "backend CA", "audit journal"],
+      "expected_research_markers": ["OpenVPN Management Interface", "easy-rsa"]
+    },
+    {
+      "id": "fastapi_csv_aggregator",
+      "prompt": "создай FastAPI сервис который принимает CSV, валидирует колонки, считает агрегаты и возвращает JSON отчет",
+      "expected_status": "ok",
+      "expected_pattern_id": "fastapi_csv_aggregator",
+      "expected_components": ["api_boundary", "csv_validator", "aggregation_core"],
+      "expected_primary_contract": "CsvAggregationRequest -> AggregationReport"
+    },
+    {
+      "id": "cnews_news_scraper",
+      "prompt": "создай скрапер новостей с первой страницы https://www.cnews.ru/ и выведи их в .csv файл",
+      "expected_status": "ok",
+      "expected_pattern_id": "web_news_scraper_cli",
+      "expected_components": ["fetcher_adapter", "html_news_parser", "csv_serializer"],
+      "expected_primary_contract": "NewsScrapeRequest -> NewsCsvResult",
+      "expected_research_markers": ["robots.txt", "site RSS/feed/API alternatives", "fixture_first_html_scraper_cli"]
+    },
+    {
+      "id": "reverse_geocode_cli",
+      "prompt": "напиши программу cli для определения названия населенного пункта по переданным в качестве параметров координатам",
+      "expected_status": "ok",
+      "expected_pattern_id": "reverse_geocode_cli",
+      "expected_components": ["coordinate_validator", "reverse_geocoder_adapter", "settlement_normalizer"],
+      "expected_primary_contract": "CoordinateLookupRequest -> SettlementResult",
+      "expected_research_markers": ["reverse geocoding provider policy", "offline geocoding datasets", "provider_adapter_with_fixture_tests"]
+    },
+    {
+      "id": "xlsx_csv_converter",
+      "prompt": "создай CLI .py конвертер xlsx в csv и обратно, тесты на fixture файлах, без сети",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["format_detector", "parser_adapter", "serializer_adapter"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "ocr_image_cli",
+      "prompt": "создай CLI которая читает изображение jpg или webp, распознает текст и сохраняет результат в json",
+      "expected_status": "ok",
+      "expected_pattern_id": "ocr_image_cli",
+      "expected_components": ["image_loader", "preprocessor", "recognition_adapter"],
+      "expected_primary_contract": "ImageRecognitionRequest -> RecognizedContent"
+    },
+    {
+      "id": "json_compare_cli",
+      "prompt": "создай программу CLI которая принимает два JSON файла, сравнивает их и выводит diff report в stdout",
+      "expected_status": "ok",
+      "expected_pattern_id": "json_compare_cli",
+      "expected_components": ["json_parser", "diff_core", "report_serializer"],
+      "expected_primary_contract": "JsonCompareRequest -> JsonDiff"
+    },
+    {
+      "id": "image_table_to_excel",
+      "prompt": "создай CLI которая берет картинку с таблицей, распознает строки и сохраняет результат в Excel файл",
+      "expected_status": "ok",
+      "expected_pattern_id": "ocr_image_cli",
+      "expected_components": ["image_loader", "recognition_adapter", "result_serializer"],
+      "expected_primary_contract": "ImageRecognitionRequest -> RecognizedContent"
+    },
+    {
+      "id": "markdown_rtf_converter",
+      "prompt": "создай локальную утилиту CLI для конвертации markdown в rtf с тестами и без внешней сети",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["cli_boundary", "parser_adapter", "serializer_adapter"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "csv_json_converter",
+      "prompt": "создай CLI .py конвертер csv в json records, читает файл, пишет json, тесты на fixture, без сети",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["format_detector", "conversion_core", "serializer_adapter"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "html_table_to_csv",
+      "prompt": "создай CLI утилиту которая читает HTML файл с таблицей и сохраняет таблицу в CSV, без внешних зависимостей",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["cli_boundary", "parser_adapter", "conversion_core"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "xls_png_converter",
+      "prompt": "создай CLI .py конвертер xls в png, вход файл xls, выход png файл, с явной policy по зависимостям",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["format_detector", "parser_adapter", "serializer_adapter"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "jpg_doc_converter",
+      "prompt": "создай CLI конвертер jpg в doc/html-compatible document, читает картинку, пишет doc файл, тесты без сети",
+      "expected_status": "ok",
+      "expected_pattern_id": "file_converter_cli",
+      "expected_components": ["parser_adapter", "conversion_core", "serializer_adapter"],
+      "expected_primary_contract": "ConversionRequest -> ConversionResult"
+    },
+    {
+      "id": "image_contents_to_html",
+      "prompt": "создай CLI которая перечисляет содержимое изображения webp и сохраняет отчет в html, backend OCR/vision через adapter",
+      "expected_status": "ok",
+      "expected_pattern_id": "ocr_image_cli",
+      "expected_components": ["image_loader", "recognition_adapter", "result_serializer"],
+      "expected_primary_contract": "ImageRecognitionRequest -> RecognizedContent"
+    },
+    {
+      "id": "rotated_image_ocr",
+      "prompt": "создай CLI для распознавания текста на повернутом изображении jpg, вывод json и предупреждения confidence",
+      "expected_status": "ok",
+      "expected_pattern_id": "ocr_image_cli",
+      "expected_components": ["image_loader", "preprocessor", "recognition_adapter"],
+      "expected_primary_contract": "ImageRecognitionRequest -> RecognizedContent"
+    },
+    {
+      "id": "fastapi_csv_upload",
+      "prompt": "создай локальный FastAPI endpoint для upload CSV файла, проверки колонок и возврата JSON результата, тесты через ASGI client",
+      "expected_status": "ok",
+      "expected_pattern_id": "fastapi_csv_aggregator",
+      "expected_components": ["api_boundary", "csv_validator", "report_serializer"],
+      "expected_primary_contract": "CsvAggregationRequest -> AggregationReport"
+    },
+    {
+      "id": "fastapi_sales_aggregates",
+      "prompt": "создай FastAPI службу для CSV с продажами: принимает файл, группирует по колонке и возвращает агрегаты в JSON",
+      "expected_status": "ok",
+      "expected_pattern_id": "fastapi_csv_aggregator",
+      "expected_components": ["api_boundary", "aggregation_core", "report_serializer"],
+      "expected_primary_contract": "CsvAggregationRequest -> AggregationReport"
+    },
+    {
+      "id": "json_diff_html_report",
+      "prompt": "создай программу CLI для сравнения двух json файлов и вывода html diff report, stdlib без сети",
+      "expected_status": "ok",
+      "expected_pattern_id": "json_compare_cli",
+      "expected_components": ["json_parser", "diff_core", "report_serializer"],
+      "expected_primary_contract": "JsonCompareRequest -> JsonDiff"
+    },
+    {
+      "id": "json_diff_ignore_keys",
+      "prompt": "создай CLI .py которая принимает два JSON файла, список игнорируемых ключей и печатает diff в stdout",
+      "expected_status": "ok",
+      "expected_pattern_id": "json_compare_cli",
+      "expected_components": ["cli_boundary", "normalizer", "diff_core"],
+      "expected_primary_contract": "JsonCompareRequest -> JsonDiff"
+    },
+    {
+      "id": "openvpn_existing_pki",
+      "prompt": "создай локальный сервер для OpenVPN клиентов с existing PKI adapter, profile artifact store и audit journal",
+      "expected_status": "ok",
+      "expected_pattern_id": "openvpn_server",
+      "expected_components": ["client_provisioning_service", "certificate_authority_adapter", "audit_store"],
+      "expected_primary_contract": "ClientProvisionRequest -> ClientProfileResponse",
+      "expected_research_markers": ["existing PKI", "management_interface_plus_profile_service"]
+    },
+    {
+      "id": "openvpn_cli_only",
+      "prompt": "создай OpenVPN client management CLI/server hybrid: выпуск профиля, отзыв клиента, audit log, без production deploy",
+      "expected_status": "ok",
+      "expected_pattern_id": "openvpn_server",
+      "expected_components": ["api_boundary", "profile_generator", "openvpn_process_adapter"],
+      "expected_primary_contract": "ClientProvisionRequest -> ClientProfileResponse",
+      "expected_research_markers": ["OpenVPN Management Interface", "install_script_only"]
+    }
+  ]
+}

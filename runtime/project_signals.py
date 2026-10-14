@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from .local_inference import LocalInferenceConfig, LocalInferenceError, call_json_chat
+from .role_research import research_context
 from .project_facts import facts_from_project_report, llm_fact_digest
 
 
@@ -39,8 +40,10 @@ def generate_project_signals(
 ) -> dict[str, Any]:
     digest = llm_fact_digest(facts_from_project_report(report))
     deterministic_signals = _deterministic_signals(digest)
+    from .structured_inference import with_response_contract
+    config = with_response_contract(config, {'signals': {'type': 'array', 'items': {'type': 'object'}}})
     try:
-        result = call_json_chat(_messages(digest), config=config)
+        result = call_json_chat(research_context(_messages(digest), config), config=config)
     except LocalInferenceError as exc:
         return {
             "signals": deterministic_signals,

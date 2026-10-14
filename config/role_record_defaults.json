@@ -1,0 +1,11 @@
+{
+  "schema_version": "role_record_defaults.v1",
+  "record_type_defaults": {
+    "project_archetype_rule": ["project_analyzer", "architect", "spec_writer"],
+    "capability_pattern": ["architect", "spec_writer", "implementer", "tester"],
+    "risk_pattern": ["architect", "tester", "reviewer"],
+    "project_lesson": ["architect", "spec_writer", "reviewer"],
+    "architecture_pattern_backlog_item": ["project_analyzer", "architect", "researcher"],
+    "kb_candidate": ["researcher", "architect", "reviewer"]
+  }
+}

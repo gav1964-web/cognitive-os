@@ -1,0 +1,4 @@
+[
+  {"title": "Python packaging overview", "url": "https://example.test/article_one.html", "snippet": "Packaging guide"},
+  {"title": "Reliable package indexes", "url": "https://example.test/article_two.html", "snippet": "Package index reliability"}
+]

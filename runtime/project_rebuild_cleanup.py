@@ -13,3 +13,6 @@ def clean_generated_runtime_artifacts(output_dir: Path) -> None:
     for path in output_dir.rglob(".pytest_cache"):
         if path.is_dir():
             shutil.rmtree(path, ignore_errors=True)
+    for path in output_dir.rglob("*.pyc"):
+        if path.is_file():
+            path.unlink(missing_ok=True)

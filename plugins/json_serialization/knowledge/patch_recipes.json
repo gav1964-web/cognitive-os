@@ -1,0 +1,39 @@
+{
+  "schema_version": "json_serialization_recipes.v1",
+  "recipes": [
+    {
+      "id": "extract_json_dumps_helper",
+      "recipe": {
+        "enabled": true,
+        "status": "prepared",
+        "reason": "json_dumps_helper_extracted",
+        "operation_kind": "extract_json_dumps_helper",
+        "allowed_hypothesis_type": "pure_core_with_effect_adapters",
+        "required_candidate_symbol": "serialize_json",
+        "target_cluster": "serialize_json_inside_filesystem_boundary",
+        "maximum_free_variables": 1,
+        "automatic_source_mutation_allowed": false,
+        "differential_verification": {
+          "case_variants": [
+            "normal",
+            "empty"
+          ],
+          "timeout_seconds": 10,
+          "profile": "callable_file_output",
+          "observations": [
+            "return_value",
+            "subprocess_calls",
+            "written_files"
+          ]
+        },
+        "required_verification": [
+          "patched_source_compiles",
+          "tester_differential_verification_passes",
+          "origin_callable_remains_source_backed",
+          "proposed_callable_becomes_source_backed",
+          "normal_architect_reselection_selects_proposed_callable"
+        ]
+      }
+    }
+  ]
+}

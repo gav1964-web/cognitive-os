@@ -1,0 +1,36 @@
+{
+  "schema_version": "project_text_fact_extractors.v1",
+  "status": "active",
+  "extractors": [
+    {
+      "answer_key": "client_connection_port",
+      "extractor_type": "regex_best_match",
+      "result_field": "port",
+      "value_type": "integer",
+      "path_suffixes": [".py", ".md", ".yml", ".yaml", ".json", ".toml", ".ps1", ".sh", ".bat", ".cmd"],
+      "priority_path_contains": ["readme", "usage", "server", "api", "run", "start", "config"],
+      "max_files": 80,
+      "max_file_size_bytes": 120000,
+      "line_markers_any": ["base-url", "base_url", "localhost", "127.0.0.1", "uvicorn", "--port", "port"],
+      "regexes": [
+        "https?://[^\\s:]+:(\\d{2,5})",
+        "(?:--port|port\\s*=|port:)\\s*[\\\"']?(\\d{2,5})"
+      ],
+      "valid_integer_range": [1, 65535],
+      "score_markers": [
+        {"markers": ["base-url", "base_url"], "score": 3},
+        {"markers": ["localhost", "127.0.0.1"], "score": 2},
+        {"markers": ["uvicorn", "--port"], "score": 2}
+      ],
+      "found": {
+        "status": "found",
+        "confidence_score_high_at": 4
+      },
+      "not_found": {
+        "status": "not_found",
+        "port": null,
+        "evidence": []
+      }
+    }
+  ]
+}

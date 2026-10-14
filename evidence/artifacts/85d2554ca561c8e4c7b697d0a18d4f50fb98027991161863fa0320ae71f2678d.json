@@ -1,0 +1,25 @@
+{
+  "artifact_type": "GeneratedFunctionStubAudit",
+  "audit_digest": "sha256:e1c2ff1f5122c1a42d149e715872aa82afaea373c11ada0c8b93e6caaae4b53f",
+  "case_count": 4,
+  "checks": {
+    "all_cases_have_admission": true,
+    "all_generated_files_parse": true,
+    "cases_present": true,
+    "reports_present": true,
+    "zero_generated_function_stubs": true
+  },
+  "failed_checks": [],
+  "generated_stub_count": 0,
+  "missing_admissions": [],
+  "parse_failures": [],
+  "report_digests": {
+    "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_cli_lineage25_20260904T080559402158Z.json": "sha256:bbda99f3051f0cd55143e7a82e65f51a0792f7ca4f456966bcd373247cd4144b",
+    "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_cli_lineage26_20260904T080559365103Z.json": "sha256:1056fb0d75afdc95852c175794feb1b554ab6a901b7bed6781810774975f0fde",
+    "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_library_lineage25_20260904T080558779008Z.json": "sha256:a106cfa2769e5dcda229957f3a4946bf4a5eff6f21ba09a081ea9266dbe5ebea",
+    "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_library_lineage26_20260904T080558918552Z.json": "sha256:26b8e8c6dae84128fcf693a7f7dc0dc5e8ae226fce56f86aa0797976745a3c61"
+  },
+  "schema_version": "generated_function_stub_audit.v1",
+  "status": "passed",
+  "violations": []
+}

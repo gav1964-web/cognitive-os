@@ -12,7 +12,6 @@ def test_registry_doctor_detects_hash_drift(tmp_path):
     root = Path(__file__).resolve().parents[2]
     for name in ("runtime", "tools", "plugins", "registry"):
         shutil.copytree(root / name, workspace / name, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
-    sys.path.insert(0, str(workspace))
     from runtime.registry import CapabilityRegistry
 
     CapabilityRegistry(workspace).reset_from_plugins()

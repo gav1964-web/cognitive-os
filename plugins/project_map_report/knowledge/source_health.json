@@ -1,0 +1,11 @@
+{
+  "schema_version": "project_map_source_health.v1",
+  "owner": "project_map_report",
+  "test_data_prefixes": [
+    "test/data/", "tests/data/", "testing/data/",
+    "test/fixtures/", "tests/fixtures/", "testing/fixtures/",
+    "test/testdata/", "tests/testdata/"
+  ],
+  "applicability": "Root-relative test data directories; never arbitrary production directories named data or fixtures.",
+  "fallback": "Keep unclassified syntax errors as source damage. This path classification does not certify tests or authorize execution."
+}

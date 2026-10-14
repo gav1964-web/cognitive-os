@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+STRATEGY_REGISTRY = {
+    'html_links': {'order': 10, 'requires_network': False, 'executor': 'parser.parse_news_items'},
+    'json_ld': {'order': 20, 'requires_network': False, 'executor': 'parser.parse_news_items'},
+    'rss_atom': {'order': 30, 'requires_network': True, 'executor': 'feed.parse_feed_items'},
+    'sitemap': {'order': 40, 'requires_network': True, 'executor': 'sitemap.rows_from_sitemap'},
+    'browser_dom': {'order': 50, 'requires_network': True, 'optional_dependency': 'playwright', 'executor': 'browser_fetcher.fetch_rendered_html'},
+    'api_probe': {'order': 60, 'requires_network': True, 'status': 'diagnostic_only'},
+}
+
+
+def allowed_strategy_ids() -> list[str]:
+    return [key for key, _ in sorted(STRATEGY_REGISTRY.items(), key=lambda item: item[1]['order'])]
+
+
+def is_allowed_strategy(strategy_id: str) -> bool:
+    return strategy_id in STRATEGY_REGISTRY

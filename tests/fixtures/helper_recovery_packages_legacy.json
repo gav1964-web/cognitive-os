@@ -1,0 +1,841 @@
+{
+  "cases": [
+    {
+      "id": "append_0",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "inline_append",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,5 +1,8 @@",
+              "+def normalize_record(row):",
+              "+    return {'name': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        result.append({'name': row.strip()})",
+              "+        result.append(normalize_record(row))",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "c748b8123a43ef9bd24b0e1571792338116ced7ba388b7c281f80ad8303c3d7f",
+        "patched_source_sha256": "215ae47753238ff680ae3e280c448a0b1fdd92b0d38eb49bfb1728f99545414a",
+        "patch_digest": "5a0c2b3ff922641390ce24edddb1f4f87c128f29e25d7393d99d0fa7fcbfd8eb",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append_1",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        record = {'name': row.strip()}\n        result.append(record)\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        record = normalize_record(row)\n        result.append(record)\n    return result\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "preceding_assignment",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,6 +1,9 @@",
+              "+def normalize_record(row):",
+              "+    return {'name': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        record = {'name': row.strip()}",
+              "+        record = normalize_record(row)",
+              "         result.append(record)",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "40f76aa62a1ded8770038fe1677ffd05425bae8a1b95e86cc7157bff9bc79503",
+        "patched_source_sha256": "10750ec50fc6cf17c7ed4e1600a1981c05bfce5a51397f93f02179506693a4d4",
+        "patch_digest": "dd04da569c2326d5eaece8a33cf9a8e65566b60232b53e1b9002faef550daf51",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append_2",
+      "source": "def normalize_rows(rows):\r\n    result = []\r\n    for row in rows:\r\n        result.append({'name': row.strip()})\r\n    return result\r\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\r\n    return {'name': row.strip()}\r\n\r\ndef normalize_rows(rows):\r\n    result = []\r\n    for row in rows:\r\n        result.append(normalize_record(row))\r\n    return result\r\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "inline_append",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,5 +1,8 @@",
+              "+def normalize_record(row):",
+              "+    return {'name': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        result.append({'name': row.strip()})",
+              "+        result.append(normalize_record(row))",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "5e5e705cf1d5b5efd78e01eaed3a2d8d39653d6728e2267c61dd63943a85d4c6",
+        "patched_source_sha256": "f312d59c7cb733cd52ccebd2faec1d58984a433afe3d53b2ea932a06154042d7",
+        "patch_digest": "5bf607bd2a2fd6d6105706b3c27dc7a396fa5815ee19c56cb57ce174ea9e3f97",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append_3",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "inline_append",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,5 +1,8 @@",
+              "+def normalize_record(row):",
+              "+    return {'name': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        result.append({'name': row.strip()})",
+              "+        result.append(normalize_record(row))",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "8634c888c695a91fe2936b002d97db4a08e0eb28298c45d3affd645419a19046",
+        "patched_source_sha256": "eca53a6b19b54a00446ca635a48b87adee18d90564c759325d61205320109100",
+        "patch_digest": "d8e2ca1126c73cd74cffcfe12e4dadaab98f210ef81eab64769f278195a5eeef",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append_4",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'имя': row.strip()})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\n    return {'имя': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "inline_append",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,5 +1,8 @@",
+              "+def normalize_record(row):",
+              "+    return {'имя': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        result.append({'имя': row.strip()})",
+              "+        result.append(normalize_record(row))",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "b365c9620b06ed3a6279b2f7a6061b7c1ad2ef229bf0963184c8944059d66828",
+        "patched_source_sha256": "c4a6c2acad44f5d44fddfbe7cf5f6c547afdaf9df1281f8da04e7e43e9bacf39",
+        "patch_digest": "c2e60922a46db9c83d4bf00b5a8a544285a40eba29156ed12ff5bdb45ea68fba",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append_5",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        for sub in row:\n            result.append({'name': row.strip()})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_6",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': default_name})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_7",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n        result.append({'second': row})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_8",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n\ndef normalize_record(row):\n    return row\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_9",
+      "source": "invalid syntax !",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_10",
+      "source": "def other_function(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "append_mapping_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "append_11",
+      "source": "def normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append({'name': row.strip()})\n    return result\n",
+      "origin_symbol": "normalize_rows",
+      "proposed_symbol": "normalize_record",
+      "patched_source": "def normalize_record(row):\n    return {'name': row.strip()}\n\ndef normalize_rows(rows):\n    result = []\n    for row in rows:\n        result.append(normalize_record(row))\n    return result\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:normalize_rows",
+          "proposed_target": "writer.py:normalize_record"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "append_mapping_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_append_mapping_helper",
+            "target": "writer.py:normalize_rows",
+            "file": "writer.py",
+            "created_target": "writer.py:normalize_record",
+            "loop_variable": "row",
+            "accumulator": "result",
+            "mapping_field_count": 1,
+            "mapping_source": "inline_append",
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,5 +1,8 @@",
+              "+def normalize_record(row):",
+              "+    return {'name': row.strip()}",
+              "+",
+              " def normalize_rows(rows):",
+              "     result = []",
+              "     for row in rows:",
+              "-        result.append({'name': row.strip()})",
+              "+        result.append(normalize_record(row))",
+              "     return result"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "c748b8123a43ef9bd24b0e1571792338116ced7ba388b7c281f80ad8303c3d7f",
+        "patched_source_sha256": "215ae47753238ff680ae3e280c448a0b1fdd92b0d38eb49bfb1728f99545414a",
+        "patch_digest": "5a0c2b3ff922641390ce24edddb1f4f87c128f29e25d7393d99d0fa7fcbfd8eb",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "json_dumps",
+      "origin_symbol": "write_json",
+      "proposed_symbol": "serialize_json",
+      "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n",
+      "patched_source": "import json\nfrom pathlib import Path\ndef serialize_json(value):\n    return json.dumps(value)\n\ndef write_json(path, value):\n    Path(path).write_text(serialize_json(value))\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:write_json",
+          "proposed_target": "writer.py:serialize_json"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "json_dumps_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_json_dumps_helper",
+            "target": "writer.py:write_json",
+            "file": "writer.py",
+            "created_target": "writer.py:serialize_json",
+            "free_variable": "value",
+            "serialization_line": 4,
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,4 +1,7 @@",
+              " import json",
+              " from pathlib import Path",
+              "+def serialize_json(value):",
+              "+    return json.dumps(value)",
+              "+",
+              " def write_json(path, value):",
+              "-    Path(path).write_text(json.dumps(value))",
+              "+    Path(path).write_text(serialize_json(value))"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "84a1088ba27977efb9f453b4285d179bb26c8aee4c8f21f3d2343140d84b70bd",
+        "patched_source_sha256": "9d666318822d3a1a2e89b0cc28dc716936f1d9bfef555a260081c2f14894a583",
+        "patch_digest": "229d20f0926b2455ca9f230dae5b06ff04fc1432b5e241fd1faf482c4939504a",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "json_dumps_refusal",
+      "origin_symbol": "write_json",
+      "proposed_symbol": "serialize_json",
+      "source": "def write_json():\n    return None\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:write_json",
+          "proposed_target": "writer.py:serialize_json"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "json_dumps_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "json_loads",
+      "origin_symbol": "load_json",
+      "proposed_symbol": "parse_json",
+      "source": "import json\nfrom pathlib import Path\ndef load_json(path):\n    return json.loads(Path(path).read_text())\n",
+      "patched_source": "import json\nfrom pathlib import Path\ndef parse_json(text):\n    return json.loads(text)\n\ndef load_json(path):\n    return parse_json(Path(path).read_text())\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:load_json",
+          "proposed_target": "writer.py:parse_json"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "json_loads_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_json_loads_helper",
+            "target": "writer.py:load_json",
+            "file": "writer.py",
+            "created_target": "writer.py:parse_json",
+            "read_expression": "Path(path).read_text()",
+            "parse_line": 4,
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,4 +1,7 @@",
+              " import json",
+              " from pathlib import Path",
+              "+def parse_json(text):",
+              "+    return json.loads(text)",
+              "+",
+              " def load_json(path):",
+              "-    return json.loads(Path(path).read_text())",
+              "+    return parse_json(Path(path).read_text())"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "27b959e7ff582878f5a494eb27a63da7eccc9f8593d4f16c02b9b93041827ffe",
+        "patched_source_sha256": "f517fff1b977fc2886373df5a527a1a43c716b65abad63b3575b4ff50860c801",
+        "patch_digest": "9d9a4f88ddac27380be3a9f4a5ce608e7ad723dd5f8fcbfcee3e746c4f23746f",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "json_loads_refusal",
+      "origin_symbol": "load_json",
+      "proposed_symbol": "parse_json",
+      "source": "def load_json():\n    return None\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:load_json",
+          "proposed_target": "writer.py:parse_json"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "json_loads_helper_pattern_not_proven",
+        "patches": []
+      }
+    },
+    {
+      "id": "splitlines",
+      "origin_symbol": "load_lines",
+      "proposed_symbol": "split_lines",
+      "source": "from pathlib import Path\ndef load_lines(path):\n    return Path(path).read_text().splitlines()\n",
+      "patched_source": "from pathlib import Path\ndef split_lines(text):\n    return text.splitlines()\n\ndef load_lines(path):\n    return split_lines(Path(path).read_text())\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:load_lines",
+          "proposed_target": "writer.py:split_lines"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "artifact_type": "RecoveryPatchPackage",
+        "status": "prepared",
+        "reason": "splitlines_helper_extracted",
+        "sandbox_project": "<sandbox>",
+        "patches": [
+          {
+            "artifact_type": "PatchOperation",
+            "kind": "extract_splitlines_helper",
+            "target": "writer.py:load_lines",
+            "file": "writer.py",
+            "created_target": "writer.py:split_lines",
+            "text_expression": "Path(path).read_text()",
+            "split_line": 3,
+            "diff": [
+              "--- a/writer.py",
+              "+++ b/writer.py",
+              "@@ -1,3 +1,6 @@",
+              " from pathlib import Path",
+              "+def split_lines(text):",
+              "+    return text.splitlines()",
+              "+",
+              " def load_lines(path):",
+              "-    return Path(path).read_text().splitlines()",
+              "+    return split_lines(Path(path).read_text())"
+            ]
+          }
+        ],
+        "source_precondition_sha256": "53ea862fd41339665ee8b67b562a495eba49b5703310572541cff9a33c77a9bf",
+        "patched_source_sha256": "4c60df181ea286fed3ed4630a76c26c9d7e4d2ac04c04ac4c34334ede3806a1a",
+        "patch_digest": "abaa2aa0893e0fb071581691c501b9ac46014e10ca3fda4c2e90142a9fef6849",
+        "source_code_changes": false,
+        "registry_changes": false,
+        "verification": {
+          "patched_source_compiles": true,
+          "sandbox_only": true,
+          "normal_architect_reselection_pending": true
+        },
+        "policy": {
+          "automatic_source_mutation_allowed": false,
+          "apply_source_enabled": false,
+          "required_verification": [
+            "patched_source_compiles",
+            "tester_differential_verification_passes",
+            "origin_callable_remains_source_backed",
+            "proposed_callable_becomes_source_backed",
+            "normal_architect_reselection_selects_proposed_callable"
+          ]
+        }
+      }
+    },
+    {
+      "id": "splitlines_refusal",
+      "origin_symbol": "load_lines",
+      "proposed_symbol": "split_lines",
+      "source": "def load_lines():\n    return None\n",
+      "route": {
+        "status": "bounded_rework_ready",
+        "research_hypothesis": {
+          "hypothesis_type": "pure_core_with_effect_adapters",
+          "origin_target": "writer.py:load_lines",
+          "proposed_target": "writer.py:split_lines"
+        },
+        "architect_reentry_gate": {
+          "status": "accepted_for_bounded_rework"
+        }
+      },
+      "package": {
+        "status": "skipped",
+        "reason": "splitlines_helper_pattern_not_proven",
+        "patches": []
+      }
+    }
+  ]
+}

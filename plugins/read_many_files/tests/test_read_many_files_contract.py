@@ -40,3 +40,16 @@ def test_read_many_files_auto_discovers_readme_rst(tmp_path, monkeypatch):
     result = run({"root": "project", "auto_discover": True, "max_files": 2})
 
     assert [item["path"] for item in result["files"]] == ["README.rst", "pyproject.toml"]
+
+
+def test_auto_discovery_prioritizes_setup_cfg_and_plugin_module(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    project = Path("project")
+    (project / "sample").mkdir(parents=True)
+    (project / "setup.cfg").write_text("[options.entry_points]\npytest11 = sample\n", encoding="utf-8")
+    (project / "sample" / "plugin.py").write_text("def pytest_configure(config): pass\n", encoding="utf-8")
+    (project / "sample" / "ordinary.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    result = run({"root": "project", "auto_discover": True, "max_files": 2})
+
+    assert result["selected_paths"] == ["setup.cfg", "sample/plugin.py"]

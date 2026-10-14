@@ -28,7 +28,11 @@ def test_detect_project_stack_reports_python_app(tmp_path, monkeypatch):
 def test_detect_project_stack_ignores_context_entrypoints(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("project/tests/testserver").mkdir(parents=True)
+    Path("project/continuous_integration").mkdir(parents=True)
+    Path("project/doctests").mkdir(parents=True)
     Path("project/tests/testserver/server.py").write_text("print('test server')\n", encoding="utf-8")
+    Path("project/continuous_integration/run_tests.sh").write_text("pytest\n", encoding="utf-8")
+    Path("project/doctests/run_examples.sh").write_text("python example.py\n", encoding="utf-8")
     Path("project/src/pkg").mkdir(parents=True)
     Path("project/src/pkg/__init__.py").write_text("", encoding="utf-8")
     Path("project/noxfile.py").write_text("", encoding="utf-8")
@@ -36,3 +40,14 @@ def test_detect_project_stack_ignores_context_entrypoints(tmp_path, monkeypatch)
     result = run({"path": "project"})
 
     assert result["entrypoints"] == []
+
+
+def test_detect_project_stack_does_not_treat_plain_app_py_as_flask(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Path("project").mkdir()
+    Path("project/app.py").write_text("def main():\n    print('hello')\n", encoding="utf-8")
+
+    result = run({"path": "project"})
+
+    assert result["entrypoints"] == ["app.py"]
+    assert "Flask-like Python web app" not in result["frameworks"]

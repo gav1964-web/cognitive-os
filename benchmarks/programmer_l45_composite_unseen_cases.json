@@ -1,0 +1,70 @@
+{
+  "schema_version": "programmer_l45_composite_cases.v1",
+  "source_root": "artifacts/gitlab_blind_iteration_12_40_20260817/src",
+  "cases": [
+    {
+      "id": "djambda_header_normalization", "project": "briancaffey__djambda", "fixture_relation": "direct_semantic_mutation",
+      "files": {"headers.py": "def merge_headers(event):\n    return event.get('headers') or {}\n\ndef titlecase_keys(values):\n    return {key.lower(): value for key, value in values.items()}\n"},
+      "edits": [
+        {"target": "headers.py:merge_headers", "provenance": "django/zappa_werkzeug_handler.py:merge_headers", "provenance_ast_sha256": "ff7f9fc888eefba777b91b78f10d57553a04162a8e7198f7ea717861f9a1bc72", "statement": "Merge headers and multiValueHeaders; multi-value entries take precedence and every output value is a comma-and-space joined string.", "examples": [{"given": {"event": {"headers": {"x-one": "a", "shared": "single"}, "multiValueHeaders": {"shared": ["a", "b"], "x-two": ["c"]}}}, "expected": {"shared": "a, b", "x-two": "c", "x-one": "a"}}]},
+        {"target": "headers.py:titlecase_keys", "provenance": "django/zappa_werkzeug_handler.py:titlecase_keys", "provenance_ast_sha256": "e16c7d17791b80d53a4f37b5405d31850025d2fa25180db5a1d3cc7fbf9b26c2", "statement": "Return a new mapping with every string key title-cased and values unchanged.", "examples": [{"given": {"values": {"content-type": "json", "x-test": "yes"}}, "expected": {"Content-Type": "json", "X-Test": "yes"}}]}
+      ]
+    },
+    {
+      "id": "rvgl_text_identifiers", "project": "re-volt__rvgl-launcher", "fixture_relation": "direct_semantic_mutation",
+      "files": {"text_ids.py": "import hashlib\nimport re\n\ndef hashed_string(text):\n    return text\n\ndef slugify(name):\n    return name.replace(' ', '-')\n"},
+      "edits": [
+        {"target": "text_ids.py:hashed_string", "provenance": "rv_launcher/helpers.py:hashed_string", "provenance_ast_sha256": "3efe940be8523a876ba2018f2a68a453105536caf75fbbe2662d072abec99657", "statement": "Return the lowercase hexadecimal MD5 digest of the UTF-8 encoded text.", "examples": [{"given": {"text": "abc"}, "expected": "900150983cd24fb0d6963f7d28e17f72"}]},
+        {"target": "text_ids.py:slugify", "provenance": "rv_launcher/helpers.py:slugify", "provenance_ast_sha256": "93dc15e42abb0aa5daf255e09c2e92e97f4cedb3a7b3e2c954c62aa0b064fcb3", "statement": "Lowercase the name, remove characters other than word characters, whitespace, and hyphens, collapse whitespace or underscores to one underscore, then trim leading and trailing dashes or underscores.", "examples": [{"given": {"name": "  Hello,  WORLD_test-  "}, "expected": "hello_world_test"}]}
+      ]
+    },
+    {
+      "id": "rvgl_version_parsing", "project": "re-volt__rvgl-launcher", "fixture_relation": "adapted_tuple_to_json_list",
+      "files": {"versions.py": "import re\n\ndef parse_version(version):\n    return version.split('.')[:2]\n\ndef parse_int(value):\n    return value\n"},
+      "edits": [
+        {"target": "versions.py:parse_version", "provenance": "rv_launcher/packages.py:parse_version", "provenance_ast_sha256": "43840245751a020aa882de95c4f8c7cb21392febb9ef4f1afdff56b706509263", "statement": "Parse major, optional minor, and optional trailing revision from a version string and return a JSON list of three integers; return [0, 0, 0] when parsing fails.", "examples": [{"given": {"version": "2.4-beta-7"}, "expected": [2, 4, 7]}, {"given": {"version": "bad"}, "expected": [0, 0, 0]}]},
+        {"target": "versions.py:parse_int", "provenance": "rv_launcher/packages.py:parse_int", "provenance_ast_sha256": "b0295c056441bf639b39ce64440eb42af6d4bf22580f07204d8ab1e46d164cee", "statement": "Convert the value to an integer and return zero on any conversion failure.", "examples": [{"given": {"value": "42"}, "expected": 42}, {"given": {"value": "x"}, "expected": 0}]}
+      ]
+    },
+    {
+      "id": "utopya_message_and_scalar_coercion", "project": "utopia-project__utopya", "fixture_relation": "adapted_json_scalar_path",
+      "files": {"coercion.py": "def parse_msg(msg, args):\n    return msg\n\ndef convert_value(val):\n    return val\n"},
+      "edits": [
+        {"target": "coercion.py:parse_msg", "provenance": "utopya_cli/_utils.py:_parse_msg", "provenance_ast_sha256": "29b9f29bda1fd3655513957908c95935c3572e5cc650c5d48830cf16938fce1c", "statement": "Apply old-style percent formatting with args when args is non-empty; otherwise return the message unchanged.", "examples": [{"given": {"msg": "item=%s count=%d", "args": ["alpha", 3]}, "expected": "item=alpha count=3"}, {"given": {"msg": "plain", "args": []}, "expected": "plain"}]},
+        {"target": "coercion.py:convert_value", "provenance": "utopya_cli/_utils.py:convert_value", "provenance_ast_sha256": "76b21c63c9f2bf14689c48e3e9437d84949695ba397b69d97b811304c000ac0c", "statement": "Convert case-insensitive true/false to booleans, null to None, integer text to int, floating-point text to float, and otherwise preserve the string.", "examples": [{"given": {"val": "FALSE"}, "expected": false}, {"given": {"val": "12.5"}, "expected": 12.5}]}
+      ]
+    },
+    {
+      "id": "unifi_identity_resolution", "project": "checkmk-extensions__plugins__unifi", "fixture_relation": "adapted_namespace_and_tuple_mapping",
+      "files": {"identity.py": "def user_piggyback_hostname(user, mode, domain):\n    return user.get('hostname')\n\ndef is_wired_client_lldp_entry(device, neighbor, wired_clients):\n    return False\n"},
+      "edits": [
+        {"target": "identity.py:user_piggyback_hostname", "provenance": "special_agents/agent_unifi.py:user_piggyback_hostname", "provenance_ast_sha256": "276efb90bf651600070e67b97279b99c4a1f4523debdacd5a418e8a4ebd942fa", "statement": "For mode ip return the user IP; for hostname return the hostname; otherwise append the dot-trimmed domain unless the hostname already equals or ends with it, case-insensitively; return None when hostname is absent.", "examples": [{"given": {"user": {"hostname": "desk", "ip": "10.0.0.8"}, "mode": "fqdn", "domain": ".example.org."}, "expected": "desk.example.org"}, {"given": {"user": {"hostname": "desk", "ip": "10.0.0.8"}, "mode": "ip", "domain": "example.org"}, "expected": "10.0.0.8"}]},
+        {"target": "identity.py:is_wired_client_lldp_entry", "provenance": "special_agents/agent_unifi.py:is_wired_client_lldp_entry", "provenance_ast_sha256": "c658039c62e23b97e5453571459037f082f70e3131243cf522de49ffd0aa74ae", "statement": "Return true only when device MAC, neighbor local port, and chassis ID are valid and a case-insensitive matching client record exists in wired_clients, represented as records with switch_mac, switch_port, and client_macs.", "examples": [{"given": {"device": {"mac": "AA:BB"}, "neighbor": {"local_port_idx": 4, "chassis_id": "CC:DD"}, "wired_clients": [{"switch_mac": "aa:bb", "switch_port": 4, "client_macs": ["cc:dd"]}]}, "expected": true}]}
+      ]
+    },
+    {
+      "id": "portmod_paths_and_booleans", "project": "portmod__portmod", "fixture_relation": "adapted_posix_and_localization_free",
+      "files": {"portable.py": "def parents(paths):\n    return paths\n\ndef strtobool(value):\n    return bool(value)\n"},
+      "edits": [
+        {"target": "portable.py:parents", "provenance": "portmod/execute.py:parents", "provenance_ast_sha256": "73e72549ce43bdc339fdc3673765a2aa609a623d8eec917f9423f7979100b7c4", "statement": "Return a sorted JSON list of all unique POSIX parent paths for every absolute input path, including the root.", "examples": [{"given": {"paths": ["/a/b/c", "/a/d"]}, "expected": ["/", "/a", "/a/b"]}]},
+        {"target": "portable.py:strtobool", "provenance": "portmod/prompt.py:strtobool", "provenance_ast_sha256": "483dee6020b1f8650a68c6fb7add145ff0ab45108a099fd04578c4f545e431ae", "statement": "Case-insensitively map yes, y, true, t, and 1 to true; map no, n, false, f, and 0 to false.", "examples": [{"given": {"value": "YeS"}, "expected": true}, {"given": {"value": "0"}, "expected": false}]}
+      ]
+    },
+    {
+      "id": "pyflare_numeric_cli_parsing", "project": "cresset__flare-python-pyflare", "fixture_relation": "adapted_tuple_to_json_list",
+      "files": {"numeric.py": "def float_or_two_floats(arg):\n    return arg\n\ndef bytes_to_readable(nbytes):\n    return str(nbytes)\n"},
+      "edits": [
+        {"target": "numeric.py:float_or_two_floats", "provenance": "_internal/feputil.py:float_or_two_floats", "provenance_ast_sha256": "e8b5ab92fc3404c4aff56affc82b60a3027a05e375c409abd57945339949dfca", "statement": "Parse one float as a number or exactly two comma-separated floats as a JSON list.", "examples": [{"given": {"arg": "3.5"}, "expected": 3.5}, {"given": {"arg": "1.5,2.5"}, "expected": [1.5, 2.5]}]},
+        {"target": "numeric.py:bytes_to_readable", "provenance": "sparkdbupdate.py:bytes_to_readable", "provenance_ast_sha256": "fda11e24f6d961ada3057b89badf8595700c2bfde895186097ad58685ab718a1", "statement": "Return nbytes/1000000 plus ' MB' above 2000000 bytes, nbytes/1000 plus ' kB' for other positive values, and '0 B' for zero or negative values.", "examples": [{"given": {"nbytes": 2500000}, "expected": "2.5 MB"}, {"given": {"nbytes": 1500}, "expected": "1.5 kB"}]}
+      ]
+    },
+    {
+      "id": "gims_cif_symbol_resolution", "project": "gims-developers__gims", "fixture_relation": "adapted_dependency_injection",
+      "files": {"cif_values.py": "import re\n\ndef parse_atom_symbols(labels, types):\n    return labels\n\ndef parse_symmetries(symmetry_params, sg_params, hm_groups):\n    return sg_params[1]\n"},
+      "edits": [
+        {"target": "cif_values.py:parse_atom_symbols", "provenance": "app/gims/cif.py:_parse_atom_symbols", "provenance_ast_sha256": "e84e15563729605b67d8539feec773c42d830df4becaa474750eccb8f7d31bdd", "statement": "Extract one capitalized chemical symbol with an optional lowercase letter from each type string and return the symbols in order when their count matches labels.", "examples": [{"given": {"labels": ["Si1", "O1", "O2"], "types": ["Si4+", "O2-", "O2-"]}, "expected": ["Si", "O", "O"]}]},
+        {"target": "cif_values.py:parse_symmetries", "provenance": "app/gims/cif.py:_parse_symmetries", "provenance_ast_sha256": "12e9d701fe70ee70f6bfebf33c6792eadef6108bfa96060773c8993552355e9e", "statement": "Prefer a consistent numeric space-group value from symmetry_params then sg_params and return it as an integer; otherwise normalize spaces in Hermann-Mauguin notation and resolve it through hm_groups, falling back to the notation.", "examples": [{"given": {"symmetry_params": [null, "225"], "sg_params": [null, null], "hm_groups": {}}, "expected": 225}, {"given": {"symmetry_params": ["P 1", null], "sg_params": [null, null], "hm_groups": {"P1": 1}}, "expected": 1}]}
+      ]
+    }
+  ]
+}

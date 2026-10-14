@@ -1,0 +1,32 @@
+{
+  "affected_scope": {
+    "framework_plugin_certification": "revoked",
+    "historical_evidence": "retained_immutable",
+    "role_maturity_matrix": "retained_not_certification_authority",
+    "runtime_functionality": "not_revoked"
+  },
+  "artifact_type": "FrameworkPluginCertificationReassessment",
+  "checks": {
+    "development_not_demonstrated": true,
+    "prior_certificate_is_obsolete_v1": true,
+    "prior_receipt_verified": true,
+    "role_artifacts_now_auditable": true,
+    "semantic_quality_not_demonstrated": true,
+    "semantic_reassessment_is_v2": true,
+    "unrelated_role_matrix_preserved": true
+  },
+  "failed_checks": [],
+  "next_action": "run_semantic_ground_truth_holdout",
+  "prior_certificate_digest": "sha256:a6d3e6b23b97e2dcc6022c887f6bbce7f34e4e597683cf28454412fee4361237",
+  "prior_certificate_receipt": "evidence/ledger/2b753d022452ef95039e308a6048e3c89aea7eb256a71a4d883e90106f5d0ace.json",
+  "promotion_applied": false,
+  "promotion_eligible": false,
+  "reason_codes": [
+    "constant_role_scores_without_semantic_authority",
+    "artifact_presence_mistaken_for_role_quality",
+    "verification_only_holdout_mistaken_for_project_development"
+  ],
+  "reassessment_digest": "sha256:ad53e98ce20de166b7d0787f42a8014b7f2cdae1d513c8678397970d43412072",
+  "schema_version": "framework_plugin_certification_reassessment.v1",
+  "status": "revoked"
+}

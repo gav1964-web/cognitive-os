@@ -1,0 +1,26 @@
+{
+  "artifact_type": "ThreeRouteBlindScorecard",
+  "schema_version": "three_route_blind_scorecard.v2",
+  "bundle_digest": "sha256:<blind-bundle>",
+  "judge": {
+    "id": "independent evaluator identity",
+    "independent": true,
+    "produced_route_output": false,
+    "saw_blind_key_before_scoring": false
+  },
+  "scores": [
+    {
+      "task_id": "taskXX_name",
+      "candidate_id": "candidate_<blind-id>",
+      "rubric": {
+        "requirement_coverage": 0.0,
+        "correctness": 0.0,
+        "maintainability": 0.0,
+        "evidence_quality": 0.0,
+        "safety": 0.0
+      },
+      "blocking_findings": [],
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "task_competencies.v2",
+  "competencies": [
+    "exception_pickle",
+    {
+      "capability": "learned_fix_templates",
+      "detector": {
+        "tool": "ruff",
+        "rules": ["TRY004", "G002"]
+      }
+    }
+  ]
+}

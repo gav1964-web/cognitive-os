@@ -17,13 +17,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--project-dir")
+    parser.add_argument("--active-root", help="Explicit active root inside --project-dir for mixed portfolio/snapshot roots")
     parser.add_argument("--benchmarks-dir", default="benchmarks/project_analyzer")
     parser.add_argument("--benchmark-project", default=None)
     parser.add_argument("--goal", default="Prepare ADR and TechnicalSpec for first safe transformation")
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--benchmark", action="store_true")
     parser.add_argument("--use-architect-llm", action="store_true")
-    parser.add_argument("--architect-base-url", default="http://127.0.0.1:8000/v1")
+    parser.add_argument("--architect-base-url", default="http://127.0.0.1:8200/v1")
     parser.add_argument("--architect-model", default="local")
     parser.add_argument("--architect-timeout", type=float, default=20.0)
     args = parser.parse_args()
@@ -57,6 +58,7 @@ def main() -> int:
             project_dir=project_dir.resolve(),
             goal=args.goal,
             write=args.write,
+            active_root=args.active_root,
             architect_advisory_config=advisory_config,
         )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

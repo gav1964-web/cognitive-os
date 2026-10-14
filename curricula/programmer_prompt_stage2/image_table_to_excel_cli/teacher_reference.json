@@ -1,0 +1,45 @@
+{
+  "prompt": "Напиши локальную CLI .py утилиту без обязательных внешних зависимостей: вход — путь к изображению PNG/JPG/WEBP с простой табличной сметой, выход — Excel .xlsx, .csv, legacy .xls-compatible, .html, .doc или .rtf файл с тем же базовым именем. Утилита должна извлекать строки таблицы через injectable OCR/text backend, уметь принимать уже распознанный UTF-8 текст из файла, поддерживать optional OpenAI-compatible vision/OCR backend, сохранять table output, явно обрабатывать отсутствующий файл и отсутствие OCR backend. Нужны README и pytest.",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "codex_external_corrector",
+  "expected_steps": [
+    "classify prompt as bounded image table to Excel CLI",
+    "define image path input and XLSX output contract",
+    "separate CLI, image validation, OCR/text extraction, table parsing and XLSX writing",
+    "make OCR backend injectable for deterministic tests",
+    "allow recognized text through --ocr-text-file for reproducible real-image workflows",
+    "keep live vision/OCR backend optional and environment-configured",
+    "support xlsx, csv, legacy xls-compatible, html, doc-compatible and rtf outputs",
+    "default output path uses the same image stem with the requested suffix",
+    "run project-scoped compile and pytest"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "image_table_to_excel.py",
+    "src/image_table_excel/__init__.py",
+    "src/image_table_excel/cli.py",
+    "src/image_table_excel/table_extractor.py",
+    "tests/fixtures/sample.webp",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "image table fixture is parsed through an injectable OCR backend",
+    "recognized OCR text can be supplied through a UTF-8 text file",
+    "CLI writes XLSX, CSV, legacy XLS-compatible, HTML, DOC-compatible and RTF outputs",
+    "default output path uses the same base image name with the requested suffix",
+    "missing images and unavailable OCR backend are rejected with controlled errors",
+    "real vision OCR backend is optional and not required for default tests",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "dependency_policy"
+  ]
+}
+

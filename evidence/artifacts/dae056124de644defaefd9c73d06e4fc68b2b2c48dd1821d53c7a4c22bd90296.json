@@ -1,0 +1,110 @@
+{
+  "artifact_type": "NarrowTypeHoldoutEvidence",
+  "checks": {
+    "all_required_cells_present": true,
+    "blind_inputs_durable": true,
+    "cells_promotion_eligible": true,
+    "generated_stub_gate": true,
+    "independent_evaluator": true,
+    "independent_holdout": true,
+    "inputs_digest_bound": true,
+    "lineage_disjoint": true,
+    "no_role_regression": true,
+    "role_chain_continuity": true,
+    "scores_at_promotion_target": true,
+    "stub_audit_covers_holdout": true
+  },
+  "evidence_digest": "sha256:02c89cbc3f0f24404cc607632d9210857fc3fdc1b8805e72729003f82d15ffcc",
+  "failed_checks": [],
+  "generated_stub_count": 0,
+  "holdout_provenance": {
+    "case_count": 2,
+    "selection_digest": "sha256:8e0123b301f3aae3beab3d36ece646245797a2576425469b5623f67c390234ec",
+    "source_lineages": 2,
+    "source_report_count": 4
+  },
+  "input_provenance": {
+    "blind_reports": [
+      {
+        "content_digest": "sha256:1056fb0d75afdc95852c175794feb1b554ab6a901b7bed6781810774975f0fde",
+        "entry_digest": "sha256:dd80b0d4f9a6a076425bd7156661d32a60d45236da4292ffeb90d1a7cec96b0e",
+        "receipt": "evidence/ledger/dd80b0d4f9a6a076425bd7156661d32a60d45236da4292ffeb90d1a7cec96b0e.json",
+        "verified": true
+      },
+      {
+        "content_digest": "sha256:bbda99f3051f0cd55143e7a82e65f51a0792f7ca4f456966bcd373247cd4144b",
+        "entry_digest": "sha256:165b1809a2bad609c633d5161d334d2b4314a1936ffc61a8728d01aab1b2b393",
+        "receipt": "evidence/ledger/165b1809a2bad609c633d5161d334d2b4314a1936ffc61a8728d01aab1b2b393.json",
+        "verified": true
+      },
+      {
+        "content_digest": "sha256:26b8e8c6dae84128fcf693a7f7dc0dc5e8ae226fce56f86aa0797976745a3c61",
+        "entry_digest": "sha256:a8ed073e4482ee6d17b7027068f6e0a4d4b94a0b8760a0e3f11643a9cce69156",
+        "receipt": "evidence/ledger/a8ed073e4482ee6d17b7027068f6e0a4d4b94a0b8760a0e3f11643a9cce69156.json",
+        "verified": true
+      },
+      {
+        "content_digest": "sha256:a106cfa2769e5dcda229957f3a4946bf4a5eff6f21ba09a081ea9266dbe5ebea",
+        "entry_digest": "sha256:573117fec61f7026dd2c129673b0456b1a97bc7b3929c5ec750eb75bb8fa297c",
+        "receipt": "evidence/ledger/573117fec61f7026dd2c129673b0456b1a97bc7b3929c5ec750eb75bb8fa297c.json",
+        "verified": true
+      }
+    ],
+    "evaluation": {
+      "content_digest": "sha256:142efda9423bcc74619ad60b3cf3b94b254ed36427ae1ebc422786fbe9835875",
+      "entry_digest": "sha256:0d1f782a447a97b72596bcae8578a077a2f0b9f5a940cd5f07890d54aa419e8d",
+      "input_digest": "sha256:142efda9423bcc74619ad60b3cf3b94b254ed36427ae1ebc422786fbe9835875",
+      "input_path": "F:/ubuntu/test/9/artifacts/field_trials/role_project_type_evaluation_20260904T080619771177Z.json",
+      "receipt": "evidence/ledger/0d1f782a447a97b72596bcae8578a077a2f0b9f5a940cd5f07890d54aa419e8d.json",
+      "verified": true
+    },
+    "role_pipeline": {
+      "content_digest": "sha256:9adcaf298adec3931316238761cf7fcc0c854900e18c6ed1081dd34d5909b16d",
+      "entry_digest": "sha256:5171b4f57bc61ff0724177a36a7a538c85c20b4cd114937bb8b4f4bcea001721",
+      "input_digest": "sha256:9adcaf298adec3931316238761cf7fcc0c854900e18c6ed1081dd34d5909b16d",
+      "input_path": "F:/ubuntu/test/9/artifacts/field_trials/role_pipeline_field_trial_20260904T072703557765Z.json",
+      "receipt": "evidence/ledger/5171b4f57bc61ff0724177a36a7a538c85c20b4cd114937bb8b4f4bcea001721.json",
+      "verified": true
+    },
+    "stub_audit": {
+      "content_digest": "sha256:85d2554ca561c8e4c7b697d0a18d4f50fb98027991161863fa0320ae71f2678d",
+      "entry_digest": "sha256:8948abc03510d975d6046419bff3d4cc12914cdd964d73eb2cce5dd169bc0f90",
+      "input_digest": "sha256:85d2554ca561c8e4c7b697d0a18d4f50fb98027991161863fa0320ae71f2678d",
+      "input_path": "F:/ubuntu/test/9/artifacts/verification/generated_function_stub_audit_narrow_latest.json",
+      "receipt": "evidence/ledger/8948abc03510d975d6046419bff3d4cc12914cdd964d73eb2cce5dd169bc0f90.json",
+      "verified": true
+    }
+  },
+  "lane_id": "narrow_python_owned",
+  "promotion_applied": false,
+  "role_chain_report": "F:/ubuntu/test/9/artifacts/field_trials/role_pipeline_field_trial_20260904T072703557765Z.json",
+  "schema_version": "narrow_type_holdout_evidence.v1",
+  "source_apply": false,
+  "status": "passed",
+  "stub_audit": {
+    "artifact_type": "GeneratedFunctionStubAudit",
+    "audit_digest": "sha256:e1c2ff1f5122c1a42d149e715872aa82afaea373c11ada0c8b93e6caaae4b53f",
+    "case_count": 4,
+    "checks": {
+      "all_cases_have_admission": true,
+      "all_generated_files_parse": true,
+      "cases_present": true,
+      "reports_present": true,
+      "zero_generated_function_stubs": true
+    },
+    "failed_checks": [],
+    "generated_stub_count": 0,
+    "missing_admissions": [],
+    "parse_failures": [],
+    "report_digests": {
+      "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_cli_lineage25_20260904T080559402158Z.json": "sha256:bbda99f3051f0cd55143e7a82e65f51a0792f7ca4f456966bcd373247cd4144b",
+      "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_cli_lineage26_20260904T080559365103Z.json": "sha256:1056fb0d75afdc95852c175794feb1b554ab6a901b7bed6781810774975f0fde",
+      "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_library_lineage25_20260904T080558779008Z.json": "sha256:a106cfa2769e5dcda229957f3a4946bf4a5eff6f21ba09a081ea9266dbe5ebea",
+      "F:/ubuntu/test/9/artifacts/field_trials/narrow_holdout_library_lineage26_20260904T080558918552Z.json": "sha256:26b8e8c6dae84128fcf693a7f7dc0dc5e8ae226fce56f86aa0797976745a3c61"
+    },
+    "schema_version": "generated_function_stub_audit.v1",
+    "status": "passed",
+    "violations": []
+  },
+  "target_score": 9.7
+}

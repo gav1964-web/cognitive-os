@@ -1,0 +1,30 @@
+{
+  "schema_version": "tester_curriculum.v1",
+  "project_dir": "benchmarks/project_analyzer/projects/data_pipeline_csv_json",
+  "teacher_profile": "tester",
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "expected_test_plan": {
+    "candidate": "pipeline.py:normalize_rows",
+    "writable_scope": [
+      "pipeline.py:normalize_rows"
+    ],
+    "min_contract_matrix_count": 2,
+    "min_acceptance_test_count": 4,
+    "min_negative_test_count": 2,
+    "min_smoke_count": 3,
+    "min_regression_risk_count": 1,
+    "min_executable_obligation_count": 5,
+    "dependency_external_calls": "fake_by_default"
+  },
+  "teacher_review": {
+    "project_condition": "CSV-to-JSON pipeline where Tester must keep IO helpers as context",
+    "expected_test_behavior": [
+      "test normalize_rows contract first",
+      "add malformed row/input obligations",
+      "treat load_csv/write_json as read-only regression context"
+    ],
+    "known_risks": [
+      "load_csv/write_json are filesystem context and must use fixture or tmp-path tests"
+    ]
+  }
+}

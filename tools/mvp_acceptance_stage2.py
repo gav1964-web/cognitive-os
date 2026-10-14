@@ -26,6 +26,10 @@ STAGE2_FASTAPI_KV_PROMPT = (
     "хранит данные в памяти, возвращает JSON, имеет controlled 404 для отсутствующего ключа, "
     "README, тесты и команду запуска."
 )
+STAGE2_CSV_SORT_PROMPT = (
+    "Напиши CLI-утилиту без внешних зависимостей, которая читает CSV-файл, "
+    "сортирует строки по колонке name, сохраняет CSV-файл, имеет README и тесты."
+)
 
 
 def stage2_checks(report) -> None:
@@ -85,6 +89,34 @@ def stage2_checks(report) -> None:
             "curricula/programmer_prompt_stage2",
             "--prompt",
             STAGE2_FASTAPI_KV_PROMPT,
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.verified_system_package_ok,
+    )
+    report.command(
+        "stage2_template_admission_csv_sort",
+        [
+            sys.executable,
+            "tools/stage2_template_admission.py",
+            "--root",
+            ".",
+            "--case",
+            "csv_sort_cli",
+            "--write",
+        ],
+        layers=["L4"], check=programmer_checks.stage2_template_admission_ok,
+    )
+    report.command(
+        "verified_system_package_csv_sort",
+        [
+            sys.executable,
+            "tools/verified_system_package.py",
+            "--root",
+            ".",
+            "--curriculum-dir",
+            "curricula/programmer_prompt_stage2",
+            "--prompt",
+            STAGE2_CSV_SORT_PROMPT,
             "--write",
         ],
         layers=["L4"], check=programmer_checks.verified_system_package_ok,

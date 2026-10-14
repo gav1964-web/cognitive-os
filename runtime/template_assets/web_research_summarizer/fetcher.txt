@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+from pathlib import Path
+from urllib.parse import quote, urlparse, urlunparse
+from urllib.request import Request, urlopen
+
+
+DEFAULT_USER_AGENT = 'cognitive-os-web-research-summarizer/0.1'
+
+
+def fetch_article_html(url: str, *, timeout: float = 15.0, user_agent: str = DEFAULT_USER_AGENT) -> str:
+    request = Request(_iri_to_uri(url), headers={'User-Agent': user_agent})
+    with urlopen(request, timeout=timeout) as response:
+        encoding = response.headers.get_content_charset() or 'utf-8'
+        return response.read().decode(encoding, errors='replace')
+
+
+def _iri_to_uri(url: str) -> str:
+    parsed = urlparse(url)
+    path = quote(parsed.path, safe='/%')
+    query = quote(parsed.query, safe='=&?/%:+')
+    return urlunparse((parsed.scheme, parsed.netloc.encode('idna').decode('ascii') if parsed.netloc else '', path, parsed.params, query, parsed.fragment))
+
+
+def fetch_article_from_fixture(url: str, fixture_dir: str) -> str:
+    name = (urlparse(url).path.rsplit('/', 1)[-1] or 'index.html').replace('.html', '') + '.html'
+    path = Path(fixture_dir) / name
+    if not path.is_file():
+        raise FileNotFoundError(f'missing fixture for {url}: {path}')
+    return path.read_text(encoding='utf-8')

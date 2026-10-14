@@ -1,0 +1,36 @@
+{
+  "schema_version": "system_knowledge_ir_backlog_policy.v1",
+  "status": "active",
+  "categories": {
+    "purpose": {
+      "role": "project_analyzer",
+      "severity": "medium",
+      "suggested_work": "preserve project purpose in generated README and IR seed"
+    },
+    "public_interfaces": {
+      "role": "project_analyzer",
+      "severity": "high",
+      "suggested_work": "carry route/CLI/file interfaces from IR into generated source and docs"
+    },
+    "behavior_contracts": {
+      "role": "spec_writer",
+      "severity": "high",
+      "suggested_work": "emit source-backed behavior contracts that generated project analysis can recover"
+    },
+    "architecture_slices": {
+      "role": "architect",
+      "severity": "medium",
+      "suggested_work": "compile first-slice boundaries into generated module names or docs"
+    },
+    "acceptance_tests": {
+      "role": "spec_writer",
+      "severity": "medium",
+      "suggested_work": "materialize acceptance criteria as generated contract tests"
+    },
+    "data_artifacts": {
+      "role": "project_analyzer",
+      "severity": "low",
+      "suggested_work": "copy or summarize required data artifacts with traceable names"
+    }
+  }
+}

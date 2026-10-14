@@ -7,8 +7,8 @@ from runtime.graph_planner import plan_from_spec, plan_pipeline
 from runtime.registry import CapabilityRegistry
 
 
-def test_rule_based_graph_planner_builds_executable_pipeline():
-    root = Path(__file__).resolve().parents[2]
+def test_rule_based_graph_planner_builds_executable_pipeline(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     pipeline = plan_pipeline("normalize_then_hash", registry)
@@ -21,8 +21,8 @@ def test_rule_based_graph_planner_builds_executable_pipeline():
     assert result["outputs"]["hash"]["hash"].startswith("sha256:")
 
 
-def test_graph_planner_builds_markdown_file_pipeline(tmp_path, monkeypatch):
-    root = Path(__file__).resolve().parents[2]
+def test_graph_planner_builds_markdown_file_pipeline(tmp_path, monkeypatch, runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     monkeypatch.chdir(tmp_path)
@@ -35,8 +35,8 @@ def test_graph_planner_builds_markdown_file_pipeline(tmp_path, monkeypatch):
     assert Path("out.txt").read_text(encoding="utf-8") == "Hello planner"
 
 
-def test_graph_planner_builds_markdown_to_rtf_file_pipeline(tmp_path, monkeypatch):
-    root = Path(__file__).resolve().parents[2]
+def test_graph_planner_builds_markdown_to_rtf_file_pipeline(tmp_path, monkeypatch, runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     monkeypatch.chdir(tmp_path)
@@ -51,8 +51,8 @@ def test_graph_planner_builds_markdown_to_rtf_file_pipeline(tmp_path, monkeypatc
     assert "\\b planner\\b0" in output
 
 
-def test_graph_planner_accepts_structured_goal_spec():
-    root = Path(__file__).resolve().parents[2]
+def test_graph_planner_accepts_structured_goal_spec(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     planned = plan_from_spec(
@@ -72,8 +72,8 @@ def test_graph_planner_accepts_structured_goal_spec():
     assert planned["selection"][0]["capability_id"] == "normalize_text"
 
 
-def test_graph_planner_builds_spreadsheet_file_pipelines(tmp_path, monkeypatch):
-    root = Path(__file__).resolve().parents[2]
+def test_graph_planner_builds_spreadsheet_file_pipelines(tmp_path, monkeypatch, runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     monkeypatch.chdir(tmp_path)

@@ -107,8 +107,12 @@ def _verdict(score: dict[str, Any]) -> str:
 
 
 def _programmer_evidence(patch_package: dict[str, Any], test_result: dict[str, Any]) -> dict[str, Any]:
+    synthesis = dict(patch_package.get("patch_synthesis") or {})
     return {
         "patch_count": len(patch_package.get("patches") or []),
+        "patch_synthesis_status": synthesis.get("status"),
+        "patch_synthesis_reason": synthesis.get("reason"),
+        "patch_sandbox_project": synthesis.get("sandbox_project"),
         "snapshot_count": len(patch_package.get("snapshot") or []),
         "command_summary": test_result.get("summary", {}),
         "commands": [

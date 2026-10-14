@@ -1,0 +1,11 @@
+[project]
+name = "news_site_scraper"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+browser = ["playwright>=1.40"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

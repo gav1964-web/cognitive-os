@@ -1,0 +1,358 @@
+from __future__ import annotations
+
+import base64
+import csv
+import json
+import mimetypes
+import os
+import re
+import urllib.error
+import urllib.request
+import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable
+from xml.sax.saxutils import escape
+
+
+SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+SUPPORTED_OUTPUT_EXTENSIONS = {".xlsx", ".csv", ".xls", ".html", ".doc", ".rtf"}
+HEADERS = ["Наименование", "Ед.", "Цена", "Кол-во", "Сумма"]
+
+
+@dataclass(frozen=True)
+class TableRow:
+    name: str
+    unit: str = ""
+    price: float | None = None
+    quantity: float | None = None
+    total: float | None = None
+
+
+OcrBackend = Callable[[Path], str]
+
+
+def image_table_to_excel(
+    image_path: str,
+    output_path: str | None = None,
+    *,
+    ocr_backend: OcrBackend | None = None,
+    ocr_text_file: str | None = None,
+    output_format: str = "xlsx",
+) -> dict[str, object]:
+    source = _validate_image_path(image_path)
+    target = _resolve_output_target(source, output_path, output_format)
+    text = _resolve_ocr_text(source, ocr_backend=ocr_backend, ocr_text_file=ocr_text_file)
+    rows = parse_table_text(text)
+    if not rows:
+        raise ValueError("no table rows recognized")
+    write_table_output(target, rows)
+    return {"input_path": str(source), "output_path": str(target), "rows": len(rows)}
+
+
+def parse_table_text(text: str) -> list[TableRow]:
+    rows: list[TableRow] = []
+    for raw_line in text.splitlines():
+        line = " ".join(raw_line.strip().split())
+        if not line or _is_header(line):
+            continue
+        row = _parse_line(line)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def write_xlsx(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table = [HEADERS]
+    for row in rows:
+        table.append(
+            [
+                row.name,
+                row.unit,
+                _number_or_blank(row.price),
+                _number_or_blank(row.quantity),
+                _number_or_blank(row.total),
+            ]
+        )
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", _content_types())
+        archive.writestr("_rels/.rels", _root_rels())
+        archive.writestr("xl/workbook.xml", _workbook())
+        archive.writestr("xl/_rels/workbook.xml.rels", _workbook_rels())
+        archive.writestr("xl/worksheets/sheet1.xml", _sheet_xml(table))
+
+
+def write_table_output(path: Path, rows: list[TableRow]) -> None:
+    suffix = path.suffix.lower()
+    if suffix == ".xlsx":
+        write_xlsx(path, rows)
+    elif suffix == ".csv":
+        write_csv(path, rows)
+    elif suffix == ".xls":
+        write_xls_html(path, rows)
+    elif suffix == ".html":
+        write_html(path, rows)
+    elif suffix == ".doc":
+        write_doc_html(path, rows)
+    elif suffix == ".rtf":
+        write_rtf(path, rows)
+    else:
+        raise ValueError(f"unsupported output extension: {path.suffix}")
+
+
+def write_csv(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(HEADERS)
+        for row in rows:
+            writer.writerow([row.name, row.unit, _number_or_blank(row.price), _number_or_blank(row.quantity), _number_or_blank(row.total)])
+
+
+def write_xls_html(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_html_document(rows), encoding="utf-8")
+
+
+def write_html(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_html_document(rows), encoding="utf-8")
+
+
+def write_doc_html(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_html_document(rows), encoding="utf-8")
+
+
+def write_rtf(path: Path, rows: list[TableRow]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["{\\rtf1\\ansi\\deff0", "\\b " + _rtf_escape(" | ".join(HEADERS)) + "\\b0\\par"]
+    for row in rows:
+        values = [row.name, row.unit, _number_or_blank(row.price), _number_or_blank(row.quantity), _number_or_blank(row.total)]
+        lines.append(_rtf_escape(" | ".join(str(value) for value in values)) + "\\par")
+    lines.append("}")
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _rtf_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+
+
+def _html_document(rows: list[TableRow]) -> str:
+    html_rows = [_html_row(HEADERS)]
+    for row in rows:
+        html_rows.append(
+            _html_row([row.name, row.unit, _number_or_blank(row.price), _number_or_blank(row.quantity), _number_or_blank(row.total)])
+        )
+    return (
+        "<html><head><meta charset=\"utf-8\"></head><body><table>"
+        + "".join(html_rows)
+        + "</table></body></html>"
+    )
+
+
+def _parse_line(line: str) -> TableRow | None:
+    full = re.fullmatch(
+        r"(?P<head>.+?)\s+(?P<price>\d+(?:[.,]\d+)?)\s+(?P<quantity>\d+(?:[.,]\d+)?)\s+"
+        r"(?P<total>\d{1,3}(?:\s\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)",
+        line,
+    )
+    if full:
+        head = full.group("head").split()
+        if len(head) < 2:
+            return None
+        return TableRow(
+            name=" ".join(head[:-1]),
+            unit=head[-1],
+            price=_parse_number(full.group("price")),
+            quantity=_parse_number(full.group("quantity")),
+            total=_parse_number(full.group("total")),
+        )
+    total_only = re.fullmatch(r"(?P<name>.+?)\s+(?P<total>\d{1,3}(?:\s\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)", line)
+    if total_only:
+        return TableRow(name=total_only.group("name"), total=_parse_number(total_only.group("total")))
+    return None
+
+
+def _resolve_ocr_text(
+    image_path: Path,
+    *,
+    ocr_backend: OcrBackend | None = None,
+    ocr_text_file: str | None = None,
+) -> str:
+    if ocr_backend is not None:
+        return ocr_backend(image_path)
+    if ocr_text_file:
+        text_path = Path(ocr_text_file)
+        if not text_path.is_file():
+            raise ValueError(f"OCR text file not found: {ocr_text_file}")
+        return text_path.read_text(encoding="utf-8")
+    return _default_ocr_text(image_path)
+
+
+def _resolve_output_target(source: Path, output_path: str | None, output_format: str) -> Path:
+    requested = "." + output_format.lower().lstrip(".")
+    if requested not in SUPPORTED_OUTPUT_EXTENSIONS:
+        raise ValueError(f"unsupported output format: {output_format}")
+    if output_path:
+        target = Path(output_path)
+        if target.suffix.lower() not in SUPPORTED_OUTPUT_EXTENSIONS:
+            raise ValueError(f"unsupported output extension: {target.suffix}")
+        return target
+    return source.with_suffix(requested)
+
+
+def _default_ocr_text(image_path: Path) -> str:
+    text = os.getenv("IMAGE_TABLE_OCR_TEXT")
+    if text:
+        return text
+    if os.getenv("IMAGE_TABLE_VISION_BASE_URL") and os.getenv("IMAGE_TABLE_VISION_MODEL"):
+        return _ocr_with_openai_compatible_vision(image_path)
+    raise RuntimeError(
+        "OCR backend unavailable: inject ocr_backend, pass --ocr-text-file, set IMAGE_TABLE_OCR_TEXT, "
+        "or configure IMAGE_TABLE_VISION_BASE_URL and IMAGE_TABLE_VISION_MODEL"
+    )
+
+
+def _ocr_with_openai_compatible_vision(image_path: Path) -> str:
+    payload = {
+        "model": os.environ["IMAGE_TABLE_VISION_MODEL"],
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Extract the visible estimate table from this image. Return plain text only, "
+                            "one row per line, preserving item name, unit, price, quantity and total. "
+                            "Do not add explanations or markdown."
+                        ),
+                    },
+                    {"type": "image_url", "image_url": {"url": _data_url(image_path)}},
+                ],
+            }
+        ],
+        "temperature": 0,
+    }
+    request = urllib.request.Request(
+        _chat_url(os.environ["IMAGE_TABLE_VISION_BASE_URL"]),
+        data=json.dumps(payload).encode("utf-8"),
+        headers=_headers(),
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"vision OCR backend call failed: {exc}") from exc
+    try:
+        return str(body["choices"][0]["message"]["content"]).strip()
+    except (KeyError, IndexError, TypeError) as exc:
+        raise RuntimeError("vision OCR backend returned unsupported response shape") from exc
+
+
+def _data_url(image_path: Path) -> str:
+    mime = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
+    data = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{data}"
+
+
+def _chat_url(base_url: str) -> str:
+    return base_url.rstrip("/") + "/chat/completions"
+
+
+def _headers() -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    api_key = os.getenv("IMAGE_TABLE_VISION_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _validate_image_path(path: str) -> Path:
+    image_path = Path(path)
+    if not image_path.is_file():
+        raise ValueError(f"image file not found: {path}")
+    if image_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        raise ValueError(f"unsupported image extension: {image_path.suffix}")
+    return image_path
+
+
+def _is_header(line: str) -> bool:
+    lowered = line.lower()
+    return "цена" in lowered and ("кол-во" in lowered or "количество" in lowered)
+
+
+def _is_number(value: str) -> bool:
+    return bool(re.fullmatch(r"\d+(?:[.,]\d+)?", value.replace(" ", "")))
+
+
+def _parse_number(value: str) -> float:
+    return float(value.replace(" ", "").replace(",", "."))
+
+
+def _number_or_blank(value: float | None) -> float | str:
+    return "" if value is None else value
+
+
+def _html_row(values: list[object]) -> str:
+    return "<tr>" + "".join(f"<td>{escape(str(value))}</td>" for value in values) + "</tr>"
+
+
+def _content_types() -> str:
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>"""
+
+
+def _root_rels() -> str:
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>"""
+
+
+def _workbook() -> str:
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Table" sheetId="1" r:id="rId1"/></sheets>
+</workbook>"""
+
+
+def _workbook_rels() -> str:
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>"""
+
+
+def _sheet_xml(table: list[list[object]]) -> str:
+    rows = []
+    for row_index, values in enumerate(table, start=1):
+        cells = []
+        for column_index, value in enumerate(values, start=1):
+            ref = f"{_column_name(column_index)}{row_index}"
+            if isinstance(value, (int, float)):
+                cells.append(f'<c r="{ref}"><v>{value}</v></c>')
+            else:
+                cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
+        rows.append(f'<row r="{row_index}">' + "".join(cells) + "</row>")
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        "<sheetData>" + "".join(rows) + "</sheetData></worksheet>"
+    )
+
+
+def _column_name(index: int) -> str:
+    name = ""
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        name = chr(65 + remainder) + name
+    return name

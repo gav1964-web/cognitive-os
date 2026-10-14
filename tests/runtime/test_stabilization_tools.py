@@ -11,10 +11,9 @@ from runtime.models import Pipeline, PipelineNode
 from runtime.registry import CapabilityRegistry
 
 
-def test_queue_cleanup_and_registry_selection_report_cli():
-    root = Path(__file__).resolve().parents[2]
-    shutil.rmtree(root / "artifacts" / "queue", ignore_errors=True)
-    queue = DurableQueue(root)
+def test_queue_cleanup_and_registry_selection_report_cli(runtime_workspace):
+    source = Path(__file__).resolve().parents[2]
+    queue = DurableQueue(runtime_workspace)
     pipeline = Pipeline(
         id="cleanup_hash",
         version="0.1.0",
@@ -23,24 +22,35 @@ def test_queue_cleanup_and_registry_selection_report_cli():
         retry_policy={},
     )
     job_id = queue.enqueue(pipeline, {"value": "cleanup"})
-    queue.complete(job_id, result={"status": "ok", "outputs": {}})
+    claimed = queue.claim_next("cleanup-test")
+    assert claimed is not None
+    queue.complete(
+        job_id, worker_id="cleanup-test", lease_token=claimed["lease_token"],
+        result={"status": "ok", "outputs": {}},
+    )
 
-    cleanup = _run_tool(root, "queue_cleanup.py", "--archive-terminal")
-    report = _run_tool(root, "registry_selection_report.py")
+    cleanup = _run_tool(source, runtime_workspace, "queue_cleanup.py", "--archive-terminal")
+    report = _run_tool(source, runtime_workspace, "registry_selection_report.py")
 
     assert cleanup["archived"] == [job_id]
     assert any(item["id"] == "hash_payload" for item in report["capabilities"])
 
 
-def test_runtime_smoke_skip_pytest_cli():
-    root = Path(__file__).resolve().parents[2]
-    result = _run_tool(root, "runtime_smoke.py", "--skip-pytest")
+def test_runtime_smoke_skip_pytest_cli(runtime_workspace):
+    source = Path(__file__).resolve().parents[2]
+    # Smoke includes the plugin suites. Their manifest-owned tests and editable
+    # package implementations are part of this fixture, unlike a runtime-only copy.
+    for name in ('tests', 'packages', 'skills'):
+        shutil.copytree(source / name, runtime_workspace / name,
+                        ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache'))
+    shutil.copy2(source / 'pytest.ini', runtime_workspace / 'pytest.ini')
+    result = _run_tool(source, runtime_workspace, "runtime_smoke.py", "--skip-pytest")
 
     assert result["status"] == "ok"
 
 
-def test_registry_selection_report_api():
-    root = Path(__file__).resolve().parents[2]
+def test_registry_selection_report_api(runtime_workspace):
+    root = runtime_workspace
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
 
@@ -49,9 +59,9 @@ def test_registry_selection_report_api():
     assert any(item["id"] == "normalize_text" for item in report["capabilities"])
 
 
-def _run_tool(root: Path, tool_name: str, *args: str) -> dict[str, object]:
+def _run_tool(source: Path, root: Path, tool_name: str, *args: str) -> dict[str, object]:
     result = subprocess.run(
-        [sys.executable, str(root / "tools" / tool_name), "--root", str(root), *args],
+        [sys.executable, str(source / "tools" / tool_name), "--root", str(root), *args],
         check=True,
         capture_output=True,
         text=True,

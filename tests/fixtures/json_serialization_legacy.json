@@ -1,0 +1,144 @@
+{
+  "cases": [
+    {
+      "id": "inline",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef serialize_json(value):\n    return json.dumps(value)\n\ndef write_json(path, value):\n    Path(path).write_text(serialize_json(value))\n",
+        "free_variable": "value",
+        "serialization_line": 4
+      }
+    },
+    {
+      "id": "crlf",
+      "request": {
+        "source": "import json\r\nfrom pathlib import Path\r\ndef write_json(path, value):\r\n    Path(path).write_text(json.dumps(value))\r\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": {
+        "source": "import json\r\nfrom pathlib import Path\r\ndef serialize_json(value):\r\n    return json.dumps(value)\r\n\r\ndef write_json(path, value):\r\n    Path(path).write_text(serialize_json(value))\r\n",
+        "free_variable": "value",
+        "serialization_line": 4
+      }
+    },
+    {
+      "id": "no_eof",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef serialize_json(value):\n    return json.dumps(value)\n\ndef write_json(path, value):\n    Path(path).write_text(serialize_json(value))",
+        "free_variable": "value",
+        "serialization_line": 4
+      }
+    },
+    {
+      "id": "keywords",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value, ensure_ascii=False, sort_keys=True))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef serialize_json(value):\n    return json.dumps(value, ensure_ascii=False, sort_keys=True)\n\ndef write_json(path, value):\n    Path(path).write_text(serialize_json(value))\n",
+        "free_variable": "value",
+        "serialization_line": 4
+      }
+    },
+    {
+      "id": "literal",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(42))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": null
+    },
+    {
+      "id": "two_variables",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps([value, path]))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 2
+      },
+      "patch": null
+    },
+    {
+      "id": "limit_zero",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 0
+      },
+      "patch": null
+    },
+    {
+      "id": "repeated",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n    Path(path).write_text(json.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": null
+    },
+    {
+      "id": "existing_helper",
+      "request": {
+        "source": "def serialize_json(value):\n    return value\nimport json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": null
+    },
+    {
+      "id": "invalid",
+      "request": {
+        "source": "def broken(:",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": null
+    },
+    {
+      "id": "alias",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\ndef write_json(path, value):\n    Path(path).write_text(encoder.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": null
+    },
+    {
+      "id": "async",
+      "request": {
+        "source": "import json\nfrom pathlib import Path\nasync def write_json(path, value):\n    Path(path).write_text(json.dumps(value))\n",
+        "origin_symbol": "write_json",
+        "proposed_symbol": "serialize_json",
+        "maximum_free_variables": 1
+      },
+      "patch": {
+        "source": "import json\nfrom pathlib import Path\ndef serialize_json(value):\n    return json.dumps(value)\n\nasync def write_json(path, value):\n    Path(path).write_text(serialize_json(value))\n",
+        "free_variable": "value",
+        "serialization_line": 4
+      }
+    }
+  ]
+}

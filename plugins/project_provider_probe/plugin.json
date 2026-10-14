@@ -1,0 +1,13 @@
+{
+  "id": "project_provider_probe",
+  "version": "0.1.0",
+  "entrypoint": "plugins.project_provider_probe.src.main:run",
+  "determinism_grade": "C",
+  "side_effects": {
+    "filesystem": "write_scoped",
+    "network": "allowlist",
+    "secrets": "declared"
+  },
+  "lifecycle_status": "active",
+  "version_hash": "sha256:dev"
+}

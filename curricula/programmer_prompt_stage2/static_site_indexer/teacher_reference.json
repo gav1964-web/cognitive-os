@@ -1,0 +1,39 @@
+{
+  "reference_quality": "teacher_reference_not_ground_truth",
+  "teacher_profile": "external_teacher_corrector",
+  "prompt": "Напиши CLI-индексатор статического сайта: пройти по HTML-файлам каталога, извлечь title и ссылки, сохранить JSON.",
+  "expected_steps": [
+    "clarify HTML input directory and output JSON schema",
+    "create small CLI project scaffold with package module, README and tests",
+    "define contract for file title and links",
+    "parse fixture HTML without browser or network",
+    "write deterministic JSON index",
+    "add fixture-based tests for parser and CLI behavior",
+    "run project-scoped tests and produce usage example"
+  ],
+  "expected_artifacts": [
+    "pyproject.toml",
+    "README.md",
+    "src/static_site_indexer/__init__.py",
+    "src/static_site_indexer/cli.py",
+    "src/static_site_indexer/indexer.py",
+    "tests/fixtures/index.html",
+    "tests/test_core.py",
+    "tests/test_cli.py"
+  ],
+  "acceptance_criteria": [
+    "HTML files are indexed from fixture directory",
+    "title and links are extracted",
+    "CLI writes JSON index",
+    "all tests run from generated project root"
+  ],
+  "required_capabilities": [
+    "prompt_intake",
+    "clarification_or_assumption_policy",
+    "greenfield_project_scaffold",
+    "code_file_generation",
+    "fixture_generation",
+    "project_scoped_tests",
+    "implementation_trace_capture"
+  ]
+}

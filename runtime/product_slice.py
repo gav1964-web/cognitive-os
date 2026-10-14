@@ -160,6 +160,9 @@ def _inputs_outputs(gate: dict[str, Any], package: dict[str, Any]) -> dict[str, 
     inferred = _inferred_io(str(package.get("prompt") or gate.get("prompt") or ""), system_type)
     inputs = list(goal_spec.get("inputs") or inferred["inputs"])
     outputs = list(goal_spec.get("outputs") or inferred["outputs"])
+    if system_type == "fastapi_service" and inferred["outputs"]:
+        inputs = inferred["inputs"]
+        outputs = inferred["outputs"]
     if outputs == ["file"] and inferred["outputs"]:
         outputs = inferred["outputs"]
     return {

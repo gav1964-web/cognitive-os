@@ -1,6 +1,38 @@
 {
   "capabilities": [
     {
+      "id": "append_mapping",
+      "version": "0.4.0",
+      "entrypoint": "plugins.append_mapping.src.main:run",
+      "input_schema_ref": "plugins/append_mapping/schemas/input.json",
+      "output_schema_ref": "plugins/append_mapping/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:7b952613831b27c922dcc7db555bc54493a5ba03d4c4da9c63b70980d3dc8af2",
+      "fallback_for": []
+    },
+    {
+      "id": "apply_project_change_recipe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.apply_project_change_recipe.src.main:run",
+      "input_schema_ref": "plugins/apply_project_change_recipe/schemas/input.json",
+      "output_schema_ref": "plugins/apply_project_change_recipe/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:de6b3f98ab8e5a7dcaf9ab5d9ee1e09f8608ab380e9d72fd8baa2d0880902f49",
+      "fallback_for": []
+    },
+    {
       "id": "csv_to_spreadsheet",
       "version": "0.1.0",
       "entrypoint": "plugins.csv_to_spreadsheet.src.main:run",
@@ -29,7 +61,55 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:da12787c65b825863c0a1f837c8922a2142557f823e7ccec3b4ae61a530866df",
+      "version_hash": "sha256:e6514f2da4304ab4df196dfa6b2fad8e0d90998ee5593ed419403d4e50950022",
+      "fallback_for": []
+    },
+    {
+      "id": "development_quality",
+      "version": "0.1.23",
+      "entrypoint": "plugins.development_quality.src.main:run",
+      "input_schema_ref": "plugins/development_quality/schemas/input.json",
+      "output_schema_ref": "plugins/development_quality/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:cd57bcbcaadcf0423494fcbc583110921ca8d21009a014b04a6eafb4b1a98ab9",
+      "fallback_for": []
+    },
+    {
+      "id": "learned_fix_templates",
+      "version": "0.1.0",
+      "entrypoint": "plugins.learned_fix_templates.src.main:run",
+      "input_schema_ref": "plugins/learned_fix_templates/schemas/input.json",
+      "output_schema_ref": "plugins/learned_fix_templates/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:e5edaea2350aa20a01ff33895bf25e657ca9b25e06ba37bd293793e9b8aff158",
+      "fallback_for": []
+    },
+    {
+      "id": "exception_pickle",
+      "version": "0.5.0",
+      "entrypoint": "plugins.exception_pickle.src.main:run",
+      "input_schema_ref": "plugins/exception_pickle/schemas/input.json",
+      "output_schema_ref": "plugins/exception_pickle/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:c1b1308a7f00e2cc3f90939b2491c8cfdbc41cbee25603c238f076109fdd62b6",
       "fallback_for": []
     },
     {
@@ -61,7 +141,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:9c11eaed03de6c12ea98c7f3984a6eab3ef3d4e296a4a9646696cc21a49bdd1a",
+      "version_hash": "sha256:08e1d8f06391977dadba80543ec887e7765bb437cd68dca0317349007bb476e5",
       "fallback_for": []
     },
     {
@@ -77,7 +157,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:580a9aebcad0a4da05d71725f23a4348007171c26d363e5805b1deeee082d483",
+      "version_hash": "sha256:a712f8fdfd80563f7b5b6b0aa2026d0f0dfa0b02ba8ede6eb05c72c7c2bf58c7",
       "fallback_for": []
     },
     {
@@ -145,6 +225,22 @@
       "fallback_for": []
     },
     {
+      "id": "json_parsing",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_parsing.src.main:run",
+      "input_schema_ref": "plugins/json_parsing/schemas/input.json",
+      "output_schema_ref": "plugins/json_parsing/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:90308edb1f5b87fd33b8501cf85d74852c568fd78a7f59af5babdfc7066b15c6",
+      "fallback_for": []
+    },
+    {
       "id": "json_select",
       "version": "0.1.0",
       "entrypoint": "plugins.json_select.src.main:run",
@@ -158,6 +254,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:c348e5d0f7bb1357c053fa94b013e549c56fb3988850284d10ae31ef708e9eca",
+      "fallback_for": []
+    },
+    {
+      "id": "json_serialization",
+      "version": "0.1.0",
+      "entrypoint": "plugins.json_serialization.src.main:run",
+      "input_schema_ref": "plugins/json_serialization/schemas/input.json",
+      "output_schema_ref": "plugins/json_serialization/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:304854fb68004247af9c8f086baa6361b1bf2151dae92b2284807257b8576195",
       "fallback_for": []
     },
     {
@@ -269,7 +381,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:30d707cbe694b1ffc31ae5f8b46916a2b4a099e36b3b2ff5a9298028782671a8",
+      "version_hash": "sha256:ef2be622a4cc1210564169384b3382a2e7e8166d27d86eb8e8356347c1d50f48",
       "fallback_for": []
     },
     {
@@ -307,19 +419,83 @@
       ]
     },
     {
-      "id": "project_map_report",
+      "id": "project_description",
+      "version": "0.18.0",
+      "entrypoint": "plugins.project_description.src.main:run",
+      "input_schema_ref": "plugins/project_description/schemas/input.json",
+      "output_schema_ref": "plugins/project_description/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:626d444dd975e1b65241f84314891885fb4d9456c63d2df905f0684b60511bce",
+      "fallback_for": []
+    },
+    {
+      "id": "project_fact_questions",
       "version": "0.1.0",
+      "entrypoint": "plugins.project_fact_questions.src.main:run",
+      "input_schema_ref": "plugins/project_fact_questions/schemas/input.json",
+      "output_schema_ref": "plugins/project_fact_questions/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:1af98eb9a0483de187d4653003538bc91069821600849e1b176569037ae22dc1",
+      "fallback_for": []
+    },
+    {
+      "id": "project_map_report",
+      "version": "0.2.0",
       "entrypoint": "plugins.project_map_report.src.main:run",
       "input_schema_ref": "plugins/project_map_report/schemas/input.json",
       "output_schema_ref": "plugins/project_map_report/schemas/output.json",
       "determinism_grade": "A",
       "side_effects": {
-        "filesystem": "none",
+        "filesystem": "read_only",
         "network": "none",
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:3ecd3192b5b5513614ca29d36f548e09276ea58df8593911bd851a4b7ddd57e0",
+      "version_hash": "sha256:b52dd9de9f89122bbeb39bb71837c3e4d01696f5071b6d8f3ee74f444ac76237",
+      "fallback_for": []
+    },
+    {
+      "id": "project_provider_probe",
+      "version": "0.1.0",
+      "entrypoint": "plugins.project_provider_probe.src.main:run",
+      "input_schema_ref": "plugins/project_provider_probe/schemas/input.json",
+      "output_schema_ref": "plugins/project_provider_probe/schemas/output.json",
+      "determinism_grade": "C",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "allowlist",
+        "secrets": "declared"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:3a2e6d1606b61040debb3b2477f5a8a6acca8af1d87130e8f78191daf260dce1",
+      "fallback_for": []
+    },
+    {
+      "id": "python_transform_contracts",
+      "version": "0.2.0",
+      "entrypoint": "plugins.python_transform_contracts.src.main:run",
+      "input_schema_ref": "plugins/python_transform_contracts/schemas/input.json",
+      "output_schema_ref": "plugins/python_transform_contracts/schemas/output.json",
+      "determinism_grade": "A",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:319540ad69b2935fd9cb84cf44e125c9caea298a5e098429af48cc255fa27596",
       "fallback_for": []
     },
     {
@@ -335,7 +511,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f142e8c8fb71114d24117759423f2552cffbc638b5e4e9c36b8aba1853eea764",
+      "version_hash": "sha256:28bc62d7127a0364c1bbea6748d3c89753050510a9e3218f9f9a23bac28bc9e8",
       "fallback_for": []
     },
     {
@@ -352,6 +528,22 @@
       },
       "lifecycle_status": "active",
       "version_hash": "sha256:b36bb3dde5ab9626bc3b6b3b29ef2e2881098fd52bc510f3b43e5c1c5fc64520",
+      "fallback_for": []
+    },
+    {
+      "id": "replace_text_in_project",
+      "version": "0.1.0",
+      "entrypoint": "plugins.replace_text_in_project.src.main:run",
+      "input_schema_ref": "plugins/replace_text_in_project/schemas/input.json",
+      "output_schema_ref": "plugins/replace_text_in_project/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "write_scoped",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:8a3760ea508210d740664246a12552b01e9aeb35c4e918d4a9efdf9bf467dd85",
       "fallback_for": []
     },
     {
@@ -383,7 +575,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:f6c7073072940cfa8412f9f51dcc832f9a9fab131b6d27ca104dbb77e2dedb19",
+      "version_hash": "sha256:83aed927da43539590ca98f98e794284464fb7310f53a43e06dbd8805c263c4c",
       "fallback_for": []
     },
     {
@@ -403,6 +595,22 @@
       "fallback_for": []
     },
     {
+      "id": "text_splitting",
+      "version": "0.1.0",
+      "entrypoint": "plugins.text_splitting.src.main:run",
+      "input_schema_ref": "plugins/text_splitting/schemas/input.json",
+      "output_schema_ref": "plugins/text_splitting/schemas/output.json",
+      "determinism_grade": "B",
+      "side_effects": {
+        "filesystem": "read_only",
+        "network": "none",
+        "secrets": "none"
+      },
+      "lifecycle_status": "active",
+      "version_hash": "sha256:87d5a532157b8dbc339e12709b69a2915333f8a395a770d108f01ea0299201c1",
+      "fallback_for": []
+    },
+    {
       "id": "translate_text",
       "version": "0.1.0",
       "entrypoint": "plugins.translate_text.src.main:run",
@@ -415,7 +623,7 @@
         "secrets": "none"
       },
       "lifecycle_status": "active",
-      "version_hash": "sha256:0a8fcf5a40b30f071646b8cd94fcfa182433f993d100c70f280d61066f10385c",
+      "version_hash": "sha256:c04ada235d497f342269d77ef67b0daa94d74c6f94df0fc7e54b75c1b5b761eb",
       "fallback_for": []
     },
     {

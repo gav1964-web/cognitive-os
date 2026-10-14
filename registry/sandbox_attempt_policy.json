@@ -1,0 +1,69 @@
+{
+  "artifact_type": "SandboxAttemptPolicy",
+  "schema_version": "0.1",
+  "status": "active",
+  "allowed_attempt_kinds": {
+    "existing_stage2_case": {
+      "cases": [
+        "csv_sort_cli",
+        "image_contents_cli"
+      ],
+      "requires_curriculum_reference": true
+    },
+    "bounded_adapter_recipe": {
+      "cases": [
+        "generic_file_converter_cli"
+      ],
+      "requires_curriculum_reference": false,
+      "allowed_backend_prefixes": [
+        "stdlib_"
+      ],
+      "allowed_backends": [
+        "fixture_adapter"
+      ],
+      "required_artifacts": [
+        "GenericFileConversionRecipe",
+        "LibraryBindingRecipe",
+        "AdapterImplementationPlan"
+      ]
+    }
+  },
+  "runner": {
+    "allowed": [
+      "ProgrammerProjectReview"
+    ]
+  },
+  "verification_commands": [
+    "python -m compileall -b .",
+    "python -m pytest tests -q"
+  ],
+  "allowed_operations": [
+    "create_isolated_scaffold",
+    "write_generated_package_files",
+    "write_recipe_artifacts",
+    "select_existing_adapter_backend",
+    "run_project_scoped_compileall",
+    "run_project_scoped_pytest",
+    "read_project_scoped_verification"
+  ],
+  "forbidden_operations": [
+    "edit_user_source_tree",
+    "mutate_registry",
+    "promote_kb_candidate",
+    "install_dependencies",
+    "call_network",
+    "execute_model_generated_code",
+    "run_arbitrary_shell"
+  ],
+  "required_true_invariants": [
+    "sandbox_only",
+    "existing_case_or_bounded_adapter_recipe_only",
+    "project_scoped_verification_required",
+    "llm_output_is_not_executed"
+  ],
+  "required_false_invariants": [
+    "source_tree_changes",
+    "registry_changes",
+    "kb_promotion"
+  ]
+}

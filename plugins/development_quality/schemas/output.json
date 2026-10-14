@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "required": [
+    "contract"
+  ],
+  "properties": {
+    "contract": {
+      "const": "development_quality.v1"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "artifact": {
+      "type": "object"
+    },
+    "grants_approval": {
+      "const": false
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unexplained": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "instruction": {
+      "type": "string"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "baseline_expectations": {
+      "type": "object"
+    },
+    "semantic_audit_ready": {
+      "type": "boolean"
+    },
+    "assertion_inventory": {
+      "type": "object"
+    },
+    "allowed": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

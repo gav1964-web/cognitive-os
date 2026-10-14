@@ -1,0 +1,1 @@
+<html><body><main><p>Reliable package indexes provide discovery, version metadata and distribution files for Python projects.</p><p>Teams should validate downloaded artifacts and keep dependency policy explicit before automation.</p></main></body></html>

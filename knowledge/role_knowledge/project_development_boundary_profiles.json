@@ -1,0 +1,137 @@
+{
+  "schema_version": "project_development_boundary_profiles.v1",
+  "promotion_policy": {
+    "active_kb_requires_promotion": true,
+    "minimum_projects": 3,
+    "minimum_cases": 5,
+    "minimum_blind_cases": 2,
+    "minimum_independent_reports": 2
+  },
+  "profiles": [
+    {
+      "id": "cross_reducer_ambiguity",
+      "status": "staged",
+      "priority": 50,
+      "match": {
+        "all": [
+          {
+            "source": "source_facts",
+            "path": "source_backed",
+            "operator": "eq",
+            "value": true
+          },
+          {
+            "source": "feedback",
+            "path": "reason",
+            "operator": "eq",
+            "value": "ambiguous_development_helper_extraction"
+          }
+        ]
+      },
+      "hypothesis": {
+        "status": "proposed",
+        "confidence": 0.9,
+        "experiment_kind": "architect_replan",
+        "strategy": "narrow_target_to_one_reducer_boundary"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {},
+      "evidence_state": {
+        "promotion_ready": false,
+        "deferred_until_independent_contrasts": true
+      }
+    },
+    {
+      "id": "unsupported_reducer_shape",
+      "status": "staged",
+      "priority": 10,
+      "match": {
+        "all": [
+          {
+            "source": "source_facts",
+            "path": "source_backed",
+            "operator": "eq",
+            "value": true
+          },
+          {
+            "any": [
+              {
+                "source": "feedback",
+                "path": "reason",
+                "operator": "suffix",
+                "value": "_pattern_not_proven"
+              },
+              {
+                "source": "feedback",
+                "path": "reason",
+                "operator": "eq",
+                "value": "no_unique_development_helper_extraction"
+              },
+              {
+                "source": "feedback",
+                "path": "reason",
+                "operator": "eq",
+                "value": "no_verified_failure_reducer"
+              }
+            ]
+          }
+        ]
+      },
+      "hypothesis": {
+        "status": "research_more",
+        "confidence": 0.68,
+        "experiment_kind": "bounded_research",
+        "strategy": "collect_one_positive_and_one_negative_source_shape"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {},
+      "evidence_state": {
+        "promotion_ready": false,
+        "deferred_until_shape_is_classified": true,
+        "observed_failure_kinds": [
+          "disabled_pytest_plugin_symbolic_seed_contract",
+          "exception_pickle_reconstruction_contract",
+          "server_start_readiness_cleanup_contract"
+        ],
+        "observed_projects": [
+          "pytest-httpserver",
+          "pytest-randomly",
+          "pytest-socket"
+        ],
+        "minimum_independent_projects": 3,
+        "minimum_additional_independent_projects": 0,
+        "minimum_additional_independent_contrasts_per_failure_kind": 2
+      }
+    },
+    {
+      "id": "unsupported_reducer_shape_fallback",
+      "hypothesis_kind": "unsupported_reducer_shape",
+      "status": "staged",
+      "priority": 0,
+      "fallback": true,
+      "hypothesis": {
+        "status": "knowledge_gap",
+        "confidence": 0.0,
+        "experiment_kind": "bounded_research",
+        "strategy": "resolve_source_and_reducer_evidence"
+      },
+      "required_evidence": [
+        "same_target_source_facts",
+        "positive_and_negative_shape_contrast",
+        "no_scope_expansion"
+      ],
+      "requirement_rules": {},
+      "evidence_state": {
+        "promotion_ready": false
+      }
+    }
+  ]
+}

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from runtime.executor import execute_pipeline
@@ -10,11 +8,10 @@ from runtime.registry import CapabilityRegistry
 
 
 @pytest.fixture()
-def workspace_root():
-    root = Path(__file__).resolve().parents[2]
+def workspace_root(runtime_workspace):
+    root = runtime_workspace
     CapabilityRegistry(root).reset_from_plugins()
-    yield root
-    CapabilityRegistry(root).reset_from_plugins()
+    return root
 
 
 def test_happy_path_completes_all_nodes(workspace_root):

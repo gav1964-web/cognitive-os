@@ -1,0 +1,136 @@
+{
+  "provenance": "Pre-extraction constructor output; synthetic development regression, not admission evidence.",
+  "cases": [
+    {
+      "request": {
+        "readiness": {
+          "artifact_type": "ExceptionPicklePromotionReadiness",
+          "status": "eligible_for_promotion_review",
+          "promotion_review_allowed": true,
+          "autonomous_activation_allowed": true,
+          "kb_promotion_allowed": false,
+          "evidence": {
+            "reports": [
+              {
+                "project": "used",
+                "target": "pkg.py:Used.__init__"
+              }
+            ],
+            "autonomous_reports": [
+              {
+                "project": "holdout",
+                "target": "pkg.py:HoldoutError.__init__",
+                "verified": true
+              }
+            ],
+            "supervised_verified_count": 3,
+            "autonomous_verified_count": 1
+          }
+        },
+        "evaluator": {
+          "artifact_type": "ExceptionPickleIndependentEvaluatorReview",
+          "status": "passed",
+          "evidence": {
+            "autonomous_project": "holdout"
+          },
+          "source_apply": false,
+          "kb_promotion": false
+        },
+        "holdout": {
+          "artifact_type": "ExceptionPickleHoldoutTransaction",
+          "status": "holdout_ready",
+          "holdout_project_count": 25,
+          "holdout_candidate_count": 25
+        },
+        "generated_at": "2026-09-15T00:00:00+00:00"
+      },
+      "catalog": {
+        "schema_version": "exception_pickle_reconstruction_patterns.v1",
+        "status": "active",
+        "activated_at": "2026-09-15T00:00:00+00:00",
+        "promotion_authority": "explicit_exception_pickle_promotion_transaction",
+        "operator": {
+          "id": "preserve_exception_constructor_reconstruction",
+          "status": "validated_active",
+          "hypothesis_kind": "exception_pickle_reconstruction_boundary",
+          "reconstruction_method": "__reduce__",
+          "state_strategy": "reuse_direct_assignments",
+          "applicability": {
+            "required_constructor_inputs_must_be_stored_on_self": true,
+            "maximum_required_constructor_inputs": 4,
+            "existing_reconstruction_hook_blocks": true,
+            "single_class_constructor_target": true,
+            "generated_function_stubs_forbidden": true
+          }
+        },
+        "promotion_evidence": {
+          "supervised_reports": [
+            {
+              "project": "used",
+              "target": "pkg.py:Used.__init__"
+            }
+          ],
+          "autonomous_reports": [
+            {
+              "project": "holdout",
+              "target": "pkg.py:HoldoutError.__init__",
+              "verified": true
+            }
+          ],
+          "independent_evaluator": {
+            "autonomous_project": "holdout"
+          },
+          "holdout_candidate_count": 25,
+          "holdout_project_count": 25
+        },
+        "safety": {
+          "source_apply_allowed": false,
+          "automatic_runtime_mutation_allowed": false,
+          "requires_sandbox_patch": true,
+          "requires_semantic_replay": true
+        }
+      }
+    },
+    {
+      "request": {
+        "readiness": {},
+        "evaluator": {},
+        "holdout": {},
+        "generated_at": "2026-09-15T00:00:00+00:00"
+      },
+      "catalog": {
+        "schema_version": "exception_pickle_reconstruction_patterns.v1",
+        "status": "active",
+        "activated_at": "2026-09-15T00:00:00+00:00",
+        "promotion_authority": "explicit_exception_pickle_promotion_transaction",
+        "operator": {
+          "id": "preserve_exception_constructor_reconstruction",
+          "status": "validated_active",
+          "hypothesis_kind": "exception_pickle_reconstruction_boundary",
+          "reconstruction_method": "__reduce__",
+          "state_strategy": "reuse_direct_assignments",
+          "applicability": {
+            "required_constructor_inputs_must_be_stored_on_self": true,
+            "maximum_required_constructor_inputs": 4,
+            "existing_reconstruction_hook_blocks": true,
+            "single_class_constructor_target": true,
+            "generated_function_stubs_forbidden": true
+          }
+        },
+        "promotion_evidence": {
+          "supervised_reports": [],
+          "autonomous_reports": [],
+          "independent_evaluator": {},
+          "holdout_candidate_count": null,
+          "holdout_project_count": null
+        },
+        "safety": {
+          "source_apply_allowed": false,
+          "automatic_runtime_mutation_allowed": false,
+          "requires_sandbox_patch": true,
+          "requires_semantic_replay": true
+        }
+      }
+    }
+  ]
+}

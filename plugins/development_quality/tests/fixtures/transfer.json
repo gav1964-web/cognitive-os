@@ -1,0 +1,401 @@
+[
+  {
+    "id": "chunks",
+    "cohort": "transfer",
+    "source_path": "batching.py",
+    "goal": "Improve chunks(items, size), where items is a list and size a positive integer: return consecutive list chunks of at most size items, preserving order; include a short final chunk, empty input gives [], never mutate input. No invalid-size policy required.",
+    "original": "def chunks(items, size):\n    return [items[:size]] if items else []\n",
+    "reference": "def chunks(items, size):\n    return [items[i:i+size] for i in range(0, len(items), size)]\n",
+    "mutants": [
+      "def chunks(items, size):\n    return [items[i:i+size] for i in range(0, len(items)-len(items)%size, size)]\n",
+      "def chunks(items, size):\n    return [items[i:i+size][::-1] for i in range(0, len(items), size)]\n"
+    ],
+    "checks": [
+      [
+        [
+          [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          2
+        ],
+        [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            5
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          2
+        ],
+        [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      ],
+      [
+        [
+          [],
+          3
+        ],
+        []
+      ],
+      [
+        [
+          [
+            1
+          ],
+          5
+        ],
+        [
+          [
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            1,
+            2
+          ],
+          1
+        ],
+        [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ]
+      ]
+    ],
+    "oracle": "from batching import chunks\ndef test_case_0():\n    assert chunks(*[[1, 2, 3, 4, 5], 2]) == [[1, 2], [3, 4], [5]]\ndef test_case_1():\n    assert chunks(*[[1, 2, 3, 4], 2]) == [[1, 2], [3, 4]]\ndef test_case_2():\n    assert chunks(*[[], 3]) == []\ndef test_case_3():\n    assert chunks(*[[1], 5]) == [[1]]\ndef test_case_4():\n    assert chunks(*[[1, 2], 1]) == [[1], [2]]\n",
+    "existing": "from batching import chunks\ndef test_preserved():\n    assert chunks([1,2],2) == [[1,2]]\n"
+  },
+  {
+    "id": "locale",
+    "cohort": "transfer",
+    "source_path": "localization.py",
+    "goal": "Fix choose_locale(available, requested, default=\"en\"): available is a list of locale strings unique under casefold; requested is a string. Match requested case-insensitively to an available full locale first, then its language before the first hyphen; return the original spelling from available. Otherwise return default unchanged. Empty available/requested and unknown locales use default; no input mutation.",
+    "original": "def choose_locale(available, requested, default=\"en\"):\n    return requested if requested in available else default\n",
+    "reference": "def choose_locale(available, requested, default=\"en\"):\n    lookup = {s.casefold(): s for s in available}\n    key = requested.casefold()\n    if not key:\n        return default\n    return lookup.get(key, lookup.get(key.split(\"-\",1)[0], default))\n",
+    "mutants": [
+      "def choose_locale(available, requested, default=\"en\"):\n    lookup = {s: s for s in available}\n    key = requested.casefold()\n    if not key:\n        return default\n    return lookup.get(key, lookup.get(key.split(\"-\",1)[0], default))\n",
+      "def choose_locale(available, requested, default=\"en\"):\n    lookup = {s.casefold(): s for s in available}\n    key = requested.casefold()\n    if not key:\n        return default\n    return lookup.get(key.split(\"-\",1)[0], lookup.get(key, default))\n"
+    ],
+    "checks": [
+      [
+        [
+          [
+            "PT-br",
+            "pt"
+          ],
+          "PT-BR",
+          "en"
+        ],
+        "PT-br"
+      ],
+      [
+        [
+          [
+            "fr"
+          ],
+          "fr-CA",
+          "en"
+        ],
+        "fr"
+      ],
+      [
+        [
+          [
+            "ru"
+          ],
+          "xx",
+          "en"
+        ],
+        "en"
+      ],
+      [
+        [
+          [],
+          "ru",
+          "de"
+        ],
+        "de"
+      ],
+      [
+        [
+          [
+            ""
+          ],
+          "",
+          "de"
+        ],
+        "de"
+      ]
+    ],
+    "oracle": "from localization import choose_locale\ndef test_case_0():\n    assert choose_locale(*[['PT-br', 'pt'], 'PT-BR', 'en']) == 'PT-br'\ndef test_case_1():\n    assert choose_locale(*[['fr'], 'fr-CA', 'en']) == 'fr'\ndef test_case_2():\n    assert choose_locale(*[['ru'], 'xx', 'en']) == 'en'\ndef test_case_3():\n    assert choose_locale(*[[], 'ru', 'de']) == 'de'\ndef test_case_4():\n    assert choose_locale(*[[''], '', 'de']) == 'de'\n",
+    "existing": "from localization import choose_locale\ndef test_preserved():\n    assert choose_locale([\"en\", \"ru\"],\"ru\") == \"ru\"\n"
+  },
+  {
+    "id": "window_sums",
+    "cohort": "transfer",
+    "source_path": "stream_math.py",
+    "goal": "Fix running_totals(values, window): values is a list of integers and window a positive integer. For each input index output sum of at most window most recent values, including the current one. Include partial prefix windows, [] for empty input, support negatives, keep input unchanged. No invalid-window policy required.",
+    "original": "def running_totals(values, window):\n    return [sum(values[:i+1]) for i in range(len(values))]\n",
+    "reference": "def running_totals(values, window):\n    return [sum(values[max(0,i-window+1):i+1]) for i in range(len(values))]\n",
+    "mutants": [
+      "def running_totals(values, window):\n    return [sum(values[max(0,i-window):i+1]) for i in range(len(values))]\n",
+      "def running_totals(values, window):\n    return [sum(values[max(0,i-window+1):i+1]) for i in range(window-1,len(values))]\n"
+    ],
+    "checks": [
+      [
+        [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          2
+        ],
+        [
+          1,
+          3,
+          5,
+          7
+        ]
+      ],
+      [
+        [
+          [
+            3,
+            -5,
+            2
+          ],
+          1
+        ],
+        [
+          3,
+          -5,
+          2
+        ]
+      ],
+      [
+        [
+          [
+            1,
+            2
+          ],
+          5
+        ],
+        [
+          1,
+          3
+        ]
+      ],
+      [
+        [
+          [],
+          2
+        ],
+        []
+      ]
+    ],
+    "oracle": "from stream_math import running_totals\ndef test_case_0():\n    assert running_totals(*[[1, 2, 3, 4], 2]) == [1, 3, 5, 7]\ndef test_case_1():\n    assert running_totals(*[[3, -5, 2], 1]) == [3, -5, 2]\ndef test_case_2():\n    assert running_totals(*[[1, 2], 5]) == [1, 3]\ndef test_case_3():\n    assert running_totals(*[[], 2]) == []\n",
+    "existing": "from stream_math import running_totals\ndef test_preserved():\n    assert running_totals([1,2],3) == [1,3]\n"
+  },
+  {
+    "id": "frequency",
+    "cohort": "transfer",
+    "source_path": "token_counts.py",
+    "goal": "Improve frequencies(tokens), a list of strings: ignore only exact empty strings, count case-sensitively, return (token,count) tuples ordered by descending count, with ties in first-occurrence order. Preserve whitespace-only strings and input; empty input returns [].",
+    "original": "def frequencies(tokens):\n    counts = {}\n    for token in tokens:\n        counts[token] = counts.get(token,0)+1\n    return list(counts.items())\n",
+    "reference": "def frequencies(tokens):\n    counts = {}\n    for token in tokens:\n        if token != \"\":\n            counts[token] = counts.get(token,0)+1\n    return sorted(counts.items(),key=lambda item:-item[1])\n",
+    "mutants": [
+      "def frequencies(tokens):\n    counts = {}\n    for token in tokens:\n        if token != \"\":\n            counts[token] = counts.get(token,0)+1\n    return sorted(counts.items(),key=lambda item:(-item[1],item[0]))\n",
+      "def frequencies(tokens):\n    counts = {}\n    for token in tokens:\n        token = token.casefold()\n        if token != \"\":\n            counts[token] = counts.get(token,0)+1\n    return sorted(counts.items(),key=lambda item:-item[1])\n"
+    ],
+    "checks": [
+      [
+        [
+          [
+            "z",
+            "a",
+            "a",
+            "z",
+            "b"
+          ]
+        ],
+        [
+          [
+            "z",
+            2
+          ],
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            "x",
+            "y",
+            "y"
+          ]
+        ],
+        [
+          [
+            "y",
+            2
+          ],
+          [
+            "x",
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            "A",
+            "a",
+            "A",
+            ""
+          ]
+        ],
+        [
+          [
+            "A",
+            2
+          ],
+          [
+            "a",
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            " ",
+            "",
+            " "
+          ]
+        ],
+        [
+          [
+            " ",
+            2
+          ]
+        ]
+      ],
+      [
+        [
+          []
+        ],
+        []
+      ]
+    ],
+    "oracle": "from token_counts import frequencies\ndef test_case_0():\n    assert frequencies(*[['z', 'a', 'a', 'z', 'b']]) == [('z', 2), ('a', 2), ('b', 1)]\ndef test_case_1():\n    assert frequencies(*[['x', 'y', 'y']]) == [('y', 2), ('x', 1)]\ndef test_case_2():\n    assert frequencies(*[['A', 'a', 'A', '']]) == [('A', 2), ('a', 1)]\ndef test_case_3():\n    assert frequencies(*[[' ', '', ' ']]) == [(' ', 2)]\ndef test_case_4():\n    assert frequencies(*[[]]) == []\n",
+    "existing": "from token_counts import frequencies\ndef test_preserved():\n    assert frequencies([\"x\",\"x\"]) == [(\"x\",2)]\n"
+  },
+  {
+    "id": "duration",
+    "cohort": "transfer",
+    "source_path": "clock_math.py",
+    "goal": "Fix duration_parts(seconds) for integer seconds: clamp negatives to zero; return a tuple of whole hours, remaining minutes, remaining seconds. Minutes and seconds are 0..59; hours are unbounded (do not wrap at 24). Preserve existing sub-minute behavior.",
+    "original": "def duration_parts(seconds):\n    return (0,0,seconds%60)\n",
+    "reference": "def duration_parts(seconds):\n    seconds = max(0, seconds)\n    hours, rest = divmod(seconds,3600)\n    minutes, seconds = divmod(rest,60)\n    return hours, minutes, seconds\n",
+    "mutants": [
+      "def duration_parts(seconds):\n    seconds = max(0, seconds)\n    hours, rest = divmod(seconds,3600)\n    minutes, seconds = divmod(rest,60)\n    return hours%24, minutes, seconds\n",
+      "def duration_parts(seconds):\n    seconds = abs(seconds)\n    hours, rest = divmod(seconds,3600)\n    minutes, seconds = divmod(rest,60)\n    return hours, minutes, seconds\n"
+    ],
+    "checks": [
+      [
+        [
+          3661
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      [
+        [
+          90061
+        ],
+        [
+          25,
+          1,
+          1
+        ]
+      ],
+      [
+        [
+          -5
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          60
+        ],
+        [
+          0,
+          1,
+          0
+        ]
+      ]
+    ],
+    "oracle": "from clock_math import duration_parts\ndef test_case_0():\n    assert duration_parts(*[3661]) == (1, 1, 1)\ndef test_case_1():\n    assert duration_parts(*[90061]) == (25, 1, 1)\ndef test_case_2():\n    assert duration_parts(*[-5]) == (0, 0, 0)\ndef test_case_3():\n    assert duration_parts(*[0]) == (0, 0, 0)\ndef test_case_4():\n    assert duration_parts(*[60]) == (0, 1, 0)\n",
+    "existing": "from clock_math import duration_parts\ndef test_preserved():\n    assert duration_parts(55) == (0,0,55)\n"
+  }
+]

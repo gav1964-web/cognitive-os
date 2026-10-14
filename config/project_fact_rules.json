@@ -1,0 +1,34 @@
+{
+  "schema_version": "project_fact_rules.v1",
+  "status": "active",
+  "question_answer_routes": [
+    {
+      "answer_key": "opencv_usage",
+      "markers": ["OpenCV", "cv2", "используют OpenCV", "uses OpenCV"]
+    },
+    {
+      "answer_key": "disk_work",
+      "markers": ["работа с диском", "работают с диском", "filesystem", "file system", "disk work"]
+    },
+    {
+      "answer_key": "gigachat_model_auto_selection",
+      "markers": ["автоматический выбор модели", "автовыбор модели", "auto model selection", "провайдера GigaChat"]
+    },
+    {
+      "answer_key": "llm_cache_key_recommendation",
+      "markers": ["рекомендации", "имеет ли смысл убрать", "признаки модели и провайдера", "provider и model"]
+    },
+    {
+      "answer_key": "llm_cache_sharing",
+      "markers": ["для разных LLM", "один и тот же кэш", "same cache", "shared cache"]
+    },
+    {
+      "answer_key": "llm_cache_exists",
+      "markers": ["существует ли кэш", "кэш обращений к LLM", "LLM cache exists"]
+    },
+    {
+      "answer_key": "client_connection_port",
+      "markers": ["какой порт", "порт используется", "port is used", "connection port"]
+    }
+  ]
+}

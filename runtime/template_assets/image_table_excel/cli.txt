@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+import argparse
+import sys
+
+from image_table_excel.table_extractor import image_table_to_excel
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description='Convert an image table to an Excel .xlsx workbook')
+    parser.add_argument('input')
+    parser.add_argument('output', nargs='?')
+    parser.add_argument('--format', choices=['xlsx', 'csv', 'xls', 'html', 'doc', 'rtf'], default='xlsx', help='Output format when output path is omitted')
+    parser.add_argument('--ocr-text-file', help='Read already recognized table text from UTF-8 file')
+    args = parser.parse_args(argv)
+    try:
+        result = image_table_to_excel(args.input, args.output, ocr_text_file=args.ocr_text_file, output_format=args.format)
+    except (RuntimeError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(result['output_path'])
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

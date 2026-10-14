@@ -15,6 +15,8 @@ auditable and reproducible outcomes than a direct agent route?
 
 ## Compared Routes
 
+The authoritative v2 experiment has three routes: a real direct agent, a shortened Cognitive OS chain, and the full role chain. The older two-route files remain diagnostic only. Route execution produces evidence receipts without self-assigned quality scores; an independent evaluator receives a blinded bundle and scores all candidates with one rubric before route identities are restored.
+
 ### Route A: Direct Agent Baseline
 
 ```text
@@ -152,7 +154,9 @@ These tests must not automatically rewrite the architecture. They produce keep/s
 
 ## Near-Term Next Step
 
-Create a small evaluation harness for 5-8 existing tasks first:
+The initial harness phase is complete. `evaluation/protocol_v2_manifest.json` freezes 26 tasks: 20 product tasks with at least two cases in every declared product class, plus 6 architecture ablations. Inputs are bound into the manifest; five tasks use the untouched, owner-independent selection in `evaluation/corpus_selection_v2.json`, disjoint from self-development acquisition and holdout. `evaluation/PROTOCOL_V2.md` defines receipt, secret-salted blinding and scoring commands. The next evidence step is to replace legacy proxy runs with three same-model receipts per task and obtain an independent blind scorecard. No winner, role removal or product claim exists until that evidence is complete.
+
+The original bootstrap sequence was:
 
 - one project-analysis task;
 - one sandbox project-change task;

@@ -1,0 +1,398 @@
+"""Source-isolated callable extraction for executable acceptance."""
+
+from __future__ import annotations
+
+import ast
+import copy
+import sys
+import types
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any
+
+from .executable_acceptance_ast_imports import loaded_names as _loaded_names
+from .executable_acceptance_ast_imports import needed_class_members
+from .executable_acceptance_ast_imports import needed_import_nodes as _needed_import_nodes_for_nodes
+from .executable_acceptance_callable_context import with_runtime_effect_stubs
+from .executable_acceptance_constructor_closure import constructs_owner
+from .executable_acceptance_isolation_globals import install_configured_global_fixtures, install_unresolved_wildcard_names, isolated_global_nodes, replace_configured_global_factories
+from .executable_acceptance_import_compat import configured_import_fallbacks
+from .executable_acceptance_effect_stubs import configured_effect_stubs
+from .executable_acceptance_framework_context import preload_framework_modules, with_framework_context
+from .executable_acceptance_method_fixtures import method_fixture_values
+from .executable_acceptance_method_selection import unique_method_class
+from .executable_acceptance_methods import runtime_method_name
+from .executable_acceptance_local_imports import replace_local_import_factories
+from .executable_acceptance_package_shells import fresh_local_package
+from .executable_acceptance_resource_io import read_only_open_for
+from .python_parser_compatibility import parse_compatible_source
+
+
+def load_source_isolated_function(path: Path, symbol: str) -> dict[str, Any]:
+    try:
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
+        functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        if symbol not in functions:
+            return {"callable": None, "reason": "target_not_callable"}
+        names = _isolated_function_names(functions, symbol)
+        nodes = [_strip_annotations(copy.deepcopy(functions[name])) for name in functions if name in names]
+        globals_body = isolated_global_nodes(tree, nodes, "")
+        globals_body, factory_bindings = replace_configured_global_factories(globals_body)
+        imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *nodes])
+        imports = configured_import_fallbacks(imports)
+        imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, nodes)
+        module = ast.Module(body=[*imports, *globals_body, *nodes], type_ignores=[])
+        ast.fix_missing_locations(module)
+        namespace: dict[str, Any] = _namespace_for(path)
+        namespace.update(factory_bindings)
+        namespace.update(local_factory_bindings)
+        from .executable_acceptance_policy import method_fixture_policy
+        local_stubs = symbol in set(method_fixture_policy().get("local_import_stub_functions") or [])
+        preload_framework_modules(_imported_module_names(module))
+        with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
+            effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+        configured_stubs = install_configured_global_fixtures(nodes, namespace)
+        wildcard_stubs = install_unresolved_wildcard_names(tree, nodes, namespace)
+        func = namespace.get(symbol)
+        if callable(func):
+            func = with_runtime_effect_stubs(func, set(effect_stubs))
+            func = with_framework_context(func, path)
+        return {"callable": func, "reason": "" if callable(func) else "target_not_callable", "source_path": str(path), "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs], *[f"local_factory:{name}" for name in local_factory_stubs]], "wildcard_import_stubs": wildcard_stubs}
+    except Exception as exc:
+        return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
+
+
+def load_source_isolated_callable(path: Path, symbol: str) -> dict[str, Any]:
+    loaded = load_source_isolated_function(path, symbol)
+    if not loaded.get("reason"):
+        return loaded
+    method = load_source_isolated_method(path, symbol)
+    if not method.get("reason"):
+        return method
+    return method if method.get("detail") else loaded
+
+
+def load_source_isolated_method(path: Path, symbol: str) -> dict[str, Any]:
+    try:
+        tree, _ = parse_compatible_source(path.read_text(encoding="utf-8"), str(path))
+        match = unique_method_class(tree, symbol)
+        if match is None:
+            return {"callable": None, "reason": "target_not_callable"}
+        _, separator, method_name = symbol.partition(".")
+        method_name = method_name if separator else symbol
+        class_node, method_names = match
+        runtime_symbol = runtime_method_name(class_node.name, method_name)
+        methods = {
+            node.name: node
+            for node in class_node.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        selected = _isolated_method_names(methods, method_name)
+        if "__init__" in methods and constructs_owner(methods, selected, class_node.name):
+            selected.add("__init__")
+        body = [_isolated_class_member(item) for item in needed_class_members(class_node, selected)]
+        globals_body = isolated_global_nodes(tree, body, class_node.name)
+        globals_body, factory_bindings = replace_configured_global_factories(globals_body)
+        isolated_class = ast.ClassDef(
+            name=class_node.name,
+            bases=[],
+            keywords=[],
+            body=body or [ast.Pass()],
+            decorator_list=[],
+        )
+        imports = _needed_import_nodes_for_nodes(tree, [*globals_body, *body])
+        imports = configured_import_fallbacks(imports)
+        imports, local_factory_bindings, local_factory_stubs = replace_local_import_factories(imports, body)
+        module = ast.Module(body=[*imports, *globals_body, isolated_class], type_ignores=[])
+        ast.fix_missing_locations(module)
+        namespace: dict[str, Any] = _namespace_for(path)
+        namespace.update(factory_bindings)
+        namespace.update(local_factory_bindings)
+        from .executable_acceptance_policy import method_fixture_policy
+        local_stubs = f"{class_node.name}.{method_name}" in set(method_fixture_policy().get("local_import_stub_methods") or [])
+        preload_framework_modules(_imported_module_names(module))
+        with _source_import_path(path), fresh_local_package(namespace, path), _fresh_probe_stub_modules():
+            effect_stubs = _exec_with_stubs(module, path, namespace, local_import_stubs=local_stubs)
+        configured_stubs = install_configured_global_fixtures(body, namespace)
+        wildcard_stubs = install_unresolved_wildcard_names(tree, body, namespace)
+        cls = namespace[class_node.name]
+        member = getattr(cls, runtime_symbol, None)
+        raw_attrs, attrs = method_fixture_values(class_node.name, method_name, body, selected)
+        if callable(member) and _callable_accepts_without_self(member):
+            func = member
+        else:
+            instance = object.__new__(cls)
+            for key, value in attrs.items():
+                setattr(instance, key, value)
+            func = getattr(instance, runtime_symbol, None)
+        if callable(func):
+            func = with_runtime_effect_stubs(func, set(effect_stubs))
+            func = with_framework_context(func, path)
+        return {
+            "callable": func,
+            "reason": "" if callable(func) else "target_not_callable",
+            "method": {"class_name": class_node.name, "method_name": method_name},
+            "method_instance_attributes": raw_attrs,
+            "source_isolated": True,
+            "source_isolated_method": True,
+            "source_path": str(path),
+            "method_dependencies": sorted(method_names & selected),
+            "effect_module_stubs": [*effect_stubs, *[f"configured:{name}" for name in configured_stubs], *[f"local_factory:{name}" for name in local_factory_stubs]],
+            "wildcard_import_stubs": wildcard_stubs,
+        }
+    except Exception as exc:
+        return {"callable": None, "reason": _import_failure_reason(exc), "detail": _exception_detail(exc)}
+
+
+def _isolated_function_names(functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef], symbol: str) -> set[str]:
+    selected = {symbol}
+    changed = True
+    while changed:
+        changed = False
+        for name in list(selected):
+            for loaded in _loaded_names(functions[name]):
+                if loaded in functions and loaded not in selected:
+                    selected.add(loaded)
+                    changed = True
+    return selected
+
+
+def _strip_annotations(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> ast.FunctionDef | ast.AsyncFunctionDef:
+    func_node.decorator_list = []
+    func_node.returns = None
+    for arg in list(func_node.args.posonlyargs) + list(func_node.args.args) + list(func_node.args.kwonlyargs):
+        arg.annotation = None
+    if func_node.args.vararg:
+        func_node.args.vararg.annotation = None
+    if func_node.args.kwarg:
+        func_node.args.kwarg.annotation = None
+    return func_node
+
+
+def _isolated_class_member(item: ast.AST) -> ast.AST:
+    copied = copy.deepcopy(item)
+    if isinstance(copied, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        binding_decorators = [
+            decorator
+            for decorator in copied.decorator_list
+            if isinstance(decorator, ast.Name) and decorator.id in {"classmethod", "staticmethod"}
+        ]
+        copied = _strip_annotations(copied)
+        copied.decorator_list = binding_decorators
+    return copied
+
+
+def _isolated_method_names(functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef], symbol: str) -> set[str]:
+    selected = {symbol}
+    changed = True
+    while changed:
+        changed = False
+        for name in list(selected):
+            for loaded in _self_method_names(functions[name]):
+                if loaded in functions and loaded not in selected:
+                    selected.add(loaded)
+                    changed = True
+    return selected
+
+
+def _self_method_names(node: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for item in ast.walk(node):
+        if not isinstance(item, ast.Attribute) or not isinstance(item.value, ast.Name):
+            continue
+        if item.value.id in {"self", "cls"} and isinstance(item.ctx, ast.Load):
+            names.add(item.attr)
+    return names
+
+
+def _callable_accepts_without_self(func: object) -> bool:
+    args = getattr(getattr(func, "__code__", None), "co_varnames", ())
+    count = int(getattr(getattr(func, "__code__", None), "co_argcount", 0) or 0)
+    return count == 0 or not args or args[0] not in {"self", "cls"}
+
+def _exec_with_stubs(module: ast.Module, path: Path, namespace: dict[str, Any], *, local_import_stubs: bool) -> list[str]:
+    code = compile(module, str(path), "exec")
+    installed: list[str] = []
+    if local_import_stubs:
+        _install_local_import_stubs(module, namespace)
+    _install_known_profile_modules(_imported_module_names(module))
+    with configured_effect_stubs(_imported_module_names(module)) as effect_stubs:
+        for _ in range(12):
+            try:
+                _install_lazy_loader_stub()
+                exec(code, namespace)
+                return effect_stubs
+            except ModuleNotFoundError as exc:
+                missing = str(getattr(exc, "name", "") or "")
+                if not missing or missing in installed or _is_local_missing(missing, namespace):
+                    raise
+                if _install_profile_module(missing):
+                    installed.append(missing)
+                    continue
+                _install_stub_module(missing)
+                installed.append(missing)
+        exec(code, namespace)
+        return effect_stubs
+
+
+def _imported_module_names(module: ast.Module) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(module):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module)
+    return names
+
+
+def _install_known_profile_modules(names: set[str]) -> None:
+    for name in names:
+        _install_profile_module(name)
+
+
+def _install_local_import_stubs(module: ast.Module, namespace: dict[str, Any]) -> None:
+    top = str(namespace.get("__package__") or "").split(".", 1)[0]
+    if not top:
+        return
+    for name in _imported_module_names(module):
+        if name != top and name.startswith(f"{top}."):
+            _install_stub_module(name)
+
+
+def _install_profile_module(name: str) -> bool:
+    from .executable_acceptance_materializers import materialize
+    from .executable_acceptance_policy import dependency_stub_policy
+    profile = dict(dict(dependency_stub_policy().get("generated_module_profiles") or {}).get(name) or {})
+    if not profile:
+        return False
+    _install_stub_module(name)
+    module = sys.modules[name]
+    for key, value in dict(profile.get("attrs") or {}).items():
+        setattr(module, key, materialize(value))
+    return True
+
+
+def _install_lazy_loader_stub() -> None:
+    module = sys.modules.get("lazy_loader") or types.ModuleType("lazy_loader")
+    module.attach_stub = lambda *args, **kwargs: (lambda name: _StubObject(f"lazy_loader.{name}"), lambda: [], [])
+    sys.modules["lazy_loader"] = module
+
+
+def _namespace_for(path: Path) -> dict[str, Any]:
+    package = _package_name(path)
+    return {
+        "__name__": f"{package}.__acceptance_isolated__" if package else "__acceptance_isolated__",
+        "__package__": package,
+        "open": read_only_open_for(path),
+    }
+
+
+def _package_name(path: Path) -> str:
+    names: list[str] = []
+    parent = path.resolve().parent
+    while (parent / "__init__.py").is_file():
+        names.append(parent.name)
+        parent = parent.parent
+    return ".".join(reversed(names))
+
+
+@contextmanager
+def _fresh_probe_stub_modules():
+    names = [
+        name
+        for name, module in list(sys.modules.items())
+        if module.__class__.__name__ == "_StubModule"
+        and module.__class__.__module__.endswith("executable_acceptance_loading")
+    ]
+    saved = {name: sys.modules.pop(name) for name in names}
+    baseline = set(sys.modules)
+    try:
+        yield
+    finally:
+        for name in [name for name in list(sys.modules) if name not in baseline]:
+            sys.modules.pop(name, None)
+        sys.modules.update(saved)
+
+
+def _install_stub_module(name: str) -> None:
+    parts = name.split(".")
+    for index in range(1, len(parts) + 1):
+        module_name = ".".join(parts[:index])
+        if module_name not in sys.modules:
+            module = types.ModuleType(module_name)
+            module.__path__ = []
+            module.__all__ = []
+            module.__getattr__ = lambda attr, prefix=module_name: _StubObject(f"{prefix}.{attr}")
+            if module_name == "lazy_loader":
+                module.attach_stub = lambda *args, **kwargs: (lambda name: _StubObject(f"lazy_loader.{name}"), lambda: [], [])
+            sys.modules[module_name] = module
+        if index > 1:
+            setattr(sys.modules[".".join(parts[: index - 1])], parts[index - 1], sys.modules[module_name])
+
+
+def _is_local_missing(missing: str, namespace: dict[str, Any]) -> bool:
+    package = str(namespace.get("__package__") or "")
+    return bool(package and missing.split(".", 1)[0] == package.split(".", 1)[0])
+
+
+class _StubObject:
+    def __init__(self, name: str):
+        self._name = name
+    def __call__(self, *args: Any, **kwargs: Any) -> "_StubObject": return self
+    def __iter__(self): return iter(())
+    def __bool__(self) -> bool: return False
+    def __getitem__(self, key: Any) -> "_StubObject": return _StubObject(f"{self._name}[{key!r}]")
+    def __mro_entries__(self, bases: tuple[object, ...]) -> tuple[()]: return ()
+    def __getattr__(self, name: str) -> "_StubObject": return _StubObject(f"{self._name}.{name}")
+
+
+@contextmanager
+def _source_import_path(path: Path):
+    parts = path.resolve().parts
+    entries = []
+    if "src" in parts:
+        src_index = len(parts) - 1 - list(reversed(parts)).index("src")
+        src = Path(*parts[: src_index + 1])
+        entries.append(str(src))
+        if len(parts) > src_index + 1 and parts[src_index + 1] == "python":
+            entries.insert(0, str(src / "python"))
+    package_root = _package_root(path)
+    if package_root and str(package_root) not in entries:
+        entries.append(str(package_root))
+    for entry in entries:
+        sys.path.insert(0, entry)
+    try:
+        yield
+    finally:
+        for entry in entries:
+            try:
+                sys.path.remove(entry)
+            except ValueError:
+                pass
+
+
+def _package_root(path: Path) -> Path | None:
+    parent = path.resolve().parent
+    while (parent / "__init__.py").is_file():
+        parent = parent.parent
+    return parent if parent != path.resolve().parent else None
+
+
+def _import_failure_reason(exc: Exception) -> str:
+    if isinstance(exc, ModuleNotFoundError):
+        return "import_failed_missing_module"
+    if isinstance(exc, ImportError):
+        return "import_failed_import_error"
+    return "import_failed_runtime_error"
+
+
+def _exception_detail(exc: Exception) -> str:
+    name = getattr(exc, "name", "") or ""
+    message = str(exc).splitlines()[0] if str(exc) else exc.__class__.__name__
+    if name:
+        return f"{name}: {message}"[:240]
+    return message[:240]

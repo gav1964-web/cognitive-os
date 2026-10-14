@@ -1,0 +1,210 @@
+import json
+from pathlib import Path
+from unittest.mock import patch
+
+from tools.github_blind_corpus import (
+    _checkout_ready,
+    _eligible,
+    _export_compatible_tree,
+    _project_row,
+    _repo_key,
+    _owner_key,
+    _search_stratum,
+    _search_with_gh,
+    _windows_compatible_path,
+    known_projects,
+)
+
+
+def test_known_projects_reads_frozen_release_and_hypothesis_selections(tmp_path):
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "selection.json").write_text(
+        json.dumps({"projects": [{"full_name": "Owner/Repo"}]}), encoding="utf-8"
+    )
+    hypothesis = tmp_path / "hypothesis_holdouts" / "case"
+    hypothesis.mkdir(parents=True)
+    (hypothesis / "selection.json").write_text(
+        json.dumps({"projects": [{"full_name": "Holdout/Nested"}]}), encoding="utf-8"
+    )
+
+    assert known_projects(tmp_path) == {"owner/repo", "holdout/nested"}
+
+
+def test_repo_key_excludes_cross_forge_namespace_aliases():
+    assert _repo_key("github-owner/Shared-Repo.git") == "shared-repo"
+
+
+def test_owner_key_supports_independent_lineage_gate():
+    assert _owner_key("First-Owner/repo") == "first-owner"
+
+
+def test_stratum_project_count_may_override_global_default():
+    policy = {
+        "projects_per_stratum": 1,
+        "strata": [{"id": "one", "projects": 3, "queries": ["topic:test"]}],
+    }
+
+    assert policy["strata"][0]["projects"] == 3
+
+
+def test_known_projects_includes_historical_foundation_trials(tmp_path):
+    reports = tmp_path / "field_trials"
+    reports.mkdir()
+    (reports / "role_foundation_min_field_trial_1.json").write_text(
+        json.dumps({"cases": [{"project": "Known__Project"}, {"project": "synthetic"}]}),
+        encoding="utf-8",
+    )
+
+    assert known_projects(tmp_path) == {"known/project"}
+
+
+def test_project_row_keeps_reproducibility_metadata():
+    row = _project_row(
+        {
+            "full_name": "Owner/Repo",
+            "clone_url": "https://github.com/Owner/Repo.git",
+            "stargazers_count": 123,
+            "size": 456,
+            "default_branch": "main",
+            "html_url": "https://github.com/Owner/Repo",
+            "description": "Example",
+        }
+    )
+
+    assert row["full_name"] == "Owner/Repo"
+    assert row["stars"] == 123
+    assert row["size_kb"] == 456
+
+
+def test_production_filter_rejects_learning_collections_and_keeps_services():
+    policy = {
+        "excluded_name_tokens": ["awesome", "blogs", "interview-questions", "projects", "resources", "template", "tutorial", "udacity"],
+        "excluded_description_tokens": ["course", "collection of", "curated list", "example end to end", "examples of", "interview questions"],
+        "production_signal_tokens": ["api", "service", "library"],
+    }
+
+    assert not _eligible({"full_name": "org/awesome-api", "description": "API list", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/ml", "description": "course exercises", "topics": ["library"]}, policy)
+    assert not _eligible({"full_name": "org/api-template", "description": "Production API", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/ml", "description": "Examples of ML algorithms", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/data-blogs", "description": "Data library", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/catalog", "description": "A curated list of APIs", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/data-projects", "description": "Data platform", "topics": []}, policy)
+    assert not _eligible({"full_name": "org/questions", "description": "200 interview questions", "topics": []}, policy)
+    assert _eligible({"full_name": "org/payments", "description": "Production API service", "topics": []}, policy)
+
+
+def test_production_filter_rejects_explicit_holdout_owners_case_insensitively():
+    policy = {
+        "excluded_owners": ["Prior-Owner"],
+        "production_signal_tokens": ["plugin"],
+    }
+
+    assert not _eligible(
+        {"full_name": "prior-owner/new-plugin", "description": "Production plugin", "topics": []},
+        policy,
+    )
+    assert _eligible(
+        {"full_name": "fresh-owner/new-plugin", "description": "Production plugin", "topics": []},
+        policy,
+    )
+
+
+def test_search_uses_authenticated_gh_transport_when_token_exists():
+    policy = {"minimum_stars": 1, "maximum_size_kb": 10}
+    with patch.dict("os.environ", {"GITHUB_TOKEN": "secret-token"}), patch(
+        "tools.github_blind_corpus._search_with_gh", return_value={"items": []}
+    ) as search:
+        assert _search_stratum({"queries": ["topic:sdk"]}, policy) == []
+
+    assert search.call_count == 1
+
+
+def test_search_paginates_only_until_enough_unseen_projects_exist():
+    policy = {
+        "minimum_stars": 1, "maximum_size_kb": 10, "maximum_search_pages": 3,
+        "production_signal_tokens": ["sdk"],
+    }
+    items = lambda names: {
+        "items": [
+            {"full_name": name, "clone_url": "url", "stargazers_count": 10, "size": 2,
+             "description": "production sdk", "topics": []}
+            for name in names
+        ]
+    }
+    with patch("tools.github_blind_corpus._search_page", side_effect=[items(["old/sdk"]), items(["new/sdk1", "new/sdk2"])]) as search:
+        rows = _search_stratum(
+            {"queries": ["topic:sdk"]}, policy, excluded={"old/sdk"}, needed=2
+        )
+
+    assert {row["full_name"] for row in rows} == {"old/sdk", "new/sdk1", "new/sdk2"}
+    assert search.call_count == 2
+    assert search.call_args_list[1].args[0]["page"] == "2"
+
+
+def test_search_respects_discovery_round_page_start():
+    policy = {
+        "minimum_stars": 1, "maximum_size_kb": 10,
+        "maximum_search_pages": 2, "search_page_start": 3,
+    }
+    with patch("tools.github_blind_corpus._search_page", return_value={"items": []}) as search:
+        _search_stratum({"queries": ["state registry"]}, policy, needed=1)
+
+    assert [call.args[0]["page"] for call in search.call_args_list] == ["3", "4"]
+
+
+def test_authenticated_search_does_not_put_token_in_command():
+    completed = type("Completed", (), {"returncode": 0, "stdout": '{"items": []}', "stderr": ""})()
+    with patch("subprocess.run", return_value=completed) as run:
+        assert _search_with_gh({"q": "topic:sdk", "per_page": "50"}) == {"items": []}
+
+    command = run.call_args.args[0]
+    assert "secret-token" not in " ".join(command)
+
+
+def test_sdk_stratum_keeps_multiple_integration_ecosystems():
+    policy = json.loads((Path(__file__).resolve().parents[2] / "config" / "github_blind_corpus_strata.json").read_text())
+    sdk = next(row for row in policy["strata"] if row["id"] == "sdk_integrations")
+
+    assert {"topic:aws-sdk", "topic:slack-api", "topic:mqtt-client", "topic:gitlab-api"}.issubset(sdk["queries"])
+
+
+def test_authenticated_search_retries_one_rate_limit_window():
+    limited = type("Completed", (), {"returncode": 1, "stdout": "", "stderr": "API rate limit exceeded"})()
+    success = type("Completed", (), {"returncode": 0, "stdout": '{"items": []}', "stderr": ""})()
+    with patch("subprocess.run", side_effect=[limited, success]) as run, patch("time.sleep") as sleep:
+        assert _search_with_gh({"q": "topic:cli"}) == {"items": []}
+
+    assert run.call_count == 2
+    sleep.assert_called_once_with(65)
+
+
+def test_checkout_ready_requires_clean_git_status(tmp_path):
+    completed = type("Completed", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+    with patch("subprocess.run", return_value=completed) as run:
+        assert _checkout_ready(tmp_path)
+    assert run.call_args.args[0][-2:] == ["status", "--porcelain"]
+
+
+def test_windows_compatible_path_rejects_unrepresentable_segments():
+    assert _windows_compatible_path("src/client.py")
+    assert not _windows_compatible_path("tests/@user:host.db")
+    assert not _windows_compatible_path("docs/trailing. /readme.md")
+    assert not _windows_compatible_path("src/CON.txt")
+
+
+def test_compatible_tree_export_skips_invalid_windows_paths(tmp_path):
+    completed = lambda code=0, output=b"": type(
+        "Completed", (), {"returncode": code, "stdout": output, "stderr": b""}
+    )()
+    listing = completed(output=b"src/good.py\0tests/@user:host.db\0")
+    with patch("subprocess.run", side_effect=[listing, completed(output=b"print('ok')\n")]):
+        recovery = _export_compatible_tree(tmp_path)
+
+    assert (tmp_path / "src" / "good.py").read_text() == "print('ok')\n"
+    assert recovery == {
+        "checkout_recovery": "compatible_tree_export",
+        "exported_files": 1,
+        "omitted_paths": ["tests/@user:host.db"],
+    }

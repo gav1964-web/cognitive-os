@@ -1,0 +1,105 @@
+{
+  "schema_version": "narrow_role_status.v1",
+  "status": "evidence_required",
+  "recorded_at": "2026-09-08",
+  "project_types": ["cli_local_tool", "library_pure_transform"],
+  "target_score": 9.7,
+  "authority_view": {
+    "evaluation_split": "owner_independent_unseen_transfer",
+    "scores": {
+      "project_analyzer": 8.0,
+      "architect": 5.0,
+      "spec_writer": 6.0,
+      "implementer": 4.0,
+      "tester": 0.0,
+      "reviewer": 2.0
+    },
+    "gaps_to_target": {
+      "project_analyzer": 1.7,
+      "architect": 4.7,
+      "spec_writer": 3.7,
+      "implementer": 5.7,
+      "tester": 9.7,
+      "reviewer": 7.7
+    },
+    "source": "config/narrow_type_transfer_results_20260908.json",
+    "certification_granted": false
+  },
+  "known_case_diagnostic_view": {
+    "evaluation_split": "consumed_training_replay",
+    "projects": 6,
+    "scores": {
+      "project_analyzer": 9.4,
+      "architect": 8.5,
+      "spec_writer": 8.5,
+      "implementer": 9.0,
+      "tester": 8.8,
+      "reviewer": 8.8
+    },
+    "structural_scores": {
+      "project_analyzer": 10.0,
+      "architect": 10.0,
+      "spec_writer": 10.0,
+      "implementer": 10.0,
+      "tester": 10.0,
+      "reviewer": 10.0
+    },
+    "latest_case": "config/historical_defect_acquisition_invoke_20260908.json",
+    "certification_authority": false
+  },
+  "fresh_holdout_view": {
+    "campaigns": 2,
+    "projects_executed": 8,
+    "qualified_defects": 0,
+    "clean_projects": 3,
+    "environment_blocked_projects": 5,
+    "role_scores_changed": false,
+    "sources": [
+      "config/narrow_type_fresh_holdout_results_20260908.json",
+      "config/narrow_type_fresh_holdout_results_20260908_b.json"
+    ]
+  },
+  "next_role_sequence": [
+    {
+      "order": 1,
+      "role": "project_analyzer",
+      "objective": "Qualify fresh owner-independent defects and bind exact project identity, active source and one causal production target."
+    },
+    {
+      "order": 2,
+      "role": "architect",
+      "objective": "Produce a source-backed causal mechanism, alternatives, impact map and bounded repair design for each fresh target."
+    },
+    {
+      "order": 3,
+      "role": "spec_writer",
+      "objective": "Translate the selected repair into an executable mutation contract with preserved behavior and explicit replay/regression gates."
+    },
+    {
+      "order": 4,
+      "role": "implementer",
+      "objective": "Synthesize one sandbox-only delta from an admitted deterministic reducer or reviewed bounded hypothesis."
+    },
+    {
+      "order": 5,
+      "role": "tester",
+      "objective": "Run the original failure, neighboring contract checks, native regression and generated-stub/source-scope gates."
+    },
+    {
+      "order": 6,
+      "role": "reviewer",
+      "objective": "Compare the outcome with the baseline contract and reject target drift, partial verification or unsupported promotion."
+    }
+  ],
+  "next_evidence_gate": {
+    "qualified_fresh_defects_per_project_type": 2,
+    "owner_independence_required": true,
+    "previously_unknown_failure_mechanism_required": true,
+    "full_role_artifacts_required": true,
+    "sandbox_change_required": true,
+    "targeted_and_regression_verification_required": true,
+    "generated_function_stubs_allowed": false,
+    "source_apply": false,
+    "automatic_promotion": false
+  }
+}

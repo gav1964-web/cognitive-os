@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +19,11 @@ class AcceptanceReport:
         self.results: list[dict[str, Any]] = []
 
     def command(self, name: str, command: list[str], *, layers: list[str], check: Check) -> dict[str, Any]:
-        proc = subprocess.run(command, cwd=self.root, capture_output=True, text=True)
+        temp_dir = self.root / ".pytest-tmp" / "mvp" / name
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env.update({"TMP": str(temp_dir), "TEMP": str(temp_dir), "TMPDIR": str(temp_dir)})
+        proc = subprocess.run(command, cwd=self.root, env=env, capture_output=True, text=True)
         payload = json_or_empty(proc.stdout)
         passed, detail = check(
             {

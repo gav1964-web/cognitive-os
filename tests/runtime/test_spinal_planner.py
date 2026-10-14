@@ -9,15 +9,14 @@ from runtime.spinal_planner import adapt_from_interrupt_packet, plan_from_intent
 from runtime.spinal_quality import score_spinal_result
 
 
-def _registry() -> CapabilityRegistry:
-    root = Path(__file__).resolve().parents[2]
+def _registry(root: Path) -> CapabilityRegistry:
     registry = CapabilityRegistry(root)
     registry.reset_from_plugins()
     return registry
 
 
-def test_spinal_planner_builds_deterministic_motor_plan() -> None:
-    registry = _registry()
+def test_spinal_planner_builds_deterministic_motor_plan(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     intent = intent_packet(
         correlation_id="goal_spinal_1",
         intent="NORMALIZE_AND_HASH",
@@ -35,12 +34,14 @@ def test_spinal_planner_builds_deterministic_motor_plan() -> None:
     assert result["motor_plan_packet"]["packet_type"] == "MOTOR_PLAN"
     assert result["motor_plan_packet"]["payload"]["capability_chain"] == ["normalize_text", "hash_payload"]
     assert result["motor_plan_packet"]["payload"]["execution_policy"]["execute_plugins"] is False
+    assert result["selection_diagnostics"]["summary"]["active"] > 0
+    assert result["selection_diagnostics"]["schema_policy"]
     assert result["signal_packet"]["payload"]["signals"][0]["type"] == "MOTOR_PLAN_READY"
     assert score_spinal_result(result, registry)["passed"] is True
 
 
-def test_spinal_planner_uses_llm_only_as_validated_proposal() -> None:
-    registry = _registry()
+def test_spinal_planner_uses_llm_only_as_validated_proposal(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     intent = intent_packet(
         correlation_id="goal_spinal_2",
         intent="CUSTOM_CHAIN",
@@ -81,17 +82,23 @@ def test_spinal_planner_uses_llm_only_as_validated_proposal() -> None:
     assert result["status"] == "planned"
     assert result["planner"] == "local_llm_graph_planner"
     assert result["pipeline"]["id"] == "llm_select_hash"
+    assert result["selection_diagnostics"]["llm_fallback"]["authority"] == "proposal_only_validated_by_pipeline_dsl"
     assert result["motor_plan_packet"]["payload"]["validation"]["pipeline_dsl_validated"] is True
     assert score_spinal_result(result, registry)["passed"] is True
 
 
-def test_spinal_planner_turns_interrupt_into_motor_signal() -> None:
-    registry = _registry()
+def test_spinal_planner_turns_interrupt_into_motor_signal(runtime_workspace) -> None:
+    registry = _registry(runtime_workspace)
     interrupt = interrupt_packet(
         correlation_id="goal_spinal_3",
         interrupt={
+            "type": "CRITICAL_INTERRUPT",
+            "pipeline_id": "fetch_pipeline",
+            "failed_node_id": "fetch",
             "error_class": "transient",
             "capability_id": "fetch_html",
+            "error_fingerprint": {"exception_type": "TimeoutError", "traceback_hash": "test"},
+            "state_ref": "checkpoint_test",
             "capability_status": "active",
             "suggested_actions": [],
         },

@@ -1,0 +1,15 @@
+{
+  "artifact": "evidence/artifacts/2b061ac9ae2e64cc0e7b96c512357b7c74c08c1986b8c00699e1d744e421c056.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:2b061ac9ae2e64cc0e7b96c512357b7c74c08c1986b8c00699e1d744e421c056",
+  "entry_digest": "sha256:881aa221306e21bca1c0ced74d38e8e25a761d1ce36f1cae035b0460db547e2f",
+  "evaluator_fingerprint": "certification-boundary-evaluator:v1",
+  "producer_fingerprint": "experiment-queue:v1",
+  "replay_command": [
+    "python",
+    "tools/self_development_experiment_queue.py"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/self_development_experiment_queue_20260906T053725456599Z.json",
+  "status": "promoted"
+}

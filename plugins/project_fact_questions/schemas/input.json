@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "required": ["tree", "python_structure"],
+  "properties": {
+    "tree": { "type": "object" },
+    "python_structure": { "type": "object" },
+    "project_map_report": { "type": "object" },
+    "scope": {
+      "type": "string",
+      "enum": ["all", "active_core"]
+    },
+    "questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

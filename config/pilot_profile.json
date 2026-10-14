@@ -1,0 +1,76 @@
+{
+  "schema_version": "cognitive_os_pilot_profile.v1",
+  "profile_id": "deterministic_filesystem_read_pilot",
+  "allowed_project_strata": [
+    "cli_local_tool",
+    "library_pure_transform",
+    "data_tabular_pipeline",
+    "framework_plugin_build"
+  ],
+  "allowed_modes": ["analysis_only", "sandbox_patch"],
+  "allowed_effect_modes": ["pure", "filesystem_read", "sandbox_only"],
+  "prohibited_risk_profiles": [
+    "network",
+    "subprocess",
+    "stateful",
+    "concurrent",
+    "provider_llm"
+  ],
+  "target_scoped_admission": {
+    "enabled": true,
+    "waivable_project_risks": ["stateful"],
+    "minimum_repeat_count": 2,
+    "forbidden_call_names": [
+      "open",
+      "write",
+      "write_text",
+      "write_bytes",
+      "unlink",
+      "rename",
+      "mkdir",
+      "rmdir",
+      "system",
+      "popen",
+      "run",
+      "call",
+      "check_call",
+      "check_output",
+      "connect",
+      "send",
+      "request",
+      "urlopen",
+      "commit",
+      "execute"
+    ],
+    "allowed_transitive_effects": ["filesystem_read"],
+    "transitive_effect_max_depth": 3,
+    "transitive_effect_max_files": 80,
+    "source_apply_allowed": false
+  },
+  "required_roles": [
+    "project_analyzer",
+    "architect",
+    "spec_writer",
+    "implementer_planner",
+    "programmer_executor",
+    "tester",
+    "reviewer"
+  ],
+  "transfer_gate": {
+    "minimum_blind_projects": 2,
+    "minimum_independent_lineages": 2,
+    "maximum_handoff_loss": 0,
+    "reviewer_adversarial_required": true
+  },
+  "telemetry_gate": {
+    "minimum_reviewed_runs": 5,
+    "minimum_first_pass_rate": 0.8,
+    "maximum_handoff_loss": 0,
+    "maximum_pending_reviews": 0
+  },
+  "source_apply": {
+    "allowed": false,
+    "human_approval_required": true,
+    "digest_binding_required": true
+  }
+}

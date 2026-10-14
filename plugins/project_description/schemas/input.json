@@ -1,0 +1,571 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_root"
+  ],
+  "properties": {
+    "review_context_profile": {
+      "enum": ["default", "expanded"]
+    },
+    "project_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action": {
+      "enum": [
+        "collect",
+        "read",
+        "review",
+        "claim_review",
+        "claim_review_v2",
+        "claim_review_v3",
+        "claim_review_v4",
+        "normalize",
+        "grounding",
+        "return_flags",
+        "mechanism_review",
+        "return_property",
+        "api_contracts",
+        "behavior_checks"
+      ]
+    },
+    "requests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "start_line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "end_line": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "root",
+        "sources"
+      ],
+      "properties": {
+        "root": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 33,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "path",
+              "sha256",
+              "excerpt"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "excerpt": {
+                "type": "string"
+              },
+              "authority": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "evidence_ids"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "claim_id",
+          "action",
+          "reason",
+          "evidence_ids"
+        ],
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "retained",
+              "rephrased",
+              "removed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "review_evidence": {
+      "type": "object",
+      "required": [
+        "root",
+        "sources"
+      ],
+      "properties": {
+        "root": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 33,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "path",
+              "sha256",
+              "excerpt"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "excerpt": {
+                "type": "string"
+              },
+              "authority": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "claim_result": {
+      "type": "object"
+    },
+    "coverage_requirements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "description_result": {},
+    "return_flag_analysis": {
+      "type": "object"
+    },
+    "return_property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "symbol",
+        "claim_start",
+        "claim_end",
+        "kind"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "claim_start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "claim_end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "normal_return_field_true",
+            "describes_diagnostic",
+            "normal_return_for_inputs",
+            "return_field_equals_for_inputs"
+          ]
+        },
+        "inputs": {
+          "type": "object",
+          "maxProperties": 6,
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "expected": {
+          "type": [
+            "string",
+            "boolean",
+            "null"
+          ],
+          "maxLength": 100
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "normal_return_for_inputs"
+            }
+          },
+          "required": [
+            "inputs"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "field"
+                ]
+              },
+              {
+                "required": [
+                  "expected"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "normal_return_field_true",
+                "describes_diagnostic"
+              ]
+            }
+          },
+          "required": [
+            "field"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "inputs"
+                ]
+              },
+              {
+                "required": [
+                  "expected"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "return_field_equals_for_inputs"
+            }
+          },
+          "required": [
+            "inputs",
+            "field",
+            "expected"
+          ]
+        }
+      ]
+    },
+    "behavior_checks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "read"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "requests"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "review"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "claim_review"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "claim_review_v2"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "claim_review_v3"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "claim_review_v4"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "return_flags"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "requests"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "mechanism_review"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims",
+          "return_flag_analysis"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "return_property"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "claims",
+          "return_property"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "api_contracts"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence",
+          "requests"
+        ]
+      }
+    }
+  ]
+}

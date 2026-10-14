@@ -1,0 +1,16 @@
+{
+  "artifact": "evidence/artifacts/853e3db5f50797ce800f79cc2f453141e3be59e3d9d889f5f8ac4fc4fd9d2cd1.json",
+  "artifact_type": "PromotedEvidenceLedgerEntry",
+  "content_sha256": "sha256:853e3db5f50797ce800f79cc2f453141e3be59e3d9d889f5f8ac4fc4fd9d2cd1",
+  "entry_digest": "sha256:6f3834dad93e64ff05e983cf1be6769f033e5211d3ab7203503a81b7a39e5be8",
+  "evaluator_fingerprint": "corpus-eligibility-evaluator:v1",
+  "producer_fingerprint": "challenge-campaign:v1",
+  "replay_command": [
+    "python",
+    "tools/self_development_challenge_campaign.py",
+    "manifest"
+  ],
+  "schema_version": "evidence_ledger_entry.v1",
+  "source": "artifacts/self_development/self_development_challenge_manifest_20260906T052304784765Z.json",
+  "status": "promoted"
+}

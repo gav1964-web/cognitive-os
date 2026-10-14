@@ -1,0 +1,142 @@
+{
+  "schema_version": "sandbox_programmer_profiles.v1",
+  "status": "active",
+  "profiles": {
+    "text_expression": {
+      "expression_policy": "text_expression_required",
+      "graph_family": "file_to_file_text",
+      "parser": "utf8_text",
+      "parser_output": "text",
+      "admission_shape": "input_output_files"
+    },
+    "operation_composition": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "composition_input",
+      "parser_output": "intermediate",
+      "admission_shape": "input_output_files"
+    },
+    "line_sort": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "utf8_text",
+      "parser_output": "text",
+      "admission_shape": "input_output_files"
+    },
+    "line_unique": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "utf8_text",
+      "parser_output": "text",
+      "admission_shape": "input_output_files"
+    },
+    "csv_row_count": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "csv_sort_first_column": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "csv_select_first_two_columns": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "csv_filter_first_column_nonempty": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "csv_sum_second_column": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "csv_to_json_records": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "html_table_to_csv": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "csv_or_html_table_stdlib",
+      "parser_output": "table_rows",
+      "admission_shape": "input_output_files"
+    },
+    "json_extract_first_key": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "json_stdlib",
+      "parser_output": "json_value",
+      "transform_output": "utf8_text",
+      "admission_shape": "input_output_files"
+    },
+    "json_keys": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "json_stdlib",
+      "parser_output": "json_value",
+      "admission_shape": "input_output_files"
+    },
+    "json_pretty": {
+      "expression_policy": "no_expression",
+      "graph_family": "file_to_file_text",
+      "parser": "json_stdlib",
+      "parser_output": "json_value",
+      "admission_shape": "input_output_files"
+    },
+    "numeric_args_sum": {
+      "expression_policy": "no_expression",
+      "graph_family": "numeric_args_stdout",
+      "admission_shape": "numeric_args_stdout"
+    },
+    "numeric_args_expression": {
+      "expression_policy": "numeric_expression_required",
+      "graph_family": "numeric_args_stdout",
+      "admission_shape": "numeric_args_stdout"
+    },
+    "numeric_args_file_expression": {
+      "expression_policy": "numeric_expression_required",
+      "graph_family": "numeric_args_file",
+      "admission_shape": "numeric_args_file"
+    },
+    "stdin_text_expression": {
+      "expression_policy": "text_expression_required",
+      "graph_family": "stdin_stdout_text",
+      "admission_shape": "stdin_stdout"
+    },
+    "stdin_file_text_expression": {
+      "expression_policy": "text_expression_required",
+      "graph_family": "stdin_file_text",
+      "admission_shape": "stdin_file"
+    },
+    "file_stdout_text_expression": {
+      "expression_policy": "text_expression_required",
+      "graph_family": "file_stdout_text",
+      "admission_shape": "file_stdout"
+    }
+  },
+  "text_expression_policy": {
+    "allowed_names": ["text", "str", "len"],
+    "allowed_methods": ["upper", "lower", "split", "splitlines", "strip", "join"]
+  },
+  "numeric_expression_policy": {
+    "allowed_names": ["a", "b", "c", "d", "e"]
+  }
+}

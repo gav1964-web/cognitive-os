@@ -1,0 +1,58 @@
+{
+  "source_receipt_digest": "sha256:d694561d15bdea2b56e87450d229e4fc00fb64ee1fdb0a0b488fbb7e6b066a49",
+  "source": "import gzip\ndef encode(data, compressed=False):\n    raw = data.encode('utf-8')\n    if compressed:\n        return gzip.compress(raw)\n    return raw\n",
+  "claim": "Текст кодируется в UTF-8, а результат всегда сжимается gzip.",
+  "response": {
+    "parts": [
+      {
+        "text": "Текст кодируется в UTF-8,",
+        "verdict": "supported",
+        "reason": "В функции encode() явно вызывается data.encode('utf-8'), что соответствует кодированию текста в UTF-8.",
+        "citations": [
+          {
+            "source_id": "s1",
+            "quote": "raw = data.encode('utf-8')"
+          }
+        ]
+      },
+      {
+        "text": "а результат всегда сжимается gzip.",
+        "verdict": "refuted",
+        "reason": "Функция encode() сжимает результат gzip только при условии compressed=True. При вызове с compressed=False или по умолчанию (так как compressed=False) она возвращает несжатые данные. Утверждение 'всегда' неверно.",
+        "citations": [
+          {
+            "source_id": "s1",
+            "quote": "if compressed:\n        return gzip.compress(raw)\n    return raw"
+          }
+        ]
+      }
+    ],
+    "coverage": {
+      "scope": {
+        "status": "contradicted",
+        "reason": "Утверждение о том, что результат 'всегда' сжимается, противоречит видимому коду, где сжатие происходит только при условии compressed=True.",
+        "citations": [
+          {
+            "source_id": "s1",
+            "quote": "if compressed:\n        return gzip.compress(raw)\n    return raw"
+          }
+        ]
+      },
+      "bindings": {
+        "status": "shown",
+        "reason": "Связь между заявленным поведением (кодирование UTF-8 и сжатие gzip) и реализацией в функции encode() установлена: кодирование выполняется через data.encode('utf-8'), а сжатие — через gzip.compress.",
+        "citations": [
+          {
+            "source_id": "s1",
+            "quote": "raw = data.encode('utf-8')"
+          },
+          {
+            "source_id": "s1",
+            "quote": "return gzip.compress(raw)"
+          }
+        ]
+      }
+    },
+    "proposed_text": null
+  }
+}

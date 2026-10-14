@@ -2,6 +2,7 @@
   "id": "detect_project_stack",
   "version": "0.1.0",
   "entrypoint": "plugins.detect_project_stack.src.main:run",
+  "implementation_packages": ["cognitive_inspect"],
   "determinism_grade": "B",
   "side_effects": {
     "filesystem": "read_only",

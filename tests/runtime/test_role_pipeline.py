@@ -22,12 +22,18 @@ def test_role_pipeline_returns_next_action(tmp_path):
     assert result["next_action"] in {"run_project_transform", "review_risks_then_run_project_transform", "rework_role_artifacts"}
     assert result["safety"]["source_code_changes"] is False
     assert result["safety"]["llm_invoked"] is False
+    assert result["safety"]["l4_5_required"] is False
     assert result["safety"]["foundry_invoked"] is False
+    assert result["cognitive_control_plane"]["layer"] == "L4.0"
+    assert result["cognitive_control_plane"]["role_transition"]["next_action"] == result["next_action"]
     assert result["architect_advisory"]["source"] == "deterministic"
     assert result["transform"]["status"] == "skipped"
     assert Path(result["report_path"]).exists()
     assert Path(result["human_documents"]["architecture_analysis"]).exists()
+    assert Path(result["human_documents"]["technical_spec"]).exists()
     assert result["artifacts"]["review_findings"]["artifact_type"] == "ReviewFindings"
+    assert result["artifacts"]["programmer_task_tree"]["artifact_type"] == "ProgrammerTaskTree"
+    assert result["artifacts"]["programmer_task_tree"]["role"] == "task_tree_builder"
 
 
 def test_role_pipeline_cli_writes_report():
@@ -42,6 +48,7 @@ def test_role_pipeline_cli_writes_report():
             "benchmarks/project_analyzer/projects/simple_cli_tool",
             "--goal",
             "Extract first safe capability",
+            "--no-role-llm",
             "--write",
         ],
         check=True,
@@ -52,9 +59,19 @@ def test_role_pipeline_cli_writes_report():
 
     assert payload["status"] == "ok"
     assert Path(payload["report_path"]).exists()
+    assert Path(payload["human_documents"]["technical_spec"]).exists()
 
 
-def test_role_pipeline_can_run_transform():
+def test_role_pipeline_can_run_transform(tmp_path, monkeypatch):
+    from runtime.extraction_proposal import write_foundry_spec
+    # Keep the actual writer and candidate validation, but isolate its spec output
+    # from maintained generated/specs (including platform newline changes).
+    def isolated_spec(_root, spec):
+        return write_foundry_spec(tmp_path, spec)
+    monkeypatch.setattr('runtime.extraction_proposal.write_foundry_spec', isolated_spec)
+    monkeypatch.setattr('runtime.transformation_flow.write_foundry_spec', isolated_spec)
+    maintained_spec = ROOT / 'generated/specs/simple_cli_tool_normalize_text.json'
+    before = maintained_spec.read_bytes() if maintained_spec.exists() else None
     project_dir = ROOT / "benchmarks" / "project_analyzer" / "projects" / "simple_cli_tool"
 
     result = run_role_pipeline(
@@ -70,6 +87,8 @@ def test_role_pipeline_can_run_transform():
     assert result["safety"]["foundry_invoked"] is True
     assert result["transform"]["status"] == "promotion_ready"
     assert Path(result["transform"]["candidate_path"]).exists()
+    assert Path(result['transform']['spec_path']).is_relative_to(tmp_path)
+    assert (maintained_spec.read_bytes() if maintained_spec.exists() else None) == before
 
 
 def test_role_pipeline_architect_llm_fallback():
@@ -85,5 +104,7 @@ def test_role_pipeline_architect_llm_fallback():
 
     assert result["status"] == "ok"
     assert result["safety"]["llm_invoked"] is False
+    assert result["safety"]["l4_5_required"] is True
     assert result["safety"]["foundry_invoked"] is False
     assert result["architect_advisory"]["source"] == "deterministic_fallback"
+    assert "report_path" not in result

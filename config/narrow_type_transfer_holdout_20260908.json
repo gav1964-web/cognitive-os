@@ -1,0 +1,64 @@
+{
+  "schema_version": "narrow_type_transfer_holdout.v1",
+  "evaluation_split": "owner_independent_unseen_defect_transfer",
+  "frozen_at": "2026-09-08T06:25:00+03:00",
+  "holdout_consumed": true,
+  "consumed_at": "2026-09-08T03:27:18+00:00",
+  "result_manifest": "config/narrow_type_transfer_results_20260908.json",
+  "cases": [
+    {
+      "id": "rich_test_card_render_contract",
+      "project": "rich",
+      "project_stratum": "library_pure_transform",
+      "source_owner": "Textualize",
+      "source_url": "https://github.com/Textualize/rich",
+      "base_revision": "9d8f9a372cc5916fd4781fec207ced7ddac2f08f",
+      "project_root": "benchmarks/github_fresh_40g_20260805/rich",
+      "failure_intake": "artifacts/field_trials/project_native_failure_intake_20260829T175706204509Z.json",
+      "failure_intake_digest": "sha256:1d41ab013b02e3b48b514d5e91a05c11c04fc5803051d214b2d50c846c23a8de",
+      "failure_signature": "c1c1a33d2b91f60c8d73f7d25f7b1362590a2a4042bf82ae4a6b08cca9c21182",
+      "test_target": "tests/test_card.py::test_card_render",
+      "code_target": "rich/__main__.py:make_test_card",
+      "frozen_project_digest": "40e557dfd061db347c2af0157640c2ea750ae63ac30a9b944478cb2016dbbf17"
+    },
+    {
+      "id": "click_strict_default_equality",
+      "project": "click_strict_default_eq",
+      "project_stratum": "cli_local_tool",
+      "source_owner": "pallets",
+      "source_url": "https://github.com/pallets/click",
+      "base_revision": "04ef3a6f473deb2499721a8d11f92a7d2c0912f2",
+      "project_root": "benchmarks/github_historical_prefixed_20260829/click_strict_default_eq",
+      "failure_intake": "artifacts/field_trials/project_native_failure_intake_20260830T053246325123Z.json",
+      "failure_intake_digest": "sha256:f952f1c7e96216d087ce7345cdf19f278b0480cf82ae814b13f1c94fe6ea2155",
+      "failure_signature": "121692dc44b5ac5786624c3627ee9830b3afdfe0ff99a0bffd14ea986b4344a8",
+      "test_target": "tests/test_options.py::test_show_default_with_empty_string[non-string-comparable-object]",
+      "code_target": "src/click/core.py:Option.get_help_extra",
+      "frozen_project_digest": "c90fb6e3a7bb2aef243cd3b85e02cf8de8952611fd26093c3c515646a4df9d9c"
+    },
+    {
+      "id": "pytest_httpserver_readiness_cleanup",
+      "project": "pytest-httpserver-readiness",
+      "project_stratum": "framework_plugin_build",
+      "source_owner": "csernazs",
+      "source_url": "https://github.com/csernazs/pytest-httpserver",
+      "base_revision": "b937308278bd191e01640aaea29c22cb2840b240",
+      "project_root": "artifacts/pytest_plugin_prefixed_20260831/pytest-httpserver-readiness",
+      "failure_intake": "artifacts/field_trials/project_native_failure_intake_20260831T061848150361Z.json",
+      "failure_intake_digest": "sha256:c0a330e7e417f07ebeffec145743822cc17697df9cfcf1281eb9b09db0ccdab1",
+      "failure_signature": "cbed86a0ccc8d9b519a2a97f618500f32b7036ae56aa3fbd3b5c80a7d66f7eea",
+      "test_target": "tests/test_readiness.py::test_readiness_failure_stops_server",
+      "code_target": "pytest_httpserver/httpserver.py:HTTPServer.start",
+      "frozen_project_digest": "e69406f89e1693c9ca56baee5d9d8c6fb834585a11be08f7b0139db36bbdd34e"
+    }
+  ],
+  "invariants": {
+    "one_case_per_narrow_stratum": true,
+    "distinct_source_owners": true,
+    "preloaded_fix_pattern": false,
+    "failure_intake_predates_selection": true,
+    "source_apply": false,
+    "knowledge_updates_before_evaluation": false,
+    "certification_from_single_case": false
+  }
+}
