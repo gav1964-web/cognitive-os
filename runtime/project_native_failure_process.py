@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 
 from cognitive_replay.bounded_process import _run_bounded_process, _terminate_process_tree
+
+from .integrity import portable_order
 from cognitive_replay.version import _project_version_hint
 
 def _copy_git_build_metadata(project: Path, sandbox: Path, intake: dict[str, Any]) -> bool:
@@ -110,7 +112,8 @@ def _project_digest(project: Path) -> str:
         ".git", ".hg", ".pytest_cache", ".pytest-native-intake", ".mypy_cache",
         ".ruff_cache", "__pycache__", ".venv", "venv", ".native-user", ".nfi",
     }
-    for path in sorted(item for item in project.rglob("*") if item.is_file() and not set(item.relative_to(project).parts).intersection(excluded)):
+    files = (item for item in project.rglob("*") if item.is_file() and not set(item.relative_to(project).parts).intersection(excluded))
+    for path in sorted(files, key=portable_order(project)):
         digest.update(path.relative_to(project).as_posix().encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()

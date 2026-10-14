@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from .three_route_evaluation import (
-    INPUT_SKIP_DIRS, _digest, _freeze_task, _tree_digest, validate_manifest,
+    INPUT_SKIP_DIRS, _digest, _freeze_task, _tree_digest, snapshot_matches, validate_manifest,
 )
 
 PROJECT_CLASSES = {'project_analysis', 'documentation', 'sandbox_project_change'}
@@ -77,7 +77,7 @@ def _task_issues(root, task_dir, task):
         if declared != expected:
             issues.append('input_declaration_drift')
         elif not any(code.startswith(('input_', 'linked_', 'private_')) for code in issues):
-            if _freeze_task(root, task_dir) != task:
+            if not snapshot_matches(_freeze_task(root, task_dir), task, task_dir):
                 issues.append('task_snapshot_drift')
     except (OSError, ValueError, TypeError):
         issues.append('input_or_definition_unreadable')

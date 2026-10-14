@@ -354,3 +354,19 @@ def test_config_mutation_sandbox_validates_object_merge(tmp_path: Path):
 
     assert report["status"] == "passed"
     assert report["target_modified"] is False
+
+
+def test_task_snapshot_ignores_prompt_line_endings_only(tmp_path):
+    from runtime.three_route_evaluation import _task_definition, snapshot_matches
+
+    task = tmp_path / "task01"
+    task.mkdir()
+    (task / "metrics.json").write_text('{"task_class": "x"}', encoding="utf-8")
+    (task / "prompt.md").write_bytes(b"## Prompt\r\nDo it\r\n\r\n## Expected Inputs\r\n- a\r\n")
+    frozen, _ = _task_definition(task)
+    (task / "prompt.md").write_bytes(b"## Prompt\nDo it\n\n## Expected Inputs\n- a\n")
+    current, _ = _task_definition(task)
+    assert current != frozen and snapshot_matches(current, frozen, task)
+    (task / "prompt.md").write_bytes(b"## Prompt\nDo it now\n\n## Expected Inputs\n- a\n")
+    changed, _ = _task_definition(task)
+    assert not snapshot_matches(changed, frozen, task)

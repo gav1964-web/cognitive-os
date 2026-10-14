@@ -95,7 +95,8 @@ def manifest_drift_errors(
                     key: value for key, value in dict(expected[task_id]["input_spec"]).items()
                     if key != "tree_digest"
                 }
-                if current != expected_base or expected_inputs != current["expected_inputs"] or declared != expected_spec:
+                if (not snapshot_matches(current, expected_base, root / "evaluation" / task_id)
+                        or expected_inputs != current["expected_inputs"] or declared != expected_spec):
                     errors.append(f"task_snapshot_drift:{task_id}")
                 continue
             errors.append(f"task_snapshot_unreadable:{task_id}:{type(exc).__name__}")
@@ -103,7 +104,7 @@ def manifest_drift_errors(
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"task_snapshot_unreadable:{task_id}:{type(exc).__name__}")
             continue
-        if current != expected[task_id]:
+        if not snapshot_matches(current, expected[task_id], root / "evaluation" / task_id):
             errors.append(f"task_snapshot_drift:{task_id}")
     return sorted(set(errors))
 
@@ -231,6 +232,20 @@ def load_receipts(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     return [json.loads(item.read_text(encoding="utf-8")) for item in sorted(path.glob("*.json"))]
+
+
+def snapshot_matches(current: dict[str, Any], expected: dict[str, Any], task_dir: Path) -> bool:
+    """Equal snapshots, or ones whose prompt.md differs only in line endings.
+
+    Manifests frozen on Windows hashed CRLF prompt files; git stores them with LF (.gitattributes), so a
+    checkout on any OS hashes differently although every parsed field is identical."""
+    if current == expected:
+        return True
+    if {key for key in set(current) | set(expected) if current.get(key) != expected.get(key)} != {"task_file_digest"}:
+        return False
+    raw = (task_dir / "prompt.md").read_bytes()
+    other = raw.replace(b"\r\n", b"\n") if b"\r\n" in raw else raw.replace(b"\n", b"\r\n")
+    return _bytes_digest(other) == expected.get("task_file_digest")
 
 
 def _freeze_task(root: Path, task_dir: Path) -> dict[str, Any]:

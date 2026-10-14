@@ -237,7 +237,9 @@ def test_qualification_preserves_unrelated_prunable_worktree(tmp_path: Path) -> 
     (stale / "calc.py").unlink()
     stale.rmdir()
     before = _git(source, "worktree", "list", "--porcelain")
-    assert "prunable" in before
+    # git >= 2.31 marks it "prunable"; older git (Ubuntu 20.04 ships 2.25) only lists it. Both mean: a
+    # registered worktree whose directory is gone.
+    assert f"worktree {stale}" in before and not stale.exists()
     public, oracle = _validation_manifests()
     public.update(status="shortage", cases=[case])
     oracle["cases"] = [sealed]

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .generated_stub_admission import inspect_generated_function_stubs
+from .integrity import portable_order
 from .native_failure_acceptance import FORMAT as NATIVE_FORMAT, native_coverage
 from .programmer_executor import run_programmer_executor
 from .project_failure_evidence_packet import is_complete_failure_evidence_packet
@@ -377,7 +378,8 @@ def _patch_scope_aligned(patch: dict[str, Any], evidence: list[str]) -> bool:
 
 def _project_digest(project: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(item for item in project.rglob("*") if item.is_file() and not (set(item.parts) & IGNORED_DIGEST_PARTS)):
+    for path in sorted((item for item in project.rglob("*") if item.is_file() and not (set(item.parts) & IGNORED_DIGEST_PARTS)),
+                       key=portable_order(project)):
         digest.update(path.relative_to(project).as_posix().encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
